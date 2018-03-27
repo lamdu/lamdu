@@ -41,6 +41,9 @@ data Tag name m = Tag
     , _tagSelection :: TagSelection name m ()
     }
 
+instance Show name => Show (Tag name m) where
+    show (Tag info _) = "(Tag " ++ show info ++ ")"
+
 Lens.makeLenses ''Tag
 Lens.makeLenses ''TagInfo
 Lens.makeLenses ''TagOption

@@ -1,21 +1,15 @@
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderExpr
-    , orderedFlatComposite, orderedClosedFlatComposite
+    , orderedClosedFlatComposite
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Utils (tagged)
 import           Control.Monad ((>=>))
 import           Data.List (sortOn)
-import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import qualified Lamdu.Calc.Type.Scheme as S
 import           Lamdu.Data.Anchors (assocTagOrder)
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -25,38 +19,36 @@ import           Lamdu.Prelude
 type T = Transaction
 type Order m x = x -> T m x
 
-orderByTag :: Monad m => (a -> T.Tag) -> Order m [a]
+orderByTag :: Monad m => (a -> Sugar.TagInfo name) -> Order m [a]
 orderByTag toTag =
     fmap (map fst . sortOn snd) . mapM loadOrder
     where
         loadOrder x =
-            toTag x
+            toTag x ^. Sugar.tagVal
             & assocTagOrder
             & Property.getP
             <&> (,) x
 
-orderComposite :: Monad m => Order m (T.Composite p)
-orderComposite c =
-    fields
-    & Map.toList
-    & orderByTag fst
-    <&> foldr (uncurry T.CExtend) (maybe T.CEmpty T.CVar mExt)
-    >>= ExprLens.compositeTypes orderType
-    where
-        FlatComposite fields mExt = FlatComposite.fromComposite c
+orderComposite :: Monad m => Order m (Sugar.CompositeFields p name (Sugar.Type a))
+orderComposite =
+    Sugar.compositeFields $
+    \fields -> fields & orderByTag (^. _1) >>= traverse . _2 %%~ orderType
 
-orderType :: Monad m => Order m Type
-orderType t =
+orderTBody :: Monad m => Order m (Sugar.TBody name (Sugar.Type name))
+orderTBody t =
     t
-    & T._TRecord %%~ orderComposite
-    >>= T._TVariant %%~ orderComposite
-    >>= ExprLens.nextLayer orderType
+    & Sugar._TRecord %%~ orderComposite
+    >>= Sugar._TVariant %%~ orderComposite
+    >>= traverse orderType
+
+orderType :: Monad m => Order m (Sugar.Type name)
+orderType = Sugar.tBody %%~ orderTBody
 
 orderRecord :: Monad m => Order m (Sugar.Composite name (T f) a)
-orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo . Sugar.tagVal)
+orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo)
 
 orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
-orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag . Sugar.tagVal)
+orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
 
 orderCase :: Monad m => Order m (Sugar.Case name (T m) a)
 orderCase = Sugar.cBody %%~ orderRecord
@@ -102,7 +94,7 @@ orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) (Sugar.Expression name (T m) a))
 orderDef def =
     def
-    & SugarLens.defSchemes . S.schemeType %%~ orderType
+    & SugarLens.defSchemes . Sugar.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
         %%~ (orderBinder >=> Lens.traversed %%~ orderExpr)
 
@@ -121,6 +113,5 @@ orderedFlatComposite =
         from ([], Just x) = T.CVar x
         from ((tag,typ):rest, v) = (rest, v) & from & T.CExtend tag typ
 
-orderedClosedFlatComposite :: Lens.Prism' (T.Composite b) [(T.Tag, Type)]
-orderedClosedFlatComposite =
-    orderedFlatComposite . tagged Lens._Nothing
+orderedClosedFlatComposite :: Lens.Prism' (T.Composite b) [(T.Tag, T.Type)]
+orderedClosedFlatComposite = orderedFlatComposite . tagged Lens._Nothing

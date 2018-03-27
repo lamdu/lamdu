@@ -67,7 +67,7 @@ make ::
     ( MonadReader env f, HasTheme env, GuiState.HasCursor env
     , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad m
     ) =>
-    Sugar.DefinitionBuiltin (T m) -> Widget.Id ->
+    Sugar.DefinitionBuiltin name (T m) -> Widget.Id ->
     f (WithTextPos (Widget (T m GuiState.Update)))
 make def myId =
     do

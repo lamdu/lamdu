@@ -38,6 +38,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -213,7 +214,8 @@ numEdit prop pl =
 
 make ::
     Monad m =>
-    Sugar.Literal (Property (T m)) -> Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Literal (Property (T m)) ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make lit pl =
     stdWrap pl

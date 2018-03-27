@@ -10,11 +10,9 @@ module Lamdu.Sugar.Lens
     , leftMostLeaf
     , workAreaExpressions
     , holeTransformExprs, holeOptionTransformExprs
-    , getVarNames
     ) where
 
 import qualified Control.Lens as Lens
-import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -94,7 +92,7 @@ fragmentExprs ::
     (Payload name m a)
 fragmentExprs = subExprsOf _BodyFragment
 
-defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) Scheme
+defBodySchemes :: Lens.Traversal' (DefinitionBody name m expr) (Scheme name)
 defBodySchemes f (DefinitionBodyBuiltin b) =
     b & biType %%~ f
     <&> DefinitionBodyBuiltin
@@ -102,7 +100,7 @@ defBodySchemes f (DefinitionBodyExpression de) =
     de & deType %%~ f
     <&> DefinitionBodyExpression
 
-defSchemes :: Lens.Traversal' (Definition name m expr) Scheme
+defSchemes :: Lens.Traversal' (Definition name m expr) (Scheme name)
 defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::
@@ -151,8 +149,3 @@ holeTransformExprs onExpr hole =
     , _holeOptionLiteral =
         hole ^. holeOptionLiteral <&> Lens.mapped . Lens._2 %~ (>>= holeResultConverted onExpr)
     }
-
-getVarNames :: Lens.Traversal (GetVar name0 a) (GetVar name1 a) name0 name1
-getVarNames f (GetParam p) = (pNameRef . nrName) f p <&> GetParam
-getVarNames f (GetParamsRecord r) = (prvFieldNames . traverse) f r <&> GetParamsRecord
-getVarNames f (GetBinder b) = (bvNameRef . nrName) f b <&> GetBinder

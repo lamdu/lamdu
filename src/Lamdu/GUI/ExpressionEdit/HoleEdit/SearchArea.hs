@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -126,7 +127,7 @@ makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
     , MonadTransaction n0 m, Spacer.HasStdSpacing env
     ) =>
-    Sugar.Payload name m0 a0 -> m View
+    Sugar.Payload (Name g) m0 a0 -> m View
 makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
     <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
@@ -172,7 +173,7 @@ make ::
     Monad m =>
     T m [Sugar.HoleOption (T m) (ExpressionN (T m) ())] ->
     Maybe (Sugar.OptionLiteral (T m) (ExpressionN (T m) ())) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     (Text -> Bool) ->
     ExprGuiM m (Menu.Placement -> ExpressionGui (T m))
 make options mOptionLiteral pl allowedTerms =

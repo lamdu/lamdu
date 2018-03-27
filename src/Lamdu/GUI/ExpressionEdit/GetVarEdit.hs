@@ -24,7 +24,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
@@ -131,7 +130,7 @@ definitionTypeChangeBox ::
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env, Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType (f Sugar.EntityId) -> Widget.Id ->
+    Sugar.DefinitionOutdatedType (Name g) (f Sugar.EntityId) -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
@@ -159,7 +158,7 @@ definitionTypeChangeBox info getVarId =
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         updateDoc = E.Doc ["Edit", "Update definition type"]
         mkTypeView idSuffix scheme =
-            TypeView.make (scheme ^. schemeType)
+            TypeView.makeScheme scheme
             & Reader.local (Element.animIdPrefix .~ animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
@@ -170,7 +169,7 @@ processDefinitionWidget ::
     , GuiState.HasCursor env, Hover.HasStyle env
     , Applicative f
     ) =>
-    Sugar.DefinitionForm f -> Widget.Id ->
+    Sugar.DefinitionForm (Name g) f -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update))) ->
     m (WithTextPos (Widget (f GuiState.Update)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
@@ -250,7 +249,7 @@ makeNoActions getVar myId =
 make ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

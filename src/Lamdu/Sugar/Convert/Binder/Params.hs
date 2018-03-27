@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Transaction (transaction, getP, setP)
+import           Control.Monad.Transaction (getP, setP)
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
@@ -20,7 +20,6 @@ import           Data.Maybe.Utils (unsafeUnjust)
 import           Data.Property (Property, MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -39,10 +38,11 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.OrderTags (orderType, orderedClosedFlatComposite)
+import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -62,8 +62,8 @@ Lens.makeLenses ''ConventionalParams
 
 data FieldParam = FieldParam
     { fpTag :: T.Tag
-    , fpFieldType :: Type
-    , fpValue :: CurAndPrev (Map ER.ScopeId [(ER.ScopeId, ER.Val Type)])
+    , fpFieldType :: T.Type
+    , fpValue :: CurAndPrev (Map ER.ScopeId [(ER.ScopeId, ER.Val T.Type)])
     }
 
 data StoredLam m = StoredLam
@@ -358,31 +358,34 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
             , _cpParams = Params params
             , _cpAddFirstParam = PrependParam addFirstSelection
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
-            , cpMLamParam = Just (pl ^. Input.entityId, param)
+            , cpMLamParam = Just (entityId, param)
             }
     where
+        entityId = pl ^. Input.entityId
         tags = fieldParams <&> fpTag
         mkParInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam pl
         mkParam fp =
-            ParamInfo
-            <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
-                    >>= convertTag tag (nameWithContext param)
-                        (Set.delete tag (Set.fromList tagList))
-                        (EntityId.ofTaggedEntity param)
-                )
-            <*> fieldParamActions mPresMode binderKind tags fp storedLam
-            <&>
-            FuncParam Annotation
-            { _aInferredType = fpFieldType fp
-            , _aMEvaluationResult =
-                fpValue fp <&>
-                \x ->
-                do
-                    Map.null x & not & guard
-                    x ^.. Lens.traversed . Lens.traversed
-                        & Map.fromList & Just
-            }
+            do
+                paramInfo <-
+                    ParamInfo
+                    <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
+                            >>= convertTag tag (nameWithContext param)
+                                (Set.delete tag (Set.fromList tagList))
+                                (EntityId.ofTaggedEntity param)
+                        )
+                    <*> fieldParamActions mPresMode binderKind tags fp storedLam
+                typeS <- fpFieldType fp & convertType (EntityId.ofTypeOf entityId)
+                -- TODO: DRY with Convert.Expression.Actions.makeAnnotation?
+                let mk res
+                        | Map.null res = Nothing
+                        | otherwise =
+                            res ^.. Lens.folded . Lens.folded & Map.fromList
+                                & Just
+                FuncParam Annotation
+                    { _aInferredType = typeS
+                    , _aMEvaluationResult = fpValue fp <&> mk
+                    } paramInfo & pure
             where
                 tag = fpTag fp
                 tagList = fieldParams <&> fpTag
@@ -466,7 +469,7 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition newParam =
             slLambdaProp storedLam & Property.value
             & Anchors.assocFieldParamList
 
-lamParamType :: Input.Payload m a -> Type
+lamParamType :: Input.Payload m a -> T.Type
 lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
     lamExprPl ^? Input.inferredType . T._TFun . _1
@@ -500,27 +503,29 @@ makeNonRecordParamActions binderKind storedLam =
     where
         param = storedLam ^. slLam . V.lamParamId
 
-mkFuncParam :: Monad m => Input.Payload m a -> info -> ConvertM m (FuncParam info)
-mkFuncParam lamExprPl info =
-    Lens.view ConvertM.scNominalsMap
-    <&> \noms ->
-    FuncParam
-    { _fpInfo = info
-    , _fpAnnotation =
-        Annotation
-        { _aInferredType = typ
-        , _aMEvaluationResult =
-            lamExprPl ^. Input.evalResults
-            <&> (^. Input.eAppliesOfLam)
-            <&> \lamApplies ->
-            do
-                Map.null lamApplies & not & guard
-                lamApplies ^..
-                    Lens.traversed . Lens.traversed & Map.fromList
+mkFuncParam ::
+    Monad m =>
+    EntityId -> Input.Payload m a -> info ->
+    ConvertM m (FuncParam InternalName info)
+mkFuncParam entityId lamExprPl info =
+    do
+        noms <- Lens.view ConvertM.scNominalsMap
+        typS <- convertType (EntityId.ofTypeOf entityId) typ
+        -- TODO: DRY with Convert.Expression.Actions.makeAnnotation?
+        let mk lamApplies
+                | Map.null lamApplies = Nothing
+                | otherwise =
+                    lamApplies ^.. Lens.folded . Lens.folded & Map.fromList
                     <&> ResultsProcess.addTypes noms typ
                     & Just
-        }
-    }
+        pure FuncParam
+            { _fpInfo = info
+            , _fpAnnotation =
+                Annotation
+                { _aInferredType = typS
+                , _aMEvaluationResult = lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> mk
+                }
+            }
     where
         typ = lamParamType lamExprPl
 
@@ -535,15 +540,13 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             case lamParamType lamExprPl of
             T.TRecord T.CEmpty
                 | null (lamExprPl ^. Input.varRefsOfLambda) ->
-                  funcParamActions ^. fpDelete
-                  & void
-                  & NullParamActions
-                  & mkFuncParam lamExprPl
-                  <&> NullParam
+                    mkFuncParam (EntityId.ofBinder param) lamExprPl info <&> NullParam
+                where
+                    info = funcParamActions ^. fpDelete & void & NullParamActions
             _ ->
                 do
                     tag <- convertTaggedEntity param
-                    mkFuncParam lamExprPl
+                    mkFuncParam (tag ^. tagInfo . tagInstance) lamExprPl
                         ParamInfo
                         { _piTag = tag
                         , _piActions = funcParamActions
@@ -632,11 +635,9 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                         <&> Lens.traversed %~
                             filter (Lens.nullOf (_2 . ER.body . ER._RError))
                 }
-        orderedType <-
-            lambdaPl ^. Input.inferredType & orderType & transaction
         presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
         let presModeOrder tag = takeWhile (/= tag) presModeTags & length
-        case orderedType of
+        case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
                 | Just fields <- composite ^? orderedClosedFlatComposite <&> List.sortOn (presModeOrder . fst)
                 , ListUtils.isLengthAtLeast 2 fields

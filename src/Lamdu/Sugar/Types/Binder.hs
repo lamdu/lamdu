@@ -36,19 +36,20 @@ module Lamdu.Sugar.Types.Binder
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
-import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag
+import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-type EvaluationResult = Map ER.ScopeId (ER.Val Type)
+type EvaluationResult = Map ER.ScopeId (ER.Val T.Type)
 
-data Annotation = Annotation
-    { _aInferredType :: Type
+data Annotation name = Annotation
+    { _aInferredType :: Type name
     , _aMEvaluationResult :: CurAndPrev (Maybe EvaluationResult)
     } deriving Show
 
@@ -75,12 +76,12 @@ data ParamInfo name m = ParamInfo
     , _piActions :: FuncParamActions name m
     }
 
-data FuncParam info = FuncParam
-    { _fpAnnotation :: Annotation
+data FuncParam name info = FuncParam
+    { _fpAnnotation :: Annotation name
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
 
-instance Show info => Show (FuncParam info) where
+instance (Show info, Show name) => Show (FuncParam name info) where
     show FuncParam{..} =
         "(FuncParam " ++ show _fpInfo ++
         " " ++ show _fpAnnotation ++ " )"
@@ -116,7 +117,7 @@ data Let name m expr = Let
     { _lValue :: Binder name m expr -- "let [[foo = bar]] in x"
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
-    , _lAnnotation :: Annotation
+    , _lAnnotation :: Annotation name
     , _lName :: Tag name m
     , _lActions :: LetActions name m
     , _lBodyScope :: ChildScopeMapping
@@ -142,8 +143,8 @@ data BinderParams name m
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam (NullParamActions m))
-    | Params [FuncParam (ParamInfo name m)]
+      NullParam (FuncParam name (NullParamActions m))
+    | Params [FuncParam name (ParamInfo name m)]
 
 data BinderContent name m expr
     = BinderLet (Let name m expr)

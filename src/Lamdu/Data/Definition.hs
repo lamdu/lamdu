@@ -45,7 +45,7 @@ data Body valExpr
 
 data Definition valExpr a = Definition
     { _defBody :: Body valExpr
-    , _defType :: Scheme
+    , _defType :: Scheme -- TODO: typeExpr
     , _defPayload :: a
     } deriving (Generic, Functor, Foldable, Traversable)
 

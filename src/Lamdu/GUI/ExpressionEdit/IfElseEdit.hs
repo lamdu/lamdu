@@ -31,6 +31,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -144,7 +145,7 @@ renderRows =
 make ::
     Monad m =>
     Sugar.IfElse name (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make ifElse pl =
     stdWrapParentExpr pl

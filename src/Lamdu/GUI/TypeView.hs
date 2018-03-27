@@ -1,52 +1,42 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, TemplateHaskell #-}
 module Lamdu.GUI.TypeView
-    ( make
+    ( make, makeScheme
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.State (StateT, state, evalStateT)
-import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Transaction (MonadTransaction(..), getP)
-import qualified Data.Char as Char
+import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
-import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Identifier (Identifier(..))
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.GUI.ExpressionEdit.TagEdit (makeTagView)
+import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Sugar.OrderTags (orderedFlatComposite)
-import           System.Random (Random, random)
-import qualified System.Random as Random
+import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 newtype Prec = Prec Int deriving (Eq, Ord, Show)
-
-newtype M m a = M
-    { runM :: StateT Random.StdGen m a
-    } deriving
-    (Functor, Applicative, Monad, MonadTrans, MonadTransaction n, MonadReader r)
 
 data CompositeRow a = CompositeRow
     { _crPre :: a
@@ -68,40 +58,31 @@ horizSetCompositeRow r =
     , _crPost = r ^. crPost & Align.fromWithTextPos 0
     }
 
-rand :: (Random r, Monad m) => M m r
-rand = M $ state random
+sanitize :: Text -> Text
+sanitize = Text.replace "\0" ""
 
-split :: Monad m => M m a -> M m a
-split (M act) =
-    do
-        splitGen <- M $ state Random.split
-        M $ lift $ evalStateT act splitGen
-
-randAnimId :: Monad m => M m AnimId
-randAnimId = WidgetId.toAnimId . WidgetIds.fromUUID <$> rand
-
-text :: (MonadReader env m, TextView.HasStyle env) => Text -> M m (WithTextPos View)
-text str =
-    do
-        animId <- randAnimId
-        TextView.make ?? Text.replace "\0" "" str ?? animId
+text ::
+    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Text -> m (WithTextPos View)
+text = TextView.makeLabel . sanitize
 
 grammar ::
-    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
-    Text -> M m (WithTextPos View)
-grammar str =
-    do
-        animId <- randAnimId
-        Styled.grammarText ?? Text.replace "\0" "" str ?? animId
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    Text -> m (WithTextPos View)
+grammar = Styled.grammarLabel . sanitize
 
 showIdentifier ::
-    (MonadReader env m, TextView.HasStyle env) =>
-    Identifier -> M m (WithTextPos View)
+    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Identifier -> m (WithTextPos View)
 showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
 parensAround ::
-    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
-    WithTextPos View -> M m (WithTextPos View)
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    WithTextPos View -> m (WithTextPos View)
 parensAround view =
     do
         openParenView <- grammar "("
@@ -109,45 +90,51 @@ parensAround view =
         hbox [openParenView, view, closeParenView] & pure
 
 parens ::
-    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
-    Prec -> Prec -> WithTextPos View -> M m (WithTextPos View)
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
     | parent > my = parensAround view
     | otherwise = pure view
 
 makeTVar ::
-    (MonadReader env m, TextView.HasStyle env) =>
-    T.Var p -> M m (WithTextPos View)
+    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Sugar.TVar p -> m (WithTextPos View)
 makeTVar (T.Var name) = showIdentifier name
 
 makeTFun ::
-    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env, MonadTransaction n m) =>
-    Prec -> Type -> Type -> M m (WithTextPos View)
+    ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
+    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    ) =>
+    Prec -> Sugar.Type (Name f) -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeTFun parentPrecedence a b =
-    case a of
-    T.TRecord T.CEmpty -> [grammar "| "]
+    case a ^. Sugar.tBody of
+    Sugar.TRecord (Sugar.CompositeFields [] Nothing) -> [grammar "| "]
     _ ->
-        [ splitMake (Prec 1) a
+        [ makeInternal (Prec 1) a
         , grammar " → "
         ]
-    ++ [splitMake (Prec 0) b]
+    ++ [makeInternal (Prec 0) b]
     & sequence
     <&> hbox
     >>= parens parentPrecedence (Prec 0)
 
 makeTInst ::
-    (MonadReader env m, Spacer.HasStdSpacing env, HasTheme env, MonadTransaction n m) =>
-    Prec -> T.NominalId -> Map T.ParamId Type -> M m (WithTextPos View)
+    ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
+    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    ) =>
+    Prec -> Sugar.TId (Name f) -> Map Sugar.ParamId (Sugar.Type (Name f)) ->
+    m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
-        tag <- Anchors.assocTag tid & getP
-        nameView <- Anchors.assocTagNameRef tag & getP <&> Lens.ix 0 %~ Char.toUpper >>= text
+        nameView <- NameView.make (tid ^. Sugar.tidName)
         hspace <- Spacer.stdHSpace
         let afterName paramsView = nameView /|/ hspace /|/ paramsView
         let makeTypeParam (T.ParamId tParamId, arg) =
                 do
                     paramIdView <- showIdentifier tParamId
-                    typeView <- splitMake (Prec 0) arg
+                    typeView <- makeInternal (Prec 0) arg
                     pure
                         [ Align.fromWithTextPos 1 paramIdView
                         , Aligned 0.5 hspace
@@ -156,7 +143,7 @@ makeTInst parentPrecedence tid typeParams =
         case Map.toList typeParams of
             [] -> pure nameView
             [(_, arg)] ->
-                splitMake (Prec 0) arg
+                makeInternal (Prec 0) arg
                 <&> afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
@@ -167,41 +154,43 @@ makeTInst parentPrecedence tid typeParams =
                 >>= addTypeBG
                 <&> afterName
 
-addTypeBG :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
+addTypeBG ::
+    (Element a, MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
+    a -> m a
 addTypeBG view =
     do
         color <- Lens.view (Theme.theme . Theme.typeFrameBGColor)
-        bgId <- randAnimId
+        bgId <- Element.subAnimId ["bg"]
         view
             & MDraw.backgroundColor bgId color
             & pure
 
 makeEmptyComposite ::
-    (MonadReader env m, TextView.HasStyle env, HasTheme env) =>
-    M m (WithTextPos View)
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    m (WithTextPos View)
 makeEmptyComposite = grammar "Ø"
 
-makeTag ::
-    (MonadTransaction n m, MonadReader env m, TextView.HasStyle env) =>
-    T.Tag -> M m (WithTextPos View)
-makeTag tag =
-    Anchors.assocTagNameRef tag & getP
-    <&> Lens.filtered Text.null .~ "(empty)"
-    >>= text
-
 makeField ::
-    (MonadTransaction n m, MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
-    (T.Tag, Type) -> M m (WithTextPos View, WithTextPos View)
+    ( MonadTransaction n m, MonadReader env m, HasTheme env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
+    ) =>
+    (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
+    m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
     (,)
-    <$> makeTag tag
-    <*> splitMake (Prec 0) fieldType
+    <$> makeTagView tag
+    <*> makeInternal (Prec 0) fieldType
 
 makeVariantField ::
-    (MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m, HasTheme env) =>
-    (T.Tag, Type) -> M m (WithTextPos View, WithTextPos View)
-makeVariantField (tag, T.TRecord T.CEmpty) =
-    makeTag tag <&> flip (,) Element.empty
+    ( MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m
+    , HasTheme env, Element.HasAnimIdPrefix env
+    ) =>
+    (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
+    m (WithTextPos View, WithTextPos View)
+makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
+    makeTagView tag <&> flip (,) Element.empty
     -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
@@ -216,80 +205,84 @@ gridViewTopLeftAlign views =
         (alignPoints, view) = GridView.make views
 
 makeComposite ::
-    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env) =>
+    ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
+    , Element.HasAnimIdPrefix env
+    ) =>
     Text -> Text ->
-    M m (WithTextPos View) -> M m (WithTextPos View) ->
-    ((T.Tag, Type) -> M m (WithTextPos View, WithTextPos View)) ->
-    T.Composite t -> M m (WithTextPos View)
-makeComposite _ _ _ _ _ T.CEmpty = makeEmptyComposite
+    m (WithTextPos View) -> m (WithTextPos View) ->
+    ((Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
+         m (WithTextPos View, WithTextPos View)) ->
+    Sugar.CompositeFields t (Name f) (Sugar.Type (Name f)) ->
+    m (WithTextPos View)
 makeComposite o c mkPre mkPost mkField composite =
-    do
-        opener <- grammar o
-        closer <- grammar c
-        let toRow (t, v) =
-                CompositeRow mkPre (pure t) space (pure v) mkPost
-                where
-                    space
-                        | v ^. Align.tValue . Element.width == 0 = pure Element.empty
-                        | otherwise = Spacer.stdHSpace <&> WithTextPos 0
-        fieldsView <-
-            traverse mkField fields
-            <&> map toRow
-            <&> Lens.ix 0 . crPre .~ pure opener
-            <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
-            >>= traverse sequenceA
-            <&> map horizSetCompositeRow
-            <&> gridViewTopLeftAlign
-            <&> Align.alignmentRatio . _1 .~ 0.5
-        let barWidth
-                | null fields = 150
-                | otherwise = fieldsView ^. Element.width
-        extView <-
-            case extension of
-            Nothing -> pure Element.empty
-            Just var ->
-                do
-                    sqrId <- randAnimId
-                    let sqr =
-                            View.unitSquare sqrId
-                            & Element.scale (Vector2 barWidth 10)
-                    varView <- makeTVar var
-                    pre <- mkPre
-                    let lastLine = (pre /|/ varView) ^. Align.tValue
-                    pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
-        fieldsView /-/ extView & Align.toWithTextPos
-            & (Styled.addValPadding ??)
-            >>= addTypeBG
-    where
-        (fields, extension) = composite ^. orderedFlatComposite
-
-splitMake ::
-    (MonadReader env m, HasTheme env, Spacer.HasStdSpacing env, MonadTransaction n m) =>
-    Prec -> Type -> M m (WithTextPos View)
-splitMake parentPrecedence typ = split $ makeInternal parentPrecedence typ
+    case composite of
+    Sugar.CompositeFields [] Nothing -> makeEmptyComposite
+    Sugar.CompositeFields fields extension ->
+        do
+            opener <- grammar o
+            closer <- grammar c
+            let toRow (t, v) =
+                    CompositeRow mkPre (pure t) space (pure v) mkPost
+                    where
+                        space
+                            | v ^. Align.tValue . Element.width == 0 = pure Element.empty
+                            | otherwise = Spacer.stdHSpace <&> WithTextPos 0
+            fieldsView <-
+                traverse mkField fields
+                <&> map toRow
+                <&> Lens.ix 0 . crPre .~ pure opener
+                <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
+                >>= traverse sequenceA
+                <&> map horizSetCompositeRow
+                <&> gridViewTopLeftAlign
+                <&> Align.alignmentRatio . _1 .~ 0.5
+            let barWidth
+                    | null fields = 150
+                    | otherwise = fieldsView ^. Element.width
+            extView <-
+                case extension of
+                Nothing -> pure Element.empty
+                Just var ->
+                    do
+                        sqrId <- Element.subAnimId ["square"]
+                        let sqr =
+                                View.unitSquare sqrId
+                                & Element.scale (Vector2 barWidth 10)
+                        varView <- makeTVar var
+                        pre <- mkPre
+                        let lastLine = (pre /|/ varView) ^. Align.tValue
+                        pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
+            fieldsView /-/ extView & Align.toWithTextPos
+                & (Styled.addValPadding ??)
+                >>= addTypeBG
 
 makeInternal ::
-    (MonadReader env m, Spacer.HasStdSpacing env, HasTheme env, MonadTransaction n m) =>
-    Prec -> Type -> M m (WithTextPos View)
-makeInternal parentPrecedence typ =
-    case typ of
-    T.TVar var -> makeTVar var
-    T.TFun a b -> makeTFun parentPrecedence a b
-    T.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    T.TRecord composite -> makeComposite "{" "}" (pure Element.empty) (grammar ",") makeField composite
-    T.TVariant composite ->
+    ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
+    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    ) =>
+    Prec -> Sugar.Type (Name f) -> m (WithTextPos View)
+makeInternal parentPrecedence (Sugar.Type entityId tbody) =
+    case tbody of
+    Sugar.TVar var -> makeTVar var
+    Sugar.TFun a b -> makeTFun parentPrecedence a b
+    Sugar.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
+    Sugar.TRecord composite -> makeComposite "{" "}" (pure Element.empty) (grammar ",") makeField composite
+    Sugar.TVariant composite ->
         makeComposite "+{" "}" (grammar "or: ") (pure Element.empty) makeVariantField composite
+    & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env, MonadTransaction n m
     ) =>
-    Type -> m (WithTextPos View)
-make t =
-    do
-        prefix <- Lens.view Element.animIdPrefix
-        makeInternal (Prec 0) t
-            & runM
-            & (`evalStateT` Random.mkStdGen 0)
-            <&> Element.setLayers . Element.layers . Lens.mapped %~ Anim.mapIdentities (mappend prefix)
-            & Styled.withColor TextColors.typeTextColor
+    Sugar.Type (Name f) -> m (WithTextPos View)
+make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
+
+makeScheme ::
+    ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
+    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    ) =>
+    Sugar.Scheme (Name f) -> m (WithTextPos View)
+makeScheme s = make (s ^. Sugar.schemeType)

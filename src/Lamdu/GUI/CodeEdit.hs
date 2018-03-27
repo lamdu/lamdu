@@ -22,7 +22,6 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -235,7 +234,7 @@ jumpBack gp =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) ->
-    T.Type -> ExprGuiM m (EventMap (IOTrans m GuiState.Update))
+    Sugar.Type name -> ExprGuiM m (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replType =
     do
         theConfig <- Lens.view config
@@ -258,9 +257,9 @@ panesEventMap theExportActions cp gp replType =
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
-            , case replType of
-                T.TInst tid _
-                    | tid == Builtins.mutTid ->
+            , case replType ^. Sugar.tBody of
+                Sugar.TInst tid _
+                    | tid ^. Sugar.tidTId == Builtins.mutTid ->
                         E.keysEventMap (exportConfig ^. Config.executeKeys)
                         (E.Doc ["Execute Repl Process"])
                         (IOTrans (pure (pure mempty) <$

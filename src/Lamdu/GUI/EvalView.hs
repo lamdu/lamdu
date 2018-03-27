@@ -10,6 +10,7 @@ import           Control.Monad.Transaction (MonadTransaction)
 import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -29,7 +30,6 @@ import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Config.Theme as Theme
@@ -79,7 +79,7 @@ makeTag tag =
     <&> Lens.filtered Text.null .~ "(empty)"
     >>= textView
 
-makeField :: MonadExprGui m => T.Tag -> Val Type -> m [Aligned View]
+makeField :: MonadExprGui m => T.Tag -> Val T.Type -> m [Aligned View]
 makeField tag val =
     do
         tagView <- makeTag tag & Reader.local (Element.animIdPrefix <>~ ["tag"])
@@ -112,7 +112,7 @@ arrayCutoff = 10
 tableCutoff :: Int
 tableCutoff = 6
 
-makeArray :: MonadExprGui m => [Val Type] -> m (WithTextPos View)
+makeArray :: MonadExprGui m => [Val T.Type] -> m (WithTextPos View)
 makeArray items =
     case sequence (items <&> (^? ER.body . ER._RRecExtend)) <&> Lens.mapped %~ extractFields of
     Just pairs@(x:_:_) | all (== RecordComputed) (pairs ^.. traverse . _2) ->
@@ -163,7 +163,10 @@ makeArray items =
             <&> hbox
             & Reader.local (Element.animIdPrefix %~ (Anim.augmentId ?? (idx :: Int)))
 
-makeRecExtend :: MonadExprGui m => Type -> V.RecExtend (Val Type) -> m (WithTextPos View)
+makeRecExtend ::
+    MonadExprGui m =>
+    T.Type -> V.RecExtend (Val T.Type) ->
+    m (WithTextPos View)
 makeRecExtend typ recExtend =
     case
         ( typ, recStatus
@@ -213,7 +216,9 @@ makeRecExtend typ recExtend =
     where
         (fields, recStatus) = extractFields recExtend
 
-makeInject :: MonadExprGui m => Type -> V.Inject (Val Type) -> m (WithTextPos View)
+makeInject ::
+    MonadExprGui m =>
+    T.Type -> V.Inject (Val T.Type) -> m (WithTextPos View)
 makeInject typ inject =
     case
         ( typ
@@ -259,7 +264,7 @@ depthCounts v =
     <&> sum
     & (1 :)
 
-make :: MonadExprGui m => Val Type -> m (WithTextPos View)
+make :: MonadExprGui m => Val T.Type -> m (WithTextPos View)
 make v =
     do
         maxEvalViewSize <- Lens.view (Theme.theme . Theme.maxEvalViewSize)
@@ -282,7 +287,7 @@ fixSize view =
             & Anim.iUnitImage %~
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
-makeInner :: MonadExprGui m => Val Type -> m (WithTextPos View)
+makeInner :: MonadExprGui m => Val T.Type -> m (WithTextPos View)
 makeInner (Val typ val) =
     do
         animId <- Lens.view Element.animIdPrefix
@@ -292,18 +297,21 @@ makeInner (Val typ val) =
             RRecEmpty -> textView "()"
             RInject inject -> makeInject typ inject
             RRecExtend recExtend -> makeRecExtend typ recExtend
-            RPrimVal primVal
-                | typ == T.TInst Builtins.textTid mempty ->
-                  case pv of
-                  PrimVal.Bytes x ->
-                    case decodeUtf8' x of
-                    Right txt -> toText txt
-                    Left{} -> toText x
-                  _ -> makeError (EvalTypeError "text not made of bytes")
-                | otherwise ->
-                  case pv of
-                  PrimVal.Bytes x -> toText x
-                  PrimVal.Float x -> toText x
+            RPrimVal primVal ->
+                case typ of
+                T.TInst tid fields
+                    | Map.null fields
+                    && tid == Builtins.textTid ->
+                    case pv of
+                    PrimVal.Bytes x ->
+                        case decodeUtf8' x of
+                        Right txt -> toText txt
+                        Left{} -> toText x
+                    _ -> makeError (EvalTypeError "text not made of bytes")
+                _ ->
+                    case pv of
+                    PrimVal.Bytes x -> toText x
+                    PrimVal.Float x -> toText x
                 where
                     pv = PrimVal.toKnown primVal
             RArray items -> makeArray items

@@ -20,7 +20,6 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Calc.Type.Scheme (Scheme(..), schemeType)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
@@ -67,7 +66,7 @@ makeExprDefinition lhsEventMap def bodyExpr =
 makeBuiltinDefinition ::
     Monad m =>
     Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.DefinitionBuiltin (T m) ->
+    Sugar.DefinitionBuiltin (Name g) (T m) ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
     do
@@ -120,8 +119,8 @@ make lhsEventMap def =
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 topLevelSchemeTypeView ::
-    Monad m => Scheme -> ExprGuiM m (WithTextPos View)
+    Monad m => Sugar.Scheme (Name g) -> ExprGuiM m (WithTextPos View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
-    TypeView.make (scheme ^. schemeType)
+    TypeView.make (scheme ^. Sugar.schemeType)

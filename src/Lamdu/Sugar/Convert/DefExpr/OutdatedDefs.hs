@@ -9,7 +9,6 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType, alphaEq)
@@ -24,7 +23,11 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
-import           Lamdu.Sugar.Types (DefinitionOutdatedType(..))
+import qualified Lamdu.Sugar.Convert.Type as ConvertType
+import           Lamdu.Sugar.Internal
+import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
@@ -138,7 +141,7 @@ changeFuncArg change usedDefVar =
                 _ -> fixArg ArgChange arg go
 
 isPartSame ::
-    Lens.Getting (Monoid.First Type) Type Type -> Scheme -> Scheme -> Bool
+    Lens.Getting (Monoid.First T.Type) T.Type T.Type -> Scheme -> Scheme -> Bool
 isPartSame part preType newType =
     do
         prePart <- preType & schemeType %%~ (^? part)
@@ -209,24 +212,27 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
 
 scan ::
     Monad m =>
-    Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
+    EntityId -> Def.Expr (Val (ValIProperty m)) ->
+    (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcessResult ->
-    T m (Map V.Var (DefinitionOutdatedType (T m ())))
-scan defExpr setDefExpr typeCheck =
+    T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ())))
+scan entityId defExpr setDefExpr typeCheck =
     defExpr ^. Def.exprFrozenDeps . Infer.depsGlobalTypes
-    & Map.toList & mapM (uncurry scanDef) <&> mconcat
+    & Map.toList & traverse (uncurry scanDef) <&> mconcat
     where
         scanDef globalVar usedType =
             ExprIRef.defI globalVar & Transaction.readIRef
             <&> (^. Def.defType)
-            <&> processDef globalVar usedType
+            >>= processDef globalVar usedType
         processDef globalVar usedType newUsedDefType
-            | alphaEq usedType newUsedDefType = Map.empty
+            | alphaEq usedType newUsedDefType = pure Map.empty
             | otherwise =
-                DefinitionOutdatedType
-                { _defTypeWhenUsed = usedType
-                , _defTypeCurrent = newUsedDefType
-                , _defTypeUseCurrent =
-                    updateDefType usedType newUsedDefType globalVar defExpr setDefExpr typeCheck
-                }
-                & Map.singleton globalVar
+                do
+                    usedTypeS <- ConvertType.convertScheme (EntityId.usedTypeOf entityId) usedType
+                    currentTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) newUsedDefType
+                    Sugar.DefinitionOutdatedType
+                        { Sugar._defTypeWhenUsed = usedTypeS
+                        , Sugar._defTypeCurrent = currentTypeS
+                        , Sugar._defTypeUseCurrent =
+                            updateDefType usedType newUsedDefType globalVar defExpr setDefExpr typeCheck
+                        } & Map.singleton globalVar & pure

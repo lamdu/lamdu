@@ -136,7 +136,7 @@ makeFuncRow mParensId apply applyNearestHoles myId =
 makeLabeled ::
     Monad m =>
     Sugar.LabeledApply (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 makeLabeled apply pl =
     stdWrapParentExpr pl
@@ -212,7 +212,7 @@ mkBoxed apply nearestHoles funcRow =
 makeSimple ::
     Monad m =>
     Sugar.Apply (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 makeSimple (Sugar.Apply func arg) pl =
     stdWrapParentExpr pl

@@ -38,7 +38,7 @@ type T = Transaction
 make ::
     Monad m =>
     Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make fragment pl =
     do

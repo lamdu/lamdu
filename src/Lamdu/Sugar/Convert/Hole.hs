@@ -32,10 +32,10 @@ import           Data.Text.Encoding (encodeUtf8)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Type (Type(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (schemeType, mono)
+import           Lamdu.Calc.Type.Scheme (mono)
+import qualified Lamdu.Calc.Type.Scheme as CalcScheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -60,7 +60,6 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Types
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -86,11 +85,29 @@ convert exprPl =
     >>= addActions exprPl
     <&> rPayload . plActions . mSetToHole .~ Nothing
 
+mkHoleResultValFragment ::
+    Monad m =>
+    Input.Payload m dummy ->
+    Val (T.Type, Maybe (Input.Payload m a)) ->
+    StateT Infer.Context (T m) (HoleResultVal m IsFragment)
+mkHoleResultValFragment exprPl val =
+    val <&> onPl
+    & detachValIfNeeded (inferred ^. Infer.plType)
+    where
+        inferred = exprPl ^. Input.inferred
+        onPl (typ, mInputPl) =
+            ( inferred & Infer.plType .~ typ
+            , case mInputPl of
+              Nothing -> (Nothing, NotFragment)
+              Just inputPl ->
+                (inputPl ^. Input.stored & Property.value & Just, IsFragment)
+            )
+
 mkHoleOptionFromFragment ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a ->
-    Val (Type, Maybe (Input.Payload m a)) ->
+    Val (T.Type, Maybe (Input.Payload m a)) ->
     HoleOption (T m) (Expression InternalName (T m) ())
 mkHoleOptionFromFragment sugarContext exprPl val =
     HoleOption
@@ -215,7 +232,7 @@ mkNominalOptions nominals =
             do
                 (tag, _typ) <-
                     nominal ^..
-                    N.nomType . N._NominalType . schemeType . T._TVariant .
+                    N.nomType . N._NominalType . CalcScheme.schemeType . T._TVariant .
                     ExprLens.compositeFields
                 let inject = V.Inject tag P.hole & V.BInject & Val ()
                 [ inject & V.Nom tid & V.BToNom & Val () ]
@@ -314,7 +331,7 @@ sugar sugarContext exprPl val =
         -- otherwise sugaring of lambdas crashes.
         fakeInferPayload =
             Infer.Payload
-            { Infer._plType = TFun (TVar "fakeInput") (TVar "fakeOutput")
+            { Infer._plType = T.TFun (T.TVar "fakeInput") (T.TVar "fakeOutput")
             , Infer._plScope = exprPl ^. Input.inferred . Infer.plScope
             }
 
@@ -460,7 +477,7 @@ applyForms _ v@(Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LHole))))) 
     <|> pure v
 applyForms empty val =
     case inferPl ^. Infer.plType of
-    TVar tv
+    T.TVar tv
         | any (`Lens.has` val)
             [ ExprLens.valVar
             , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
@@ -470,8 +487,8 @@ applyForms empty val =
             do
                 arg <- freshVar "af"
                 res <- freshVar "af"
-                let varTyp = TFun arg res
-                unify varTyp (TVar tv)
+                let varTyp = T.TFun arg res
+                unify varTyp (T.TVar tv)
                     & Infer.run & mapStateT assertSuccess
                 pure $ Val (plSameScope res) $ V.BApp $ V.Apply val $
                     Val (plSameScope arg) (V.BLeaf V.LHole)
@@ -484,13 +501,13 @@ applyForms empty val =
             freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
             scope = inferPl ^. Infer.plScope
             plSameScope t = (Infer.Payload t scope, empty)
-    TRecord{} | Lens.has ExprLens.valVar val ->
+    T.TRecord{} | Lens.has ExprLens.valVar val ->
         -- A "params record" (or just a let item which is a record..)
         pure val
     _ ->
-        val & Val.payload . _1 . Infer.plType %%~ orderType
-        <&> Suggest.fillHoles empty
-        >>= Suggest.valueConversion Load.nominal empty
+        val
+        & Suggest.fillHoles empty
+        & Suggest.valueConversion Load.nominal empty
         <&> mapStateT ListClass.fromList
         & lift & lift & join
     where
@@ -498,7 +515,7 @@ applyForms empty val =
 
 detachValIfNeeded ::
     Monad m =>
-    Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
+    T.Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
     StateT Infer.Context m (Val (Infer.Payload, (Maybe a, IsFragment)))
 detachValIfNeeded holeType val =
     do
@@ -513,7 +530,7 @@ detachValIfNeeded holeType val =
         liftInfer = stateEitherSequence . Infer.run
 
 detachVal ::
-    Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
+    T.Type -> Val (Infer.Payload, (Maybe a, IsFragment)) ->
     Update (Val (Infer.Payload, (Maybe a, IsFragment)))
 detachVal resultType val =
     update resultType <&> mk
@@ -524,7 +541,7 @@ detachVal resultType val =
         plSameScope typ = inferPl & Infer.plType .~ typ
         inferPl = val ^. Val.payload . _1
         func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
-        funcType = TFun (inferPl ^. Infer.plType) resultType
+        funcType = T.TFun (inferPl ^. Infer.plType) resultType
         emptyPl = (Nothing, NotFragment)
 
 emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
@@ -591,24 +608,6 @@ holeResultsEmplaceFragment rawFragmentExpr val =
             , (Just (pl ^. Input.stored . Property.pVal), IsFragment)
             )
         fragmentType = rawFragmentExpr ^. Val.payload . Input.inferredType
-
-mkHoleResultValFragment ::
-    Monad m =>
-    Input.Payload m dummy ->
-    Val (Type, Maybe (Input.Payload m a)) ->
-    StateT Infer.Context (T m) (HoleResultVal m IsFragment)
-mkHoleResultValFragment exprPl val =
-    val <&> onPl
-    & detachValIfNeeded (inferred ^. Infer.plType)
-    where
-        inferred = exprPl ^. Input.inferred
-        onPl (typ, mInputPl) =
-            ( inferred & Infer.plType .~ typ
-            , case mInputPl of
-              Nothing -> (Nothing, NotFragment)
-              Just inputPl ->
-                (inputPl ^. Input.stored & Property.value & Just, IsFragment)
-            )
 
 mkHoleResultVals ::
     Monad m =>

@@ -16,6 +16,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postProcessDef)
 import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -181,18 +182,23 @@ addActions exprPl body =
                 }
             }
 
-makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m Annotation
+makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =
-    Lens.view id
-    <&> \ctx ->
-    let mk res =
-            do
-                Map.null res & not & guard
-                res <&> ResultsProcess.addTypes (ctx ^. ConvertM.scNominalsMap) typ & Just
-    in  Annotation
-        { _aInferredType = typ
-        , _aMEvaluationResult =
-            payload ^. Input.evalResults <&> (^. Input.eResults) <&> mk
-        }
+    do
+        nominalsMap <- Lens.view ConvertM.scNominalsMap
+        let mk res
+                | Map.null res = Nothing
+                | otherwise =
+                    res <&> ResultsProcess.addTypes nominalsMap typ
+                        & Just
+        typS <- convertType (EntityId.ofTypeOf entityId) typ
+        pure Annotation
+            { _aInferredType = typS
+            , _aMEvaluationResult =
+                payload ^. Input.evalResults
+                <&> (^. Input.eResults)
+                <&> mk
+            }
     where
+        entityId = payload ^. Input.entityId
         typ = payload ^. Input.inferredType

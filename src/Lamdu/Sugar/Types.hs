@@ -16,11 +16,11 @@ module Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import           Data.UUID.Types (UUID)
-import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.Type as Exported
 import           Lamdu.Sugar.Types.Binder as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
@@ -30,20 +30,20 @@ import           Lamdu.Sugar.Types.Tag as Exported
 import           Lamdu.Prelude
 
 data DefinitionExpression name m expr = DefinitionExpression
-    { _deType :: Scheme
+    { _deType :: Scheme name
     , _dePresentationMode :: Maybe (m (Property m Meta.PresentationMode))
     , _deContent :: Binder name m expr
     } deriving (Functor, Foldable, Traversable)
 
-data DefinitionBuiltin m = DefinitionBuiltin
+data DefinitionBuiltin name m = DefinitionBuiltin
     { _biName :: Definition.FFIName
     , _biSetName :: Definition.FFIName -> m ()
-    , _biType :: Scheme
+    , _biType :: Scheme name
     }
 
 data DefinitionBody name m expr
     = DefinitionBodyExpression (DefinitionExpression name m expr)
-    | DefinitionBodyBuiltin (DefinitionBuiltin m)
+    | DefinitionBodyBuiltin (DefinitionBuiltin name m)
     deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition

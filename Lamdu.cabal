@@ -279,6 +279,7 @@ Library
                   , Lamdu.Sugar.Convert.TId
                   , Lamdu.Sugar.Convert.Tag
                   , Lamdu.Sugar.Convert.Text
+                  , Lamdu.Sugar.Convert.Type
                   , Lamdu.Sugar.EntityId
                   , Lamdu.Sugar.Parens
                   , Lamdu.Sugar.Lens
@@ -298,6 +299,7 @@ Library
                   , Lamdu.Sugar.Types.GetVar
                   , Lamdu.Sugar.Types.Hole
                   , Lamdu.Sugar.Types.Tag
+                  , Lamdu.Sugar.Types.Type
                   , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions

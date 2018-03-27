@@ -11,7 +11,6 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
@@ -69,9 +68,11 @@ type TM m = T (SM m)
 type OldExpression m a = Expression (OldName m) (TM m) a
 type NewExpression m a = Expression (NewName m) (TM m) a
 
-isFunctionType :: Type -> NameGen.VarInfo
-isFunctionType T.TFun {} = NameGen.Function
-isFunctionType _ = NameGen.NormalVar
+isFunctionType :: Sugar.Type name -> NameGen.VarInfo
+isFunctionType typ =
+    case typ ^. tBody of
+    Sugar.TFun {} -> NameGen.Function
+    _ -> NameGen.NormalVar
 
 toParamRef ::
     MonadNaming m =>
@@ -79,24 +80,65 @@ toParamRef ::
     m (ParamRef (NewName m) p)
 toParamRef = (pNameRef . nrName) (opGetName Nothing TaggedVar)
 
-binderVarType :: BinderVarForm t -> NameType
+binderVarType :: BinderVarForm name m -> NameType
 binderVarType GetLet = TaggedVar
 binderVarType (GetDefinition _) = GlobalDef
 
+toCompositeFields ::
+    MonadNaming m =>
+    CompositeFields p (OldName m) (Type (OldName m)) ->
+    m (CompositeFields p (NewName m) (Type (NewName m)))
+toCompositeFields =
+    compositeFields . traverse %%~ toField
+    where
+        toField (tag, typ) = (,) <$> toTagInfoOf Tag tag <*> toType typ
+
+toTId :: MonadNaming m => TId (OldName m) -> m (TId (NewName m))
+toTId = tidName %%~ opGetName Nothing TaggedNominal
+
+toTBody ::
+    MonadNaming m =>
+    TBody (OldName m) (Type (OldName m)) ->
+    m (TBody (NewName m) (Type (NewName m)))
+toTBody (TVar tv) = TVar tv & pure
+toTBody (TFun a b) = TFun <$> toType a <*> toType b
+toTBody (TInst tid params) = TInst <$> toTId tid <*> traverse toType params
+toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
+toTBody (TVariant composite) = TVariant <$> toCompositeFields composite
+
+toType :: MonadNaming m => Type (OldName m) -> m (Type (NewName m))
+toType = tBody %%~ toTBody
+
+toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
+toScheme (Scheme tvs cs typ) = Scheme tvs cs <$> toType typ
+
+toDefinitionOutdatedType ::
+    MonadNaming m =>
+    DefinitionOutdatedType (OldName m) p ->
+    m (DefinitionOutdatedType (NewName m) p)
+toDefinitionOutdatedType (DefinitionOutdatedType whenUsed current useCur) =
+    DefinitionOutdatedType <$> toScheme whenUsed <*> toScheme current ?? useCur
+
 toBinderVarRef ::
     MonadNaming m =>
-    BinderVarRef (OldName m) p ->
-    m (BinderVarRef (NewName m) p)
-toBinderVarRef binderVar =
-    (bvNameRef . nrName)
-    (opGetName Nothing (binderVarType (binderVar ^. bvForm))) binderVar
+    Maybe Disambiguator ->
+    BinderVarRef (OldName m) (TM m) ->
+    m (BinderVarRef (NewName m) (TM m))
+toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
+    BinderVarRef
+    <$> ( nrName %%~
+          opGetName mDisambig (binderVarType form)
+        ) nameRef
+    <*> (_GetDefinition . _DefTypeChanged %%~ toDefinitionOutdatedType) form
+    ?? var
+    ?? inline
 
 toGetVar ::
     MonadNaming m =>
-    GetVar (OldName m) p ->
-    m (GetVar (NewName m) p)
+    GetVar (OldName m) (TM m) ->
+    m (GetVar (NewName m) (TM m))
 toGetVar (GetParam x) = toParamRef x <&> GetParam
-toGetVar (GetBinder x) = toBinderVarRef x <&> GetBinder
+toGetVar (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
 toGetVar (GetParamsRecord x) =
     traverse (opGetName Nothing Tag) x <&> GetParamsRecord
 
@@ -105,6 +147,11 @@ toNodeActions ::
     NodeActions (OldName m) (TM m) ->
     m (NodeActions (NewName m) (TM m))
 toNodeActions = wrapInRecord toTagSelection
+
+toAnnotation :: MonadNaming m => Annotation (OldName m) -> m (Annotation (NewName m))
+toAnnotation (Annotation typ evalRes) =
+    (Annotation ?? evalRes)
+    <$> toType typ
 
 toLet ::
     MonadNaming m => (a -> m b) ->
@@ -115,6 +162,7 @@ toLet expr Let{..} =
         (_lName, _lBody) <-
             unCPS (withTag TaggedVar (isFunctionType (_lAnnotation ^. aInferredType)) _lName)
             (toBinderBody expr _lBody)
+        _lAnnotation <- toAnnotation _lAnnotation
         _lValue <- toBinder expr _lValue
         _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
@@ -214,10 +262,7 @@ toLabeledApply ::
     m (LabeledApply (NewName m) (TM m) b)
 toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
-    <$>
-    ( _aFunc & bvNameRef . nrName %%~
-        opGetName (Just (funcSignature app)) TaggedVar
-    )
+    <$> toBinderVarRef (Just (funcSignature app)) _aFunc
     <*> pure _aSpecialArgs
     <*> (traverse . aaTag) (toTagInfoOf Tag) _aAnnotatedArgs
     <*> traverse toRelayedArg _aRelayedArgs
@@ -316,7 +361,6 @@ toBody expr = \case
     BodyPlaceHolder    -> pure BodyPlaceHolder
     where
         toTag = toTagOf Tag
-        toTId = tidName %%~ opGetName Nothing TaggedNominal
 
 funcSignature :: LabeledApply name binderVar a -> FunctionSignature
 funcSignature apply =
@@ -325,20 +369,38 @@ funcSignature apply =
     , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 
+toPayload ::
+    MonadNaming m => Payload (OldName m) (TM m) a ->
+    m (Payload (NewName m) (TM m) a)
+toPayload Payload{..} =
+    do
+        _plAnnotation <- toAnnotation _plAnnotation
+        _plActions <- toNodeActions _plActions
+        pure Payload{..}
+
 toExpression :: MonadNaming m => OldExpression m a -> m (NewExpression m a)
 toExpression (Expression body pl) =
     Expression
     <$> toBody toExpression body
-    <*> plActions toNodeActions pl
+    <*> toPayload pl
 
-withParam ::
-    MonadNaming m => FuncParam (ParamInfo (OldName m) (TM m)) ->
-    CPS m (FuncParam (ParamInfo (NewName m) (TM m)))
-withParam (FuncParam ann (ParamInfo tag fpActions)) =
+withParamInfo ::
+    MonadNaming m =>
+    NameGen.VarInfo -> ParamInfo (OldName m) (TM m) ->
+    CPS m (ParamInfo (NewName m) (TM m))
+withParamInfo varInfo (ParamInfo tag fpActions) =
     ParamInfo
     <$> withTag TaggedVar varInfo tag
     <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagSelection fpActions)
-    <&> FuncParam ann
+
+withFuncParam ::
+    MonadNaming m =>
+    (NameGen.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) a ->
+    CPS m (FuncParam (NewName m) b)
+withFuncParam f (FuncParam ann info) =
+    FuncParam
+    <$> liftCPS (toAnnotation ann)
+    <*> f varInfo info
     where
         varInfo = ann ^. aInferredType & isFunctionType
 
@@ -347,18 +409,27 @@ withBinderParams ::
     BinderParams (OldName m) (TM m) ->
     CPS m (BinderParams (NewName m) (TM m))
 withBinderParams BinderWithoutParams = pure BinderWithoutParams
-withBinderParams (NullParam a) = pure (NullParam a)
-withBinderParams (Params xs) = traverse withParam xs <&> Params
+withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
+withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
+
+toDefExpr ::
+    MonadNaming m => (a -> m b) ->
+    DefinitionExpression (OldName m) (TM m) a ->
+    m (DefinitionExpression (NewName m) (TM m) b)
+toDefExpr f (DefinitionExpression typ presMode content) =
+    DefinitionExpression
+    <$> toScheme typ
+    <*> pure presMode
+    <*> toBinder f content
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->
     DefinitionBody (OldName m) (TM m) a ->
     m (DefinitionBody (NewName m) (TM m) b)
-toDefinitionBody _ (DefinitionBodyBuiltin bi) = pure (DefinitionBodyBuiltin bi)
-toDefinitionBody f (DefinitionBodyExpression (DefinitionExpression typeInfo presMode content)) =
-     toBinder f content
-     <&> DefinitionExpression typeInfo presMode
-     <&> DefinitionBodyExpression
+toDefinitionBody _ (DefinitionBodyBuiltin bi) =
+    bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
+toDefinitionBody f (DefinitionBodyExpression expr) =
+    toDefExpr f expr <&> DefinitionBodyExpression
 
 toDef ::
     MonadNaming m => (a -> m b) ->

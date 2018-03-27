@@ -8,6 +8,8 @@ module Lamdu.Sugar.Internal.EntityId
     , ofTaggedEntity
     , ofTId
     , randomizeExprAndParams
+    , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
+    , usedTypeOf, currentTypeOf
     ) where
 
 import           Data.Binary.Utils (encodeS)
@@ -40,17 +42,20 @@ randomizeExprAndParams gen =
 augment :: ByteString -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ UUIDUtils.augment str x
 
+fromUniqueId :: UniqueId.ToUUID a => a -> EntityId
+fromUniqueId = EntityId . UniqueId.toUUID
+
 ofIRef :: IRef m a -> EntityId
-ofIRef = EntityId . UniqueId.toUUID
+ofIRef = fromUniqueId
 
 ofValI :: ExprIRef.ValI m -> EntityId
-ofValI = ofIRef . ExprIRef.unValI
+ofValI = fromUniqueId
 
 ofTId :: T.NominalId -> EntityId
-ofTId = EntityId . UniqueId.toUUID
+ofTId = fromUniqueId
 
 ofBinder :: V.Var -> EntityId
-ofBinder = EntityId . UniqueId.toUUID
+ofBinder = fromUniqueId
 
 -- For tag instance entity id
 ofTaggedEntity :: UniqueId.ToUUID a => a -> T.Tag -> EntityId
@@ -60,3 +65,24 @@ ofTaggedEntity v p =
 -- For tag instance entity id
 ofTag :: EntityId -> T.Tag -> EntityId
 ofTag entityId tag = augment (encodeS tag) entityId
+
+ofTypeOf :: EntityId -> EntityId
+ofTypeOf = augment "typeOf"
+
+ofRestOfComposite :: EntityId -> EntityId
+ofRestOfComposite = augment "restOfComposite"
+
+ofFunParam :: EntityId -> EntityId
+ofFunParam = augment "TFunParam"
+
+ofFunResult :: EntityId -> EntityId
+ofFunResult = augment "TFunResult"
+
+ofTInstParam :: T.ParamId -> EntityId -> EntityId
+ofTInstParam p (EntityId uuid) = EntityId $ UUIDUtils.combine (UniqueId.toUUID p) uuid
+
+currentTypeOf :: EntityId -> EntityId
+currentTypeOf = ofTypeOf
+
+usedTypeOf :: EntityId -> EntityId
+usedTypeOf = augment "usedTypeOf"

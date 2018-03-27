@@ -15,7 +15,7 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import           Lamdu.Calc.Type.Scheme (schemeType)
+import qualified Lamdu.Calc.Type.Scheme as CalcScheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -71,7 +71,7 @@ validateDefParamsMatchArgs var record frozenDeps =
         defArgs <-
             frozenDeps ^? Property.pVal
                 . Infer.depsGlobalTypes . Lens.at var . Lens._Just
-                . schemeType . T._TFun . _1 . T._TRecord
+                . CalcScheme.schemeType . T._TFun . _1 . T._TRecord
             & maybeToMPlus
         let flatArgs = FlatComposite.fromComposite defArgs
         flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus

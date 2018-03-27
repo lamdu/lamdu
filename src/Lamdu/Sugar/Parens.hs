@@ -66,8 +66,8 @@ precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
         (else_ ?? Just 0 ?? unambiguous)
     )
 
-binderName :: Lens (BinderVarRef namea m) (BinderVarRef nameb m) namea nameb
-binderName = bvNameRef . nrName
+binderName :: BinderVarRef name m -> name
+binderName x = x ^. bvNameRef . nrName
 
 precedenceOfLabeledApply ::
     HasPrecedence name =>
@@ -87,7 +87,7 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
             appendOpPrec
                 | notBoxed = prec+1
                 | otherwise = 0
-            prec = func ^. binderName & precedence
+            prec = binderName func & precedence
     Object arg | notBoxed ->
         ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
         , LabeledApply func (Object (arg (Just 13) (Precedence (Just 13) Nothing)))

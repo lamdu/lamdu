@@ -9,7 +9,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (evalStateT, runStateT)
 import           Control.Monad.Transaction (transaction)
 import qualified Data.Property as Property
-import           Lamdu.Calc.Type (Type)
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -63,7 +63,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
             exprPl (sugg <&> _1 %~ (^. Infer.plType))
 
-checkTypeMatch :: Monad m => Type -> Type -> ConvertM m Bool
+checkTypeMatch :: Monad m => T.Type -> T.Type -> ConvertM m Bool
 checkTypeMatch x y =
     Lens.view ConvertM.scInferContext
     <&> evalStateT (Infer.run (unify x y))

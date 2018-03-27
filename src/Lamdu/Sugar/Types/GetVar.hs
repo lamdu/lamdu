@@ -13,9 +13,9 @@ module Lamdu.Sugar.Types.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
@@ -33,20 +33,20 @@ data ParamRef name m = ParamRef
     , _pBinderMode :: BinderMode
     }
 
-data DefinitionOutdatedType a = DefinitionOutdatedType
-    { _defTypeWhenUsed :: Scheme
-    , _defTypeCurrent :: Scheme
+data DefinitionOutdatedType name a = DefinitionOutdatedType
+    { _defTypeWhenUsed :: Scheme name
+    , _defTypeCurrent :: Scheme name
     , _defTypeUseCurrent :: a
     } deriving (Functor, Foldable, Traversable)
-instance Show (DefinitionOutdatedType m) where
+instance Show name => Show (DefinitionOutdatedType name a) where
     show (DefinitionOutdatedType usedType newType _) =
         "(Used @type: " ++ show usedType ++ " now type: " ++ show newType ++ ")"
 
-data DefinitionForm m =
-    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType (m EntityId))
+data DefinitionForm name m =
+    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType name (m EntityId))
     deriving Show
 
-data BinderVarForm m = GetDefinition (DefinitionForm m) | GetLet deriving Show
+data BinderVarForm name m = GetDefinition (DefinitionForm name m) | GetLet deriving Show
 
 data BinderVarInline m
     = InlineVar (m EntityId)
@@ -55,7 +55,7 @@ data BinderVarInline m
 
 data BinderVarRef name m = BinderVarRef
     { _bvNameRef :: NameRef name m
-    , _bvForm :: BinderVarForm m
+    , _bvForm :: BinderVarForm name m
     , _bvVar :: V.Var
     , -- Just means it is stored and inlinable:
       _bvInline :: BinderVarInline m

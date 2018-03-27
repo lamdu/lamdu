@@ -31,25 +31,24 @@ module Lamdu.Sugar.Types.Expression
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fAttach, fOptions
     , Attach(..), _AttachAction, _AttachTypeMismatch
-    , TId(..), tidName, tidTId
     , Lambda(..), lamBinder, lamMode
     , V.Apply(..), V.applyFunc, V.applyArg
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
 import           Lamdu.Sugar.Types.Tag
+import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
 data Payload name m a = Payload
-    { _plAnnotation :: Annotation
+    { _plAnnotation :: Annotation name
     , _plActions :: NodeActions name m
     , _plEntityId :: EntityId
     , _plData :: a
@@ -63,11 +62,6 @@ data Expression name m a = Expression
     } deriving (Functor, Foldable, Traversable)
 instance (Show name, Show a) => Show (Expression name m a) where
     show (Expression body pl) = show body ++ "{" ++ show pl ++ "}"
-
-data TId name = TId
-    { _tidName :: name
-    , _tidTId :: T.NominalId
-    }
 
 {- Composites start -}
 data CompositeItem name m expr = CompositeItem
@@ -244,7 +238,6 @@ Lens.makeLenses ''Nominal
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg
-Lens.makeLenses ''TId
 Lens.makePrisms ''Attach
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind

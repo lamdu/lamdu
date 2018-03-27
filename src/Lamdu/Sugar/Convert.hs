@@ -5,15 +5,15 @@ module Lamdu.Sugar.Convert
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
+import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Utils (insertAt, removeAt)
 import qualified Data.Map as Map
 import           Data.Property (Property(Property), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (Scheme, schemeType)
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
@@ -33,6 +33,7 @@ import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), Recursiv
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.PostProcess (postProcessDef, postProcessExpr)
 import           Lamdu.Sugar.Convert.Tag (convertTaggedEntityWith)
+import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
@@ -46,15 +47,19 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertDefIBuiltin ::
-    Monad m => Scheme -> Definition.FFIName -> DefI m ->
-    DefinitionBody InternalName (T m) (ExpressionU m [EntityId])
+    (MonadTransaction n m, Monad f) =>
+    Scheme.Scheme -> Definition.FFIName -> DefI f ->
+    m (DefinitionBody InternalName (T f) (ExpressionU f [EntityId]))
 convertDefIBuiltin scheme name defI =
+    ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
+    <&> \typeS ->
     DefinitionBodyBuiltin DefinitionBuiltin
     { _biName = name
     , _biSetName = setName
-    , _biType = scheme
+    , _biType = typeS
     }
     where
+        entityId = ExprIRef.globalId defI & EntityId.ofBinder
         setName newName =
             Transaction.writeIRef defI
             Definition.Definition
@@ -74,7 +79,7 @@ emptyScopeInfo recursiveRef =
     }
 
 makeNominalsMap ::
-    Monad m => Val (Input.Payload m a) -> T m (Map T.NominalId N.Nominal)
+    Monad m => Val (Input.Payload m a) -> T m (Map NominalId N.Nominal)
 makeNominalsMap val =
     mapM_ loadForType (val ^.. Lens.traverse . Input.inferred . Infer.plType)
     & (`State.execStateT` mempty)
@@ -87,7 +92,8 @@ makeNominalsMap val =
                     do
                         nom <- ExprLoad.nominal tid & lift
                         Map.insert tid nom loaded & State.put
-                        nom ^.. N.nomType . N._NominalType . schemeType & traverse_ loadForType
+                        nom ^.. N.nomType . N._NominalType . Scheme.schemeType
+                            & traverse_ loadForType
 
 canInlineDefinition :: Val (Input.Payload m [EntityId]) -> Set V.Var -> V.Var -> EntityId -> Bool
 canInlineDefinition defExpr recursiveVars var entityId =
@@ -98,7 +104,7 @@ canInlineDefinition defExpr recursiveVars var entityId =
 convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
+    Scheme.Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
@@ -106,7 +112,8 @@ convertInferDefExpr evalRes cp defType defExpr defI =
             Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <-
-            OutdatedDefs.scan defExpr setDefExpr (postProcessDef defI)
+            OutdatedDefs.scan entityId defExpr setDefExpr
+            (postProcessDef defI)
             <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcessDef defI)
         let context =
                 Context
@@ -131,6 +138,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
+        entityId = EntityId.ofBinder defVar
         defVar = ExprIRef.globalId defI
         setDefExpr x =
             Definition.Definition (Definition.BodyExpr x) defType ()
@@ -148,7 +156,7 @@ convertDefBody ::
 convertDefBody evalRes cp (Definition.Definition body defType defI) =
     case body of
     Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
-    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & pure
+    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
 convertExpr ::
     Monad m =>
@@ -158,10 +166,11 @@ convertExpr ::
 convertExpr evalRes cp prop =
     do
         defExpr <- ExprLoad.defExprProperty prop
+        entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
         (valInferred, newInferContext) <-
             Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
-        outdatedDefinitions <- OutdatedDefs.scan defExpr (Property.setP prop) (postProcessExpr prop)
+        outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) (postProcessExpr prop)
         let context =
                 Context
                 { _scInferContext = newInferContext

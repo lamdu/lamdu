@@ -57,7 +57,7 @@ addAltId = (`Widget.joinId` ["add alt"])
 make ::
     Monad m =>
     Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do

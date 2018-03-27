@@ -21,6 +21,7 @@ import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -38,7 +39,7 @@ parentExprFDConfig config = FocusDelegator.Config
 
 stdWrap ::
     (Monad m, Applicative f) =>
-    Sugar.Payload name f ExprGui.Payload ->
+    Sugar.Payload (Name g) f ExprGui.Payload ->
     ExprGuiM m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 stdWrap pl =
     maybeAddAnnotationPl pl
@@ -57,7 +58,7 @@ parentDelegator myId =
 
 stdWrapParentExpr ::
     Monad m =>
-    Sugar.Payload name (T m) ExprGui.Payload ->
+    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m) -> ExpressionGui (T m))
 stdWrapParentExpr pl =
     (.)

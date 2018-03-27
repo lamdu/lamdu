@@ -2,16 +2,15 @@ module Lamdu.Sugar.Convert.TId
     ( convert
     ) where
 
-import           Control.Monad.Transaction (getP)
+import           Control.Monad.Transaction (MonadTransaction, getP)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convert :: Monad m => T.NominalId -> ConvertM m (TId InternalName)
+convert :: MonadTransaction n m => T.NominalId -> m (TId InternalName)
 convert tid =
     Anchors.assocTag tid & getP
     <&> \tag ->
