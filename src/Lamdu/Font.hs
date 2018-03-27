@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, CPP #-}
 module Lamdu.Font
     ( FontSize, Fonts(..)
     , LCDSubPixelEnabled(..), new
-    , lfontDefault, lfontHelp, lfontLiteralText, lfontAutoName, lfontLiteralBytes, lfontBinders
+    , fontDefault, fontHelp, fontLiteralText, fontAutoName, fontLiteralBytes, fontBinders
     , Font.height
     ) where
 
@@ -10,10 +10,14 @@ import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Typeable (Typeable)
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory
+#ifndef NO_CODE
+import           Data.Aeson.Utils (removePrefix, decapitalize)
+#endif
 
 import           Lamdu.Prelude
 
@@ -21,24 +25,20 @@ newtype MissingFont = MissingFont FilePath deriving (Show, Typeable)
 instance E.Exception MissingFont
 
 data Fonts a = Fonts
-    { fontDefault :: a
-    , fontHelp :: a
-    , fontLiteralText :: a
-    , fontLiteralBytes :: a
-    , fontAutoName :: a
-    , fontBinders :: a
+    { _fontDefault :: a
+    , _fontHelp :: a
+    , _fontLiteralText :: a
+    , _fontLiteralBytes :: a
+    , _fontAutoName :: a
+    , _fontBinders :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
-deriveJSON defaultOptions ''Fonts
-
-Lens.makeLensesFor
-    [ ("fontDefault"     , "lfontDefault"     )
-    , ("fontHelp"        , "lfontHelp"        )
-    , ("fontAutoName"    , "lfontAutoName"    )
-    , ("fontBinders"     , "lfontBinders"     )
-    , ("fontLiteralText" , "lfontLiteralText" )
-    , ("fontLiteralBytes", "lfontLiteralBytes")
-    ]
+deriveJSON
+    defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_font"}
+#endif
     ''Fonts
+Lens.makeLenses ''Fonts
 
 type FontSize = Float
 

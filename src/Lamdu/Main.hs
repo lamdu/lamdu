@@ -298,7 +298,7 @@ assignFontSizes :: Theme -> Fonts FilePath -> Fonts (FontSize, FilePath)
 assignFontSizes theme fonts =
     fonts
     <&> (,) baseTextSize
-    & Font.lfontHelp . _1 .~ helpTextSize
+    & Font.fontHelp . _1 .~ helpTextSize
     where
         baseTextSize = Theme.baseTextSize theme
         helpTextSize = Theme.helpTextSize (Theme.help theme)
@@ -344,8 +344,8 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                 \zoom -> do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts zoom sample
-                    let height = fontDefault fonts & Font.height
-                    Style.mainLoopConfig height (Font.fontHelp fonts)
+                    let height = fonts ^. Font.fontDefault & Font.height
+                    Style.mainLoopConfig height (fonts ^. Font.fontHelp)
                         (sample ^. sConfig) (sample ^. sTheme)
                         & pure
             , tickHandler =
@@ -365,7 +365,7 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                   do
                       sample <- ConfigSampler.getSample configSampler
                       if sample ^. sConfig . Config.debug . Config.debugShowFPS
-                          then getFonts zoom sample <&> fontDefault <&> Just
+                          then getFonts zoom sample <&> (^. Font.fontDefault) <&> Just
                           else pure Nothing
                 , virtualCursorColor =
                     ConfigSampler.getSample configSampler

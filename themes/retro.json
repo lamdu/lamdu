@@ -2,12 +2,12 @@
     "animationTimePeriodSec": 0,
     "animationRemainInPeriod": 0.2,
     "fonts": {
-        "fontDefault"     : "fonts/DejaVuSansMono.ttf",
-        "fontHelp"        : "fonts/DejaVuSansMono.ttf",
-        "fontAutoName"    : "fonts/DejaVuSansMono.ttf",
-        "fontBinders"     : "fonts/DejaVuSansMono.ttf",
-        "fontLiteralText" : "fonts/DejaVuSansMono.ttf",
-        "fontLiteralBytes": "fonts/DejaVuSansMono.ttf"
+        "default"     : "fonts/DejaVuSansMono.ttf",
+        "help"        : "fonts/DejaVuSansMono.ttf",
+        "autoName"    : "fonts/DejaVuSansMono.ttf",
+        "binders"     : "fonts/DejaVuSansMono.ttf",
+        "literalText" : "fonts/DejaVuSansMono.ttf",
+        "literalBytes": "fonts/DejaVuSansMono.ttf"
     },
     "stdSpacing": [1.0, 0.1],
     "baseTextSize": 16,

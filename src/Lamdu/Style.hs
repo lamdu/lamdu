@@ -25,7 +25,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Font (Fonts(..))
-import qualified Lamdu.Font as Fonts
+import qualified Lamdu.Font as Font
 
 import           Lamdu.Prelude
 
@@ -71,17 +71,17 @@ makeStyle :: TextColors -> Fonts Font -> Style
 makeStyle config fonts =
     Style
     { _styleBase =
-      textEdit (TextColors.baseColor config) (Fonts.fontDefault fonts)
+      textEdit (TextColors.baseColor config) (fonts ^. Font.fontDefault)
     , _styleAutoNameOrigin =
-      textEdit (TextColors.baseColor config) (Fonts.fontAutoName fonts)
+      textEdit (TextColors.baseColor config) (fonts ^. Font.fontAutoName)
     , _styleNameAtBinder =
-      textEdit (TextColors.baseColor config) (Fonts.fontBinders fonts)
+      textEdit (TextColors.baseColor config) (fonts ^. Font.fontBinders)
     , _styleBytes =
-      textEdit (TextColors.literalColor config) (Fonts.fontLiteralBytes fonts)
+      textEdit (TextColors.literalColor config) (fonts ^. Font.fontLiteralBytes)
     , _styleText =
-      textEdit (TextColors.literalColor config) (Fonts.fontLiteralText fonts)
+      textEdit (TextColors.literalColor config) (fonts ^. Font.fontLiteralText)
     , _styleNum =
-      textEdit (TextColors.literalColor config) (Fonts.fontDefault fonts)
+      textEdit (TextColors.literalColor config) (fonts ^. Font.fontDefault)
     }
 
 mainLoopConfig :: Draw.R -> Font -> Config -> Theme -> MainLoop.Config
