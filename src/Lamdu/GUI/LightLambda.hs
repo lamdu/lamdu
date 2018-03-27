@@ -12,6 +12,6 @@ import           Lamdu.Prelude
 underline :: Theme -> Underline
 underline theme =
     Underline
-    { _underlineColor = TextColors.lightLambdaUnderlineColor (theme ^. Theme.textColors)
+    { _underlineColor = theme ^. Theme.textColors . TextColors.lightLambdaUnderlineColor
     , _underlineWidth = theme ^. Theme.wideUnderlineWidth
     }

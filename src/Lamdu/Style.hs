@@ -56,31 +56,24 @@ helpStyle font helpKeys theme =
     , EventMapHelp._configTint = theme ^. Theme.helpTint
     }
 
-textEdit :: Draw.Color -> Font -> TextEdit.Style
-textEdit color font =
-    TextEdit.defaultStyle
-    TextView.Style
-    { TextView._styleColor = color
-    , TextView._styleFont = font
-    , TextView._styleUnderline = Nothing
-    }
-
 makeStyle :: TextColors -> Fonts Font -> Style
 makeStyle config fonts =
     Style
-    { _styleBase =
-      textEdit (TextColors.baseColor config) (fonts ^. Font.fontDefault)
-    , _styleAutoNameOrigin =
-      textEdit (TextColors.baseColor config) (fonts ^. Font.fontAutoName)
-    , _styleNameAtBinder =
-      textEdit (TextColors.baseColor config) (fonts ^. Font.fontBinders)
-    , _styleBytes =
-      textEdit (TextColors.literalColor config) (fonts ^. Font.fontLiteralBytes)
-    , _styleText =
-      textEdit (TextColors.literalColor config) (fonts ^. Font.fontLiteralText)
-    , _styleNum =
-      textEdit (TextColors.literalColor config) (fonts ^. Font.fontDefault)
+    { _styleBase           = textEdit TextColors.baseColor    Font.fontDefault
+    , _styleAutoNameOrigin = textEdit TextColors.baseColor    Font.fontAutoName
+    , _styleNameAtBinder   = textEdit TextColors.baseColor    Font.fontBinders
+    , _styleBytes          = textEdit TextColors.literalColor Font.fontLiteralBytes
+    , _styleText           = textEdit TextColors.literalColor Font.fontLiteralText
+    , _styleNum            = textEdit TextColors.literalColor Font.fontDefault
     }
+    where
+        textEdit color font =
+            TextEdit.defaultStyle
+            TextView.Style
+            { TextView._styleColor = config ^. color
+            , TextView._styleFont = fonts ^. font
+            , TextView._styleUnderline = Nothing
+            }
 
 mainLoopConfig :: Draw.R -> Font -> Config -> Theme -> MainLoop.Config
 mainLoopConfig fontHeight helpFont config theme =

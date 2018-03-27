@@ -136,7 +136,7 @@ definitionTypeChangeBox ::
 definitionTypeChangeBox info getVarId =
     do
         infoColor <-
-            Lens.view (Theme.theme . Theme.textColors) <&> TextColors.infoTextColor
+            Lens.view (Theme.theme . Theme.textColors . TextColors.infoTextColor)
         let infoLabel text =
                 TextView.makeLabel text & Reader.local (TextView.color .~ infoColor)
         updateLabel <- Styled.actionable myId "Update" updateDoc update
@@ -208,7 +208,7 @@ makeGetBinder binderVar myId =
                     , processDefinitionWidget defForm myId
                     )
         makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor color
+            <&> Lens.mapped %~ Styled.withColor (Lens.cloneLens color)
             & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))

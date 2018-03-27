@@ -214,7 +214,7 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
 separationBar :: TextColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
-    & Element.tint (TextColors.recordTailColor theme)
+    & Element.tint (theme ^. TextColors.recordTailColor)
     & Element.scale (Vector2 width 10)
 
 makeOpenRecord ::

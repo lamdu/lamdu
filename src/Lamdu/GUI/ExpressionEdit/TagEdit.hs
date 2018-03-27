@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts, ConstraintKinds, RankNTypes #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeVariantTag, makeTagView
     , makeParamTag, addParamId
@@ -420,7 +420,7 @@ addParamId = (`Widget.joinId` ["add param"])
 makeLHSTag ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env, HasStyle env) =>
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
-    (TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    Lens.Getter TextColors Draw.Color -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeLHSTag onPickNext color tag =
     do
@@ -476,7 +476,7 @@ makeBinderTagEdit ::
     , Hover.HasStyle env, Menu.HasConfig env
     , MonadTransaction f m
     ) =>
-    (TextColors -> Draw.Color) -> Sugar.Tag (Name (T f)) (T f) ->
+    Lens.Getter TextColors Draw.Color -> Sugar.Tag (Name (T f)) (T f) ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeBinderTagEdit color tag =
     makeLHSTag defaultOnPickNext color tag

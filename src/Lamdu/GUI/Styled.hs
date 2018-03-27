@@ -110,10 +110,10 @@ addDeletionDiagonal =
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
-    (TextColors -> Draw.Color) -> m a -> m a
+    Lens.Getter TextColors Draw.Color -> m a -> m a
 withColor textColor act =
     do
-        color <- Lens.view (Theme.theme . Theme.textColors) <&> textColor
+        color <- Lens.view (Theme.theme . Theme.textColors . textColor)
         Reader.local (TextView.color .~ color) act
 
 actionable ::
@@ -125,7 +125,7 @@ actionable ::
     m (WithTextPos (Widget (f GuiState.Update)))
 actionable myId text doc action =
     do
-        color <- Lens.view (Theme.theme . Theme.textColors) <&> TextColors.actionTextColor
+        color <- Lens.view (Theme.theme . Theme.textColors . TextColors.actionTextColor)
         underlineWidth <- Lens.view (Theme.theme . Theme.narrowUnderlineWidth)
         let underline =
                 Font.Underline
@@ -142,10 +142,10 @@ actionable myId text doc action =
 
 nameAtBinder ::
     (MonadReader env m, HasTheme env, Style.HasStyle env) =>
-    (TextColors -> Draw.Color) -> Name n -> m b -> m b
+    Lens.Getter TextColors Draw.Color -> Name n -> m b -> m b
 nameAtBinder nameColor name act =
     do
-        color <- Lens.view (theme . Theme.textColors) <&> nameColor
+        color <- Lens.view (theme . Theme.textColors . nameColor)
         style <- Lens.view Style.style
         let textEditStyle =
                 style

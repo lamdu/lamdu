@@ -196,7 +196,7 @@ makeAddAltRow addAlt myId =
 separationBar :: TextColors -> Widget.R -> Anim.AnimId -> View
 separationBar theme width animId =
     View.unitSquare (animId <> ["tailsep"])
-    & Element.tint (TextColors.caseTailColor theme)
+    & Element.tint (theme ^. TextColors.caseTailColor)
     & Element.scale (Vector2 width 10)
 
 makeOpenCase ::

@@ -73,10 +73,10 @@ make def myId =
     do
         colors <- Lens.view (Theme.theme . Theme.textColors)
         moduleName <-
-            makeNamePartEditor (TextColors.foreignModuleColor colors)
+            makeNamePartEditor (colors ^. TextColors.foreignModuleColor)
             modulePathStr modulePathSetter (builtinFFIPath myId)
         varName <-
-            makeNamePartEditor (TextColors.foreignVarColor colors) name nameSetter
+            makeNamePartEditor (colors ^. TextColors.foreignVarColor) name nameSetter
             (builtinFFIName myId)
         dot <- TextView.makeLabel "."
         moduleName /|/ dot /|/ varName & pure
