@@ -154,7 +154,7 @@ makeEvaluationResultView res =
             <&>
             case erdSource res of
             Current -> id
-            Prev -> Element.tint (Theme.staleResultTint (Theme.eval th))
+            Prev -> Element.tint (Theme.eval th ^. Theme.staleResultTint)
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -184,8 +184,8 @@ makeEvalView mNeighbours evalRes =
                 & Reader.local (Element.animIdPrefix <>~ animIdSuffix res)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
-                <&> Lens.mapped %~ Element.scale (Theme.neighborsScaleFactor evalTheme)
-                <&> Lens.mapped %~ Element.pad (Theme.neighborsPadding evalTheme)
+                <&> Lens.mapped %~ Element.scale (evalTheme ^. Theme.neighborsScaleFactor)
+                <&> Lens.mapped %~ Element.pad (evalTheme ^. Theme.neighborsPadding)
                 <&> fromMaybe Element.empty
         (prev, next) <-
             case mNeighbours of

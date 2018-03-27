@@ -4,7 +4,8 @@
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
     , Hole(..), holeResultPadding, holeSearchTermBGColor, holeActiveSearchTermBGColor
-    , Eval(..), ToolTip(..), StatusBar(..)
+    , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
+    , ToolTip(..), StatusBar(..)
     , Theme(..), stdSpacing, menu, versionControl
     , HasTheme(..)
     ) where
@@ -60,11 +61,17 @@ deriveJSON Aeson.defaultOptions
 Lens.makeLenses ''Hole
 
 data Eval = Eval
-    { neighborsScaleFactor :: Vector2 Double
-    , neighborsPadding :: Vector2 Double
-    , staleResultTint :: Draw.Color
+    { _neighborsScaleFactor :: Vector2 Double
+    , _neighborsPadding :: Vector2 Double
+    , _staleResultTint :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions ''Eval
+deriveJSON Aeson.defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removePrefix "_"}
+#endif
+    ''Eval
+
+Lens.makeLenses ''Eval
 
 data ToolTip = ToolTip
     { tooltipFgColor :: Draw.Color
