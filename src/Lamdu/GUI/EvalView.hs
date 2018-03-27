@@ -262,7 +262,7 @@ depthCounts v =
 make :: MonadExprGui m => Val Type -> m (WithTextPos View)
 make v =
     do
-        maxEvalViewSize <- Lens.view Theme.theme <&> Theme.maxEvalViewSize
+        maxEvalViewSize <- Lens.view (Theme.theme . Theme.maxEvalViewSize)
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
                 & takeWhile (< maxEvalViewSize) & length

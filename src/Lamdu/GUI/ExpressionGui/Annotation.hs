@@ -60,7 +60,7 @@ addAnnotationBackgroundH getColor =
     do
         t <- Lens.view theme
         bgAnimId <- Element.subAnimId ["annotation background"]
-        Draw.backgroundColor bgAnimId (getColor (Theme.valAnnotation t)) & pure
+        Draw.backgroundColor bgAnimId (getColor (t ^. Theme.valAnnotation)) & pure
 
 addAnnotationBackground ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
@@ -113,7 +113,7 @@ processAnnotationGui ::
     m (Widget.R -> View -> View)
 processAnnotationGui wideAnnotationBehavior =
     f
-    <$> (Lens.view theme <&> Theme.valAnnotation)
+    <$> Lens.view (theme . Theme.valAnnotation)
     <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
     <*> applyWideAnnotationBehavior wideAnnotationBehavior
@@ -154,7 +154,7 @@ makeEvaluationResultView res =
             <&>
             case erdSource res of
             Current -> id
-            Prev -> Element.tint (Theme.eval th ^. Theme.staleResultTint)
+            Prev -> Element.tint (th ^. Theme.eval . Theme.staleResultTint)
 
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
@@ -167,7 +167,7 @@ makeEvalView ::
     ExprGuiM m (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
-        evalTheme <- Lens.view theme <&> Theme.eval
+        evalTheme <- Lens.view (theme . Theme.eval)
         let animIdSuffix res =
                 -- When we can scroll between eval view results we
                 -- must encode the scope into the anim ID for smooth
@@ -207,8 +207,7 @@ makeEvalView mNeighbours evalRes =
 annotationSpacer ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) => m View
 annotationSpacer =
-    Lens.view Theme.theme
-    <&> Theme.valAnnotation
+    Lens.view (Theme.theme . Theme.valAnnotation)
     <&> ValAnnotation.valAnnotationSpacing
     >>= Spacer.vspaceLines
 

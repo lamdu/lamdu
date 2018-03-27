@@ -1,7 +1,10 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts, DisambiguateRecordFields #-}
 
 module GUI.Momentu.Widgets.Menu
-    ( Style(..), Keys(..), Config(..), HasConfig(..)
+    ( Style(..), submenuSymbolColorUnselected, submenuSymbolColorSelected
+    , Keys(..), keysPickOption, keysPickOptionAndGotoNext
+    , Config(..), configStyle, configKeys
+    , HasConfig(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
     , PickResult(..), pickDest, pickNextEntryPoint
@@ -18,6 +21,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
 import           GUI.Momentu.Align (WithTextPos, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -36,31 +40,52 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
+#ifndef NO_CODE
+import           Data.Aeson.Utils (removePrefix)
+#endif
 
 import           Lamdu.Prelude
 
 data Style = Style
-    { submenuSymbolColorUnselected :: Draw.Color
-    , submenuSymbolColorSelected :: Draw.Color
+    { _submenuSymbolColorUnselected :: Draw.Color
+    , _submenuSymbolColorSelected :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Style
+deriveJSON defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removePrefix "_"}
+#endif
+    ''Style
+
+Lens.makeLenses ''Style
 
 data Keys = Keys
-    { keysPickOption :: [MetaKey]
+    { _keysPickOption :: [MetaKey]
         -- ^ Pick option and stay on its dest
-    , keysPickOptionAndGotoNext :: [MetaKey]
+    , _keysPickOptionAndGotoNext :: [MetaKey]
         -- ^ Pick option and goto the next "entry point" (see below)
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Keys
+deriveJSON defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removePrefix "_"}
+#endif
+    ''Keys
+
+Lens.makeLenses ''Keys
 
 class HasConfig env where config :: Lens' env Config
 instance HasConfig Config where config = id
 
 data Config = Config
-    { configStyle :: Style
-    , configKeys :: Keys
+    { _configStyle :: Style
+    , _configKeys :: Keys
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Config
+deriveJSON defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removePrefix "_"}
+#endif
+    ''Config
+
+Lens.makeLenses ''Config
 
 -- | Menu supports picking results and setting cursor directly to it
 -- (return), or picking and going to the next "entry point" (space).
@@ -165,7 +190,7 @@ makeSubmenuSymbol ::
     Bool -> m (WithTextPos View)
 makeSubmenuSymbol isSelected =
     do
-        color <- Lens.view config <&> configStyle <&> submenuSymbolColor
+        color <- Lens.view (config . configStyle . submenuSymbolColor)
         TextView.makeLabel submenuSymbolText
             & Reader.local (TextView.color .~ color)
     where
@@ -223,13 +248,13 @@ makePickEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
     m (Widget.PreEvent (f PickResult) -> EventMap (f State.Update))
 makePickEventMap =
-    Lens.view config <&> configKeys
+    Lens.view (config . configKeys)
     <&>
     \keys pick ->
-    E.keysEventMapMovesCursor (keysPickOptionAndGotoNext keys)
+    E.keysEventMapMovesCursor (keys ^. keysPickOptionAndGotoNext)
     (E.Doc [pick ^. Widget.pDesc <> ", Next entry"]) (pick ^. Widget.pAction <&> (^. pickNextEntryPoint))
     <>
-    E.keysEventMapMovesCursor (keysPickOption keys)
+    E.keysEventMapMovesCursor (keys ^. keysPickOption)
     (E.Doc [pick ^. Widget.pDesc]) (pick ^. Widget.pAction <&> (^. pickDest))
 
 addPickers ::

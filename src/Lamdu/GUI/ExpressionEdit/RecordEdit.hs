@@ -234,7 +234,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
         let layout layoutMode fields =
                 fields
                 /-/
-                separationBar (Theme.textColors theme) (max minWidth targetWidth) animId
+                separationBar (theme ^. Theme.textColors) (max minWidth targetWidth) animId
                 /-/
                 vspace
                 /-/

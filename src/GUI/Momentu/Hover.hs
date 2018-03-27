@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, RankNTypes, UndecidableInstances #-}
 module GUI.Momentu.Hover
-    ( Style(..)
+    ( Style(..), frameColor, framePadding, bgColor, bgPadding
     , Hover, hover, sequenceHover
     , backgroundColor
     , HasStyle(..)

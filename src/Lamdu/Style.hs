@@ -87,17 +87,17 @@ mainLoopConfig fontHeight helpFont config theme =
     MainLoop.Config
     { cAnim =
         AnimConfig
-        { acTimePeriod = realToFrac (Theme.animationTimePeriodSec theme)
-        , acRemainingRatioInPeriod = Theme.animationRemainInPeriod theme
+        { acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
+        , acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
         }
     , cCursor =
         Cursor.Config
-        { cursorColor = Theme.cursorColor theme
+        { cursorColor = theme ^. Theme.cursorColor
         , Cursor.decay = Just Cursor.Decay
             { Cursor.heightUnit = fontHeight
-            , Cursor.heightExponent = Theme.cursorDecayExponent theme
+            , Cursor.heightExponent = theme ^. Theme.cursorDecayExponent
             }
         }
     , cZoom = config ^. Config.zoom
-    , cHelpStyle = helpStyle helpFont (config ^. Config.helpKeys) (Theme.help theme)
+    , cHelpStyle = helpStyle helpFont (config ^. Config.helpKeys) (theme ^. Theme.help)
     }

@@ -45,10 +45,13 @@ emptyPickEventMap ::
     (MonadReader env m, Menu.HasConfig env, Applicative f) =>
     m (EventMap (f State.Update))
 emptyPickEventMap =
-    Lens.view Menu.config
-    <&> Menu.configKeys
-    <&> (Menu.keysPickOption <> Menu.keysPickOptionAndGotoNext)
+    Lens.view (Menu.config . Menu.configKeys)
+    <&> allPickKeys
     <&> \keys -> E.keysEventMap keys (E.Doc ["Pick (N/A)"]) (pure ())
+    where
+        allPickKeys keys =
+            keys ^. Menu.keysPickOption <>
+            keys ^. Menu.keysPickOptionAndGotoNext
 
 -- | All search menu results must start with a common prefix.
 -- This is used to tell when cursor was on a result that got filtered out

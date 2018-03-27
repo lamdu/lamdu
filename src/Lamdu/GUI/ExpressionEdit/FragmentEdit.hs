@@ -109,11 +109,11 @@ makeFragmentExprEdit fragment =
     do
         theme <- Lens.view Theme.theme
         let frameColor =
-                theme &
+                theme ^.
                 case fragment ^. Sugar.fAttach of
                 Sugar.AttachAction {} -> Theme.typeIndicatorMatchColor
                 Sugar.AttachTypeMismatch {} -> Theme.typeIndicatorErrorColor
-        let frameWidth = Theme.typeIndicatorFrameWidth theme
+        let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
         fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
         Momentu.addInnerFrame
             ?? frameColor ?? frameWidth

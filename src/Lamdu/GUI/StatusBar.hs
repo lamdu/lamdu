@@ -59,6 +59,6 @@ make themeNames settingsProp width vcActions =
         theTheme <- Lens.view Theme.theme
         hspace <- StatusBar.hspacer
         Draw.backgroundColor
-            ?? Theme.statusBar theTheme ^. Theme.statusBarBGColor
+            ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
             ?? ((settings /|/ hspace /|/ branchWidget) ^. Align.tValue
                 & Element.width .~ width)

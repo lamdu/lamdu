@@ -179,8 +179,8 @@ makeScopeNavArrow setScope arrowText mScopeId =
             & Reader.local
             ( TextView.color .~
                 case mScopeId of
-                Nothing -> Theme.disabledColor theme
-                Just _ -> TextColors.grammarColor (Theme.textColors theme)
+                Nothing -> theme ^. Theme.disabledColor
+                Just _ -> TextColors.grammarColor (theme ^. Theme.textColors)
             )
     where
         mEnter size =
@@ -445,7 +445,7 @@ makeLetEdit item =
         letEquation <-
             make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder letId
             <&> Widget.weakerEvents eventMap
-            <&> Element.pad (Theme.letItemPadding theme)
+            <&> Element.pad (theme ^. Theme.letItemPadding)
         letLabel /|/ space /|/ letEquation & pure
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where

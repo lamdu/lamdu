@@ -157,7 +157,7 @@ makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
         let bgColor
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
-        theme <- Lens.view Theme.theme <&> Theme.hole
+        theme <- Lens.view (Theme.theme . Theme.hole)
         (SearchMenu.addPickFirstResultEvent searchMenuId mPickFirst <&> (Align.tValue %~))
             <*> ( SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
                     <&> Align.tValue . Lens.mapped %~ pure

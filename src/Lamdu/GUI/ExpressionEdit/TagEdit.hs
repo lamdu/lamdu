@@ -79,7 +79,7 @@ makeTagNameEdit ::
     m (WithTextPos (Widget (f GuiState.Update)))
 makeTagNameEdit nearestHoles (Name.StoredName setName tagText _tagCollision storedText) myId =
     do
-        keys <- Lens.view (Config.config . Config.menu) <&> Menu.keysPickOptionAndGotoNext
+        keys <- Lens.view (Config.config . Config.menu . Menu.keysPickOptionAndGotoNext)
         let jumpNextEventMap =
                 nearestHoles ^. NearestHoles.next
                 & foldMap
@@ -111,8 +111,8 @@ makePickEventMap ::
 makePickEventMap action =
     Lens.view (Config.config . Config.menu) <&>
     \config ->
-    let pickKeys = Menu.keysPickOption config
-        jumpNextKeys = Menu.keysPickOptionAndGotoNext config
+    let pickKeys = config ^. Menu.keysPickOption
+        jumpNextKeys = config ^. Menu.keysPickOptionAndGotoNext
     in
     E.keysEventMapMovesCursor pickKeys doc (action <&> (^. Menu.pickDest))
     <> E.keysEventMapMovesCursor jumpNextKeys
@@ -163,8 +163,7 @@ addNewTag tagSelection mkPickResult ctx =
     , Menu._oRender =
         do
             color <-
-                Lens.view theme <&> Theme.textColors
-                <&> TextColors.actionTextColor
+                Lens.view (theme . Theme.textColors) <&> TextColors.actionTextColor
             (Widget.makeFocusableView ?? optionId <&> fmap)
                 <*> TextView.makeLabel "Create new"
                 <&> (`Menu.RenderedOption` preEvent)
@@ -275,7 +274,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
                 Lens.mapped . Widget.fPreEvents %~
                 (Widget.PreEvents newTagPreEvents <>)
-        tooltip <- Lens.view theme <&> Theme.tooltip
+        tooltip <- Lens.view (theme . Theme.tooltip)
         if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
             then
                 do
@@ -484,13 +483,4 @@ makeBinderTagEdit ::
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeBinderTagEdit color tag =
     makeLHSTag defaultOnPickNext color tag
-    & Reader.local (Menu.config %~ removeGoNextKeys)
-    where
-        removeGoNextKeys c =
-            -- Would be nicer with lens but that would make the JSON format ugly..
-            c
-            { Menu.configKeys =
-                (Menu.configKeys c)
-                { Menu.keysPickOptionAndGotoNext = []
-                }
-            }
+    & Reader.local (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

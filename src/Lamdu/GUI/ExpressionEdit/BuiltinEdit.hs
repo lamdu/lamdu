@@ -71,7 +71,7 @@ make ::
     f (WithTextPos (Widget (T m GuiState.Update)))
 make def myId =
     do
-        colors <- Lens.view Theme.theme <&> Theme.textColors
+        colors <- Lens.view (Theme.theme . Theme.textColors)
         moduleName <-
             makeNamePartEditor (TextColors.foreignModuleColor colors)
             modulePathStr modulePathSetter (builtinFFIPath myId)

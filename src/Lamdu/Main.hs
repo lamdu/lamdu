@@ -199,7 +199,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = Property.value settingsProp
-                , _envStyle = Style.makeStyle (Theme.textColors theme) fonts
+                , _envStyle = Style.makeStyle (theme ^. Theme.textColors) fonts
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
                 }
@@ -300,13 +300,12 @@ assignFontSizes theme fonts =
     <&> (,) baseTextSize
     & Font.fontHelp . _1 .~ helpTextSize
     where
-        baseTextSize = Theme.baseTextSize theme
-        helpTextSize = Theme.help theme ^. Theme.helpTextSize
+        baseTextSize = theme ^. Theme.baseTextSize
+        helpTextSize = theme ^. Theme.help . Theme.helpTextSize
 
 curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =
-    sample ^. sTheme
-    & Theme.fonts
+    sample ^. sTheme . Theme.fonts
     & prependConfigPath sample
     & assignFontSizes (sample ^. sTheme)
 
@@ -399,7 +398,7 @@ mkWidgetWithFallback settingsProp dbToIO env =
                 pure (isValid, widget)
         unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. M.cursor)
         widget
-            & M.backgroundColor (["background"] :: M.AnimId) (bgColor isValid theme)
+            & M.backgroundColor (["background"] :: M.AnimId) (theme ^. bgColor isValid)
             & pure
     where
         theme = env ^. envTheme

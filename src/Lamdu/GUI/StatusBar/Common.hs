@@ -13,6 +13,5 @@ import           Lamdu.Prelude
 hspacer ::
     (MonadReader env m, Spacer.HasStdSpacing env, Theme.HasTheme env) => m View
 hspacer = do
-    hSpaceCount <-
-        Lens.view Theme.theme <&> Theme.statusBar <&> (^. Theme.statusBarHSpaces)
+    hSpaceCount <- Lens.view (Theme.theme . Theme.statusBar . Theme.statusBarHSpaces)
     Spacer.getSpaceSize <&> (^. _1) <&> (* hSpaceCount) <&> Spacer.makeHorizontal

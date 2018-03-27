@@ -86,7 +86,7 @@ fdConfig :: (MonadReader env m, HasConfig env, Menu.HasConfig env) => m FocusDel
 fdConfig =
     (,)
     <$> Lens.view (Config.config . Config.literal)
-    <*> (Lens.view Menu.config <&> Menu.configKeys)
+    <*> Lens.view (Menu.config . Menu.configKeys)
     <&>
     \(litConf, menuKeys) ->
     FocusDelegator.Config
@@ -96,10 +96,10 @@ fdConfig =
         litConf ^. Config.literalStopEditingKeys
         -- The literal edit should behave like holes, in that the "pick option"
         -- key goes to the resulting expr.
-        <> Menu.keysPickOption menuKeys
+        <> menuKeys ^. Menu.keysPickOption
         -- Only taken when the literal edit doesn't handle it by
         -- jumping to next entry:
-        <> Menu.keysPickOptionAndGotoNext menuKeys
+        <> menuKeys ^. Menu.keysPickOptionAndGotoNext
     , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal", "Stop editing"]
     }
 
@@ -173,7 +173,7 @@ numEdit prop pl =
             case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
             Nothing -> pure mempty
             Just nextEntry ->
-                Lens.view Menu.config <&> Menu.configKeys <&> Menu.keysPickOptionAndGotoNext
+                Lens.view (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
                 <&>
                 \keys ->
                 WidgetIds.fromEntityId nextEntry & pure

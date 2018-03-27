@@ -7,13 +7,22 @@ module Lamdu.Config.Theme
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
     , StatusBar(..), statusBarBGColor, statusBarHSpaces
-    , Theme(..), stdSpacing, menu, versionControl
+    , Theme(..)
+        , fonts, baseTextSize, animationTimePeriodSec
+        , animationRemainInPeriod, help, hole, menu, name, eval, hover, tooltip
+        , textColors, topPadding, statusBar, maxEvalViewSize, versionControl
+        , valAnnotation, indent, backgroundColor, invalidCursorBGColor
+        , typeIndicatorErrorColor, typeIndicatorMatchColor
+        , typeIndicatorFrameWidth, letItemPadding, narrowUnderlineWidth
+        , wideUnderlineWidth, valFrameBGColor, valFramePadding
+        , typeFrameBGColor, stdSpacing, cursorColor, cursorDecayExponent
+        , disabledColor, presentationChoiceScaleFactor, evaluatedPathBGColor
     , HasTheme(..)
     ) where
 
 import qualified Control.Lens as Lens
 #ifndef NO_CODE
-import           Data.Aeson.Utils (decapitalize, removePrefix, removeOptionalPrefix)
+import           Data.Aeson.Utils (decapitalize, removePrefix)
 #endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
@@ -104,45 +113,45 @@ deriveJSON Aeson.defaultOptions
 Lens.makeLenses ''StatusBar
 
 data Theme = Theme
-    { fonts :: Fonts FilePath
-    , baseTextSize :: FontSize
-    , animationTimePeriodSec :: Double
-    , animationRemainInPeriod :: Double
-    , help :: Help
-    , hole :: Hole
+    { _fonts :: Fonts FilePath
+    , _baseTextSize :: FontSize
+    , _animationTimePeriodSec :: Double
+    , _animationRemainInPeriod :: Double
+    , _help :: Help
+    , _hole :: Hole
     , _menu :: Menu.Style
-    , name :: Name
-    , eval :: Eval
+    , _name :: Name
+    , _eval :: Eval
     , _hover :: Hover.Style
-    , tooltip :: ToolTip
-    , textColors :: TextColors
-    , topPadding :: Draw.R
-    , statusBar :: StatusBar
-    , maxEvalViewSize :: Int
+    , _tooltip :: ToolTip
+    , _textColors :: TextColors
+    , _topPadding :: Draw.R
+    , _statusBar :: StatusBar
+    , _maxEvalViewSize :: Int
     , _versionControl :: VersionControl.Theme
-    , valAnnotation :: ValAnnotation
+    , _valAnnotation :: ValAnnotation
     , _indent :: Expression.Style
-    , backgroundColor :: Draw.Color
-    , invalidCursorBGColor :: Draw.Color
-    , typeIndicatorErrorColor :: Draw.Color
-    , typeIndicatorMatchColor :: Draw.Color
-    , typeIndicatorFrameWidth :: Vector2 Double
-    , letItemPadding :: Vector2 Double
-    , narrowUnderlineWidth :: Double
-    , wideUnderlineWidth :: Double
-    , valFrameBGColor :: Draw.Color
-    , valFramePadding :: Vector2 Double
-    , typeFrameBGColor :: Draw.Color
+    , _backgroundColor :: Draw.Color
+    , _invalidCursorBGColor :: Draw.Color
+    , _typeIndicatorErrorColor :: Draw.Color
+    , _typeIndicatorMatchColor :: Draw.Color
+    , _typeIndicatorFrameWidth :: Vector2 Double
+    , _letItemPadding :: Vector2 Double
+    , _narrowUnderlineWidth :: Double
+    , _wideUnderlineWidth :: Double
+    , _valFrameBGColor :: Draw.Color
+    , _valFramePadding :: Vector2 Double
+    , _typeFrameBGColor :: Draw.Color
     , _stdSpacing :: Vector2 Double -- as ratio of space character size
-    , cursorColor :: Draw.Color
-    , cursorDecayExponent :: Draw.R
-    , disabledColor :: Draw.Color
-    , presentationChoiceScaleFactor :: Vector2 Double
-    , evaluatedPathBGColor :: Draw.Color
+    , _cursorColor :: Draw.Color
+    , _cursorDecayExponent :: Draw.R
+    , _disabledColor :: Draw.Color
+    , _presentationChoiceScaleFactor :: Vector2 Double
+    , _evaluatedPathBGColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removeOptionalPrefix "_"}
+    {Aeson.fieldLabelModifier = removePrefix "_"}
 #endif
     ''Theme
 

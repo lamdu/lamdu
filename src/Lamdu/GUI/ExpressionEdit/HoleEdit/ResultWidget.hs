@@ -75,7 +75,7 @@ makeWidget ::
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
-        theme <- Theme.hole <$> Lens.view Theme.theme
+        theme <- Lens.view (Theme.theme . Theme.hole)
         stdSpacing <- Spacer.getSpaceSize
         let padding = theme ^. Theme.holeResultPadding & (* stdSpacing)
         ExprGuiM.makeSubexpression holeResultConverted

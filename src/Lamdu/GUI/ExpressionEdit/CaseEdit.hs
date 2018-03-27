@@ -221,7 +221,7 @@ makeOpenCase actions rest animId altsGui =
             in
             alts
             /-/
-            separationBar (Theme.textColors theme) (max minWidth targetWidth) animId
+            separationBar (theme ^. Theme.textColors) (max minWidth targetWidth) animId
             /-/
             vspace
             /-/

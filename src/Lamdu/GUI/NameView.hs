@@ -35,7 +35,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
     where
         mk text =
             do
-                nameTheme <- Lens.view theme <&> Theme.name
+                nameTheme <- Lens.view (theme . Theme.name)
                 (Draw.backgroundColor ?? nameTheme ^# collisionColor)
                     <*>
                     (TextView.makeLabel text

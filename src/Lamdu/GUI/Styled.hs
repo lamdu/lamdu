@@ -1,6 +1,6 @@
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.Styled
     ( grammarLabel, grammarText
     , addValBG, addBgColor
@@ -63,12 +63,12 @@ addValBG = addBgColor Theme.valFrameBGColor
 addBgColor ::
     ( MonadReader env m, Element a
     , Element.HasAnimIdPrefix env, HasTheme env
-    ) => (Theme -> Draw.Color) -> m (a -> a)
+    ) => Lens.Getter Theme Draw.Color -> m (a -> a)
 addBgColor getColor =
-    Draw.backgroundColor <*> (Lens.view Theme.theme <&> getColor)
+    Draw.backgroundColor <*> Lens.view (Theme.theme . getColor)
 
 addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
-addValPadding = Lens.view Theme.theme <&> Theme.valFramePadding <&> Element.pad
+addValPadding = Lens.view (Theme.theme . Theme.valFramePadding) <&> Element.pad
 
 addValFrame ::
     ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env
@@ -106,14 +106,14 @@ addDeletionDiagonal ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
     m (Widget.R -> a -> a)
 addDeletionDiagonal =
-    addDiagonal <*> (Lens.view Theme.theme <&> Theme.typeIndicatorErrorColor)
+    addDiagonal <*> Lens.view (Theme.theme . Theme.typeIndicatorErrorColor)
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
     (TextColors -> Draw.Color) -> m a -> m a
 withColor textColor act =
     do
-        color <- Lens.view Theme.theme <&> Theme.textColors <&> textColor
+        color <- Lens.view (Theme.theme . Theme.textColors) <&> textColor
         Reader.local (TextView.color .~ color) act
 
 actionable ::
@@ -125,8 +125,8 @@ actionable ::
     m (WithTextPos (Widget (f GuiState.Update)))
 actionable myId text doc action =
     do
-        color <- Lens.view Theme.theme <&> Theme.textColors <&> TextColors.actionTextColor
-        underlineWidth <- Lens.view Theme.theme <&> Theme.narrowUnderlineWidth
+        color <- Lens.view (Theme.theme . Theme.textColors) <&> TextColors.actionTextColor
+        underlineWidth <- Lens.view (Theme.theme . Theme.narrowUnderlineWidth)
         let underline =
                 Font.Underline
                 { Font._underlineColor = color
@@ -145,7 +145,7 @@ nameAtBinder ::
     (TextColors -> Draw.Color) -> Name n -> m b -> m b
 nameAtBinder nameColor name act =
     do
-        color <- Lens.view theme <&> Theme.textColors <&> nameColor
+        color <- Lens.view (theme . Theme.textColors) <&> nameColor
         style <- Lens.view Style.style
         let textEditStyle =
                 style

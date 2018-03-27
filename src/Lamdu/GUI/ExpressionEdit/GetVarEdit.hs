@@ -136,7 +136,7 @@ definitionTypeChangeBox ::
 definitionTypeChangeBox info getVarId =
     do
         infoColor <-
-            Lens.view Theme.theme <&> Theme.textColors <&> TextColors.infoTextColor
+            Lens.view (Theme.theme . Theme.textColors) <&> TextColors.infoTextColor
         let infoLabel text =
                 TextView.makeLabel text & Reader.local (TextView.color .~ infoColor)
         updateLabel <- Styled.actionable myId "Update" updateDoc update
@@ -181,8 +181,8 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         theme <- Lens.view Theme.theme
         let underline = Underline
-                { _underlineColor = Theme.typeIndicatorErrorColor theme
-                , _underlineWidth = Theme.wideUnderlineWidth theme
+                { _underlineColor = theme ^. Theme.typeIndicatorErrorColor
+                , _underlineWidth = theme ^. Theme.wideUnderlineWidth
                 }
         layout <- Reader.local (TextView.underline ?~ underline) mkLayout
         isSelected <- GuiState.isSubCursor ?? myId

@@ -171,7 +171,7 @@ makeTInst parentPrecedence tid typeParams =
 addTypeBG :: (Element a, MonadReader env m, HasTheme env) => a -> M m a
 addTypeBG view =
     do
-        color <- Lens.view Theme.theme <&> Theme.typeFrameBGColor
+        color <- Lens.view (Theme.theme . Theme.typeFrameBGColor)
         bgId <- randAnimId
         view
             & MDraw.backgroundColor bgId color
@@ -288,7 +288,7 @@ make ::
     Type -> m (WithTextPos View)
 make t =
     do
-        color <- Lens.view Theme.theme <&> Theme.textColors <&> TextColors.typeTextColor
+        color <- Lens.view (Theme.theme . Theme.textColors) <&> TextColors.typeTextColor
         prefix <- Lens.view Element.animIdPrefix
         makeInternal (Prec 0) t
             & runM
