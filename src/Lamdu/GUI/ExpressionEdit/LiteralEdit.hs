@@ -68,7 +68,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property (T m) a ->
-    Sugar.Payload name (T m) ExprGui.Payload -> f (ExpressionGui m)
+    Sugar.Payload name (T m) ExprGui.Payload -> f (ExpressionGui (T m))
 genericEdit whichStyle prop pl =
     TextView.makeFocusable ?? valText ?? myId
     <&> Align.tValue %~ Widget.weakerEvents editEventMap
@@ -214,7 +214,7 @@ numEdit prop pl =
 make ::
     Monad m =>
     Sugar.Literal (Property (T m)) -> Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 make lit pl =
     stdWrap pl
     <*>

@@ -55,7 +55,7 @@ make ::
     Monad m =>
     Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId

@@ -237,7 +237,7 @@ makeNoActions ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
     Widget.Id ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -251,6 +251,6 @@ make ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

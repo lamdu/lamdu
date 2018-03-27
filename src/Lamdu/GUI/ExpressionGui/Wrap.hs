@@ -58,7 +58,7 @@ parentDelegator myId =
 stdWrapParentExpr ::
     Monad m =>
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m -> ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m) -> ExpressionGui (T m))
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl

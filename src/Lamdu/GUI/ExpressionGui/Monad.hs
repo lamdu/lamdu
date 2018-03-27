@@ -64,7 +64,7 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
+    , _aMakeSubexpression :: ExprGui.SugarExpr (T (TM m)) -> m (ExpressionGui (T (TM m)))
     , _aCodeAnchors :: Anchors.CodeAnchors (TM m)
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -75,7 +75,7 @@ class
     ( MonadTransaction (TM m) m, MonadReader (Askable m) m
     ) => MonadExprGui m where
     type TM m :: * -> *
-    makeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
+    makeSubexpression :: ExprGui.SugarExpr (T (TM m)) -> m (ExpressionGui (T (TM m)))
 
 Lens.makeLenses ''Askable
 
@@ -158,7 +158,7 @@ run ::
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
+    (ExprGui.SugarExpr (T m) -> ExprGuiM m (ExpressionGui (T m))) ->
     Anchors.CodeAnchors m ->
     ExprGuiM m a ->
     n a

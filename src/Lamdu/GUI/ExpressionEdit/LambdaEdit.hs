@@ -42,14 +42,14 @@ type T = Transaction
 
 addScopeEdit ::
     Functor m =>
-    Maybe (Widget (T m GuiState.Update)) -> ExpressionGui m ->
-    ExpressionGui m
+    Maybe (Widget (T m GuiState.Update)) -> ExpressionGui (T m) ->
+    ExpressionGui (T m)
 addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
     Functor m =>
-    Maybe (ExpressionGui m) ->
-    Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui m]
+    Maybe (ExpressionGui (T m)) ->
+    Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui (T m)]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
@@ -57,8 +57,8 @@ mkExpanded ::
     ( Monad m, MonadReader env f, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
-    f (Maybe (ExpressionGui m) -> Maybe (Widget (T m GuiState.Update)) ->
-     [ExpressionGui m])
+    f (Maybe (ExpressionGui (T m)) -> Maybe (Widget (T m GuiState.Update)) ->
+     [ExpressionGui (T m)])
 mkExpanded =
     Styled.grammarLabel "→" <&> Responsive.fromTextView
     <&> \labelEdit mParamsEdit mScopeEdit ->
@@ -71,7 +71,7 @@ mkShrunk ::
     ( Monad m, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui m])
+    f (Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui (T m)])
 mkShrunk paramIds myId =
     do
         jumpKeys <- Lens.view (Config.config . Config.jumpToDefinitionKeys)
@@ -99,8 +99,8 @@ mkLightLambda ::
     ) =>
     Sugar.BinderParams a m -> Widget.Id ->
     f
-    (Maybe (ExpressionGui n) -> Maybe (Widget (T n GuiState.Update)) ->
-     [ExpressionGui n])
+    (Maybe (ExpressionGui (T n)) -> Maybe (Widget (T n GuiState.Update)) ->
+     [ExpressionGui (T n)])
 mkLightLambda params myId =
     do
         isSelected <-
@@ -127,9 +127,9 @@ mkLightLambda params myId =
 
 make ::
     Monad m =>
-    Sugar.Lambda (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Lambda (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-

@@ -53,9 +53,9 @@ undeleteButton undelete =
 makeExprDefinition ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
-    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
-    Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
-    ExprGuiM m (ExpressionGui m)
+    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
+    Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
+    ExprGuiM m (ExpressionGui (T m))
 makeExprDefinition lhsEventMap def bodyExpr =
     BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
@@ -66,7 +66,7 @@ makeExprDefinition lhsEventMap def bodyExpr =
 
 makeBuiltinDefinition ::
     Monad m =>
-    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
+    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.DefinitionBuiltin (T m) ->
     ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
@@ -89,8 +89,8 @@ makeBuiltinDefinition def builtin =
 make ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
-    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr m) ->
-    ExprGuiM m (ExpressionGui m)
+    Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
+    ExprGuiM m (ExpressionGui (T m))
 make lhsEventMap def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & transaction

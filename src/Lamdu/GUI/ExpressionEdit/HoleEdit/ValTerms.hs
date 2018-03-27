@@ -93,7 +93,7 @@ bodyNames =
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b >>= ofName
 
-expr :: Monad m => ExpressionN m a -> [Text]
+expr :: Monad m => ExpressionN (T m) a -> [Text]
 expr (Sugar.Expression body _) =
     bodyShape body <>
     bodyNames body <>

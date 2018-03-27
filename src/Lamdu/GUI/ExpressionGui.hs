@@ -24,13 +24,10 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
-type ExpressionGui m = Responsive (T m GuiState.Update)
+type ExpressionGui m = Responsive (m GuiState.Update)
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
     deriving (Eq, Ord, Show)
@@ -80,7 +77,7 @@ isHoleResult :: Sugar.Payload name f Payload -> Bool
 isHoleResult =
     Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
-type ExpressionN m a = Sugar.Expression (Name (T m)) (T m) a
+type ExpressionN f a = Sugar.Expression (Name f) f a
 type SugarExpr m = ExpressionN m Payload
 
 nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles

@@ -155,8 +155,8 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
-    T n [Sugar.HoleOption (T n) (ExpressionN n ())] ->
-    Maybe (Sugar.OptionLiteral (T n) (ExpressionN n ())) ->
+    T n [Sugar.HoleOption (T n) (ExpressionN (T n) ())] ->
+    Maybe (Sugar.OptionLiteral (T n) (ExpressionN (T n) ())) ->
     SearchMenu.ResultsContext ->
     m (Menu.OptionList (ResultGroup (T n)))
 makeAll options mOptionLiteral ctx =
@@ -184,7 +184,7 @@ mkGroupId option =
 
 mkGroup ::
     Monad m =>
-    Sugar.HoleOption (T m) (ExpressionN m ()) ->
+    Sugar.HoleOption (T m) (ExpressionN (T m) ()) ->
     T m (Group (T m))
 mkGroup option =
     option ^. Sugar.hoSugaredBaseExpr
@@ -200,7 +200,7 @@ tryBuildLiteral ::
     (Format a, Monad m) =>
     Text ->
     (Identity a -> Sugar.Literal Identity) ->
-    Sugar.OptionLiteral (T m) (ExpressionN m ()) ->
+    Sugar.OptionLiteral (T m) (ExpressionN (T m) ()) ->
     Text ->
     Maybe (T m (Group (T m)))
 tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
@@ -220,7 +220,7 @@ tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
 makeLiteralGroups ::
     Monad m =>
     Text ->
-    Sugar.OptionLiteral (T m) (ExpressionN m ()) ->
+    Sugar.OptionLiteral (T m) (ExpressionN (T m) ()) ->
     [T m (Group (T m))]
 makeLiteralGroups searchTerm optionLiteral =
     [ tryBuildLiteral "Num"   Sugar.LiteralNum   optionLiteral searchTerm

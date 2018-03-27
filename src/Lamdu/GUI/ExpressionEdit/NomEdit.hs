@@ -38,9 +38,9 @@ mReplaceParent = Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent . Lens.
 makeToNom ::
     Monad m =>
     Sugar.Nominal (Name (T m))
-    (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr m)) ->
+    (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr (T m))) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
     & mkNomGui id "ToNominal" "«" mDel pl
@@ -50,9 +50,9 @@ makeToNom nom pl =
 
 makeFromNom ::
     Monad m =>
-    Sugar.Nominal (Name (T m)) (ExprGui.SugarExpr m) ->
+    Sugar.Nominal (Name (T m)) (ExprGui.SugarExpr (T m)) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
     & mkNomGui reverse "FromNominal" "»" mDel pl
@@ -61,11 +61,11 @@ makeFromNom nom pl =
 
 mkNomGui ::
     Monad m =>
-    ([ExpressionGui m] -> [ExpressionGui m]) ->
+    ([ExpressionGui (T m)] -> [ExpressionGui (T m)]) ->
     Text -> Text -> Maybe (T m Sugar.EntityId) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui m)) ->
-    ExprGuiM m (ExpressionGui m)
+    Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui (T m))) ->
+    ExprGuiM m (ExpressionGui (T m))
 mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (Theme.theme . Theme.textColors . TextColors.nomColor)

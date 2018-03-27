@@ -37,9 +37,9 @@ type T = Transaction
 
 make ::
     Monad m =>
-    Sugar.Fragment (Name (T m)) (T m) (ExpressionN m ExprGui.Payload) ->
+    Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
@@ -103,8 +103,8 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     Monad m =>
-    Sugar.Fragment (Name (T m)) (T m) (ExpressionN m ExprGui.Payload) ->
-    ExprGuiM m (ExpressionGui m)
+    Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
+    ExprGuiM m (ExpressionGui (T m))
 makeFragmentExprEdit fragment =
     do
         theme <- Lens.view Theme.theme

@@ -66,7 +66,8 @@ fdConfig config = FocusDelegator.Config
 
 makeRenderedResult ::
     Monad m =>
-    Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext -> Result (T m) ->
+    Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext ->
+    Result (T m) ->
     ExprGuiM m (Menu.RenderedOption (T m))
 makeRenderedResult pl ctx result =
     -- Warning: rHoleResult should be ran at most once!
@@ -80,7 +81,7 @@ makeRenderedResult pl ctx result =
             pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next
             <&> WidgetIds.fromEntityId
 
-postProcessSugar :: Int -> ExpressionN m () -> ExpressionN m ExprGui.Payload
+postProcessSugar :: Int -> ExpressionN (T m) () -> ExpressionN (T m) ExprGui.Payload
 postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
@@ -169,11 +170,11 @@ makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
 -- Has a typeView under the search term
 make ::
     Monad m =>
-    T m [Sugar.HoleOption (T m) (ExpressionN m ())] ->
-    Maybe (Sugar.OptionLiteral (T m) (ExpressionN m ())) ->
+    T m [Sugar.HoleOption (T m) (ExpressionN (T m) ())] ->
+    Maybe (Sugar.OptionLiteral (T m) (ExpressionN (T m) ())) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
     (Text -> Bool) ->
-    ExprGuiM m (Menu.Placement -> ExpressionGui m)
+    ExprGuiM m (Menu.Placement -> ExpressionGui (T m))
 make options mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config

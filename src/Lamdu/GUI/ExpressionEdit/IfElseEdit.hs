@@ -50,8 +50,8 @@ makeIfThen ::
     ( Monad m, MonadReader env f, HasTheme env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
-    WithTextPos View -> Sugar.EntityId -> Sugar.IfThen (T m) (ExpressionGui m) ->
-    f (Row (ExpressionGui m))
+    WithTextPos View -> Sugar.EntityId -> Sugar.IfThen (T m) (ExpressionGui (T m)) ->
+    f (Row (ExpressionGui (T m)))
 makeIfThen prefixLabel entityId ifThen =
     do
         label <- Styled.grammarLabel "if "
@@ -68,7 +68,7 @@ makeIfThen prefixLabel entityId ifThen =
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-makeElse :: Monad m => Sugar.Else name (T m) (ExprGui.SugarExpr m) -> ExprGuiM m [Row (ExpressionGui m)]
+makeElse :: Monad m => Sugar.Else name (T m) (ExprGui.SugarExpr (T m)) -> ExprGuiM m [Row (ExpressionGui (T m))]
 makeElse (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
@@ -103,7 +103,7 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _node
 verticalRowRender ::
     ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    ) => f (Row (ExpressionGui m) -> ExpressionGui m)
+    ) => f (Row (ExpressionGui (T m)) -> ExpressionGui (T m))
 verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
@@ -118,7 +118,7 @@ verticalRowRender =
 renderRows ::
     ( Monad m, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    ) => f ([Row (ExpressionGui m)] -> ExpressionGui m)
+    ) => f ([Row (ExpressionGui (T m))] -> ExpressionGui (T m))
 renderRows =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
@@ -143,9 +143,9 @@ renderRows =
 
 make ::
     Monad m =>
-    Sugar.IfElse name (T m) (ExprGui.SugarExpr m) ->
+    Sugar.IfElse name (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui m)
+    ExprGuiM m (ExpressionGui (T m))
 make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows

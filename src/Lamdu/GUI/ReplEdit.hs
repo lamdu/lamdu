@@ -72,7 +72,7 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
 make ::
     MonadExprGui m =>
     ExportRepl (TM m) ->
-    ExprGui.SugarExpr (TM m) ->
+    ExprGui.SugarExpr (T (TM m)) ->
     m (Responsive (IOTrans (TM m) GuiState.Update))
 make exportRepl replExpr =
     do
