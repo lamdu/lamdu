@@ -1,16 +1,17 @@
 -- | Responsive layout for expressions express the hierarchy using parentheses and indentation,
 -- as is customary in many programming languages and in mathematics.
 
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
-
+{-# LANGUAGE TemplateHaskell, CPP, FlexibleContexts #-}
 module GUI.Momentu.Responsive.Expression
-    ( Style(..), HasStyle(..)
+    ( Style(..), indentBarWidth, indentBarGap, indentBarColor
+    , HasStyle(..)
     , disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb, indent
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
@@ -27,15 +28,23 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+#ifndef NO_CODE
+import           Data.Aeson.Utils (removePrefix)
+#endif
 
 import           Lamdu.Prelude
 
 data Style = Style
-    { indentBarWidth :: Double
-    , indentBarGap :: Double
-    , indentBarColor :: Draw.Color
+    { _indentBarWidth :: Double
+    , _indentBarGap :: Double
+    , _indentBarColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions ''Style
+deriveJSON defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removePrefix "_"}
+#endif
+    ''Style
+Lens.makeLenses ''Style
 
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
@@ -77,7 +86,7 @@ totalBarWidth =
     do
         s <- Lens.view style
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
-        stdSpace * (indentBarWidth s + indentBarGap s) & pure
+        stdSpace * (s ^. indentBarWidth + s ^. indentBarGap) & pure
 
 indentBar ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env) =>
@@ -89,9 +98,9 @@ indentBar =
         pure $ \height myId ->
             let bar =
                     Spacer.make (Vector2 barWidth height)
-                    & Draw.backgroundColor bgAnimId (indentBarColor s)
-                barWidth = stdSpace * indentBarWidth s
-                gapWidth = stdSpace * indentBarGap s
+                    & Draw.backgroundColor bgAnimId (s ^. indentBarColor)
+                barWidth = stdSpace * s ^. indentBarWidth
+                gapWidth = stdSpace * s ^. indentBarGap
                 bgAnimId = myId ++ ["("]
             in  bar /|/ Spacer.make (Vector2 gapWidth 0)
 
