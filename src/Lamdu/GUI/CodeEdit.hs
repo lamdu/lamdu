@@ -131,12 +131,12 @@ make ::
     ) =>
     Anchors.CodeAnchors m -> Widget.R ->
     n (Widget (IOTrans m GuiState.Update))
-make theCodeAnchors width =
+make cp width =
     do
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         workArea <-
-            loadWorkArea theEvalResults theCodeAnchors
+            loadWorkArea theEvalResults cp
             & transaction
         do
             replGui <-
@@ -145,14 +145,14 @@ make theCodeAnchors width =
             panesEdits <-
                 workArea ^. Sugar.waPanes
                 & traverse (makePaneEdit theExportActions)
-            newDefinitionButton <- makeNewDefinitionButton <&> fmap IOTrans.liftTrans <&> Responsive.fromWidget
+            newDefinitionButton <- makeNewDefinitionButton cp <&> fmap IOTrans.liftTrans <&> Responsive.fromWidget
             eventMap <-
-                panesEventMap theExportActions theCodeAnchors
+                panesEventMap theExportActions cp
                 (workArea ^. Sugar.waRepl . Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & ExprGuiM.run ExpressionEdit.make theCodeAnchors
+            & ExprGuiM.run ExpressionEdit.make cp
             <&> render
             <&> (^. Align.tValue)
     where
@@ -202,11 +202,10 @@ makePaneEdit theExportActions pane =
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 
-makeNewDefinition :: Monad m => ExprGuiM m (T m Widget.Id)
-makeNewDefinition =
+makeNewDefinition :: Monad m => Anchors.CodeAnchors m -> ExprGuiM m (T m Widget.Id)
+makeNewDefinition cp =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
-        cp <- ExprGuiM.readCodeAnchors
         pure $ do
             holeI <- DataOps.newHole
             newDefI <-
@@ -221,11 +220,12 @@ makeNewDefinition =
 newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
 
-makeNewDefinitionButton :: Monad m => ExprGuiM m (Widget (T m GuiState.Update))
-makeNewDefinitionButton =
+makeNewDefinitionButton ::
+    Monad m => Anchors.CodeAnchors m -> ExprGuiM m (Widget (T m GuiState.Update))
+makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
-        makeNewDefinition
+        makeNewDefinition cp
             >>= Styled.actionable newDefId "New..." newDefinitionDoc
             <&> (^. Align.tValue)
 
@@ -233,14 +233,14 @@ panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> T.Type ->
     ExprGuiM m (EventMap (IOTrans m GuiState.Update))
-panesEventMap theExportActions theCodeAnchors replType =
+panesEventMap theExportActions cp replType =
     do
         theConfig <- Lens.view config
         let exportConfig = theConfig ^. Config.export
         mJumpBack <-
-            DataOps.jumpBack theCodeAnchors & transaction <&> fmap IOTrans.liftTrans
+            DataOps.jumpBack cp & transaction <&> fmap IOTrans.liftTrans
         newDefinitionEventMap <-
-            makeNewDefinition
+            makeNewDefinition cp
             <&> E.keysEventMapMovesCursor
             (theConfig ^. Config.pane . Config.newDefinitionKeys) newDefinitionDoc
         pure $ mconcat

@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , advanceDepth, resetDepth
     --
-    , readCodeAnchors, mkPrejumpPosSaver
+    , mkPrejumpPosSaver
     --
     , readMScopeId, withLocalMScopeId
     --
