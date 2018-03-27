@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, RankNTypes #-}
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
@@ -55,12 +55,12 @@ type T = Transaction
 
 addAnnotationBackgroundH ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
-    (ValAnnotation -> Draw.Color) -> m (a -> a)
-addAnnotationBackgroundH getColor =
+    Lens.Getter ValAnnotation Draw.Color -> m (a -> a)
+addAnnotationBackgroundH color =
     do
         t <- Lens.view theme
         bgAnimId <- Element.subAnimId ["annotation background"]
-        Draw.backgroundColor bgAnimId (getColor (t ^. Theme.valAnnotation)) & pure
+        Draw.backgroundColor bgAnimId (t ^. Theme.valAnnotation . color) & pure
 
 addAnnotationBackground ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
@@ -126,12 +126,11 @@ processAnnotationGui wideAnnotationBehavior =
                 maybeTooNarrow annotation & addBg
             where
                 annotationWidth = annotation ^. Element.width
-                expansionLimit =
-                    ValAnnotation.valAnnotationWidthExpansionLimit th
+                expansionLimit = th ^. ValAnnotation.valAnnotationWidthExpansionLimit
                 maxWidth = minWidth + expansionLimit
-                shrinkAtLeast = ValAnnotation.valAnnotationShrinkAtLeast th
+                shrinkAtLeast = th ^. ValAnnotation.valAnnotationShrinkAtLeast
                 heightShrinkRatio =
-                    ValAnnotation.valAnnotationMaxHeight th * stdSpacing ^. _2
+                    th ^. ValAnnotation.valAnnotationMaxHeight * stdSpacing ^. _2
                     / annotation ^. Element.height
                 shrinkRatio =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
@@ -207,8 +206,7 @@ makeEvalView mNeighbours evalRes =
 annotationSpacer ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) => m View
 annotationSpacer =
-    Lens.view (Theme.theme . Theme.valAnnotation)
-    <&> ValAnnotation.valAnnotationSpacing
+    Lens.view (Theme.theme . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
     >>= Spacer.vspaceLines
 
 addAnnotationH ::

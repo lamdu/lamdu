@@ -1,8 +1,6 @@
 {-# LANGUAGE TemplateHaskell, CPP #-}
 -- | The themes/ config format
-module Lamdu.Config.Theme.ValAnnotation
-    ( ValAnnotation(..)
-    ) where
+module Lamdu.Config.Theme.ValAnnotation where
 
 #ifndef NO_CODE
 import qualified Control.Lens as Lens
@@ -18,19 +16,21 @@ import qualified GUI.Momentu.Draw as Draw
 import           Lamdu.Prelude
 
 data ValAnnotation = ValAnnotation
-    { valAnnotationBGColor :: Draw.Color
-    , valAnnotationHoverBGColor :: Draw.Color
-    , valAnnotationSpacing :: Double -- as ratio of line height
-    , valAnnotationWidthExpansionLimit :: Double
-    , valAnnotationShrinkAtLeast :: Double
-    , valAnnotationMaxHeight :: Double
+    { _valAnnotationBGColor :: Draw.Color
+    , _valAnnotationHoverBGColor :: Draw.Color
+    , _valAnnotationSpacing :: Double -- as ratio of line height
+    , _valAnnotationWidthExpansionLimit :: Double
+    , _valAnnotationShrinkAtLeast :: Double
+    , _valAnnotationMaxHeight :: Double
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
     { Aeson.fieldLabelModifier = \name ->
         name
-        & removePrefix "valAnnotation"
+        & removePrefix "_valAnnotation"
         & Lens.taking 2 traverse %~ Char.toLower
     }
 #endif
     ''ValAnnotation
+
+Lens.makeLenses ''ValAnnotation
