@@ -20,6 +20,8 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -37,7 +39,7 @@ import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.IOTrans (IOTrans)
+import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.Styled as Styled
@@ -144,7 +146,9 @@ make theCodeAnchors width =
                 workArea ^. Sugar.waPanes
                 & traverse (makePaneEdit theExportActions)
             newDefinitionButton <- makeNewDefinitionButton <&> fmap IOTrans.liftTrans <&> Responsive.fromWidget
-            eventMap <- panesEventMap theExportActions theCodeAnchors
+            eventMap <-
+                panesEventMap theExportActions theCodeAnchors
+                (workArea ^. Sugar.waRepl . Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
@@ -226,9 +230,9 @@ makeNewDefinitionButton =
 
 panesEventMap ::
     Monad m =>
-    ExportActions m -> Anchors.CodeAnchors m ->
+    ExportActions m -> Anchors.CodeAnchors m -> T.Type ->
     ExprGuiM m (EventMap (IOTrans m GuiState.Update))
-panesEventMap theExportActions theCodeAnchors =
+panesEventMap theExportActions theCodeAnchors replType =
     do
         theConfig <- Lens.view config
         let exportConfig = theConfig ^. Config.export
@@ -251,6 +255,14 @@ panesEventMap theExportActions theCodeAnchors =
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
+            , case replType of
+                T.TInst tid _
+                    | tid == Builtins.mutTid ->
+                        E.keysEventMap (exportConfig ^. Config.executeKeys)
+                        (E.Doc ["Execute Repl Process"])
+                        (IOTrans (pure (pure mempty) <$
+                        ReplEdit.executeIOProcess (exportReplActions theExportActions)))
+                _ -> mempty
             ]
     where
         ExportActions{importAll,exportAll} = theExportActions

@@ -16,8 +16,6 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config, config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -59,7 +57,7 @@ replEventMap ::
     Monad m =>
     Config -> ExportRepl m ->
     Sugar.Expression name (T m) a -> EventMap (IOTrans m GuiState.Update)
-replEventMap theConfig (ExportRepl exportRepl exportFancy executeRepl) replExpr =
+replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
     mconcat
     [ extractEventMap replExpr (theConfig ^. Config.extractKeys)
         <&> IOTrans.liftTrans
@@ -67,13 +65,6 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy executeRepl) replExpr 
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
     , E.keysEventMap (exportConfig ^. Config.exportFancyKeys)
       (E.Doc ["Collaboration", "Export repl as JS"]) exportFancy
-    , case replExpr ^. Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType of
-        T.TInst tid _
-            | tid == Builtins.mutTid ->
-                E.keysEventMap (exportConfig ^. Config.executeKeys)
-                (E.Doc ["Execute Repl Process"])
-                (IOTrans (pure (pure mempty) <$ executeRepl))
-        _ -> mempty
     ]
     where
         exportConfig = theConfig ^. Config.export
