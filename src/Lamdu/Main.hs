@@ -301,7 +301,7 @@ assignFontSizes theme fonts =
     & Font.fontHelp . _1 .~ helpTextSize
     where
         baseTextSize = Theme.baseTextSize theme
-        helpTextSize = Theme.helpTextSize (Theme.help theme)
+        helpTextSize = Theme.help theme ^. Theme.helpTextSize
 
 curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =

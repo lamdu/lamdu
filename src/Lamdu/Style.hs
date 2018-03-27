@@ -46,17 +46,15 @@ helpStyle font helpKeys theme =
     EventMapHelp.Config
     { EventMapHelp._configStyle =
         TextView.Style
-        { TextView._styleColor = helpTextColor
+        { TextView._styleColor = theme ^. Theme.helpTextColor
         , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
-    , EventMapHelp._configInputDocColor = helpInputDocColor
-    , EventMapHelp._configBGColor = helpBGColor
+    , EventMapHelp._configInputDocColor = theme ^. Theme.helpInputDocColor
+    , EventMapHelp._configBGColor = theme ^. Theme.helpBGColor
     , EventMapHelp._configOverlayDocKeys = helpKeys
-    , EventMapHelp._configTint = helpTint
+    , EventMapHelp._configTint = theme ^. Theme.helpTint
     }
-    where
-        Theme.Help{helpTextColor, helpInputDocColor, helpBGColor, helpTint} = theme
 
 textEdit :: Draw.Color -> Font -> TextEdit.Style
 textEdit color font =

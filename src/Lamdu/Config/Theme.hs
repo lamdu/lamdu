@@ -2,7 +2,9 @@
 {-# LANGUAGE TemplateHaskell, CPP #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), Hole(..), Eval(..), ToolTip(..), StatusBar(..)
+    ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
+    , Hole(..)
+    , Eval(..), ToolTip(..), StatusBar(..)
     , Theme(..), stdSpacing, menu, versionControl
     , HasTheme(..)
     ) where
@@ -30,17 +32,19 @@ import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import           Lamdu.Prelude
 
 data Help = Help
-    { helpTextSize :: FontSize
-    , helpTextColor :: Draw.Color
-    , helpInputDocColor :: Draw.Color
-    , helpBGColor :: Draw.Color
-    , helpTint :: Draw.Color
+    { _helpTextSize :: FontSize
+    , _helpTextColor :: Draw.Color
+    , _helpInputDocColor :: Draw.Color
+    , _helpBGColor :: Draw.Color
+    , _helpTint :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "help"}
+    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_help"}
 #endif
     ''Help
+
+Lens.makeLenses ''Help
 
 data Hole = Hole
     { holeResultPadding :: Vector2 Double
