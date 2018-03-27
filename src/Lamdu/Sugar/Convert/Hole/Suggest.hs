@@ -74,7 +74,7 @@ valueConversionH nominals empty src =
         srcInferPl = src ^. Val.payload . _1
 
 prependOpt :: a -> StateT s [] a -> StateT s [] a
-prependOpt opt act = StateT $ \s -> (opt, s) : runStateT act s
+prependOpt opt = Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
 
 valueConversionNoSplit ::
     Nominals -> a -> Val (Payload, a) ->
