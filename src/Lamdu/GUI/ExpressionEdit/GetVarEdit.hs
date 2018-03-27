@@ -181,12 +181,11 @@ processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         theme <- Lens.view Theme.theme
-        layout <-
-            ExprGuiM.withLocalUnderline Underline
+        let underline = Underline
                 { _underlineColor = Theme.typeIndicatorErrorColor theme
                 , _underlineWidth = Theme.wideUnderlineWidth theme
                 }
-            mkLayout
+        layout <- Reader.local (TextView.underline ?~ underline) mkLayout
         isSelected <- GuiState.isSubCursor ?? myId
         if isSelected
             then
@@ -226,7 +225,7 @@ makeGetParam param myId =
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->
                 makeSimpleView
-                <&> Lens.mapped %~ LightLambda.withUnderline theme
+                <&> Lens.mapped %~ Reader.local (TextView.underline ?~ LightLambda.underline theme)
                 <&> Lens.mapped %~ Styled.nameAtBinder TextColors.parameterColor name
             _ ->
                 makeSimpleView

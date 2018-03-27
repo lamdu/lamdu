@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -85,7 +86,7 @@ mkShrunk paramIds myId =
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
             <*> Styled.grammarLabel "λ"
             <&> Responsive.fromWithTextPos
-            & LightLambda.withUnderline theme
+            & Reader.local (TextView.underline ?~ LightLambda.underline theme)
         pure $ \mScopeEdit ->
             [ addScopeEdit mScopeEdit lamLabel
               & Widget.weakerEvents expandEventMap

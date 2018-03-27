@@ -2,7 +2,6 @@
 module Lamdu.GUI.ExpressionGui.Monad
     ( ExprGuiM
     , StoredEntityIds(..)
-    , withLocalUnderline
     --
     , makeSubexpression
     , advanceDepth, resetDepth
@@ -111,10 +110,6 @@ instance Menu.HasConfig (Askable m) where
 instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
-
-withLocalUnderline ::
-    (MonadReader env m, TextView.HasStyle env) => TextView.Underline -> m a -> m a
-withLocalUnderline underline = Reader.local (TextView.underline ?~ underline)
 
 readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeAnchors m)
 readCodeAnchors = Lens.view aCodeAnchors
