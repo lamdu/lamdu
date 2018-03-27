@@ -202,18 +202,18 @@ makePaneEdit theExportActions pane =
 
 makeNewDefinition :: Monad m => Anchors.CodeAnchors m -> ExprGuiM m (T m Widget.Id)
 makeNewDefinition cp =
+    ExprGuiM.mkPrejumpPosSaver <&>
+    \savePrecursor ->
     do
-        savePrecursor <- ExprGuiM.mkPrejumpPosSaver
-        pure $ do
-            holeI <- DataOps.newHole
-            newDefI <-
-                Definition
-                (Definition.BodyExpr (Definition.Expr holeI mempty))
-                Scheme.any ()
-                & DataOps.newPublicDefinitionWithPane cp
-            savePrecursor
-            pure newDefI
-            <&> WidgetIds.newDest . WidgetIds.fromIRef
+        holeI <- DataOps.newHole
+        newDefI <-
+            Definition
+            (Definition.BodyExpr (Definition.Expr holeI mempty))
+            Scheme.any ()
+            & DataOps.newPublicDefinitionWithPane cp
+        savePrecursor
+        pure newDefI
+        <&> WidgetIds.newDest . WidgetIds.fromIRef
 
 newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
