@@ -1,23 +1,22 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 module Lamdu.GUI.ExpressionGui.Monad
-    ( ExprGuiM
-    , StoredEntityIds(..)
+    ( StoredEntityIds(..)
     --
-    , makeSubexpression
     , advanceDepth, resetDepth
     --
     , readCodeAnchors, mkPrejumpPosSaver
     --
     , readMScopeId, withLocalMScopeId
     --
-    , run
+    , MonadExprGui(..)
+    , ExprGuiM, run
     ) where
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
-import qualified Control.Monad.Trans.Reader as ReaderT
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Vector.Vector2 (Vector2)
@@ -65,27 +64,20 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-    , _aCodeAnchors :: Anchors.CodeAnchors m
+    , _aMakeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
+    , _aCodeAnchors :: Anchors.CodeAnchors (TM m)
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
     }
-newtype ExprGuiM m a = ExprGuiM
-    { _exprGuiM :: ReaderT (Askable m) (T m) a
-    } deriving (Functor, Applicative, Monad, MonadReader (Askable m))
 
-instance (Monad m, Semigroup a) => Semigroup (ExprGuiM m a) where
-    (<>) = liftA2 (<>)
-
-instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
-    mempty = pure mempty
-    mappend = liftA2 mappend
+class
+    ( MonadTransaction (TM m) m, MonadReader (Askable m) m
+    ) => MonadExprGui m where
+    type TM m :: * -> *
+    makeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
 
 Lens.makeLenses ''Askable
-Lens.makeLenses ''ExprGuiM
-
-instance Monad m => MonadTransaction m (ExprGuiM m) where transaction = ExprGuiM . lift
 
 instance GuiState.HasCursor (Askable m)
 instance GuiState.HasState (Askable m) where state = aState
@@ -111,36 +103,54 @@ instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
 
-readCodeAnchors :: Monad m => ExprGuiM m (Anchors.CodeAnchors m)
+readCodeAnchors :: MonadExprGui m => m (Anchors.CodeAnchors (TM m))
 readCodeAnchors = Lens.view aCodeAnchors
 
-mkPrejumpPosSaver :: Monad m => ExprGuiM m (T m ())
+mkPrejumpPosSaver :: MonadExprGui m => m (T (TM m) ())
 mkPrejumpPosSaver =
     DataOps.savePreJumpPosition <$> readCodeAnchors <*> Lens.view GuiState.cursor
 
-makeSubexpression :: Monad m => ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpression expr =
-    do
-        maker <- Lens.view aMakeSubexpression & ExprGuiM
-        maker expr
-    & advanceDepth (pure . Responsive.fromTextView) animId
-    where
-        animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
+resetDepth :: MonadExprGui m => Int -> m r -> m r
+resetDepth depth = Reader.local (aDepthLeft .~ depth)
 
-resetDepth :: Int -> ExprGuiM m r -> ExprGuiM m r
-resetDepth depth = exprGuiM %~ ReaderT.local (aDepthLeft .~ depth)
-
-advanceDepth ::
-    Monad m =>
-    (WithTextPos View -> ExprGuiM m r) -> AnimId -> ExprGuiM m r -> ExprGuiM m r
+advanceDepth :: MonadExprGui m => (WithTextPos View -> m r) -> AnimId -> m r -> m r
 advanceDepth f animId action =
     do
         depth <- Lens.view aDepthLeft
         if depth <= 0
             then mkErrorWidget >>= f
-            else action & exprGuiM %~ ReaderT.local (aDepthLeft -~ 1)
+            else action & Reader.local (aDepthLeft -~ 1)
     where
         mkErrorWidget = TextView.make ?? "..." ?? animId
+
+readMScopeId :: MonadExprGui m => m (CurAndPrev (Maybe ScopeId))
+readMScopeId = Lens.view aMScopeId
+
+withLocalMScopeId :: MonadExprGui m => CurAndPrev (Maybe ScopeId) -> m a -> m a
+withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
+
+newtype ExprGuiM m a = ExprGuiM (ReaderT (Askable (ExprGuiM m)) (T m) a)
+    deriving (Functor, Applicative, Monad, MonadReader (Askable (ExprGuiM m)))
+
+instance (Monad m, Semigroup a) => Semigroup (ExprGuiM m a) where
+    (<>) = liftA2 (<>)
+
+instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
+    mempty = pure mempty
+    mappend = liftA2 mappend
+
+instance Monad m => MonadTransaction m (ExprGuiM m) where
+    transaction = ExprGuiM . lift
+
+instance Monad m => MonadExprGui (ExprGuiM m) where
+    type TM (ExprGuiM m) = m
+    makeSubexpression expr =
+        do
+            maker <- Lens.view aMakeSubexpression
+            maker expr
+        & advanceDepth (pure . Responsive.fromTextView) animId
+        where
+            animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
 run ::
     ( MonadTransaction m n, MonadReader env n
@@ -176,9 +186,3 @@ run makeSubexpr theCodeAnchors (ExprGuiM action) =
             , _aMScopeId = Just topLevelScopeId & pure
             , _aStyle = theStyle
             } & transaction
-
-readMScopeId :: Monad m => ExprGuiM m (CurAndPrev (Maybe ScopeId))
-readMScopeId = Lens.view aMScopeId
-
-withLocalMScopeId :: CurAndPrev (Maybe ScopeId) -> ExprGuiM m a -> ExprGuiM m a
-withLocalMScopeId mScopeId = exprGuiM %~ ReaderT.local (aMScopeId .~ mScopeId)
