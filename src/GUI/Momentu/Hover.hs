@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, RankNTypes, UndecidableInstances #-}
+{-# LANGUAGE CPP, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, RankNTypes, UndecidableInstances #-}
 module GUI.Momentu.Hover
     ( Style(..)
     , Hover, hover, sequenceHover
@@ -16,6 +16,7 @@ module GUI.Momentu.Hover
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
@@ -30,24 +31,32 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
+#ifndef NO_CODE
+import           Data.Aeson.Utils (removePrefix)
+#endif
 
 import           Lamdu.Prelude
 
 data Style = Style
-    { frameColor :: Draw.Color
-    , framePadding :: Vector2 R
-    , bgColor :: Draw.Color
-    , bgPadding :: Vector2 R
+    { _frameColor :: Draw.Color
+    , _framePadding :: Vector2 R
+    , _bgColor :: Draw.Color
+    , _bgPadding :: Vector2 R
     } deriving (Eq, Generic, Show)
-deriveJSON defaultOptions ''Style
+deriveJSON
+    defaultOptions
+#ifndef NO_CODE
+    {Aeson.fieldLabelModifier = removePrefix "_"}
+#endif
+    ''Style
 
-Lens.makeLensesFor [("bgColor", "bgColorL")] ''Style
+Lens.makeLenses ''Style
 
 class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
 backgroundColor :: HasStyle env => Lens' env Draw.Color
-backgroundColor = style . bgColorL
+backgroundColor = style . bgColor
 
 data AnchoredWidget a = AnchoredWidget
     { _anchorPoint :: Vector2 R
@@ -167,10 +176,10 @@ addFrame =
         animId <- Lens.view Element.animIdPrefix
         pure $ \gui ->
             gui
-            & Element.pad (bgPadding s)
-            & Draw.backgroundColor (animId <> ["hover bg"]) (bgColor s)
-            & Element.pad (framePadding s)
-            & Draw.backgroundColor (animId <> ["hover frame"]) (frameColor s)
+            & Element.pad (s ^. bgPadding)
+            & Draw.backgroundColor (animId <> ["hover bg"]) (s ^. bgColor)
+            & Element.pad (s ^. framePadding)
+            & Draw.backgroundColor (animId <> ["hover frame"]) (s ^. frameColor)
 
 hover ::
     (MonadReader env m, Element a, HasStyle env, Element.HasAnimIdPrefix env) =>
