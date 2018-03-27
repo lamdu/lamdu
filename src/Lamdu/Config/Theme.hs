@@ -6,7 +6,7 @@ module Lamdu.Config.Theme
     , Hole(..), holeResultPadding, holeSearchTermBGColor, holeActiveSearchTermBGColor
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
-    , StatusBar(..)
+    , StatusBar(..), statusBarBGColor, statusBarHSpaces
     , Theme(..), stdSpacing, menu, versionControl
     , HasTheme(..)
     ) where
@@ -87,19 +87,21 @@ deriveJSON Aeson.defaultOptions
 Lens.makeLenses ''ToolTip
 
 data StatusBar = StatusBar
-    { statusBarBGColor :: Draw.Color
-    , statusBarHSpaces :: Double
+    { _statusBarBGColor :: Draw.Color
+    , _statusBarHSpaces :: Double
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE
     {Aeson.fieldLabelModifier =
      \name ->
      name
-     & removePrefix "statusBar"
+     & removePrefix "_statusBar"
      & Lens.taking 2 traverse %~ Char.toLower
     }
 #endif
     ''StatusBar
+
+Lens.makeLenses ''StatusBar
 
 data Theme = Theme
     { fonts :: Fonts FilePath
