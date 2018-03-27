@@ -44,14 +44,16 @@ undoEventMap ::
     VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
 undoEventMap config =
-    E.keyPresses (VersionControl.undoKeys config <&> toModKey) (E.Doc ["Edit", "Undo"])
+    E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
+    (E.Doc ["Edit", "Undo"])
     & foldMap
 
 redoEventMap ::
     VersionControl.Config -> Maybe (m GuiState.Update) ->
     EventMap (m GuiState.Update)
 redoEventMap config =
-    E.keyPresses (VersionControl.redoKeys config <&> toModKey) (E.Doc ["Edit", "Redo"])
+    E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
+    (E.Doc ["Edit", "Redo"])
     & foldMap
 
 eventMap ::
@@ -59,9 +61,9 @@ eventMap ::
     VersionControl.Config -> Actions t f ->
     EventMap (f GuiState.Update)
 eventMap config actions = mconcat
-    [ E.keysEventMapMovesCursor (VersionControl.makeBranchKeys config)
+    [ E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
-    , E.keysEventMapMovesCursor (VersionControl.jumpToBranchesKeys config)
+    , E.keysEventMapMovesCursor (config ^. VersionControl.jumpToBranchesKeys)
       (E.Doc ["Branches", "Select"]) $
       (pure . branchDelegatorId . currentBranch) actions
     , mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap config
@@ -109,7 +111,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                 let delEventMap
                         | ListUtils.isLengthAtLeast 2 (branches actions) =
                             E.keysEventMapMovesCursor
-                            (VersionControl.delBranchKeys config)
+                            (config ^. VersionControl.delBranchKeys)
                             (E.Doc ["Branches", "Delete"])
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
@@ -120,5 +122,5 @@ makeBranchSelector rwtransaction rtransaction actions =
                         \env ->
                         env &
                         TextView.color .~
-                        VersionControl.selectedBranchColor (env ^. VersionControl.theme)
+                        env ^. VersionControl.theme . VersionControl.selectedBranchColor
                     else id
