@@ -63,7 +63,7 @@ Lens.makeLenses ''ConventionalParams
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: T.Type
-    , fpValue :: CurAndPrev (Map ER.ScopeId [(ER.ScopeId, ER.Val T.Type)])
+    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, ER.Val T.Type)])
     }
 
 data StoredLam m = StoredLam
@@ -163,7 +163,7 @@ addFieldParam mPresMode mkArg binderKind storedLam mkNewTags tag =
                 V.RecExtend tag newArg argI
                     & V.BRecExtend & ExprIRef.newValBody
 
-mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ER.ScopeId [BinderParamScopeId])
+mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
 mkCpScopesOfLam x =
     x ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
     <&> (fmap . map) BinderParamScopeId

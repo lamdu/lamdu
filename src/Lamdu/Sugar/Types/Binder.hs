@@ -1,8 +1,7 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module Lamdu.Sugar.Types.Binder
     ( -- Annotations
-      EvaluationResult
-    , Annotation(..), aInferredType, aMEvaluationResult
+      Annotation(..), aInferredType, aMEvaluationResult
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, extract, mReplaceParent, wrapInRecord
@@ -12,7 +11,6 @@ module Lamdu.Sugar.Types.Binder
     , Let(..)
         , lEntityId, lValue, lName, lUsages
         , lActions, lAnnotation, lBodyScope, lBody
-    , ChildScopeMapping
     -- Binders
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
@@ -34,23 +32,19 @@ module Lamdu.Sugar.Types.Binder
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
-import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.Eval
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-type EvaluationResult = Map ER.ScopeId (ER.Val T.Type)
-
 data Annotation name = Annotation
     { _aInferredType :: Type name
-    , _aMEvaluationResult :: CurAndPrev (Maybe EvaluationResult)
+    , _aMEvaluationResult :: EvaluationScopes
     } deriving Show
 
 data AddNextParam name m
@@ -108,11 +102,6 @@ data LetActions name m = LetActions
     , _laNodeActions :: NodeActions name m
     }
 
--- This is a mapping from a parent scope to the inner scope in:
--- * A redex lambda body (executed exactly once)
--- * Also used for if-else sugar where else-if scopes are executed no more than once
-type ChildScopeMapping = CurAndPrev (Map ER.ScopeId ER.ScopeId)
-
 data Let name m expr = Let
     { _lValue :: Binder name m expr -- "let [[foo = bar]] in x"
     , _lEntityId :: EntityId
@@ -120,7 +109,7 @@ data Let name m expr = Let
     , _lAnnotation :: Annotation name
     , _lName :: Tag name m
     , _lActions :: LetActions name m
-    , _lBodyScope :: ChildScopeMapping
+    , _lBodyScope :: ChildScopes
     , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
@@ -159,7 +148,7 @@ data BinderBody name m expr = BinderBody
 data BinderBodyScope
     = SameAsParentScope
       -- ^ no binder params
-    | BinderBodyScope (CurAndPrev (Map ER.ScopeId [BinderParamScopeId]))
+    | BinderBodyScope ParamScopes
       -- ^ binder has params, use the map to get the param application
       -- scopes
 

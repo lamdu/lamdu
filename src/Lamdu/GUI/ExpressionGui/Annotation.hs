@@ -140,7 +140,7 @@ processAnnotationGui wideAnnotationBehavior =
                     | otherwise = id
 
 data EvalResDisplay = EvalResDisplay
-    { erdScope :: ER.ScopeId
+    { erdScope :: Sugar.ScopeId
     , erdSource :: CurPrevTag
     , erdVal :: ER.Val T.Type
     }
@@ -359,7 +359,7 @@ maybeAddAnnotation ::
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::
-    Sugar.Annotation name -> CurAndPrev (Maybe ER.ScopeId) ->
+    Sugar.Annotation name -> CurAndPrev (Maybe Sugar.ScopeId) ->
     Maybe EvalResDisplay
 valOfScope annotation mScopeIds =
     go
@@ -373,5 +373,5 @@ valOfScope annotation mScopeIds =
             ann ^? Lens._Just . Lens.at scopeId . Lens._Just
             <&> EvalResDisplay scopeId tag
 
-valOfScopePreferCur :: Sugar.Annotation name -> ER.ScopeId -> Maybe EvalResDisplay
+valOfScopePreferCur :: Sugar.Annotation name -> Sugar.ScopeId -> Maybe EvalResDisplay
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just

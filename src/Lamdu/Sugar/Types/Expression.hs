@@ -40,6 +40,7 @@ import           Data.Property (Property)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Binder
+import           Lamdu.Sugar.Types.Eval
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
 import           Lamdu.Sugar.Types.Tag
@@ -114,7 +115,7 @@ data IfThen m expr = IfThen
 
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
 data ElseIfContent name m expr = ElseIfContent
-    { _eiScopes :: ChildScopeMapping
+    { _eiScopes :: ChildScopes
     , _eiEntityId :: EntityId
     , _eiContent :: IfElse name m expr
     , _eiCondAddLet :: m EntityId
