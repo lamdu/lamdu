@@ -205,15 +205,13 @@ makeNewDefinition cp =
     ExprGuiM.mkPrejumpPosSaver <&>
     \savePrecursor ->
     do
+        savePrecursor
         holeI <- DataOps.newHole
-        newDefI <-
-            Definition
+        Definition
             (Definition.BodyExpr (Definition.Expr holeI mempty))
             Scheme.any ()
             & DataOps.newPublicDefinitionWithPane cp
-        savePrecursor
-        pure newDefI
-        <&> WidgetIds.newDest . WidgetIds.fromIRef
+    <&> WidgetIds.newDest . WidgetIds.fromIRef
 
 newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
