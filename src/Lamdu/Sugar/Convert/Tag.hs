@@ -48,7 +48,7 @@ convertTagWith ::
     Tag name (T m)
 convertTagWith tag name forbiddenTags allowAnon mkInstance setTag getPublishedTags =
     convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag getPublishedTags
-    & Tag (TagInfo (mkInstance tag) tag) (name tag)
+    & Tag (TagInfo (name tag) (mkInstance tag) tag)
 
 convertTagSelection ::
     Monad m =>
@@ -73,18 +73,17 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag getPublis
     , _tsNewTag =
         do
             newTag <- DataOps.genNewTag
-            setTag newTag <&> (,,) (name newTag) (mkInfo newTag)
+            setTag newTag <&> (,) (mkInfo newTag)
     , _tsAnon =
         case allowAnon of
         RequireTag -> Nothing
         AllowAnon -> setTag Anchors.anonTag <&> (,) (mkInstance Anchors.anonTag) & Just
     }
     where
-        mkInfo t = TagInfo (mkInstance t) t
+        mkInfo t = TagInfo (name t) (mkInstance t) t
         toOption x =
             TagOption
-            { _toName = name x
-            , _toInfo = mkInfo x
+            { _toInfo = mkInfo x
             , _toPick = setTag x
             }
 

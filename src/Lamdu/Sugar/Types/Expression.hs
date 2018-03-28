@@ -26,7 +26,7 @@ module Lamdu.Sugar.Types.Expression
     , GetField(..), gfRecord, gfTag
     , Inject(..), iTag, iMVal
     , SpecialArgs(..)
-    , AnnotatedArg(..), aaTag, aaExpr, aaName
+    , AnnotatedArg(..), aaTag, aaExpr
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fAttach, fOptions
@@ -146,8 +146,7 @@ data Inject name m expr = Inject
     } deriving (Functor, Foldable, Traversable)
 
 data AnnotatedArg name expr = AnnotatedArg
-    { _aaTag :: TagInfo
-    , _aaName :: name
+    { _aaTag :: TagInfo name
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 

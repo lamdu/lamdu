@@ -87,7 +87,7 @@ data Info m = Info
     , iId :: Widget.Id
     }
 
-mkParamPickResult :: Sugar.TagInfo -> a -> Menu.PickResult
+mkParamPickResult :: Sugar.TagInfo name -> a -> Menu.PickResult
 mkParamPickResult tagInfo _ =
     Menu.PickResult
     { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId

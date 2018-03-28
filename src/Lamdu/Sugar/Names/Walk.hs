@@ -156,6 +156,16 @@ toLam ::
     m (Lambda (NewName m) (TM m) b)
 toLam = lamBinder . toBinder
 
+toTagInfoOf ::
+    MonadNaming m => NameType -> TagInfo (OldName m) -> m (TagInfo (NewName m))
+toTagInfoOf nameType = tagName (opGetName Nothing nameType)
+
+withTagInfoOf ::
+    MonadNaming m =>
+    NameType -> NameGen.VarInfo ->
+    TagInfo (OldName m) -> CPS m (TagInfo (NewName m))
+withTagInfoOf nameType varInfo = tagName (opWithName varInfo nameType)
+
 toTagSelection ::
     MonadNaming m =>
     TagSelection (OldName m) (TM m) a -> m (TagSelection (NewName m) (TM m) a)
@@ -165,17 +175,17 @@ toTagSelection t@TagSelection{..} =
         run1 <- opRun
         pure t
             { _tsOptions =
-                _tsOptions >>= run0 . (traverse . toName) (opGetName Nothing Tag)
-            , _tsNewTag = _tsNewTag >>= run1 . _1 (opGetName Nothing Tag)
+                _tsOptions >>= run0 . (traverse . toInfo) (toTagInfoOf Tag)
+            , _tsNewTag = _tsNewTag >>= run1 . _1 (toTagInfoOf Tag)
             }
 
 toTagOf ::
     MonadNaming m =>
     NameType -> Sugar.Tag (OldName m) (TM m) ->
     m (Sugar.Tag (NewName m) (TM m))
-toTagOf nameType (Sugar.Tag info name actions) =
-    Sugar.Tag info
-    <$> opGetName Nothing nameType name
+toTagOf nameType (Sugar.Tag info actions) =
+    Sugar.Tag
+    <$> toTagInfoOf nameType info
     <*> toTagSelection actions
 
 withTag ::
@@ -183,9 +193,9 @@ withTag ::
     NameType -> NameGen.VarInfo ->
     Sugar.Tag (OldName m) (TM m) ->
     CPS m (Sugar.Tag (NewName m) (TM m))
-withTag nameType varInfo (Sugar.Tag info name actions) =
-    Sugar.Tag info
-    <$> opWithName varInfo nameType name
+withTag nameType varInfo (Sugar.Tag info actions) =
+    Sugar.Tag
+    <$> withTagInfoOf nameType varInfo info
     <*> liftCPS (toTagSelection actions)
 
 toRelayedArg ::
@@ -209,7 +219,7 @@ toLabeledApply expr app@LabeledApply{..} =
         opGetName (Just (funcSignature app)) TaggedVar
     )
     <*> pure _aSpecialArgs
-    <*> (traverse . aaName) (opGetName Nothing Tag) _aAnnotatedArgs
+    <*> (traverse . aaTag) (toTagInfoOf Tag) _aAnnotatedArgs
     <*> traverse toRelayedArg _aRelayedArgs
     >>= traverse expr
 

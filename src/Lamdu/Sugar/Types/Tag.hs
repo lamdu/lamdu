@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
-    ( Tag(..), tagName, tagInfo, tagSelection
-    , TagInfo(..), tagVal, tagInstance
+    ( Tag(..), tagInfo, tagSelection
+    , TagInfo(..), tagName, tagVal, tagInstance
     , TagSelection(..), tsOptions, tsNewTag, tsAnon
-    , TagOption(..), toInfo, toName, toPick
+    , TagOption(..), toInfo, toPick
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,14 +12,14 @@ import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
-data TagInfo = TagInfo
-    { _tagInstance :: EntityId -- Unique across different uses of a tag
+data TagInfo name = TagInfo
+    { _tagName :: name
+    , _tagInstance :: EntityId -- Unique across different uses of a tag
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Show)
 
 data TagOption name m a = TagOption
-    { _toInfo :: TagInfo
-    , _toName :: name
+    { _toInfo :: TagInfo name
     , _toPick :: m a
     } deriving (Functor, Foldable, Traversable)
 
@@ -29,7 +29,7 @@ data TagSelection name m a = TagSelection
       -- and this would also fix animation artifacts for picking new tags.
       -- However that would require making a consistent new tag,
       -- which would require either a new Revision.Deltum feature or a Sugar cache.
-      _tsNewTag :: m (name, TagInfo, a)
+      _tsNewTag :: m (TagInfo name, a)
     , -- In some cases, like let-items, single params,
       -- the user does not have to choose a tag and can choose to have
       -- an auto-generated name instead.
@@ -37,8 +37,7 @@ data TagSelection name m a = TagSelection
     } deriving Functor
 
 data Tag name m = Tag
-    { _tagInfo :: TagInfo
-    , _tagName :: name
+    { _tagInfo :: TagInfo name
     , _tagSelection :: TagSelection name m ()
     }
 

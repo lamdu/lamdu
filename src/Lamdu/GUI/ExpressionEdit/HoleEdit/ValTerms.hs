@@ -60,7 +60,7 @@ bodyShape = \case
     Sugar.BodySimpleApply {} -> ["Apply"]
     Sugar.BodyLabeledApply {} -> ["Apply"]
     Sugar.BodyRecord {} -> ["{}", "()", "[]"]
-    Sugar.BodyGetField gf -> ofName (gf ^. Sugar.gfTag . Sugar.tagName) <&> ("." <>)
+    Sugar.BodyGetField gf -> ofName (gf ^. Sugar.gfTag . Sugar.tagInfo . Sugar.tagName) <&> ("." <>)
     Sugar.BodyCase cas ->
         ["case", "of"] ++
         case cas of
@@ -74,7 +74,7 @@ bodyShape = \case
     -- So these terms are used to filter the whole group, and then
     -- isExactMatch (see below) is used to filter each entry.
     Sugar.BodyInject (Sugar.Inject tag _) ->
-        (<>) <$> ofName (tag ^. Sugar.tagName) <*> [":", "."]
+        (<>) <$> ofName (tag ^. Sugar.tagInfo . Sugar.tagName) <*> [":", "."]
     Sugar.BodyLiteral i -> [formatLiteral i]
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
     Sugar.BodyGetVar {} -> []

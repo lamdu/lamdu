@@ -160,7 +160,7 @@ makeArgRow ::
     ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
 makeArgRow arg =
     do
-        argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaName) (arg ^. Sugar.aaTag . Sugar.tagInstance)
+        argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName) (arg ^. Sugar.aaTag . Sugar.tagInstance)
         space <- Spacer.stdHSpace
         expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
         pure Responsive.TaggedItem

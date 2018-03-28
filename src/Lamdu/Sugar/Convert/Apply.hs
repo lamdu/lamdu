@@ -107,7 +107,6 @@ convertLabeled funcS argS exprPl =
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. ciTag . tagInfo
-                    , _aaName = field ^. ciTag . tagName
                     , _aaExpr = field ^. ciExpr
                     }
         let args = record ^. cItems <&> getArg

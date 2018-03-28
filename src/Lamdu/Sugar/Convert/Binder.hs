@@ -214,7 +214,7 @@ convertLam lam exprPl =
             convParams (lam ^. V.lamResult) exprPl
             <&> bActions . baMNodeActions .~ Nothing
         let paramNames =
-                binder ^.. bParams . _Params . traverse . fpInfo . piTag . tagName
+                binder ^.. bParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
                 & Set.fromList
         let lambda
                 | useNormalLambda paramNames binder =
