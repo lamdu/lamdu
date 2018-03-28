@@ -310,13 +310,13 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 
 makeTagView ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env) =>
-    Sugar.Tag (Name f) g -> m (WithTextPos View)
+    Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
-    NameView.make (tag ^. Sugar.tagInfo . Sugar.tagName)
+    NameView.make (tag ^. Sugar.tagName)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId =
-            tag ^. Sugar.tagInfo . Sugar.tagInstance
+            tag ^. Sugar.tagInstance
             & WidgetIds.fromEntityId
             & Widget.toAnimId
 
@@ -367,7 +367,7 @@ makeTagEditWith onView onPickNext nearestHoles tag =
                 (E.Doc ["Edit", "Tag", "Choose"]) chooseAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            makeTagView tag
+            makeTagView (tag ^. Sugar.tagInfo)
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
         let hover = Hover.hoverBeside Align.tValue ?? nameView
