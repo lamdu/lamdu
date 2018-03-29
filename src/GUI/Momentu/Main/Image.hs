@@ -81,7 +81,7 @@ glDraw win (Vector2 winSizeX winSizeY) image =
         GL.matrixMode $= GL.Projection
         GL.loadIdentity
         GL.ortho 0 winSizeX winSizeY 0 (-1) 1
-        DrawUtils.clearRender image
+        Draw.clearRender image
         GLFW.swapBuffers win
         pure NextPoll
 

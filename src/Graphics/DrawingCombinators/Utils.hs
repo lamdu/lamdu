@@ -4,7 +4,6 @@ module Graphics.DrawingCombinators.Utils
     ( Image
     , square
     , scale, translate
-    , Draw.clearRender
     ) where
 
 import           Control.Monad (void)
