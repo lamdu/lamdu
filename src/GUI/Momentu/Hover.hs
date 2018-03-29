@@ -16,7 +16,6 @@ module GUI.Momentu.Hover
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import qualified Data.Aeson.Types as Aeson
 import           Data.List.Utils (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
@@ -31,7 +30,9 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
+
 #ifndef NO_CODE
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson.Utils (removePrefix)
 #endif
 

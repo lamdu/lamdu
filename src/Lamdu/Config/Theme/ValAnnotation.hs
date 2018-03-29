@@ -2,9 +2,7 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme.ValAnnotation where
 
-#ifndef NO_CODE
 import qualified Control.Lens as Lens
-#endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 #ifndef NO_CODE

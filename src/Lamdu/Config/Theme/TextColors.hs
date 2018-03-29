@@ -5,9 +5,10 @@ module Lamdu.Config.Theme.TextColors where
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import qualified Data.Aeson.Types as Aeson
 import qualified GUI.Momentu.Draw as Draw
+
 #ifndef NO_CODE
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson.Utils (removePrefix)
 #endif
 

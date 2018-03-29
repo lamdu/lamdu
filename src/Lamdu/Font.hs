@@ -10,12 +10,13 @@ import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import qualified Data.Aeson.Types as Aeson
 import           Data.Typeable (Typeable)
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory
+
 #ifndef NO_CODE
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson.Utils (removePrefix, decapitalize)
 #endif
 

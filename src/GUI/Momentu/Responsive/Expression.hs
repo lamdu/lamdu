@@ -11,7 +11,6 @@ module GUI.Momentu.Responsive.Expression
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import qualified Data.Aeson.Types as Aeson
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
@@ -28,8 +27,10 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+
 #ifndef NO_CODE
 import           Data.Aeson.Utils (removePrefix)
+import qualified Data.Aeson.Types as Aeson
 #endif
 
 import           Lamdu.Prelude

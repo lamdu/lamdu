@@ -7,7 +7,6 @@ module GUI.Momentu.Zoom
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import qualified Data.Aeson.Types as Aeson
 import           Data.IORef
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -17,7 +16,9 @@ import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+
 #ifndef NO_CODE
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson.Utils (removePrefix)
 #endif
 

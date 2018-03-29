@@ -21,7 +21,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import qualified Data.Aeson.Types as Aeson
 import           GUI.Momentu.Align (WithTextPos, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -40,7 +39,9 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
+
 #ifndef NO_CODE
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson.Utils (removePrefix)
 #endif
 
