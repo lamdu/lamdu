@@ -6,6 +6,7 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.Transaction (MonadTransaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -23,7 +24,7 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -99,10 +100,10 @@ mkParamPickResult tagInfo _ =
 
 -- exported for use in definition sugaring.
 make ::
-    Monad m =>
+    (MonadExprGui n, MonadTransaction m n) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name g) (Info m) -> ExprGuiM m [ExpressionGui (T m)]
+    Sugar.FuncParam (Name g) (Info m) -> n [ExpressionGui (T m)]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view Config.config
