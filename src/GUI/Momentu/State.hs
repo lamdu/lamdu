@@ -34,6 +34,11 @@ import           Lamdu.Prelude
 newtype VirtualCursor = VirtualCursor { _vcRect :: Rect }
 Lens.makeLenses ''VirtualCursor
 
+-- The GUIState may persist in user-specified storage (e.g: the Lamdu
+-- DB), thus we do not want to store the virtual cursor there. The
+-- Update type is still a convenient place to carry the virtual cursor
+-- updates.
+
 data GUIState = GUIState
     { _sCursor :: Id
     , _sWidgetStates :: Map Id ByteString
