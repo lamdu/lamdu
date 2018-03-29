@@ -3,6 +3,7 @@ module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)
     , makeToggledHelpAdder
+    , addHelpView
     , Config(..), defaultConfig
     ) where
 
@@ -218,10 +219,13 @@ toggle HelpNotShown = HelpShown
 helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
-addHelpView ::
+addHelpView :: Config -> Vector2 R -> Widget.Focused (f a) -> Widget.Focused (f a)
+addHelpView = addHelpViewWith HelpShown
+
+addHelpViewWith ::
     IsHelpShown -> Config -> Vector2 R ->
     Widget.Focused (f a) -> Widget.Focused (f a)
-addHelpView showingHelp config size focus =
+addHelpViewWith showingHelp config size focus =
     focus
     & Widget.fLayers %~ addToBottomRight bgHelpView size
     where
@@ -275,7 +279,7 @@ makeToggledHelpAdder startValue =
         readIORef showingHelpVar
         <&> (\showingHelp ->
                 makeFocus
-                <&> addHelpView showingHelp config size
+                <&> addHelpViewWith showingHelp config size
                 <&> Widget.fEventMap . Lens.mapped %~ (toggleEventMap showingHelpVar showingHelp config <>)
             )
         <&> Widget.StateFocused
