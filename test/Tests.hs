@@ -1,6 +1,7 @@
 module Main where
 
 import qualified Lamdu.Data.Export.JSON as JsonFormat
+import qualified TestAnimIdClash
 import qualified TestColorSchemes
 import qualified TestConfig
 import qualified TestMomentu
@@ -20,7 +21,8 @@ main =
         tests =
             TestStdlib.tests ++
             TestMomentu.tests ++
-            [ TestColorSchemes.test
+            [ TestAnimIdClash.test
+            , TestColorSchemes.test
             , TestConfig.test
             , testCase "json-codec-migration" jsonCodecMigrationTest
             ]

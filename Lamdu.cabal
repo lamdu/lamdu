@@ -282,6 +282,7 @@ Library
                   , Lamdu.Sugar.Convert.Text
                   , Lamdu.Sugar.Convert.Type
                   , Lamdu.Sugar.EntityId
+                  , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.Parens
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.Names.Add
@@ -318,7 +319,6 @@ Library
                   , System.Random.Utils
 
   other-modules:    Lamdu.Sugar.Internal
-                  , Lamdu.Sugar.Internal.EntityId
                   , Paths_Lamdu
 
   ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
@@ -336,16 +336,19 @@ Test-Suite Tests
   extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   hs-source-dirs: test
   main-is: Tests.hs
-  other-modules: TestColorSchemes
+  other-modules: TestAnimIdClash
+               , TestColorSchemes
                , TestConfig
                , TestMomentu
                , TestStdlib
                , Test.Lamdu.Db
                , Test.Lamdu.FreshDb
+               , Test.Lamdu.GuiEnv
                , Test.Lamdu.Instances
+               , Test.Lamdu.Theme
   build-depends:
     base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck, aeson-diff,
     Lamdu, AlgoW, lamdu-calculus,
-    aeson, bytestring, containers, filepath, lens, aeson-pretty, pretty, random, text
+    aeson, bytestring, containers, filepath, lens, aeson-pretty, pretty, random, text, uuid-types
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts

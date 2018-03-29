@@ -5,7 +5,9 @@ module Test.Lamdu.Instances () where
 
 import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.String (IsString(..))
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Data.UUID.Types as UUID
 import           GUI.Momentu.Align (Aligned(..))
 import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
@@ -19,6 +21,7 @@ import           Lamdu.Config.Theme.TextColors as Theme
 import           Lamdu.Config.Theme.ValAnnotation as Theme
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
+import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import           Test.QuickCheck (Arbitrary(..), choose, getPositive, frequency)
 import           Text.PrettyPrint ((<+>))
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
@@ -41,6 +44,13 @@ deriving instance Data Theme.ValAnnotation
 deriving instance Data VcGuiConfig.Theme
 deriving instance Data a => Data (Fonts a)
 deriving instance Data a => Data (Vector2 a)
+
+instance IsString EntityId where
+    fromString s =
+        fromString (s ++ replicate (16 - length s) '\0')
+        & UUID.fromByteString
+        & fromMaybe (error ("Failed to convert to UUID: " <> show s))
+        & EntityId
 
 instance Pretty Color where
     pPrint (Color r g b a)

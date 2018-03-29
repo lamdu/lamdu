@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Sugar.Internal.EntityId
-    ( EntityId
+    ( EntityId(..)
     , bs
     , ofValI, ofIRef
     , ofBinder
