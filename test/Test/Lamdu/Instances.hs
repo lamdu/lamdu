@@ -1,7 +1,7 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveDataTypeable, OverloadedStrings, FlexibleInstances #-}
 
-module TestInstances () where
+module Test.Lamdu.Instances () where
 
 import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty(..))

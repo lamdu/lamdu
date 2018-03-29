@@ -1,7 +1,5 @@
 module Main where
 
-import           TestInstances ()
-
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
 import qualified Data.Aeson as Aeson
@@ -11,13 +9,13 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.Char as Char
 import           Data.Data.Lens (template)
-import qualified Data.Text as Text
 import           Data.List (sort)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import           Data.Proxy (Proxy(..), asProxyTypeOf)
+import qualified Data.Set as Set
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
@@ -36,20 +34,21 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Paths as Paths
 import qualified Lamdu.Themes as Themes
 import           System.FilePath (takeFileName)
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
-
-import           Lamdu.Prelude
 import           Test.Framework
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.Framework.Providers.QuickCheck2 (testProperty)
 import           Test.HUnit
+import           Test.Lamdu.Instances ()
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
+
+import           Lamdu.Prelude
 
 jsonCodecMigrationTest :: IO ()
 jsonCodecMigrationTest = JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
