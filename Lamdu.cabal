@@ -126,6 +126,7 @@ Library
                   , GUI.Momentu.Responsive.Options
                   , GUI.Momentu.Scroll
                   , GUI.Momentu.State
+                  , GUI.Momentu.Test
                   , GUI.Momentu.View
                   , GUI.Momentu.Widget
                   , GUI.Momentu.Widget.Id
