@@ -2,6 +2,7 @@
 module GUI.Momentu.Zoom
     ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
+    , makeUnscaled
     ) where
 
 import qualified Control.Lens as Lens
@@ -70,3 +71,7 @@ make win =
     do
         displayScale <- GLFWUtils.getDisplayScale win
         newIORef (displayScale ^. _2) <&> Zoom
+
+-- | Useful mainly for tests
+makeUnscaled :: Widget.R -> IO Zoom
+makeUnscaled = fmap Zoom . newIORef
