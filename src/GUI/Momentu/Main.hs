@@ -42,10 +42,10 @@ import           Graphics.UI.GLFW.Events as GLFWE
 import           Lamdu.Prelude
 
 data Config = Config
-    { cAnim :: MainAnim.AnimConfig
-    , cCursor :: Cursor.Config
-    , cZoom :: Zoom.Config
-    , cHelpStyle :: EventMapHelp.Config
+    { cAnim :: IO MainAnim.AnimConfig
+    , cCursor :: Zoom -> IO Cursor.Config
+    , cZoom :: IO Zoom.Config
+    , cHelpStyle :: Zoom -> IO EventMapHelp.Config
     }
 
 newtype ExecuteInMainThread m = ExecuteInMainThread (m ())
@@ -76,7 +76,7 @@ iorefStateStorage initialCursor =
 
 data Options = Options
     { tickHandler :: IO Bool
-    , getConfig :: Zoom -> IO Config
+    , config :: Config
     , stateStorage :: StateStorage
     , debug :: DebugOptions
     }
@@ -99,24 +99,25 @@ defaultOptions helpFontPath =
         stateStorage_ <- iorefStateStorage (Widget.Id [])
         pure Options
             { tickHandler = pure False
-            , getConfig =
-                \zoom -> do
-                    zoomFactor <- Zoom.getZoomFactor zoom
-                    helpFont <- loadHelpFont (9 * zoomFactor)
-                    pure Config
-                        { cAnim =
-                            MainAnim.AnimConfig
-                            { MainAnim.acTimePeriod = 0.11
-                            , MainAnim.acRemainingRatioInPeriod = 0.2
-                            }
-                        , cCursor =
-                            Cursor.Config
-                            { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
-                            , Cursor.decay = Nothing
-                            }
-                        , cZoom = Zoom.defaultConfig
-                        , cHelpStyle = EventMapHelp.defaultConfig helpFont
-                        }
+            , config = Config
+                { cAnim =
+                    pure MainAnim.AnimConfig
+                    { MainAnim.acTimePeriod = 0.11
+                    , MainAnim.acRemainingRatioInPeriod = 0.2
+                    }
+                , cCursor =
+                    \_zoom -> pure Cursor.Config
+                    { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
+                    , Cursor.decay = Nothing
+                    }
+                , cZoom = pure Zoom.defaultConfig
+                , cHelpStyle =
+                    \zoom ->
+                    do
+                        zoomFactor <- Zoom.getZoomFactor zoom
+                        helpFont <- loadHelpFont (9 * zoomFactor)
+                        EventMapHelp.defaultConfig helpFont & pure
+                }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
             }
@@ -185,9 +186,9 @@ mainLoopWidget win mkWidgetUnmemod options =
         let mkW =
                 memoIO $ \size ->
                 do
-                    config <- getConfig zoom
-                    let zoomEventMap = cZoom config & Zoom.eventMap zoom <&> liftIO
+                    zoomEventMap <- cZoom config <&> Zoom.eventMap zoom <&> fmap liftIO
                     s <- readState stateStorage_
+                    helpStyle <- cHelpStyle config zoom
                     mkWidgetUnmemod
                         Env
                         { _eZoom = zoom
@@ -195,7 +196,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         , _eState = s
                         }
                         <&> Widget.eventMapMaker . Lens.mapped %~ (zoomEventMap <>)
-                        >>= addHelp (cHelpStyle config) size
+                        >>= addHelp helpStyle size
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =
@@ -203,10 +204,9 @@ mainLoopWidget win mkWidgetUnmemod options =
                     virtCursor <- readIORef virtCursorRef
                     vcursorimg <- virtualCursorImage virtCursor debug
                     Cursor.render
-                        <$> (getConfig zoom <&> cCursor)
-                        <*> (readIORef mkWidgetRef >>= (size &))
-                        <&> _1 <>~ vcursorimg
-        MainAnim.mainLoop win (fpsFont zoom) (getConfig zoom <&> cAnim) $ \size -> MainAnim.Handlers
+                        <$> (readIORef mkWidgetRef >>= (size &))
+                        <&> _1 <>~ const vcursorimg
+        MainAnim.mainLoop win (fpsFont zoom) (cAnim config) $ \size -> MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
                     anyUpdate <- tickHandler
@@ -233,10 +233,12 @@ mainLoopWidget win mkWidgetUnmemod options =
                         { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
                         , MainAnim.erExecuteInMainThread = act
                         }
-            , MainAnim.makeFrame = renderWidget size <&> (^. _1)
+            , MainAnim.makeFrame =
+                (renderWidget size <&> (^. _1))
+                <*> cCursor config zoom
             }
     where
         stateStorage_ = stateStorage options
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{tickHandler, debug, getConfig} = options
+        Options{tickHandler, debug, config} = options
         DebugOptions{fpsFont} = debug

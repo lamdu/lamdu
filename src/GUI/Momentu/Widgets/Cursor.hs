@@ -33,21 +33,21 @@ data Config = Config
     }
 
 render ::
-    Config -> Widget a ->
-    ( Anim.Frame
+    Widget a ->
+    ( Config -> Anim.Frame
     , Maybe (Vector2 Widget.R -> Widget.EnterResult a)
     , Maybe (Rect, State.VirtualCursor -> EventMap a)
     )
-render Config{cursorColor, decay} w =
+render w =
     case w ^. Widget.wState of
     Widget.StateUnfocused u ->
         -- Unfocused top level widget! TODO: Is this some sort of error?
-        ( Element.render (u ^. Widget.uLayers)
+        ( const $ Element.render (u ^. Widget.uLayers)
         , u ^. Widget.uMEnter <&> (. Point)
         , Nothing
         )
     Widget.StateFocused f ->
-        ( cursorFrame <> Element.render (r ^. Widget.fLayers)
+        ( \config -> cursorFrame config <> Element.render (r ^. Widget.fLayers)
         , r ^. Widget.fMEnterPoint
         , Just (area, mkEventMap)
         )
@@ -61,12 +61,12 @@ render Config{cursorColor, decay} w =
                 }
             area = last (r ^. Widget.fFocalAreas)
             areaSize = area ^. Rect.width * area ^. Rect.height
-            color =
+            color Config{cursorColor, decay} =
                 case decay of
                 Nothing -> cursorColor
                 Just (Decay unit power) ->
                     cursorColor
                     & Draw.alphaChannel //~ (areaSize / unit**2) ** power
-            cursorFrame =
-                Anim.coloredRectangle ["cursor"] color (area ^. Rect.size)
+            cursorFrame config =
+                Anim.coloredRectangle ["cursor"] (color config) (area ^. Rect.size)
                 & Anim.translate (area ^. Rect.topLeft)

@@ -48,6 +48,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Opts as Opts
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
+import           Lamdu.Style (FontInfo(..))
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
@@ -341,15 +342,20 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
-        M.mainLoopWidget win makeWidget MainLoop.Options
-            { getConfig =
+        let mkFontInfo =
                 \zoom -> do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts zoom sample
                     let height = fonts ^. Font.fontDefault & Font.height
-                    Style.mainLoopConfig height (fonts ^. Font.fontHelp)
-                        (sample ^. sConfig) (sample ^. sTheme)
-                        & pure
+                    pure FontInfo
+                        { primaryFontHeight = height
+                        , helpFont = fonts ^. Font.fontHelp
+                        }
+        let mkConfigTheme =
+                ConfigSampler.getSample configSampler
+                <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
+        M.mainLoopWidget win makeWidget MainLoop.Options
+            { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
             , tickHandler =
                 do
                     sample <- ConfigSampler.getSample configSampler

@@ -2,7 +2,7 @@
 module Lamdu.Style
     ( Style(..), makeStyle
     , HasStyle(..)
-    , mainLoopConfig
+    , FontInfo(..), mainLoopConfig
 
     , styleBase, styleAutoNameOrigin, styleNameAtBinder
     , styleBytes, styleText, styleNum
@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           GUI.Momentu.Zoom (Zoom)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -75,22 +76,36 @@ makeStyle config fonts =
             , TextView._styleUnderline = Nothing
             }
 
-mainLoopConfig :: Draw.R -> Font -> Config -> Theme -> MainLoop.Config
-mainLoopConfig fontHeight helpFont config theme =
+data FontInfo = FontInfo
+    { primaryFontHeight :: Draw.R
+    , helpFont :: Font
+    }
+
+mainLoopConfig :: (Zoom -> IO FontInfo) -> IO (Config, Theme) -> MainLoop.Config
+mainLoopConfig getFontInfo getConfig =
     MainLoop.Config
     { cAnim =
+        getConfig
+        <&> \(_config, theme) ->
         AnimConfig
         { acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
         , acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
         }
     , cCursor =
+        \zoom ->
+        (,) <$> getFontInfo zoom <*> getConfig
+        <&> \(fi, (_config, theme)) ->
         Cursor.Config
         { cursorColor = theme ^. Theme.cursorColor
         , Cursor.decay = Just Cursor.Decay
-            { Cursor.heightUnit = fontHeight
+            { Cursor.heightUnit = primaryFontHeight fi
             , Cursor.heightExponent = theme ^. Theme.cursorDecayExponent
             }
         }
-    , cZoom = config ^. Config.zoom
-    , cHelpStyle = helpStyle helpFont (config ^. Config.helpKeys) (theme ^. Theme.help)
+    , cZoom = getConfig <&> (^. _1 . Config.zoom)
+    , cHelpStyle =
+        \zoom ->
+        (,) <$> getFontInfo zoom <*> getConfig
+        <&> \(fi, (config, theme)) ->
+        helpStyle (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
     }
