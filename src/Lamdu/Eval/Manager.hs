@@ -48,7 +48,7 @@ Lens.makePrisms ''BGEvaluator
 data NewParams = NewParams
     { resultsUpdated :: IO ()
     -- ^ Callback for notifying that new evaluation results are available.
-    , dbMVar :: MVar (Maybe (Transaction.Store IO))
+    , dbMVar :: MVar (Maybe (Transaction.Store DbM))
     , copyJSOutputPath :: Maybe FilePath
     }
 
@@ -72,13 +72,13 @@ new params =
             , eCancelTimerRef = cancelRef
             }
 
-withDb :: MVar (Maybe (Transaction.Store IO)) -> (Transaction.Store IO -> IO a) -> IO a
+withDb :: MVar (Maybe (Transaction.Store DbM)) -> (Transaction.Store DbM -> IO a) -> IO a
 withDb mvar action =
     withMVar mvar $ \case
     Nothing -> error "Trying to use DB when it is already gone"
     Just db -> action db
 
-runViewTransactionInIO :: MVar (Maybe (Transaction.Store IO)) -> T ViewM a -> IO a
+runViewTransactionInIO :: MVar (Maybe (Transaction.Store DbM)) -> T ViewM a -> IO a
 runViewTransactionInIO dbM trans =
     withDb dbM $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
@@ -95,7 +95,7 @@ getResults evaluator =
         prevResults <- readIORef (eResultsRef evaluator)
         pure CurAndPrev { _prev = prevResults, _current = res }
 
-eDb :: Evaluator -> MVar (Maybe (Transaction.Store IO))
+eDb :: Evaluator -> MVar (Maybe (Transaction.Store DbM))
 eDb = dbMVar . eParams
 
 loadDef ::

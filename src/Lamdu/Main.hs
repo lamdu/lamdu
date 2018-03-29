@@ -30,6 +30,7 @@ import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Db as Db
+import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
@@ -65,7 +66,7 @@ type T = Transaction
 
 data Env = Env
     { _envEvalRes :: GUIMain.EvalResults
-    , _envExportActions :: GUIMain.ExportActions DbLayout.ViewM
+    , _envExportActions :: GUIMain.ExportActions ViewM
     , _envConfig :: Config
     , _envTheme :: Theme
     , _envSettings :: Settings
@@ -75,8 +76,8 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-instance GUIMain.HasExportActions Env DbLayout.ViewM where exportActions = envExportActions
-instance GUIMain.HasEvalResults Env DbLayout.ViewM where evalResults = envEvalRes
+instance GUIMain.HasExportActions Env ViewM where exportActions = envExportActions
+instance GUIMain.HasEvalResults Env ViewM where evalResults = envEvalRes
 instance Settings.HasSettings Env where settings = envSettings
 instance Style.HasStyle Env where style = envStyle
 instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
@@ -124,7 +125,7 @@ deleteDB lamduDir =
         putStrLn "Deleting DB..."
         Directory.removeDirectoryRecursive lamduDir
 
-undoN :: Int -> Transaction.Store IO -> IO ()
+undoN :: Int -> Transaction.Store DbM -> IO ()
 undoN n db =
     do
         putStrLn $ "Undoing " ++ show n ++ " times"
@@ -135,13 +136,13 @@ undoN n db =
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
-importPath :: FilePath -> Transaction.Store IO -> IO ()
+importPath :: FilePath -> Transaction.Store DbM -> IO ()
 importPath path db =
     Export.fileImportAll path
     <&> VersionControl.runAction
     >>= DbLayout.runDbTransaction db
 
-exportToPath :: FilePath -> Transaction.Store IO -> IO ()
+exportToPath :: FilePath -> Transaction.Store DbM -> IO ()
 exportToPath path db =
     Export.fileExportAll path
     & VersionControl.runAction
@@ -169,7 +170,7 @@ settingsChangeHandler configSampler evaluator (Settings annotationMode theme) =
         ConfigSampler.setTheme configSampler theme
 
 exportActions ::
-    Config -> EvalResults (ValI DbLayout.ViewM) -> IO () -> GUIMain.ExportActions DbLayout.ViewM
+    Config -> EvalResults (ValI ViewM) -> IO () -> GUIMain.ExportActions ViewM
 exportActions config evalResults executeIOProcess =
     GUIMain.ExportActions
     { GUIMain.exportReplActions =
@@ -189,7 +190,7 @@ exportActions config evalResults executeIOProcess =
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
-    Fonts M.Font -> Transaction.Store IO -> EvalManager.Evaluator -> Config -> Theme ->
+    Fonts M.Font -> Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
     MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
 makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
     do
@@ -222,7 +223,7 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-stateStorageInIRef :: Transaction.Store IO -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
+stateStorageInIRef :: Transaction.Store DbM -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
 stateStorageInIRef db stateIRef =
     MainLoop.StateStorage
     { readState = DbLayout.runDbTransaction db (Transaction.readIRef stateIRef)
@@ -242,7 +243,7 @@ newSettingsProp initial configSampler evaluator =
         readIORef settingsRef <&> (`Property` setSettings) & pure
 
 newEvaluator ::
-    IO () -> MVar (Maybe (Transaction.Store IO)) -> Opts.EditorOpts -> IO EvalManager.Evaluator
+    IO () -> MVar (Maybe (Transaction.Store DbM)) -> Opts.EditorOpts -> IO EvalManager.Evaluator
 newEvaluator refresh dbMVar opts =
     EvalManager.new EvalManager.NewParams
     { EvalManager.resultsUpdated = refresh
@@ -250,7 +251,7 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
     }
 
-runEditor :: Opts.EditorOpts -> Transaction.Store IO -> IO ()
+runEditor :: Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 runEditor opts db =
     withMVarProtection db $ \dbMVar ->
     do

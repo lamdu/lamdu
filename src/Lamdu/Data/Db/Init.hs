@@ -7,6 +7,7 @@ module Lamdu.Data.Db.Init
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
@@ -34,7 +35,7 @@ newBranch name ver =
         setName branch name
         pure branch
 
-initDb :: Transaction.Store IO -> T DbLayout.ViewM () -> IO ()
+initDb :: Transaction.Store DbM -> T DbLayout.ViewM () -> IO ()
 initDb db importAct =
     DbLayout.runDbTransaction db $
     do
@@ -66,7 +67,7 @@ initDb db importAct =
         newVer <- Branch.curVersion master
         Version.preventUndo newVer
 
-initFreshDb :: Transaction.Store IO -> IO ()
+initFreshDb :: Transaction.Store DbM -> IO ()
 initFreshDb db =
     Paths.getDataFileName "freshdb.json"
     >>= fileImportAll >>= initDb db

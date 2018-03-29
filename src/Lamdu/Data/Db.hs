@@ -4,6 +4,7 @@ module Lamdu.Data.Db
 
 import           Control.Exception (onException)
 import qualified Lamdu.Data.Db.Init as DbInit
+import           Lamdu.Data.Db.Layout (DbM(..))
 import           Lamdu.Data.Db.Migration (migration)
 import qualified Revision.Deltum.Db as Db
 import qualified Revision.Deltum.Transaction as Transaction
@@ -12,7 +13,7 @@ import           System.FilePath ((</>))
 
 import           Lamdu.Prelude
 
-withDB :: FilePath -> (Transaction.Store IO -> IO a) -> IO a
+withDB :: FilePath -> (Transaction.Store DbM -> IO a) -> IO a
 withDB lamduDir body =
     do
         Directory.createDirectoryIfMissing False lamduDir
@@ -23,8 +24,9 @@ withDB lamduDir body =
                 , Db.errorIfExists = not alreadyExist
                 }
         Db.withDB dbPath options $
-            \db ->
+            \ioDb ->
             do
+                let db = Transaction.onStoreM DbM ioDb
                 if alreadyExist
                     then migration db
                     else DbInit.initFreshDb db `onException` Directory.removeDirectoryRecursive dbPath

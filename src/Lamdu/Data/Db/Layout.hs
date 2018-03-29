@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Db.Layout
-    ( DbM, runDbTransaction
+    ( DbM(DbM), runDbTransaction
     , ViewM, runViewTransaction
     , GuiAnchors, guiAnchors, guiIRefs
     , CodeAnchors, codeAnchors, codeIRefs
@@ -32,8 +32,8 @@ newtype DbM a = DbM { dbM :: IO a }
 newtype ViewM a = ViewM { viewM :: T DbM a }
     deriving (Functor, Applicative, Monad)
 
-runDbTransaction :: Transaction.Store IO -> T DbM a -> IO a
-runDbTransaction store = dbM . Transaction.run (Transaction.onStoreM DbM store)
+runDbTransaction :: Transaction.Store DbM -> T DbM a -> IO a
+runDbTransaction store = dbM . Transaction.run store
 
 runViewTransaction :: View DbM -> T ViewM a -> T DbM a
 runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . View.store) v
