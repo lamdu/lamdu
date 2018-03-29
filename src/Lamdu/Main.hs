@@ -8,7 +8,6 @@ import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM_)
 import           Data.CurAndPrev (current)
-import           Data.Functor.Compose (Compose(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (Property(..))
@@ -38,7 +37,8 @@ import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
-import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
+import           Lamdu.GUI.IOTrans (ioTrans)
+import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -174,7 +174,7 @@ exportActions config evalResults executeIOProcess =
     { GUIMain.exportReplActions =
         GUIMain.ExportRepl
         { GUIMain.exportRepl = fileExport Export.fileExportRepl
-        , GUIMain.exportFancy = export (exportFancy evalResults)
+        , GUIMain.exportFancy = exportFancy evalResults & IOTrans.liftTIO
         , GUIMain.executeIOProcess = executeIOProcess
         }
     , GUIMain.exportAll = fileExport Export.fileExportAll
@@ -183,9 +183,8 @@ exportActions config evalResults executeIOProcess =
     }
     where
         exportPath = config ^. Config.export . Config.exportPath
-        export x = x <&> (`MainLoop.EventResult` ()) & pure & Compose & IOTrans
-        fileExport exporter = exporter exportPath & export
-        importAll path = Export.fileImportAll path <&> fmap pure & Compose & IOTrans
+        fileExport exporter = exporter exportPath & IOTrans.liftTIO
+        importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
     Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
