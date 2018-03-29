@@ -17,7 +17,6 @@ import           Test.Framework (Test)
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.HUnit (assertString)
 import           Test.Lamdu.FreshDb (readFreshDb)
-import           Test.Lamdu.Instances ()
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude

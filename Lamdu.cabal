@@ -337,7 +337,7 @@ Test-Suite Tests
   hs-source-dirs: test
   main-is: Tests.hs
   other-modules:
-    TestColorSchemes, TestStdlib,
+    TestColorSchemes, TestConfig, TestMomentu, TestStdlib,
     Test.Lamdu.FreshDb, Test.Lamdu.Instances
   build-depends:
     base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck, aeson-diff,
