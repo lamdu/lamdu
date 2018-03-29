@@ -375,7 +375,9 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
                                 (EntityId.ofTaggedEntity param)
                         )
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
-                typeS <- fpFieldType fp & convertType (EntityId.ofTypeOf entityId)
+                typeS <-
+                    convertType (EntityId.ofTypeOf (paramInfo ^. piTag . tagInfo . tagInstance))
+                    (fpFieldType fp)
                 -- TODO: DRY with Convert.Expression.Actions.makeAnnotation?
                 let mk res
                         | Map.null res = Nothing
