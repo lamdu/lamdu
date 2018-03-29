@@ -8,7 +8,6 @@ import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.Char as Char
-import           Data.Data.Lens (template)
 import           Data.List (sort)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
@@ -20,7 +19,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (R)
-import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Rect as Rect
 import qualified GUI.Momentu.Responsive as Responsive
@@ -32,7 +30,6 @@ import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
-import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON as JsonFormat
@@ -40,11 +37,11 @@ import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Paths as Paths
 import qualified Lamdu.Themes as Themes
-import           System.FilePath (takeFileName)
 import           Test.Framework
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.Framework.Providers.QuickCheck2 (testProperty)
 import           Test.HUnit
+import qualified TestColorSchemes
 import           Test.Lamdu.Instances ()
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
@@ -52,45 +49,6 @@ import           Lamdu.Prelude
 
 jsonCodecMigrationTest :: IO ()
 jsonCodecMigrationTest = JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
-
-colorSchemeTest :: IO ()
-colorSchemeTest = Themes.getFiles >>= traverse_ verifyTheme
-
-colorSV :: Color -> (Double, Double)
-colorSV (Color r g b _a) =
-    (if v == 0 then 0 else (v - m) / v, v)
-    where
-        v = maximum [r, g, b]
-        m = minimum [r, g, b]
-
-colorSat :: Color -> Double
-colorSat = fst . colorSV
-
-roundIn :: RealFrac a => a -> a -> a
-roundIn unit x = fromIntegral (round (x / unit) :: Integer) * unit
-
-verifyTheme :: FilePath -> IO ()
-verifyTheme filename =
-    ConfigSampler.readJson filename >>= verify
-    where
-        verify :: Theme -> IO ()
-        verify theme
-            | "retro.json" == takeFileName filename = traverse_ verifyRetroColor colors
-            | Map.size saturations <= 3 = pure ()
-            | otherwise =
-                assertString
-                ("Too many saturation options in theme " ++ filename ++ ":\n" ++
-                prettyShow (Map.toList saturations))
-            where
-                saturations =
-                    colors <&> (\c -> (roundIn 0.001 (colorSat c), [c]))
-                    & Map.fromListWith (++)
-                colors = theme ^.. template
-        verifyRetroColor col@(Color r g b a)
-            | all (`elem` [0, 0.5, 1.0]) [r, g, b]
-                && elem a [0, 0.05, 0.1, 0.5, 1.0] = pure ()
-            | otherwise =
-                assertString ("Bad retro color in theme " ++ filename ++ ": " ++ show col)
 
 verifyTagsTest :: IO ()
 verifyTagsTest =
@@ -257,7 +215,7 @@ main :: IO ()
 main =
     defaultMainWithOpts
     [ testCase "json-codec-migration" jsonCodecMigrationTest
-    , testCase "color-scheme" colorSchemeTest
+    , TestColorSchemes.test
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     , testCase "vertical-disambguation" verticalDisambigTest
     , testCase "config-parses" configParseTest
