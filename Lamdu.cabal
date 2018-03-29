@@ -336,9 +336,13 @@ Test-Suite Tests
   extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   hs-source-dirs: test
   main-is: Tests.hs
-  other-modules:
-    TestColorSchemes, TestConfig, TestMomentu, TestStdlib,
-    Test.Lamdu.FreshDb, Test.Lamdu.Instances
+  other-modules: TestColorSchemes
+               , TestConfig
+               , TestMomentu
+               , TestStdlib
+               , Test.Lamdu.Db
+               , Test.Lamdu.FreshDb
+               , Test.Lamdu.Instances
   build-depends:
     base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck, aeson-diff,
     Lamdu, AlgoW, lamdu-calculus,
