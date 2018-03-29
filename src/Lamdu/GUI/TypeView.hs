@@ -220,12 +220,6 @@ makeComposite o c mkPre mkPost mkField composite =
         do
             opener <- grammar o
             closer <- grammar c
-            let toRow (t, v) =
-                    CompositeRow mkPre (pure t) space (pure v) mkPost
-                    where
-                        space
-                            | v ^. Align.tValue . Element.width == 0 = pure Element.empty
-                            | otherwise = Spacer.stdHSpace <&> WithTextPos 0
             fieldsView <-
                 traverse mkField fields
                 <&> map toRow
@@ -254,6 +248,13 @@ makeComposite o c mkPre mkPost mkField composite =
             fieldsView /-/ extView & Align.toWithTextPos
                 & (Styled.addValPadding ??)
                 >>= addTypeBG
+    where
+        toRow (t, v) =
+            CompositeRow mkPre (pure t) space (pure v) mkPost
+            where
+                space
+                    | v ^. Align.tValue . Element.width == 0 = pure Element.empty
+                    | otherwise = Spacer.stdHSpace <&> WithTextPos 0
 
 makeInternal ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
