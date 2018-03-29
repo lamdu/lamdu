@@ -15,12 +15,11 @@ import           Lamdu.Data.Db.Layout (runDbTransaction, dbSchemaVersion, curDbS
 import           Lamdu.Data.Export.JSON (verifyAll)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.VersionControl as VersionControl
-import           Revision.Deltum.Db (DB)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
-migrateFromNoVersion :: DB -> IO ()
+migrateFromNoVersion :: Transaction.Store IO -> IO ()
 migrateFromNoVersion db =
     do
         putStrLn "No DB version found (pre 2018.02.03), adding version"
@@ -50,7 +49,7 @@ showIncompatibleDbMessage =
             & putStrLn
         fail "incompatible db"
 
-migrateFromVersion :: DB -> Int -> IO ()
+migrateFromVersion :: Transaction.Store IO -> Int -> IO ()
 migrateFromVersion _ ver | ver > curDbSchemaVersion = fail "DB from newer Lamdu version!"
 migrateFromVersion _ ver | ver == curDbSchemaVersion = pure ()
 migrateFromVersion db 0 =
@@ -68,7 +67,7 @@ migrateFromVersion db 0 =
 migrateFromVersion _ ver | ver < curDbSchemaVersion = showIncompatibleDbMessage
 migrateFromVersion _ ver = fail ("Unexpected Lamdu DB version: " ++ show ver)
 
-migration :: DB -> IO ()
+migration :: Transaction.Store IO -> IO ()
 migration db =
     do
         schemaExists <- Transaction.irefExists dbSchemaVersion & runDbTransaction db

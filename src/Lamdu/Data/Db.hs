@@ -5,14 +5,14 @@ module Lamdu.Data.Db
 import           Control.Exception (onException)
 import qualified Lamdu.Data.Db.Init as DbInit
 import           Lamdu.Data.Db.Migration (migration)
-import           Revision.Deltum.Db (DB)
 import qualified Revision.Deltum.Db as Db
+import qualified Revision.Deltum.Transaction as Transaction
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 
 import           Lamdu.Prelude
 
-withDB :: FilePath -> (DB -> IO a) -> IO a
+withDB :: FilePath -> (Transaction.Store IO -> IO a) -> IO a
 withDB lamduDir body =
     do
         Directory.createDirectoryIfMissing False lamduDir

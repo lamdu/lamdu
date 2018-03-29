@@ -30,7 +30,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
-import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import qualified Revision.Deltum.Rev.Change as Change
@@ -49,7 +48,7 @@ Lens.makePrisms ''BGEvaluator
 data NewParams = NewParams
     { resultsUpdated :: IO ()
     -- ^ Callback for notifying that new evaluation results are available.
-    , dbMVar :: MVar (Maybe DB)
+    , dbMVar :: MVar (Maybe (Transaction.Store IO))
     , copyJSOutputPath :: Maybe FilePath
     }
 
@@ -73,13 +72,13 @@ new params =
             , eCancelTimerRef = cancelRef
             }
 
-withDb :: MVar (Maybe DB) -> (DB -> IO a) -> IO a
+withDb :: MVar (Maybe (Transaction.Store IO)) -> (Transaction.Store IO -> IO a) -> IO a
 withDb mvar action =
     withMVar mvar $ \case
     Nothing -> error "Trying to use DB when it is already gone"
     Just db -> action db
 
-runViewTransactionInIO :: MVar (Maybe DB) -> T ViewM a -> IO a
+runViewTransactionInIO :: MVar (Maybe (Transaction.Store IO)) -> T ViewM a -> IO a
 runViewTransactionInIO dbM trans =
     withDb dbM $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
@@ -96,7 +95,7 @@ getResults evaluator =
         prevResults <- readIORef (eResultsRef evaluator)
         pure CurAndPrev { _prev = prevResults, _current = res }
 
-eDb :: Evaluator -> MVar (Maybe DB)
+eDb :: Evaluator -> MVar (Maybe (Transaction.Store IO))
 eDb = dbMVar . eParams
 
 loadDef ::

@@ -12,7 +12,6 @@ import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Paths as Paths
-import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.Rev.Branch (Branch)
 import qualified Revision.Deltum.Rev.Branch as Branch
 import           Revision.Deltum.Rev.Version (Version)
@@ -35,7 +34,7 @@ newBranch name ver =
         setName branch name
         pure branch
 
-initDb :: DB -> T DbLayout.ViewM () -> IO ()
+initDb :: Transaction.Store IO -> T DbLayout.ViewM () -> IO ()
 initDb db importAct =
     DbLayout.runDbTransaction db $
     do
@@ -67,7 +66,7 @@ initDb db importAct =
         newVer <- Branch.curVersion master
         Version.preventUndo newVer
 
-initFreshDb :: DB -> IO ()
+initFreshDb :: Transaction.Store IO -> IO ()
 initFreshDb db =
     Paths.getDataFileName "freshdb.json"
     >>= fileImportAll >>= initDb db

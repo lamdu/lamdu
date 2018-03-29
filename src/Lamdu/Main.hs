@@ -51,7 +51,6 @@ import qualified Lamdu.Style as Style
 import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
-import           Revision.Deltum.Db (DB)
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -125,7 +124,7 @@ deleteDB lamduDir =
         putStrLn "Deleting DB..."
         Directory.removeDirectoryRecursive lamduDir
 
-undoN :: Int -> DB -> IO ()
+undoN :: Int -> Transaction.Store IO -> IO ()
 undoN n db =
     do
         putStrLn $ "Undoing " ++ show n ++ " times"
@@ -136,13 +135,13 @@ undoN n db =
                 actions <- VersionControl.makeActions
                 fromMaybe (fail "Cannot undo any further") $ mUndo actions
 
-importPath :: FilePath -> DB -> IO ()
+importPath :: FilePath -> Transaction.Store IO -> IO ()
 importPath path db =
     Export.fileImportAll path
     <&> VersionControl.runAction
     >>= DbLayout.runDbTransaction db
 
-exportToPath :: FilePath -> DB -> IO ()
+exportToPath :: FilePath -> Transaction.Store IO -> IO ()
 exportToPath path db =
     Export.fileExportAll path
     & VersionControl.runAction
@@ -190,7 +189,7 @@ exportActions config evalResults executeIOProcess =
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
-    Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
+    Fonts M.Font -> Transaction.Store IO -> EvalManager.Evaluator -> Config -> Theme ->
     MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
 makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
     do
@@ -223,7 +222,7 @@ printGLVersion =
         ver <- GL.get GL.glVersion
         putStrLn $ "Using GL version: " ++ show ver
 
-stateStorageInIRef :: DB -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
+stateStorageInIRef :: Transaction.Store IO -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
 stateStorageInIRef db stateIRef =
     MainLoop.StateStorage
     { readState = DbLayout.runDbTransaction db (Transaction.readIRef stateIRef)
@@ -243,7 +242,7 @@ newSettingsProp initial configSampler evaluator =
         readIORef settingsRef <&> (`Property` setSettings) & pure
 
 newEvaluator ::
-    IO () -> MVar (Maybe DB) -> Opts.EditorOpts -> IO EvalManager.Evaluator
+    IO () -> MVar (Maybe (Transaction.Store IO)) -> Opts.EditorOpts -> IO EvalManager.Evaluator
 newEvaluator refresh dbMVar opts =
     EvalManager.new EvalManager.NewParams
     { EvalManager.resultsUpdated = refresh
@@ -251,7 +250,7 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
     }
 
-runEditor :: Opts.EditorOpts -> DB -> IO ()
+runEditor :: Opts.EditorOpts -> Transaction.Store IO -> IO ()
 runEditor opts db =
     withMVarProtection db $ \dbMVar ->
     do

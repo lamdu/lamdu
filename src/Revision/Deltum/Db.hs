@@ -1,6 +1,5 @@
 module Revision.Deltum.Db
-    ( DB, DB.withDB, DB.defaultOptions, DB.Options(..)
-    , store
+    ( withDB, DB.defaultOptions, DB.Options(..)
     ) where
 
 import           Data.ByteString.Utils (strictifyBS)
@@ -30,3 +29,6 @@ store db =
     , storeLookup = lookup db
     , storeAtomicWrite = transaction db
     }
+
+withDB :: FilePath -> DB.Options -> (Store IO -> IO a) -> IO a
+withDB path opts act = DB.withDB path opts (act . store)

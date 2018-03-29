@@ -17,8 +17,6 @@ import           Data.ByteString.Char8 ()
 import           GUI.Momentu.State (GUIState)
 import           Lamdu.Data.Anchors (Gui(..), Code(..), Revision(..))
 import qualified Lamdu.Data.Anchors as Anchors
-import           Revision.Deltum.Db (DB)
-import qualified Revision.Deltum.Db as Db
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Rev.View (View)
@@ -34,8 +32,8 @@ newtype DbM a = DbM { dbM :: IO a }
 newtype ViewM a = ViewM { viewM :: T DbM a }
     deriving (Functor, Applicative, Monad)
 
-runDbTransaction :: DB -> T DbM a -> IO a
-runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))
+runDbTransaction :: Transaction.Store IO -> T DbM a -> IO a
+runDbTransaction store = dbM . Transaction.run (Transaction.onStoreM DbM store)
 
 runViewTransaction :: View DbM -> T ViewM a -> T DbM a
 runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . View.store) v
