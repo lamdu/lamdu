@@ -11,6 +11,7 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -225,6 +226,7 @@ makeComposite o c mkPre mkPost mkField composite =
                 <&> map toRow
                 <&> Lens.ix 0 . crPre .~ pure opener
                 <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
+                <&> zipWith addAnimIdPrefix [(0 :: Int)..]
                 >>= traverse sequenceA
                 <&> map horizSetCompositeRow
                 <&> gridViewTopLeftAlign
@@ -249,6 +251,8 @@ makeComposite o c mkPre mkPost mkField composite =
                 & (Styled.addValPadding ??)
                 >>= addTypeBG
     where
+        addAnimIdPrefix i row =
+            row <&> Reader.local (Element.animIdPrefix %~ (`AnimId.augmentId` i))
         toRow (t, v) =
             CompositeRow mkPre (pure t) space (pure v) mkPost
             where
