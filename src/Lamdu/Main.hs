@@ -191,7 +191,7 @@ exportActions config evalResults executeIOProcess =
 
 makeRootWidget ::
     Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
-    MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M M.Update))
+    MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
 makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
@@ -331,7 +331,7 @@ mainLoop ::
     MainLoop.StateStorage -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
-    IO (M.Widget (MainLoop.M M.Update))) -> IO ()
+    IO (M.Widget (MainLoop.M IO M.Update))) -> IO ()
 mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
@@ -381,7 +381,7 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
 mkWidgetWithFallback ::
     Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> IO (M.Widget (MainLoop.M M.Update))
+    Env -> IO (M.Widget (MainLoop.M IO M.Update))
 mkWidgetWithFallback settingsProp dbToIO env =
     do
         themeNames <- Themes.getNames
@@ -411,7 +411,7 @@ mkWidgetWithFallback settingsProp dbToIO env =
 makeMainGui ::
     [Themes.Selection] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.Update))
+    Env -> T DbLayout.DbM (M.Widget (MainLoop.M IO M.Update))
 makeMainGui themeNames settingsProp dbToIO env =
     GUIMain.make themeNames settingsProp env
     <&> Lens.mapped %~

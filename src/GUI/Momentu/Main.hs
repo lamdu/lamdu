@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances #-}
 module GUI.Momentu.Main
     ( mainLoopWidget
     , ExecuteInMainThread(..), M
@@ -48,10 +48,12 @@ data Config = Config
     , cHelpStyle :: EventMapHelp.Config
     }
 
-newtype ExecuteInMainThread = ExecuteInMainThread (IO ())
-    deriving (Semigroup, Monoid)
+newtype ExecuteInMainThread m = ExecuteInMainThread (m ())
 
-type M = WriterT ExecuteInMainThread IO
+deriving instance Semigroup (m ()) => Semigroup (ExecuteInMainThread m)
+deriving instance Monoid (m ()) => Monoid (ExecuteInMainThread m)
+
+type M m = WriterT (ExecuteInMainThread m) m
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -172,7 +174,7 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
 
 mainLoopWidget ::
     GLFW.Window ->
-    (Env -> IO (Widget (M State.Update))) ->
+    (Env -> IO (Widget (M IO State.Update))) ->
     Options ->
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =

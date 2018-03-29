@@ -20,7 +20,7 @@ type T = Transaction
 -- C. A final *main-thread* IO action (allowed to depend on B) (e.g:
 --    to write a JSON file)
 newtype IOTrans m a = IOTrans
-    { _ioTrans :: Compose IO (Compose (T m) ((,) Main.ExecuteInMainThread)) a
+    { _ioTrans :: Compose IO (Compose (T m) ((,) (Main.ExecuteInMainThread IO))) a
     } deriving (Functor, Applicative)
 Lens.makeLenses ''IOTrans
 
@@ -28,8 +28,8 @@ trans ::
     Lens.Setter
     (IOTrans m a)
     (IOTrans n b)
-    (T m (Main.ExecuteInMainThread, a))
-    (T n (Main.ExecuteInMainThread, b))
+    (T m (Main.ExecuteInMainThread IO, a))
+    (T n (Main.ExecuteInMainThread IO, b))
 trans f (IOTrans (Compose act)) =
     (Lens.mapped . Lens._Wrapped) f act
     <&> Compose
@@ -46,7 +46,7 @@ liftIOT :: Functor m => IO (T m a) -> IOTrans m a
 liftIOT = IOTrans . Compose . fmap (Compose . fmap pure)
 
 -- | Run T / IO (IO in main thread)
-liftTExecInMain :: Functor m => T m Main.ExecuteInMainThread -> IOTrans m ()
+liftTExecInMain :: Functor m => T m (Main.ExecuteInMainThread IO) -> IOTrans m ()
 liftTExecInMain act =
     act
     <&> (, ())
