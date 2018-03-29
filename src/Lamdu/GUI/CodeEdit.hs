@@ -262,8 +262,7 @@ panesEventMap theExportActions cp gp replType =
                     | tid ^. Sugar.tidTId == Builtins.mutTid ->
                         E.keysEventMap (exportConfig ^. Config.executeKeys)
                         (E.Doc ["Execute Repl Process"])
-                        (IOTrans (pure (pure mempty) <$
-                        ReplEdit.executeIOProcess (exportReplActions theExportActions)))
+                        (IOTrans (mempty <$ ReplEdit.executeIOProcess (exportReplActions theExportActions)))
                 _ -> mempty
             ]
     where

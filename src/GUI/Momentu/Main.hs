@@ -52,6 +52,15 @@ data EventResult a = EventResult
     , erVal :: a
     } deriving (Functor, Foldable, Traversable)
 
+instance Semigroup a => Semigroup (EventResult a) where
+    EventResult x0 y0 <> EventResult x1 y1 =
+        EventResult (x0 <> x1) (y0 <> y1)
+
+instance Monoid a => Monoid (EventResult a) where
+    mempty = EventResult mempty mempty
+    EventResult x0 y0 `mappend` EventResult x1 y1 =
+        EventResult (x0 <> x1) (y0 `mappend` y1)
+
 instance Applicative EventResult where
     pure x = EventResult { erExecuteInMainThread = pure (), erVal = x }
     EventResult am ar <*> EventResult bm br = EventResult (am >> bm) (ar br)
