@@ -1,20 +1,14 @@
 module Main where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (zipWithM_)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
-import qualified Data.Char as Char
-import           Data.List (sort)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.Map as Map
 import           Data.Proxy (Proxy(..), asProxyTypeOf)
-import qualified Data.Set as Set
-import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
@@ -26,94 +20,23 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
-import           Lamdu.Calc.Identifier (identHex)
-import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
-import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON as JsonFormat
-import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Paths as Paths
 import qualified Lamdu.Themes as Themes
+import qualified TestColorSchemes
+import qualified TestStdlib
 import           Test.Framework
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.Framework.Providers.QuickCheck2 (testProperty)
 import           Test.HUnit
-import qualified TestColorSchemes
 import           Test.Lamdu.Instances ()
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
 jsonCodecMigrationTest :: IO ()
 jsonCodecMigrationTest = JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
-
-verifyTagsTest :: IO ()
-verifyTagsTest =
-    readFreshDb
-    <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . Lens._Just)
-    >>= verifyTagNames
-
-verifyTagNames :: [Text] -> IO ()
-verifyTagNames names =
-    zipWithM_ verifyPair sorted (tail sorted)
-    where
-        sorted = sort names
-        verifyPair x y
-            | x == y = assertString ("duplicate tag name:" <> show x)
-            | Text.length x == 1 = pure ()
-            | Set.member x prefixesWhitelist = pure ()
-            | Text.isPrefixOf x y && suffix /= "s" && Lens.anyOf (Lens.ix 0) Char.isLower suffix =
-                assertString ("inconsistent abbreviation detected: " <> show x <> ", " <> show y)
-            | otherwise = pure ()
-            where
-                suffix = Text.drop (Text.length x) y
-
-prefixesWhitelist :: Set Text
-prefixesWhitelist =
-    Set.fromList
-    [ "connect" -- prefix of "connection"
-    , "data" -- prefix of "database"
-    , "not" -- prefix of "nothing"
-    ]
-
-verifyNoBrokenDefsTest :: IO ()
-verifyNoBrokenDefsTest =
-    readFreshDb
-    <&> (^.. traverse . JsonCodec._EntityDef)
-    <&> traverse . Def.defPayload %~ (^. Lens._3)
-    >>= verifyDefs
-
-readFreshDb :: IO [JsonCodec.Entity]
-readFreshDb =
-    LBS.readFile "freshdb.json" <&> Aeson.eitherDecode
-    >>= either fail pure
-    <&> Aeson.fromJSON
-    >>=
-    \case
-    Aeson.Error str -> fail str
-    Aeson.Success x -> pure x
-
-verifyDefs :: [Def.Definition v V.Var] -> IO ()
-verifyDefs defs =
-    defs ^.. traverse . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . Infer.depsGlobalTypes
-    <&> Map.toList & concat
-    & traverse_ (uncurry verifyGlobalType)
-    where
-        defTypes = defs <&> (\x -> (x ^. Def.defPayload, x ^. Def.defType)) & Map.fromList
-        verifyGlobalType var typ =
-            case defTypes ^. Lens.at var of
-            Nothing -> assertString ("Missing def referred in frozen deps: " ++ showVar)
-            Just x
-                | Scheme.alphaEq x typ -> pure ()
-                | otherwise ->
-                    assertString
-                    ("Frozen def type mismatch for " ++ showVar ++ ":\n" ++
-                    prettyShow x ++ "\nvs\n" ++ prettyShow typ)
-            where
-                showVar = V.vvName var & identHex
 
 propGridSensibleSize :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> Bool
 propGridSensibleSize viewConfs =
@@ -213,15 +136,16 @@ configParseTest =
 
 main :: IO ()
 main =
-    defaultMainWithOpts
-    [ testCase "json-codec-migration" jsonCodecMigrationTest
-    , TestColorSchemes.test
-    , testCase "no-broken-defs" verifyNoBrokenDefsTest
-    , testCase "vertical-disambguation" verticalDisambigTest
-    , testCase "config-parses" configParseTest
-    , testCase "sensible-tags" verifyTagsTest
-    , testProperty "grid-sensible-size" propGridSensibleSize
-        & plusTestOptions mempty
-        { topt_maximum_generated_tests = Just 1000
-        }
-    ] mempty
+    defaultMainWithOpts tests mempty
+    where
+        tests =
+            TestStdlib.tests ++
+            [ TestColorSchemes.test
+            , testCase "json-codec-migration" jsonCodecMigrationTest
+            , testCase "vertical-disambguation" verticalDisambigTest
+            , testCase "config-parses" configParseTest
+            , testProperty "grid-sensible-size" propGridSensibleSize
+                & plusTestOptions mempty
+                { topt_maximum_generated_tests = Just 1000
+                }
+            ]
