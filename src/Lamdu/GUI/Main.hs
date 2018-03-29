@@ -75,7 +75,7 @@ layout themeNames settingsProp vcActions =
         codeEdit <-
             CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
-            <&> Lens.mapped . ioTrans . Lens.mapped %~ VersionControl.runEvent state
+            <&> Lens.mapped . ioTrans . Lens._Wrapped . Lens.mapped %~ VersionControl.runEvent state
         topPadding <- Spacer.vspaceLines (theTheme ^. Theme.topPadding)
         statusBar /-/ topPadding /-/ codeEdit
             & Scroll.focusAreaInto fullSize & pure

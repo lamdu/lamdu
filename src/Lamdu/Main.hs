@@ -8,6 +8,7 @@ import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM_)
 import           Data.CurAndPrev (current)
+import           Data.Functor.Compose (Compose(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (Property(..))
@@ -37,7 +38,7 @@ import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
-import           Lamdu.GUI.IOTrans (ioTrans)
+import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -182,9 +183,9 @@ exportActions config evalResults executeIOProcess =
     }
     where
         exportPath = config ^. Config.export . Config.exportPath
-        export x = ioTrans # (x <&> (`MainLoop.EventResult` ()) & pure)
+        export x = x <&> (`MainLoop.EventResult` ()) & pure & Compose & IOTrans
         fileExport exporter = exporter exportPath & export
-        importAll path = ioTrans # (Export.fileImportAll path <&> fmap pure)
+        importAll path = Export.fileImportAll path <&> fmap pure & Compose & IOTrans
 
 makeRootWidget ::
     Fonts M.Font -> DB -> EvalManager.Evaluator -> Config -> Theme ->
@@ -412,7 +413,7 @@ makeMainGui ::
 makeMainGui themeNames settingsProp dbToIO env =
     GUIMain.make themeNames settingsProp env
     <&> Lens.mapped %~ \act ->
-    act ^. ioTrans
+    act ^. ioTrans . Lens._Wrapped
     <&> dbToIO
     & join
     & MainLoop.M
