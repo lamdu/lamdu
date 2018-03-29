@@ -7,11 +7,13 @@ import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM_)
+import           Control.Monad.Trans.FastWriter (writerT)
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
+import qualified Data.Tuple as Tuple
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
@@ -174,7 +176,7 @@ exportActions config evalResults executeIOProcess =
     { GUIMain.exportReplActions =
         GUIMain.ExportRepl
         { GUIMain.exportRepl = fileExport Export.fileExportRepl
-        , GUIMain.exportFancy = exportFancy evalResults & IOTrans.liftTIO
+        , GUIMain.exportFancy = exportFancy evalResults & execTIO
         , GUIMain.executeIOProcess = executeIOProcess
         }
     , GUIMain.exportAll = fileExport Export.fileExportAll
@@ -183,7 +185,8 @@ exportActions config evalResults executeIOProcess =
     }
     where
         exportPath = config ^. Config.export . Config.exportPath
-        fileExport exporter = exporter exportPath & IOTrans.liftTIO
+        execTIO = IOTrans.liftTExecInMain . fmap MainLoop.ExecuteInMainThread
+        fileExport exporter = exporter exportPath & execTIO
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
@@ -411,8 +414,11 @@ makeMainGui ::
     Env -> T DbLayout.DbM (M.Widget (MainLoop.M M.Update))
 makeMainGui themeNames settingsProp dbToIO env =
     GUIMain.make themeNames settingsProp env
-    <&> Lens.mapped %~ \act ->
+    <&> Lens.mapped %~
+    \act ->
     act ^. ioTrans . Lens._Wrapped
+    <&> (^. Lens._Wrapped)
     <&> dbToIO
     & join
-    & MainLoop.M
+    <&> Tuple.swap
+    & writerT

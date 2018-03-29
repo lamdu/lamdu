@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
 module GUI.Momentu.Main
     ( mainLoopWidget
-    , Config(..), EventResult(..), M(..), m
+    , ExecuteInMainThread(..), M
+    , Config(..)
     , Env(..), eWindowSize, eZoom, eState
     , HasMainLoopEnv(..)
     , DebugOptions(..), defaultDebugOptions
@@ -11,9 +12,9 @@ module GUI.Momentu.Main
     , quitEventMap
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified Data.Text as Text
@@ -47,42 +48,10 @@ data Config = Config
     , cHelpStyle :: EventMapHelp.Config
     }
 
-data EventResult a = EventResult
-    { erExecuteInMainThread :: IO ()
-    , erVal :: a
-    } deriving (Functor, Foldable, Traversable)
+newtype ExecuteInMainThread = ExecuteInMainThread (IO ())
+    deriving (Semigroup, Monoid)
 
-instance Semigroup a => Semigroup (EventResult a) where
-    EventResult x0 y0 <> EventResult x1 y1 =
-        EventResult (x0 <> x1) (y0 <> y1)
-
-instance Monoid a => Monoid (EventResult a) where
-    mempty = EventResult mempty mempty
-    EventResult x0 y0 `mappend` EventResult x1 y1 =
-        EventResult (x0 <> x1) (y0 `mappend` y1)
-
-instance Applicative EventResult where
-    pure x = EventResult { erExecuteInMainThread = pure (), erVal = x }
-    EventResult am ar <*> EventResult bm br = EventResult (am >> bm) (ar br)
-
-newtype M a = M { _m :: IO (EventResult a) }
-    deriving Functor
-Lens.makeLenses ''M
-
-instance Applicative M where
-    pure = M . pure . pure
-    M f <*> M x = (liftA2 . liftA2) ($) f x & M
-
-instance Monad M where
-    x >>= f =
-        do
-            EventResult ax rx <- x ^. m
-            EventResult af rf <- f rx ^. m
-            EventResult (ax >> af) rf & pure
-        & M
-
-instance MonadIO M where
-    liftIO = M . fmap pure
+type M = WriterT ExecuteInMainThread IO
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -248,7 +217,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     (_, mEnter, mFocus) <- renderWidget size
                     mWidgetRes <- lookupEvent getClipboard virtCursorRef mEnter mFocus event
-                    EventResult runInMainThread mRes <- sequenceA mWidgetRes ^. m
+                    (mRes, ExecuteInMainThread act) <- sequenceA mWidgetRes & runWriterT
                     case mRes of
                         Nothing -> pure ()
                         Just res ->
@@ -260,7 +229,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                                 newWidget
                     pure MainAnim.EventResult
                         { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
-                        , MainAnim.erExecuteInMainThread = runInMainThread
+                        , MainAnim.erExecuteInMainThread = act
                         }
             , MainAnim.makeFrame = renderWidget size <&> (^. _1)
             }

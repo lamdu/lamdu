@@ -30,7 +30,7 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
-import           Lamdu.GUI.IOTrans (IOTrans(..), ioTrans)
+import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Settings as SettingsWidget
 import qualified Lamdu.GUI.StatusBar as StatusBar
