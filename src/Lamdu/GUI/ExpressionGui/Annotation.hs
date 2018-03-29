@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionGui.Annotation
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction)
 import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -233,7 +232,7 @@ addAnnotationH f wideBehavior =
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , MonadTransaction n m, Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
     m (Responsive (f GuiState.Update) ->

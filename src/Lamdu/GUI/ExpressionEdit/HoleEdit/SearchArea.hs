@@ -125,7 +125,7 @@ makeResultOption pl ctx results =
 
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
-    , MonadTransaction n0 m, Spacer.HasStdSpacing env
+    , Spacer.HasStdSpacing env
     ) =>
     Sugar.Payload (Name g) m0 a0 -> m View
 makeInferredTypeAnnotation pl =

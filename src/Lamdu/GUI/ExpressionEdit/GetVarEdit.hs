@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.ByteString.Char8 as SBS8
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -125,7 +124,7 @@ makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    ( MonadReader env m, MonadTransaction n m
+    ( MonadReader env m
     , Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env, Applicative f
@@ -164,7 +163,7 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    ( MonadReader env m, MonadTransaction n m, Spacer.HasStdSpacing env
+    ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
     , GuiState.HasCursor env, Hover.HasStyle env
     , Applicative f

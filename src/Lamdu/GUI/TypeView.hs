@@ -5,7 +5,6 @@ module Lamdu.GUI.TypeView
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
@@ -105,7 +104,7 @@ makeTVar (T.Var name) = showIdentifier name
 
 makeTFun ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    , Element.HasAnimIdPrefix env
     ) =>
     Prec -> Sugar.Type (Name f) -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeTFun parentPrecedence a b =
@@ -122,7 +121,7 @@ makeTFun parentPrecedence a b =
 
 makeTInst ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    , Element.HasAnimIdPrefix env
     ) =>
     Prec -> Sugar.TId (Name f) -> Map Sugar.ParamId (Sugar.Type (Name f)) ->
     m (WithTextPos View)
@@ -173,7 +172,7 @@ makeEmptyComposite ::
 makeEmptyComposite = grammar "Ø"
 
 makeField ::
-    ( MonadTransaction n m, MonadReader env m, HasTheme env
+    ( MonadReader env m, HasTheme env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
@@ -184,7 +183,7 @@ makeField (tag, fieldType) =
     <*> makeInternal (Prec 0) fieldType
 
 makeVariantField ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, MonadTransaction n m
+    ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env
     ) =>
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
@@ -258,7 +257,7 @@ makeComposite o c mkPre mkPost mkField composite =
 
 makeInternal ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    , Element.HasAnimIdPrefix env
     ) =>
     Prec -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeInternal parentPrecedence (Sugar.Type entityId tbody) =
@@ -275,14 +274,14 @@ makeInternal parentPrecedence (Sugar.Type entityId tbody) =
 
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    , Element.HasAnimIdPrefix env
     ) =>
     Sugar.Type (Name f) -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
 makeScheme ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, MonadTransaction n m
+    , Element.HasAnimIdPrefix env
     ) =>
     Sugar.Scheme (Name f) -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)
