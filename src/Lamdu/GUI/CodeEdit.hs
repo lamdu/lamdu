@@ -8,7 +8,6 @@ module Lamdu.GUI.CodeEdit
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Functor.Compose (Compose(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Property as Property
@@ -263,8 +262,9 @@ panesEventMap theExportActions cp gp replType =
                     | tid ^. Sugar.tidTId == Builtins.mutTid ->
                         E.keysEventMap (exportConfig ^. Config.executeKeys)
                         (E.Doc ["Execute Repl Process"])
-                        (IOTrans (Compose (mempty <$ ReplEdit.executeIOProcess (exportReplActions theExportActions))))
+                        (IOTrans.liftIO executeRepl)
                 _ -> mempty
             ]
     where
+        executeRepl = exportReplActions theExportActions & ReplEdit.executeIOProcess
         ExportActions{importAll,exportAll} = theExportActions
