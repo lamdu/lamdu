@@ -91,8 +91,8 @@ preparePayloads evalRes inferredVal =
                 execId = Property.value valIProp
         exprEvalRes pl r =
             Input.EvalResultsForExpr
-            (r ^. erExprValues . Lens.at pl . Lens._Just)
-            (r ^. erAppliesOfLam . Lens.at pl . Lens._Just)
+            (r ^. erExprValues . Lens.ix pl)
+            (r ^. erAppliesOfLam . Lens.ix pl)
 
 loadInferPrepareInput ::
     Monad m =>

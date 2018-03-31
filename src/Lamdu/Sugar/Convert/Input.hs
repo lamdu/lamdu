@@ -62,7 +62,7 @@ preparePayloads =
             , b <&> snd
               & Val
                 ( case body of
-                  V.BLam (V.Lam var _) -> childrenVars ^. Lens.at var . Lens._Just
+                  V.BLam (V.Lam var _) -> childrenVars ^. Lens.ix var
                   _ -> []
                   & mkPayload
                 )

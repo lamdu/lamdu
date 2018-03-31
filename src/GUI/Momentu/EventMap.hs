@@ -256,8 +256,7 @@ lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar
     do
         ModKey.KeyState'Pressed <- pure keyState
         char <- mchar ^.. Lens._Just
-        charGroups ^.. Lens.traverse . cgDocHandler . dhHandler .
-            Lens.at char . Lens._Just
+        charGroups ^.. Lens.traverse . cgDocHandler . dhHandler . Lens.ix char
 
 lookupAllCharHandler :: [AllCharsHandler t] -> Events.KeyEvent -> Maybe t
 lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =

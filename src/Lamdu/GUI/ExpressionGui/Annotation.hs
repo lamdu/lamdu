@@ -372,8 +372,7 @@ valOfScope annotation mScopeIds =
     where
         go _ _ Nothing = Nothing
         go tag ann (Just scopeId) =
-            ann ^? Lens._Just . Lens.at scopeId . Lens._Just
-            <&> EvalResDisplay scopeId tag
+            ann ^? Lens._Just . Lens.ix scopeId <&> EvalResDisplay scopeId tag
 
 valOfScopePreferCur :: Sugar.Annotation name -> Sugar.ScopeId -> Maybe EvalResDisplay
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just
