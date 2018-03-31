@@ -1,9 +1,9 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
-    , InferResult(..), irVal, irCtx
+    , InferResult(..), irVal, irNomsMap, irCtx
     , inferDef
     , inferCheckDef
     , inferCheckDefExpr
@@ -13,9 +13,14 @@ module Lamdu.Sugar.Convert.Load
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.State as State
 import           Data.CurAndPrev (CurAndPrev)
+import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.Nominal as N
+import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -23,6 +28,8 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as Infer
 import qualified Lamdu.Infer.Trans as InferT
@@ -31,6 +38,7 @@ import qualified Lamdu.Infer.Update as Update
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Types
 import           Lamdu.Sugar.Types (EntityId)
 import           Revision.Deltum.Transaction (Transaction)
 import           Text.PrettyPrint.HughesPJClass (pPrint)
@@ -108,19 +116,39 @@ readValAndAddProperties prop =
     <&> ExprIRef.addProperties (prop ^. Property.pSet)
     <&> fmap fst
 
+makeNominalsMap :: Monad m => [T.Type] -> T m (Map NominalId N.Nominal)
+makeNominalsMap types =
+    mapM_ loadForType types
+    & (`State.execStateT` mempty)
+    where
+        loadForType typ = typ ^.. ExprLens.typeTIds & mapM_ loadForTid
+        loadForTid tid =
+            do
+                loaded <- State.get
+                unless (Map.member tid loaded) $
+                    do
+                        nom <- ExprLoad.nominal tid & lift
+                        Map.insert tid nom loaded & State.put
+                        nom ^.. N.nomType . N._NominalType . Scheme.schemeType
+                            & traverse_ loadForType
+
 data InferResult m = InferResult
     { _irVal :: Val (Input.Payload m [EntityId])
+    , _irNomsMap :: Map NominalId N.Nominal
     , _irCtx :: Infer.Context
     }
 Lens.makeLenses ''InferResult
 
 runInferResult ::
-    Functor f =>
-    InferT.M f (Val (Input.Payload m [EntityId])) ->
-    f (Either Infer.Error (InferResult m))
+    Monad m =>
+    InferT.M (T m) (Val (Input.Payload f [EntityId])) ->
+    T m (Either Infer.Error (InferResult f))
 runInferResult act =
-    InferT.run act
-    <&> Lens.mapped %~ \(val, ctx) -> InferResult val ctx
+    InferT.run act >>= traverse toResult
+    where
+        toResult (val, ctx) =
+            makeNominalsMap (val ^.. Lens.folded . Input.inferred . Infer.plType) <&>
+            \nomsMap -> InferResult val nomsMap ctx
 
 inferDef ::
     Monad m =>

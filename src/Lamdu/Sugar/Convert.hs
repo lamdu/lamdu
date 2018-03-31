@@ -4,15 +4,12 @@ module Lamdu.Sugar.Convert
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Utils (insertAt, removeAt)
-import qualified Data.Map as Map
 import           Data.Property (Property(Property), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import qualified Lamdu.Calc.Type.Nominal as N
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -23,7 +20,6 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -78,23 +74,6 @@ emptyScopeInfo recursiveRef =
     , _siRecursiveRef = recursiveRef
     }
 
-makeNominalsMap ::
-    Monad m => Val (Input.Payload m a) -> T m (Map NominalId N.Nominal)
-makeNominalsMap val =
-    mapM_ loadForType (val ^.. Lens.traverse . Input.inferred . Infer.plType)
-    & (`State.execStateT` mempty)
-    where
-        loadForType typ = typ ^.. ExprLens.typeTIds & mapM_ loadForTid
-        loadForTid tid =
-            do
-                loaded <- State.get
-                unless (Map.member tid loaded) $
-                    do
-                        nom <- ExprLoad.nominal tid & lift
-                        Map.insert tid nom loaded & State.put
-                        nom ^.. N.nomType . N._NominalType . Scheme.schemeType
-                            & traverse_ loadForType
-
 canInlineDefinition :: Val (Input.Payload m [EntityId]) -> Set V.Var -> V.Var -> EntityId -> Bool
 canInlineDefinition defExpr recursiveVars var entityId =
     Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f) defExpr
@@ -108,9 +87,8 @@ convertInferDefExpr ::
     T m (DefinitionBody InternalName (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
-        Load.InferResult valInferred newInferContext <-
+        Load.InferResult valInferred nomsMap newInferContext <-
             Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
-        nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr
             (postProcessDef defI)
@@ -167,9 +145,8 @@ convertExpr evalRes cp prop =
     do
         defExpr <- ExprLoad.defExprProperty prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
-        Load.InferResult valInferred newInferContext <-
+        Load.InferResult valInferred nomsMap newInferContext <-
             Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
-        nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) (postProcessExpr prop)
         let context =
                 Context
