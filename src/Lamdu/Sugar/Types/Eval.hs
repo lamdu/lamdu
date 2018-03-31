@@ -23,6 +23,9 @@ type ChildScopes = EvalScopes ScopeId
 
 type ParamScopes = EvalScopes [BinderParamScopeId]
 
--- TODO: Is the `Maybe` here relevant? Is an empty map the same?
--- Remove `Maybe` or document the difference
+-- For parameters: if there were any applies-of-lam in a parent scope,
+-- even if they got no values yet, it will be `Just mempty`, which
+-- will not fall back to showing the prev
+-- TODO: Does this actually happen? Do we generate empty lists of
+-- scope-val pairs for lams?
 type EvaluationScopes = CurAndPrev (Maybe (Map ScopeId (ER.Val T.Type)))
