@@ -1,7 +1,9 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
+    , InferResult(..), irVal, irCtx
     , inferDef
     , inferCheckDef
     , inferCheckDefExpr
@@ -106,16 +108,30 @@ readValAndAddProperties prop =
     <&> ExprIRef.addProperties (prop ^. Property.pSet)
     <&> fmap fst
 
+data InferResult m = InferResult
+    { _irVal :: Val (Input.Payload m [EntityId])
+    , _irCtx :: Infer.Context
+    }
+Lens.makeLenses ''InferResult
+
+runInferResult ::
+    Functor f =>
+    InferT.M f (Val (Input.Payload m [EntityId])) ->
+    f (Either Infer.Error (InferResult m))
+runInferResult act =
+    InferT.run act
+    <&> Lens.mapped %~ \(val, ctx) -> InferResult val ctx
+
 inferDef ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValIProperty m)) ->
     V.Var ->
-    T m (Either Infer.Error (Val (Input.Payload m [EntityId]), Infer.Context))
+    T m (Either Infer.Error (InferResult m))
 inferDef results defExpr defVar =
     inferDefExprWithRecursiveRef defExpr defVar
     >>= loadInferPrepareInput results
-    & InferT.run
+    & runInferResult
 
 inferDefExprHelper ::
     Monad m => Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
@@ -128,11 +144,11 @@ inferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValIProperty m)) ->
-    T m (Either Infer.Error (Val (Input.Payload m [EntityId]), Infer.Context))
+    T m (Either Infer.Error (InferResult m))
 inferDefExpr results defExpr =
     inferDefExprHelper defExpr
     >>= loadInferPrepareInput results
-    & InferT.run
+    & runInferResult
 
 inferCheckDef ::
     Monad m =>

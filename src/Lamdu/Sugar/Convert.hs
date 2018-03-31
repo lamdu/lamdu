@@ -108,7 +108,7 @@ convertInferDefExpr ::
     T m (DefinitionBody InternalName (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
-        (valInferred, newInferContext) <-
+        Load.InferResult valInferred newInferContext <-
             Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <-
@@ -167,7 +167,7 @@ convertExpr evalRes cp prop =
     do
         defExpr <- ExprLoad.defExprProperty prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
-        (valInferred, newInferContext) <-
+        Load.InferResult valInferred newInferContext <-
             Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
         nomsMap <- makeNominalsMap valInferred
         outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) (postProcessExpr prop)
