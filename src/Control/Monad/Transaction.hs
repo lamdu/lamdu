@@ -11,6 +11,7 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.State (StateT)
+import           Control.Monad.Trans.Except (ExceptT)
 import           Data.Binary (Binary)
 import qualified Data.Property as Property
 import           Revision.Deltum.IRef (IRef)
@@ -30,6 +31,7 @@ instance Monad m => MonadTransaction m (T m) where
 instance MonadTransaction n m => MonadTransaction n (MaybeT    m) where transaction = lift . transaction
 instance MonadTransaction n m => MonadTransaction n (StateT  s m) where transaction = lift . transaction
 instance MonadTransaction n m => MonadTransaction n (ReaderT r m) where transaction = lift . transaction
+instance MonadTransaction n m => MonadTransaction n (ExceptT e m) where transaction = lift . transaction
 
 getP :: MonadTransaction n m => Property.MkProperty (T n) a -> m a
 getP = transaction . Property.getP
