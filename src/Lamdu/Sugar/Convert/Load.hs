@@ -39,7 +39,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import           Lamdu.Sugar.Types (EntityId)
 import           Revision.Deltum.Transaction (Transaction)
 import           Text.PrettyPrint.HughesPJClass (pPrint)
 

@@ -342,8 +342,8 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
-        let mkFontInfo =
-                \zoom -> do
+        let mkFontInfo zoom =
+                do
                     sample <- ConfigSampler.getSample configSampler
                     fonts <- getFonts zoom sample
                     let height = fonts ^. Font.fontDefault & Font.height
