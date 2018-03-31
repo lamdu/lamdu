@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scPostProcessRoot, siRecursiveRef
-    , scCodeAnchors, scScopeInfo, scNominalsMap
+    , scCodeAnchors, scScopeInfo
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinition
 
     , ConvertM(..), run
@@ -23,7 +23,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Nominal (Nominal(..))
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
@@ -92,8 +91,6 @@ data Context m = Context
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcessResult
-    , -- The nominal types appearing in the converted expr and its subexpression
-      _scNominalsMap :: Map T.NominalId Nominal
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ()))
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
     , _scFrozenDeps :: Property (T m) Infer.Dependencies

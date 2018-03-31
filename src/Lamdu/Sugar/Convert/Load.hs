@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
-    , InferResult(..), irVal, irNomsMap, irCtx
+    , InferResult(..), irVal, irCtx
     , inferDef
     , inferCheckDef
     , inferCheckDefExpr
@@ -126,7 +126,7 @@ loadInferPrepareInput ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
-    InferT.M (T m) (Map NominalId N.Nominal, Val (Input.Payload m [EntityId]))
+    InferT.M (T m) (Val (Input.Payload m [EntityId]))
 loadInferPrepareInput evalRes val =
     do
         nomsMap <-
@@ -135,7 +135,6 @@ loadInferPrepareInput evalRes val =
         preparePayloads nomsMap evalRes val
             <&> setUserData
             & ParamList.loadForLambdas
-            <&> (,) nomsMap
     where
         setUserData pl =
             pl & Input.userData %~ \() -> [pl ^. Input.entityId]
@@ -150,7 +149,6 @@ readValAndAddProperties prop =
 
 data InferResult m = InferResult
     { _irVal :: Val (Input.Payload m [EntityId])
-    , _irNomsMap :: Map NominalId N.Nominal
     , _irCtx :: Infer.Context
     }
 Lens.makeLenses ''InferResult
@@ -166,7 +164,7 @@ runInferResult results act =
     & InferT.run
     <&> fmap toResult
     where
-        toResult ((nomsMap, val), ctx) = InferResult val nomsMap ctx
+        toResult (val, ctx) = InferResult val ctx
 
 inferDef ::
     Monad m =>

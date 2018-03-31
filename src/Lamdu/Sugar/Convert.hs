@@ -87,7 +87,7 @@ convertInferDefExpr ::
     T m (DefinitionBody InternalName (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
-        Load.InferResult valInferred nomsMap newInferContext <-
+        Load.InferResult valInferred newInferContext <-
             Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr
@@ -96,7 +96,6 @@ convertInferDefExpr evalRes cp defType defExpr defI =
         let context =
                 Context
                 { _scInferContext = newInferContext
-                , _scNominalsMap = nomsMap
                 , _scCodeAnchors = cp
                 , _scScopeInfo =
                         emptyScopeInfo
@@ -145,13 +144,12 @@ convertExpr evalRes cp prop =
     do
         defExpr <- ExprLoad.defExprProperty prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
-        Load.InferResult valInferred nomsMap newInferContext <-
+        Load.InferResult valInferred newInferContext <-
             Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
         outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) (postProcessExpr prop)
         let context =
                 Context
                 { _scInferContext = newInferContext
-                , _scNominalsMap = nomsMap
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo Nothing
                 , _scPostProcessRoot = postProcessExpr prop
