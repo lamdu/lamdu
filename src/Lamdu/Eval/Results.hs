@@ -44,14 +44,14 @@ data Val pl = Val
     , _body :: Body (Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
-extractField :: T.Tag -> Val () -> Val ()
-extractField tag (Val () (RRecExtend (V.RecExtend vt vv vr)))
+extractField :: Show a => a -> T.Tag -> Val a -> Val a
+extractField errPl tag (Val _ (RRecExtend (V.RecExtend vt vv vr)))
     | vt == tag = vv
-    | otherwise = extractField tag vr
-extractField _ v@(Val () RError {}) = v
-extractField tag x =
+    | otherwise = extractField errPl tag vr
+extractField _ _ v@(Val _ RError {}) = v
+extractField errPl tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & EvalTypeError & RError & Val ()
+    & EvalTypeError & RError & Val errPl
 
 data EvalResults srcId =
     EvalResults

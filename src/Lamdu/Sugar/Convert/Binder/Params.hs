@@ -28,7 +28,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
-import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -511,14 +510,12 @@ mkFuncParam ::
     ConvertM m (FuncParam InternalName info)
 mkFuncParam entityId lamExprPl info =
     do
-        noms <- Lens.view ConvertM.scNominalsMap
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         -- TODO: DRY with Convert.Expression.Actions.makeAnnotation?
         let mk lamApplies
                 | Map.null lamApplies = Nothing
                 | otherwise =
                     lamApplies ^.. Lens.folded . Lens.folded & Map.fromList
-                    <&> ResultsProcess.addTypes noms typ
                     & Just
         pure FuncParam
             { _fpInfo = info
@@ -613,6 +610,20 @@ convertLamParams lambda lambdaPl =
     where
         lambdaProp = lambdaPl ^. Input.stored
 
+makeFieldParam :: Input.Payload m a -> (T.Tag, T.Type) -> FieldParam
+makeFieldParam lambdaPl (tag, typeExpr) =
+    FieldParam
+    { fpTag = tag
+    , fpFieldType = typeExpr
+    , fpValue =
+            lambdaPl ^. Input.evalResults
+            <&> (^. Input.eAppliesOfLam)
+            <&> Lens.traversed . Lens.mapped . _2 %~
+                ER.extractField typeExpr tag
+            <&> Lens.traversed %~
+                filter (Lens.nullOf (_2 . ER.body . ER._RError))
+    }
+
 convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty (T m) PresentationMode) ->
@@ -623,20 +634,6 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
         tagsInOuterScope <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
-        noms <- Lens.view ConvertM.scNominalsMap
-        let makeFieldParam (tag, typeExpr) =
-                FieldParam
-                { fpTag = tag
-                , fpFieldType = typeExpr
-                , fpValue =
-                        lambdaPl ^. Input.evalResults
-                        <&> (^. Input.eAppliesOfLam)
-                        <&> Lens.traversed . Lens.mapped . _2 %~
-                            ResultsProcess.addTypes noms typeExpr .
-                            ER.extractField tag
-                        <&> Lens.traversed %~
-                            filter (Lens.nullOf (_2 . ER.body . ER._RError))
-                }
         presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
         let presModeOrder tag = takeWhile (/= tag) presModeTags & length
         case lambdaPl ^. Input.inferredType of
@@ -645,7 +642,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , ListUtils.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
-                , let fieldParams = map makeFieldParam fields
+                , let fieldParams = fields <&> makeFieldParam lambdaPl
                 -> if Set.null (tagsInOuterScope `Set.intersection` myTags)
                    then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
                    else

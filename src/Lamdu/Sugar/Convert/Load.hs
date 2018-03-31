@@ -14,6 +14,7 @@ module Lamdu.Sugar.Convert.Load
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.State as State
+import           Control.Monad.Transaction (transaction)
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import           Data.Property (Property)
@@ -26,6 +27,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
+import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -35,6 +37,7 @@ import qualified Lamdu.Infer.Error as Infer
 import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import qualified Lamdu.Infer.Update as Update
+import           Lamdu.Sugar.Convert.Input (EvalResultsForExpr(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -68,10 +71,11 @@ propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
 
 preparePayloads ::
+    Map NominalId N.Nominal ->
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValIProperty m) ->
     Val (Input.Payload m ())
-preparePayloads evalRes inferredVal =
+preparePayloads nomsMap evalRes inferredVal =
     inferredVal <&> f & Input.preparePayloads
     where
         f (inferPl, valIProp) =
@@ -82,38 +86,25 @@ preparePayloads evalRes inferredVal =
               , Input._entityId = eId
               , Input._stored = valIProp
               , Input._inferred = inferPl
-              , Input._evalResults = evalRes <&> exprEvalRes execId
+              , Input._evalResults = evalRes <&> exprEvalRes typ execId
               , Input._userData = ()
               }
             )
             where
+                typ = inferPl ^. Infer.plType
                 eId = propEntityId valIProp
                 execId = Property.value valIProp
-        exprEvalRes pl r =
-            Input.EvalResultsForExpr
-            (r ^. erExprValues . Lens.ix pl)
-            (r ^. erAppliesOfLam . Lens.ix pl)
-
-loadInferPrepareInput ::
-    Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValIProperty m) ->
-    InferT.M (T m) (Val (Input.Payload m [EntityId]))
-loadInferPrepareInput evalRes val =
-    preparePayloads evalRes val
-    <&> setUserData
-    & ParamList.loadForLambdas
-    where
-        setUserData pl =
-            pl & Input.userData %~ \() -> [pl ^. Input.entityId]
-
-readValAndAddProperties ::
-    Monad m => ValIProperty m -> T m (Val (ValIProperty m))
-readValAndAddProperties prop =
-    ExprIRef.readVal (prop ^. Property.pVal)
-    <&> fmap (flip (,) ())
-    <&> ExprIRef.addProperties (prop ^. Property.pSet)
-    <&> fmap fst
+        exprEvalRes typ pl r =
+            EvalResultsForExpr
+            { _eResults = r ^. erExprValues . Lens.ix pl <&> addTypes nomsMap typ
+            , _eAppliesOfLam =
+                case typ of
+                T.TFun paramType _ ->
+                    r ^. erAppliesOfLam . Lens.ix pl
+                    <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
+                _ | r ^. erAppliesOfLam & Map.null -> Map.empty
+                  | otherwise -> error "Have non-empty erAppliesOfLam for non-function-type"
+            }
 
 makeNominalsMap :: Monad m => [T.Type] -> T m (Map NominalId N.Nominal)
 makeNominalsMap types =
@@ -131,6 +122,32 @@ makeNominalsMap types =
                         nom ^.. N.nomType . N._NominalType . Scheme.schemeType
                             & traverse_ loadForType
 
+loadInferPrepareInput ::
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) ->
+    Val (Infer.Payload, ValIProperty m) ->
+    InferT.M (T m) (Map NominalId N.Nominal, Val (Input.Payload m [EntityId]))
+loadInferPrepareInput evalRes val =
+    do
+        nomsMap <-
+            val ^.. Lens.folded . _1 . Infer.plType
+            & makeNominalsMap & transaction
+        preparePayloads nomsMap evalRes val
+            <&> setUserData
+            & ParamList.loadForLambdas
+            <&> (,) nomsMap
+    where
+        setUserData pl =
+            pl & Input.userData %~ \() -> [pl ^. Input.entityId]
+
+readValAndAddProperties ::
+    Monad m => ValIProperty m -> T m (Val (ValIProperty m))
+readValAndAddProperties prop =
+    ExprIRef.readVal (prop ^. Property.pVal)
+    <&> fmap (flip (,) ())
+    <&> ExprIRef.addProperties (prop ^. Property.pSet)
+    <&> fmap fst
+
 data InferResult m = InferResult
     { _irVal :: Val (Input.Payload m [EntityId])
     , _irNomsMap :: Map NominalId N.Nominal
@@ -140,14 +157,16 @@ Lens.makeLenses ''InferResult
 
 runInferResult ::
     Monad m =>
-    InferT.M (T m) (Val (Input.Payload f [EntityId])) ->
-    T m (Either Infer.Error (InferResult f))
-runInferResult act =
-    InferT.run act >>= traverse toResult
+    CurAndPrev (EvalResults (ValI m)) ->
+    InferT.M (T m) (Val (Infer.Payload, ValIProperty m)) ->
+    T m (Either Infer.Error (InferResult m))
+runInferResult results act =
+    act
+    >>= loadInferPrepareInput results
+    & InferT.run
+    <&> fmap toResult
     where
-        toResult (val, ctx) =
-            makeNominalsMap (val ^.. Lens.folded . Input.inferred . Infer.plType) <&>
-            \nomsMap -> InferResult val nomsMap ctx
+        toResult ((nomsMap, val), ctx) = InferResult val nomsMap ctx
 
 inferDef ::
     Monad m =>
@@ -157,8 +176,7 @@ inferDef ::
     T m (Either Infer.Error (InferResult m))
 inferDef results defExpr defVar =
     inferDefExprWithRecursiveRef defExpr defVar
-    >>= loadInferPrepareInput results
-    & runInferResult
+    & runInferResult results
 
 inferDefExprHelper ::
     Monad m => Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
@@ -174,8 +192,7 @@ inferDefExpr ::
     T m (Either Infer.Error (InferResult m))
 inferDefExpr results defExpr =
     inferDefExprHelper defExpr
-    >>= loadInferPrepareInput results
-    & runInferResult
+    & runInferResult results
 
 inferCheckDef ::
     Monad m =>

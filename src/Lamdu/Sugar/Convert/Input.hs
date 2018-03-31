@@ -22,8 +22,8 @@ import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Prelude
 
 data EvalResultsForExpr = EvalResultsForExpr
-    { _eResults :: Map ER.ScopeId (ER.Val ())
-    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val ())]
+    { _eResults :: Map ER.ScopeId (ER.Val Type)
+    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val Type)]
     }
 
 data Payload m a = Payload

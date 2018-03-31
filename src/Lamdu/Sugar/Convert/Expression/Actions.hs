@@ -8,7 +8,6 @@ import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Eval.Results.Process as ResultsProcess
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -185,12 +184,6 @@ addActions exprPl body =
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =
     do
-        nominalsMap <- Lens.view ConvertM.scNominalsMap
-        let mk res
-                | Map.null res = Nothing
-                | otherwise =
-                    res <&> ResultsProcess.addTypes nominalsMap typ
-                        & Just
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         pure Annotation
             { _aInferredType = typS
@@ -200,5 +193,8 @@ makeAnnotation payload =
                 <&> mk
             }
     where
+        mk res
+            | Map.null res = Nothing
+            | otherwise = Just res
         entityId = payload ^. Input.entityId
         typ = payload ^. Input.inferredType
