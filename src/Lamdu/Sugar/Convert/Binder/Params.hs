@@ -616,12 +616,11 @@ makeFieldParam lambdaPl (tag, typeExpr) =
     { fpTag = tag
     , fpFieldType = typeExpr
     , fpValue =
-            lambdaPl ^. Input.evalResults
-            <&> (^. Input.eAppliesOfLam)
-            <&> Lens.traversed . Lens.mapped . _2 %~
-                ER.extractField typeExpr tag
-            <&> Lens.traversed %~
-                filter (Lens.nullOf (_2 . ER.body . ER._RError))
+        lambdaPl ^. Input.evalResults
+        <&> (^. Input.eAppliesOfLam)
+        <&> Lens.mapped . Lens.mapped . _2 %~ ER.extractField typeExpr tag
+        <&> Lens.mapped %~
+            filter (Lens.nullOf (_2 . ER.body . ER._RError))
     }
 
 convertNonEmptyParams ::
