@@ -252,7 +252,7 @@ makeComposite o c mkPre mkPost mkField composite =
                 >>= addTypeBG
     where
         addAnimIdPrefix i row =
-            row <&> Reader.local (Element.animIdPrefix %~ (`AnimId.augmentId` i))
+            row <&> Reader.local (Element.animIdPrefix %~ AnimId.augmentId i)
         toRow (t, v) =
             CompositeRow mkPre (pure t) space (pure v) mkPost
             where

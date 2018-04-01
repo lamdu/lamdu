@@ -101,7 +101,7 @@ addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
 addAnimIds animId (Branch a cs) =
     Branch (tAnimId, a) $ map (addAnimIds tAnimId) cs
     where
-        tAnimId = Anim.augmentId animId a
+        tAnimId = Anim.augmentId a animId
 
 makeShortcutKeyView :: [E.InputDoc] -> Env -> View
 makeShortcutKeyView inputDocs =

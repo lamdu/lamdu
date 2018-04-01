@@ -9,5 +9,5 @@ import           Lamdu.Prelude
 
 type AnimId = [ByteString]
 
-augmentId :: Show a => AnimId -> a -> AnimId
-augmentId animId = (animId ++) . (:[]) . SBS8.pack . show
+augmentId :: Show a => a -> AnimId -> AnimId
+augmentId x animId = animId ++ [show x & SBS8.pack]

@@ -115,10 +115,10 @@ makeTable (Sugar.ResTable headers valss) =
             & Reader.local (Element.animIdPrefix <>~ [BinUtils.encodeS tag, "tag"])
         makeCell colI val =
             makeInner val
-            & Reader.local (Element.animIdPrefix %~ (AnimId.augmentId ?? colI))
+            & Reader.local (Element.animIdPrefix %~ AnimId.augmentId colI)
         makeRow rowI rowVals =
             zipWithM makeCell [(0::Int)..] rowVals
-            & Reader.local (Element.animIdPrefix %~ (AnimId.augmentId ?? rowI))
+            & Reader.local (Element.animIdPrefix %~ AnimId.augmentId rowI)
 
 makeArray :: MonadExprGui m => [ResVal] -> m (WithTextPos View)
 makeArray items =
@@ -136,7 +136,7 @@ makeArray items =
             ] & concat
             & sequence
             <&> hbox
-            & Reader.local (Element.animIdPrefix %~ (Anim.augmentId ?? (idx :: Int)))
+            & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
 
 makeTree :: MonadExprGui m => Sugar.ResTree ResVal -> m (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
@@ -155,7 +155,7 @@ makeTree (Sugar.ResTree root subtrees) =
             ] & concat
             & sequence
             <&> hbox
-            & Reader.local (Element.animIdPrefix %~ (Anim.augmentId ?? (idx :: Int)))
+            & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
         cutoff = 4
 
 

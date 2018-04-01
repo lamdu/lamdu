@@ -164,7 +164,7 @@ addPostTags items =
     where
         f idx item =
             Styled.grammarLabel txt
-            & Reader.local (Element.animIdPrefix %~ (`augmentId` idx))
+            & Reader.local (Element.animIdPrefix %~ augmentId idx)
             <&> \label -> item & Responsive.tagPost .~ (label <&> Widget.fromView)
             where
                 txt | idx < lastIdx = ","
