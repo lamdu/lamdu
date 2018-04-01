@@ -103,7 +103,7 @@ make ::
     (MonadExprGui n, MonadTransaction m n) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name g) (Info m) -> n [ExpressionGui (T m)]
+    Sugar.FuncParam (Name (T m)) (Info m) -> n [ExpressionGui (T m)]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view Config.config

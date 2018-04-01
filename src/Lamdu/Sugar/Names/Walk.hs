@@ -148,10 +148,37 @@ toNodeActions ::
     m (NodeActions (NewName m) (TM m))
 toNodeActions = wrapInRecord toTagSelection
 
+toResRecord ::
+    MonadNaming m =>
+    ResRecord (OldName m) a -> m (ResRecord (NewName m) a)
+toResRecord = recordFields . traverse . _1 %%~ toTagInfoOf Tag
+
+toResBody ::
+    MonadNaming m =>
+    (a -> m b) -> ResBody (OldName m) a -> m (ResBody (NewName m) b)
+toResBody f body =
+    case body of
+    RFunc    x -> RFunc x & pure
+    RError   x -> RError x & pure
+    RBytes   x -> RBytes x & pure
+    RFloat   x -> RFloat x & pure
+    RText    x -> RText x & pure
+    RArray   x -> RArray x & pure
+    RStream  x -> RStream x & pure
+    RTree    x -> RTree x & pure
+    RTable   x -> (rtHeaders . traverse) (toTagInfoOf Tag) x <&> RTable
+    RRecord  x -> toResRecord x <&> RRecord
+    RInject  x -> riTag (toTagInfoOf Tag) x <&> RInject
+    >>= traverse f
+
+toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
+toResVal = resBody (toResBody toResVal)
+
 toAnnotation :: MonadNaming m => Annotation (OldName m) -> m (Annotation (NewName m))
 toAnnotation (Annotation typ evalRes) =
-    (Annotation ?? evalRes)
+    Annotation
     <$> toType typ
+    <*> (traverse . traverse . traverse) toResVal evalRes
 
 toLet ::
     MonadNaming m => (a -> m b) ->

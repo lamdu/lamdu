@@ -55,7 +55,7 @@ addAltId = (`Widget.joinId` ["add alt"])
 make ::
     Monad m =>
     Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
@@ -99,7 +99,9 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         <&> (,) mTag
         altsGui <-
             do
-                altsGui <- makeAltsWidget mActiveTag alts addAlt altsId
+                altsGui <-
+                    makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal))
+                    alts addAlt altsId
                 case caseTail of
                     Sugar.ClosedComposite actions ->
                         Widget.weakerEvents (closedCaseEventMap config actions) altsGui

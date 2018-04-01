@@ -18,20 +18,19 @@ module Lamdu.Sugar.Types.Eval
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (BinderParamScopeId)
 import           Lamdu.Eval.Results (ScopeId, EvalError(..))
 import           Lamdu.Sugar.EntityId (EntityId)
--- import           Lamdu.Sugar.Types.Tag
+import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
 
-newtype ResRecord v = ResRecord
-    { _recordFields :: [(T.Tag, v)]
+newtype ResRecord name v = ResRecord
+    { _recordFields :: [(TagInfo name, v)]
     } deriving (Show, Functor, Foldable, Traversable)
 
-data ResInject v = ResInject
-    { _riTag :: T.Tag -- TODO: TagInfo name
+data ResInject name v = ResInject
+    { _riTag :: TagInfo name
     , _riVal :: Maybe v
     } deriving (Show, Functor, Foldable, Traversable)
 
@@ -40,8 +39,8 @@ data ResTree v = ResTree
     , _rtSubtrees :: [v]
     } deriving (Show, Functor, Foldable, Traversable)
 
-data ResTable v = ResTable
-    { _rtHeaders :: [T.Tag]
+data ResTable name v = ResTable
+    { _rtHeaders :: [TagInfo name]
     , _rtRows :: [[v]] -- All rows are same length as each other and the headers
     } deriving (Show, Functor, Foldable, Traversable)
 
@@ -49,26 +48,25 @@ newtype ResStream v = ResStream
     { _rsHead :: v
     } deriving (Show, Functor, Foldable, Traversable)
 
-data ResBody v
-    = RRecord (ResRecord v)
-    | RInject (ResInject v)
+data ResBody name v
+    = RRecord (ResRecord name v)
+    | RInject (ResInject name v)
     | RFunc Int -- Identifier for function instance
     | RArray [v] -- TODO: Vector here?
     | RError EvalError
     | RBytes ByteString
     | RFloat Double
     -- Sugared forms:
-    | RTable (ResTable v)
+    | RTable (ResTable name v)
     | RStream (ResStream v)
     | RTree (ResTree v)
     | RText Text
     deriving (Show, Functor, Foldable, Traversable)
 
-data ResVal = ResVal
+data ResVal name = ResVal
     { _resPayload :: EntityId
-    , _resBody :: ResBody ResVal
-    }
-    deriving Show
+    , _resBody :: ResBody name (ResVal name)
+    } deriving Show
 
 type EvalScopes a = CurAndPrev (Map ScopeId a)
 
@@ -84,7 +82,7 @@ type ParamScopes = EvalScopes [BinderParamScopeId]
 -- will not fall back to showing the prev
 -- TODO: Does this actually happen? Do we generate empty lists of
 -- scope-val pairs for lams?
-type EvaluationScopes = CurAndPrev (Maybe (Map ScopeId ResVal))
+type EvaluationScopes name = CurAndPrev (Maybe (Map ScopeId (ResVal name)))
 
 Lens.makeLenses ''ResInject
 Lens.makeLenses ''ResRecord

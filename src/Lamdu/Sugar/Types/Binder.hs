@@ -44,7 +44,7 @@ import           Lamdu.Prelude
 
 data Annotation name = Annotation
     { _aInferredType :: Type name
-    , _aMEvaluationResult :: EvaluationScopes
+    , _aMEvaluationResult :: EvaluationScopes name
     } deriving Show
 
 data AddNextParam name m

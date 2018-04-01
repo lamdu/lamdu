@@ -39,7 +39,7 @@ makeToNom ::
     Monad m =>
     Sugar.Nominal (Name (T m))
     (Sugar.BinderBody (Name (T m)) (T m) (ExprGui.SugarExpr (T m))) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
@@ -51,7 +51,7 @@ makeToNom nom pl =
 makeFromNom ::
     Monad m =>
     Sugar.Nominal (Name (T m)) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
@@ -63,7 +63,7 @@ mkNomGui ::
     Monad m =>
     ([ExpressionGui (T m)] -> [ExpressionGui (T m)]) ->
     Text -> Text -> Maybe (T m Sugar.EntityId) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     Sugar.Nominal (Name (T m)) (ExprGuiM m (ExpressionGui (T m))) ->
     ExprGuiM m (ExpressionGui (T m))
 mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =

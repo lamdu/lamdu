@@ -78,7 +78,7 @@ addFieldWithSearchTermEventMap myId =
 
 makeUnit ::
     (Monad m, Applicative f) =>
-    Sugar.Payload (Name g) f ExprGui.Payload ->
+    Sugar.Payload (Name f) f ExprGui.Payload ->
     ExprGuiM m (Responsive (f GuiState.Update))
 makeUnit pl =
     do
@@ -97,7 +97,7 @@ makeUnit pl =
 make ::
     Monad m =>
     Sugar.Composite (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open

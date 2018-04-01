@@ -215,7 +215,7 @@ numEdit prop pl =
 make ::
     Monad m =>
     Sugar.Literal (Property (T m)) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make lit pl =
     stdWrap pl

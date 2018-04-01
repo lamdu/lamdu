@@ -173,7 +173,7 @@ make ::
     Monad m =>
     T m [Sugar.HoleOption (T m) (ExpressionN (T m) ())] ->
     Maybe (Sugar.OptionLiteral (T m) (ExpressionN (T m) ())) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     (Text -> Bool) ->
     ExprGuiM m (Menu.Placement -> ExpressionGui (T m))
 make options mOptionLiteral pl allowedTerms =

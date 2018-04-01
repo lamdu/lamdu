@@ -128,7 +128,7 @@ mkLightLambda params myId =
 make ::
     Monad m =>
     Sugar.Lambda (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name g) (T m) ExprGui.Payload ->
+    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     ExprGuiM m (ExpressionGui (T m))
 make lam pl =
     do
