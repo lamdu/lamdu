@@ -117,15 +117,15 @@ mkPrejumpPosSaver =
 resetDepth :: MonadExprGui m => Int -> m r -> m r
 resetDepth depth = Reader.local (aDepthLeft .~ depth)
 
-advanceDepth :: MonadExprGui m => (WithTextPos View -> m r) -> AnimId -> m r -> m r
-advanceDepth f animId action =
+advanceDepth :: MonadExprGui m => (WithTextPos View -> m r) -> m r -> m r
+advanceDepth f action =
     do
         depth <- Lens.view aDepthLeft
         if depth <= 0
             then mkErrorWidget >>= f
             else action & Reader.local (aDepthLeft -~ 1)
     where
-        mkErrorWidget = TextView.make ?? "..." ?? animId
+        mkErrorWidget = TextView.makeLabel "..."
 
 readMScopeId :: MonadExprGui m => m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId
@@ -152,7 +152,8 @@ instance Monad m => MonadExprGui (ExprGuiM m) where
         do
             maker <- Lens.view aMakeSubexpression
             maker expr
-        & advanceDepth (pure . Responsive.fromTextView) animId
+        & advanceDepth (pure . Responsive.fromTextView)
+        & Reader.local (Element.animIdPrefix .~ animId)
         where
             animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
