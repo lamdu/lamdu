@@ -208,23 +208,25 @@ fixSize view =
 
 makeInner :: MonadExprGui m => ResVal -> m (WithTextPos View)
 makeInner (Sugar.ResVal body) =
-    case body of
-    Sugar.RError err -> makeError err
-    Sugar.RFunc{} -> textView "Fn"
-    Sugar.RInject inject -> makeInject inject
-    Sugar.RRecord record -> makeRecord record
-    Sugar.RText txt -> toText txt
-    Sugar.RBytes x -> toText x
-    Sugar.RFloat x -> toText x
-    Sugar.RArray x -> makeArray x
-    Sugar.RTree x -> makeTree x
-    Sugar.RTable x -> makeTable x
-    Sugar.RStream x -> makeStream x
-    & advanceDepth
+    do
+        animId <- Lens.view Element.animIdPrefix
+        case body of
+            Sugar.RError err -> makeError err
+            Sugar.RFunc{} -> textView "Fn"
+            Sugar.RInject inject -> makeInject inject
+            Sugar.RRecord record -> makeRecord record
+            Sugar.RText txt -> toText txt
+            Sugar.RBytes x -> toText x
+            Sugar.RFloat x -> toText x
+            Sugar.RArray x -> makeArray x
+            Sugar.RTree x -> makeTree x
+            Sugar.RTable x -> makeTable x
+            Sugar.RStream x -> makeStream x
+            & advanceDepth animId
     where
         -- Only cut non-leaf expressions due to depth limits
-        advanceDepth
-            | Lens.has Lens.folded body = ExprGuiM.advanceDepth pure
+        advanceDepth animId
+            | Lens.has Lens.folded body = ExprGuiM.advanceDepth pure animId
             | otherwise = id
 
 toText ::
