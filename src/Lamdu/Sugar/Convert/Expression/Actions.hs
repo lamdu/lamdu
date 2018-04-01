@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Expression.Actions
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
@@ -15,6 +14,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postProcessDef)
 import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Eval (convertEvalResults)
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -184,17 +184,14 @@ addActions exprPl body =
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =
     do
+        evalResults <-
+            payload ^. Input.evalResults <&> (^. Input.eResults)
+            & convertEvalResults
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         pure Annotation
             { _aInferredType = typS
-            , _aMEvaluationResult =
-                payload ^. Input.evalResults
-                <&> (^. Input.eResults)
-                <&> mk
+            , _aMEvaluationResult = evalResults
             }
     where
-        mk res
-            | Map.null res = Nothing
-            | otherwise = Just res
         entityId = payload ^. Input.entityId
         typ = payload ^. Input.inferredType

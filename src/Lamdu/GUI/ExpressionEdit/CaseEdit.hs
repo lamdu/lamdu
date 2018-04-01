@@ -23,13 +23,11 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -94,7 +92,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         <&> Widget.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
                     mTag <-
                         Annotation.evaluationResult (arg ^. Sugar.rPayload)
-                        <&> (>>= (^? ER.body . ER._RInject . V.injectTag))
+                        <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
                     Options.boxSpaced
                         ?? Options.disambiguationNone
                         ?? [caseLabel, argEdit, ofLabel]

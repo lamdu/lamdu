@@ -28,12 +28,10 @@ import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
-import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..), EvalModeShow(..))
@@ -141,7 +139,7 @@ processAnnotationGui wideAnnotationBehavior =
 data EvalResDisplay = EvalResDisplay
     { erdScope :: Sugar.ScopeId
     , erdSource :: CurPrevTag
-    , erdVal :: ER.Val T.Type
+    , erdVal :: Sugar.ResVal
     }
 
 makeEvaluationResultView ::
@@ -251,10 +249,10 @@ addEvaluationResult ::
      Responsive (f GuiState.Update) ->
      Responsive (f GuiState.Update))
 addEvaluationResult mNeigh resDisp wideBehavior =
-    case (erdVal resDisp ^. ER.payload, erdVal resDisp ^. ER.body) of
-    (T.TRecord T.CEmpty, _) ->
+    case erdVal resDisp ^. Sugar.resBody of
+    Sugar.RRecord (Sugar.ResRecord []) ->
         Styled.addBgColor Theme.evaluatedPathBGColor <&> const
-    (_, ER.RFunc{}) -> pure (flip const)
+    Sugar.RFunc _ -> pure (flip const)
     _ ->
         case wideBehavior of
         KeepWideTypeAnnotation -> ShrinkWideAnnotation
@@ -288,7 +286,7 @@ maybeAddAnnotationPl pl =
 evaluationResult ::
     Monad m =>
     Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM m (Maybe (ER.Val T.Type))
+    ExprGuiM m (Maybe Sugar.ResVal)
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)

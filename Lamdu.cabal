@@ -259,6 +259,7 @@ Library
                   , Lamdu.Sugar.Convert.Composite
                   , Lamdu.Sugar.Convert.DefExpr
                   , Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
+                  , Lamdu.Sugar.Convert.Eval
                   , Lamdu.Sugar.Convert.Expression
                   , Lamdu.Sugar.Convert.Expression.Actions
                   , Lamdu.Sugar.Convert.Fragment

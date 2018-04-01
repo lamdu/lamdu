@@ -38,6 +38,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
+import           Lamdu.Sugar.Convert.Eval (convertEvalParam)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
@@ -377,15 +378,10 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 typeS <-
                     convertType (EntityId.ofTypeOf (paramInfo ^. piTag . tagInfo . tagInstance))
                     (fpFieldType fp)
-                -- TODO: DRY with Convert.Expression.Actions.makeAnnotation?
-                let mk res
-                        | Map.null res = Nothing
-                        | otherwise =
-                            res ^.. Lens.folded . Lens.folded & Map.fromList
-                                & Just
+                evalResults <- fpValue fp & convertEvalParam
                 FuncParam Annotation
                     { _aInferredType = typeS
-                    , _aMEvaluationResult = fpValue fp <&> mk
+                    , _aMEvaluationResult = evalResults
                     } paramInfo & pure
             where
                 tag = fpTag fp
@@ -511,18 +507,15 @@ mkFuncParam ::
 mkFuncParam entityId lamExprPl info =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
-        -- TODO: DRY with Convert.Expression.Actions.makeAnnotation?
-        let mk lamApplies
-                | Map.null lamApplies = Nothing
-                | otherwise =
-                    lamApplies ^.. Lens.folded . Lens.folded & Map.fromList
-                    & Just
+        evalResults <-
+            lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
+            & convertEvalParam
         pure FuncParam
             { _fpInfo = info
             , _fpAnnotation =
                 Annotation
                 { _aInferredType = typS
-                , _aMEvaluationResult = lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> mk
+                , _aMEvaluationResult = evalResults
                 }
             }
     where
