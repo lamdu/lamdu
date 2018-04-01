@@ -58,12 +58,12 @@ makeTag tag =
     Anchors.assocTagNameRef tag & Transaction.getP
     <&> Lens.filtered Text.null .~ "(empty)"
     >>= textView
-    -- TODO: animIdPrefix <>~ here?
+    & Reader.local (Element.animIdPrefix <>~ [BinUtils.encodeS tag, "tag"])
 
 makeField :: MonadExprGui m => T.Tag -> ResVal -> m [Aligned View]
 makeField tag val =
     do
-        tagView <- makeTag tag & Reader.local (Element.animIdPrefix <>~ ["tag"])
+        tagView <- makeTag tag
         space <- Spacer.stdHSpace
         valView <- makeInner val & Reader.local (Element.animIdPrefix <>~ ["val"])
         pure
@@ -96,7 +96,7 @@ tableCutoff = 6
 makeTable :: MonadExprGui m => Sugar.ResTable ResVal -> m (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
-        header <- mapM makeHeader headers
+        header <- mapM makeTag headers
         rows <- zipWithM makeRow [0..tableCutoff-1] valss
         s <- Spacer.stdHSpace
         let table =
@@ -110,9 +110,6 @@ makeTable (Sugar.ResTable headers valss) =
             else label "…"
         Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
     where
-        makeHeader tag =
-            makeTag tag
-            & Reader.local (Element.animIdPrefix <>~ [BinUtils.encodeS tag, "tag"])
         makeCell colI val =
             makeInner val
             & Reader.local (Element.animIdPrefix %~ AnimId.augmentId colI)
@@ -179,7 +176,7 @@ makeStream (Sugar.ResStream head_) =
 makeInject :: MonadExprGui m => Sugar.ResInject ResVal -> m (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     do
-        tagView <- makeTag tag & Reader.local (Element.animIdPrefix <>~ ["tag"])
+        tagView <- makeTag tag
         case mVal of
             Nothing -> pure tagView
             Just val ->
