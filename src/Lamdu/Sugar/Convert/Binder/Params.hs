@@ -163,8 +163,8 @@ addFieldParam mPresMode mkArg binderKind storedLam mkNewTags tag =
                     & V.BRecExtend & ExprIRef.newValBody
 
 mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
-mkCpScopesOfLam x =
-    x ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
+mkCpScopesOfLam lamPl =
+    lamPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
     <&> (fmap . map) BinderParamScopeId
 
 getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
@@ -336,7 +336,7 @@ convertRecordParams ::
     BinderKind m -> [FieldParam] ->
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
+convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
         params <- mapM mkParam fieldParams
         postProcess <- ConvertM.postProcess
@@ -356,14 +356,14 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) pl =
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
             , _cpParams = Params params
             , _cpAddFirstParam = PrependParam addFirstSelection
-            , cpScopes = BinderBodyScope $ mkCpScopesOfLam pl
+            , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamPl
             , cpMLamParam = Just (entityId, param)
             }
     where
-        entityId = pl ^. Input.entityId
+        entityId = lamPl ^. Input.entityId
         tags = fieldParams <&> fpTag
         mkParInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
-        storedLam = mkStoredLam lam pl
+        storedLam = mkStoredLam lam lamPl
         mkParam fp =
             do
                 paramInfo <-
