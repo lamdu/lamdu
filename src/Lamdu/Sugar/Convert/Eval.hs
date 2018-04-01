@@ -174,7 +174,6 @@ animIdForEvalResult entityId _ = entityId
 
 animIdForParam :: EntityId -> ScopeId -> EntityId
 animIdForParam entityId (ER.ScopeId scopeId) =
-    traceId ("animIdForParam " ++ show entityId ++ " ScopeId=" ++ show scopeId ++ ": ") $
     EntityId.ofEvalArrayIdx scopeId entityId
 
 convertEvalResultsWith ::

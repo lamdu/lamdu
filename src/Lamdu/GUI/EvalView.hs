@@ -198,7 +198,7 @@ makeInner (Sugar.ResVal entityId body) =
     Sugar.RRecord record -> makeRecord record
     Sugar.RText txt -> toText txt
     Sugar.RBytes x -> toText x
-    Sugar.RFloat x -> trace ("Making float with anim id " ++ show animId) $ toText x
+    Sugar.RFloat x -> toText x
     Sugar.RArray x -> makeArray x
     Sugar.RTree x -> makeTree x
     Sugar.RTable x -> makeTable x
