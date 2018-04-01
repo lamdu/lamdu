@@ -114,6 +114,16 @@ stack install
 
 ```
 
+#### nix (any linux distribution)
+
+requires [Nix](https://nixos.org/nix/)
+
+```shell
+git clone --recursive https://github.com/lamdu/lamdu
+cd lamdu
+nix-env -f default.nix -iA lamdu
+```
+
 ## Tutorial
 
 *Note:* In the shortcut key combinations, "left" refers to the left cursor key.
