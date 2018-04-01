@@ -61,21 +61,21 @@ makeEditor ::
 makeEditor body pl =
     case body of
     Sugar.BodyPlaceHolder    -> placeHolder pl
-    Sugar.BodyHole         x -> HoleEdit.make         x pl & r
-    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl & r <&> d
-    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl & r <&> d
-    Sugar.BodyLam          x -> LambdaEdit.make       x pl & r
-    Sugar.BodyLiteral      x -> LiteralEdit.make      x pl & r
-    Sugar.BodyRecord       x -> RecordEdit.make       x pl & r
-    Sugar.BodyCase         x -> CaseEdit.make         x pl & r <&> d
-    Sugar.BodyIfElse       x -> IfElseEdit.make       x pl & r <&> d
-    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl & r <&> d
-    Sugar.BodyInject       x -> InjectEdit.make       x pl & r
-    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl & r <&> d
-    Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl & r
-    Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl & r <&> d
-    Sugar.BodyFragment     x -> FragmentEdit.make     x pl & r
+    Sugar.BodyHole         x -> HoleEdit.make         x pl
+    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl <&> d
+    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl <&> d
+    Sugar.BodyLam          x -> LambdaEdit.make       x pl
+    Sugar.BodyLiteral      x -> LiteralEdit.make      x pl
+    Sugar.BodyRecord       x -> RecordEdit.make       x pl
+    Sugar.BodyCase         x -> CaseEdit.make         x pl <&> d
+    Sugar.BodyIfElse       x -> IfElseEdit.make       x pl <&> d
+    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl <&> d
+    Sugar.BodyInject       x -> InjectEdit.make       x pl
+    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl <&> d
+    Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl
+    Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl <&> d
+    Sugar.BodyFragment     x -> FragmentEdit.make     x pl
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         d = Dotter.addEventMap myId
         myId = WidgetIds.fromExprPayload pl
-        r = Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)

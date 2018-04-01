@@ -412,12 +412,15 @@ markNotFragment val = val <&> _2 . _2 .~ NotFragment
 fragmentVar :: V.Var
 fragmentVar = "HOLE FRAGMENT EXPR"
 
-replaceFragment :: Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
-replaceFragment (Val pl body) =
+replaceFragment :: EntityId -> Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
+replaceFragment parentEntityId (Val pl body) =
     case pl ^. Input.userData of
-    IsFragment -> V.LVar fragmentVar & V.BLeaf
-    NotFragment -> body & traverse %~ replaceFragment
-    & Val (void pl)
+    IsFragment ->
+        V.LVar fragmentVar & V.BLeaf
+        & Val (void pl & Input.entityId .~ EntityId.ofFragmentUnder parentEntityId)
+    NotFragment ->
+        body & traverse %~ replaceFragment (pl ^. Input.entityId)
+        & Val (void pl)
 
 writeConvertTypeChecked ::
     Monad m =>
@@ -433,10 +436,11 @@ writeConvertTypeChecked sugarContext holeStored inferredVal =
             <&> ExprIRef.addProperties (Property.set holeStored)
             <&> fmap snd . Input.preparePayloads . fmap toPayload
         Property.set holeStored (writtenExpr ^. Val.payload . _1 . Property.pVal)
-        replaceFragment (writtenExpr <&> snd)
+        replaceFragment topEntityId (writtenExpr <&> snd)
             & ConvertM.convertSubexpression
             & ConvertM.run sugarContext
     where
+        topEntityId = Property.value holeStored & EntityId.ofValI
         intoStorePoint (inferred, (mStorePoint, a)) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
         toPayload (stored, (inferred, wasStored, a)) =

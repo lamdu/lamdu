@@ -7,6 +7,7 @@ module Lamdu.Sugar.Internal.EntityId
     , ofTag
     , ofTaggedEntity
     , ofTId
+    , ofFragmentUnder
     , randomizeExprAndParams
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
     , usedTypeOf, currentTypeOf
@@ -77,6 +78,9 @@ ofFunParam = augment "TFunParam"
 
 ofFunResult :: EntityId -> EntityId
 ofFunResult = augment "TFunResult"
+
+ofFragmentUnder :: EntityId -> EntityId
+ofFragmentUnder = augment "Fragment"
 
 ofTInstParam :: T.ParamId -> EntityId -> EntityId
 ofTInstParam p (EntityId uuid) = EntityId $ UUIDUtils.combine (UniqueId.toUUID p) uuid
