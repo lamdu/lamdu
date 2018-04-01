@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionGui.Annotation
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Binary.Utils (encodeS)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
@@ -137,8 +136,7 @@ processAnnotationGui wideAnnotationBehavior =
                     | otherwise = id
 
 data EvalResDisplay = EvalResDisplay
-    { erdScope :: Sugar.ScopeId
-    , erdSource :: CurPrevTag
+    { erdSource :: CurPrevTag
     , erdVal :: Sugar.ResVal
     }
 
@@ -166,20 +164,6 @@ makeEvalView ::
 makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view (theme . Theme.eval)
-        let animIdSuffix res =
-                -- When we can scroll between eval view results we
-                -- must encode the scope into the anim ID for smooth
-                -- scroll to work.
-                -- When we cannot, we'd rather not animate changes
-                -- within a scrolled scope (use same animId).
-                case mNeighbours of
-                Nothing -> ["eval-view"]
-                Just _ -> [encodeS (erdScope res)]
-        let makeEvaluationResultViewBG res =
-                addAnnotationBackground
-                <*> makeEvaluationResultView res
-                <&> (^. Align.tValue)
-                & Reader.local (Element.animIdPrefix <>~ animIdSuffix res)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
                 <&> Lens.mapped %~ Element.scale (evalTheme ^. Theme.neighborsScaleFactor)
@@ -192,15 +176,21 @@ makeEvalView mNeighbours evalRes =
                 (,)
                 <$> neighbourView mPrev
                 <*> neighbourView mNext
-        evalView <-
-            makeEvaluationResultView evalRes
-            & Reader.local (Element.animIdPrefix <>~ animIdSuffix evalRes)
+        evalView <- makeEvaluationResultView evalRes
         let prevPos = Vector2 0 0.5 * evalView ^. Element.size - prev ^. Element.size
         let nextPos = Vector2 1 0.5 * evalView ^. Element.size
         evalView
             & Element.setLayers <>~ Element.translateLayers prevPos (prev ^. View.vAnimLayers)
             & Element.setLayers <>~ Element.translateLayers nextPos (next ^. View.vAnimLayers)
             & pure
+    where
+        evalAnimId erd =
+            erdVal erd ^. Sugar.resPayload & WidgetIds.fromEntityId & Widget.toAnimId
+        makeEvaluationResultViewBG res =
+            ( addAnnotationBackground
+            & Reader.local (Element.animIdPrefix .~ evalAnimId res)
+            ) <*> makeEvaluationResultView res
+            <&> (^. Align.tValue)
 
 annotationSpacer ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) => m View
@@ -370,7 +360,7 @@ valOfScope annotation mScopeIds =
     where
         go _ _ Nothing = Nothing
         go tag ann (Just scopeId) =
-            ann ^? Lens._Just . Lens.ix scopeId <&> EvalResDisplay scopeId tag
+            ann ^? Lens._Just . Lens.ix scopeId <&> EvalResDisplay tag
 
 valOfScopePreferCur :: Sugar.Annotation name -> Sugar.ScopeId -> Maybe EvalResDisplay
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just

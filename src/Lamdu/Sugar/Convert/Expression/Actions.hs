@@ -186,7 +186,7 @@ makeAnnotation payload =
     do
         evalResults <-
             payload ^. Input.evalResults <&> (^. Input.eResults)
-            & convertEvalResults
+            & convertEvalResults (EntityId.ofEvalOf entityId)
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         pure Annotation
             { _aInferredType = typS

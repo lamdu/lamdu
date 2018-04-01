@@ -13,7 +13,7 @@ module Lamdu.Sugar.Types.Eval
     , ResBody(..)
     , _RRecord, _RInject, _RFunc, _RArray, _RError, _RBytes, _RFloat
     , _RStream, _RTree, _RText
-    , ResVal(..), resBody
+    , ResVal(..), resPayload, resBody
     ) where
 
 import qualified Control.Lens as Lens
@@ -21,6 +21,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (BinderParamScopeId)
 import           Lamdu.Eval.Results (ScopeId, EvalError(..))
+import           Lamdu.Sugar.EntityId (EntityId)
 -- import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
@@ -63,7 +64,10 @@ data ResBody v
     | RText Text
     deriving (Show, Functor, Foldable, Traversable)
 
-newtype ResVal = ResVal { _resBody :: ResBody ResVal }
+data ResVal = ResVal
+    { _resPayload :: EntityId
+    , _resBody :: ResBody ResVal
+    }
     deriving Show
 
 type EvalScopes a = CurAndPrev (Map ScopeId a)

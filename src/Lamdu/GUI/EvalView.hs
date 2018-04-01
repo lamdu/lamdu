@@ -12,17 +12,16 @@ import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.List as List
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox, vbox)
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -34,6 +33,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Sugar.Types (ResVal)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -43,12 +43,6 @@ textView ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => Text -> m (WithTextPos View)
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
-
-label ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    ) => Text -> m (WithTextPos View)
-label text =
-    textView text & Reader.local (Element.animIdPrefix <>~ [encodeUtf8 text])
 
 makeTag ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
@@ -65,13 +59,12 @@ makeField tag val =
     do
         tagView <- makeTag tag
         space <- Spacer.stdHSpace
-        valView <- makeInner val & Reader.local (Element.animIdPrefix <>~ ["val"])
+        valView <- makeInner val
         pure
             [ toAligned 1 tagView
             , Aligned 0.5 space
             , toAligned 0 valView
             ]
-        & Reader.local (Element.animIdPrefix <>~ [BinUtils.encodeS tag])
     where
         toAligned x (WithTextPos y w) =
             Aligned (Vector2 x (y / w ^. Element.height)) w
@@ -97,7 +90,7 @@ makeTable :: MonadExprGui m => Sugar.ResTable ResVal -> m (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
         header <- mapM makeTag headers
-        rows <- zipWithM makeRow [0..tableCutoff-1] valss
+        rows <- take (tableCutoff-1) valss & traverse . traverse %%~ makeInner
         s <- Spacer.stdHSpace
         let table =
                 header : rows <&> traverse %~ (^. Align.tValue)
@@ -107,29 +100,22 @@ makeTable (Sugar.ResTable headers valss) =
         remainView <-
             if null (drop tableCutoff rows)
             then pure Element.empty
-            else label "…"
+            else TextView.makeLabel "…"
         Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
-    where
-        makeCell colI val =
-            makeInner val
-            & Reader.local (Element.animIdPrefix %~ AnimId.augmentId colI)
-        makeRow rowI rowVals =
-            zipWithM makeCell [(0::Int)..] rowVals
-            & Reader.local (Element.animIdPrefix %~ AnimId.augmentId rowI)
 
 makeArray :: MonadExprGui m => [ResVal] -> m (WithTextPos View)
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
-        opener <- label "["
-        closer <- label "]"
+        opener <- TextView.makeLabel "["
+        closer <- TextView.makeLabel "]"
         opener : itemViews ++ [closer] & hbox & pure
     where
         makeItem idx val =
-            [ [ label ", " | idx > 0 ]
-            , [ makeInner val & Reader.local (Element.animIdPrefix <>~ ["val"])
+            [ [ TextView.makeLabel ", " | idx > 0 ]
+            , [ makeInner val
                 | idx < arrayCutoff ]
-            , [ label "…" | idx == arrayCutoff ]
+            , [ TextView.makeLabel "…" | idx == arrayCutoff ]
             ] & concat
             & sequence
             <&> hbox
@@ -138,17 +124,14 @@ makeArray items =
 makeTree :: MonadExprGui m => Sugar.ResTree ResVal -> m (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
     do
-        rootView <-
-            makeInner root & Reader.local (Element.animIdPrefix <>~ ["root"])
+        rootView <- makeInner root
         subtreeViews <- zipWithM makeItem [0..cutoff] subtrees
         rootView : subtreeViews & vbox & pure
     where
         makeItem idx val =
-            [ [ label "* " ]
-            , [ makeInner val
-                & Reader.local (Element.animIdPrefix <>~ ["val"])
-                | idx < cutoff ]
-            , [ label "…" | idx == cutoff ]
+            [ [ TextView.makeLabel "* " ]
+            , [ makeInner val | idx < cutoff ]
+            , [ TextView.makeLabel "…" | idx == cutoff ]
             ] & concat
             & sequence
             <&> hbox
@@ -164,9 +147,9 @@ makeRecord (Sugar.ResRecord fields) =
 makeStream :: MonadExprGui m => Sugar.ResStream ResVal -> m (WithTextPos View)
 makeStream (Sugar.ResStream head_) =
     do
-        o <- label "["
-        inner <- makeInner head_ & Reader.local (Element.animIdPrefix <>~ ["head"])
-        c <- label ", …]" <&> (^. Align.tValue)
+        o <- TextView.makeLabel "["
+        inner <- makeInner head_
+        c <- TextView.makeLabel ", …]" <&> (^. Align.tValue)
         o /|/ inner
             & Align.tValue %~ (hGlueAlign 1 ?? c)
             & pure
@@ -182,7 +165,7 @@ makeInject (Sugar.ResInject tag mVal) =
             Just val ->
                 do
                     s <- Spacer.stdHSpace
-                    i <- makeInner val & Reader.local (Element.animIdPrefix <>~ ["val"])
+                    i <- makeInner val
                     tagView /|/ s /|/ i & pure
 
 depthCounts :: Sugar.ResVal -> [Int]
@@ -207,7 +190,7 @@ fixSize view =
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
 makeInner :: MonadExprGui m => ResVal -> m (WithTextPos View)
-makeInner (Sugar.ResVal body) =
+makeInner (Sugar.ResVal entityId body) =
     case body of
     Sugar.RError err -> makeError err
     Sugar.RFunc{} -> textView "Fn"
@@ -215,13 +198,15 @@ makeInner (Sugar.ResVal body) =
     Sugar.RRecord record -> makeRecord record
     Sugar.RText txt -> toText txt
     Sugar.RBytes x -> toText x
-    Sugar.RFloat x -> toText x
+    Sugar.RFloat x -> trace ("Making float with anim id " ++ show animId) $ toText x
     Sugar.RArray x -> makeArray x
     Sugar.RTree x -> makeTree x
     Sugar.RTable x -> makeTable x
     Sugar.RStream x -> makeStream x
     & advanceDepth
+    & Reader.local (Element.animIdPrefix .~ animId)
     where
+        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         -- Only cut non-leaf expressions due to depth limits
         advanceDepth
             | Lens.has Lens.folded body = ExprGuiM.advanceDepth pure
@@ -259,6 +244,5 @@ make v =
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
                 & takeWhile (< maxEvalViewSize) & length
-        makeInner v
-            & ExprGuiM.resetDepth depthLimit
+        makeInner v & ExprGuiM.resetDepth depthLimit
     <&> fixSize

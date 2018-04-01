@@ -9,11 +9,13 @@ module Lamdu.Sugar.Internal.EntityId
     , ofTId
     , ofFragmentUnder
     , randomizeExprAndParams
+    , ofEvalOf, ofEvalField, ofEvalArrayIdx
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
     , usedTypeOf, currentTypeOf
     ) where
 
 import           Data.Binary.Utils (encodeS)
+import qualified Data.ByteString as BS
 import           Data.Hashable (Hashable)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -66,6 +68,16 @@ ofTaggedEntity v p =
 -- For tag instance entity id
 ofTag :: EntityId -> T.Tag -> EntityId
 ofTag entityId tag = augment (encodeS tag) entityId
+
+ofEvalField :: T.Tag -> EntityId -> EntityId
+ofEvalField p (EntityId uuid) =
+    EntityId $ UUIDUtils.combine (UniqueId.toUUID p) uuid
+
+ofEvalArrayIdx :: Int -> EntityId -> EntityId
+ofEvalArrayIdx idx = augment (BS.pack [fromIntegral idx])
+
+ofEvalOf :: EntityId -> EntityId
+ofEvalOf = augment "evalOf"
 
 ofTypeOf :: EntityId -> EntityId
 ofTypeOf = augment "typeOf"
