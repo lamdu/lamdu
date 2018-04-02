@@ -24,8 +24,8 @@ import qualified Lamdu.Name as Name
 import           Lamdu.Prelude
 
 makeCollisionSuffixLabel ::
-    ( TextView.HasStyle r, Element.HasAnimIdPrefix r, HasTheme r
-    , MonadReader r m
+    ( MonadReader env m
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
     ) => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel collisionColor mCollision =
     case mCollision of
@@ -45,7 +45,9 @@ makeCollisionSuffixLabel collisionColor mCollision =
             <&> Just
 
 make ::
-    (HasTheme r, Element.HasAnimIdPrefix r, TextView.HasStyle r, MonadReader r m) =>
+    ( MonadReader env m
+    , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) =>
     Name f -> m (WithTextPos View)
 make name =
     do
