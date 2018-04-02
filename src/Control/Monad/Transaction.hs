@@ -33,10 +33,10 @@ instance MonadTransaction n m => MonadTransaction n (StateT  s m) where transact
 instance MonadTransaction n m => MonadTransaction n (ReaderT r m) where transaction = lift . transaction
 instance MonadTransaction n m => MonadTransaction n (ExceptT e m) where transaction = lift . transaction
 
-getP :: MonadTransaction n m => Property.MkProperty (T n) a -> m a
+getP :: MonadTransaction n m => Property.MkProperty' (T n) a -> m a
 getP = transaction . Property.getP
 
-setP :: MonadTransaction n m => Property.MkProperty (T n) a -> a -> m ()
+setP :: MonadTransaction n m => Property.MkProperty' (T n) a -> a -> m ()
 setP prop = transaction . Property.setP prop
 
 readIRef :: (Binary a, MonadTransaction n m) => IRef n a -> m a

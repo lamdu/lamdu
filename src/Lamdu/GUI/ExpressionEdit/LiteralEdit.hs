@@ -35,7 +35,7 @@ import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -69,7 +69,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property (T m) a ->
-    Sugar.Payload name (T m) ExprGui.Payload -> f (ExpressionGui (T m))
+    Sugar.Payload' name (T m) ExprGui.Payload -> f (ExpressionGui (T m))
 genericEdit whichStyle prop pl =
     TextView.makeFocusable ?? valText ?? myId
     <&> Align.tValue %~ Widget.weakerEvents editEventMap
@@ -118,7 +118,7 @@ textEdit ::
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
     ) =>
     Property (T f) Text ->
-    Sugar.Payload name (T f) ExprGui.Payload ->
+    Sugar.Payload' name (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 textEdit prop pl =
     do
@@ -144,7 +144,7 @@ numEdit ::
     , GuiState.HasState env, Monad f
     ) =>
     Property (T f) Double ->
-    Sugar.Payload name (T f) ExprGui.Payload ->
+    Sugar.Payload' name (T f) ExprGui.Payload ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 numEdit prop pl =
     (withFd ?? myId) <*>
@@ -215,8 +215,8 @@ numEdit prop pl =
 make ::
     Monad m =>
     Sugar.Literal (Property (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make lit pl =
     stdWrap pl
     <*>

@@ -28,41 +28,41 @@ import           Lamdu.Sugar.Types.Type as Exported
 
 import           Lamdu.Prelude
 
-data DefinitionExpression name m expr = DefinitionExpression
+data DefinitionExpression name im am expr = DefinitionExpression
     { _deType :: Scheme name
-    , _dePresentationMode :: Maybe (m (Property m Meta.PresentationMode))
-    , _deContent :: Binder name m expr
+    , _dePresentationMode :: Maybe (im (Property am Meta.PresentationMode))
+    , _deContent :: Binder name im am expr
     } deriving (Functor, Foldable, Traversable)
 
-data DefinitionBuiltin name m = DefinitionBuiltin
+data DefinitionBuiltin name am = DefinitionBuiltin
     { _biName :: Definition.FFIName
-    , _biSetName :: Definition.FFIName -> m ()
+    , _biSetName :: Definition.FFIName -> am ()
     , _biType :: Scheme name
     }
 
-data DefinitionBody name m expr
-    = DefinitionBodyExpression (DefinitionExpression name m expr)
-    | DefinitionBodyBuiltin (DefinitionBuiltin name m)
+data DefinitionBody name im am expr
+    = DefinitionBodyExpression (DefinitionExpression name im am expr)
+    | DefinitionBodyBuiltin (DefinitionBuiltin name am)
     deriving (Functor, Foldable, Traversable)
 
-data Definition name m expr = Definition
-    { _drName :: Tag name m
+data Definition name im am expr = Definition
+    { _drName :: Tag name im am
     , _drDefI :: V.Var
-    , _drDefinitionState :: m (Property m Meta.DefinitionState)
+    , _drDefinitionState :: im (Property am Meta.DefinitionState)
     , _drEntityId :: EntityId
-    , _drBody :: DefinitionBody name m expr
+    , _drBody :: DefinitionBody name im am expr
     } deriving (Functor, Foldable, Traversable)
 
-data Pane name m a = Pane
-    { _paneDefinition :: Definition name m (Expression name m a)
-    , _paneClose :: m EntityId
-    , _paneMoveDown :: Maybe (m ())
-    , _paneMoveUp :: Maybe (m ())
+data Pane name im am a = Pane
+    { _paneDefinition :: Definition name im am (Expression name im am a)
+    , _paneClose :: am EntityId
+    , _paneMoveDown :: Maybe (am ())
+    , _paneMoveUp :: Maybe (am ())
     } deriving (Functor, Foldable, Traversable)
 
-data WorkArea name m a = WorkArea
-    { _waPanes :: [Pane name m a]
-    , _waRepl :: Expression name m a
+data WorkArea name im am a = WorkArea
+    { _waPanes :: [Pane name im am a]
+    , _waRepl :: Expression name im am a
     } deriving (Functor, Foldable, Traversable)
 
 Lens.makeLenses ''Definition

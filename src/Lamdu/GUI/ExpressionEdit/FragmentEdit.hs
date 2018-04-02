@@ -23,7 +23,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSear
 import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -37,9 +37,10 @@ type T = Transaction
 
 make ::
     Monad m =>
-    Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Fragment (Name (T m)) (T m) (T m)
+    (ExpressionN (T m) (T m) ExprGui.Payload) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
@@ -103,8 +104,9 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     Monad m =>
-    Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Fragment (Name (T m)) (T m) (T m)
+    (ExpressionN (T m) (T m) ExprGui.Payload) ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 makeFragmentExprEdit fragment =
     do
         theme <- Lens.view Theme.theme

@@ -20,7 +20,7 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -53,9 +53,9 @@ allowedHoleSearchTerm searchTerm =
 
 make ::
     Monad m =>
-    Sugar.Hole (T m) (Sugar.Expression (Name (T m)) (T m) ()) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Hole (T m) (T m) (Sugar.Expression (Name (T m)) (T m) (T m) ()) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId

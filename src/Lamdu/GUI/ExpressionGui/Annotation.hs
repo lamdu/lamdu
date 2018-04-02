@@ -35,7 +35,7 @@ import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, MonadExprGui)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM', MonadExprGui)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -250,8 +250,8 @@ addEvaluationResult mNeigh resDisp wideBehavior =
 
 maybeAddAnnotationPl ::
     (Functor f, Monad m) =>
-    Sugar.Payload (Name f) x ExprGui.Payload ->
-    ExprGuiM (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    Sugar.Payload (Name f) im am ExprGui.Payload ->
+    ExprGuiM' (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
@@ -274,8 +274,8 @@ maybeAddAnnotationPl pl =
 
 evaluationResult ::
     Monad m =>
-    Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (Maybe (Sugar.ResVal name))
+    Sugar.Payload' name (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (Maybe (Sugar.ResVal name))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)
@@ -345,7 +345,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
 maybeAddAnnotation ::
     (Functor f, Monad m) =>
     WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation (Name f) ->
-    ExprGuiM (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    ExprGuiM' (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::

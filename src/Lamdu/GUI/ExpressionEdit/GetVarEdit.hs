@@ -30,7 +30,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
@@ -88,8 +88,8 @@ makeParamsRecord myId paramsRecordVar =
 makeNameRef ::
     Monad m =>
     Widget.Id -> Sugar.NameRef name (T m) ->
-    (name -> Widget.Id -> ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))) ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    (name -> Widget.Id -> ExprGuiM' (T m) (WithTextPos (Widget (T m GuiState.Update)))) ->
+    ExprGuiM' (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeNameRef myId nameRef maker =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
@@ -194,7 +194,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 makeGetBinder ::
     Monad m =>
     Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    ExprGuiM' (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -215,7 +215,7 @@ makeGetBinder binderVar myId =
 makeGetParam ::
     Monad m =>
     Sugar.ParamRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    ExprGuiM' (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
@@ -235,7 +235,7 @@ makeNoActions ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
     Widget.Id ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    ExprGuiM' (T m) (ExpressionGui (T m))
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -248,7 +248,7 @@ makeNoActions getVar myId =
 make ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

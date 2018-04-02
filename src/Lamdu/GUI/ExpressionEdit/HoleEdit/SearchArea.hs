@@ -43,7 +43,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -67,9 +67,9 @@ fdConfig config = FocusDelegator.Config
 
 makeRenderedResult ::
     Monad m =>
-    Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext ->
-    Result (T m) ->
-    ExprGuiM (T m) (Menu.RenderedOption (T m))
+    Sugar.Payload name im am ExprGui.Payload -> SearchMenu.ResultsContext ->
+    Result (T m) (T m) ->
+    ExprGuiM' (T m) (Menu.RenderedOption (T m))
 makeRenderedResult pl ctx result =
     -- Warning: rHoleResult should be ran at most once!
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
@@ -82,7 +82,8 @@ makeRenderedResult pl ctx result =
             pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next
             <&> WidgetIds.fromEntityId
 
-postProcessSugar :: Int -> ExpressionN (T m) () -> ExpressionN (T m) ExprGui.Payload
+postProcessSugar ::
+    Int -> ExpressionN (T m) (T m) () -> ExpressionN (T m) (T m) ExprGui.Payload
 postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
@@ -101,8 +102,8 @@ postProcessSugar minOpPrec expr =
 
 makeResultOption ::
     Monad m =>
-    Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext -> ResultGroup (T m) ->
-    Menu.Option (ExprGuiM (T m)) (T m)
+    Sugar.Payload name im am ExprGui.Payload -> SearchMenu.ResultsContext ->
+    ResultGroup (T m) (T m) -> Menu.Option (ExprGuiM' (T m)) (T m)
 makeResultOption pl ctx results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
@@ -127,7 +128,7 @@ makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env
     ) =>
-    Sugar.Payload (Name g) m0 a0 -> m View
+    Sugar.Payload (Name g) im am a0 -> m View
 makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
     <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
@@ -147,12 +148,12 @@ filterSearchTermEvents allowedTerms searchTerm
 
 makeSearchTerm ::
     ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
-    , Applicative f
+    , Applicative am
     ) =>
     Widget.Id ->
     (Text -> Bool) ->
-    Maybe (Widget.PreEvent (f Menu.PickResult)) ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    Maybe (Widget.PreEvent (am Menu.PickResult)) ->
+    m (WithTextPos (Widget (am GuiState.Update)))
 makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
     do
         isActive <- GuiState.isSubCursor ?? searchMenuId
@@ -171,11 +172,11 @@ makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
 -- Has a typeView under the search term
 make ::
     Monad m =>
-    T m [Sugar.HoleOption (T m) (ExpressionN (T m) ())] ->
-    Maybe (Sugar.OptionLiteral (T m) (ExpressionN (T m) ())) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
+    T m [Sugar.HoleOption' (T m) (ExpressionN (T m) (T m) ())] ->
+    Maybe (Sugar.OptionLiteral (T m) (T m) (ExpressionN (T m) (T m) ())) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
     (Text -> Bool) ->
-    ExprGuiM (T m) (Menu.Placement -> ExpressionGui (T m))
+    ExprGuiM' (T m) (Menu.Placement -> ExpressionGui (T m))
 make options mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config

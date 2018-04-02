@@ -254,7 +254,7 @@ toSuffixMap tagContexts =
         eachTag tag contexts = zipWith (item tag) [0..] (Set.toList contexts) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: MkProperty (T tm) (Set T.Tag) -> P1Out -> P2Env tm
+initialP2Env :: MkProperty (T tm) (T tm) (Set T.Tag) -> P1Out -> P2Env tm
 initialP2Env publishedTags (P1Out p1tags p1contexts p1localCollisions p1texts) =
     P2Env
     { _p2NameGen = NameGen.initial
@@ -325,14 +325,14 @@ data P2Env tm = P2Env
     , _p2Tags :: MMap T.Tag IsClash
         -- ^ All tags including locals from all inner scopes -- used to
         -- check collision of globals in hole results with everything.
-    , _p2PublishedTags :: MkProperty (T tm) (Set T.Tag)
+    , _p2PublishedTags :: MkProperty (T tm) (T tm) (Set T.Tag)
     }
 Lens.makeLenses ''P2Env
 
 newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader (P2Env tm) a }
     deriving (Functor, Applicative, Monad, MonadReader (P2Env tm))
 
-runPass2MakeNamesInitial :: MkProperty (T tm) (Set T.Tag) -> P1Out -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial :: MkProperty (T tm) (T tm) (Set T.Tag) -> P1Out -> Pass2MakeNames tm a -> a
 runPass2MakeNamesInitial publishedTags p1out act =
     initialP2Env publishedTags p1out & (runReader . runPass2MakeNames) act
 
@@ -454,7 +454,7 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
 
 runPasses ::
     Functor tm =>
-    MkProperty (T tm) (Set T.Tag) ->
+    MkProperty (T tm) (T tm) (Set T.Tag) ->
     (a -> Pass0LoadNames tm b) -> (b -> Pass1PropagateUp tm c) -> (c -> Pass2MakeNames tm d) ->
     a -> T tm d
 runPasses publishedTags f0 f1 f2 =
@@ -466,7 +466,9 @@ runPasses publishedTags f0 f1 f2 =
 
 addToWorkArea ::
     Monad tm =>
-    MkProperty (T tm) (Set T.Tag) -> WorkArea InternalName (T tm) a -> T tm (WorkArea (Name (T tm)) (T tm) a)
+    MkProperty (T tm) (T tm) (Set T.Tag) ->
+    WorkArea InternalName (T tm) (T tm) a ->
+    T tm (WorkArea (Name (T tm)) (T tm) (T tm) a)
 addToWorkArea publishedTags =
     runPasses publishedTags f f f
     where

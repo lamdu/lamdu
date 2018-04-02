@@ -26,7 +26,7 @@ import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (addLetEventMap)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
@@ -69,7 +69,10 @@ makeIfThen prefixLabel entityId ifThen =
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-makeElse :: Monad m => Sugar.Else name (T m) (ExprGui.SugarExpr (T m)) -> ExprGuiM (T m) [Row (ExpressionGui (T m))]
+makeElse ::
+    Monad m =>
+    Sugar.Else name (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
+    ExprGuiM' (T m) [Row (ExpressionGui (T m))]
 makeElse (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
@@ -144,9 +147,9 @@ renderRows =
 
 make ::
     Monad m =>
-    Sugar.IfElse name (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.IfElse name (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows

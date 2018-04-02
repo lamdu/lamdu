@@ -37,8 +37,8 @@ cpsTellName name = CPS $ \k -> (,) <$> tellName name <*> k
 
 -- | Returns all the *foldable* names in the given expression
 -- (excluding names hidden behind transactions)
-fromExpression :: Monad m => Expression name (T m) a -> [name]
+fromExpression :: Monad m => Expression name (T m) (T m) a -> [name]
 fromExpression = snd . runCollect . Walk.toExpression
 
-fromBody :: Monad m => Body name (T m) expr -> [name]
+fromBody :: Monad m => Body name (T m) (T m) expr -> [name]
 fromBody = snd . runCollect . Walk.toBody pure

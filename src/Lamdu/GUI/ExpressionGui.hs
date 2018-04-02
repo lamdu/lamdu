@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
-    , SugarExpr
+    , SugarExpr, SugarExpr'
     , Payload(..)
         , plStoredEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
         , plMinOpPrec
@@ -73,14 +73,15 @@ data Payload = Payload
     }
 Lens.makeLenses ''Payload
 
-isHoleResult :: Sugar.Payload name f Payload -> Bool
+isHoleResult :: Sugar.Payload name im am Payload -> Bool
 isHoleResult =
     Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
-type ExpressionN f a = Sugar.Expression (Name f) f a
-type SugarExpr m = ExpressionN m Payload
+type ExpressionN im am a = Sugar.Expression (Name am) im am a
+type SugarExpr im am = ExpressionN im am Payload
+type SugarExpr' m = SugarExpr m m
 
-nextHolesBefore :: Sugar.Expression name m Payload -> NearestHoles
+nextHolesBefore :: Sugar.Expression name im am Payload -> NearestHoles
 nextHolesBefore val =
     node ^. Sugar.rPayload . Sugar.plData . plNearestHoles
     & if Lens.has (Sugar.rBody . SugarLens.bodyUnfinished) node

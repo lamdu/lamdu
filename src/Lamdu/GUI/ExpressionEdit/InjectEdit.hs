@@ -19,7 +19,7 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
@@ -41,9 +41,9 @@ injectIndicator text =
 
 makeNullaryInject ::
     Monad m =>
-    Sugar.Tag (Name (T m)) (T m) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Tag (Name (T m)) (T m) (T m) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 makeNullaryInject tag pl =
     stdWrapParentExpr pl <*>
     do
@@ -55,10 +55,10 @@ makeNullaryInject tag pl =
 
 makeInject ::
     Monad m =>
-    ExprGui.SugarExpr (T m) ->
-    Sugar.Tag (Name (T m)) (T m) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    ExprGui.SugarExpr' (T m) ->
+    Sugar.Tag (Name (T m)) (T m) (T m) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
@@ -93,7 +93,7 @@ makeInject val tag pl =
 
 make ::
     Monad m =>
-    Sugar.Inject (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Inject (Name (T m)) (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make (Sugar.Inject tag mVal) = maybe makeNullaryInject makeInject mVal tag

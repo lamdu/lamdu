@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Types.Hole
     ( HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
+    , HoleOption'
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , OptionLiteral
     , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
@@ -24,31 +25,35 @@ data HoleResultScore = HoleResultScore
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord)
 
-data HoleResult m resultExpr = HoleResult
+data HoleResult am resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
-    , _holeResultPick :: m ()
+    , _holeResultPick :: am ()
     } deriving (Functor, Foldable, Traversable)
 
-data HoleOption m resultExpr = HoleOption
+data HoleOption im am resultExpr = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: m resultExpr
+    , _hoSugaredBaseExpr :: im resultExpr
     , -- A group in the hole results based on this option
-      _hoResults :: ListT m (HoleResultScore, m (HoleResult m resultExpr))
+      _hoResults :: ListT im (HoleResultScore, im (HoleResult am resultExpr))
     } deriving Functor
+
+type HoleOption' m = HoleOption m m
 
 data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
 
-type OptionLiteral m resultExpr = Literal Identity -> m (HoleResultScore, m (HoleResult m resultExpr))
+type OptionLiteral im am resultExpr =
+    Literal Identity -> im (HoleResultScore, im (HoleResult am resultExpr))
 
-data Hole m resultExpr = Hole
-    { _holeOptions :: m [HoleOption m resultExpr]
-    , _holeOptionLiteral :: OptionLiteral m resultExpr
+data Hole im am resultExpr = Hole
+    { _holeOptions :: im [HoleOption im am resultExpr]
+      -- TODO: Lifter from im to am?
+    , _holeOptionLiteral :: OptionLiteral im am resultExpr
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
-      _holeMDelete :: Maybe (m EntityId)
+      _holeMDelete :: Maybe (am EntityId)
     } deriving Functor
 
 Lens.makeLenses ''Hole

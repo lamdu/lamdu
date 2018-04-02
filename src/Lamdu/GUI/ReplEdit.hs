@@ -20,7 +20,7 @@ import           Lamdu.Config (Config, config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -47,7 +47,8 @@ data ExportRepl m = ExportRepl
 
 extractEventMap ::
     Functor m =>
-    Sugar.Expression name (T m) a -> [MetaKey] -> EventMap (T m GuiState.Update)
+    Sugar.Expression name (T m) (T m) a -> [MetaKey] ->
+    EventMap (T m GuiState.Update)
 extractEventMap replExpr keys =
     replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor
@@ -56,7 +57,7 @@ extractEventMap replExpr keys =
 replEventMap ::
     Monad m =>
     Config -> ExportRepl m ->
-    Sugar.Expression name (T m) a -> EventMap (IOTrans m GuiState.Update)
+    Sugar.Expression name (T m) (T m) a -> EventMap (IOTrans m GuiState.Update)
 replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
     mconcat
     [ extractEventMap replExpr (theConfig ^. Config.extractKeys)
@@ -72,8 +73,8 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
 make ::
     Monad m =>
     ExportRepl m ->
-    ExprGui.SugarExpr (T m) ->
-    ExprGuiM (T m) (Responsive (IOTrans m GuiState.Update))
+    ExprGui.SugarExpr (T m) (T m) ->
+    ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
 make exportRepl replExpr =
     do
         theConfig <- Lens.view config

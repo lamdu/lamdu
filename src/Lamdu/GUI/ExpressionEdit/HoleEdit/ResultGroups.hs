@@ -36,22 +36,23 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data Group m = Group
+data Group im am = Group
     { _groupSearchTerms :: [Text]
     , _groupId :: WidgetId.Id
     , _groupResults ::
-        ListT m
+        ListT im
         ( Sugar.HoleResultScore
-        , m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
+        , im (Sugar.HoleResult am (Sugar.Expression (Name am) im am ()))
         )
     }
 Lens.makeLenses ''Group
 
-data Result m = Result
+data Result im am = Result
     { _rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
       -- Running it more than once will cause inconsistencies.
-      rHoleResult :: m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
+      rHoleResult :: im (Sugar.HoleResult am (Sugar.Expression (Name am) im am ()))
+        -- TODO: Unit monad instead of im am for Expression above?
     , rId :: WidgetId.Id
     }
 Lens.makeLenses ''Result
@@ -59,21 +60,21 @@ Lens.makeLenses ''Result
 data IsExactMatch = ExactMatch | NotExactMatch
     deriving (Eq, Ord)
 
-data ResultGroup m = ResultGroup
+data ResultGroup im am = ResultGroup
     { _rgExactMatch :: IsExactMatch -- Move to top of result list
     , _rgPrefixId :: WidgetId.Id
-    , _rgMain :: Result m
-    , _rgExtra :: [Result m]
+    , _rgMain :: Result im am
+    , _rgExtra :: [Result im am]
     }
 Lens.makeLenses ''ResultGroup
 
 mResultGroupOf ::
     WidgetId.Id ->
     [ ( Sugar.HoleResultScore
-      , m (Sugar.HoleResult m (Sugar.Expression (Name m) m ()))
+      , im (Sugar.HoleResult am (Sugar.Expression (Name am) im am ()))
       )
     ] ->
-    Maybe (ResultGroup m)
+    Maybe (ResultGroup im am)
 mResultGroupOf _ [] = Nothing
 mResultGroupOf prefixId (x:xs) = Just
     ResultGroup
@@ -94,9 +95,9 @@ mResultGroupOf prefixId (x:xs) = Just
             }
 
 makeResultGroup ::
-    Monad m =>
-    SearchMenu.ResultsContext -> Group m ->
-    m (Maybe (ResultGroup m))
+    Monad im =>
+    SearchMenu.ResultsContext -> Group im am ->
+    im (Maybe (ResultGroup im am))
 makeResultGroup ctx group =
     group ^. groupResults
     & ListClass.toList
@@ -114,7 +115,10 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''GoodAndBad
 
-collectResults :: Monad m => Config.Completion -> ListT m (ResultGroup f) -> m (Menu.OptionList (ResultGroup f))
+collectResults ::
+    Monad im =>
+    Config.Completion -> ListT im (ResultGroup im am) ->
+    im (Menu.OptionList (ResultGroup im am))
 collectResults config resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
@@ -155,10 +159,10 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
-    T n [Sugar.HoleOption (T n) (ExpressionN (T n) ())] ->
-    Maybe (Sugar.OptionLiteral (T n) (ExpressionN (T n) ())) ->
+    T n [Sugar.HoleOption (T n) (T n) (ExpressionN (T n) (T n) ())] ->
+    Maybe (Sugar.OptionLiteral (T n) (T n) (ExpressionN (T n) (T n) ())) ->
     SearchMenu.ResultsContext ->
-    m (Menu.OptionList (ResultGroup (T n)))
+    m (Menu.OptionList (ResultGroup (T n) (T n)))
 makeAll options mOptionLiteral ctx =
     do
         config <- Lens.view (Config.config . Config.completion)
@@ -184,8 +188,8 @@ mkGroupId option =
 
 mkGroup ::
     Monad m =>
-    Sugar.HoleOption (T m) (ExpressionN (T m) ()) ->
-    T m (Group (T m))
+    Sugar.HoleOption' (T m) (ExpressionN (T m) (T m) ()) ->
+    T m (Group (T m) (T m))
 mkGroup option =
     option ^. Sugar.hoSugaredBaseExpr
     <&>
@@ -200,9 +204,9 @@ tryBuildLiteral ::
     (Format a, Monad m) =>
     Text ->
     (Identity a -> Sugar.Literal Identity) ->
-    Sugar.OptionLiteral (T m) (ExpressionN (T m) ()) ->
+    Sugar.OptionLiteral (T m) (T m) (ExpressionN (T m) (T m) ()) ->
     Text ->
-    Maybe (T m (Group (T m)))
+    Maybe (T m (Group (T m) (T m)))
 tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
     tryParse searchTerm
     <&> Identity
@@ -220,8 +224,8 @@ tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
 makeLiteralGroups ::
     Monad m =>
     Text ->
-    Sugar.OptionLiteral (T m) (ExpressionN (T m) ()) ->
-    [T m (Group (T m))]
+    Sugar.OptionLiteral (T m) (T m) (ExpressionN (T m) (T m) ()) ->
+    [T m (Group (T m) (T m))]
 makeLiteralGroups searchTerm optionLiteral =
     [ tryBuildLiteral "Num"   Sugar.LiteralNum   optionLiteral searchTerm
     , tryBuildLiteral "Bytes" Sugar.LiteralBytes optionLiteral searchTerm
@@ -246,7 +250,7 @@ unicodeAlts haystack =
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-holeMatches :: Monad m => Text -> [Group m] -> [Group m]
+holeMatches :: Monad im => Text -> [Group im am] -> [Group im am]
 holeMatches searchTerm groups =
     groups ^@.. Lens.ifolded
     <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))

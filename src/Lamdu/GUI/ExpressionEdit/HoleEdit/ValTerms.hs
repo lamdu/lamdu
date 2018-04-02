@@ -54,7 +54,7 @@ formatLiteral (Sugar.LiteralNum i) = formatProp i
 formatLiteral (Sugar.LiteralText i) = formatProp i
 formatLiteral (Sugar.LiteralBytes i) = formatProp i
 
-bodyShape :: Sugar.Body (Name m) m expr -> [Text]
+bodyShape :: Sugar.Body (Name am) im am expr -> [Text]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     Sugar.BodySimpleApply {} -> ["Apply"]
@@ -86,14 +86,14 @@ bodyShape = \case
     Sugar.BodyFragment {} -> []
     Sugar.BodyPlaceHolder {} -> []
 
-bodyNames :: Monad m => Sugar.Body (Name (T m)) (T m) expr -> [Text]
+bodyNames :: Monad m => Sugar.Body (Name (T m)) (T m) (T m) expr -> [Text]
 bodyNames =
     \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b >>= ofName
 
-expr :: Monad m => ExpressionN (T m) a -> [Text]
+expr :: Monad m => ExpressionN (T m) (T m) a -> [Text]
 expr (Sugar.Expression body _) =
     bodyShape body <>
     bodyNames body <>
@@ -130,7 +130,8 @@ allowedFragmentSearchTerm searchTerm =
 -- | Given a hole result sugared expression, determine which part of
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
-getSearchStringRemainder :: SearchMenu.ResultsContext -> Sugar.Expression name m a -> Text
+getSearchStringRemainder ::
+    SearchMenu.ResultsContext -> Sugar.Expression name im am a -> Text
 getSearchStringRemainder ctx holeResultConverted
     | isA Sugar._BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
@@ -147,10 +148,13 @@ getSearchStringRemainder ctx holeResultConverted
         fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
         isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]
 
-injectMVal :: Lens.Traversal' (Sugar.Expression name m a) (Maybe (Sugar.Expression name m a))
+injectMVal ::
+    Lens.Traversal'
+    (Sugar.Expression name im am a)
+    (Maybe (Sugar.Expression name im am a))
 injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
 
-verifyInjectSuffix :: Text -> Sugar.Expression name m a -> Bool
+verifyInjectSuffix :: Text -> Sugar.Expression name im am a -> Bool
 verifyInjectSuffix searchTerm val =
     case suffix of
     Just ':' | Lens.has (injectMVal . Lens._Nothing) val -> False

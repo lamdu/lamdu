@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, FlexibleContexts, UndecidableInstances, PolymorphicComponents #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --
@@ -8,8 +8,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readMScopeId, withLocalMScopeId
     --
-    , MonadExprGui(..)
-    , ExprGuiM, run
+    , MonadExprGui(..), iam
+    , ExprGuiM, ExprGuiM', run
     ) where
 
 import           Control.Applicative (liftA2)
@@ -30,7 +30,6 @@ import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -61,20 +60,24 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr (AM m) -> m (ExpressionGui (AM m))
-    , _aGuiAnchors :: Anchors.GuiAnchors (AM m)
+    , _aMakeSubexpression :: ExprGui.SugarExpr (IM m) (AM m) -> m (ExpressionGui (AM m))
+    , _aGuiAnchors :: Anchors.GuiAnchors (IM m) (AM m)
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
+    , _aIam :: forall a. IM m a -> AM m a
     }
 
-class
-    ( Monad (AM m), MonadReader (Askable m) m
-    ) => MonadExprGui m where
-    type AM m :: * -> *
-    makeSubexpression :: ExprGui.SugarExpr (AM m) -> m (ExpressionGui (AM m))
+class (Monad (IM m), Monad (AM m), MonadReader (Askable m) m) => MonadExprGui m where
+    type AM m :: * -> *         -- Sugar Action monad
+    type IM m :: * -> *         -- Sugar Info Monad
+    im :: IM m a -> m a
+    makeSubexpression :: ExprGui.SugarExpr (IM m) (AM m) -> m (ExpressionGui (AM m))
 
 Lens.makeLenses ''Askable
+
+iam :: MonadExprGui m => m (IM m a -> AM m a)
+iam = Lens.view aIam
 
 instance GuiState.HasCursor (Askable m)
 instance GuiState.HasState (Askable m) where state = aState
@@ -100,15 +103,16 @@ instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
 
-readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (AM m))
+readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (IM m) (AM m))
 readGuiAnchors = Lens.view aGuiAnchors
-
-savePreJumpPosition :: Monad m => Anchors.GuiAnchors m -> WidgetId.Id -> m ()
-savePreJumpPosition guiAnchors pos = Property.modP (Anchors.preJumps guiAnchors) $ (pos :) . take 19
 
 mkPrejumpPosSaver :: MonadExprGui m => m (AM m ())
 mkPrejumpPosSaver =
-    savePreJumpPosition <$> readGuiAnchors <*> Lens.view GuiState.cursor
+    do
+        preJumpsMkProp <- readGuiAnchors <&> Anchors.preJumps
+        preJumpsProp <- preJumpsMkProp ^. Property.mkProperty & im
+        cursor <- Lens.view GuiState.cursor
+        Property.pureModify preJumpsProp ((cursor:) . take 19) & pure
 
 resetDepth :: MonadExprGui m => Int -> m r -> m r
 resetDepth depth = Reader.local (aDepthLeft .~ depth)
@@ -129,21 +133,25 @@ readMScopeId = Lens.view aMScopeId
 withLocalMScopeId :: MonadExprGui m => CurAndPrev (Maybe ScopeId) -> m a -> m a
 withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
 
-newtype ExprGuiM m a = ExprGuiM (ReaderT (Askable (ExprGuiM m)) m a)
-    deriving (Functor, Applicative, Monad, MonadReader (Askable (ExprGuiM m)))
+newtype ExprGuiM im (am :: * -> *) a =
+    ExprGuiM (ReaderT (Askable (ExprGuiM im am)) im a)
+    deriving (Functor, Applicative, Monad, MonadReader (Askable (ExprGuiM im am)))
 
-instance (Monad m, Semigroup a) => Semigroup (ExprGuiM m a) where
+type ExprGuiM' m = ExprGuiM m m
+
+instance (Monad im, Semigroup a) => Semigroup (ExprGuiM im am a) where
     (<>) = liftA2 (<>)
 
-instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
+instance (Monad im, Monoid a) => Monoid (ExprGuiM im am a) where
     mempty = pure mempty
     mappend = liftA2 mappend
 
-instance MonadTransaction n m => MonadTransaction n (ExprGuiM m) where
+instance MonadTransaction n im => MonadTransaction n (ExprGuiM im am) where
     transaction = ExprGuiM . lift . transaction
 
-instance Monad m => MonadExprGui (ExprGuiM m) where
-    type AM (ExprGuiM m) = m
+instance (Monad im, Monad am) => MonadExprGui (ExprGuiM im am) where
+    type IM (ExprGuiM im am) = im
+    type AM (ExprGuiM im am) = am
     makeSubexpression expr =
         do
             maker <- Lens.view aMakeSubexpression
@@ -152,16 +160,17 @@ instance Monad m => MonadExprGui (ExprGuiM m) where
         & Reader.local (Element.animIdPrefix .~ animId)
         where
             animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
+    im = ExprGuiM . lift
 
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.GuiAnchors m ->
-    env -> ExprGuiM m a -> m a
-run makeSubexpr theGuiAnchors env (ExprGuiM action) =
+    (ExprGui.SugarExpr im am -> ExprGuiM im am (ExpressionGui am)) ->
+    Anchors.GuiAnchors im am ->
+    env -> (forall x. im x -> am x) -> ExprGuiM im am a -> im a
+run makeSubexpr theGuiAnchors env liftIam (ExprGuiM action) =
     runReaderT action
     Askable
     { _aState = env ^. GuiState.state
@@ -176,4 +185,5 @@ run makeSubexpr theGuiAnchors env (ExprGuiM action) =
     , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
+    , _aIam = liftIam
     }

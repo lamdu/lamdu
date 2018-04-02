@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Binder
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import           Data.Property (MkProperty)
+import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
@@ -47,7 +47,7 @@ lamParamToHole (V.Lam param body) =
 mkLetItemActions ::
     Monad m =>
     Input.Payload m a -> Redex (Input.Payload m a) ->
-    ConvertM m (LetActions InternalName (T m))
+    ConvertM m (LetActions InternalName (T m) (T m))
 mkLetItemActions topLevelPl redex =
     do
         postProcess <- ConvertM.postProcess
@@ -92,7 +92,7 @@ convertRedex ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
-    ConvertM m (Let InternalName (T m) (ExpressionU m a))
+    ConvertM m (Let InternalName (T m) (T m) (ExpressionU m a))
 convertRedex expr redex =
     do
         tag <- convertTaggedEntity param
@@ -143,7 +143,7 @@ convertRedex expr redex =
 makeBinderContent ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderContent InternalName (T m) (ExpressionU m a))
+    ConvertM m (BinderContent InternalName (T m) (T m) (ExpressionU m a))
 makeBinderContent expr =
     case Redex.check expr of
     Nothing ->
@@ -154,7 +154,7 @@ makeBinderContent expr =
 convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderBody InternalName (T m) (ExpressionU m a))
+    ConvertM m (BinderBody InternalName (T m) (T m) (ExpressionU m a))
 convertBinderBody expr =
     makeBinderContent expr
     <&>
@@ -167,9 +167,9 @@ convertBinderBody expr =
 
 makeBinder ::
     (Monad m, Monoid a) =>
-    MkProperty (T m) (Maybe BinderParamScopeId) ->
+    MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
-    ConvertM m (Binder InternalName (T m) (ExpressionU m a))
+    ConvertM m (Binder InternalName (T m) (T m) (ExpressionU m a))
 makeBinder chosenScopeProp params funcBody pl =
     do
         binderBody <- convertBinderBody funcBody
@@ -227,7 +227,9 @@ convertLam lam exprPl =
             & addActions exprPl
             <&> rBody . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
-useNormalLambda :: Set InternalName -> Binder InternalName (T m) (Expression InternalName (T m) a) -> Bool
+useNormalLambda ::
+    Set InternalName ->
+    Binder InternalName im0 am0 (Expression InternalName im1 am1 a) -> Bool
 useNormalLambda paramNames binder
     | Set.size paramNames < 2 = True
     | otherwise =
@@ -237,12 +239,14 @@ useNormalLambda paramNames binder
         , not . allParamsUsed paramNames
         ]
     where
-        forbiddenLightLamSubExprs :: Lens.Traversal' (Body name m a) ()
+        forbiddenLightLamSubExprs :: Lens.Traversal' (Body name im am a) ()
         forbiddenLightLamSubExprs =
             Lens.failing SugarLens.bodyUnfinished
             (_BodyLam . lamBinder . bParams . _Params . Lens.united)
 
-allParamsUsed :: Set InternalName -> Binder InternalName (T m) (Expression InternalName (T m) a) -> Bool
+allParamsUsed ::
+    Set InternalName ->
+    Binder InternalName im am (Expression InternalName im1 am1 a) -> Bool
 allParamsUsed paramNames binder =
     Set.null (paramNames `Set.difference` usedParams)
     where
@@ -252,7 +256,9 @@ allParamsUsed paramNames binder =
             & Set.fromList
 
 markLightParams ::
-    Monad m => Set InternalName -> Expression InternalName (T m) a -> Expression InternalName (T m) a
+    Monad m =>
+    Set InternalName -> Expression InternalName (T m) (T m) a ->
+    Expression InternalName (T m) (T m) a
 markLightParams paramNames (Expression body pl) =
     case body of
     BodyGetVar (GetParam n)
@@ -269,8 +275,8 @@ convertBinder ::
     (Monad m, Monoid a) =>
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
-    ( Maybe (MkProperty (T m) PresentationMode)
-    , Binder InternalName (T m) (ExpressionU m a)
+    ( Maybe (MkProperty' (T m) PresentationMode)
+    , Binder InternalName (T m) (T m) (ExpressionU m a)
     )
 convertBinder binderKind defVar expr =
     do
@@ -284,8 +290,8 @@ convertDefinitionBinder ::
     (Monad m, Monoid a) =>
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
-    ( Maybe (MkProperty (T m) PresentationMode)
-    , Binder InternalName (T m) (ExpressionU m a)
+    ( Maybe (MkProperty' (T m) PresentationMode)
+    , Binder InternalName (T m) (T m) (ExpressionU m a)
     )
 convertDefinitionBinder defI =
     convertBinder (BinderKindDef defI) (ExprIRef.globalId defI)

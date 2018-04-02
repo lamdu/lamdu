@@ -36,10 +36,10 @@ import           Lamdu.Prelude
 type T = Transaction
 
 eventMapAddFirstParam ::
-    (MonadReader env m, Applicative f, HasConfig env) =>
+    (MonadReader env m, Applicative am, HasConfig env) =>
     Widget.Id ->
-    Sugar.AddFirstParam name f ->
-    m (EventMap (f GuiState.Update))
+    Sugar.AddFirstParam name im am ->
+    m (EventMap (am GuiState.Update))
 eventMapAddFirstParam binderId addFirst =
     Lens.view (Config.config . Config.addNextParamKeys)
     <&>
@@ -54,8 +54,9 @@ eventMapAddFirstParam binderId addFirst =
             Sugar.AddInitialParam x -> (x <&> enterParam, "Add parameter")
 
 eventMapAddNextParam ::
-    Applicative f =>
-    Config -> Widget.Id -> Sugar.AddNextParam name f -> EventMap (f GuiState.Update)
+    Applicative am =>
+    Config -> Widget.Id -> Sugar.AddNextParam name im am ->
+    EventMap (am GuiState.Update)
 eventMapAddNextParam conf myId addNext =
     E.keysEventMapMovesCursor (conf ^. Config.addNextParamKeys)
     (E.Doc ["Edit", doc]) (pure dst)
@@ -82,7 +83,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
 data Info m = Info
     { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
     , iDel :: T m ()
-    , iAddNext :: Maybe (Sugar.AddNextParam (Name (T m)) (T m))
+    , iAddNext :: Maybe (Sugar.AddNextParam (Name (T m)) (T m) (T m))
     , iMOrderBefore :: Maybe (T m ())
     , iMOrderAfter :: Maybe (T m ())
     , iId :: Widget.Id

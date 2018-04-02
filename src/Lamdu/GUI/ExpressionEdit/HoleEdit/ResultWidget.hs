@@ -25,7 +25,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -70,8 +70,8 @@ applyResultLayout fGui =
 makeWidget ::
     Monad m =>
     Widget.Id ->
-    Sugar.Expression (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    Sugar.Expression (Name (T m)) (T m) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
@@ -90,8 +90,8 @@ make ::
     Maybe Widget.Id ->
     SearchMenu.ResultsContext ->
     Widget.Id ->
-    Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (Menu.RenderedOption (T m))
+    Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) (T m) ExprGui.Payload) ->
+    ExprGuiM' (T m) (Menu.RenderedOption (T m))
 make mNextEntry ctx resultId holeResult =
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)

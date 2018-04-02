@@ -26,7 +26,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
@@ -97,7 +97,7 @@ mkLightLambda ::
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
     , HasConfig env
     ) =>
-    Sugar.BinderParams a m -> Widget.Id ->
+    Sugar.BinderParams a im am -> Widget.Id ->
     f
     (Maybe (ExpressionGui (T n)) -> Maybe (Widget (T n GuiState.Update)) ->
      [ExpressionGui (T n)])
@@ -127,9 +127,9 @@ mkLightLambda params myId =
 
 make ::
     Monad m =>
-    Sugar.Lambda (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Lambda (Name (T m)) (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-

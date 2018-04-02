@@ -23,10 +23,10 @@ toLiteralTextKeys =
     ]
 
 makeLiteral ::
-    Monad f =>
-    Sugar.OptionLiteral f (Sugar.Expression name f a) ->
+    Monad am =>
+    Sugar.OptionLiteral am am (Sugar.Expression name im am a) ->
     Sugar.Literal Identity ->
-    f WidgetId
+    am WidgetId
 makeLiteral optionLiteral lit =
     do
         (_score, mkResult) <- optionLiteral lit
@@ -41,9 +41,9 @@ makeLiteral optionLiteral lit =
             & pure
 
 makeLiteralEventMap ::
-    Monad f =>
-    Sugar.OptionLiteral f (Sugar.Expression name f a) ->
-    EventMap (f GuiState.Update)
+    Monad am =>
+    Sugar.OptionLiteral am am (Sugar.Expression name im am a) ->
+    EventMap (am GuiState.Update)
 makeLiteralEventMap optionLiteral =
     E.keysEventMapMovesCursor toLiteralTextKeys (E.Doc ["Edit", "Literal Text"])
     (makeLiteral optionLiteral (Sugar.LiteralText (Identity "")))

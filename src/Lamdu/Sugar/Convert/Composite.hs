@@ -36,7 +36,7 @@ convertAddItem ::
     (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Set T.Tag ->
     Input.Payload m a ->
-    ConvertM m (TagSelection InternalName (T m) EntityId)
+    ConvertM m (TagSelection InternalName (T m) (T m) EntityId)
 convertAddItem extendOp existingTags pl =
     do
         addItem <-
@@ -59,8 +59,8 @@ convertCompositeExtend ::
     expr ->
     Input.Payload m a ->
     (T.Tag, ExprIRef.ValI m, Input.Payload m a) ->
-    Composite InternalName (T m) expr ->
-    ConvertM m (Composite InternalName (T m) expr)
+    Composite InternalName (T m) (T m) expr ->
+    ConvertM m (Composite InternalName (T m) (T m) expr)
 convertCompositeExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -83,7 +83,7 @@ convertOneItemOpenComposite ::
     expr -> expr ->
     Input.Payload m a ->
     (T.Tag, ExprIRef.ValI m, Input.Payload m a) ->
-    ConvertM m (Composite InternalName (T m) expr)
+    ConvertM m (Composite InternalName (T m) (T m) expr)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertCompositeItem cons
@@ -111,7 +111,7 @@ convertEmptyComposite ::
     Monad m =>
     (T.Tag -> ExprIRef.ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Input.Payload m a ->
-    ConvertM m (Composite InternalName (T m) expr)
+    ConvertM m (Composite InternalName (T m) (T m) expr)
 convertEmptyComposite extendOp exprPl =
     do
         actions <-
@@ -138,7 +138,7 @@ convertCompositeItem ::
     EntityId -> Set T.Tag -> expr ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     (T.Tag, ExprIRef.ValI m, ExprIRef.ValI m) ->
-    ConvertM m (CompositeItem InternalName (T m) expr)
+    ConvertM m (CompositeItem InternalName (T m) (T m) expr)
 convertCompositeItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
     do
         delItem <- deleteItem stored restI

@@ -6,6 +6,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
     , Payload(..), plEntityId, plAnnotation, plActions, plData
+    , Payload'
     , Expression(..), rBody, rPayload
     -- record:
     , CompositeItem(..), ciDelete, ciTag, ciExpr
@@ -48,95 +49,97 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-data Payload name m a = Payload
+data Payload name im am a = Payload
     { _plAnnotation :: Annotation name
-    , _plActions :: NodeActions name m
+    , _plActions :: NodeActions name im am
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable)
-instance Show a => Show (Payload name m a) where
+instance Show a => Show (Payload name im am a) where
     show (Payload _ann _actions _entityId data_) = show data_
 
-data Expression name m a = Expression
-    { _rBody :: Body name m (Expression name m a)
-    , _rPayload :: Payload name m a
+type Payload' name m = Payload name m m
+
+data Expression name im am a = Expression
+    { _rBody :: Body name im am (Expression name im am a)
+    , _rPayload :: Payload name im am a
     } deriving (Functor, Foldable, Traversable)
-instance (Show name, Show a) => Show (Expression name m a) where
+instance (Show name, Show a) => Show (Expression name im am a) where
     show (Expression body pl) = show body ++ "{" ++ show pl ++ "}"
 
 {- Composites start -}
-data CompositeItem name m expr = CompositeItem
-    { _ciDelete :: m EntityId
-    , _ciTag :: Tag name m
+data CompositeItem name im am expr = CompositeItem
+    { _ciDelete :: am EntityId
+    , _ciTag :: Tag name im am
     , _ciExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
-newtype ClosedCompositeActions m = ClosedCompositeActions
-    { _closedCompositeOpen :: m EntityId
+newtype ClosedCompositeActions am = ClosedCompositeActions
+    { _closedCompositeOpen :: am EntityId
     }
 
-newtype OpenCompositeActions m = OpenCompositeActions
-    { _openCompositeClose :: m EntityId
+newtype OpenCompositeActions am = OpenCompositeActions
+    { _openCompositeClose :: am EntityId
     }
 
-data CompositeTail m expr
-    = OpenComposite (OpenCompositeActions m) expr
-    | ClosedComposite (ClosedCompositeActions m)
+data CompositeTail am expr
+    = OpenComposite (OpenCompositeActions am) expr
+    | ClosedComposite (ClosedCompositeActions am)
     deriving (Functor, Foldable, Traversable)
 
-data Composite name m expr = Composite
-    { _cItems :: [CompositeItem name m expr]
-    , _cTail :: CompositeTail m expr
-    , _cAddItem :: TagSelection name m EntityId
+data Composite name im am expr = Composite
+    { _cItems :: [CompositeItem name im am expr]
+    , _cTail :: CompositeTail am expr
+    , _cAddItem :: TagSelection name im am EntityId
     } deriving (Functor, Foldable, Traversable)
 
-data CaseArg m expr = CaseArg
+data CaseArg am expr = CaseArg
     { _caVal :: expr
-    , _caToLambdaCase :: m EntityId
+    , _caToLambdaCase :: am EntityId
     } deriving (Functor, Foldable, Traversable)
 
-data CaseKind m expr
+data CaseKind am expr
     = LambdaCase
-    | CaseWithArg (CaseArg m expr)
+    | CaseWithArg (CaseArg am expr)
     deriving (Functor, Foldable, Traversable)
 
-data Case name m expr = Case
-    { _cKind :: CaseKind m expr
-    , _cBody :: Composite name m expr
+data Case name im am expr = Case
+    { _cKind :: CaseKind am expr
+    , _cBody :: Composite name im am expr
     } deriving (Functor, Foldable, Traversable)
 {- Composites end -}
 
 -- An "if/elif <cond>: <then>" clause in an IfElse expression
-data IfThen m expr = IfThen
+data IfThen am expr = IfThen
     { _itIf :: expr
     , _itThen :: expr
-    , _itDelete :: m EntityId
+    , _itDelete :: am EntityId
     } deriving (Functor, Foldable, Traversable)
 
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
-data ElseIfContent name m expr = ElseIfContent
+data ElseIfContent name im am expr = ElseIfContent
     { _eiScopes :: ChildScopes
     , _eiEntityId :: EntityId
-    , _eiContent :: IfElse name m expr
-    , _eiCondAddLet :: m EntityId
-    , _eiNodeActions :: NodeActions name m
+    , _eiContent :: IfElse name im am expr
+    , _eiCondAddLet :: am EntityId
+    , _eiNodeActions :: NodeActions name im am
     } deriving (Functor, Foldable, Traversable)
 
-data Else name m expr = SimpleElse expr | ElseIf (ElseIfContent name m expr)
+data Else name im am expr = SimpleElse expr | ElseIf (ElseIfContent name im am expr)
     deriving (Functor, Foldable, Traversable)
 
-data IfElse name m expr = IfElse
-    { _iIfThen :: IfThen m expr
-    , _iElse :: Else name m expr
+data IfElse name im am expr = IfElse
+    { _iIfThen :: IfThen am expr
+    , _iElse :: Else name im am expr
     } deriving (Functor, Foldable, Traversable)
 
-data GetField name m expr = GetField
+data GetField name im am expr = GetField
     { _gfRecord :: expr
-    , _gfTag :: Tag name m
+    , _gfTag :: Tag name im am
     } deriving (Functor, Foldable, Traversable)
 
-data Inject name m expr = Inject
-    { _iTag :: Tag name m
+data Inject name im am expr = Inject
+    { _iTag :: Tag name im am
     , _iMVal :: Maybe expr
     } deriving (Functor, Foldable, Traversable)
 
@@ -145,17 +148,17 @@ data AnnotatedArg name expr = AnnotatedArg
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable)
 
-data RelayedArg name m = RelayedArg
-    { _raValue :: GetVar name m
+data RelayedArg name im am = RelayedArg
+    { _raValue :: GetVar name am
     , _raId :: EntityId
-    , _raActions :: NodeActions name m
+    , _raActions :: NodeActions name im am
     }
 
-data LabeledApply name m expr = LabeledApply
-    { _aFunc :: BinderVarRef name m
+data LabeledApply name im am expr = LabeledApply
+    { _aFunc :: BinderVarRef name am
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
-    , _aRelayedArgs :: [RelayedArg name m]
+    , _aRelayedArgs :: [RelayedArg name im am]
     } deriving (Functor, Foldable, Traversable)
 
 data Nominal name expr = Nominal
@@ -163,46 +166,46 @@ data Nominal name expr = Nominal
     , _nVal :: expr
     } deriving (Functor, Foldable, Traversable)
 
-data Lambda name m expr = Lambda
+data Lambda name im am expr = Lambda
     { _lamMode :: BinderMode
-    , _lamBinder :: Binder name m expr
+    , _lamBinder :: Binder name im am expr
     } deriving (Functor, Foldable, Traversable)
 
-data Attach m
-    = AttachAction (m EntityId)
+data Attach am
+    = AttachAction (am EntityId)
     | AttachTypeMismatch
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
-data Fragment name m expr = Fragment
+data Fragment name im am expr = Fragment
     { _fExpr :: expr
-    , _fAttach :: Attach m
-    , _fOptions :: m [HoleOption m (Expression name m ())]
+    , _fAttach :: Attach am
+    , _fOptions :: im [HoleOption im am (Expression name im am ())]
     } deriving (Functor, Foldable, Traversable)
 
-data Body name m expr
-    = BodyLam (Lambda name m expr)
+data Body name im am expr
+    = BodyLam (Lambda name im am expr)
     | BodySimpleApply (V.Apply expr)
-    | BodyLabeledApply (LabeledApply name m expr)
-    | BodyHole (Hole m (Expression name m ()))
-    | BodyLiteral (Literal (Property m))
-    | BodyRecord (Composite name m expr)
-    | BodyGetField (GetField name m expr)
-    | BodyCase (Case name m expr)
-    | BodyIfElse (IfElse name m expr)
-    | BodyInject (Inject name m expr)
-    | BodyGetVar (GetVar name m)
-    | BodyToNom (Nominal name (BinderBody name m expr))
+    | BodyLabeledApply (LabeledApply name im am expr)
+    | BodyHole (Hole im am (Expression name im am ()))
+    | BodyLiteral (Literal (Property am))
+    | BodyRecord (Composite name im am expr)
+    | BodyGetField (GetField name im am expr)
+    | BodyCase (Case name im am expr)
+    | BodyIfElse (IfElse name im am expr)
+    | BodyInject (Inject name im am expr)
+    | BodyGetVar (GetVar name am)
+    | BodyToNom (Nominal name (BinderBody name im am expr))
     | BodyFromNom (Nominal name expr)
-    | BodyFragment (Fragment name m expr)
+    | BodyFragment (Fragment name im am expr)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable)
 
-instance (Show name, Show expr) => Show (LabeledApply name m expr) where
+instance (Show name, Show expr) => Show (LabeledApply name im am expr) where
     show (LabeledApply func specialArgs _annArgs _relayedArgs) =
         unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
-instance (Show name, Show expr) => Show (Body name m expr) where
+instance (Show name, Show expr) => Show (Body name im am expr) where
     show (BodyLam _) = "TODO show lam"
     show BodyHole {} = "Hole"
     show BodyLiteral {} = "Literal"

@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Utils (insertAt, removeAt)
-import           Data.Property (Property(Property), MkProperty)
+import           Data.Property (Property(Property), MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -45,7 +45,7 @@ type T = Transaction
 convertDefIBuiltin ::
     (MonadTransaction n m, Monad f) =>
     Scheme.Scheme -> Definition.FFIName -> DefI f ->
-    m (DefinitionBody InternalName (T f) (ExpressionU f [EntityId]))
+    m (DefinitionBody InternalName im (T f) (ExpressionU f [EntityId]))
 convertDefIBuiltin scheme name defI =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
     <&> \typeS ->
@@ -84,7 +84,7 @@ convertInferDefExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
-    T m (DefinitionBody InternalName (T m) (ExpressionU m [EntityId]))
+    T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
@@ -129,7 +129,7 @@ convertDefBody ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
-    T m (DefinitionBody InternalName (T m) (ExpressionU m [EntityId]))
+    T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
 convertDefBody evalRes cp (Definition.Definition body defType defI) =
     case body of
     Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
@@ -138,7 +138,7 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
 convertExpr ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    MkProperty (T m) (Definition.Expr (ValI m)) ->
+    MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m (ExpressionU m [EntityId])
 convertExpr evalRes cp prop =
     do
@@ -168,7 +168,7 @@ convertExpr evalRes cp prop =
 loadRepl ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (Expression InternalName (T m) [EntityId])
+    T m (Expression InternalName (T m) (T m) [EntityId])
 loadRepl evalRes cp =
     convertExpr evalRes cp (Anchors.repl cp)
     <&> Lens.mapped %~ (^. pUserData)
@@ -185,7 +185,7 @@ loadAnnotatedDef getDefI annotation =
 loadPanes ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m -> EntityId ->
-    T m [Pane InternalName (T m) [EntityId]]
+    T m [Pane InternalName (T m) (T m) [EntityId]]
 loadPanes evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
@@ -240,7 +240,7 @@ loadPanes evalRes cp replEntityId =
 
 loadWorkArea ::
     Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (WorkArea InternalName (T m) [EntityId])
+    T m (WorkArea InternalName (T m) (T m) [EntityId])
 loadWorkArea evalRes cp =
     do
         repl <- loadRepl evalRes cp

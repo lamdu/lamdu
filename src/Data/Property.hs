@@ -4,7 +4,7 @@ module Data.Property
     , compose, pureCompose, composeLens
     , modify_, pureModify
 
-    , MkProperty(..), mkProperty
+    , MkProperty(..), MkProperty', mkProperty
     , getP, setP, modP
     ) where
 
@@ -49,18 +49,20 @@ composeLens lens (Property val setter) =
 
 -- MkProperty:
 
-newtype MkProperty m a = MkProperty { _mkProperty :: m (Property m a) }
+newtype MkProperty im am a = MkProperty { _mkProperty :: im (Property am a) }
 Lens.makeLenses ''MkProperty
 
-getP :: Monad m => MkProperty m a -> m a
+type MkProperty' m = MkProperty m m
+
+getP :: Functor im => MkProperty im am a -> im a
 getP = fmap value . (^. mkProperty)
 
-setP :: Monad m => MkProperty m a -> a -> m ()
+setP :: Monad m => MkProperty m m a -> a -> m ()
 setP (MkProperty mkProp) val = do
     prop <- mkProp
     set prop val
 
-modP :: Monad m => MkProperty m a -> (a -> a) -> m ()
+modP :: Monad m => MkProperty m m a -> (a -> a) -> m ()
 modP (MkProperty mkProp) f = do
     prop <- mkProp
     pureModify prop f

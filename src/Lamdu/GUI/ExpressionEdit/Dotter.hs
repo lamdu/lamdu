@@ -39,9 +39,10 @@ import           Lamdu.Prelude
 
 add ::
     ( MonadReader env m, TextView.HasStyle env, HasConfig env
-    , Element.HasAnimIdPrefix env, Applicative f
+    , Element.HasAnimIdPrefix env, Applicative am
     ) =>
-    Sugar.Payload name f a -> m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    Sugar.Payload name im am a ->
+    m (Responsive (am GuiState.Update) -> Responsive (am GuiState.Update))
 add pl =
     do
         ev <- eventMap pl
@@ -61,8 +62,8 @@ add pl =
             }
 
 eventMap ::
-    (MonadReader env m, HasConfig env, Applicative f) =>
-    Sugar.Payload name f expr -> m (EventMap (f GuiState.Update))
+    (MonadReader env m, HasConfig env, Applicative am) =>
+    Sugar.Payload name im am expr -> m (EventMap (am GuiState.Update))
 eventMap pl =
     delDotEventMap (WidgetIds.fromExprPayload pl)
     <&> (<> fragmentEventMap pl)
@@ -71,9 +72,10 @@ eventMap pl =
 -- sure it activates it when it's jumped to
 with ::
     ( MonadReader env m, GuiState.HasCursor env, TextView.HasStyle env
-    , HasConfig env, Element.HasAnimIdPrefix env, Applicative f
+    , HasConfig env, Element.HasAnimIdPrefix env, Applicative am
     ) =>
-    Sugar.Payload name f a -> m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    Sugar.Payload name im am a ->
+    m (Responsive (am GuiState.Update) -> Responsive (am GuiState.Update))
 with pl =
     do
         isActive <-
@@ -85,7 +87,8 @@ with pl =
 
 -- | Pressing alpha char transforms the dotted expr into a fragment
 -- with '.<char>' as the search term
-fragmentEventMap :: Applicative f => Sugar.Payload name f expr -> EventMap (f GuiState.Update)
+fragmentEventMap ::
+    Applicative am => Sugar.Payload name im am expr -> EventMap (am GuiState.Update)
 fragmentEventMap pl =
     E.charEventMap "Character" (E.Doc ["Edit", "Get field"]) getField
     where

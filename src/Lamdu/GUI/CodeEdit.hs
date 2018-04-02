@@ -37,7 +37,7 @@ import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -85,24 +85,24 @@ toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) 
 
 traverseAddNearestHoles ::
     Traversable t =>
-    t (Sugar.Expression name m a) ->
-    t (Sugar.Expression name m (a, NearestHoles))
+    t (Sugar.Expression name im am a) ->
+    t (Sugar.Expression name im am (a, NearestHoles))
 traverseAddNearestHoles binder =
     binder
     <&> Lens.mapped %~ (,)
     & NearestHoles.add traverse
 
 exprAddNearestHoles ::
-    Sugar.Expression name m a ->
-    Sugar.Expression name m (a, NearestHoles)
+    Sugar.Expression name im am a ->
+    Sugar.Expression name im am (a, NearestHoles)
 exprAddNearestHoles expr =
     Identity expr
     & traverseAddNearestHoles
     & runIdentity
 
 postProcessExpr ::
-    Sugar.Expression (Name n) m ([Sugar.EntityId], NearestHoles) ->
-    Sugar.Expression (Name n) m ExprGui.Payload
+    Sugar.Expression (Name n) im am ([Sugar.EntityId], NearestHoles) ->
+    Sugar.Expression (Name n) im am ExprGui.Payload
 postProcessExpr =
     fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 
@@ -110,7 +110,7 @@ loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
-    T m (Sugar.WorkArea (Name (T m)) (T m) ExprGui.Payload)
+    T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
 loadWorkArea theEvalResults cp =
     SugarConvert.loadWorkArea theEvalResults cp
     >>= AddNames.addToWorkArea (Anchors.tags cp)
@@ -128,7 +128,7 @@ make ::
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env
     ) =>
-    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) -> Widget.R ->
+    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
     n (Widget (IOTrans m GuiState.Update))
 make cp gp width =
     do
@@ -153,7 +153,7 @@ make cp gp width =
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & ExprGuiM.run ExpressionEdit.make gp env
+            & ExprGuiM.run ExpressionEdit.make gp env id
             & transaction
             <&> render
             <&> (^. Align.tValue)
@@ -167,8 +167,8 @@ make cp gp width =
 makePaneEdit ::
     Monad m =>
     ExportActions m ->
-    Sugar.Pane (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (Responsive (IOTrans m GuiState.Update))
+    Sugar.Pane (Name (T m)) (T m) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
@@ -204,7 +204,8 @@ makePaneEdit theExportActions pane =
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 
-makeNewDefinition :: Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (T m Widget.Id)
+makeNewDefinition ::
+    Monad m => Anchors.CodeAnchors m -> ExprGuiM' (T m) (T m Widget.Id)
 makeNewDefinition cp =
     ExprGuiM.mkPrejumpPosSaver <&>
     \savePrecursor ->
@@ -221,7 +222,7 @@ newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
 
 makeNewDefinitionButton ::
-    Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (Widget (T m GuiState.Update))
+    Monad m => Anchors.CodeAnchors m -> ExprGuiM' (T m) (Widget (T m GuiState.Update))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
@@ -229,7 +230,7 @@ makeNewDefinitionButton cp =
             >>= Styled.actionable newDefId "New..." newDefinitionDoc
             <&> (^. Align.tValue)
 
-jumpBack :: Monad m => Anchors.GuiAnchors (T m) -> T m (Maybe (T m Widget.Id))
+jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))
 jumpBack gp =
     Property.getP (Anchors.preJumps gp)
     <&> \case
@@ -238,8 +239,8 @@ jumpBack gp =
 
 panesEventMap ::
     Monad m =>
-    ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) ->
-    Sugar.Type name -> ExprGuiM (T m) (EventMap (IOTrans m GuiState.Update))
+    ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
+    Sugar.Type name -> ExprGuiM' (T m) (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replType =
     do
         theConfig <- Lens.view config

@@ -33,7 +33,7 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
@@ -54,9 +54,9 @@ addAltId = (`Widget.joinId` ["add alt"])
 
 make ::
     Monad m =>
-    Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.Case (Name (T m)) (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
+    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
+    ExprGuiM' (T m) (ExpressionGui (T m))
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
@@ -124,8 +124,9 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
 makeAltRow ::
     Monad m =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (Responsive.TaggedItem (T m GuiState.Update))
+    Sugar.CompositeItem (Name (T m)) (T m) (T m)
+    (Sugar.Expression (Name (T m)) (T m) (T m) ExprGui.Payload) ->
+    ExprGuiM' (T m) (Responsive.TaggedItem (T m GuiState.Update))
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -153,10 +154,11 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
 makeAltsWidget ::
     Monad m =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload)] ->
-    Sugar.TagSelection (Name (T m)) (T m) Sugar.EntityId ->
+    [Sugar.CompositeItem (Name (T m)) (T m) (T m)
+     (Sugar.Expression (Name (T m)) (T m) (T m) ExprGui.Payload)] ->
+    Sugar.TagSelection (Name (T m)) (T m) (T m) Sugar.EntityId ->
     Widget.Id ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    ExprGuiM' (T m) (ExpressionGui (T m))
 makeAltsWidget mActiveTag alts addAlt altsId =
     do
         existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
@@ -174,7 +176,7 @@ makeAltsWidget mActiveTag alts addAlt altsId =
 
 makeAddAltRow ::
     (MonadReader env m, MonadTransaction f m, TagEdit.HasTagEditEnv env) =>
-    Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Widget.Id ->
+    Sugar.TagSelection (Name (T f)) (T f) (T f) Sugar.EntityId -> Widget.Id ->
     m (Responsive.TaggedItem (T f GuiState.Update))
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
@@ -201,8 +203,8 @@ separationBar theme width animId =
 
 makeOpenCase ::
     Monad m =>
-    Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr (T m) ->
-    AnimId -> ExpressionGui (T m) -> ExprGuiM (T m) (ExpressionGui (T m))
+    Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr' (T m) ->
+    AnimId -> ExpressionGui (T m) -> ExprGuiM' (T m) (ExpressionGui (T m))
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
