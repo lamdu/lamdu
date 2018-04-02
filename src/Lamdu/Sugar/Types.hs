@@ -10,12 +10,10 @@ module Lamdu.Sugar.Types
     , Meta.SpecialArgs(..), Meta.PresentationMode
     , Meta.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
-    , DefinitionU
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
-import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
@@ -54,8 +52,6 @@ data Definition name m expr = Definition
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name m expr
     } deriving (Functor, Foldable, Traversable)
-
-type DefinitionU m a = Definition UUID m (Expression UUID m a)
 
 data Pane name m a = Pane
     { _paneDefinition :: Definition name m (Expression name m a)
