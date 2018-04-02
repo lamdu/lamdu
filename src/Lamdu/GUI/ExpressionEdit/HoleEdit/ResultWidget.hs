@@ -71,7 +71,7 @@ makeWidget ::
     Monad m =>
     Widget.Id ->
     Sugar.Expression (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
@@ -91,7 +91,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
-    ExprGuiM m (Menu.RenderedOption (T m))
+    ExprGuiM (T m) (Menu.RenderedOption (T m))
 make mNextEntry ctx resultId holeResult =
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)

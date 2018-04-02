@@ -56,7 +56,7 @@ make ::
     Monad m =>
     Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
@@ -125,7 +125,7 @@ makeAltRow ::
     Monad m =>
     Maybe Tag ->
     Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
-    ExprGuiM m (Responsive.TaggedItem (T m GuiState.Update))
+    ExprGuiM (T m) (Responsive.TaggedItem (T m GuiState.Update))
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -156,7 +156,7 @@ makeAltsWidget ::
     [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload)] ->
     Sugar.TagSelection (Name (T m)) (T m) Sugar.EntityId ->
     Widget.Id ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 makeAltsWidget mActiveTag alts addAlt altsId =
     do
         existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
@@ -202,7 +202,7 @@ separationBar theme width animId =
 makeOpenCase ::
     Monad m =>
     Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr (T m) ->
-    AnimId -> ExpressionGui (T m) -> ExprGuiM m (ExpressionGui (T m))
+    AnimId -> ExpressionGui (T m) -> ExprGuiM (T m) (ExpressionGui (T m))
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme

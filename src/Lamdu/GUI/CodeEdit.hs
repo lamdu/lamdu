@@ -134,6 +134,7 @@ make cp gp width =
     do
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
+        env <- Lens.view id
         workArea <- loadWorkArea theEvalResults cp & transaction
         do
             replGui <-
@@ -142,14 +143,18 @@ make cp gp width =
             panesEdits <-
                 workArea ^. Sugar.waPanes
                 & traverse (makePaneEdit theExportActions)
-            newDefinitionButton <- makeNewDefinitionButton cp <&> fmap IOTrans.liftTrans <&> Responsive.fromWidget
+            newDefinitionButton <-
+                makeNewDefinitionButton cp <&> fmap IOTrans.liftTrans
+                <&> Responsive.fromWidget
             eventMap <-
                 panesEventMap theExportActions cp gp
-                (workArea ^. Sugar.waRepl . Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType)
+                (workArea ^. Sugar.waRepl . Sugar.rPayload . Sugar.plAnnotation .
+                 Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & ExprGuiM.run ExpressionEdit.make gp
+            & ExprGuiM.run ExpressionEdit.make gp env
+            & transaction
             <&> render
             <&> (^. Align.tValue)
     where
@@ -163,7 +168,7 @@ makePaneEdit ::
     Monad m =>
     ExportActions m ->
     Sugar.Pane (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (Responsive (IOTrans m GuiState.Update))
+    ExprGuiM (T m) (Responsive (IOTrans m GuiState.Update))
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
@@ -199,7 +204,7 @@ makePaneEdit theExportActions pane =
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 
-makeNewDefinition :: Monad m => Anchors.CodeAnchors m -> ExprGuiM m (T m Widget.Id)
+makeNewDefinition :: Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (T m Widget.Id)
 makeNewDefinition cp =
     ExprGuiM.mkPrejumpPosSaver <&>
     \savePrecursor ->
@@ -216,7 +221,7 @@ newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
 
 makeNewDefinitionButton ::
-    Monad m => Anchors.CodeAnchors m -> ExprGuiM m (Widget (T m GuiState.Update))
+    Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (Widget (T m GuiState.Update))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
@@ -234,7 +239,7 @@ jumpBack gp =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) ->
-    Sugar.Type name -> ExprGuiM m (EventMap (IOTrans m GuiState.Update))
+    Sugar.Type name -> ExprGuiM (T m) (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replType =
     do
         theConfig <- Lens.view config

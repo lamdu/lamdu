@@ -29,7 +29,7 @@ make ::
     Monad m =>
     Sugar.GetField (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <- ExprGuiM.makeSubexpression recExpr

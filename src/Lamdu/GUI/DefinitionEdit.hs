@@ -40,7 +40,7 @@ type T = Transaction
 
 undeleteButton ::
     Monad m =>
-    T m Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    T m Widget.Id -> ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
 undeleteButton undelete =
     TextView.makeFocusableLabel "Undelete..."
     <&> Align.tValue %~ Widget.weakerEvents eventMap
@@ -54,7 +54,7 @@ makeExprDefinition ::
     EventMap (T m GuiState.Update) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.DefinitionExpression (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 makeExprDefinition lhsEventMap def bodyExpr =
     BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
@@ -67,7 +67,7 @@ makeBuiltinDefinition ::
     Monad m =>
     Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.DefinitionBuiltin (Name g) (T m) ->
-    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeBuiltinDefinition def builtin =
     do
         nameEdit <- TagEdit.makeBinderTagEdit TextColors.definitionColor name
@@ -89,7 +89,7 @@ make ::
     Monad m =>
     EventMap (T m GuiState.Update) ->
     Sugar.Definition (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 make lhsEventMap def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & transaction
@@ -119,7 +119,7 @@ make lhsEventMap def =
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 topLevelSchemeTypeView ::
-    Monad m => Sugar.Scheme (Name g) -> ExprGuiM m (WithTextPos View)
+    Monad m => Sugar.Scheme (Name g) -> ExprGuiM (T m) (WithTextPos View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, FlexibleContexts, UndecidableInstances #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --
@@ -48,11 +47,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Settings (Settings, HasSettings(..))
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Semigroup, Monoid)
@@ -65,18 +61,18 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr (T (TM m)) -> m (ExpressionGui (T (TM m)))
-    , _aGuiAnchors :: Anchors.GuiAnchors (T (TM m))
+    , _aMakeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
+    , _aGuiAnchors :: Anchors.GuiAnchors (TM m)
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
     }
 
 class
-    ( MonadTransaction (TM m) m, MonadReader (Askable m) m
+    ( Monad (TM m), MonadReader (Askable m) m
     ) => MonadExprGui m where
     type TM m :: * -> *
-    makeSubexpression :: ExprGui.SugarExpr (T (TM m)) -> m (ExpressionGui (T (TM m)))
+    makeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
 
 Lens.makeLenses ''Askable
 
@@ -104,13 +100,13 @@ instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
 
-readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (T (TM m)))
+readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (TM m))
 readGuiAnchors = Lens.view aGuiAnchors
 
-savePreJumpPosition :: Monad m => Anchors.GuiAnchors (T m) -> WidgetId.Id -> T m ()
+savePreJumpPosition :: Monad m => Anchors.GuiAnchors m -> WidgetId.Id -> m ()
 savePreJumpPosition guiAnchors pos = Property.modP (Anchors.preJumps guiAnchors) $ (pos :) . take 19
 
-mkPrejumpPosSaver :: MonadExprGui m => m (T (TM m) ())
+mkPrejumpPosSaver :: MonadExprGui m => m ((TM m) ())
 mkPrejumpPosSaver =
     savePreJumpPosition <$> readGuiAnchors <*> Lens.view GuiState.cursor
 
@@ -133,7 +129,7 @@ readMScopeId = Lens.view aMScopeId
 withLocalMScopeId :: MonadExprGui m => CurAndPrev (Maybe ScopeId) -> m a -> m a
 withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
 
-newtype ExprGuiM m a = ExprGuiM (ReaderT (Askable (ExprGuiM m)) (T m) a)
+newtype ExprGuiM m a = ExprGuiM (ReaderT (Askable (ExprGuiM m)) m a)
     deriving (Functor, Applicative, Monad, MonadReader (Askable (ExprGuiM m)))
 
 instance (Monad m, Semigroup a) => Semigroup (ExprGuiM m a) where
@@ -143,8 +139,8 @@ instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
     mempty = pure mempty
     mappend = liftA2 mappend
 
-instance Monad m => MonadTransaction m (ExprGuiM m) where
-    transaction = ExprGuiM . lift
+instance MonadTransaction n m => MonadTransaction n (ExprGuiM m) where
+    transaction = ExprGuiM . lift . transaction
 
 instance Monad m => MonadExprGui (ExprGuiM m) where
     type TM (ExprGuiM m) = m
@@ -158,36 +154,26 @@ instance Monad m => MonadExprGui (ExprGuiM m) where
             animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
 run ::
-    ( MonadTransaction m n, MonadReader env n
-    , GuiState.HasState env, Spacer.HasStdSpacing env
+    ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr (T m) -> ExprGuiM m (ExpressionGui (T m))) ->
-    Anchors.GuiAnchors (T m) ->
-    ExprGuiM m a ->
-    n a
-run makeSubexpr theGuiAnchors (ExprGuiM action) =
-    do
-        theSettings <- Lens.view settings
-        theStyle <- Lens.view style
-        theState <- Lens.view GuiState.state
-        theTextEditStyle <- Lens.view TextEdit.style
-        theStdSpacing <- Lens.view Spacer.stdSpacing
-        theConfig <- Lens.view Config.config
-        theTheme <- Lens.view Theme.theme
-        runReaderT action
-            Askable
-            { _aState = theState
-            , _aTextEditStyle = theTextEditStyle
-            , _aStdSpacing = theStdSpacing
-            , _aAnimIdPrefix = ["outermost"]
-            , _aConfig = theConfig
-            , _aTheme = theTheme
-            , _aSettings = theSettings
-            , _aMakeSubexpression = makeSubexpr
-            , _aGuiAnchors = theGuiAnchors
-            , _aDepthLeft = theConfig ^. Config.maxExprDepth
-            , _aMScopeId = Just topLevelScopeId & pure
-            , _aStyle = theStyle
-            } & transaction
+    (ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
+    Anchors.GuiAnchors m ->
+    env -> ExprGuiM m a -> m a
+run makeSubexpr theGuiAnchors env (ExprGuiM action) =
+    runReaderT action
+    Askable
+    { _aState = env ^. GuiState.state
+    , _aTextEditStyle = env ^. TextEdit.style
+    , _aStdSpacing = env ^. Spacer.stdSpacing
+    , _aAnimIdPrefix = ["outermost"]
+    , _aConfig = env ^. Config.config
+    , _aTheme = env ^. Theme.theme
+    , _aSettings = env ^. settings
+    , _aMakeSubexpression = makeSubexpr
+    , _aGuiAnchors = theGuiAnchors
+    , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
+    , _aMScopeId = Just topLevelScopeId & pure
+    , _aStyle = env ^. style
+    }

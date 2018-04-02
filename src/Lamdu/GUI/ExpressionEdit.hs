@@ -35,7 +35,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-make :: Monad m => ExprGui.SugarExpr (T m) -> ExprGuiM m (ExpressionGui (T m))
+make :: Monad m => ExprGui.SugarExpr (T m) -> ExprGuiM (T m) (ExpressionGui (T m))
 make (Sugar.Expression body pl) =
     makeEditor body pl & assignCursor
     where
@@ -47,7 +47,7 @@ make (Sugar.Expression body pl) =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
             & foldr (`GuiState.assignCursorPrefix` const myId) x
 
-placeHolder :: Monad m => Sugar.Payload name (T m) ExprGui.Payload -> ExprGuiM m (ExpressionGui (T m))
+placeHolder :: Monad m => Sugar.Payload name (T m) ExprGui.Payload -> ExprGuiM (T m) (ExpressionGui (T m))
 placeHolder pl =
     (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
     <*> TextView.makeLabel "★"
@@ -57,7 +57,7 @@ makeEditor ::
     Monad m =>
     Sugar.Body (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
     Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 makeEditor body pl =
     case body of
     Sugar.BodyPlaceHolder    -> placeHolder pl

@@ -216,7 +216,7 @@ make ::
     Monad m =>
     Sugar.Literal (Property (T m)) ->
     Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 make lit pl =
     stdWrap pl
     <*>

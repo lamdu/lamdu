@@ -69,7 +69,7 @@ makeRenderedResult ::
     Monad m =>
     Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result (T m) ->
-    ExprGuiM m (Menu.RenderedOption (T m))
+    ExprGuiM (T m) (Menu.RenderedOption (T m))
 makeRenderedResult pl ctx result =
     -- Warning: rHoleResult should be ran at most once!
     -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
@@ -102,7 +102,7 @@ postProcessSugar minOpPrec expr =
 makeResultOption ::
     Monad m =>
     Sugar.Payload name f ExprGui.Payload -> SearchMenu.ResultsContext -> ResultGroup (T m) ->
-    Menu.Option (ExprGuiM m) (T m)
+    Menu.Option (ExprGuiM (T m)) (T m)
 makeResultOption pl ctx results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
@@ -175,7 +175,7 @@ make ::
     Maybe (Sugar.OptionLiteral (T m) (ExpressionN (T m) ())) ->
     Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
     (Text -> Bool) ->
-    ExprGuiM m (Menu.Placement -> ExpressionGui (T m))
+    ExprGuiM (T m) (Menu.Placement -> ExpressionGui (T m))
 make options mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config

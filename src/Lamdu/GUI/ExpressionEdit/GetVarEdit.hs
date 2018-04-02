@@ -88,8 +88,8 @@ makeParamsRecord myId paramsRecordVar =
 makeNameRef ::
     Monad m =>
     Widget.Id -> Sugar.NameRef name (T m) ->
-    (name -> Widget.Id -> ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))) ->
-    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    (name -> Widget.Id -> ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))) ->
+    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeNameRef myId nameRef maker =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
@@ -194,7 +194,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 makeGetBinder ::
     Monad m =>
     Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -215,7 +215,7 @@ makeGetBinder binderVar myId =
 makeGetParam ::
     Monad m =>
     Sugar.ParamRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM m (WithTextPos (Widget (T m GuiState.Update)))
+    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
@@ -235,7 +235,7 @@ makeNoActions ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
     Widget.Id ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -249,6 +249,6 @@ make ::
     Monad m =>
     Sugar.GetVar (Name (T m)) (T m) ->
     Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM m (ExpressionGui (T m))
+    ExprGuiM (T m) (ExpressionGui (T m))
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)
