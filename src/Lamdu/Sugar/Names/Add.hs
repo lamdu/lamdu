@@ -394,6 +394,7 @@ mkSetName tag =
     <&>
     \publishedTags newName ->
     do
+        -- TODO: DRY with DataOps.setName
         setP (Anchors.assocTagNameRef tag) newName
         Property.modP publishedTags (Lens.contains tag .~ (newName /= ""))
 
