@@ -125,6 +125,7 @@ Library
                   , Control.Monad.Trans.FastRWS
                   , Control.Monad.Trans.FastWriter
                   , Control.Monad.Transaction
+                  , Control.Monad.Unit
                   , Data.Aeson.Utils
                   , Data.Binary.Extended
                   , Data.ByteString.Extended
