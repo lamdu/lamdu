@@ -114,8 +114,8 @@ instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a)
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widget a)) where
-    type Glued (AnchoredWidget a) (Hover (Widget a)) =
+instance (Functor f, a ~ b, b ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widget b)) where
+    type Glued (AnchoredWidget a) (Hover (Widget b)) =
         Hover (AnchoredWidget a)
     glue orientation ow0 (Hover ow1) =
         Glue.glueH f orientation ow0 ow1 & Hover
@@ -123,8 +123,8 @@ instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widg
             f (AnchoredWidget pos w0) w1 =
                 AnchoredWidget pos (Widget.glueStates orientation w0 w1)
 
-instance (Functor f, a ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget a) where
-    type Glued (Hover (Widget a)) (AnchoredWidget a) =
+instance (Functor f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget b) where
+    type Glued (Hover (Widget a)) (AnchoredWidget b) =
         Hover (AnchoredWidget a)
     glue orientation (Hover ow0) =
         Glue.glueH f orientation ow0 <&> Hover
