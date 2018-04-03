@@ -219,10 +219,7 @@ loadPanes evalRes cp replEntityId =
                         <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
-                    tag <-
-                        Anchors.tags cp
-                        & Property.getP
-                        & convertTaggedEntityWith defVar
+                    tag <- Anchors.tags cp & convertTaggedEntityWith defVar
                     defS <-
                         PresentationModes.addToDef Definition
                         { _drEntityId = EntityId.ofIRef defI
