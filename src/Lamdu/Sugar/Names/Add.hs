@@ -395,7 +395,7 @@ mkSetName tag =
     \publishedTags newName ->
     do
         setP (Anchors.assocTagNameRef tag) newName
-        Property.modP publishedTags ((if newName == "" then Set.delete else Set.insert) tag)
+        Property.modP publishedTags (Lens.contains tag .~ (newName /= ""))
 
 storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name (T tm))
 storedName tagsBelow aName storedText =
