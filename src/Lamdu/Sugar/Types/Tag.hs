@@ -29,7 +29,7 @@ data TagSelection name m a = TagSelection
       -- and this would also fix animation artifacts for picking new tags.
       -- However that would require making a consistent new tag,
       -- which would require either a new Revision.Deltum feature or a Sugar cache.
-      _tsNewTag :: m (TagInfo name, a)
+      _tsNewTag :: Text -> m (EntityId, a)
     , -- In some cases, like let-items, single params,
       -- the user does not have to choose a tag and can choose to have
       -- an auto-generated name instead.

@@ -71,19 +71,20 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag published
         <&> Set.toList
         <&> map toOption
     , _tsNewTag =
+        \newName ->
         do
             newTag <- DataOps.genNewTag
-            setTag newTag <&> (,) (mkInfo newTag)
+            DataOps.setTagName publishedTagsProp newTag newName
+            setTag newTag <&> (,) (mkInstance newTag)
     , _tsAnon =
         case allowAnon of
         RequireTag -> Nothing
         AllowAnon -> setTag Anchors.anonTag <&> (,) (mkInstance Anchors.anonTag) & Just
     }
     where
-        mkInfo t = TagInfo (name t) (mkInstance t) t
         toOption x =
             TagOption
-            { _toInfo = mkInfo x
+            { _toInfo = TagInfo (name x) (mkInstance x) x
             , _toPick = setTag x
             }
 

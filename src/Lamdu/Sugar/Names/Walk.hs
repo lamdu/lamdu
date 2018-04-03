@@ -245,14 +245,9 @@ toTagSelection ::
     MonadNaming m =>
     TagSelection (OldName m) (TM m) a -> m (TagSelection (NewName m) (TM m) a)
 toTagSelection t@TagSelection{..} =
-    do
-        run0 <- opRun
-        run1 <- opRun
-        pure t
-            { _tsOptions =
-                _tsOptions >>= run0 . (traverse . toInfo) (toTagInfoOf Tag)
-            , _tsNewTag = _tsNewTag >>= run1 . _1 (toTagInfoOf Tag)
-            }
+    opRun
+    <&>
+    \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagInfoOf Tag))
 
 toTagOf ::
     MonadNaming m =>

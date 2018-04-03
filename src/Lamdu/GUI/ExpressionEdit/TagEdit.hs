@@ -128,11 +128,8 @@ makeNewTag ::
     (EntityId -> a -> b) -> m b
 makeNewTag searchTerm tagSelection mkPickResult =
     do
-        (t, selectResult) <- tagSelection ^. Sugar.tsNewTag
-        case t ^? Sugar.tagName . Name._Stored . Name.snSet of
-            Nothing -> pure ()
-            Just setName -> setName searchTerm
-        mkPickResult (t ^. Sugar.tagInstance) selectResult & pure
+        (tagInstance, selectResult) <- searchTerm & tagSelection ^. Sugar.tsNewTag
+        mkPickResult tagInstance selectResult & pure
 
 makeNewTagPreEvent ::
     Monad f =>
