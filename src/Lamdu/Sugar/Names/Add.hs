@@ -9,7 +9,7 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (runState, evalState)
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
-import           Control.Monad.Transaction (getP, setP)
+import           Control.Monad.Transaction (getP)
 import qualified Data.Char as Char
 import           Data.Foldable (fold)
 import           Data.MMap (MMap(..), _MMap)
@@ -19,13 +19,12 @@ import qualified Data.Map as Map
 import           Data.Map.Utils (singleton, hasKey)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Property (MkProperty)
-import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (assocTagNameRef, anonTag)
-import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
@@ -389,14 +388,7 @@ getTagText tag text =
             | otherwise = NoCollision
 
 mkSetName :: Monad tm => T.Tag -> Pass2MakeNames tm (Text -> Transaction tm ())
-mkSetName tag =
-    Lens.view p2PublishedTags
-    <&>
-    \publishedTags newName ->
-    do
-        -- TODO: DRY with DataOps.setName
-        setP (Anchors.assocTagNameRef tag) newName
-        Property.modP publishedTags (Lens.contains tag .~ (newName /= ""))
+mkSetName tag = Lens.view p2PublishedTags <&> (`DataOps.setTagName` tag)
 
 storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name (T tm))
 storedName tagsBelow aName storedText =
