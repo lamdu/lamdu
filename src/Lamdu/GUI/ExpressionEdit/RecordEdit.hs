@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -34,18 +33,15 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
+import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui, IM, AM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 doc :: E.Subtitle -> E.Doc
 doc text = E.Doc ["Edit", "Record", text]
@@ -54,8 +50,8 @@ addFieldId :: Widget.Id -> Widget.Id
 addFieldId = (`Widget.joinId` ["add field"])
 
 mkAddFieldEventMap ::
-    (MonadReader env m, HasConfig env, Applicative f) =>
-    Widget.Id -> m (EventMap (f GuiState.Update))
+    (MonadReader env m, HasConfig env, Applicative am) =>
+    Widget.Id -> m (EventMap (am GuiState.Update))
 mkAddFieldEventMap myId =
     Lens.view (Config.config . Config.recordAddFieldKeys)
     <&>
@@ -64,7 +60,7 @@ mkAddFieldEventMap myId =
     & pure
     & E.keysEventMapMovesCursor keys (doc "Add Field")
 
-addFieldWithSearchTermEventMap :: Applicative f => Widget.Id -> EventMap (f GuiState.Update)
+addFieldWithSearchTermEventMap :: Applicative am => Widget.Id -> EventMap (am GuiState.Update)
 addFieldWithSearchTermEventMap myId =
     E.charEventMap "Character" (doc "Add Field") f
     where
@@ -77,9 +73,9 @@ addFieldWithSearchTermEventMap myId =
             | otherwise = Nothing
 
 makeUnit ::
-    (Monad m, Applicative am) =>
+    (MonadExprGui m, Applicative am) =>
     Sugar.Payload (Name am) im am ExprGui.Payload ->
-    ExprGuiM' (T m) (Responsive (am GuiState.Update))
+    m (Responsive (am GuiState.Update))
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
@@ -95,10 +91,10 @@ makeUnit pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    Monad m =>
-    Sugar.Composite (Name (T m)) (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
-    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM' (T m) (ExpressionGui (T m))
+    MonadExprGui m =>
+    Sugar.Composite (Name (AM m)) (IM m) (AM m) (ExprGui.SugarExpr (IM m) (AM m)) ->
+    Sugar.Payload (Name (AM m)) (IM m) (AM m) ExprGui.Payload ->
+    m (ExpressionGui (AM m))
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -139,11 +135,11 @@ make (Sugar.Composite fields recordTail addField) pl =
 
 makeRecord ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
-    , Functor f
+    , Functor am
     ) =>
-    (Responsive (f GuiState.Update) -> m (Responsive (f GuiState.Update))) ->
-    [Responsive.TaggedItem (f GuiState.Update)] ->
-    m (Responsive (f GuiState.Update))
+    (Responsive (am GuiState.Update) -> m (Responsive (am GuiState.Update))) ->
+    [Responsive.TaggedItem (am GuiState.Update)] ->
+    m (Responsive (am GuiState.Update))
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
@@ -156,7 +152,7 @@ makeRecord postProcess fieldGuis =
 
 addPostTags ::
     (MonadReader env m, Theme.HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    [Responsive.TaggedItem (f GuiState.Update)] -> m [Responsive.TaggedItem (f GuiState.Update)]
+    [Responsive.TaggedItem (am GuiState.Update)] -> m [Responsive.TaggedItem (am GuiState.Update)]
 addPostTags items =
     items
     & zipWith f [0 :: Int ..]
@@ -172,10 +168,10 @@ addPostTags items =
         lastIdx = length items - 1
 
 makeAddFieldRow ::
-    (MonadReader env m, MonadTransaction f m, TagEdit.HasTagEditEnv env) =>
-    Sugar.TagSelection (Name (T f)) (T f) (T f) Sugar.EntityId ->
-    Sugar.Payload' name (T f) ExprGui.Payload ->
-    m (Responsive.TaggedItem (T f GuiState.Update))
+    MonadExprGui m =>
+    Sugar.TagSelection (Name (AM m)) (IM m) (AM m) Sugar.EntityId ->
+    Sugar.Payload name (IM m) (AM m) ExprGui.Payload ->
+    m (Responsive.TaggedItem (AM m GuiState.Update))
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
@@ -195,9 +191,9 @@ makeAddFieldRow addField pl =
             }
 
 makeFieldRow ::
-    Monad m =>
-    Sugar.CompositeItem (Name (T m)) (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
-    ExprGuiM' (T m) (Responsive.TaggedItem (T m GuiState.Update))
+    MonadExprGui m =>
+    Sugar.CompositeItem (Name (AM m)) (IM m) (AM m) (ExprGui.SugarExpr (IM m) (AM m)) ->
+    m (Responsive.TaggedItem ((AM m) GuiState.Update))
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -219,9 +215,9 @@ separationBar theme width animId =
     & Element.scale (Vector2 width 10)
 
 makeOpenRecord ::
-    Monad m =>
-    Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr' (T m) ->
-    ExpressionGui (T m) -> ExprGuiM' (T m) (ExpressionGui (T m))
+    MonadExprGui m =>
+    Sugar.OpenCompositeActions (AM m) -> ExprGui.SugarExpr (IM m) (AM m) ->
+    ExpressionGui (AM m) -> m (ExpressionGui (AM m))
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view Theme.theme
@@ -265,8 +261,8 @@ openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
         isHole = Lens.has (Sugar.rBody . Sugar._BodyHole)
 
 closedRecordEventMap ::
-    (MonadReader env m, HasConfig env, Functor f) =>
-    Sugar.ClosedCompositeActions f -> m (EventMap (f GuiState.Update))
+    (MonadReader env m, HasConfig env, Functor am) =>
+    Sugar.ClosedCompositeActions am -> m (EventMap (am GuiState.Update))
 closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     Lens.view (Config.config . Config.recordOpenKeys)
     <&>
@@ -275,8 +271,8 @@ closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     & E.keysEventMapMovesCursor keys (doc "Open")
 
 recordDelEventMap ::
-    (MonadReader env m, HasConfig env, Functor f) =>
-    f Sugar.EntityId -> m (EventMap (f GuiState.Update))
+    (MonadReader env m, HasConfig env, Functor am) =>
+    am Sugar.EntityId -> m (EventMap (am GuiState.Update))
 recordDelEventMap delete =
     Lens.view Config.config <&> Config.delKeys
     <&>
