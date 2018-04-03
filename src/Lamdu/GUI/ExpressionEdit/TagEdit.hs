@@ -53,6 +53,7 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Style as Style
+import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
@@ -124,19 +125,19 @@ makePickEventMap action =
 makeNewTag ::
     Monad m =>
     Text -> Sugar.TagSelection (Name m) m a ->
-    (Sugar.TagInfo (Name m) -> a -> b) -> m b
+    (EntityId -> a -> b) -> m b
 makeNewTag searchTerm tagSelection mkPickResult =
     do
         (t, selectResult) <- tagSelection ^. Sugar.tsNewTag
         case t ^? Sugar.tagName . Name._Stored . Name.snSet of
             Nothing -> pure ()
             Just setName -> setName searchTerm
-        mkPickResult t selectResult & pure
+        mkPickResult (t ^. Sugar.tagInstance) selectResult & pure
 
 makeNewTagPreEvent ::
     Monad f =>
     Text -> Sugar.TagSelection (Name f) f a ->
-    (Sugar.TagInfo (Name f) -> a -> r) -> Maybe (Widget.PreEvent (f r))
+    (EntityId -> a -> r) -> Maybe (Widget.PreEvent (f r))
 makeNewTagPreEvent searchTerm tagSelection mkPickResult
     | Text.null searchTerm = Nothing
     | otherwise =
@@ -151,7 +152,7 @@ addNewTag ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.TagSelection (Name (T m)) (T m) a ->
-    (Sugar.TagInfo (Name (T m)) -> a -> Menu.PickResult) ->
+    (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     Maybe (Menu.Option f (T m))
 addNewTag tagSelection mkPickResult ctx =
@@ -182,7 +183,7 @@ makeOptions ::
     , HasConfig env, HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Sugar.TagSelection (Name (T m)) (T m) a ->
-    (Sugar.TagInfo (Name (T m)) -> a -> Menu.PickResult) ->
+    (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     f (Menu.OptionList (Menu.Option f (T m)))
 makeOptions tagSelection mkPickResult ctx
@@ -225,7 +226,7 @@ makeOptions tagSelection mkPickResult ctx
                 { Menu._rWidget = widget
                 , Menu._rPick = Widget.PreEvent
                     { Widget._pDesc = "Pick"
-                    , Widget._pAction = opt ^. Sugar.toPick <&> mkPickResult (opt ^. Sugar.toInfo)
+                    , Widget._pAction = opt ^. Sugar.toPick <&> mkPickResult (opt ^. Sugar.toInfo . Sugar.tagInstance)
                     , Widget._pTextRemainder = ""
                     }
                 }
@@ -251,7 +252,7 @@ type HasTagEditEnv env = (HasSearchTermEnv env, Menu.HasConfig env)
 makeHoleSearchTerm ::
     (MonadReader env m, Monad f, HasSearchTermEnv env) =>
     Sugar.TagSelection (Name f) f a ->
-    (Sugar.TagInfo (Name f) -> a -> Menu.PickResult) -> Widget.Id ->
+    (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
 makeHoleSearchTerm tagSelection mkPickResult holeId =
     do
@@ -296,7 +297,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
 makeTagHoleEdit ::
     (MonadReader env m, MonadTransaction f m, HasTagEditEnv env) =>
     Sugar.TagSelection (Name (T f)) (T f) a ->
-    (Sugar.TagInfo (Name (T f)) -> a -> Menu.PickResult) ->
+    (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
     m (WithTextPos (Widget (T f GuiState.Update)))
 makeTagHoleEdit tagSelection mkPickResult holeId =
@@ -387,11 +388,11 @@ makeTagEditWith onView onPickNext nearestHoles tag =
     where
         myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         viewId = tagViewId myId
-        mkPickResult tagInfo () =
+        mkPickResult tagInstance () =
             Menu.PickResult
-            { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+            { Menu._pickDest = WidgetIds.fromEntityId tagInstance
             , Menu._pickNextEntryPoint =
-                onPickNext (nearestHoles ^. NearestHoles.next) (tagInfo ^. Sugar.tagInstance)
+                onPickNext (nearestHoles ^. NearestHoles.next) tagInstance
             }
         chooseAction =
             case tag ^. Sugar.tagSelection . Sugar.tsAnon of

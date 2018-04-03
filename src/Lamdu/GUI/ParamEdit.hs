@@ -88,14 +88,12 @@ data Info m = Info
     , iId :: Widget.Id
     }
 
-mkParamPickResult :: Sugar.TagInfo name -> a -> Menu.PickResult
-mkParamPickResult tagInfo _ =
+mkParamPickResult :: Sugar.EntityId -> a -> Menu.PickResult
+mkParamPickResult tagInstance _ =
     Menu.PickResult
-    { Menu._pickDest = tagInfo ^. Sugar.tagInstance & WidgetIds.fromEntityId
+    { Menu._pickDest = WidgetIds.fromEntityId tagInstance
     , Menu._pickNextEntryPoint =
-        tagInfo ^. Sugar.tagInstance
-        & WidgetIds.fromEntityId
-        & TagEdit.addParamId
+        WidgetIds.fromEntityId tagInstance & TagEdit.addParamId
     }
 
 -- exported for use in definition sugaring.
