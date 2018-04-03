@@ -61,18 +61,18 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
-    , _aGuiAnchors :: Anchors.GuiAnchors (TM m)
+    , _aMakeSubexpression :: ExprGui.SugarExpr (AM m) -> m (ExpressionGui (AM m))
+    , _aGuiAnchors :: Anchors.GuiAnchors (AM m)
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
     }
 
 class
-    ( Monad (TM m), MonadReader (Askable m) m
+    ( Monad (AM m), MonadReader (Askable m) m
     ) => MonadExprGui m where
-    type TM m :: * -> *
-    makeSubexpression :: ExprGui.SugarExpr (TM m) -> m (ExpressionGui (TM m))
+    type AM m :: * -> *
+    makeSubexpression :: ExprGui.SugarExpr (AM m) -> m (ExpressionGui (AM m))
 
 Lens.makeLenses ''Askable
 
@@ -100,13 +100,13 @@ instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
 instance HasStyle (Askable m) where style = aStyle
 instance HasSettings (Askable m) where settings = aSettings
 
-readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (TM m))
+readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (AM m))
 readGuiAnchors = Lens.view aGuiAnchors
 
 savePreJumpPosition :: Monad m => Anchors.GuiAnchors m -> WidgetId.Id -> m ()
 savePreJumpPosition guiAnchors pos = Property.modP (Anchors.preJumps guiAnchors) $ (pos :) . take 19
 
-mkPrejumpPosSaver :: MonadExprGui m => m ((TM m) ())
+mkPrejumpPosSaver :: MonadExprGui m => m (AM m ())
 mkPrejumpPosSaver =
     savePreJumpPosition <$> readGuiAnchors <*> Lens.view GuiState.cursor
 
@@ -143,7 +143,7 @@ instance MonadTransaction n m => MonadTransaction n (ExprGuiM m) where
     transaction = ExprGuiM . lift . transaction
 
 instance Monad m => MonadExprGui (ExprGuiM m) where
-    type TM (ExprGuiM m) = m
+    type AM (ExprGuiM m) = m
     makeSubexpression expr =
         do
             maker <- Lens.view aMakeSubexpression
