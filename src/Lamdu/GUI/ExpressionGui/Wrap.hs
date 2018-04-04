@@ -35,10 +35,10 @@ parentExprFDConfig config = FocusDelegator.Config
     }
 
 stdWrap ::
-    (Monad im, Monad am) =>
-    Sugar.Payload (Name am) im am ExprGui.Payload ->
-    ExprGuiM im am
-    (Responsive (am GuiState.Update) -> Responsive (am GuiState.Update))
+    (Monad i, Monad o) =>
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o
+    (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 stdWrap pl =
     maybeAddAnnotationPl pl
     <<< Dotter.with pl
@@ -47,17 +47,17 @@ stdWrap pl =
         (<<<) = liftA2 (.)
 
 parentDelegator ::
-    ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative am
+    ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative o
     ) => Widget.Id ->
-    m (Responsive (am GuiState.Update) -> Responsive (am GuiState.Update))
+    m (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
     ?? FocusDelegator.FocusEntryChild ?? myId
 
 stdWrapParentExpr ::
-    (Monad im, Monad am) =>
-    Sugar.Payload (Name am) im am ExprGui.Payload ->
-    ExprGuiM im am (ExpressionGui am -> ExpressionGui am)
+    (Monad i, Monad o) =>
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o -> ExpressionGui o)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl

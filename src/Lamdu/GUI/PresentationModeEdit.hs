@@ -33,7 +33,7 @@ make ::
     , Hover.HasStyle env
     ) =>
     Widget.Id ->
-    Sugar.BinderParams name im am ->
+    Sugar.BinderParams name i o ->
     Property m Sugar.PresentationMode ->
     n (Widget (m GuiState.Update))
 make myId (Sugar.Params params) prop =

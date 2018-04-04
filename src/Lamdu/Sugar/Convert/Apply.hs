@@ -64,7 +64,7 @@ noDuplicates x = length x == Set.size (Set.fromList x)
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
-    V.Var -> Composite name im am expr -> Infer.Dependencies -> m ()
+    V.Var -> Composite name i o expr -> Infer.Dependencies -> m ()
 validateDefParamsMatchArgs var record frozenDeps =
     do
         defArgs <-

@@ -38,7 +38,7 @@ mkAppliedHoleOptions ::
     Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
-    Expression name im am a ->
+    Expression name i o a ->
     Input.Payload m a ->
     [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
 mkAppliedHoleOptions sugarContext argI argS exprPl =

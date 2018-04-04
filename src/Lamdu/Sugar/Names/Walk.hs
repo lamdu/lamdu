@@ -72,8 +72,8 @@ isFunctionType typ =
 
 toParamRef ::
     MonadNaming m =>
-    ParamRef (OldName m) am ->
-    m (ParamRef (NewName m) am)
+    ParamRef (OldName m) o ->
+    m (ParamRef (NewName m) o)
 toParamRef = (pNameRef . nrName) (opGetName Nothing TaggedVar)
 
 binderVarType :: BinderVarForm name m -> NameType
@@ -118,8 +118,8 @@ toDefinitionOutdatedType (DefinitionOutdatedType whenUsed current useCur) =
 toBinderVarRef ::
     MonadNaming m =>
     Maybe Disambiguator ->
-    BinderVarRef (OldName m) am ->
-    m (BinderVarRef (NewName m) am)
+    BinderVarRef (OldName m) o ->
+    m (BinderVarRef (NewName m) o)
 toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
     BinderVarRef
     <$> ( nrName %%~
@@ -131,8 +131,8 @@ toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
 
 toGetVar ::
     MonadNaming m =>
-    GetVar (OldName m) am ->
-    m (GetVar (NewName m) am)
+    GetVar (OldName m) o ->
+    m (GetVar (NewName m) o)
 toGetVar (GetParam x) = toParamRef x <&> GetParam
 toGetVar (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
 toGetVar (GetParamsRecord x) =
@@ -140,8 +140,8 @@ toGetVar (GetParamsRecord x) =
 
 toNodeActions ::
     MonadNaming m =>
-    NodeActions (OldName m) (TM m) am ->
-    m (NodeActions (NewName m) (TM m) am)
+    NodeActions (OldName m) (TM m) o ->
+    m (NodeActions (NewName m) (TM m) o)
 toNodeActions = wrapInRecord toTagSelection
 
 toResRecord ::
@@ -178,8 +178,8 @@ toAnnotation (Annotation typ evalRes) =
 
 toLet ::
     MonadNaming m => (a -> m b) ->
-    Let (OldName m) (TM m) am a ->
-    m (Let (NewName m) (TM m) am b)
+    Let (OldName m) (TM m) o a ->
+    m (Let (NewName m) (TM m) o b)
 toLet expr Let{..} =
     do
         (_lName, _lBody) <-
@@ -192,21 +192,21 @@ toLet expr Let{..} =
 
 toBinderContent ::
     MonadNaming m => (a -> m b) ->
-    BinderContent (OldName m) (TM m) am a ->
-    m (BinderContent (NewName m) (TM m) am b)
+    BinderContent (OldName m) (TM m) o a ->
+    m (BinderContent (NewName m) (TM m) o b)
 toBinderContent expr (BinderLet l) = toLet expr l <&> BinderLet
 toBinderContent expr (BinderExpr e) = expr e <&> BinderExpr
 
 toBinderBody ::
     MonadNaming m => (a -> m b) ->
-    BinderBody (OldName m) (TM m) am a ->
-    m (BinderBody (NewName m) (TM m) am b)
+    BinderBody (OldName m) (TM m) o a ->
+    m (BinderBody (NewName m) (TM m) o b)
 toBinderBody expr = bbContent %%~ toBinderContent expr
 
 toBinderActions ::
     MonadNaming m =>
-    BinderActions (OldName m) (TM m) am ->
-    m (BinderActions (NewName m) (TM m) am)
+    BinderActions (OldName m) (TM m) o ->
+    m (BinderActions (NewName m) (TM m) o)
 toBinderActions BinderActions{..} =
     BinderActions
     <$> _PrependParam toTagSelection _baAddFirstParam
@@ -214,8 +214,8 @@ toBinderActions BinderActions{..} =
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
-    Binder (OldName m) (TM m) am a ->
-    m (Binder (NewName m) (TM m) am b)
+    Binder (OldName m) (TM m) o a ->
+    m (Binder (NewName m) (TM m) o b)
 toBinder expr Binder{..} =
     (\(_bParams, _bBody) _bActions -> Binder{..})
     <$> unCPS (withBinderParams _bParams) (toBinderBody expr _bBody)
@@ -223,8 +223,8 @@ toBinder expr Binder{..} =
 
 toLam ::
     MonadNaming m => (a -> m b) ->
-    Lambda (OldName m) (TM m) am a ->
-    m (Lambda (NewName m) (TM m) am b)
+    Lambda (OldName m) (TM m) o a ->
+    m (Lambda (NewName m) (TM m) o b)
 toLam = lamBinder . toBinder
 
 toTagInfoOf ::
@@ -239,8 +239,8 @@ withTagInfoOf nameType varInfo = tagName (opWithName varInfo nameType)
 
 toTagSelection ::
     MonadNaming m =>
-    TagSelection (OldName m) (TM m) am a ->
-    m (TagSelection (NewName m) (TM m) am a)
+    TagSelection (OldName m) (TM m) o a ->
+    m (TagSelection (NewName m) (TM m) o a)
 toTagSelection t@TagSelection{..} =
     opRun
     <&>
@@ -248,8 +248,8 @@ toTagSelection t@TagSelection{..} =
 
 toTagOf ::
     MonadNaming m =>
-    NameType -> Sugar.Tag (OldName m) (TM m) am ->
-    m (Sugar.Tag (NewName m) (TM m) am)
+    NameType -> Sugar.Tag (OldName m) (TM m) o ->
+    m (Sugar.Tag (NewName m) (TM m) o)
 toTagOf nameType (Sugar.Tag info actions) =
     Sugar.Tag
     <$> toTagInfoOf nameType info
@@ -258,8 +258,8 @@ toTagOf nameType (Sugar.Tag info actions) =
 withTag ::
     MonadNaming m =>
     NameType -> NameGen.VarInfo ->
-    Sugar.Tag (OldName m) (TM m) am ->
-    CPS m (Sugar.Tag (NewName m) (TM m) am)
+    Sugar.Tag (OldName m) (TM m) o ->
+    CPS m (Sugar.Tag (NewName m) (TM m) o)
 withTag nameType varInfo (Sugar.Tag info actions) =
     Sugar.Tag
     <$> withTagInfoOf nameType varInfo info
@@ -267,8 +267,8 @@ withTag nameType varInfo (Sugar.Tag info actions) =
 
 toRelayedArg ::
     MonadNaming m =>
-    RelayedArg (OldName m) (TM m) am ->
-    m (RelayedArg (NewName m) (TM m) am)
+    RelayedArg (OldName m) (TM m) o ->
+    m (RelayedArg (NewName m) (TM m) o)
 toRelayedArg RelayedArg{..} =
     (\_raValue _raActions -> RelayedArg{..})
     <$> toGetVar _raValue
@@ -277,8 +277,8 @@ toRelayedArg RelayedArg{..} =
 toLabeledApply ::
     MonadNaming m =>
     (a -> m b) ->
-    LabeledApply (OldName m) (TM m) am a ->
-    m (LabeledApply (NewName m) (TM m) am b)
+    LabeledApply (OldName m) (TM m) o a ->
+    m (LabeledApply (NewName m) (TM m) o b)
 toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
     <$> toBinderVarRef (Just (funcSignature app)) _aFunc
@@ -289,8 +289,8 @@ toLabeledApply expr app@LabeledApply{..} =
 
 toHole ::
     MonadNaming m =>
-    Hole (TM m) am (Expression (OldName m) (TM m) am ()) ->
-    m (Hole (TM m) am (Expression (NewName m) (TM m) am ()))
+    Hole (TM m) o (Expression (OldName m) (TM m) o ()) ->
+    m (Hole (TM m) o (Expression (NewName m) (TM m) o ()))
 toHole hole =
     opRun
     <&>
@@ -300,8 +300,8 @@ toHole hole =
 toFragment ::
     MonadNaming m =>
     (a -> m b) ->
-    Fragment (OldName m) (TM m) am a ->
-    m (Fragment (NewName m) (TM m) am b)
+    Fragment (OldName m) (TM m) o a ->
+    m (Fragment (NewName m) (TM m) o b)
 toFragment expr Fragment{..} =
     do
         run <- opRun
@@ -315,8 +315,8 @@ toFragment expr Fragment{..} =
 toComposite ::
     MonadNaming m =>
     (a -> m b) ->
-    Composite (OldName m) (TM m) am a ->
-    m (Composite (NewName m) (TM m) am b)
+    Composite (OldName m) (TM m) o a ->
+    m (Composite (NewName m) (TM m) o b)
 toComposite expr Composite{..} =
     (\_cItems _cAddItem -> Composite{..})
     <$> (traverse . ciTag) (toTagOf Tag) _cItems
@@ -326,15 +326,15 @@ toComposite expr Composite{..} =
 toCase ::
     MonadNaming m =>
     (a -> m b) ->
-    Case (OldName m) (TM m) am a ->
-    m (Case (NewName m) (TM m) am b)
+    Case (OldName m) (TM m) o a ->
+    m (Case (NewName m) (TM m) o b)
 toCase expr (Case k c) = Case <$> traverse expr k <*> toComposite expr c
 
 toElseIfContent ::
     MonadNaming m =>
     (a -> m b) ->
-    ElseIfContent (OldName m) (TM m) am a ->
-    m (ElseIfContent (NewName m) (TM m) am b)
+    ElseIfContent (OldName m) (TM m) o a ->
+    m (ElseIfContent (NewName m) (TM m) o b)
 toElseIfContent expr ElseIfContent{..} =
     (\_eiContent _eiNodeActions -> ElseIfContent{..})
     <$> toIfElse expr _eiContent
@@ -343,16 +343,16 @@ toElseIfContent expr ElseIfContent{..} =
 toElse ::
     MonadNaming m =>
     (a -> m b) ->
-    Else (OldName m) (TM m) am a ->
-    m (Else (NewName m) (TM m) am b)
+    Else (OldName m) (TM m) o a ->
+    m (Else (NewName m) (TM m) o b)
 toElse expr (SimpleElse x) = expr x <&> SimpleElse
 toElse expr (ElseIf x) = toElseIfContent expr x <&> ElseIf
 
 toIfElse ::
     MonadNaming m =>
     (a -> m b) ->
-    IfElse (OldName m) (TM m) am a ->
-    m (IfElse (NewName m) (TM m) am b)
+    IfElse (OldName m) (TM m) o a ->
+    m (IfElse (NewName m) (TM m) o b)
 toIfElse expr (IfElse ifThen els_) =
     IfElse
     <$> traverse expr ifThen
@@ -360,8 +360,8 @@ toIfElse expr (IfElse ifThen els_) =
 
 toBody ::
     MonadNaming m => (a -> m b) ->
-    Body (OldName m) (TM m) am a ->
-    m (Body (NewName m) (TM m) am b)
+    Body (OldName m) (TM m) o a ->
+    m (Body (NewName m) (TM m) o b)
 toBody expr = \case
     BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
     BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
@@ -381,7 +381,7 @@ toBody expr = \case
     where
         toTag = toTagOf Tag
 
-funcSignature :: LabeledApply name im am a -> FunctionSignature
+funcSignature :: LabeledApply name i o a -> FunctionSignature
 funcSignature apply =
     FunctionSignature
     { sSpecialArgs = apply ^. aSpecialArgs & void
@@ -389,8 +389,8 @@ funcSignature apply =
     }
 
 toPayload ::
-    MonadNaming m => Payload (OldName m) (TM m) am a ->
-    m (Payload (NewName m) (TM m) am a)
+    MonadNaming m => Payload (OldName m) (TM m) o a ->
+    m (Payload (NewName m) (TM m) o a)
 toPayload Payload{..} =
     do
         _plAnnotation <- toAnnotation _plAnnotation
@@ -399,8 +399,8 @@ toPayload Payload{..} =
 
 toExpression ::
     MonadNaming m =>
-    Expression (OldName m) (TM m) am a ->
-    m (Expression (NewName m) (TM m) am a)
+    Expression (OldName m) (TM m) o a ->
+    m (Expression (NewName m) (TM m) o a)
 toExpression (Expression body pl) =
     Expression
     <$> toBody toExpression body
@@ -408,8 +408,8 @@ toExpression (Expression body pl) =
 
 withParamInfo ::
     MonadNaming m =>
-    NameGen.VarInfo -> ParamInfo (OldName m) (TM m) am ->
-    CPS m (ParamInfo (NewName m) (TM m) am)
+    NameGen.VarInfo -> ParamInfo (OldName m) (TM m) o ->
+    CPS m (ParamInfo (NewName m) (TM m) o)
 withParamInfo varInfo (ParamInfo tag fpActions) =
     ParamInfo
     <$> withTag TaggedVar varInfo tag
@@ -428,16 +428,16 @@ withFuncParam f (FuncParam ann info) =
 
 withBinderParams ::
     MonadNaming m =>
-    BinderParams (OldName m) (TM m) am ->
-    CPS m (BinderParams (NewName m) (TM m) am)
+    BinderParams (OldName m) (TM m) o ->
+    CPS m (BinderParams (NewName m) (TM m) o)
 withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
 toDefExpr ::
     MonadNaming m => (a -> m b) ->
-    DefinitionExpression (OldName m) (TM m) am a ->
-    m (DefinitionExpression (NewName m) (TM m) am b)
+    DefinitionExpression (OldName m) (TM m) o a ->
+    m (DefinitionExpression (NewName m) (TM m) o b)
 toDefExpr f (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
@@ -446,8 +446,8 @@ toDefExpr f (DefinitionExpression typ presMode content) =
 
 toDefinitionBody ::
     MonadNaming m => (a -> m b) ->
-    DefinitionBody (OldName m) (TM m) am a ->
-    m (DefinitionBody (NewName m) (TM m) am b)
+    DefinitionBody (OldName m) (TM m) o a ->
+    m (DefinitionBody (NewName m) (TM m) o b)
 toDefinitionBody _ (DefinitionBodyBuiltin bi) =
     bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
 toDefinitionBody f (DefinitionBodyExpression expr) =
@@ -455,8 +455,8 @@ toDefinitionBody f (DefinitionBodyExpression expr) =
 
 toDef ::
     MonadNaming m => (a -> m b) ->
-    Definition (OldName m) (TM m) am a ->
-    m (Definition (NewName m) (TM m) am b)
+    Definition (OldName m) (TM m) o a ->
+    m (Definition (NewName m) (TM m) o b)
 toDef f Definition{..} =
     do
         -- NOTE: A global def binding is not considered a binder, as
@@ -467,14 +467,14 @@ toDef f Definition{..} =
 
 toPane ::
     MonadNaming m =>
-    Pane (OldName m) (TM m) am a ->
-    m (Pane (NewName m) (TM m) am a)
+    Pane (OldName m) (TM m) o a ->
+    m (Pane (NewName m) (TM m) o a)
 toPane = paneDefinition (toDef toExpression)
 
 toWorkArea ::
     MonadNaming m =>
-    WorkArea (OldName m) (TM m) am a ->
-    m (WorkArea (NewName m) (TM m) am a)
+    WorkArea (OldName m) (TM m) o a ->
+    m (WorkArea (NewName m) (TM m) o a)
 toWorkArea WorkArea { _waPanes, _waRepl } =
     WorkArea
     <$> traverse toPane _waPanes

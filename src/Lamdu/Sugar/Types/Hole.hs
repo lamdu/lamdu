@@ -25,16 +25,16 @@ data HoleResultScore = HoleResultScore
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord)
 
-data HoleResult am resultExpr = HoleResult
+data HoleResult o resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
-    , _holeResultPick :: am ()
+    , _holeResultPick :: o ()
     } deriving (Functor, Foldable, Traversable)
 
-data HoleOption im am resultExpr = HoleOption
+data HoleOption i o resultExpr = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: im resultExpr
+    , _hoSugaredBaseExpr :: i resultExpr
     , -- A group in the hole results based on this option
-      _hoResults :: ListT im (HoleResultScore, im (HoleResult am resultExpr))
+      _hoResults :: ListT i (HoleResultScore, i (HoleResult o resultExpr))
     } deriving Functor
 
 type HoleOption' m = HoleOption m m
@@ -44,16 +44,16 @@ data Literal f
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
 
-type OptionLiteral im am resultExpr =
-    Literal Identity -> im (HoleResultScore, im (HoleResult am resultExpr))
+type OptionLiteral i o resultExpr =
+    Literal Identity -> i (HoleResultScore, i (HoleResult o resultExpr))
 
-data Hole im am resultExpr = Hole
-    { _holeOptions :: im [HoleOption im am resultExpr]
-      -- TODO: Lifter from im to am?
-    , _holeOptionLiteral :: OptionLiteral im am resultExpr
+data Hole i o resultExpr = Hole
+    { _holeOptions :: i [HoleOption i o resultExpr]
+      -- TODO: Lifter from i to o?
+    , _holeOptionLiteral :: OptionLiteral i o resultExpr
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
-      _holeMDelete :: Maybe (am EntityId)
+      _holeMDelete :: Maybe (o EntityId)
     } deriving Functor
 
 Lens.makeLenses ''Hole

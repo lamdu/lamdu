@@ -45,7 +45,7 @@ type T = Transaction
 convertDefIBuiltin ::
     (MonadTransaction n m, Monad f) =>
     Scheme.Scheme -> Definition.FFIName -> DefI f ->
-    m (DefinitionBody InternalName im (T f) (ExpressionU f [EntityId]))
+    m (DefinitionBody InternalName i (T f) (ExpressionU f [EntityId]))
 convertDefIBuiltin scheme name defI =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
     <&> \typeS ->

@@ -229,7 +229,7 @@ convertLam lam exprPl =
 
 useNormalLambda ::
     Set InternalName ->
-    Binder InternalName im0 am0 (Expression InternalName im1 am1 a) -> Bool
+    Binder InternalName i0 o0 (Expression InternalName i1 o1 a) -> Bool
 useNormalLambda paramNames binder
     | Set.size paramNames < 2 = True
     | otherwise =
@@ -239,14 +239,14 @@ useNormalLambda paramNames binder
         , not . allParamsUsed paramNames
         ]
     where
-        forbiddenLightLamSubExprs :: Lens.Traversal' (Body name im am a) ()
+        forbiddenLightLamSubExprs :: Lens.Traversal' (Body name i o a) ()
         forbiddenLightLamSubExprs =
             Lens.failing SugarLens.bodyUnfinished
             (_BodyLam . lamBinder . bParams . _Params . Lens.united)
 
 allParamsUsed ::
     Set InternalName ->
-    Binder InternalName im am (Expression InternalName im1 am1 a) -> Bool
+    Binder InternalName i o (Expression InternalName i1 o1 a) -> Bool
 allParamsUsed paramNames binder =
     Set.null (paramNames `Set.difference` usedParams)
     where

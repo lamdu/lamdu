@@ -36,23 +36,23 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data Group im am = Group
+data Group i o = Group
     { _groupSearchTerms :: [Text]
     , _groupId :: WidgetId.Id
     , _groupResults ::
-        ListT im
+        ListT i
         ( Sugar.HoleResultScore
-        , im (Sugar.HoleResult am (Sugar.Expression (Name am) im am ()))
+        , i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
         )
     }
 Lens.makeLenses ''Group
 
-data Result im am = Result
+data Result i o = Result
     { _rScore :: Sugar.HoleResultScore
     , -- Warning: This transaction should be ran at most once!
       -- Running it more than once will cause inconsistencies.
-      rHoleResult :: im (Sugar.HoleResult am (Sugar.Expression (Name am) im am ()))
-        -- TODO: Unit monad instead of im am for Expression above?
+      rHoleResult :: i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
+        -- TODO: Unit monad instead of i o for Expression above?
     , rId :: WidgetId.Id
     }
 Lens.makeLenses ''Result
@@ -60,21 +60,21 @@ Lens.makeLenses ''Result
 data IsExactMatch = ExactMatch | NotExactMatch
     deriving (Eq, Ord)
 
-data ResultGroup im am = ResultGroup
+data ResultGroup i o = ResultGroup
     { _rgExactMatch :: IsExactMatch -- Move to top of result list
     , _rgPrefixId :: WidgetId.Id
-    , _rgMain :: Result im am
-    , _rgExtra :: [Result im am]
+    , _rgMain :: Result i o
+    , _rgExtra :: [Result i o]
     }
 Lens.makeLenses ''ResultGroup
 
 mResultGroupOf ::
     WidgetId.Id ->
     [ ( Sugar.HoleResultScore
-      , im (Sugar.HoleResult am (Sugar.Expression (Name am) im am ()))
+      , i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
       )
     ] ->
-    Maybe (ResultGroup im am)
+    Maybe (ResultGroup i o)
 mResultGroupOf _ [] = Nothing
 mResultGroupOf prefixId (x:xs) = Just
     ResultGroup
@@ -95,9 +95,9 @@ mResultGroupOf prefixId (x:xs) = Just
             }
 
 makeResultGroup ::
-    Monad im =>
-    SearchMenu.ResultsContext -> Group im am ->
-    im (Maybe (ResultGroup im am))
+    Monad i =>
+    SearchMenu.ResultsContext -> Group i o ->
+    i (Maybe (ResultGroup i o))
 makeResultGroup ctx group =
     group ^. groupResults
     & ListClass.toList
@@ -116,9 +116,9 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
 Lens.makeLenses ''GoodAndBad
 
 collectResults ::
-    Monad im =>
-    Config.Completion -> ListT im (ResultGroup im am) ->
-    im (Menu.OptionList (ResultGroup im am))
+    Monad i =>
+    Config.Completion -> ListT i (ResultGroup i o) ->
+    i (Menu.OptionList (ResultGroup i o))
 collectResults config resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
@@ -250,7 +250,7 @@ unicodeAlts haystack =
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-holeMatches :: Monad im => Text -> [Group im am] -> [Group im am]
+holeMatches :: Monad i => Text -> [Group i o] -> [Group i o]
 holeMatches searchTerm groups =
     groups ^@.. Lens.ifolded
     <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))

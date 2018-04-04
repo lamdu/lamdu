@@ -171,7 +171,7 @@ mkHoleSuggesteds sugarContext mFragment exprPl =
     <&> mkHoleOption sugarContext mFragment exprPl
 
 addSuggestedOptions ::
-    [HoleOption im am a] -> [HoleOption im am a] -> [HoleOption im am a]
+    [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options

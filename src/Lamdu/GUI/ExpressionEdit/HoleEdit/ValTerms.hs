@@ -54,7 +54,7 @@ formatLiteral (Sugar.LiteralNum i) = formatProp i
 formatLiteral (Sugar.LiteralText i) = formatProp i
 formatLiteral (Sugar.LiteralBytes i) = formatProp i
 
-bodyShape :: Sugar.Body (Name am) im am expr -> [Text]
+bodyShape :: Sugar.Body (Name o) i o expr -> [Text]
 bodyShape = \case
     Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     Sugar.BodySimpleApply {} -> ["Apply"]
@@ -131,7 +131,7 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Sugar.Expression name im am a -> Text
+    SearchMenu.ResultsContext -> Sugar.Expression name i o a -> Text
 getSearchStringRemainder ctx holeResultConverted
     | isA Sugar._BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
@@ -150,11 +150,11 @@ getSearchStringRemainder ctx holeResultConverted
 
 injectMVal ::
     Lens.Traversal'
-    (Sugar.Expression name im am a)
-    (Maybe (Sugar.Expression name im am a))
+    (Sugar.Expression name i o a)
+    (Maybe (Sugar.Expression name i o a))
 injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
 
-verifyInjectSuffix :: Text -> Sugar.Expression name im am a -> Bool
+verifyInjectSuffix :: Text -> Sugar.Expression name i o a -> Bool
 verifyInjectSuffix searchTerm val =
     case suffix of
     Just ':' | Lens.has (injectMVal . Lens._Nothing) val -> False

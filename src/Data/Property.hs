@@ -49,12 +49,12 @@ composeLens lens (Property val setter) =
 
 -- MkProperty:
 
-newtype MkProperty im am a = MkProperty { _mkProperty :: im (Property am a) }
+newtype MkProperty i o a = MkProperty { _mkProperty :: i (Property o a) }
 Lens.makeLenses ''MkProperty
 
 type MkProperty' m = MkProperty m m
 
-getP :: Functor im => MkProperty im am a -> im a
+getP :: Functor i => MkProperty i o a -> i a
 getP = fmap value . (^. mkProperty)
 
 setP :: Monad m => MkProperty m m a -> a -> m ()

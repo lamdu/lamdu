@@ -77,7 +77,7 @@ newtype BinderParamScopeId = BinderParamScopeId
     { _bParamScopeId :: ScopeId
     } deriving (Eq, Ord, Binary)
 
-type GuiAnchors im am = Gui (MkProperty im am)
+type GuiAnchors i o = Gui (MkProperty i o)
 type CodeAnchors m = Code (MkProperty' (T m)) m
 type RevisionProps m = Revision (MkProperty' (T m)) m
 

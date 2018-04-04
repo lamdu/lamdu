@@ -32,10 +32,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 eventMapAddFirstParam ::
-    (MonadReader env m, Applicative am, HasConfig env) =>
+    (MonadReader env m, Applicative o, HasConfig env) =>
     Widget.Id ->
-    Sugar.AddFirstParam name im am ->
-    m (EventMap (am GuiState.Update))
+    Sugar.AddFirstParam name i o ->
+    m (EventMap (o GuiState.Update))
 eventMapAddFirstParam binderId addFirst =
     Lens.view (Config.config . Config.addNextParamKeys)
     <&>
@@ -50,9 +50,9 @@ eventMapAddFirstParam binderId addFirst =
             Sugar.AddInitialParam x -> (x <&> enterParam, "Add parameter")
 
 eventMapAddNextParam ::
-    Applicative am =>
-    Config -> Widget.Id -> Sugar.AddNextParam name im am ->
-    EventMap (am GuiState.Update)
+    Applicative o =>
+    Config -> Widget.Id -> Sugar.AddNextParam name i o ->
+    EventMap (o GuiState.Update)
 eventMapAddNextParam conf myId addNext =
     E.keysEventMapMovesCursor (conf ^. Config.addNextParamKeys)
     (E.Doc ["Edit", doc]) (pure dst)
@@ -76,12 +76,12 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
     & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
-data Info im am = Info
-    { iNameEdit :: WithTextPos (Widget (am GuiState.Update))
-    , iDel :: am ()
-    , iAddNext :: Maybe (Sugar.AddNextParam (Name am) im am)
-    , iMOrderBefore :: Maybe (am ())
-    , iMOrderAfter :: Maybe (am ())
+data Info i o = Info
+    { iNameEdit :: WithTextPos (Widget (o GuiState.Update))
+    , iDel :: o ()
+    , iAddNext :: Maybe (Sugar.AddNextParam (Name o) i o)
+    , iMOrderBefore :: Maybe (o ())
+    , iMOrderAfter :: Maybe (o ())
     , iId :: Widget.Id
     }
 
@@ -95,11 +95,11 @@ mkParamPickResult tagInstance _ =
 
 -- exported for use in definition sugaring.
 make ::
-    (Monad im, Monad am) =>
+    (Monad i, Monad o) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name am) (Info im am) ->
-    ExprGuiM im am [ExpressionGui am]
+    Sugar.FuncParam (Name o) (Info i o) ->
+    ExprGuiM i o [ExpressionGui o]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view Config.config

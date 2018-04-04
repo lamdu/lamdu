@@ -21,15 +21,15 @@ import           Lamdu.Prelude
 
 data BinderMode = NormalBinder | LightLambda
 
-data NameRef name am = NameRef
+data NameRef name o = NameRef
     { _nrName :: name
-    , _nrGotoDefinition :: am EntityId
+    , _nrGotoDefinition :: o EntityId
     }
-instance Show name => Show (NameRef name am) where
+instance Show name => Show (NameRef name o) where
     show (NameRef name _) = show name
 
-data ParamRef name am = ParamRef
-    { _pNameRef :: NameRef name am
+data ParamRef name o = ParamRef
+    { _pNameRef :: NameRef name o
     , _pBinderMode :: BinderMode
     }
 
@@ -42,35 +42,35 @@ instance Show name => Show (DefinitionOutdatedType name a) where
     show (DefinitionOutdatedType usedType newType _) =
         "(Used @type: " ++ show usedType ++ " now type: " ++ show newType ++ ")"
 
-data DefinitionForm name am =
-    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType name (am EntityId))
+data DefinitionForm name o =
+    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType name (o EntityId))
     deriving Show
 
-data BinderVarForm name am = GetDefinition (DefinitionForm name am) | GetLet deriving Show
+data BinderVarForm name o = GetDefinition (DefinitionForm name o) | GetLet deriving Show
 
-data BinderVarInline am
-    = InlineVar (am EntityId)
+data BinderVarInline o
+    = InlineVar (o EntityId)
     | CannotInlineDueToUses [EntityId]
     | CannotInline
 
-data BinderVarRef name am = BinderVarRef
-    { _bvNameRef :: NameRef name am
-    , _bvForm :: BinderVarForm name am
+data BinderVarRef name o = BinderVarRef
+    { _bvNameRef :: NameRef name o
+    , _bvForm :: BinderVarForm name o
     , _bvVar :: V.Var
     , -- Just means it is stored and inlinable:
-      _bvInline :: BinderVarInline am
+      _bvInline :: BinderVarInline o
     }
-instance Show name => Show (BinderVarRef name am) where
+instance Show name => Show (BinderVarRef name o) where
     show (BinderVarRef nameRef form _ _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
 
 newtype ParamsRecordVarRef name = ParamsRecordVarRef
     { _prvFieldNames :: [name]
     } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-data GetVar name am
-    = GetParam (ParamRef name am)
+data GetVar name o
+    = GetParam (ParamRef name o)
     | GetParamsRecord (ParamsRecordVarRef name)
-    | GetBinder (BinderVarRef name am)
+    | GetBinder (BinderVarRef name o)
 
 Lens.makeLenses ''BinderVarRef
 Lens.makeLenses ''DefinitionOutdatedType

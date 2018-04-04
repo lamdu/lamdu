@@ -53,7 +53,7 @@ import           Lamdu.Prelude
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Semigroup, Monoid)
 
-data Askable im am = Askable
+data Askable i o = Askable
     { _aState :: GUIState
     , _aTextEditStyle :: TextEdit.Style
     , _aStdSpacing :: Vector2 Double
@@ -61,33 +61,33 @@ data Askable im am = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr im am -> ExprGuiM im am (ExpressionGui am)
-    , _aGuiAnchors :: Anchors.GuiAnchors im am
+    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
+    , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
-    , _aIam :: forall x. im x -> am x
+    , _aIam :: forall x. i x -> o x
     }
 
-newtype ExprGuiM im (am :: * -> *) a =
-    ExprGuiM (ReaderT (Askable im am) im a)
-    deriving (Functor, Applicative, Monad, MonadReader (Askable im am))
+newtype ExprGuiM i (o :: * -> *) a =
+    ExprGuiM (ReaderT (Askable i o) i a)
+    deriving (Functor, Applicative, Monad, MonadReader (Askable i o))
 
 -- TODO: Remove this:
 type ExprGuiM' m = ExprGuiM m m
 
 Lens.makeLenses ''Askable
 
-instance GuiState.HasCursor (Askable im am)
-instance GuiState.HasState (Askable im am) where state = aState
-instance TextView.HasStyle (Askable im am) where style = aTextEditStyle . TextView.style
-instance TextEdit.HasStyle (Askable im am) where style = aTextEditStyle
-instance Spacer.HasStdSpacing (Askable im am) where stdSpacing = aStdSpacing
-instance Element.HasAnimIdPrefix (Askable im am) where animIdPrefix = aAnimIdPrefix
-instance Config.HasConfig (Askable im am) where config = aConfig
-instance HasTheme (Askable im am) where theme = aTheme
-instance ResponsiveExpr.HasStyle (Askable im am) where style = aTheme . ResponsiveExpr.style
-instance Menu.HasConfig (Askable im am) where
+instance GuiState.HasCursor (Askable i o)
+instance GuiState.HasState (Askable i o) where state = aState
+instance TextView.HasStyle (Askable i o) where style = aTextEditStyle . TextView.style
+instance TextEdit.HasStyle (Askable i o) where style = aTextEditStyle
+instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
+instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix
+instance Config.HasConfig (Askable i o) where config = aConfig
+instance HasTheme (Askable i o) where theme = aTheme
+instance ResponsiveExpr.HasStyle (Askable i o) where style = aTheme . ResponsiveExpr.style
+instance Menu.HasConfig (Askable i o) where
     config f askable =
         f Menu.Config
         { Menu._configKeys = askable ^. aConfig . Config.menu
@@ -98,20 +98,20 @@ instance Menu.HasConfig (Askable im am) where
         askable
         & aTheme . Theme.menu .~ menuConfig ^. Menu.configStyle
         & aConfig . Config.menu .~ menuConfig ^. Menu.configKeys
-instance Hover.HasStyle (Askable im am) where style = aTheme . Hover.style
-instance HasStyle (Askable im am) where style = aStyle
-instance HasSettings (Askable im am) where settings = aSettings
+instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
+instance HasStyle (Askable i o) where style = aStyle
+instance HasSettings (Askable i o) where settings = aSettings
 
-im :: Monad im => im a -> ExprGuiM im am a
+im :: Monad i => i a -> ExprGuiM i o a
 im = ExprGuiM . lift
 
-iam :: Monad im => ExprGuiM im am (im a -> am a)
+iam :: Monad i => ExprGuiM i o (i a -> o a)
 iam = Lens.view aIam
 
-readGuiAnchors :: MonadReader (Askable im am) m => m (Anchors.GuiAnchors im am)
+readGuiAnchors :: MonadReader (Askable i o) m => m (Anchors.GuiAnchors i o)
 readGuiAnchors = Lens.view aGuiAnchors
 
-mkPrejumpPosSaver :: (Monad im, Monad am) => ExprGuiM im am (am ())
+mkPrejumpPosSaver :: (Monad i, Monad o) => ExprGuiM i o (o ())
 mkPrejumpPosSaver =
     do
         preJumpsMkProp <- readGuiAnchors <&> Anchors.preJumps
@@ -119,10 +119,10 @@ mkPrejumpPosSaver =
         cursor <- Lens.view GuiState.cursor
         Property.pureModify preJumpsProp ((cursor:) . take 19) & pure
 
-resetDepth :: MonadReader (Askable im am) m => Int -> m r -> m r
+resetDepth :: MonadReader (Askable i o) m => Int -> m r -> m r
 resetDepth depth = Reader.local (aDepthLeft .~ depth)
 
-advanceDepth :: MonadReader (Askable im am) m => (WithTextPos View -> m r) -> m r -> m r
+advanceDepth :: MonadReader (Askable i o) m => (WithTextPos View -> m r) -> m r -> m r
 advanceDepth f action =
     do
         depth <- Lens.view aDepthLeft
@@ -132,27 +132,27 @@ advanceDepth f action =
     where
         mkErrorWidget = TextView.makeLabel "..."
 
-readMScopeId :: MonadReader (Askable im am) m => m (CurAndPrev (Maybe ScopeId))
+readMScopeId :: MonadReader (Askable i o) m => m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId
 
 withLocalMScopeId ::
-    MonadReader (Askable im am) m => CurAndPrev (Maybe ScopeId) -> m a -> m a
+    MonadReader (Askable i o) m => CurAndPrev (Maybe ScopeId) -> m a -> m a
 withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
 
-instance (Monad im, Semigroup a) => Semigroup (ExprGuiM im am a) where
+instance (Monad i, Semigroup a) => Semigroup (ExprGuiM i o a) where
     (<>) = liftA2 (<>)
 
-instance (Monad im, Monoid a) => Monoid (ExprGuiM im am a) where
+instance (Monad i, Monoid a) => Monoid (ExprGuiM i o a) where
     mempty = pure mempty
     mappend = liftA2 mappend
 
-instance MonadTransaction n im => MonadTransaction n (ExprGuiM im am) where
+instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
     transaction = im . transaction
 
 makeSubexpression ::
-    Monad im =>
-    Sugar.Expression (Name am) im am ExprGui.Payload ->
-    ExprGuiM im am (Responsive.Responsive (am GuiState.Update))
+    Monad i =>
+    Sugar.Expression (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (Responsive.Responsive (o GuiState.Update))
 makeSubexpression expr =
     do
         maker <- Lens.view aMakeSubexpression
@@ -167,9 +167,9 @@ run ::
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr im am -> ExprGuiM im am (ExpressionGui am)) ->
-    Anchors.GuiAnchors im am ->
-    env -> (forall x. im x -> am x) -> ExprGuiM im am a -> im a
+    (ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)) ->
+    Anchors.GuiAnchors i o ->
+    env -> (forall x. i x -> o x) -> ExprGuiM i o a -> i a
 run makeSubexpr theGuiAnchors env liftIam (ExprGuiM action) =
     runReaderT action
     Askable

@@ -35,8 +35,8 @@ type MinOpPrec = Int
 -- Rest of "lines" get 0/0 (unambiguous) override
 binderBodyFirstLine ::
     Maybe MinOpPrec -> Precedence (Maybe Int) ->
-    BinderBody name im am (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
-    BinderBody name im am a
+    BinderBody name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    BinderBody name i o a
 binderBodyFirstLine minOpPrecOverride override =
     bbContent %~ f
     where
@@ -54,8 +54,8 @@ mkUnambiguous ::
 mkUnambiguous cons x = (NeverParen, cons (x ?? Just 0 ?? unambiguous))
 
 precedenceOfIfElse ::
-    IfElse name im am (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
-    (Classifier, IfElse name im am a)
+    IfElse name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    (Classifier, IfElse name i o a)
 precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
     ( ParenIf Never (IfGreater 1)
     , IfElse
@@ -72,8 +72,8 @@ binderName x = x ^. bvNameRef . nrName
 
 precedenceOfLabeledApply ::
     HasPrecedence name =>
-    LabeledApply name im am (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
-    (Classifier, LabeledApply name im am a)
+    LabeledApply name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    (Classifier, LabeledApply name i o a)
 precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
     case specialArgs of
     Infix l r ->
@@ -101,7 +101,7 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
 
 precedenceOfPrefixApply ::
     Apply (Maybe MinOpPrec -> Precedence (Maybe Int) -> expr) ->
-    (Classifier, Body name im am expr)
+    (Classifier, Body name i o expr)
 precedenceOfPrefixApply (V.Apply f arg) =
     ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
     , V.Apply
@@ -112,8 +112,8 @@ precedenceOfPrefixApply (V.Apply f arg) =
 
 precedenceOf ::
     HasPrecedence name =>
-    Body name im am (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
-    (Classifier, Body name im am a)
+    Body name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    (Classifier, Body name i o a)
 precedenceOf =
     \case
     BodyPlaceHolder        -> (NeverParen, BodyPlaceHolder)
@@ -150,19 +150,19 @@ precedenceOf =
 
 add ::
     HasPrecedence name =>
-    Expression name im am a -> Expression name im am (MinOpPrec, NeedsParens, a)
+    Expression name i o a -> Expression name i o (MinOpPrec, NeedsParens, a)
 add = addWith 0
 
 addWith ::
     HasPrecedence name =>
-    Int -> Expression name im am a ->
-    Expression name im am (MinOpPrec, NeedsParens, a)
+    Int -> Expression name i o a ->
+    Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 loop ::
     HasPrecedence name =>
-    MinOpPrec -> Precedence Int -> Expression name im am a ->
-    Expression name im am (MinOpPrec, NeedsParens, a)
+    MinOpPrec -> Precedence Int -> Expression name i o a ->
+    Expression name i o (MinOpPrec, NeedsParens, a)
 loop minOpPrec parentPrec (Expression body pl) =
     Expression finalBody (pl & plData %~ (,,) minOpPrec needsParens)
     where

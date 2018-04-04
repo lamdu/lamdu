@@ -67,7 +67,7 @@ fdConfig config = FocusDelegator.Config
 
 makeRenderedResult ::
     Monad m =>
-    Sugar.Payload name im am ExprGui.Payload -> SearchMenu.ResultsContext ->
+    Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result (T m) (T m) ->
     ExprGuiM' (T m) (Menu.RenderedOption (T m))
 makeRenderedResult pl ctx result =
@@ -102,7 +102,7 @@ postProcessSugar minOpPrec expr =
 
 makeResultOption ::
     Monad m =>
-    Sugar.Payload name im am ExprGui.Payload -> SearchMenu.ResultsContext ->
+    Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     ResultGroup (T m) (T m) -> Menu.Option (ExprGuiM' (T m)) (T m)
 makeResultOption pl ctx results =
     Menu.Option
@@ -128,7 +128,7 @@ makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env
     ) =>
-    Sugar.Payload (Name g) im am a0 -> m View
+    Sugar.Payload (Name g) i o a0 -> m View
 makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
     <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
@@ -148,12 +148,12 @@ filterSearchTermEvents allowedTerms searchTerm
 
 makeSearchTerm ::
     ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
-    , Applicative am
+    , Applicative o
     ) =>
     Widget.Id ->
     (Text -> Bool) ->
-    Maybe (Widget.PreEvent (am Menu.PickResult)) ->
-    m (WithTextPos (Widget (am GuiState.Update)))
+    Maybe (Widget.PreEvent (o Menu.PickResult)) ->
+    m (WithTextPos (Widget (o GuiState.Update)))
 makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
     do
         isActive <- GuiState.isSubCursor ?? searchMenuId

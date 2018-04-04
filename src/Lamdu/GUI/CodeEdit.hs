@@ -85,24 +85,24 @@ toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) 
 
 traverseAddNearestHoles ::
     Traversable t =>
-    t (Sugar.Expression name im am a) ->
-    t (Sugar.Expression name im am (a, NearestHoles))
+    t (Sugar.Expression name i o a) ->
+    t (Sugar.Expression name i o (a, NearestHoles))
 traverseAddNearestHoles binder =
     binder
     <&> Lens.mapped %~ (,)
     & NearestHoles.add traverse
 
 exprAddNearestHoles ::
-    Sugar.Expression name im am a ->
-    Sugar.Expression name im am (a, NearestHoles)
+    Sugar.Expression name i o a ->
+    Sugar.Expression name i o (a, NearestHoles)
 exprAddNearestHoles expr =
     Identity expr
     & traverseAddNearestHoles
     & runIdentity
 
 postProcessExpr ::
-    Sugar.Expression (Name n) im am ([Sugar.EntityId], NearestHoles) ->
-    Sugar.Expression (Name n) im am ExprGui.Payload
+    Sugar.Expression (Name n) i o ([Sugar.EntityId], NearestHoles) ->
+    Sugar.Expression (Name n) i o ExprGui.Payload
 postProcessExpr =
     fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 

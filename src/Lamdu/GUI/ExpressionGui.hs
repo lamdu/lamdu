@@ -73,15 +73,15 @@ data Payload = Payload
     }
 Lens.makeLenses ''Payload
 
-isHoleResult :: Sugar.Payload name im am Payload -> Bool
+isHoleResult :: Sugar.Payload name i o Payload -> Bool
 isHoleResult =
     Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
-type ExpressionN im am a = Sugar.Expression (Name am) im am a
-type SugarExpr im am = ExpressionN im am Payload
+type ExpressionN i o a = Sugar.Expression (Name o) i o a
+type SugarExpr i o = ExpressionN i o Payload
 type SugarExpr' m = SugarExpr m m
 
-nextHolesBefore :: Sugar.Expression name im am Payload -> NearestHoles
+nextHolesBefore :: Sugar.Expression name i o Payload -> NearestHoles
 nextHolesBefore val =
     node ^. Sugar.rPayload . Sugar.plData . plNearestHoles
     & if Lens.has (Sugar.rBody . SugarLens.bodyUnfinished) node

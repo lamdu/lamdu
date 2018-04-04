@@ -42,8 +42,8 @@ textView ::
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
 makeField ::
-    (Monad im, Monad am) =>
-    Sugar.TagInfo (Name f) -> ResVal (Name g) -> ExprGuiM im am [Aligned View]
+    (Monad i, Monad o) =>
+    Sugar.TagInfo (Name f) -> ResVal (Name g) -> ExprGuiM i o [Aligned View]
 makeField tag val =
     do
         tagView <- makeTagView tag
@@ -76,8 +76,8 @@ tableCutoff :: Int
 tableCutoff = 6
 
 makeTable ::
-    (Monad im, Monad am) =>
-    Sugar.ResTable (Name f) (ResVal (Name g)) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    Sugar.ResTable (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
         header <- mapM makeTagView headers
@@ -95,8 +95,8 @@ makeTable (Sugar.ResTable headers valss) =
         Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
 
 makeArray ::
-    (Monad im, Monad am) =>
-    [ResVal (Name f)] -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    [ResVal (Name f)] -> ExprGuiM i o (WithTextPos View)
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
@@ -115,8 +115,8 @@ makeArray items =
             & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
 
 makeTree ::
-    (Monad im, Monad am) =>
-    Sugar.ResTree (ResVal (Name f)) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    Sugar.ResTree (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
@@ -135,15 +135,15 @@ makeTree (Sugar.ResTree root subtrees) =
 
 
 makeRecord ::
-    (Monad im, Monad am) =>
-    Sugar.ResRecord (Name f) (ResVal (Name g)) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    Sugar.ResRecord (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeRecord (Sugar.ResRecord fields) =
     traverse (uncurry makeField) fields <&> GridView.make <&> snd
     <&> Align.WithTextPos 0
 
 makeStream ::
-    (Monad im, Monad am) =>
-    Sugar.ResStream (ResVal (Name f)) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    Sugar.ResStream (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
 makeStream (Sugar.ResStream head_) =
     do
         o <- TextView.makeLabel "["
@@ -156,8 +156,8 @@ makeStream (Sugar.ResStream head_) =
         hGlueAlign align l r = (Aligned align l /|/ Aligned align r) ^. Align.value
 
 makeInject ::
-    (Monad im, Monad am) =>
-    Sugar.ResInject (Name f) (ResVal (Name g)) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    Sugar.ResInject (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     do
         tagView <- makeTagView tag
@@ -191,7 +191,7 @@ fixSize view =
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
 makeInner ::
-    (Monad im, Monad am) => ResVal (Name f) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) => ResVal (Name f) -> ExprGuiM i o (WithTextPos View)
 makeInner (Sugar.ResVal entityId body) =
     case body of
     Sugar.RError err -> makeError err
@@ -240,8 +240,8 @@ toText val =
                 (start, rest) = Text.splitAt 100 ln
 
 make ::
-    (Monad im, Monad am) =>
-    ResVal (Name f) -> ExprGuiM im am (WithTextPos View)
+    (Monad i, Monad o) =>
+    ResVal (Name f) -> ExprGuiM i o (WithTextPos View)
 make v =
     do
         maxEvalViewSize <- Lens.view (Theme.theme . Theme.maxEvalViewSize)

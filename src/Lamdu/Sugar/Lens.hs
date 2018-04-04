@@ -19,10 +19,10 @@ import           Lamdu.Prelude
 
 subExprPayloads ::
     Lens.IndexedTraversal
-    (Expression name im am ())
-    (Expression name im am a)
-    (Expression name im am b)
-    (Payload name im am a) (Payload name im am b)
+    (Expression name i o ())
+    (Expression name i o a)
+    (Expression name i o b)
+    (Payload name i o a) (Payload name i o b)
 subExprPayloads f val@(Expression body pl) =
     Expression
     <$> (Lens.traversed .> subExprPayloads) f body
@@ -30,10 +30,10 @@ subExprPayloads f val@(Expression body pl) =
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal
-    [Expression name im am ()]
-    (Expression name im am a)
-    (Expression name im am b)
-    (Payload name im am a) (Payload name im am b)
+    [Expression name i o ()]
+    (Expression name i o a)
+    (Expression name i o b)
+    (Payload name i o a) (Payload name i o b)
 payloadsIndexedByPath f =
     go []
     where
@@ -45,11 +45,11 @@ payloadsIndexedByPath f =
                 newPath = void val : path
 
 payloadsOf ::
-    Lens.Fold (Body name im am (Expression name im am ())) a ->
+    Lens.Fold (Body name i o (Expression name i o ())) a ->
     Lens.IndexedTraversal'
-    (Expression name im am ())
-    (Expression name im am b)
-    (Payload name im am b)
+    (Expression name i o ())
+    (Expression name i o b)
+    (Payload name i o b)
 payloadsOf body =
     subExprPayloads . Lens.ifiltered predicate
     where
@@ -59,7 +59,7 @@ binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
-bodyUnfinished :: Lens.Traversal' (Body name im am a) ()
+bodyUnfinished :: Lens.Traversal' (Body name i o a) ()
 bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
@@ -68,17 +68,17 @@ bodyUnfinished =
 
 unfinishedExprPayloads ::
     Lens.IndexedTraversal'
-    (Expression name im am ())
-    (Expression name im am a)
-    (Payload name im am a)
+    (Expression name i o ())
+    (Expression name i o a)
+    (Payload name i o a)
 unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 subExprsOf ::
-    Lens.Traversal' (Body name im am (Expression name im am ())) b ->
+    Lens.Traversal' (Body name i o (Expression name i o ())) b ->
     Lens.IndexedTraversal'
-    [Expression name im am ()]
-    (Expression name im am a)
-    (Payload name im am a)
+    [Expression name i o ()]
+    (Expression name i o a)
+    (Payload name i o a)
 subExprsOf f =
     payloadsIndexedByPath . Lens.ifiltered predicate
     where
@@ -87,12 +87,12 @@ subExprsOf f =
 
 fragmentExprs ::
     Lens.IndexedTraversal'
-    [Expression name im am ()]
-    (Expression name im am a)
-    (Payload name im am a)
+    [Expression name i o ()]
+    (Expression name i o a)
+    (Payload name i o a)
 fragmentExprs = subExprsOf _BodyFragment
 
-defBodySchemes :: Lens.Traversal' (DefinitionBody name im am expr) (Scheme name)
+defBodySchemes :: Lens.Traversal' (DefinitionBody name i o expr) (Scheme name)
 defBodySchemes f (DefinitionBodyBuiltin b) =
     b & biType %%~ f
     <&> DefinitionBodyBuiltin
@@ -100,27 +100,27 @@ defBodySchemes f (DefinitionBodyExpression de) =
     de & deType %%~ f
     <&> DefinitionBodyExpression
 
-defSchemes :: Lens.Traversal' (Definition name im am expr) (Scheme name)
+defSchemes :: Lens.Traversal' (Definition name i o expr) (Scheme name)
 defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::
-    Lens.Traversal' (BinderParams name im am) (FuncParamActions name im am)
+    Lens.Traversal' (BinderParams name i o) (FuncParamActions name i o)
 binderFuncParamActions _ BinderWithoutParams = pure BinderWithoutParams
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderContentExpr :: Lens' (BinderContent name im am a) a
+binderContentExpr :: Lens' (BinderContent name i o a) a
 binderContentExpr f (BinderLet l) = l & lBody . bbContent . binderContentExpr %%~ f <&> BinderLet
 binderContentExpr f (BinderExpr e) = f e <&> BinderExpr
 
 binderContentEntityId ::
-    Lens' (BinderContent name im am (Expression name im am a)) EntityId
+    Lens' (BinderContent name i o (Expression name i o a)) EntityId
 binderContentEntityId f (BinderExpr e) =
     e & rPayload . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
-leftMostLeaf :: Expression name im am a -> Expression name im am a
+leftMostLeaf :: Expression name i o a -> Expression name i o a
 leftMostLeaf val =
     case val ^.. rBody . Lens.traversed of
     [] -> val
@@ -128,15 +128,15 @@ leftMostLeaf val =
 
 workAreaExpressions ::
     Lens.Traversal
-    (WorkArea name im am a) (WorkArea name im am b)
-    (Expression name im am a) (Expression name im am b)
+    (WorkArea name i o a) (WorkArea name i o b)
+    (Expression name i o a) (Expression name i o b)
 workAreaExpressions f (WorkArea panes repl) =
     WorkArea
     <$> (traverse . paneDefinition . traverse) f panes
     <*> f repl
 
 holeOptionTransformExprs ::
-    Monad im => (a -> im b) -> HoleOption im am a -> HoleOption im am b
+    Monad i => (a -> i b) -> HoleOption i o a -> HoleOption i o b
 holeOptionTransformExprs onExpr option =
     option
     { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr
@@ -144,7 +144,7 @@ holeOptionTransformExprs onExpr option =
     }
 
 holeTransformExprs ::
-    Monad im => (a -> im b) -> Hole im am a -> Hole im am b
+    Monad i => (a -> i b) -> Hole i o a -> Hole i o b
 holeTransformExprs onExpr hole =
     hole
     { _holeOptions = hole ^. holeOptions <&> traverse %~ holeOptionTransformExprs onExpr

@@ -28,12 +28,12 @@ forceShowTypeOrEval =
     & T.showInEvalMode .~ T.EvalModeShowEval
     & T.showInTypeMode .~ True
 
-topLevelAnn :: Lens' (Expression name im am (T.ShowAnnotation, a)) T.ShowAnnotation
+topLevelAnn :: Lens' (Expression name i o (T.ShowAnnotation, a)) T.ShowAnnotation
 topLevelAnn = rPayload . plData . _1
 
 markAnnotationsToDisplay ::
-    Expression name im am a ->
-    Expression name im am (T.ShowAnnotation, a)
+    Expression name i o a ->
+    Expression name i o (T.ShowAnnotation, a)
 markAnnotationsToDisplay (Expression oldBody pl) =
     case newBody of
     BodyPlaceHolder -> set T.neverShowAnnotations

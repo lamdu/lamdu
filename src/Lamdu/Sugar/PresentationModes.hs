@@ -18,8 +18,8 @@ type T = Transaction
 
 addToLabeledApply ::
     Monad m =>
-    Sugar.LabeledApply InternalName im am (Sugar.Expression InternalName im am a) ->
-    T m (Sugar.LabeledApply InternalName im am (Sugar.Expression InternalName im am a))
+    Sugar.LabeledApply InternalName i o (Sugar.Expression InternalName i o a) ->
+    T m (Sugar.LabeledApply InternalName i o (Sugar.Expression InternalName i o a))
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->

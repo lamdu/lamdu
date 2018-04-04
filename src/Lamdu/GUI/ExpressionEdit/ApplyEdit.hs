@@ -90,7 +90,7 @@ makeInfixFuncName nearestHoles funcVar myId =
             | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
             | otherwise = addInfixMarker myId
 
-isBoxed :: Sugar.LabeledApply name im am a -> Bool
+isBoxed :: Sugar.LabeledApply name i o a -> Bool
 isBoxed apply =
     Lens.has (Sugar.aAnnotatedArgs . traverse) apply
     || Lens.has (Sugar.aRelayedArgs . traverse) apply

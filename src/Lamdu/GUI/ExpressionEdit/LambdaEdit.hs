@@ -97,7 +97,7 @@ mkLightLambda ::
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
     , HasConfig env
     ) =>
-    Sugar.BinderParams a im am -> Widget.Id ->
+    Sugar.BinderParams a i o -> Widget.Id ->
     f
     (Maybe (ExpressionGui (T n)) -> Maybe (Widget (T n GuiState.Update)) ->
      [ExpressionGui (T n)])
