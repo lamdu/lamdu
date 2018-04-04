@@ -33,7 +33,7 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui, IM, AM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
@@ -73,9 +73,9 @@ addFieldWithSearchTermEventMap myId =
             | otherwise = Nothing
 
 makeUnit ::
-    (MonadExprGui m, Applicative am) =>
+    (Monad im, Monad am) =>
     Sugar.Payload (Name am) im am ExprGui.Payload ->
-    m (Responsive (am GuiState.Update))
+    ExprGuiM im am (Responsive (am GuiState.Update))
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
@@ -91,10 +91,10 @@ makeUnit pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    MonadExprGui m =>
-    Sugar.Composite (Name (AM m)) (IM m) (AM m) (ExprGui.SugarExpr (IM m) (AM m)) ->
-    Sugar.Payload (Name (AM m)) (IM m) (AM m) ExprGui.Payload ->
-    m (ExpressionGui (AM m))
+    (Monad im, Monad am) =>
+    Sugar.Composite (Name am) im am (ExprGui.SugarExpr im am) ->
+    Sugar.Payload (Name am) im am ExprGui.Payload ->
+    ExprGuiM im am (ExpressionGui am)
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -168,10 +168,10 @@ addPostTags items =
         lastIdx = length items - 1
 
 makeAddFieldRow ::
-    MonadExprGui m =>
-    Sugar.TagSelection (Name (AM m)) (IM m) (AM m) Sugar.EntityId ->
-    Sugar.Payload name (IM m) (AM m) ExprGui.Payload ->
-    m (Responsive.TaggedItem (AM m GuiState.Update))
+    (Monad im, Monad am) =>
+    Sugar.TagSelection (Name am) im am Sugar.EntityId ->
+    Sugar.Payload name im am ExprGui.Payload ->
+    ExprGuiM im am (Responsive.TaggedItem (am GuiState.Update))
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
@@ -191,9 +191,9 @@ makeAddFieldRow addField pl =
             }
 
 makeFieldRow ::
-    MonadExprGui m =>
-    Sugar.CompositeItem (Name (AM m)) (IM m) (AM m) (ExprGui.SugarExpr (IM m) (AM m)) ->
-    m (Responsive.TaggedItem ((AM m) GuiState.Update))
+    (Monad im, Monad am) =>
+    Sugar.CompositeItem (Name am) im am (ExprGui.SugarExpr im am) ->
+    ExprGuiM im am (Responsive.TaggedItem (am GuiState.Update))
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -215,9 +215,9 @@ separationBar theme width animId =
     & Element.scale (Vector2 width 10)
 
 makeOpenRecord ::
-    MonadExprGui m =>
-    Sugar.OpenCompositeActions (AM m) -> ExprGui.SugarExpr (IM m) (AM m) ->
-    ExpressionGui (AM m) -> m (ExpressionGui (AM m))
+    (Monad im, Monad am) =>
+    Sugar.OpenCompositeActions am -> ExprGui.SugarExpr im am ->
+    ExpressionGui am -> ExprGuiM im am (ExpressionGui am)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view Theme.theme

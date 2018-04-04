@@ -44,7 +44,7 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui, IM, AM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
@@ -172,11 +172,14 @@ fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
-    MonadExprGui m =>
-    Sugar.TagSelection (Name (AM m)) (IM m) (AM m) a ->
+    ( Monad im, Monad am, MonadReader env m
+    , GuiState.HasCursor env, HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    Sugar.TagSelection (Name am) im am a ->
     (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
-    m (Menu.OptionList (Menu.Option m (AM m)))
+    ExprGuiM im am (Menu.OptionList (Menu.Option m am))
 makeOptions tagSelection mkPickResult ctx
     | Text.null searchTerm = pure mempty
     | otherwise =
@@ -285,11 +288,11 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
             else pure term
 
 makeTagHoleEdit ::
-    MonadExprGui m =>
-    Sugar.TagSelection (Name (AM m)) (IM m) (AM m) a ->
+    (Monad im, Monad am) =>
+    Sugar.TagSelection (Name am) im am a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeTagHoleEdit tagSelection mkPickResult holeId =
     do
         searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
@@ -314,9 +317,9 @@ makeTagView tag =
             & Widget.toAnimId
 
 makeTagEdit ::
-    MonadExprGui m =>
-    NearestHoles -> Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    (Monad im, Monad am) =>
+    NearestHoles -> Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeTagEdit = makeTagEditWith id defaultOnPickNext <&> (fmap . fmap) snd
 
 defaultOnPickNext :: Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id
@@ -329,16 +332,16 @@ data TagEditType
     deriving (Eq)
 
 makeTagEditWith ::
-    ( MonadReader env n, GuiState.HasCursor env, TextView.HasStyle env
+    ( Monad im, Monad am, MonadReader env n
+    , GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
-    , MonadExprGui m
     ) =>
-    (n (WithTextPos (Widget (AM m GuiState.Update))) ->
-     m (WithTextPos (Widget (AM m GuiState.Update)))) ->
+    (n (WithTextPos (Widget (am GuiState.Update))) ->
+     ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))) ->
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
     NearestHoles ->
-    Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (TagEditType, WithTextPos (Widget (AM m GuiState.Update)))
+    Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (TagEditType, WithTextPos (Widget (am GuiState.Update)))
 makeTagEditWith onView onPickNext nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -394,17 +397,17 @@ makeTagEditWith onView onPickNext nearestHoles tag =
             <&> WidgetIds.tagHoleId
 
 makeRecordTag ::
-    MonadExprGui m =>
-    NearestHoles -> Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    (Monad im, Monad am) =>
+    NearestHoles -> Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & Styled.withColor TextColors.recordTagColor
 
 makeVariantTag ::
-    MonadExprGui m =>
-    NearestHoles -> Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    (Monad im, Monad am) =>
+    NearestHoles -> Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeVariantTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & Styled.withColor TextColors.caseTagColor
@@ -413,10 +416,10 @@ addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
 
 makeLHSTag ::
-    MonadExprGui m =>
+    (Monad im, Monad am) =>
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
-    Lens.Getter TextColors Draw.Color -> Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    Lens.Getter TextColors Draw.Color -> Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeLHSTag onPickNext color tag =
     do
         style <- Lens.view Style.style
@@ -441,9 +444,9 @@ makeLHSTag onPickNext color tag =
         onView = Styled.nameAtBinder color (tag ^. Sugar.tagInfo . Sugar.tagName)
 
 makeParamTag ::
-    MonadExprGui m =>
-    Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    (Monad im, Monad am) =>
+    Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
@@ -461,9 +464,9 @@ makeArgTag name tagInstance =
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
 makeBinderTagEdit ::
-    MonadExprGui m =>
-    Lens.Getter TextColors Draw.Color -> Sugar.Tag (Name (AM m)) (IM m) (AM m) ->
-    m (WithTextPos (Widget (AM m GuiState.Update)))
+    (Monad im, Monad am) =>
+    Lens.Getter TextColors Draw.Color -> Sugar.Tag (Name am) im am ->
+    ExprGuiM im am (WithTextPos (Widget (am GuiState.Update)))
 makeBinderTagEdit color tag =
     makeLHSTag defaultOnPickNext color tag
     & Reader.local (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

@@ -23,7 +23,7 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui, IM, AM)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -95,10 +95,11 @@ mkParamPickResult tagInstance _ =
 
 -- exported for use in definition sugaring.
 make ::
-    MonadExprGui m =>
+    (Monad im, Monad am) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name (AM m)) (Info (IM m) (AM m)) -> m [ExpressionGui (AM m)]
+    Sugar.FuncParam (Name am) (Info im am) ->
+    ExprGuiM im am [ExpressionGui am]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view Config.config

@@ -19,7 +19,7 @@ import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -35,9 +35,10 @@ parentExprFDConfig config = FocusDelegator.Config
     }
 
 stdWrap ::
-    (MonadExprGui m, Applicative am) =>
+    (Monad im, Monad am) =>
     Sugar.Payload (Name am) im am ExprGui.Payload ->
-    m (Responsive (am GuiState.Update) -> Responsive (am GuiState.Update))
+    ExprGuiM im am
+    (Responsive (am GuiState.Update) -> Responsive (am GuiState.Update))
 stdWrap pl =
     maybeAddAnnotationPl pl
     <<< Dotter.with pl
@@ -54,9 +55,9 @@ parentDelegator myId =
     ?? FocusDelegator.FocusEntryChild ?? myId
 
 stdWrapParentExpr ::
-    (MonadExprGui m, Applicative am) =>
+    (Monad im, Monad am) =>
     Sugar.Payload (Name am) im am ExprGui.Payload ->
-    m (ExpressionGui am -> ExpressionGui am)
+    ExprGuiM im am (ExpressionGui am -> ExpressionGui am)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl
