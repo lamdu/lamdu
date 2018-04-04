@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RankNTypes #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
     ( makeLiteralEventMap
@@ -23,14 +23,18 @@ toLiteralTextKeys =
     ]
 
 makeLiteral ::
-    Monad f =>
-    Sugar.OptionLiteral f (Sugar.Expression name f a) ->
+    (Monad i, Monad o) =>
+    (forall x. i x -> o x) ->
+    Sugar.OptionLiteral i o (Sugar.Expression name i o a) ->
     Sugar.Literal Identity ->
-    f WidgetId
-makeLiteral optionLiteral lit =
+    o WidgetId
+makeLiteral io optionLiteral lit =
     do
-        (_score, mkResult) <- optionLiteral lit
-        result <- mkResult
+        result <-
+            do
+                (_score, mkResult) <- optionLiteral lit
+                mkResult
+            & io
         result ^. Sugar.holeResultPick
         case result ^? Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr of
             Just arg -> arg
@@ -41,12 +45,13 @@ makeLiteral optionLiteral lit =
             & pure
 
 makeLiteralEventMap ::
-    Monad f =>
-    Sugar.OptionLiteral f (Sugar.Expression name f a) ->
-    EventMap (f GuiState.Update)
-makeLiteralEventMap optionLiteral =
+    (Monad i, Monad o) =>
+    (forall x. i x -> o x) ->
+    Sugar.OptionLiteral i o (Sugar.Expression name i o a) ->
+    EventMap (o GuiState.Update)
+makeLiteralEventMap io optionLiteral =
     E.keysEventMapMovesCursor toLiteralTextKeys (E.Doc ["Edit", "Literal Text"])
-    (makeLiteral optionLiteral (Sugar.LiteralText (Identity "")))
+    (makeLiteral io optionLiteral (Sugar.LiteralText (Identity "")))
     <>
     E.charGroup (Just "Digit") (E.Doc ["Edit", "Literal Number"]) Chars.digit
-    (fmap GuiState.updateCursor . makeLiteral optionLiteral . Sugar.LiteralNum . Identity . read . (: []))
+    (fmap GuiState.updateCursor . makeLiteral io optionLiteral . Sugar.LiteralNum . Identity . read . (: []))

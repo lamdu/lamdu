@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Tag
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
-import           Data.Property (MkProperty)
+import           Data.Property (MkProperty')
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -25,7 +25,7 @@ type T = Transaction
 
 data AllowAnonTag = AllowAnon | RequireTag
 
-getPublishedTagsProp :: Monad m => ConvertM m (MkProperty (T m) (Set T.Tag))
+getPublishedTagsProp :: Monad m => ConvertM m (MkProperty' (T m) (Set T.Tag))
 getPublishedTagsProp =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
 
@@ -36,7 +36,7 @@ convertTag ::
     Monad m =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) ->
-    ConvertM m (Tag name (T m))
+    ConvertM m (Tag name (T m) (T m))
 convertTag tag name forbiddenTags mkInstance setTag =
     getPublishedTagsProp
     <&> convertTagWith tag name forbiddenTags RequireTag mkInstance setTag
@@ -44,8 +44,8 @@ convertTag tag name forbiddenTags mkInstance setTag =
 convertTagWith ::
     Monad m =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
-    (T.Tag -> T m ()) -> MkProperty (T m) (Set T.Tag) ->
-    Tag name (T m)
+    (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
+    Tag name (T m) (T m)
 convertTagWith tag name forbiddenTags allowAnon mkInstance setTag publishedTagsProp =
     convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag publishedTagsProp
     & Tag (TagInfo (name tag) (mkInstance tag) tag)
@@ -53,7 +53,7 @@ convertTagWith tag name forbiddenTags allowAnon mkInstance setTag publishedTagsP
 convertTagSelection ::
     Monad m =>
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
-    ConvertM m (TagSelection name (T m) a)
+    ConvertM m (TagSelection name (T m) (T m) a)
 convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
     getPublishedTagsProp
     <&> convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag
@@ -61,8 +61,8 @@ convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
 convertTagSelectionWith ::
     Monad m =>
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
-    MkProperty (T m) (Set T.Tag) ->
-    TagSelection name (T m) a
+    MkProperty' (T m) (Set T.Tag) ->
+    TagSelection name (T m) (T m) a
 convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag publishedTagsProp =
     TagSelection
     { _tsOptions =
@@ -91,7 +91,7 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag published
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 convertTaggedEntityWith ::
     (UniqueId.ToUUID a, MonadTransaction n m) =>
-    a -> MkProperty (T n) (Set T.Tag) -> m (Tag InternalName (T n))
+    a -> MkProperty' (T n) (Set T.Tag) -> m (Tag InternalName (T n) (T n))
 convertTaggedEntityWith entity publishedTagsProp =
     getP prop
     <&>
@@ -101,5 +101,6 @@ convertTaggedEntityWith entity publishedTagsProp =
     where
         prop = Anchors.assocTag entity
 
-convertTaggedEntity :: (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (Tag InternalName (T m))
+convertTaggedEntity ::
+    (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (Tag InternalName (T m) (T m))
 convertTaggedEntity entity = getPublishedTagsProp >>= convertTaggedEntityWith entity

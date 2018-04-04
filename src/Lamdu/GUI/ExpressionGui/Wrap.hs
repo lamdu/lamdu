@@ -23,11 +23,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 parentExprFDConfig :: Config -> FocusDelegator.Config
 parentExprFDConfig config = FocusDelegator.Config
@@ -38,9 +35,10 @@ parentExprFDConfig config = FocusDelegator.Config
     }
 
 stdWrap ::
-    (Monad m, Applicative f) =>
-    Sugar.Payload (Name f) f ExprGui.Payload ->
-    ExprGuiM (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    (Monad i, Monad o) =>
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o
+    (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 stdWrap pl =
     maybeAddAnnotationPl pl
     <<< Dotter.with pl
@@ -49,17 +47,17 @@ stdWrap pl =
         (<<<) = liftA2 (.)
 
 parentDelegator ::
-    ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative f
+    ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative o
     ) => Widget.Id ->
-    m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    m (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
     ?? FocusDelegator.FocusEntryChild ?? myId
 
 stdWrapParentExpr ::
-    Monad m =>
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m) -> ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o -> ExpressionGui o)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl

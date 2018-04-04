@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, FlexibleContexts, UndecidableInstances, PolymorphicComponents #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --
@@ -8,8 +8,10 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readMScopeId, withLocalMScopeId
     --
-    , MonadExprGui(..)
-    , ExprGuiM, run
+    , im
+    , IOM(..), iom
+    , makeSubexpression
+    , ExprGuiM, ExprGuiM', run
     ) where
 
 import           Control.Applicative (liftA2)
@@ -30,7 +32,6 @@ import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -44,6 +45,7 @@ import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings, HasSettings(..))
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -53,7 +55,7 @@ import           Lamdu.Prelude
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
     deriving (Semigroup, Monoid)
 
-data Askable m = Askable
+data Askable i o = Askable
     { _aState :: GUIState
     , _aTextEditStyle :: TextEdit.Style
     , _aStdSpacing :: Vector2 Double
@@ -61,31 +63,33 @@ data Askable m = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr (AM m) -> m (ExpressionGui (AM m))
-    , _aGuiAnchors :: Anchors.GuiAnchors (AM m)
+    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
+    , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
+    , aIom :: forall x. i x -> o x
     }
 
-class
-    ( Monad (AM m), MonadReader (Askable m) m
-    ) => MonadExprGui m where
-    type AM m :: * -> *
-    makeSubexpression :: ExprGui.SugarExpr (AM m) -> m (ExpressionGui (AM m))
+newtype ExprGuiM i (o :: * -> *) a =
+    ExprGuiM (ReaderT (Askable i o) i a)
+    deriving (Functor, Applicative, Monad, MonadReader (Askable i o))
+
+-- TODO: Remove this:
+type ExprGuiM' m = ExprGuiM m m
 
 Lens.makeLenses ''Askable
 
-instance GuiState.HasCursor (Askable m)
-instance GuiState.HasState (Askable m) where state = aState
-instance TextView.HasStyle (Askable m) where style = aTextEditStyle . TextView.style
-instance TextEdit.HasStyle (Askable m) where style = aTextEditStyle
-instance Spacer.HasStdSpacing (Askable m) where stdSpacing = aStdSpacing
-instance Element.HasAnimIdPrefix (Askable m) where animIdPrefix = aAnimIdPrefix
-instance Config.HasConfig (Askable m) where config = aConfig
-instance HasTheme (Askable m) where theme = aTheme
-instance ResponsiveExpr.HasStyle (Askable m) where style = aTheme . ResponsiveExpr.style
-instance Menu.HasConfig (Askable m) where
+instance GuiState.HasCursor (Askable i o)
+instance GuiState.HasState (Askable i o) where state = aState
+instance TextView.HasStyle (Askable i o) where style = aTextEditStyle . TextView.style
+instance TextEdit.HasStyle (Askable i o) where style = aTextEditStyle
+instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
+instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix
+instance Config.HasConfig (Askable i o) where config = aConfig
+instance HasTheme (Askable i o) where theme = aTheme
+instance ResponsiveExpr.HasStyle (Askable i o) where style = aTheme . ResponsiveExpr.style
+instance Menu.HasConfig (Askable i o) where
     config f askable =
         f Menu.Config
         { Menu._configKeys = askable ^. aConfig . Config.menu
@@ -96,24 +100,32 @@ instance Menu.HasConfig (Askable m) where
         askable
         & aTheme . Theme.menu .~ menuConfig ^. Menu.configStyle
         & aConfig . Config.menu .~ menuConfig ^. Menu.configKeys
-instance Hover.HasStyle (Askable m) where style = aTheme . Hover.style
-instance HasStyle (Askable m) where style = aStyle
-instance HasSettings (Askable m) where settings = aSettings
+instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
+instance HasStyle (Askable i o) where style = aStyle
+instance HasSettings (Askable i o) where settings = aSettings
 
-readGuiAnchors :: MonadExprGui m => m (Anchors.GuiAnchors (AM m))
+im :: Monad i => i a -> ExprGuiM i o a
+im = ExprGuiM . lift
+
+newtype IOM i o = IOM (forall x. i x -> o x)
+iom :: Monad i => ExprGuiM i o (IOM i o)
+iom = Lens.view id <&> \askable -> IOM (aIom askable)
+
+readGuiAnchors :: MonadReader (Askable i o) m => m (Anchors.GuiAnchors i o)
 readGuiAnchors = Lens.view aGuiAnchors
 
-savePreJumpPosition :: Monad m => Anchors.GuiAnchors m -> WidgetId.Id -> m ()
-savePreJumpPosition guiAnchors pos = Property.modP (Anchors.preJumps guiAnchors) $ (pos :) . take 19
-
-mkPrejumpPosSaver :: MonadExprGui m => m (AM m ())
+mkPrejumpPosSaver :: (Monad i, Monad o) => ExprGuiM i o (o ())
 mkPrejumpPosSaver =
-    savePreJumpPosition <$> readGuiAnchors <*> Lens.view GuiState.cursor
+    do
+        preJumpsMkProp <- readGuiAnchors <&> Anchors.preJumps
+        preJumpsProp <- preJumpsMkProp ^. Property.mkProperty & im
+        cursor <- Lens.view GuiState.cursor
+        Property.pureModify preJumpsProp ((cursor:) . take 19) & pure
 
-resetDepth :: MonadExprGui m => Int -> m r -> m r
+resetDepth :: MonadReader (Askable i o) m => Int -> m r -> m r
 resetDepth depth = Reader.local (aDepthLeft .~ depth)
 
-advanceDepth :: MonadExprGui m => (WithTextPos View -> m r) -> m r -> m r
+advanceDepth :: MonadReader (Askable i o) m => (WithTextPos View -> m r) -> m r -> m r
 advanceDepth f action =
     do
         depth <- Lens.view aDepthLeft
@@ -123,45 +135,45 @@ advanceDepth f action =
     where
         mkErrorWidget = TextView.makeLabel "..."
 
-readMScopeId :: MonadExprGui m => m (CurAndPrev (Maybe ScopeId))
+readMScopeId :: MonadReader (Askable i o) m => m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId
 
-withLocalMScopeId :: MonadExprGui m => CurAndPrev (Maybe ScopeId) -> m a -> m a
+withLocalMScopeId ::
+    MonadReader (Askable i o) m => CurAndPrev (Maybe ScopeId) -> m a -> m a
 withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
 
-newtype ExprGuiM m a = ExprGuiM (ReaderT (Askable (ExprGuiM m)) m a)
-    deriving (Functor, Applicative, Monad, MonadReader (Askable (ExprGuiM m)))
-
-instance (Monad m, Semigroup a) => Semigroup (ExprGuiM m a) where
+instance (Monad i, Semigroup a) => Semigroup (ExprGuiM i o a) where
     (<>) = liftA2 (<>)
 
-instance (Monad m, Monoid a) => Monoid (ExprGuiM m a) where
+instance (Monad i, Monoid a) => Monoid (ExprGuiM i o a) where
     mempty = pure mempty
     mappend = liftA2 mappend
 
-instance MonadTransaction n m => MonadTransaction n (ExprGuiM m) where
-    transaction = ExprGuiM . lift . transaction
+instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
+    transaction = im . transaction
 
-instance Monad m => MonadExprGui (ExprGuiM m) where
-    type AM (ExprGuiM m) = m
-    makeSubexpression expr =
-        do
-            maker <- Lens.view aMakeSubexpression
-            maker expr
-        & advanceDepth (pure . Responsive.fromTextView)
-        & Reader.local (Element.animIdPrefix .~ animId)
-        where
-            animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
+makeSubexpression ::
+    Monad i =>
+    Sugar.Expression (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (Responsive.Responsive (o GuiState.Update))
+makeSubexpression expr =
+    do
+        maker <- Lens.view aMakeSubexpression
+        maker expr
+    & advanceDepth (pure . Responsive.fromTextView)
+    & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
-    Anchors.GuiAnchors m ->
-    env -> ExprGuiM m a -> m a
-run makeSubexpr theGuiAnchors env (ExprGuiM action) =
+    (ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)) ->
+    Anchors.GuiAnchors i o ->
+    env -> (forall x. i x -> o x) -> ExprGuiM i o a -> i a
+run makeSubexpr theGuiAnchors env liftIom (ExprGuiM action) =
     runReaderT action
     Askable
     { _aState = env ^. GuiState.state
@@ -176,4 +188,5 @@ run makeSubexpr theGuiAnchors env (ExprGuiM action) =
     , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
+    , aIom = liftIom
     }

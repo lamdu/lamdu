@@ -38,9 +38,9 @@ mkAppliedHoleOptions ::
     Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
-    Expression name f a ->
+    Expression name i o a ->
     Input.Payload m a ->
-    [HoleOption (T m) (Expression InternalName (T m) ())]
+    [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
 mkAppliedHoleOptions sugarContext argI argS exprPl =
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
     <&> ConvertHole.SeedExpr
@@ -51,7 +51,7 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Input.Payload m a ->
-    T m [HoleOption (T m) (Expression InternalName (T m) ())]
+    T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))

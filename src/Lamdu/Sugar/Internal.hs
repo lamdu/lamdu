@@ -73,7 +73,7 @@ nameWithContext param tag =
     }
 
 
-type ExpressionU m a = Expression InternalName (T m) (ConvertPayload m a)
+type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
 
 replaceWith ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->

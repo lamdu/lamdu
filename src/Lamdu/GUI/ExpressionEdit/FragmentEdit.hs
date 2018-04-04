@@ -29,17 +29,15 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 make ::
-    Monad m =>
-    Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Fragment (Name o) i o
+    (ExpressionN i o ExprGui.Payload) ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
@@ -102,9 +100,10 @@ make fragment pl =
             | otherwise = x
 
 makeFragmentExprEdit ::
-    Monad m =>
-    Sugar.Fragment (Name (T m)) (T m) (ExpressionN (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Functor o) =>
+    Sugar.Fragment (Name o) i o
+    (ExpressionN i o ExprGui.Payload) ->
+    ExprGuiM i o (ExpressionGui o)
 makeFragmentExprEdit fragment =
     do
         theme <- Lens.view Theme.theme

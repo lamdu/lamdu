@@ -91,7 +91,8 @@ mkExtractToLet outerScope stored =
         oldStored = Property.value stored
 
 mkWrapInRecord ::
-    Monad m => Input.Payload m a -> ConvertM m (TagSelection InternalName (T m) ())
+    Monad m =>
+    Input.Payload m a -> ConvertM m (TagSelection InternalName (T m) (T m) ())
 mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -106,7 +107,9 @@ mkWrapInRecord exprPl =
         -- TODO: The entity-ids created here don't match the resulting entity ids of the record.
         tempMkEntityId = EntityId.ofTaggedEntity (stored ^. Property.pVal)
 
-makeActions :: Monad m => Input.Payload m a -> ConvertM m (NodeActions InternalName (T m))
+makeActions ::
+    Monad m =>
+    Input.Payload m a -> ConvertM m (NodeActions InternalName (T m) (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
@@ -126,8 +129,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValIProperty m ->
-        Body name (T m) (Expression name (T m) (ConvertPayload m a)) ->
-        Body name (T m) (Expression name (T m) (ConvertPayload m a))
+        Body name (T m) (T m) (Expression name (T m) (T m) (ConvertPayload m a)) ->
+        Body name (T m) (T m) (Expression name (T m) (T m) (ConvertPayload m a))
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -159,7 +162,7 @@ setChildReplaceParentActions =
 
 addActions ::
     Monad m =>
-    Input.Payload m a -> Body InternalName (T m) (ExpressionU m a) ->
+    Input.Payload m a -> Body InternalName (T m) (T m) (ExpressionU m a) ->
     ConvertM m (ExpressionU m a)
 addActions exprPl body =
     do

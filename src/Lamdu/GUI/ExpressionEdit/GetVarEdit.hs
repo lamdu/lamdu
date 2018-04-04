@@ -40,11 +40,8 @@ import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
@@ -86,10 +83,10 @@ makeParamsRecord myId paramsRecordVar =
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
 
 makeNameRef ::
-    Monad m =>
-    Widget.Id -> Sugar.NameRef name (T m) ->
-    (name -> Widget.Id -> ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))) ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    (Monad i, Monad o) =>
+    Widget.Id -> Sugar.NameRef name o ->
+    (name -> Widget.Id -> ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))) ->
+    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeNameRef myId nameRef maker =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
@@ -192,9 +189,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
             else pure layout
 
 makeGetBinder ::
-    Monad m =>
-    Sugar.BinderVarRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    (Monad i, Monad o) =>
+    Sugar.BinderVarRef (Name o) o -> Widget.Id ->
+    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -213,9 +210,9 @@ makeGetBinder binderVar myId =
             & processDef
 
 makeGetParam ::
-    Monad m =>
-    Sugar.ParamRef (Name (T m)) (T m) -> Widget.Id ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    (Monad i, Monad o) =>
+    Sugar.ParamRef (Name o) o -> Widget.Id ->
+    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
@@ -232,10 +229,10 @@ makeGetParam param myId =
         name = param ^. Sugar.pNameRef . Sugar.nrName
 
 makeNoActions ::
-    Monad m =>
-    Sugar.GetVar (Name (T m)) (T m) ->
+    (Monad i, Monad o) =>
+    Sugar.GetVar (Name o) o ->
     Widget.Id ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    ExprGuiM i o (ExpressionGui o)
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -246,9 +243,9 @@ makeNoActions getVar myId =
         makeGetParam param myId <&> Responsive.fromWithTextPos
 
 make ::
-    Monad m =>
-    Sugar.GetVar (Name (T m)) (T m) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.GetVar (Name o) o ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

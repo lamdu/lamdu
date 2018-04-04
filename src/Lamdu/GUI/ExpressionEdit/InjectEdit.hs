@@ -26,11 +26,8 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
@@ -40,10 +37,10 @@ injectIndicator text =
     (Styled.grammarText ?? text) <*> Element.subAnimId ["injectIndicator"]
 
 makeNullaryInject ::
-    Monad m =>
-    Sugar.Tag (Name (T m)) (T m) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Tag (Name o) i o ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 makeNullaryInject tag pl =
     stdWrapParentExpr pl <*>
     do
@@ -54,11 +51,11 @@ makeNullaryInject tag pl =
         nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
 
 makeInject ::
-    Monad m =>
-    ExprGui.SugarExpr (T m) ->
-    Sugar.Tag (Name (T m)) (T m) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    ExprGui.SugarExpr i o ->
+    Sugar.Tag (Name o) i o ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
@@ -92,8 +89,8 @@ makeInject val tag pl =
         mReplaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
 
 make ::
-    Monad m =>
-    Sugar.Inject (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Inject (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make (Sugar.Inject tag mVal) = maybe makeNullaryInject makeInject mVal tag

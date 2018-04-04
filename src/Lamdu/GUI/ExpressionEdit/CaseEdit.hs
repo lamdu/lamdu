@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
@@ -40,11 +39,8 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 doc :: E.Subtitle -> E.Doc
 doc text = E.Doc ["Edit", "Case", text]
@@ -53,10 +49,10 @@ addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
 
 make ::
-    Monad m =>
-    Sugar.Case (Name (T m)) (T m) (ExprGui.SugarExpr (T m)) ->
-    Sugar.Payload (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Case (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
@@ -122,10 +118,11 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
         altsId = Widget.joinId myId ["alts"]
 
 makeAltRow ::
-    Monad m =>
+    (Monad i, Monad o) =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (Responsive.TaggedItem (T m GuiState.Update))
+    Sugar.CompositeItem (Name o) i o
+    (Sugar.Expression (Name o) i o ExprGui.Payload) ->
+    ExprGuiM i o (Responsive.TaggedItem (o GuiState.Update))
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -151,12 +148,13 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         altId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makeAltsWidget ::
-    Monad m =>
+    (Monad i, Monad o) =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name (T m)) (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload)] ->
-    Sugar.TagSelection (Name (T m)) (T m) Sugar.EntityId ->
+    [Sugar.CompositeItem (Name o) i o
+     (Sugar.Expression (Name o) i o ExprGui.Payload)] ->
+    Sugar.TagSelection (Name o) i o Sugar.EntityId ->
     Widget.Id ->
-    ExprGuiM (T m) (ExpressionGui (T m))
+    ExprGuiM i o (ExpressionGui o)
 makeAltsWidget mActiveTag alts addAlt altsId =
     do
         existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
@@ -173,9 +171,9 @@ makeAltsWidget mActiveTag alts addAlt altsId =
             altWidgtes -> Responsive.taggedList ?? altWidgtes
 
 makeAddAltRow ::
-    (MonadReader env m, MonadTransaction f m, TagEdit.HasTagEditEnv env) =>
-    Sugar.TagSelection (Name (T f)) (T f) Sugar.EntityId -> Widget.Id ->
-    m (Responsive.TaggedItem (T f GuiState.Update))
+    (Monad i, Monad o) =>
+    Sugar.TagSelection (Name o) i o Sugar.EntityId -> Widget.Id ->
+    ExprGuiM i o (Responsive.TaggedItem (o GuiState.Update))
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
@@ -200,9 +198,10 @@ separationBar theme width animId =
     & Element.scale (Vector2 width 10)
 
 makeOpenCase ::
-    Monad m =>
-    Sugar.OpenCompositeActions (T m) -> ExprGui.SugarExpr (T m) ->
-    AnimId -> ExpressionGui (T m) -> ExprGuiM (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
+    AnimId -> ExpressionGui o ->
+    ExprGuiM i o (ExpressionGui o)
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
@@ -228,31 +227,31 @@ makeOpenCase actions rest animId altsGui =
             restLayout
 
 openCaseEventMap ::
-    Monad m =>
-    Config -> Sugar.OpenCompositeActions (T m) ->
-    EventMap (T m GuiState.Update)
+    Monad o =>
+    Config -> Sugar.OpenCompositeActions o ->
+    EventMap (o GuiState.Update)
 openCaseEventMap config (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
 
 closedCaseEventMap ::
-    Monad m =>
-    Config -> Sugar.ClosedCompositeActions (T m) ->
-    EventMap (T m GuiState.Update)
+    Monad o =>
+    Config -> Sugar.ClosedCompositeActions o ->
+    EventMap (o GuiState.Update)
 closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (config ^. Config.caseOpenKeys) (doc "Open")
 
 caseDelEventMap ::
-    Monad m =>
-    Config -> m Sugar.EntityId -> EventMap (m GuiState.Update)
+    Monad o =>
+    Config -> o Sugar.EntityId -> EventMap (o GuiState.Update)
 caseDelEventMap config delete =
     delete <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Alt")
 
 toLambdaCaseEventMap ::
-    Monad m =>
-    Config -> m Sugar.EntityId -> EventMap (m GuiState.Update)
+    Monad o =>
+    Config -> o Sugar.EntityId -> EventMap (o GuiState.Update)
 toLambdaCaseEventMap config toLamCase =
     toLamCase <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Turn to Lambda-Case")

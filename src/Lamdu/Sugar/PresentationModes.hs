@@ -18,8 +18,8 @@ type T = Transaction
 
 addToLabeledApply ::
     Monad m =>
-    Sugar.LabeledApply InternalName f (Sugar.Expression InternalName f a) ->
-    T m (Sugar.LabeledApply InternalName f (Sugar.Expression InternalName f a))
+    Sugar.LabeledApply InternalName i o (Sugar.Expression InternalName i o a) ->
+    T m (Sugar.LabeledApply InternalName i o (Sugar.Expression InternalName i o a))
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->
@@ -74,8 +74,8 @@ addToLabeledApply a =
 
 addToBody ::
     Monad m =>
-    Sugar.Body InternalName (T m) (Sugar.Expression InternalName (T m) a) ->
-    T m (Sugar.Body InternalName (T m) (Sugar.Expression InternalName (T m) a))
+    Sugar.Body InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a) ->
+    T m (Sugar.Body InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a))
 addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
 addToBody (Sugar.BodyHole h) = SugarLens.holeTransformExprs addToExpr h & Sugar.BodyHole & pure
 addToBody (Sugar.BodyFragment w) =
@@ -85,8 +85,8 @@ addToBody (Sugar.BodyFragment w) =
 addToBody b = pure b
 
 addToExpr ::
-    Monad m => Sugar.Expression InternalName (T m) pl ->
-    T m (Sugar.Expression InternalName (T m) pl)
+    Monad m => Sugar.Expression InternalName (T m) (T m) pl ->
+    T m (Sugar.Expression InternalName (T m) (T m) pl)
 addToExpr e =
     e
     & Sugar.rBody %%~ addToBody
@@ -94,27 +94,27 @@ addToExpr e =
 
 addToBinder ::
     Monad m =>
-    Sugar.Binder InternalName (T m) (Sugar.Expression InternalName (T m) pl) ->
-    T m (Sugar.Binder InternalName (T m) (Sugar.Expression InternalName (T m) pl))
+    Sugar.Binder InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
+    T m (Sugar.Binder InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
 addToBinder = Sugar.bBody %%~ addToBinderBody
 
 addToBinderBody ::
     Monad m =>
-    Sugar.BinderBody InternalName (T m) (Sugar.Expression InternalName (T m) pl) ->
-    T m (Sugar.BinderBody InternalName (T m) (Sugar.Expression InternalName (T m) pl))
+    Sugar.BinderBody InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
+    T m (Sugar.BinderBody InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
 addToBinderBody = Sugar.bbContent %%~ addToBinderContent
 
 addToBinderContent ::
     Monad m =>
-    Sugar.BinderContent InternalName (T m) (Sugar.Expression InternalName (T m) pl) ->
-    T m (Sugar.BinderContent InternalName (T m) (Sugar.Expression InternalName (T m) pl))
+    Sugar.BinderContent InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
+    T m (Sugar.BinderContent InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
 addToBinderContent (Sugar.BinderExpr e) = addToExpr e <&> Sugar.BinderExpr
 addToBinderContent (Sugar.BinderLet l) = addToLet l <&> Sugar.BinderLet
 
 addToLet ::
     Monad m =>
-    Sugar.Let InternalName (T m) (Sugar.Expression InternalName (T m) pl) ->
-    T m (Sugar.Let InternalName (T m) (Sugar.Expression InternalName (T m) pl))
+    Sugar.Let InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
+    T m (Sugar.Let InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
 addToLet letItem =
     letItem
     & Sugar.lValue %%~ addToBinder
@@ -122,8 +122,8 @@ addToLet letItem =
 
 addToDef ::
     Monad m =>
-    Sugar.Definition InternalName (T m) (Sugar.Expression InternalName (T m) a) ->
-    T m (Sugar.Definition InternalName (T m) (Sugar.Expression InternalName (T m) a))
+    Sugar.Definition InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a) ->
+    T m (Sugar.Definition InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a))
 addToDef def =
     def
     & Sugar.drBody . Sugar._DefinitionBodyExpression .

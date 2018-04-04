@@ -6,7 +6,6 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.Transaction (MonadTransaction)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -24,22 +23,19 @@ import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 eventMapAddFirstParam ::
-    (MonadReader env m, Applicative f, HasConfig env) =>
+    (MonadReader env m, Applicative o, HasConfig env) =>
     Widget.Id ->
-    Sugar.AddFirstParam name f ->
-    m (EventMap (f GuiState.Update))
+    Sugar.AddFirstParam name i o ->
+    m (EventMap (o GuiState.Update))
 eventMapAddFirstParam binderId addFirst =
     Lens.view (Config.config . Config.addNextParamKeys)
     <&>
@@ -54,8 +50,9 @@ eventMapAddFirstParam binderId addFirst =
             Sugar.AddInitialParam x -> (x <&> enterParam, "Add parameter")
 
 eventMapAddNextParam ::
-    Applicative f =>
-    Config -> Widget.Id -> Sugar.AddNextParam name f -> EventMap (f GuiState.Update)
+    Applicative o =>
+    Config -> Widget.Id -> Sugar.AddNextParam name i o ->
+    EventMap (o GuiState.Update)
 eventMapAddNextParam conf myId addNext =
     E.keysEventMapMovesCursor (conf ^. Config.addNextParamKeys)
     (E.Doc ["Edit", doc]) (pure dst)
@@ -79,12 +76,12 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
     & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
-data Info m = Info
-    { iNameEdit :: WithTextPos (Widget (T m GuiState.Update))
-    , iDel :: T m ()
-    , iAddNext :: Maybe (Sugar.AddNextParam (Name (T m)) (T m))
-    , iMOrderBefore :: Maybe (T m ())
-    , iMOrderAfter :: Maybe (T m ())
+data Info i o = Info
+    { iNameEdit :: WithTextPos (Widget (o GuiState.Update))
+    , iDel :: o ()
+    , iAddNext :: Maybe (Sugar.AddNextParam (Name o) i o)
+    , iMOrderBefore :: Maybe (o ())
+    , iMOrderAfter :: Maybe (o ())
     , iId :: Widget.Id
     }
 
@@ -98,10 +95,11 @@ mkParamPickResult tagInstance _ =
 
 -- exported for use in definition sugaring.
 make ::
-    (MonadExprGui n, MonadTransaction m n) =>
+    (Monad i, Monad o) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name (T m)) (Info m) -> n [ExpressionGui (T m)]
+    Sugar.FuncParam (Name o) (Info i o) ->
+    ExprGuiM i o [ExpressionGui o]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view Config.config

@@ -35,7 +35,7 @@ import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..), EvalModeShow(..))
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, MonadExprGui)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -43,11 +43,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 addAnnotationBackgroundH ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
@@ -141,7 +138,9 @@ data EvalResDisplay name = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    MonadExprGui m => EvalResDisplay (Name f) -> m (WithTextPos View)
+    (Monad i, Monad o) =>
+    EvalResDisplay (Name f) ->
+    ExprGuiM i o (WithTextPos View)
 makeEvaluationResultView res =
     do
         th <- Lens.view theme
@@ -157,9 +156,9 @@ data NeighborVals a = NeighborVals
     } deriving (Functor, Foldable, Traversable)
 
 makeEvalView ::
-    MonadExprGui m =>
+    (Monad i, Monad o) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
-    EvalResDisplay (Name g) -> m (WithTextPos View)
+    EvalResDisplay (Name g) -> ExprGuiM i o (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view (theme . Theme.eval)
@@ -230,10 +229,10 @@ addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
 addEvaluationResult ::
-    (Functor f, MonadExprGui m) =>
+    (Monad i, Monad o, Functor f) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
     EvalResDisplay (Name g) -> WideAnnotationBehavior ->
-    m
+    ExprGuiM i o
     ((Widget.R -> Widget.R) ->
      Responsive (f GuiState.Update) ->
      Responsive (f GuiState.Update))
@@ -249,9 +248,10 @@ addEvaluationResult mNeigh resDisp wideBehavior =
         & addAnnotationH (makeEvalView mNeigh resDisp)
 
 maybeAddAnnotationPl ::
-    (Functor f, Monad m) =>
-    Sugar.Payload (Name f) x ExprGui.Payload ->
-    ExprGuiM (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    (Monad i, Monad o) =>
+    Sugar.Payload (Name o) i1 o1 ExprGui.Payload ->
+    ExprGuiM i o
+    (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
@@ -273,9 +273,9 @@ maybeAddAnnotationPl pl =
         showAnnotation = pl ^. Sugar.plData . ExprGui.plShowAnnotation
 
 evaluationResult ::
-    Monad m =>
-    Sugar.Payload name (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (Maybe (Sugar.ResVal name))
+    Monad i =>
+    Sugar.Payload name i o ExprGui.Payload ->
+    ExprGuiM i o (Maybe (Sugar.ResVal name))
 evaluationResult pl =
     ExprGuiM.readMScopeId
     <&> valOfScope (pl ^. Sugar.plAnnotation)
@@ -292,9 +292,9 @@ data AnnotationMode name
         (Maybe (NeighborVals (Maybe (EvalResDisplay name)))) (EvalResDisplay name)
 
 getAnnotationMode ::
-    MonadExprGui m =>
+    Monad i =>
     EvalAnnotationOptions -> Sugar.Annotation name ->
-    m (AnnotationMode name)
+    ExprGuiM i o (AnnotationMode name)
 getAnnotationMode opt annotation =
     Lens.view (Settings.settings . Settings.sAnnotationMode)
     >>= \case
@@ -312,10 +312,10 @@ getAnnotationMode opt annotation =
                 & Just
 
 maybeAddAnnotationWith ::
-    (Functor f, MonadExprGui m) =>
+    (Monad i, Monad o) =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
-    Sugar.Annotation (Name f) ->
-    m (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    Sugar.Annotation (Name o) ->
+    ExprGuiM i o (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
     getAnnotationMode opt annotation
     >>= \case
@@ -343,9 +343,9 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
                     <&> \add -> add $ \width -> process width typeView ^. Element.width
 
 maybeAddAnnotation ::
-    (Functor f, Monad m) =>
-    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation (Name f) ->
-    ExprGuiM (T m) (Responsive (f GuiState.Update) -> Responsive (f GuiState.Update))
+    (Monad i, Monad o) =>
+    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation (Name o) ->
+    ExprGuiM i o (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::

@@ -27,7 +27,7 @@ import           Data.Binary (Binary)
 import           Data.Binary.Utils (encodeS, decodeS)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
-import           Data.Property (Property, MkProperty)
+import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -185,10 +185,10 @@ newIRef val = do
 fromIRef :: (Monad m, Binary a) => IRef m a -> T m (Property (T m) a)
 fromIRef iref = flip Property.Property (writeIRef iref) <$> readIRef iref
 
-mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty (T m) a
+mkPropertyFromIRef :: (Monad m, Binary a) => IRef m a -> MkProperty' (T m) a
 mkPropertyFromIRef = Property.MkProperty . fromIRef
 
-assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty (T m) (Maybe a)
+assocDataRef :: (Binary a, Monad m) => ByteString -> UUID -> MkProperty' (T m) (Maybe a)
 assocDataRef str uuid =
     lookup assocUUID <&> (`Property.Property` set) & Property.MkProperty
     where
@@ -197,7 +197,7 @@ assocDataRef str uuid =
         set (Just x) = writeUUID assocUUID x
 
 assocDataRefDef ::
-    (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty (T m) a
+    (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty' (T m) a
 assocDataRefDef def str uuid =
     assocDataRef str uuid
     & Property.mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f

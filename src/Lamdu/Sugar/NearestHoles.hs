@@ -15,8 +15,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 markStoredHoles ::
-    Sugar.Expression name m a ->
-    Sugar.Expression name m (Bool, a)
+    Sugar.Expression name i o a ->
+    Sugar.Expression name i o (Bool, a)
 markStoredHoles expr =
     expr
     <&> (,) False
@@ -34,12 +34,12 @@ none = NearestHoles Nothing Nothing
 add ::
     (forall a b.
       Lens.Traversal
-      (f (Sugar.Expression name m a))
-      (f (Sugar.Expression name m b))
-      (Sugar.Expression name m a)
-      (Sugar.Expression name m b)) ->
-    f (Sugar.Expression name m (NearestHoles -> r)) ->
-    f (Sugar.Expression name m r)
+      (f (Sugar.Expression name i o a))
+      (f (Sugar.Expression name i o b))
+      (Sugar.Expression name i o a)
+      (Sugar.Expression name i o b)) ->
+    f (Sugar.Expression name i o (NearestHoles -> r)) ->
+    f (Sugar.Expression name i o r)
 add exprs s =
     s
     & exprs . Lens.mapped %~ toNearestHoles
@@ -54,16 +54,16 @@ type M = State (Maybe Sugar.EntityId)
 
 passAll ::
     LensLike M s t
-    (Sugar.Payload name f (Bool, Maybe Sugar.EntityId -> a))
-    (Sugar.Payload name f (Bool, a)) -> s -> t
+    (Sugar.Payload name i o (Bool, Maybe Sugar.EntityId -> a))
+    (Sugar.Payload name i o (Bool, a)) -> s -> t
 passAll sugarPls s =
     s
     & sugarPls %%~ setEntityId
     & (`evalState` Nothing)
 
 setEntityId ::
-    Sugar.Payload name f (Bool, Maybe Sugar.EntityId -> a) ->
-    M (Sugar.Payload name f (Bool, a))
+    Sugar.Payload name i o (Bool, Maybe Sugar.EntityId -> a) ->
+    M (Sugar.Payload name i o (Bool, a))
 setEntityId pl =
     do
         oldEntityId <- State.get

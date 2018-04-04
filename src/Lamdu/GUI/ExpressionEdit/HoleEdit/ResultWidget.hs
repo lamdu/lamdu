@@ -31,11 +31,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
 setFocalAreaToFullSize =
@@ -68,10 +65,10 @@ applyResultLayout fGui =
     }
 
 makeWidget ::
-    Monad m =>
+    (Monad i, Functor o) =>
     Widget.Id ->
-    Sugar.Expression (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM (T m) (WithTextPos (Widget (T m GuiState.Update)))
+    Sugar.Expression (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
@@ -86,12 +83,12 @@ makeWidget resultId holeResultConverted =
             <&> Element.pad padding
 
 make ::
-    Monad m =>
+    (Monad i, Functor o) =>
     Maybe Widget.Id ->
     SearchMenu.ResultsContext ->
     Widget.Id ->
-    Sugar.HoleResult (T m) (Sugar.Expression (Name (T m)) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (Menu.RenderedOption (T m))
+    Sugar.HoleResult o (Sugar.Expression (Name o) i o ExprGui.Payload) ->
+    ExprGuiM i o (Menu.RenderedOption o)
 make mNextEntry ctx resultId holeResult =
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)

@@ -25,7 +25,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import           Data.Property (Property, MkProperty)
+import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
@@ -108,7 +108,7 @@ mkHoleOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a ->
     Val (T.Type, Maybe (Input.Payload m a)) ->
-    HoleOption (T m) (Expression InternalName (T m) ())
+    HoleOption' (T m) (Expression InternalName (T m) (T m) ())
 mkHoleOptionFromFragment sugarContext exprPl val =
     HoleOption
     { _hoVal = baseExpr
@@ -150,7 +150,7 @@ mkHoleOption ::
     Maybe (Val (Input.Payload m a)) ->
     Input.Payload m a ->
     BaseExpr ->
-    HoleOption (T m) (Expression InternalName (T m) ())
+    HoleOption' (T m) (Expression InternalName (T m) (T m) ())
 mkHoleOption sugarContext mFragment exprPl val =
     HoleOption
     { _hoVal = v
@@ -163,14 +163,15 @@ mkHoleOption sugarContext mFragment exprPl val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
-    [HoleOption (T m) (Expression InternalName (T m) ())]
+    [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
 mkHoleSuggesteds sugarContext mFragment exprPl =
     exprPl ^. Input.inferred
     & Suggest.value
     <&> SuggestedExpr
     <&> mkHoleOption sugarContext mFragment exprPl
 
-addSuggestedOptions :: [HoleOption m a] -> [HoleOption m a] -> [HoleOption m a]
+addSuggestedOptions ::
+    [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
 addSuggestedOptions suggesteds options
     | null nonTrivial = options
     | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
@@ -187,7 +188,7 @@ isLiveGlobal defI =
 
 getListing ::
     Monad m =>
-    (Anchors.CodeAnchors f -> MkProperty (T m) (Set a)) ->
+    (Anchors.CodeAnchors f -> MkProperty' (T m) (Set a)) ->
     ConvertM.Context f -> T m [a]
 getListing anchor sugarContext =
     sugarContext ^. ConvertM.scCodeAnchors
@@ -240,7 +241,7 @@ mkNominalOptions nominals =
 mkOptions ::
     Monad m =>
     Maybe (Val (Input.Payload m a)) -> Input.Payload m a ->
-    ConvertM m (T m [HoleOption (T m) (Expression InternalName (T m) ())])
+    ConvertM m (T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())])
 mkOptions mFragment exprPl =
     Lens.view id
     <&>
@@ -314,7 +315,7 @@ prepareUnstoredPayloads val =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (Expression InternalName (T m) a)
+    T m (Expression InternalName (T m) (T m) a)
 sugar sugarContext exprPl val =
     val
     <&> mkPayload
@@ -338,7 +339,7 @@ sugar sugarContext exprPl val =
 mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->
-    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression InternalName (T m) ()))))
+    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))))
 mkLiteralOptions exprPl =
     Lens.view id
     <&>
@@ -655,7 +656,7 @@ mkHoleResult ::
     Monad m =>
     ConvertM.Context m -> T m () ->
     ValIProperty m -> HoleResultVal m IsFragment ->
-    T m (HoleResult (T m) (Expression InternalName (T m) ()))
+    T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
 mkHoleResult sugarContext updateDeps stored val =
     do
         updateDeps
@@ -678,7 +679,7 @@ mkHoleResults ::
     BaseExpr ->
     ListT (T m)
     ( HoleResultScore
-    , T m (HoleResult (T m) (Expression InternalName (T m) ()))
+    , T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
     )
 mkHoleResults mFragment sugarContext exprPl base =
     mkHoleResultVals (sugarContext ^. ConvertM.scFrozenDeps)

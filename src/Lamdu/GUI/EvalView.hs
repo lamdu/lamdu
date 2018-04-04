@@ -27,7 +27,7 @@ import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.TagEdit (makeTagView)
-import           Lamdu.GUI.ExpressionGui.Monad (MonadExprGui)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -42,7 +42,8 @@ textView ::
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
 makeField ::
-    MonadExprGui m => Sugar.TagInfo (Name f) -> ResVal (Name g) -> m [Aligned View]
+    (Monad i, Monad o) =>
+    Sugar.TagInfo (Name f) -> ResVal (Name g) -> ExprGuiM i o [Aligned View]
 makeField tag val =
     do
         tagView <- makeTagView tag
@@ -74,7 +75,9 @@ arrayCutoff = 10
 tableCutoff :: Int
 tableCutoff = 6
 
-makeTable :: MonadExprGui m => Sugar.ResTable (Name f) (ResVal (Name g)) -> m (WithTextPos View)
+makeTable ::
+    (Monad i, Monad o) =>
+    Sugar.ResTable (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
         header <- mapM makeTagView headers
@@ -91,7 +94,9 @@ makeTable (Sugar.ResTable headers valss) =
             else TextView.makeLabel "…"
         Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
 
-makeArray :: MonadExprGui m => [ResVal (Name f)] -> m (WithTextPos View)
+makeArray ::
+    (Monad i, Monad o) =>
+    [ResVal (Name f)] -> ExprGuiM i o (WithTextPos View)
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
@@ -109,7 +114,9 @@ makeArray items =
             <&> hbox
             & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
 
-makeTree :: MonadExprGui m => Sugar.ResTree (ResVal (Name f)) -> m (WithTextPos View)
+makeTree ::
+    (Monad i, Monad o) =>
+    Sugar.ResTree (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
@@ -127,12 +134,16 @@ makeTree (Sugar.ResTree root subtrees) =
         cutoff = 4
 
 
-makeRecord :: MonadExprGui m => Sugar.ResRecord (Name f) (ResVal (Name g)) -> m (WithTextPos View)
+makeRecord ::
+    (Monad i, Monad o) =>
+    Sugar.ResRecord (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeRecord (Sugar.ResRecord fields) =
     traverse (uncurry makeField) fields <&> GridView.make <&> snd
     <&> Align.WithTextPos 0
 
-makeStream :: MonadExprGui m => Sugar.ResStream (ResVal (Name f)) -> m (WithTextPos View)
+makeStream ::
+    (Monad i, Monad o) =>
+    Sugar.ResStream (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
 makeStream (Sugar.ResStream head_) =
     do
         o <- TextView.makeLabel "["
@@ -144,7 +155,9 @@ makeStream (Sugar.ResStream head_) =
     where
         hGlueAlign align l r = (Aligned align l /|/ Aligned align r) ^. Align.value
 
-makeInject :: MonadExprGui m => Sugar.ResInject (Name f) (ResVal (Name g)) -> m (WithTextPos View)
+makeInject ::
+    (Monad i, Monad o) =>
+    Sugar.ResInject (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     do
         tagView <- makeTagView tag
@@ -177,7 +190,8 @@ fixSize view =
             & Anim.iUnitImage %~
             (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
-makeInner :: MonadExprGui m => ResVal (Name f) -> m (WithTextPos View)
+makeInner ::
+    (Monad i, Monad o) => ResVal (Name f) -> ExprGuiM i o (WithTextPos View)
 makeInner (Sugar.ResVal entityId body) =
     case body of
     Sugar.RError err -> makeError err
@@ -225,7 +239,9 @@ toText val =
             where
                 (start, rest) = Text.splitAt 100 ln
 
-make :: MonadExprGui m => ResVal (Name f) -> m (WithTextPos View)
+make ::
+    (Monad i, Monad o) =>
+    ResVal (Name f) -> ExprGuiM i o (WithTextPos View)
 make v =
     do
         maxEvalViewSize <- Lens.view (Theme.theme . Theme.maxEvalViewSize)

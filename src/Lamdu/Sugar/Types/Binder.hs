@@ -47,27 +47,27 @@ data Annotation name = Annotation
     , _aMEvaluationResult :: EvaluationScopes name
     } deriving Show
 
-data AddNextParam name m
-    = AddNext (TagSelection name m ())
+data AddNextParam name i o
+    = AddNext (TagSelection name i o ())
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddNext EntityId
 
-data FuncParamActions name m =
+data FuncParamActions name i o =
     FuncParamActions
-    { _fpAddNext :: AddNextParam name m
-    , _fpDelete :: m ()
-    , _fpMOrderBefore :: Maybe (m ())
-    , _fpMOrderAfter :: Maybe (m ())
+    { _fpAddNext :: AddNextParam name i o
+    , _fpDelete :: o ()
+    , _fpMOrderBefore :: Maybe (o ())
+    , _fpMOrderAfter :: Maybe (o ())
     }
 
-newtype NullParamActions m = NullParamActions
-    { _npDeleteLambda :: m ()
+newtype NullParamActions o = NullParamActions
+    { _npDeleteLambda :: o ()
     }
 
-data ParamInfo name m = ParamInfo
-    { _piTag :: Tag name m
-    , _piActions :: FuncParamActions name m
+data ParamInfo name i o = ParamInfo
+    { _piTag :: Tag name i o
+    , _piActions :: FuncParamActions name i o
     }
 
 data FuncParam name info = FuncParam
@@ -84,65 +84,65 @@ data ExtractDestination
     = ExtractToLet EntityId
     | ExtractToDef EntityId
 
-data DetachAction m
-    = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
-    | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
-    | DetachAction (m EntityId) -- Detach me
+data DetachAction o
+    = FragmentAlready EntityId -- I'o an apply-of-hole, no need to detach
+    | FragmentExprAlready EntityId -- I'o an arg of apply-of-hole, no need to detach
+    | DetachAction (o EntityId) -- Detach me
 
-data NodeActions name m = NodeActions
-    { _detach :: DetachAction m
-    , _mSetToHole :: Maybe (m EntityId) -- (Not available for holes)
-    , _extract :: m ExtractDestination
-    , _mReplaceParent :: Maybe (m EntityId)
-    , _wrapInRecord :: TagSelection name m ()
+data NodeActions name i o = NodeActions
+    { _detach :: DetachAction o
+    , _mSetToHole :: Maybe (o EntityId) -- (Not available for holes)
+    , _extract :: o ExtractDestination
+    , _mReplaceParent :: Maybe (o EntityId)
+    , _wrapInRecord :: TagSelection name i o ()
     }
 
-data LetActions name m = LetActions
-    { _laDelete :: m ()
-    , _laNodeActions :: NodeActions name m
+data LetActions name i o = LetActions
+    { _laDelete :: o ()
+    , _laNodeActions :: NodeActions name i o
     }
 
-data Let name m expr = Let
-    { _lValue :: Binder name m expr -- "let [[foo = bar]] in x"
+data Let name i o expr = Let
+    { _lValue :: Binder name i o expr -- "let [[foo = bar]] in x"
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation name
-    , _lName :: Tag name m
-    , _lActions :: LetActions name m
+    , _lName :: Tag name i o
+    , _lActions :: LetActions name i o
     , _lBodyScope :: ChildScopes
-    , _lBody :: BinderBody name m expr -- "let foo = bar in [[x]]"
+    , _lBody :: BinderBody name i o expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
 
-data AddFirstParam name m
+data AddFirstParam name i o
     = -- The inital param is created with anon-tag
-      AddInitialParam (m EntityId)
-    | PrependParam (TagSelection name m ())
+      AddInitialParam (o EntityId)
+    | PrependParam (TagSelection name i o ())
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddFirst EntityId
 
-data BinderActions name m = BinderActions
-    { _baAddFirstParam :: AddFirstParam name m
-    , _baMNodeActions :: Maybe (NodeActions name m)
+data BinderActions name i o = BinderActions
+    { _baAddFirstParam :: AddFirstParam name i o
+    , _baMNodeActions :: Maybe (NodeActions name i o)
     }
 
-data BinderParams name m
+data BinderParams name i o
     = -- a definition or let-item without parameters
       BinderWithoutParams
     | -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam name (NullParamActions m))
-    | Params [FuncParam name (ParamInfo name m)]
+      NullParam (FuncParam name (NullParamActions o))
+    | Params [FuncParam name (ParamInfo name i o)]
 
-data BinderContent name m expr
-    = BinderLet (Let name m expr)
+data BinderContent name i o expr
+    = BinderLet (Let name i o expr)
     | BinderExpr expr
     deriving (Functor, Foldable, Traversable)
 
-data BinderBody name m expr = BinderBody
-    { _bbAddOuterLet :: m EntityId
-    , _bbContent :: BinderContent name m expr
+data BinderBody name i o expr = BinderBody
+    { _bbAddOuterLet :: o EntityId
+    , _bbContent :: BinderContent name i o expr
     } deriving (Functor, Foldable, Traversable)
 
 data BinderBodyScope
@@ -152,12 +152,12 @@ data BinderBodyScope
       -- ^ binder has params, use the map to get the param application
       -- scopes
 
-data Binder name m expr = Binder
-    { _bChosenScopeProp :: m (Property m (Maybe BinderParamScopeId))
-    , _bParams :: BinderParams name m
+data Binder name i o expr = Binder
+    { _bChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
+    , _bParams :: BinderParams name i o
     , _bLamId :: Maybe EntityId
-    , _bBody :: BinderBody name m expr
-    , _bActions :: BinderActions name m
+    , _bBody :: BinderBody name i o expr
+    , _bActions :: BinderActions name i o
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable)

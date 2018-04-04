@@ -44,19 +44,19 @@ orderTBody t =
 orderType :: Monad m => Order m (Sugar.Type name)
 orderType = Sugar.tBody %%~ orderTBody
 
-orderRecord :: Monad m => Order m (Sugar.Composite name (T f) a)
+orderRecord :: Monad m => Order m (Sugar.Composite name i o a)
 orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo)
 
-orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name binderVar a)
+orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name i o a)
 orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
 
-orderCase :: Monad m => Order m (Sugar.Case name (T m) a)
+orderCase :: Monad m => Order m (Sugar.Case name (T m) o a)
 orderCase = Sugar.cBody %%~ orderRecord
 
-orderLam :: Monad m => Order m (Sugar.Lambda name (T m) a)
+orderLam :: Monad m => Order m (Sugar.Lambda name (T m) o a)
 orderLam = Sugar.lamBinder orderBinder
 
-orderBody :: Monad m => Order m (Sugar.Body name (T m) a)
+orderBody :: Monad m => Order m (Sugar.Body name (T m) o a)
 orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
@@ -77,21 +77,21 @@ orderBody x@Sugar.BodyToNom{} = pure x
 orderBody x@Sugar.BodyFromNom{} = pure x
 orderBody x@Sugar.BodyPlaceHolder{} = pure x
 
-orderExpr :: Monad m => Order m (Sugar.Expression name (T m) a)
+orderExpr :: Monad m => Order m (Sugar.Expression name (T m) o a)
 orderExpr e =
     e
     & Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
-orderBinder :: Monad m => Order m (Sugar.Binder name (T m) a)
+orderBinder :: Monad m => Order m (Sugar.Binder name (T m) o a)
 orderBinder =
     -- The ordering for binder params already occurs at the Binder's conversion,
     -- because it needs to be consistent with the presentation mode.
     pure
 
 orderDef ::
-    Monad m => Order m (Sugar.Definition name (T m) (Sugar.Expression name (T m) a))
+    Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Expression name (T m) o a))
 orderDef def =
     def
     & SugarLens.defSchemes . Sugar.schemeType %%~ orderType

@@ -10,7 +10,6 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.List.Utils (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Utils (maybeToMPlus)
-import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
@@ -65,12 +64,12 @@ noDuplicates x = length x == Set.size (Set.fromList x)
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
-    V.Var -> Composite name f1 expr -> Property f2 Infer.Dependencies -> m ()
+    V.Var -> Composite name i o expr -> Infer.Dependencies -> m ()
 validateDefParamsMatchArgs var record frozenDeps =
     do
         defArgs <-
-            frozenDeps ^? Property.pVal
-                . Infer.depsGlobalTypes . Lens.at var . Lens._Just
+            frozenDeps ^?
+                Infer.depsGlobalTypes . Lens.at var . Lens._Just
                 . CalcScheme.schemeType . T._TFun . _1 . T._TRecord
             & maybeToMPlus
         let flatArgs = FlatComposite.fromComposite defArgs
@@ -96,7 +95,7 @@ convertLabeled funcS argS exprPl =
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
         isLengthAtLeast 2 (record ^. cItems) & guard
-        frozenDeps <- Lens.view ConvertM.scFrozenDeps
+        frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
         let var = sBinderVar ^. bvVar
         let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
         -- If it is an external (non-recursive) def (i.e: not in

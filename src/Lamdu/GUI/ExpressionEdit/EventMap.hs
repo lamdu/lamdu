@@ -30,10 +30,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-data ExprInfo name f = ExprInfo
+data ExprInfo name i o = ExprInfo
     { exprInfoIsHoleResult :: Bool
     , exprInfoNearestHoles :: NearestHoles
-    , exprInfoActions :: Sugar.NodeActions name f
+    , exprInfoActions :: Sugar.NodeActions name i o
     , exprInfoMinOpPrec :: MinOpPrec
     , exprInfoIsSelected :: Bool
     }
@@ -50,7 +50,7 @@ defaultOptions =
 
 exprInfoFromPl ::
     (MonadReader env m, GuiState.HasCursor env) =>
-    Sugar.Payload name f ExprGui.Payload -> m (ExprInfo name f)
+    Sugar.Payload name i o ExprGui.Payload -> m (ExprInfo name i o)
 exprInfoFromPl pl =
     GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
     <&>
@@ -64,14 +64,16 @@ exprInfoFromPl pl =
     }
 
 add ::
-    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f, GuiState.HasCursor env) =>
-    Options -> Sugar.Payload name f ExprGui.Payload ->
-    m (w (f GuiState.Update) -> w (f GuiState.Update))
+    ( MonadReader env m, Config.HasConfig env, HasWidget w, Applicative o
+    , GuiState.HasCursor env
+    ) =>
+    Options -> Sugar.Payload name i o ExprGui.Payload ->
+    m (w (o GuiState.Update) -> w (o GuiState.Update))
 add options pl = exprInfoFromPl pl >>= addWith options
 
 addWith ::
-    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative f) =>
-    Options -> ExprInfo name f -> m (w (f GuiState.Update) -> w (f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative o) =>
+    Options -> ExprInfo name i o -> m (w (o GuiState.Update) -> w (o GuiState.Update))
 addWith options exprInfo =
     do
         actions <- actionsEventMap options exprInfo
@@ -104,8 +106,8 @@ extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId & Widget
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
 extractEventMap ::
-    (MonadReader env m, Config.HasConfig env, Functor f) =>
-    Sugar.NodeActions name f -> m (EventMap (f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, Functor o) =>
+    Sugar.NodeActions name i o -> m (EventMap (o GuiState.Update))
 extractEventMap actions =
     Lens.view (Config.config . Config.extractKeys)
     <&>
@@ -116,9 +118,9 @@ extractEventMap actions =
         doc = E.Doc ["Edit", "Extract"]
 
 actionsEventMap ::
-    (MonadReader env m, Config.HasConfig env, Applicative f) =>
-    Options -> ExprInfo name f ->
-    m (EventContext -> EventMap (f GuiState.Update))
+    (MonadReader env m, Config.HasConfig env, Applicative o) =>
+    Options -> ExprInfo name i o ->
+    m (EventContext -> EventMap (o GuiState.Update))
 actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.detach of
@@ -143,7 +145,7 @@ actionsEventMap options exprInfo =
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
-transformSearchTerm :: ExprInfo name f -> EventContext -> EventMap Text
+transformSearchTerm :: ExprInfo name i o -> EventContext -> EventMap Text
 transformSearchTerm exprInfo eventCtx =
     E.charGroup Nothing (E.Doc ["Edit", "Apply Operator"]) ops Text.singleton
     <> maybeTransformEventMap
@@ -168,8 +170,8 @@ transformSearchTerm exprInfo eventCtx =
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
 
 transformEventMap ::
-    Applicative f =>
-    Options -> ExprInfo name f -> EventContext -> EventMap (f GuiState.Update)
+    Applicative o =>
+    Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update)
 transformEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.detach of
     Sugar.DetachAction detach ->
