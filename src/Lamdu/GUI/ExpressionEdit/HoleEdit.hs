@@ -20,15 +20,13 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 allowedHoleSearchTerm :: Text -> Bool
 allowedHoleSearchTerm searchTerm =
@@ -52,17 +50,18 @@ allowedHoleSearchTerm searchTerm =
             _ -> False
 
 make ::
-    Monad m =>
-    Sugar.Hole (T m) (T m) (Sugar.Expression (Name (T m)) (T m) (T m) ()) ->
-    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM' (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Hole i o (Sugar.Expression (Name o) i o ()) ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
         delKeys <- Lens.view Config.config <&> Config.delKeys
+        ExprGuiM.IOM io <- ExprGuiM.iom
         let (litEventMap, delEventMap)
                 | searchTerm == "" =
-                    ( makeLiteralEventMap (hole ^. Sugar.holeOptionLiteral)
+                    ( makeLiteralEventMap io (hole ^. Sugar.holeOptionLiteral)
                     , foldMap
                         (E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
                         (hole ^. Sugar.holeMDelete)

@@ -27,11 +27,8 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
@@ -65,10 +62,10 @@ makeNamePartEditor color namePartStr setter myId =
 
 make ::
     ( MonadReader env f, HasTheme env, GuiState.HasCursor env
-    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad m
+    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad o
     ) =>
-    Sugar.DefinitionBuiltin name (T m) -> Widget.Id ->
-    f (WithTextPos (Widget (T m GuiState.Update)))
+    Sugar.DefinitionBuiltin name o -> Widget.Id ->
+    f (WithTextPos (Widget (o GuiState.Update)))
 make def myId =
     do
         colors <- Lens.view (Theme.theme . Theme.textColors)

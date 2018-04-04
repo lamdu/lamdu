@@ -7,7 +7,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
 import           Data.Functor.Identity (Identity(..))
@@ -27,14 +26,13 @@ import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui (ExpressionN)
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 data Group i o = Group
     { _groupSearchTerms :: [Text]
@@ -49,7 +47,7 @@ Lens.makeLenses ''Group
 
 data Result i o = Result
     { _rScore :: Sugar.HoleResultScore
-    , -- Warning: This transaction should be ran at most once!
+    , -- Warning: This action should be ran at most once!
       -- Running it more than once will cause inconsistencies.
       rHoleResult :: i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
         -- TODO: Unit monad instead of i o for Expression above?
@@ -158,25 +156,25 @@ isGoodResult :: Sugar.HoleResultScore -> Bool
 isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
-    (MonadTransaction n m, MonadReader env m, Config.HasConfig env) =>
-    T n [Sugar.HoleOption (T n) (T n) (ExpressionN (T n) (T n) ())] ->
-    Maybe (Sugar.OptionLiteral (T n) (T n) (ExpressionN (T n) (T n) ())) ->
+    Monad i =>
+    i [Sugar.HoleOption i o1 (ExpressionN i o1 ())] ->
+    Maybe (Sugar.OptionLiteral i o1 (ExpressionN i o1 ())) ->
     SearchMenu.ResultsContext ->
-    m (Menu.OptionList (ResultGroup (T n) (T n)))
+    ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
 makeAll options mOptionLiteral ctx =
     do
         config <- Lens.view (Config.config . Config.completion)
         literalGroups <-
             (mOptionLiteral <&> makeLiteralGroups searchTerm) ^.. (Lens._Just . traverse)
             & sequenceA
-            & transaction
+            & ExprGuiM.im
         (options >>= mapM mkGroup <&> holeMatches searchTerm)
             <&> (literalGroups <>)
             <&> ListClass.fromList
             <&> ListClass.mapL (makeResultGroup ctx)
             <&> ListClass.catMaybes
             >>= collectResults config
-            & transaction
+            & ExprGuiM.im
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
@@ -187,9 +185,9 @@ mkGroupId option =
     & WidgetIds.hash
 
 mkGroup ::
-    Monad m =>
-    Sugar.HoleOption' (T m) (ExpressionN (T m) (T m) ()) ->
-    T m (Group (T m) (T m))
+    Monad i =>
+    Sugar.HoleOption i o (ExpressionN i o ()) ->
+    i (Group i o)
 mkGroup option =
     option ^. Sugar.hoSugaredBaseExpr
     <&>
@@ -201,12 +199,12 @@ mkGroup option =
     }
 
 tryBuildLiteral ::
-    (Format a, Monad m) =>
+    (Format a, Monad i) =>
     Text ->
     (Identity a -> Sugar.Literal Identity) ->
-    Sugar.OptionLiteral (T m) (T m) (ExpressionN (T m) (T m) ()) ->
+    Sugar.OptionLiteral i o (ExpressionN i o ()) ->
     Text ->
-    Maybe (T m (Group (T m) (T m)))
+    Maybe (i (Group i o))
 tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
     tryParse searchTerm
     <&> Identity
@@ -222,10 +220,10 @@ tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
             }
 
 makeLiteralGroups ::
-    Monad m =>
+    Monad i =>
     Text ->
-    Sugar.OptionLiteral (T m) (T m) (ExpressionN (T m) (T m) ()) ->
-    [T m (Group (T m) (T m))]
+    Sugar.OptionLiteral i o (ExpressionN i o ()) ->
+    [i (Group i o)]
 makeLiteralGroups searchTerm optionLiteral =
     [ tryBuildLiteral "Num"   Sugar.LiteralNum   optionLiteral searchTerm
     , tryBuildLiteral "Bytes" Sugar.LiteralBytes optionLiteral searchTerm

@@ -8,7 +8,9 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readMScopeId, withLocalMScopeId
     --
-    , im, iam, makeSubexpression
+    , im
+    , IOM(..), iom
+    , makeSubexpression
     , ExprGuiM, ExprGuiM', run
     ) where
 
@@ -66,7 +68,7 @@ data Askable i o = Askable
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
-    , _aIam :: forall x. i x -> o x
+    , aIom :: forall x. i x -> o x
     }
 
 newtype ExprGuiM i (o :: * -> *) a =
@@ -105,8 +107,9 @@ instance HasSettings (Askable i o) where settings = aSettings
 im :: Monad i => i a -> ExprGuiM i o a
 im = ExprGuiM . lift
 
-iam :: Monad i => ExprGuiM i o (i a -> o a)
-iam = Lens.view aIam
+newtype IOM i o = IOM (forall x. i x -> o x)
+iom :: Monad i => ExprGuiM i o (IOM i o)
+iom = Lens.view id <&> \askable -> IOM (aIom askable)
 
 readGuiAnchors :: MonadReader (Askable i o) m => m (Anchors.GuiAnchors i o)
 readGuiAnchors = Lens.view aGuiAnchors
@@ -170,7 +173,7 @@ run ::
     (ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> ExprGuiM i o a -> i a
-run makeSubexpr theGuiAnchors env liftIam (ExprGuiM action) =
+run makeSubexpr theGuiAnchors env liftIom (ExprGuiM action) =
     runReaderT action
     Askable
     { _aState = env ^. GuiState.state
@@ -185,5 +188,5 @@ run makeSubexpr theGuiAnchors env liftIam (ExprGuiM action) =
     , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
-    , _aIam = liftIam
+    , aIom = liftIom
     }

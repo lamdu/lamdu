@@ -35,7 +35,7 @@ import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -43,16 +43,13 @@ import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
-type T = Transaction.Transaction
-
 mkEditEventMap ::
-    Monad m =>
-    Text -> T m Sugar.EntityId ->
-    EventMap (T m GuiState.Update)
+    Monad o =>
+    Text -> o Sugar.EntityId ->
+    EventMap (o GuiState.Update)
 mkEditEventMap valText setToHole =
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
@@ -65,11 +62,11 @@ withStyle whichStyle =
     Reader.local (\x -> x & TextEdit.style .~ x ^. Style.style . whichStyle)
 
 genericEdit ::
-    ( Monad m, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
+    ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
-    Property (T m) a ->
-    Sugar.Payload' name (T m) ExprGui.Payload -> f (ExpressionGui (T m))
+    Property o a ->
+    Sugar.Payload name i o ExprGui.Payload -> f (ExpressionGui o)
 genericEdit whichStyle prop pl =
     TextView.makeFocusable ?? valText ?? myId
     <&> Align.tValue %~ Widget.weakerEvents editEventMap
@@ -115,11 +112,11 @@ withFd =
 
 textEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad f
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad o
     ) =>
-    Property (T f) Text ->
-    Sugar.Payload' name (T f) ExprGui.Payload ->
-    m (WithTextPos (Widget (T f GuiState.Update)))
+    Property o Text ->
+    Sugar.Payload name i o ExprGui.Payload ->
+    m (WithTextPos (Widget (o GuiState.Update)))
 textEdit prop pl =
     do
         left <- TextView.makeLabel "“"
@@ -141,11 +138,11 @@ parseNum newText
 
 numEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
-    , GuiState.HasState env, Monad f
+    , GuiState.HasState env, Monad o
     ) =>
-    Property (T f) Double ->
-    Sugar.Payload' name (T f) ExprGui.Payload ->
-    m (WithTextPos (Widget (T f GuiState.Update)))
+    Property o Double ->
+    Sugar.Payload name i o ExprGui.Payload ->
+    m (WithTextPos (Widget (o GuiState.Update)))
 numEdit prop pl =
     (withFd ?? myId) <*>
     do
@@ -213,10 +210,10 @@ numEdit prop pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    Monad m =>
-    Sugar.Literal (Property (T m)) ->
-    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM' (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Literal (Property o) ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make lit pl =
     stdWrap pl
     <*>

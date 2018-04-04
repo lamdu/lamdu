@@ -24,11 +24,8 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Get as NamesGet
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 collisionText :: Name.Collision -> Text
 collisionText NoCollision = ""
@@ -86,14 +83,14 @@ bodyShape = \case
     Sugar.BodyFragment {} -> []
     Sugar.BodyPlaceHolder {} -> []
 
-bodyNames :: Monad m => Sugar.Body (Name (T m)) (T m) (T m) expr -> [Text]
+bodyNames :: Monad i => Sugar.Body (Name o) i o expr -> [Text]
 bodyNames =
     \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b >>= ofName
 
-expr :: Monad m => ExpressionN (T m) (T m) a -> [Text]
+expr :: Monad i => ExpressionN i o a -> [Text]
 expr (Sugar.Expression body _) =
     bodyShape body <>
     bodyNames body <>

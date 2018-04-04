@@ -26,7 +26,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
@@ -34,31 +34,28 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 addScopeEdit ::
-    Functor m =>
-    Maybe (Widget (T m GuiState.Update)) -> ExpressionGui (T m) ->
-    ExpressionGui (T m)
+    Functor o =>
+    Maybe (Widget (o GuiState.Update)) -> ExpressionGui o ->
+    ExpressionGui o
 addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
-    Functor m =>
-    Maybe (ExpressionGui (T m)) ->
-    Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui (T m)]
+    Functor o =>
+    Maybe (ExpressionGui o) ->
+    Maybe (Widget (o GuiState.Update)) -> [ExpressionGui o]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
 mkExpanded ::
-    ( Monad m, MonadReader env f, HasTheme env, TextView.HasStyle env
+    ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
-    f (Maybe (ExpressionGui (T m)) -> Maybe (Widget (T m GuiState.Update)) ->
-     [ExpressionGui (T m)])
+    f (Maybe (ExpressionGui o) -> Maybe (Widget (o GuiState.Update)) ->
+     [ExpressionGui o])
 mkExpanded =
     Styled.grammarLabel "→" <&> Responsive.fromTextView
     <&> \labelEdit mParamsEdit mScopeEdit ->
@@ -68,10 +65,10 @@ lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
-    ( Monad m, MonadReader env f, HasConfig env, HasTheme env
+    ( Monad o, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Widget (T m GuiState.Update)) -> [ExpressionGui (T m)])
+    f (Maybe (Widget (o GuiState.Update)) -> [ExpressionGui o])
 mkShrunk paramIds myId =
     do
         jumpKeys <- Lens.view (Config.config . Config.jumpToDefinitionKeys)
@@ -93,14 +90,14 @@ mkShrunk paramIds myId =
             ]
 
 mkLightLambda ::
-    ( Monad n, MonadReader env f, GuiState.HasCursor env
+    ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
     , HasConfig env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f
-    (Maybe (ExpressionGui (T n)) -> Maybe (Widget (T n GuiState.Update)) ->
-     [ExpressionGui (T n)])
+    (Maybe (ExpressionGui o) -> Maybe (Widget (o GuiState.Update)) ->
+     [ExpressionGui o])
 mkLightLambda params myId =
     do
         isSelected <-
@@ -126,10 +123,10 @@ mkLightLambda params myId =
             Sugar.Params ps -> ps <&> (^. Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
 
 make ::
-    Monad m =>
-    Sugar.Lambda (Name (T m)) (T m) (T m) (ExprGui.SugarExpr' (T m)) ->
-    Sugar.Payload' (Name (T m)) (T m) ExprGui.Payload ->
-    ExprGuiM' (T m) (ExpressionGui (T m))
+    (Monad i, Monad o) =>
+    Sugar.Lambda (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    ExprGuiM i o (ExpressionGui o)
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
