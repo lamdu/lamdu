@@ -97,12 +97,13 @@ withProcess createProc =
      { Proc.std_in = Proc.CreatePipe
      , Proc.std_out = Proc.CreatePipe
      })
-    close
+    (E.uninterruptibleMask_ . close)
     where
       close (_, mStdout, mStderr, handle) =
           do
               _ <- [mStdout, mStderr] & Lens.traverse . Lens.traverse %%~ hClose
               Proc.terminateProcess handle
+              Proc.waitForProcess handle
 
 parseHexBs :: Text -> ByteString
 parseHexBs =
