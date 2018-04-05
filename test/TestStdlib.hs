@@ -40,20 +40,32 @@ verifyTagNames names =
         sorted = sort names
         verifyPair x y
             | x == y = assertString ("duplicate tag name:" <> show x)
+            | not (Text.isPrefixOf x y) = pure ()
             | Text.length x == 1 = pure ()
             | Set.member x prefixesWhitelist = pure ()
-            | Text.isPrefixOf x y && suffix /= "s" && Lens.anyOf (Lens.ix 0) Char.isLower suffix =
+            | Set.member suffix suffixesWhitelist = pure ()
+            | Lens.allOf (Lens.ix 0) Char.isUpper suffix = pure ()
+            | otherwise =
                 assertString ("inconsistent abbreviation detected: " <> show x <> ", " <> show y)
-            | otherwise = pure ()
             where
                 suffix = Text.drop (Text.length x) y
 
 prefixesWhitelist :: Set Text
 prefixesWhitelist =
     Set.fromList
-    [ "connect" -- prefix of "connection"
+    [ "by" -- prefix of "byte"
+    , "connect" -- prefix of "connection"
     , "data" -- prefix of "database"
+    , "head" -- prefix of "header"
     , "not" -- prefix of "nothing"
+    ]
+
+suffixesWhitelist :: Set Text
+suffixesWhitelist =
+    Set.fromList
+    [ "_" -- "sequence" => "sequence_"
+    , "ed" -- "sort" => "sorted"
+    , "s" -- "item" => "items"
     ]
 
 verifyNoBrokenDefsTest :: IO ()
