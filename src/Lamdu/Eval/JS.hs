@@ -256,10 +256,9 @@ processEvent fromUUID resultsRef obj =
                 & postProcess res
         Just event = obj .? "event"
 
-withCopyJSOutputTo :: Maybe FilePath -> ((String -> IO ()) -> IO a) -> IO a
-withCopyJSOutputTo Nothing f = f $ \_js -> pure ()
-withCopyJSOutputTo (Just path) f =
-    withFile path WriteMode $ \outputFile -> f (hPutStrLn outputFile)
+withCopyJSOutput :: Maybe FilePath -> (Maybe Handle -> IO a) -> IO a
+withCopyJSOutput Nothing f = f Nothing
+withCopyJSOutput (Just path) f = withFile path WriteMode $ f . Just
 
 compilerActions ::
     Ord a =>
@@ -315,14 +314,12 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
         withProcess (nodeRepl nodeExePath rtsPath) $
             \(Just stdin, Just stdout, Nothing, _handle) ->
-            withCopyJSOutputTo (actions ^. aCopyJSOutputPath) $ \copyJSOutput ->
+            withCopyJSOutput (actions ^. aCopyJSOutputPath) $ \jsOut ->
             do
-                let output line =
-                        do
-                            copyJSOutput line
-                            hPutStrLn stdin line
-                let
-                    processLines =
+                let handlesJS = stdin : jsOut ^.. Lens._Just
+                let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
+                let flushJS = traverse_ hFlush handlesJS
+                let processLines =
                         do
                             isEof <- hIsEOF stdout
                             unless isEof $
@@ -340,9 +337,9 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
                 _ <- forkIO processLines
                 val <&> Lens.mapped %~ Compiler.ValId . toUUID
                     & Compiler.compile
-                        (compilerActions toUUID depsMVar actions output)
-                hFlush stdin
-                forever (takeMVar executeReplMVar >> output "repl(x => undefined);" >> hFlush stdin)
+                        (compilerActions toUUID depsMVar actions outputJS)
+                flushJS
+                forever (takeMVar executeReplMVar >> outputJS "repl(x => undefined);" >> flushJS)
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.
