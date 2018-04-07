@@ -165,6 +165,16 @@ module.exports = {
             }));
         process.stdout.write("\n");
     },
+    memo: function (thunk) {
+        var done = false;
+        var memo;
+        return function() {
+            if(done) return memo;
+            memo = thunk();
+            done = true;
+            return memo;
+        };
+    },
     wrap: function (fast, slow) {
         var count = 0;
         var callee = function() {

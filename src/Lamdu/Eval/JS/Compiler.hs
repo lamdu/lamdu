@@ -317,14 +317,14 @@ compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
 compileDefExpr (Definition.Expr val frozenDeps) =
     compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
 
-compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
+compileGlobal :: Monad m => V.Var -> M m CodeGen
 compileGlobal globalId =
     do
         def <- performAction (`readGlobal` globalId)
         globalTypes . Lens.at globalId ?= def ^. Definition.defType & M
         case def ^. Definition.defBody of
-            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & pure
-            Definition.BodyExpr defExpr -> compileDefExpr defExpr <&> codeGenExpression
+            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
+            Definition.BodyExpr defExpr -> compileDefExpr defExpr
     & resetRW
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
@@ -335,16 +335,22 @@ compileGlobalVar var =
         loadGlobal =
             Lens.use (globalVarNames . Lens.at var) & M
             >>= maybe newGlobal pure
-            <&> JS.var
+            <&> useGlobal
             <&> codeGenFromExpr
+        useGlobal varName = JS.var varName `JS.call` []
         newGlobal =
             do
                 varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
                 globalVarNames . Lens.at var ?= varName & M
                 compileGlobal var
+                    <&> codeGenLamStmts
+                    <&> JS.lambda []
+                    <&> (: [])
+                    <&> (memo `JS.call`)
                     <&> varinit varName
                     >>= ppOut
                 pure varName
+        memo = JS.var "rts" $. "memo"
         verifyType expectedType =
             do
                 scheme <-
