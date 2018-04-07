@@ -55,7 +55,7 @@ data NewParams = NewParams
 data Evaluator = Evaluator
     { eParams :: NewParams
     , eEvaluatorRef :: IORef BGEvaluator
-    , eResultsRef :: IORef (EvalResults (ValI ViewM))
+    , ePrevResultsRef :: IORef (EvalResults (ValI ViewM))
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
@@ -68,7 +68,7 @@ new params =
         pure Evaluator
             { eParams = params
             , eEvaluatorRef = ref
-            , eResultsRef = resultsRef
+            , ePrevResultsRef = resultsRef
             , eCancelTimerRef = cancelRef
             }
 
@@ -92,7 +92,7 @@ getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
 getResults evaluator =
     do
         res <- getLatestResults evaluator
-        prevResults <- readIORef (eResultsRef evaluator)
+        prevResults <- readIORef (ePrevResultsRef evaluator)
         pure CurAndPrev { _prev = prevResults, _current = res }
 
 eDb :: Evaluator -> MVar (Maybe (Transaction.Store DbM))
@@ -110,7 +110,7 @@ evalActions evaluator =
     , Eval._aReportUpdatesAvailable = resultsUpdated (eParams evaluator)
     , Eval._aCompleted = \_ ->
           do
-              atomicModifyIORef_ (eResultsRef evaluator) (const EvalResults.empty)
+              atomicModifyIORef_ (ePrevResultsRef evaluator) (const EvalResults.empty)
               resultsUpdated (eParams evaluator)
     , Eval._aCopyJSOutputPath = copyJSOutputPath (eParams evaluator)
     }
@@ -154,7 +154,7 @@ stop evaluator =
     do
         onEvaluator Eval.stop evaluator
         writeIORef (eEvaluatorRef evaluator) NotStarted
-        writeIORef (eResultsRef evaluator) EvalResults.empty
+        writeIORef (ePrevResultsRef evaluator) EvalResults.empty
 
 executeReplIOProcess :: Evaluator -> IO ()
 executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
@@ -194,7 +194,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                     prevResults <- getLatestResults evaluator
                     stop evaluator
                     setCancelTimer evaluator
-                    atomicModifyIORef_ (eResultsRef evaluator) (const prevResults)
+                    atomicModifyIORef_ (ePrevResultsRef evaluator) (const prevResults)
                     start evaluator
             pure result
     where
@@ -207,7 +207,7 @@ setCancelTimer evaluator =
         newCancelTimer <-
             runAfter 5000000 $ -- 5 seconds
             do
-                atomicModifyIORef (eResultsRef evaluator)
+                atomicModifyIORef (ePrevResultsRef evaluator)
                     (flip (,) () . const EvalResults.empty)
                 resultsUpdated (eParams evaluator)
         atomicModifyIORef (eCancelTimerRef evaluator)
