@@ -68,9 +68,9 @@ make fragment pl =
                             render fragmentExprGui
                             & Align.tValue %~ setFocalArea
                             & Align.tValue %~ Hover.anchor
-                        searchArea p =
-                            render (searchAreaGui p)
-                            & hideIfInHole
+                        searchArea p
+                            | ExprGui.isHoleResult pl = Element.empty
+                            | otherwise = render (searchAreaGui p)
                         render x = (x ^. Responsive.render) layoutMode
                         setFocalArea w
                             | isSelected =
@@ -92,12 +92,6 @@ make fragment pl =
     where
         innerId = fragment ^. Sugar.fExpr . Sugar.rPayload & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
-        hideIfInHole x
-            | ExprGui.isHoleResult pl =
-                x
-                & Element.setLayers .~ mempty
-                & Element.size .~ 0
-            | otherwise = x
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
