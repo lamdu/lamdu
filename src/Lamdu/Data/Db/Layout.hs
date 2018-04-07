@@ -10,8 +10,6 @@ module Lamdu.Data.Db.Layout
     , module Lamdu.Data.Anchors
     ) where
 
-import           Lamdu.Prelude
-
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.ByteString.Char8 ()
 import           GUI.Momentu.State (GUIState)
@@ -23,6 +21,8 @@ import           Revision.Deltum.Rev.View (View)
 import qualified Revision.Deltum.Rev.View as View
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
+
+import           Lamdu.Prelude
 
 type T = Transaction
 

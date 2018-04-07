@@ -55,7 +55,7 @@ data Visited = Visited
     }
 Lens.makeLenses ''Visited
 
-type Export = WriterT [Codec.Entity] (StateT Visited (T ViewM))
+type Export m = WriterT [Codec.Entity] (StateT Visited (T m))
 
 type EntityOrdering = (Int, Identifier)
 
@@ -70,17 +70,19 @@ entityOrdering (Codec.EntityRepl _)                                   = (5, "")
 entityVersion :: Codec.Entity
 entityVersion = Codec.EntitySchemaVersion Migration.currentVersion
 
-runExport :: Export a -> T ViewM (a, Aeson.Value)
+runExport :: Monad m => Export m a -> T m (a, Aeson.Value)
 runExport act =
     act
     & runWriterT
     <&> _2 %~ Aeson.toJSON . List.sortOn entityOrdering . (entityVersion :)
     & (`State.evalStateT` Visited mempty mempty mempty)
 
-trans :: T ViewM a -> Export a
+trans :: Monad m => T m a -> Export m a
 trans = lift . lift
 
-withVisited :: Ord a => Lens.ALens' Visited (Set a) -> a -> Export () -> Export ()
+withVisited ::
+    (Monad m, Ord a) =>
+    Lens.ALens' Visited (Set a) -> a -> Export m () -> Export m ()
 withVisited l x act =
     do
         alreadyVisited <- Lens.use (Lens.cloneLens l . Lens.contains x)
@@ -90,12 +92,12 @@ withVisited l x act =
                 act
 
 readAssocTag :: Monad m => ToUUID a => a -> T m T.Tag
-readAssocTag x = Anchors.assocTag x & Property.getP
+readAssocTag = Property.getP . Anchors.assocTag
 
-tell :: Codec.Entity -> Export ()
+tell :: Monad m => Codec.Entity -> Export m ()
 tell = Writer.tell . (: [])
 
-exportTag :: T.Tag -> Export ()
+exportTag :: Monad m => T.Tag -> Export m ()
 exportTag tag =
     do
         tagOrder <- Property.getP (Anchors.assocTagOrder tag) & trans
@@ -104,15 +106,15 @@ exportTag tag =
         Codec.EntityTag tagOrder mName tag & tell
     & withVisited visitedTags tag
 
-exportNominal :: T.NominalId -> Export ()
+exportNominal :: Monad m => T.NominalId -> Export m ()
 exportNominal nomId =
     do
         nominal <- trans (Load.nominal nomId)
-        mName <- readAssocTag nomId & trans
-        Codec.EntityNominal mName nomId nominal & tell
+        tag <- readAssocTag nomId & trans
+        Codec.EntityNominal tag nomId nominal & tell
         & withVisited visitedNominals nomId
 
-exportSubexpr :: Val (ValI ViewM) -> Export ()
+exportSubexpr :: Monad m => Val (ValI m) -> Export m ()
 exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
@@ -120,7 +122,7 @@ exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
         Codec.EntityLamVar mParamList tag (valIToUUID lamI) lamVar & tell
 exportSubexpr _ = pure ()
 
-exportVal :: Val (ValI ViewM) -> Export ()
+exportVal :: Monad m => Val (ValI m) -> Export m ()
 exportVal val =
     do
         val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
@@ -131,7 +133,7 @@ exportVal val =
 valIToUUID :: ValI m -> UUID
 valIToUUID = IRef.uuid . ExprIRef.unValI
 
-exportDef :: V.Var -> Export ()
+exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =
     do
         presentationMode <- Property.getP (Anchors.assocPresentationMode globalId) & trans
@@ -146,7 +148,7 @@ exportDef globalId =
     where
         defI = ExprIRef.defI globalId
 
-exportRepl :: Export ()
+exportRepl :: Export ViewM ()
 exportRepl =
     do
         repl <-
@@ -162,11 +164,11 @@ jsonExportRepl = runExport exportRepl <&> snd
 fileExportRepl :: FilePath -> T ViewM (IO ())
 fileExportRepl = export "repl" exportRepl
 
-fileExportDef :: V.Var -> FilePath -> T ViewM (IO ())
+fileExportDef :: Monad m => V.Var -> FilePath -> T m (IO ())
 fileExportDef globalId =
     export ("def: " ++ show globalId) (exportDef globalId)
 
-exportAll :: Export ()
+exportAll :: Export ViewM ()
 exportAll =
     do
         exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
@@ -185,7 +187,7 @@ verifyAll = runExport exportAll & void
 fileExportAll :: FilePath -> T ViewM (IO ())
 fileExportAll = export "all" exportAll
 
-export :: String -> Export a -> FilePath -> T ViewM (IO ())
+export :: Monad m => String -> Export m a -> FilePath -> T m (IO ())
 export msg act exportPath =
     runExport act
     <&> snd
@@ -234,7 +236,7 @@ importTag tagOrder mName tag =
         traverse_ (Property.setP (Anchors.assocTagNameRef tag)) mName
         tag `insertTo` DbLayout.tags
 
-importLamVar :: Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T ViewM ()
+importLamVar :: Monad m => Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T m ()
 importLamVar paramList tag lamUUID var =
     do
         Property.setP (Anchors.assocFieldParamList lamI) paramList

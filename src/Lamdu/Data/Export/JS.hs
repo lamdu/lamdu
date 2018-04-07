@@ -63,12 +63,7 @@ removeReadmeMeta :: String -> String
 removeReadmeMeta =
     unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
-readRepl :: T ViewM (Def.Expr (Val (ValI ViewM)))
-readRepl =
-    DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
-    >>= traverse ExprIRef.readVal
-
-compile :: Def.Expr (Val (ValI ViewM)) -> T ViewM String
+compile :: Monad m => Def.Expr (Val (ValI m)) -> T m String
 compile val =
     val <&> Lens.mapped %~ valId
     & Compiler.compile actions
@@ -106,6 +101,11 @@ formatResult (EV.Val _ b) =
 
 readDataFile :: FilePath -> IO String
 readDataFile path = Paths.getDataFileName path >>= readFile
+
+readRepl :: T ViewM (Def.Expr (Val (ValI ViewM)))
+readRepl =
+    DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
+    >>= traverse ExprIRef.readVal
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
 exportFancy evalResults =
