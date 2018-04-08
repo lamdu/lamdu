@@ -2,8 +2,6 @@
 /* jshint esversion: 6 */
 "use strict";
 
-process.stdout._handle.setBlocking(true);
-
 var conf = require('./rtsConfig.js');
 
 // Tag names must match those in Lamdu.Builtins.Anchors
@@ -69,49 +67,6 @@ var bytesFromAscii = function (str) {
     return arr;
 };
 
-var encode = function() {
-    var cacheId = 0;
-    return function (x) {
-        var replacer = function(key, value) {
-            if (value == null) { // or undefined due to auto-coercion
-                return {};
-            }
-            if (typeof value == "number" && !isFinite(value)) {
-                return { "number": String(value) };
-            }
-            if ((typeof value != "object" && typeof value != "function") ||
-                key === "array" || key === "bytes") {
-                return value;
-            }
-            if (value.hasOwnProperty("cacheId")) {
-                if (value.cacheId == -1) {
-                    // Opaque value
-                    return {};
-                }
-                return { cachedVal: value.cacheId };
-            }
-            value.cacheId = cacheId++;
-            if (Function.prototype.isPrototypeOf(value)) {
-                return { func: value.cacheId };
-            }
-            if (Array.prototype.isPrototypeOf(value)) {
-                return {
-                    array: value,
-                    cacheId: value.cacheId,
-                };
-            }
-            if (Uint8Array.prototype.isPrototypeOf(value)) {
-                return {
-                    bytes: Array.from(value),
-                    cacheId: value.cacheId,
-                };
-            }
-            return value;
-        };
-        return JSON.stringify(x, replacer);
-    };
-}();
-
 var toString = function (bytes) {
     // This is a nodejs only method to convert a UInt8Array to a string.
     // For the browser we'll need to augment this.
@@ -143,28 +98,17 @@ var mutVoidWithError = function (inner) {
     };
 };
 
+var protocol = require('./protocol.js');
+
 module.exports = {
     logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
     logResult: function (scope, exprId, result) {
-        process.stdout.write(encode({
-            event:"Result",
-            scope:scope,
-            exprId:exprId,
-            result:result
-            }));
-        process.stdout.write("\n");
+        protocol.sendResult(scope, exprId, result);
         return result;
     },
     logNewScope: function (parentScope, scope, lamId, arg) {
-        process.stdout.write(encode({
-            event:"NewScope",
-            parentScope:parentScope,
-            scope:scope,
-            lamId:lamId,
-            arg:arg
-            }));
-        process.stdout.write("\n");
+        protocol.sendNewScope(parentScope, scope, lamId, arg);
     },
     memo: function (thunk) {
         var done = false;
