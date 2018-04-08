@@ -11,6 +11,7 @@ module Lamdu.Eval.JS
 import           Control.Applicative ((<|>))
 import           Control.Concurrent (forkIO, killThread)
 import           Control.Concurrent.MVar
+import           Control.Concurrent.Utils (withForkedIO)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM, msum)
@@ -58,7 +59,7 @@ import           Lamdu.Prelude
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , _aReportUpdatesAvailable :: IO ()
-    , _aCompleted :: Either E.SomeException (ER.Val srcId) -> IO ()
+    , _aCompleted :: Either E.SomeException (ER.Val ()) -> IO ()
     , _aCopyJSOutputPath :: Maybe FilePath
     }
 Lens.makeLenses ''Actions
@@ -235,21 +236,47 @@ newScope fromUUID obj =
         Just scope = obj .? "scope"
         Just lamId = obj .? "lamId"
 
-atomicModifyIORef'_ :: IORef a -> (a -> a) -> IO ()
-atomicModifyIORef'_ ref f = atomicModifyIORef' ref (flip (,) () . f)
+completionSuccess :: Json.Object -> Parse (ER.Val ())
+completionSuccess obj =
+    case obj .? "result" of
+    Nothing -> fail "Completion success report missing result"
+    Just x -> parseResult x
+
+data NodeException = NodeException Text
+instance Show NodeException where
+    show (NodeException txt) = "Node exception: " ++ Text.unpack txt
+instance E.Exception NodeException
+
+completionError :: Json.Object -> Parse E.SomeException
+completionError obj =
+    case obj .? "err" of
+    Nothing -> fail "Completion error report missing err"
+    Just x -> NodeException x & E.SomeException & pure
 
 processEvent ::
-    Ord srcId => (UUID -> srcId) -> IORef (EvalResults srcId) -> Json.Object -> IO ()
-processEvent fromUUID resultsRef obj =
+    Ord srcId =>
+    (UUID -> srcId) -> IORef (EvalResults srcId) -> Actions srcId1 ->
+    Json.Object -> IO ()
+processEvent fromUUID resultsRef actions obj =
     case event of
     "Result" ->
-        runParse (addVal fromUUID obj) (ER.erExprValues %~)
+        runParse (addVal fromUUID obj) (onResults (ER.erExprValues %~))
+        >> actions ^. aReportUpdatesAvailable
     "NewScope" ->
-        runParse (newScope fromUUID obj) (ER.erAppliesOfLam %~)
+        runParse (newScope fromUUID obj) (onResults (ER.erAppliesOfLam %~))
+        >> actions ^. aReportUpdatesAvailable
+    "CompletionSuccess" ->
+        runParse (completionSuccess obj) getResult
+        <&> Right >>= actions ^. aCompleted
+    "CompletionError" ->
+        runParse (completionError obj) getResult
+        <&> Left >>= actions ^. aCompleted
     _ -> "Unknown event " ++ event & putStrLn
     where
+        onResults f res evalResults = (f res evalResults, ())
+        getResult res evalResults = (evalResults, res)
         runParse act postProcess =
-            atomicModifyIORef'_ resultsRef $
+            atomicModifyIORef' resultsRef $
             \oldEvalResults ->
             let (res, newCache) = runState act (oldEvalResults ^. ER.erCache)
             in  oldEvalResults
@@ -333,16 +360,14 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
                 let handlesJS = stdin : jsOut ^.. Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
                 let flushJS = traverse_ hFlush handlesJS
-                let handleEvent obj =
-                        do
-                            processEvent fromUUID resultsRef obj
-                            actions ^. aReportUpdatesAvailable
-                _ <- forkIO (processNodeOutput handleEvent stdout)
-                val <&> Lens.mapped %~ Compiler.ValId . toUUID
-                    & Compiler.compile
-                        (compilerActions toUUID depsMVar actions outputJS)
-                flushJS
-                forever (takeMVar executeReplMVar >> outputJS "repl(x => undefined);" >> flushJS)
+                let handleEvent = processEvent fromUUID resultsRef actions
+                withForkedIO (processNodeOutput handleEvent stdout) $
+                    do
+                        val <&> Lens.mapped %~ Compiler.ValId . toUUID
+                            & Compiler.compile
+                                (compilerActions toUUID depsMVar actions outputJS)
+                        flushJS
+                        forever (takeMVar executeReplMVar >> outputJS "repl(x => undefined);" >> flushJS)
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.

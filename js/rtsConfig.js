@@ -1,6 +1,8 @@
 /* jshint node: true */
 "use strict";
 
+var protocol = require("./protocol.js");
+
 module.exports = {
     builtinTagName: function (x) {
         var raw = ("BI:" + x).substring(0, 16);
@@ -16,6 +18,10 @@ module.exports = {
         }
         return encoded;
     },
-    logRepl: function () {},
-    logReplErr: function () {},
+    logRepl: function (res) {
+        protocol.sendCompletionSuccess(res);
+    },
+    logReplErr: function (err) {
+        protocol.sendCompletionError(err);
+    },
 };

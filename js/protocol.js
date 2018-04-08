@@ -70,4 +70,16 @@ module.exports = {
             arg:arg
         });
     },
+    sendCompletionSuccess: function(result) {
+        sendEvent({
+            event:"CompletionSuccess",
+            result:result
+        });
+    },
+    sendCompletionError: function(err) {
+        sendEvent({
+            event:"CompletionError",
+            err:err
+        });
+    },
 };
