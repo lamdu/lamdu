@@ -2,42 +2,11 @@
 /* jshint esversion: 6 */
 "use strict";
 
-var conf = require('./rtsConfig.js');
-
-// Tag names must match those in Lamdu.Builtins.Anchors
-var trueTag = conf.builtinTagName('true');
-var falseTag = conf.builtinTagName('false');
-var objTag = conf.builtinTagName('object');
-var infixlTag = conf.builtinTagName('infixl');
-var infixrTag = conf.builtinTagName('infixr');
-var indexTag = conf.builtinTagName('index');
-var startTag = conf.builtinTagName('start');
-var stopTag = conf.builtinTagName('stop');
-var valTag = conf.builtinTagName('val');
-var oldPathTag = conf.builtinTagName('oldPath');
-var newPathTag = conf.builtinTagName('newPath');
-var filePathTag = conf.builtinTagName('filePath');
-var fileDescTag = conf.builtinTagName('fileDesc');
-var dataTag = conf.builtinTagName('data');
-var modeTag = conf.builtinTagName('mode');
-var sizeTag = conf.builtinTagName('size');
-var srcPathTag = conf.builtinTagName('srcPath');
-var dstPathTag = conf.builtinTagName('dstPath');
-var flagsTag = conf.builtinTagName('flags');
-var hostTag = conf.builtinTagName('host');
-var portTag = conf.builtinTagName('port');
-var userTag = conf.builtinTagName('user');
-var passwordTag = conf.builtinTagName('password');
-var databaseTag = conf.builtinTagName('database');
-var fieldsTag = conf.builtinTagName('fields');
-var exclusiveTag = conf.builtinTagName('exclusive');
-var connectionHandlerTag = conf.builtinTagName('connectionHandler');
-var socketTag = conf.builtinTagName('socket');
-var errorTag = conf.builtinTagName('error');
-var successTag = conf.builtinTagName('success');
+var anchors = require("./anchors.js");
+var tags = anchors.tags;
 
 var bool = function (x) {
-    return {tag: x ? trueTag : falseTag, data: {}};
+    return {tag: x ? tags.true : tags.false, data: {}};
 };
 
 // Assumes "a" and "b" are of same type, and it is an object created by
@@ -99,6 +68,7 @@ var mutVoidWithError = function (inner) {
 };
 
 var protocol = require('./protocol.js');
+var conf = require('./rtsConfig.js');
 
 module.exports = {
     logRepl: conf.logRepl,
@@ -139,54 +109,54 @@ module.exports = {
     builtins: {
         Prelude: {
             sqrt: Math.sqrt,
-            "+": function (x) { return x[infixlTag] + x[infixrTag]; },
-            "-": function (x) { return x[infixlTag] - x[infixrTag]; },
-            "*": function (x) { return x[infixlTag] * x[infixrTag]; },
-            "/": function (x) { return x[infixlTag] / x[infixrTag]; },
-            "^": function (x) { return Math.pow(x[infixlTag], x[infixrTag]); },
-            div: function (x) { return Math.floor(x[infixlTag] / x[infixrTag]); },
+            "+": function (x) { return x[tags.infixl] + x[tags.infixr]; },
+            "-": function (x) { return x[tags.infixl] - x[tags.infixr]; },
+            "*": function (x) { return x[tags.infixl] * x[tags.infixr]; },
+            "/": function (x) { return x[tags.infixl] / x[tags.infixr]; },
+            "^": function (x) { return Math.pow(x[tags.infixl], x[tags.infixr]); },
+            div: function (x) { return Math.floor(x[tags.infixl] / x[tags.infixr]); },
             mod: function (x) {
-                var modulus = x[infixrTag];
-                var r = x[infixlTag] % modulus;
+                var modulus = x[tags.infixr];
+                var r = x[tags.infixl] % modulus;
                 if (r < 0)
                     r += modulus;
                 return r;
             },
             negate: function (x) { return -x; },
-            "==": function (x) { return bool(isEqual(x[infixlTag], x[infixrTag])); },
-            "/=": function (x) { return bool(!isEqual(x[infixlTag], x[infixrTag])); },
-            ">=": function (x) { return bool(x[infixlTag] >= x[infixrTag]); },
-            ">": function (x) { return bool(x[infixlTag] > x[infixrTag]); },
-            "<=": function (x) { return bool(x[infixlTag] <= x[infixrTag]); },
-            "<": function (x) { return bool(x[infixlTag] < x[infixrTag]); },
+            "==": function (x) { return bool(isEqual(x[tags.infixl], x[tags.infixr])); },
+            "/=": function (x) { return bool(!isEqual(x[tags.infixl], x[tags.infixr])); },
+            ">=": function (x) { return bool(x[tags.infixl] >= x[tags.infixr]); },
+            ">": function (x) { return bool(x[tags.infixl] > x[tags.infixr]); },
+            "<=": function (x) { return bool(x[tags.infixl] <= x[tags.infixr]); },
+            "<": function (x) { return bool(x[tags.infixl] < x[tags.infixr]); },
         },
         Bytes: {
             length: function (x) { return x.length; },
-            byteAt: function (x) { return x[objTag][x[indexTag]]; },
-            slice: function (x) { return x[objTag].subarray(x[startTag], x[stopTag]); },
+            byteAt: function (x) { return x[tags.obj][x[tags.index]]; },
+            slice: function (x) { return x[tags.obj].subarray(x[tags.start], x[tags.stop]); },
             unshare: function (x) { return x.slice(); },
             fromArray: function (x) { return bytes(x); },
         },
         Array: {
             length: function (x) { return x.length; },
-            item: function (x) { return x[objTag][x[indexTag]]; },
+            item: function (x) { return x[tags.obj][x[tags.index]]; },
         },
         Mut: {
             return: mutFunc(x => x),
             bind: function(x) {
                 return function (cont) {
-                    return x[infixlTag](res => x[infixrTag](res)(cont));
+                    return x[tags.infixl](res => x[tags.infixr](res)(cont));
                 };
             },
             run: function(st) { return st(x => x); },
             Array: {
                 length: mutFunc(x => x.length),
-                read: mutFunc(x => x[objTag][x[indexTag]]),
-                write: mutFunc(x => { x[objTag][x[indexTag]] = x[valTag]; return {}; } ),
-                append: mutFunc(x => { x[objTag].push(x[valTag]); return {}; } ),
+                read: mutFunc(x => x[tags.obj][x[tags.index]]),
+                write: mutFunc(x => { x[tags.obj][x[tags.index]] = x[tags.val]; return {}; } ),
+                append: mutFunc(x => { x[tags.obj].push(x[tags.val]); return {}; } ),
                 truncate: mutFunc(x => {
-                    var arr = x[objTag];
-                    arr.length = Math.min(arr.length, x[stopTag]);
+                    var arr = x[tags.obj];
+                    arr.length = Math.min(arr.length, x[tags.stop]);
                     return {};
                 }),
                 new: cont => cont([]),
@@ -201,7 +171,7 @@ module.exports = {
             Ref: {
                 new: mutFunc(x => { return {val: x}; }),
                 read: mutFunc(x => x.val),
-                write: mutFunc(x => { x[objTag].val = x[valTag]; return {}; }),
+                write: mutFunc(x => { x[tags.obj].val = x[tags.val]; return {}; }),
             },
         },
         IO: {
@@ -209,11 +179,11 @@ module.exports = {
                 unlink: mutVoidWithError(path =>
                     require('fs').unlink.bind(null, toString(path))),
                 rename: mutVoidWithError(x =>
-                    require('fs').rename.bind(null, toString(x[oldPathTag]), toString(x[newPathTag]))),
+                    require('fs').rename.bind(null, toString(x[tags.oldPath]), toString(x[tags.newPath]))),
                 chmod: mutVoidWithError(x =>
-                    require('fs').chmod.bind(null, toString(x[filePathTag]), x[modeTag])),
+                    require('fs').chmod.bind(null, toString(x[tags.filePath]), x[tags.mode])),
                 link: mutVoidWithError(x =>
-                    require('fs').link.bind(null, toString(x[srcPathTag]), toString(x[dstPathTag]))),
+                    require('fs').link.bind(null, toString(x[tags.srcPath]), toString(x[tags.dstPath]))),
                 readFile: function(path) {
                     return function(cont) {
                         require('fs').readFile(toString(path), (err, data) => {
@@ -223,22 +193,22 @@ module.exports = {
                     };
                 },
                 appendFile: mutVoidWithError(x =>
-                    require('fs').appendFile.bind(null, toString(x[filePathTag]), Buffer.from(x[dataTag]), null)),
+                    require('fs').appendFile.bind(null, toString(x[tags.filePath]), Buffer.from(x[tags.data]), null)),
                 writeFile: mutVoidWithError(x =>
-                    require('fs').writeFile.bind(null, toString(x[filePathTag]), Buffer.from(x[dataTag])), null),
+                    require('fs').writeFile.bind(null, toString(x[tags.filePath]), Buffer.from(x[tags.data])), null),
             },
             network: {
                 openTcpServer: mutFunc(x => {
                     var server = require('net').Server(socket => {
                         makeOpaque(socket);
-                        x[connectionHandlerTag](socket)(dataHandler =>
+                        x[tags.connectionHandler](socket)(dataHandler =>
                             socket.on('data', data => { dataHandler(new Uint8Array(data))(x => null); } )
                         );
                     });
                     server.listen({
-                        host: toString(x[hostTag]),
-                        port: x[portTag],
-                        exclusive: bool(x[exclusiveTag])
+                        host: toString(x[tags.host]),
+                        port: x[tags.port],
+                        exclusive: bool(x[tags.exclusive])
                     });
                     makeOpaque(server);
                     return server;
@@ -250,7 +220,7 @@ module.exports = {
                 },
                 socketSend: function (x) {
                     return function (cont) {
-                        x[socketTag].write(Buffer.from(x[dataTag]), null, cont);
+                        x[tags.socket].write(Buffer.from(x[tags.data]), null, cont);
                     };
                 }
             },
@@ -260,11 +230,11 @@ module.exports = {
                         return function(cont) {
                             var pg = require('pg');
                             var client = new pg.Client({
-                                host: toString(x[hostTag]),
-                                port: x[portTag],
-                                database: toString(x[databaseTag]),
-                                user: toString(x[userTag]),
-                                password: toString(x[passwordTag])
+                                host: toString(x[tags.host]),
+                                port: x[tags.port],
+                                database: toString(x[tags.database]),
+                                user: toString(x[tags.user]),
+                                password: toString(x[tags.password])
                             });
                             makeOpaque(client);
                             client.connect(err => {
@@ -275,9 +245,9 @@ module.exports = {
                     },
                     query: function(x) {
                         return function(cont) {
-                            x[databaseTag].query(toString(x[objTag]), (err, resJs) => {
+                            x[tags.database].query(toString(x[tags.obj]), (err, resJs) => {
                                 if (err) {
-                                    cont({tag: errorTag, data: bytesFromAscii(err.message)});
+                                    cont({tag: tags.error, data: bytesFromAscii(err.message)});
                                     return;
                                 }
                                 var fields = [];
@@ -294,9 +264,9 @@ module.exports = {
                                     rows.push(row);
                                 }
                                 var resLamdu = {};
-                                resLamdu[fieldsTag] = fields;
-                                resLamdu[dataTag] = rows;
-                                cont({tag: successTag, data: resLamdu});
+                                resLamdu[tags.fields] = fields;
+                                resLamdu[tags.data] = rows;
+                                cont({tag: tags.success, data: resLamdu});
                             });
                         };
                     }
