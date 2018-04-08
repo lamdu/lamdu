@@ -12,4 +12,5 @@ module.exports = {
         return x;
     },
     logRepl: function (x) { console.log(String.fromCharCode.apply(null, x)); },
+    logReplErr: function (x) { console.log("Error: " + String.fromCharCode.apply(null, x)); },
 };

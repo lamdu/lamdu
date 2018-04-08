@@ -17,4 +17,5 @@ module.exports = {
         return encoded;
     },
     logRepl: function () {},
+    logReplErr: function () {},
 };

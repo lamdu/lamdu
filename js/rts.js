@@ -145,6 +145,7 @@ var mutVoidWithError = function (inner) {
 
 module.exports = {
     logRepl: conf.logRepl,
+    logReplErr: conf.logReplErr,
     logResult: function (scope, exprId, result) {
         process.stdout.write(encode({
             event:"Result",
