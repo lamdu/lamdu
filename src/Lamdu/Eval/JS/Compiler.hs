@@ -211,7 +211,6 @@ run actions act =
              (JS.block
               [ void [jsstmt|rts.logReplErr(err);|] ])
             ) Nothing & ppOut
-        ppOut repl
         void [jsstmt|rts.logRepl(repl);|] & ppOut
         -- This form avoids outputing repl's value in interactive mode
         void [jsstmt|(function() { module.exports = repl; })();|] & ppOut
