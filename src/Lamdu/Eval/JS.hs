@@ -14,8 +14,9 @@ import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM, msum)
+import           Control.Monad.Except (throwError, runExceptT)
 import           Control.Monad.Trans.State (State, runState)
-import qualified Data.Aeson as JsonStr
+import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString as SBS
@@ -302,6 +303,19 @@ stripInteractive line
     where
         irrelevant = SBS.unpack ". "
 
+processNodeOutput :: (Json.Object -> IO ()) -> Handle -> IO ()
+processNodeOutput handleEvent stdout =
+    void $ runExceptT $ forever $
+    do
+        isEof <- hIsEOF stdout & lift
+        when isEof $ throwError "EOF"
+        line <- SBS.hGetLine stdout <&> stripInteractive & lift
+        case Aeson.decode (lazifyBS line) of
+            Nothing
+                | line `elem` ["'use strict'", "undefined", ""] -> pure ()
+                | otherwise -> "Failed to decode: " ++ show line & throwError
+            Just obj -> handleEvent obj & lift
+
 asyncStart ::
     Ord srcId =>
     (srcId -> UUID) -> (UUID -> srcId) ->
@@ -319,22 +333,11 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
                 let handlesJS = stdin : jsOut ^.. Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
                 let flushJS = traverse_ hFlush handlesJS
-                let processLines =
+                let handleEvent obj =
                         do
-                            isEof <- hIsEOF stdout
-                            unless isEof $
-                                do
-                                    line <- SBS.hGetLine stdout <&> stripInteractive
-                                    case JsonStr.decode (lazifyBS line) of
-                                        Nothing
-                                            | line `elem` ["'use strict'", "undefined", ""] -> processLines
-                                            | otherwise -> "Failed to decode: " ++ show line & error >> processLines
-                                        Just obj ->
-                                            do
-                                                processEvent fromUUID resultsRef obj
-                                                actions ^. aReportUpdatesAvailable
-                                                processLines
-                _ <- forkIO processLines
+                            processEvent fromUUID resultsRef obj
+                            actions ^. aReportUpdatesAvailable
+                _ <- forkIO (processNodeOutput handleEvent stdout)
                 val <&> Lens.mapped %~ Compiler.ValId . toUUID
                     & Compiler.compile
                         (compilerActions toUUID depsMVar actions outputJS)
