@@ -122,11 +122,14 @@ varinit ident expr = JS.vardecls [JS.varinit ident expr]
 scopeIdent :: Int -> JSS.Id ()
 scopeIdent depth = "scopeId_" ++ show depth & JS.ident
 
+rts :: JSS.Id () -> JSS.Expression ()
+rts = (JS.var "rts" $.)
+
 declLog :: Int -> JSS.Statement ()
 declLog depth =
     varinit "log" $
     JS.lambda ["exprId", "result"]
-    [ (JS.var "rts" $. "logResult") `JS.call`
+    [ (rts "logResult") `JS.call`
       [ JS.var (scopeIdent depth)
       , JS.var "exprId"
       , JS.var "result"
@@ -346,11 +349,10 @@ compileGlobalVar var =
                     <&> codeGenLamStmts
                     <&> JS.lambda []
                     <&> (: [])
-                    <&> (memo `JS.call`)
+                    <&> (rts "memo" `JS.call`)
                     <&> varinit varName
                     >>= ppOut
                 pure varName
-        memo = JS.var "rts" $. "memo"
         verifyType expectedType =
             do
                 scheme <-
@@ -418,14 +420,14 @@ inject tagStr dat' =
 
 ffiCompile :: Definition.FFIName -> JSS.Expression ()
 ffiCompile (Definition.FFIName modul funcName) =
-    foldl ($.) (JS.var "rts" $. "builtins") (modul <&> Text.unpack <&> JS.ident)
+    foldl ($.) (rts "builtins") (modul <&> Text.unpack <&> JS.ident)
     `JS.brack` JS.string (Text.unpack funcName)
 
 compileLiteral :: V.PrimVal -> CodeGen
 compileLiteral literal =
     case PrimVal.toKnown literal of
     PrimVal.Bytes bytes ->
-        JS.var "rts" $. "bytes" $$ JS.array ints & codeGenFromExpr
+        rts "bytes" $$ JS.array ints & codeGenFromExpr
         where
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     PrimVal.Float num -> JS.number num & codeGenFromExpr
@@ -501,7 +503,7 @@ jsValId (ValId uuid) = (JS.string . Text.unpack . decodeUtf8 . Hex.encode . UUID
 
 callLogNewScope :: Int -> Int -> ValId -> JSS.Expression () -> JSS.Statement ()
 callLogNewScope parentDepth myDepth lamValId argVal =
-    (JS.var "rts" $. "logNewScope") `JS.call`
+    rts "logNewScope" `JS.call`
     [ JS.var (scopeIdent parentDepth)
     , JS.var (scopeIdent myDepth)
     , jsValId lamValId
@@ -538,7 +540,7 @@ compileLambda (V.Lam v res) valId =
                         slowLoggingLambdaPrefix logUsed parentScopeDepth valId
                         (JS.var varName)
                 fastLam <- compileRes & local (envMode .~ FastSilent) <&> mkLambda
-                (JS.var "rts" $. "wrap") `JS.call`
+                rts "wrap" `JS.call`
                     [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & pure
             where
                 parentScopeDepth = loggingInfo ^. liScopeDepth
@@ -608,7 +610,7 @@ compileToNom (V.Nom tId val) valId =
         | tId == Builtins.textTid
         && all (< 128) (BS.unpack bytes) ->
             -- The JS is more readable with string constants
-            JS.var "rts" $. "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
+            rts "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
             & codeGenFromExpr & pure
     _ -> compileVal val >>= maybeLogSubexprResult valId
 
