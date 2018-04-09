@@ -197,38 +197,49 @@ compileRepl :: Monad m => Actions m -> Definition.Expr (Val ValId) -> m ()
 compileRepl actions defExpr =
     compileDefExpr defExpr & run actions
 
-run :: Monad m => Actions m -> M m CodeGen -> m ()
-run actions act =
-    runRWST
-    (do
-        traverse_ ppOut (topLevelDecls (loggingMode actions))
-        repl <- act <&> codeGenExpression <&> varinit "repl"
-        JS.trycatch
-            (JS.block
-             [ repl
-             , void [jsstmt|rts.logRepl(repl);|]
-             ])
-            (JS.catch "err"
-             (JS.block
-              [ void [jsstmt|rts.logReplErr(err);|] ])
-            ) Nothing & ppOut
-        -- This form avoids outputing repl's value in interactive mode
-        void [jsstmt|(function() { module.exports = repl; })();|] & ppOut
-    & unM
-    )
+-- | Top-level wrapepr for the code (catch exceptions in repl
+-- execution, log it, and export the module symbols)
+scaffold :: JSS.Expression () -> [JSS.Statement ()]
+scaffold replExpr =
+    [ JS.trycatch
+        ( JS.block
+            [ varinit "repl" replExpr
+            , void [jsstmt|rts.logRepl(repl);|]
+            ]
+        )
+        ( JS.catch "err"
+            (JS.block [ void [jsstmt|rts.logReplErr(err);|] ])
+        )
+        Nothing
+    , -- This form avoids outputing repl's value in interactive mode
+        void [jsstmt|(function() { module.exports = repl; })();|]
+    ]
+
+initialEnv :: Actions m -> Env m
+initialEnv actions =
     Env
     { _envActions = actions
     , _envLocals = mempty
     , _envMode = loggingMode actions
     , _envExpectedTypes = mempty
     }
+
+initialState :: State
+initialState =
     State
     { _freshId = 0
     , _names = mempty
     , _globalVarNames = mempty
     , _globalTypes = mempty
     }
-    <&> (^. _1)
+
+run :: Monad m => Actions m -> M m CodeGen -> m ()
+run actions act =
+    runRWST
+    ( traverse_ ppOut (topLevelDecls (loggingMode actions))
+        >> act <&> codeGenExpression <&> scaffold >>= traverse_ ppOut
+        & unM
+    ) (initialEnv actions) initialState <&> (^. _1)
 
 -- | Reset reader/writer components of RWS for a new global compilation context
 resetRW :: Monad m => M m a -> M m a
