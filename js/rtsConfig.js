@@ -24,4 +24,11 @@ module.exports = {
     logReplErr: function (err) {
         protocol.sendCompletionError(err);
     },
+    logResult: function (scope, exprId, result) {
+        protocol.sendResult(scope, exprId, result);
+        return result;
+    },
+    logNewScope: function (parentScope, scope, lamId, arg) {
+        protocol.sendNewScope(parentScope, scope, lamId, arg);
+    },
 };

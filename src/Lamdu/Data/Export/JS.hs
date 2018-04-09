@@ -128,6 +128,7 @@ exportFancy evalResults =
                     readDataFile "doc/JSExportReadMe.md"
                     <&> removeReadmeMeta <&> fromString
                 rts <- readDataFile "js/rts.js" <&> fromString
+                rtsAnchors <- readDataFile "js/anchors.js" <&> fromString
                 rtsConf <- readDataFile "js/jsExportRtsConfig.js" <&> fromString
                 let addFile archive (filename, contents) =
                         Zip.addEntryToArchive
@@ -140,5 +141,6 @@ exportFancy evalResults =
                     , ("README.md", readme)
                     , ("js/main.js", replJs)
                     , ("js/rts.js", rts)
+                    , ("js/anchors.js", rtsAnchors)
                     , ("js/rtsConfig.js", rtsConf)
                     ] & Zip.fromArchive & LBS.writeFile "export.zip"

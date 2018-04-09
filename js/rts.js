@@ -67,19 +67,13 @@ var mutVoidWithError = function (inner) {
     };
 };
 
-var protocol = require('./protocol.js');
 var conf = require('./rtsConfig.js');
 
 module.exports = {
     logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
-    logResult: function (scope, exprId, result) {
-        protocol.sendResult(scope, exprId, result);
-        return result;
-    },
-    logNewScope: function (parentScope, scope, lamId, arg) {
-        protocol.sendNewScope(parentScope, scope, lamId, arg);
-    },
+    logResult: conf.logResult,
+    logNewScope: conf.logNewScope,
     memo: function (thunk) {
         var done = false;
         var memo;

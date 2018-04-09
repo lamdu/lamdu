@@ -13,4 +13,7 @@ module.exports = {
     },
     logRepl: function (x) { console.log(String.fromCharCode.apply(null, x)); },
     logReplErr: function (x) { console.log("Error: " + String.fromCharCode.apply(null, x)); },
+    // Not used in JS export:
+    logResult: undefined,
+    logNewScope: undefined
 };
