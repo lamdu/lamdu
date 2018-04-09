@@ -66,11 +66,15 @@ newtype LoggingInfo = LoggingInfo
     } deriving Show
 Lens.makeLenses ''LoggingInfo
 
+data WhichGlobal = GlobalRepl | GlobalDef V.Var
+Lens.makePrisms ''WhichGlobal
+
 data Env m = Env
     { _envActions :: Actions m
     , _envLocals :: Map V.Var LocalVarName
     , _envMode :: Mode
     , _envExpectedTypes :: Map V.Var Scheme
+    , _envCurrentGlobal :: WhichGlobal
     }
 Lens.makeLenses ''Env
 
@@ -226,6 +230,7 @@ initialEnv actions =
     , _envLocals = mempty
     , _envMode = loggingMode actions
     , _envExpectedTypes = mempty
+    , _envCurrentGlobal = GlobalRepl
     }
 
 initialState :: State
@@ -238,12 +243,13 @@ initialState =
     }
 
 -- | Reset reader/writer components of RWS for a new global compilation context
-resetRW :: Monad m => M m a -> M m a
-resetRW (M act) =
+withGlobal :: Functor m => WhichGlobal -> M m a -> M m a
+withGlobal whichGlobal (M act) =
     act
     & RWS.censor (const LogUnused)
     & RWS.local (envLocals .~ mempty)
     & RWS.local (\x -> x & envMode .~ loggingMode (x ^. envActions))
+    & RWS.local (envCurrentGlobal .~ whichGlobal)
     & M
 
 freshName :: Monad m => Text -> M m Text
@@ -343,7 +349,7 @@ compileGlobal globalId =
         case def ^. Definition.defBody of
             Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
             Definition.BodyExpr defExpr -> compileDefExpr defExpr
-    & resetRW
+    & withGlobal (GlobalDef globalId)
 
 compileGlobalVar :: Monad m => V.Var -> M m CodeGen
 compileGlobalVar var =
