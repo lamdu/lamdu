@@ -195,7 +195,11 @@ loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
 
 compileRepl :: Monad m => Actions m -> Definition.Expr (Val ValId) -> m ()
 compileRepl actions defExpr =
-    compileDefExpr defExpr & run actions
+    runRWST
+    ( traverse_ ppOut (topLevelDecls (loggingMode actions))
+        >> compileDefExpr defExpr
+        <&> codeGenExpression <&> scaffold >>= traverse_ ppOut & unM
+    ) (initialEnv actions) initialState <&> (^. _1)
 
 -- | Top-level wrapepr for the code (catch exceptions in repl
 -- execution, log it, and export the module symbols)
@@ -232,14 +236,6 @@ initialState =
     , _globalVarNames = mempty
     , _globalTypes = mempty
     }
-
-run :: Monad m => Actions m -> M m CodeGen -> m ()
-run actions act =
-    runRWST
-    ( traverse_ ppOut (topLevelDecls (loggingMode actions))
-        >> act <&> codeGenExpression <&> scaffold >>= traverse_ ppOut
-        & unM
-    ) (initialEnv actions) initialState <&> (^. _1)
 
 -- | Reset reader/writer components of RWS for a new global compilation context
 resetRW :: Monad m => M m a -> M m a
