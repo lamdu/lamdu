@@ -129,7 +129,7 @@ declLog :: Int -> JSS.Statement ()
 declLog depth =
     varinit "log" $
     JS.lambda ["exprId", "result"]
-    [ (rts "logResult") `JS.call`
+    [ rts "logResult" `JS.call`
       [ JS.var (scopeIdent depth)
       , JS.var "exprId"
       , JS.var "result"

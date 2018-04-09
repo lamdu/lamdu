@@ -242,7 +242,7 @@ completionSuccess obj =
     Nothing -> fail "Completion success report missing result"
     Just x -> parseResult x
 
-data NodeException = NodeException Text
+newtype NodeException = NodeException Text
 instance Show NodeException where
     show (NodeException txt) = "Node exception: " ++ Text.unpack txt
 instance E.Exception NodeException
