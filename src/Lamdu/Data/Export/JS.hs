@@ -64,9 +64,9 @@ removeReadmeMeta =
     unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
 compile :: Monad m => Def.Expr (Val (ValI m)) -> T m String
-compile val =
-    val <&> Lens.mapped %~ valId
-    & Compiler.compile actions
+compile repl =
+    repl <&> Lens.mapped %~ valId
+    & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
     where

@@ -4,7 +4,7 @@
 module Lamdu.Eval.JS.Compiler
     ( Actions(..)
     , ValId(..)
-    , compile, Mode(..), loggingEnabled
+    , compileRepl, Mode(..), loggingEnabled
     ) where
 
 import qualified Control.Lens as Lens
@@ -193,8 +193,9 @@ topLevelDecls mode =
 loggingEnabled :: Mode
 loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
 
-compile :: Monad m => Actions m -> Definition.Expr (Val ValId) -> m ()
-compile actions defExpr = compileDefExpr defExpr & run actions
+compileRepl :: Monad m => Actions m -> Definition.Expr (Val ValId) -> m ()
+compileRepl actions defExpr =
+    compileDefExpr defExpr & run actions
 
 run :: Monad m => Actions m -> M m CodeGen -> m ()
 run actions act =

@@ -349,7 +349,7 @@ asyncStart ::
     MVar (Dependencies srcId) -> MVar () -> IORef (EvalResults srcId) ->
     Def.Expr (Val srcId) -> Actions srcId ->
     IO ()
-asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
+asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
     do
         nodeExePath <- NodeJS.path
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
@@ -363,8 +363,8 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef val actions =
                 let handleEvent = processEvent fromUUID resultsRef actions
                 withForkedIO (processNodeOutput handleEvent stdout) $
                     do
-                        val <&> Lens.mapped %~ Compiler.ValId . toUUID
-                            & Compiler.compile
+                        replVal <&> Lens.mapped %~ Compiler.ValId . toUUID
+                            & Compiler.compileRepl
                                 (compilerActions toUUID depsMVar actions outputJS)
                         flushJS
                         forever (takeMVar executeReplMVar >> outputJS "repl(x => undefined);" >> flushJS)
@@ -380,16 +380,16 @@ whilePaused = withMVar . eDeps
 start ::
     Ord srcId => (srcId -> UUID) -> (UUID -> srcId) ->
     Actions srcId -> Def.Expr (Val srcId) -> IO (Evaluator srcId)
-start toUUID fromUUID actions defExpr =
+start toUUID fromUUID actions replExpr =
     do
         depsMVar <-
             newMVar Dependencies
             { globalDeps = Set.empty
-            , subExprDeps = defExpr ^.. Lens.folded . Lens.folded & Set.fromList
+            , subExprDeps = replExpr ^.. Lens.folded . Lens.folded & Set.fromList
             }
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar
-        tid <- asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef defExpr actions & forkIO
+        tid <- asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replExpr actions & forkIO
         pure Evaluator
             { stop = killThread tid
             , executeReplIOProcess = putMVar executeReplMVar ()
