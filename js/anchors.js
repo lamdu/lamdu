@@ -14,7 +14,7 @@ module.exports = {
         index:             conf.builtinTagName('index'),
         start:             conf.builtinTagName('start'),
         stop:              conf.builtinTagName('stop'),
-        val:               conf.builtinTagName('val'),
+        val:               conf.builtinTagName('value'),
         oldPath:           conf.builtinTagName('oldPath'),
         newPath:           conf.builtinTagName('newPath'),
         filePath:          conf.builtinTagName('filePath'),
