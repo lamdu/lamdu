@@ -2,7 +2,8 @@
 "use strict";
 
 var nameMap = {
-    data: '__data'
+    data: '__data',
+    val: 'value'
 };
 
 module.exports = {
