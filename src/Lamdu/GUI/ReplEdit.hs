@@ -26,7 +26,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config, config)
+import           Lamdu.Config (Config, HasConfig(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
@@ -100,24 +100,28 @@ makeIndicator tag enabledColor text =
         TextView.makeLabel text & Reader.local (TextView.color .~ color)
 
 errorIndicator ::
-    ( MonadReader env m, Applicative f, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
-    , HasTheme env
+    , HasTheme env, HasConfig env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
-    m (Align.WithTextPos (Widget (f GuiState.Update)))
-errorIndicator myId tag err =
+    m (Align.WithTextPos (Widget (o GuiState.Update)))
+errorIndicator myId tag (Sugar.EvalException _errorType desc jumpToErr) =
     do
+        actionKeys <- Lens.view (Config.config . Config.actionKeys)
+        let jumpEventMap =
+                jumpToErr <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> makeIndicator tag Theme.errorColor  "⚠"
+            <&> Lens.mapped %~ Widget.weakerEvents jumpEventMap
         if Widget.isFocused (indicator ^. Align.tValue)
             then
             do
                 errorColor <- Lens.view (theme . Theme.errorColor)
                 descLabel <-
-                    TextView.makeLabel (err ^. Sugar.evalExceptionDesc)
-                    & Reader.local (TextView.color .~ errorColor)
+                    TextView.makeLabel desc & Reader.local (TextView.color .~ errorColor)
                 hspace <- Spacer.stdHSpace
                 vspace <- Spacer.stdVSpace
                 hover <- Hover.hover
@@ -132,15 +136,16 @@ errorIndicator myId tag err =
             else
                 pure indicator
     where
+        jumpDoc = E.Doc ["Navigation", "Jump to error"]
         anchor = fmap Hover.anchor
 
 resultWidget ::
-    ( MonadReader env m, Applicative f, GuiState.HasCursor env
-    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
-    , HasTheme env, Hover.HasStyle env
+    ( MonadReader env m, Applicative o, GuiState.HasCursor env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
+    , HasTheme env, HasConfig env
     ) =>
     Widget.Id -> CurPrevTag -> Maybe (Sugar.EvalCompletionResult name o) ->
-    Maybe (m (Align.WithTextPos (Widget (f GuiState.Update))))
+    Maybe (m (Align.WithTextPos (Widget (o GuiState.Update))))
 resultWidget _ _ Nothing = Nothing
 resultWidget _ tag (Just Sugar.EvalSuccess {}) =
     makeIndicator tag Theme.successColor "✔"
