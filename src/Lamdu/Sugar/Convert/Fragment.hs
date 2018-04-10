@@ -108,7 +108,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             options <-
                 Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
                 <&> Lens.mapped <>~ mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl
-                <&> Lens.mapped %~ Hole.addSuggestedOptions suggesteds
+                <&> Lens.mapped %~ Hole.addWithoutDups suggesteds
             BodyFragment Fragment
                 { _fExpr =
                       argS

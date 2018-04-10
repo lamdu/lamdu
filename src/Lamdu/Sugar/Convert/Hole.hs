@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Hole
     , ResultProcessor(..)
     , mkOptions, detachValIfNeeded, sugar, loadNewDeps
     , mkResult
-    , mkOption, addSuggestedOptions
+    , mkOption, addWithoutDups
     , BaseExpr(..)
     ) where
 
@@ -135,15 +135,15 @@ mkHoleSuggesteds sugarContext resultProcessor exprPl =
     <&> SuggestedExpr
     <&> mkOption sugarContext resultProcessor exprPl
 
-addSuggestedOptions ::
+addWithoutDups ::
     [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
-addSuggestedOptions suggesteds options
-    | null nonTrivial = options
-    | otherwise = nonTrivial ++ filter (not . equivalentToSuggested) options
+addWithoutDups new old
+    | null nonHoleNew = old
+    | otherwise = nonHoleNew ++ filter (not . equivalentToNew) old
     where
-        equivalentToSuggested x =
-            any (Val.couldEq (x ^. hoVal)) (nonTrivial ^.. Lens.traverse . hoVal)
-        nonTrivial = filter (Lens.nullOf (hoVal . ExprLens.valHole)) suggesteds
+        equivalentToNew x =
+            any (Val.couldEq (x ^. hoVal)) (nonHoleNew ^.. Lens.traverse . hoVal)
+        nonHoleNew = filter (Lens.nullOf (hoVal . ExprLens.valHole)) new
 
 isLiveGlobal :: Monad m => DefI m -> T m Bool
 isLiveGlobal defI =
@@ -228,7 +228,7 @@ mkOptions resultProcessor exprPl =
             ]
             <&> SeedExpr
             <&> mkOption sugarContext resultProcessor exprPl
-            & addSuggestedOptions (mkHoleSuggesteds sugarContext resultProcessor exprPl)
+            & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor exprPl)
             & pure
 
 -- TODO: Generalize into a separate module?
