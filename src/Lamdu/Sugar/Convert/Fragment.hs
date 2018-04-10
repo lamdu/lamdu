@@ -12,7 +12,6 @@ import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
-import           Control.Monad.Transaction (transaction)
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Type as T
@@ -50,19 +49,24 @@ fragmentResultProcessor topEntityId fragment =
     , Hole.rpPreConversion = replaceFragment topEntityId 0
     }
 
-mkAppliedHoleOptions ::
+mkOptions ::
     Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Expression name i o a ->
     Input.Payload m a ->
-    [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
-mkAppliedHoleOptions sugarContext argI argS exprPl =
-    [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
-    <&> Hole.SeedExpr
-    <&> Hole.mkOption sugarContext
-        (fragmentResultProcessor topEntityId argI) exprPl
+    ConvertM m (T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())])
+mkOptions sugarContext argI argS exprPl =
+    Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
+    <&> (<> pure fragmentOptions)
+    <&> (\mkOpts -> Hole.addWithoutDups <$> mkOpts <*> mkSuggested)
     where
+        mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
+        fragmentOptions =
+            [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
+            <&> Hole.SeedExpr
+            <&> Hole.mkOption sugarContext
+                (fragmentResultProcessor topEntityId argI) exprPl
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
 
 mkAppliedHoleSuggesteds ::
@@ -102,13 +106,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         postProcess <- lift ConvertM.postProcess
         do
             sugarContext <- Lens.view id
-            suggesteds <-
-                mkAppliedHoleSuggesteds sugarContext argI exprPl
-                & transaction
-            options <-
-                Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
-                <&> Lens.mapped <>~ mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl
-                <&> Lens.mapped %~ Hole.addWithoutDups suggesteds
+            options <- mkOptions sugarContext argI (argS <&> (^. pUserData)) exprPl
             BodyFragment Fragment
                 { _fExpr =
                       argS
@@ -130,7 +128,6 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             <&> rPayload . plActions . detach .~ FragmentAlready storedEntityId
     where
         stored = exprPl ^. Input.stored
-        topEntityId = Property.value stored & EntityId.ofValI
         storedEntityId = stored & Property.value & EntityId.ofValI
 
 exceptToListT :: Monad m => Either t a -> ListT m a
