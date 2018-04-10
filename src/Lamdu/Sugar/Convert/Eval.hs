@@ -186,15 +186,15 @@ convertVal entityId (ER.Val typ (ER.RInject x)) = convertInject entityId typ x
 convertVal entityId (ER.Val typ (ER.RArray x)) = convertArray entityId typ x
 
 -- When we can scroll between eval view results we
--- must encode the scope into the anim ID for smooth
+-- must encode the scope into the entityID for smooth
 -- scroll to work.
 -- When we cannot, we'd rather not animate changes
--- within a scrolled scope (use same animId).
-animIdForEvalResult :: EntityId -> ScopeId -> EntityId
-animIdForEvalResult entityId _ = entityId
+-- within a scrolled scope (use same entityId).
+entityIdForEvalResult :: EntityId -> ScopeId -> EntityId
+entityIdForEvalResult entityId _ = entityId
 
-animIdForParam :: EntityId -> ScopeId -> EntityId
-animIdForParam entityId (ER.ScopeId scopeId) =
+entityIdForParam :: EntityId -> ScopeId -> EntityId
+entityIdForParam entityId (ER.ScopeId scopeId) =
     EntityId.ofEvalArrayIdx scopeId entityId
 
 convertEvalResultsWith ::
@@ -209,7 +209,7 @@ convertEvalResultsWith entityId evalResults =
 convertEvalResults ::
     Monad m =>
     EntityId -> EvalScopes ERV -> ConvertM m (EvaluationScopes InternalName)
-convertEvalResults = convertEvalResultsWith . animIdForEvalResult
+convertEvalResults = convertEvalResultsWith . entityIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
 -- scopes. The navigation is done via the lambda's scope map, and then
@@ -221,4 +221,4 @@ convertEvalParam ::
     ConvertM m (EvaluationScopes InternalName)
 convertEvalParam entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
-    & convertEvalResultsWith (animIdForParam entityId)
+    & convertEvalResultsWith (entityIdForParam entityId)
