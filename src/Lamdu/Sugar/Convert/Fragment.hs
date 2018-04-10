@@ -146,6 +146,9 @@ holeResultsEmplaceFragment rawFragmentExpr val =
     & join
     where
         emplace pl =
+            -- Try to emplace the fragmentExpr in directly, but if
+            -- that results in a unification type error, fall back to
+            -- emplacing another fragment wrapping the fragmentExpr:
             ListClass.fromList
             [ fragmentExpr
               <$ (mapStateT exceptToListT . Infer.run . unify fragmentType)
