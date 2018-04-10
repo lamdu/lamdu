@@ -31,13 +31,13 @@ import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
+import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
-import           Lamdu.Sugar.Convert.Eval (convertEvalParam)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
@@ -379,7 +379,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 FuncParam Annotation
                     { _aInferredType = typeS
                     , _aMEvaluationResult =
-                        fpValue fp & convertEvalParam (EntityId.ofEvalOf paramEntityId)
+                        fpValue fp & ConvertEval.param (EntityId.ofEvalOf paramEntityId)
                     } paramInfo & pure
             where
                 tag = fpTag fp
@@ -514,7 +514,7 @@ mkFuncParam entityId lamExprPl info =
                 { _aInferredType = typS
                 , _aMEvaluationResult =
                     lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
-                    & convertEvalParam (EntityId.ofEvalOf entityId)
+                    & ConvertEval.param (EntityId.ofEvalOf entityId)
                 }
             }
     where

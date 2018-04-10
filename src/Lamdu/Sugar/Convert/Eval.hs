@@ -1,7 +1,7 @@
 -- | Convert eval results
 
 module Lamdu.Sugar.Convert.Eval
-    ( convertEvalResults, convertEvalParam
+    ( results, param
     ) where
 
 import           Control.Applicative ((<|>))
@@ -192,16 +192,16 @@ convertEvalResultsWith entityId evalResults =
     & Lens.mapped .> Lens.imapped %@~ convertVal . entityId
     <&> nullToNothing
 
-convertEvalResults ::
+results ::
     EntityId -> EvalScopes ERV -> EvaluationScopes InternalName
-convertEvalResults = convertEvalResultsWith . entityIdForEvalResult
+results = convertEvalResultsWith . entityIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
 -- scopes. The navigation is done via the lambda's scope map, and then
 -- this map is used to just figure out the val of the param in some
 -- (deeply) nested scope
-convertEvalParam ::
+param ::
     EntityId -> EvalScopes [(ScopeId, ERV)] -> EvaluationScopes InternalName
-convertEvalParam entityId evalResults =
+param entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
     & convertEvalResultsWith (entityIdForParam entityId)

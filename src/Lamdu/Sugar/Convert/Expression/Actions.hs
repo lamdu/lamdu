@@ -9,12 +9,12 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postProcessDef)
 import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
-import           Lamdu.Sugar.Convert.Eval (convertEvalResults)
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -192,7 +192,7 @@ makeAnnotation payload =
             { _aInferredType = typS
             , _aMEvaluationResult =
                 payload ^. Input.evalResults <&> (^. Input.eResults)
-                & convertEvalResults (EntityId.ofEvalOf entityId)
+                & ConvertEval.results (EntityId.ofEvalOf entityId)
             }
     where
         entityId = payload ^. Input.entityId
