@@ -17,7 +17,6 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -67,7 +66,7 @@ convertNullaryInject _ _ = Nothing
 
 convertStream ::
     Monad m =>
-    EntityId -> T.Type -> V.Inject ERV -> MaybeT (ConvertM m) (ResVal InternalName)
+    EntityId -> T.Type -> V.Inject ERV -> MaybeT m (ResVal InternalName)
 convertStream entityId typ (V.Inject _ val) =
     do
         T.TInst tid _ <- pure typ
@@ -79,7 +78,7 @@ convertStream entityId typ (V.Inject _ val) =
         ResStream hdS & RStream & ResVal entityId & pure
 
 convertInject ::
-    Monad m => EntityId -> T.Type -> V.Inject ERV -> ConvertM m (ResVal InternalName)
+    Monad m => EntityId -> T.Type -> V.Inject ERV -> m (ResVal InternalName)
 convertInject entityId typ inj =
     do
         convertNullaryInject entityId inj <&> ResVal entityId & maybeToMPlus & justToLeft
@@ -94,7 +93,7 @@ convertInject entityId typ inj =
 convertPlainRecord ::
     Monad m =>
     EntityId -> Either EvalTypeError [(T.Tag, ER.Val T.Type)] ->
-    ConvertM m (ResVal InternalName)
+    m (ResVal InternalName)
 convertPlainRecord entityId (Left err) = RError err & ResVal entityId & pure
 convertPlainRecord entityId (Right fields) =
     fields
@@ -108,7 +107,7 @@ convertPlainRecord entityId (Right fields) =
 convertTree ::
     Monad m =>
     EntityId -> T.Type -> Either e (Map T.Tag ERV) ->
-    MaybeT (ConvertM m) (ResVal InternalName)
+    MaybeT m (ResVal InternalName)
 convertTree entityId typ fr =
     do
         Right fields <- pure fr
@@ -130,7 +129,7 @@ convertTree entityId typ fr =
             & convertVal
 
 convertRecord ::
-    Monad m => EntityId -> T.Type -> ERV -> ConvertM m (ResVal InternalName)
+    Monad m => EntityId -> T.Type -> ERV -> m (ResVal InternalName)
 convertRecord entityId typ v =
     do
         let fr = flattenRecord v
@@ -166,7 +165,7 @@ convertRecordArray entityId rows =
 
 convertArray ::
     Monad m =>
-    EntityId -> T.Type -> [ER.Val T.Type] -> ConvertM m (ResVal InternalName)
+    EntityId -> T.Type -> [ER.Val T.Type] -> m (ResVal InternalName)
 convertArray entityId _typ vs =
     do
         vsS <- Lens.itraverse convertElem vs & lift
@@ -176,7 +175,7 @@ convertArray entityId _typ vs =
     where
         convertElem idx = convertVal (EntityId.ofEvalArrayIdx idx entityId)
 
-convertVal :: Monad m => EntityId -> ERV -> ConvertM m (ResVal InternalName)
+convertVal :: Monad m => EntityId -> ERV -> m (ResVal InternalName)
 convertVal entityId (ER.Val _ (ER.RError err)) = RError err & ResVal entityId & pure
 convertVal entityId (ER.Val _ (ER.RFunc i)) = RFunc i & ResVal entityId & pure
 convertVal entityId (ER.Val _ ER.RRecEmpty) = ResRecord [] & RRecord & ResVal entityId & pure
@@ -200,7 +199,7 @@ entityIdForParam entityId (ER.ScopeId scopeId) =
 convertEvalResultsWith ::
     Monad m =>
     (ScopeId -> EntityId) -> EvalScopes ERV ->
-    ConvertM m (EvaluationScopes InternalName)
+    m (EvaluationScopes InternalName)
 convertEvalResultsWith entityId evalResults =
     evalResults
     & Lens.traversed .> Lens.itraversed %%@~ convertVal . entityId
@@ -208,7 +207,7 @@ convertEvalResultsWith entityId evalResults =
 
 convertEvalResults ::
     Monad m =>
-    EntityId -> EvalScopes ERV -> ConvertM m (EvaluationScopes InternalName)
+    EntityId -> EvalScopes ERV -> m (EvaluationScopes InternalName)
 convertEvalResults = convertEvalResultsWith . entityIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
@@ -218,7 +217,7 @@ convertEvalResults = convertEvalResultsWith . entityIdForEvalResult
 convertEvalParam ::
     Monad m =>
     EntityId -> EvalScopes [(ScopeId, ERV)] ->
-    ConvertM m (EvaluationScopes InternalName)
+    m (EvaluationScopes InternalName)
 convertEvalParam entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
     & convertEvalResultsWith (entityIdForParam entityId)
