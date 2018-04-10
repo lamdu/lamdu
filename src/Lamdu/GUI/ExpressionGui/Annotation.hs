@@ -211,12 +211,11 @@ addAnnotationH f wideBehavior =
         vspace <- annotationSpacer
         annotationLayout <- f <&> (^. Align.tValue)
         processAnn <- processAnnotationGui wideBehavior
-        let onAlignedWidget minWidth w =
-                w /-/ vspace /-/
-                (processAnn (w ^. Element.width) annotationLayout
-                    & Element.width %~ max (minWidth (w ^. Element.width)))
-        pure $ \minWidth ->
-            Responsive.alignedWidget %~ onAlignedWidget minWidth
+        let annotation minWidth w =
+                processAnn (w ^. Element.width) annotationLayout
+                & Element.width %~ max (minWidth (w ^. Element.width))
+        let onAlignedWidget minWidth w = w /-/ vspace /-/ annotation minWidth w
+        pure $ \minWidth -> Responsive.alignedWidget %~ onAlignedWidget minWidth
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
