@@ -31,6 +31,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -106,11 +107,11 @@ errorIndicator ::
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.WithTextPos (Widget (o GuiState.Update)))
-errorIndicator myId tag (Sugar.EvalException _errorType desc jumpToErr) =
+errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
     do
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let jumpEventMap =
-                jumpToErr <&> WidgetIds.fromEntityId
+                jumpToErr <&> dest
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
@@ -136,6 +137,11 @@ errorIndicator myId tag (Sugar.EvalException _errorType desc jumpToErr) =
             else
                 pure indicator
     where
+        dest entityId =
+            case errorType of
+            Sugar.ReachedHole -> HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
+            Sugar.LamduBug -> WidgetIds.fromEntityId entityId
+            Sugar.BrokenDef -> WidgetIds.fromEntityId entityId
         jumpDoc = E.Doc ["Navigation", "Jump to error"]
         anchor = fmap Hover.anchor
 
