@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Eval
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -19,8 +18,8 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
-import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Internal
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -200,7 +199,7 @@ animIdForParam entityId (ER.ScopeId scopeId) =
 
 convertEvalResultsWith ::
     Monad m =>
-    (ScopeId -> EntityId) -> CurAndPrev (Map ScopeId ERV) ->
+    (ScopeId -> EntityId) -> EvalScopes ERV ->
     ConvertM m (EvaluationScopes InternalName)
 convertEvalResultsWith entityId evalResults =
     evalResults
@@ -209,8 +208,7 @@ convertEvalResultsWith entityId evalResults =
 
 convertEvalResults ::
     Monad m =>
-    EntityId -> CurAndPrev (Map ScopeId ERV) ->
-    ConvertM m (EvaluationScopes InternalName)
+    EntityId -> EvalScopes ERV -> ConvertM m (EvaluationScopes InternalName)
 convertEvalResults = convertEvalResultsWith . animIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
@@ -219,7 +217,7 @@ convertEvalResults = convertEvalResultsWith . animIdForEvalResult
 -- (deeply) nested scope
 convertEvalParam ::
     Monad m =>
-    EntityId -> CurAndPrev (Map ScopeId [(ScopeId, ERV)]) ->
+    EntityId -> EvalScopes [(ScopeId, ERV)] ->
     ConvertM m (EvaluationScopes InternalName)
 convertEvalParam entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList

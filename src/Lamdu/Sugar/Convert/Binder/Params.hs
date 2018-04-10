@@ -12,7 +12,6 @@ module Lamdu.Sugar.Convert.Binder.Params
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
-import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
@@ -63,7 +62,7 @@ Lens.makeLenses ''ConventionalParams
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: T.Type
-    , fpValue :: CurAndPrev (Map ScopeId [(ScopeId, ER.Val T.Type)])
+    , fpValue :: EvalScopes [(ScopeId, ER.Val T.Type)]
     }
 
 data StoredLam m = StoredLam
@@ -163,7 +162,7 @@ addFieldParam mPresMode mkArg binderKind storedLam mkNewTags tag =
                 V.RecExtend tag newArg argI
                     & V.BRecExtend & ExprIRef.newValBody
 
-mkCpScopesOfLam :: Input.Payload m a -> CurAndPrev (Map ScopeId [BinderParamScopeId])
+mkCpScopesOfLam :: Input.Payload m a -> EvalScopes  [BinderParamScopeId]
 mkCpScopesOfLam lamPl =
     lamPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
     <&> (fmap . map) BinderParamScopeId
