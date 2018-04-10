@@ -174,7 +174,7 @@ make ::
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
     ExprGuiM i o (Menu.Placement -> ExpressionGui o)
-make options mOptionLiteral pl allowedTerms =
+make mkOptions mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config
         let fdWrap =
@@ -199,6 +199,7 @@ make options mOptionLiteral pl allowedTerms =
                         (/-/)
                         <$> Annotation.annotationSpacer
                         <*> makeInferredTypeAnnotation pl
+                    options <- ExprGuiM.im mkOptions
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
                     -- important in the case the FD is selected, and
@@ -206,7 +207,7 @@ make options mOptionLiteral pl allowedTerms =
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
                         <*> SearchMenu.make (makeSearchTerm searchMenuId allowedTerms)
-                            makeOptions annotation searchMenuId
+                            (filteredOptions options) annotation searchMenuId
                         <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
@@ -229,8 +230,8 @@ make options mOptionLiteral pl allowedTerms =
                 -- because it knows how to work with precedence and prefix chars
                 False
             | otherwise = allowedTerms txt
-        makeOptions ctx =
-            ResultGroups.makeAll options mOptionLiteral ctx
+        filteredOptions opts ctx =
+            ResultGroups.makeAll opts mOptionLiteral ctx
             <&> Lens.mapped %~ makeResultOption pl ctx
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)

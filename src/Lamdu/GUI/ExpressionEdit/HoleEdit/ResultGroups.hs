@@ -157,7 +157,7 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     Monad i =>
-    i [Sugar.HoleOption i o1 (ExpressionN i o1 ())] ->
+    [Sugar.HoleOption i o1 (ExpressionN i o1 ())] ->
     Maybe (Sugar.OptionLiteral i o1 (ExpressionN i o1 ())) ->
     SearchMenu.ResultsContext ->
     ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
@@ -168,7 +168,8 @@ makeAll options mOptionLiteral ctx =
             (mOptionLiteral <&> makeLiteralGroups searchTerm) ^.. (Lens._Just . traverse)
             & sequenceA
             & ExprGuiM.im
-        (options >>= mapM mkGroup <&> holeMatches searchTerm)
+        traverse mkGroup options
+            <&> holeMatches searchTerm
             <&> (literalGroups <>)
             <&> ListClass.fromList
             <&> ListClass.mapL (makeResultGroup ctx)
