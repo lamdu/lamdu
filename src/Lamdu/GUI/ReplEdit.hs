@@ -14,14 +14,17 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/))
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config, config)
 import qualified Lamdu.Config as Config
@@ -86,28 +89,64 @@ indicatorColor ::
 indicatorColor Current color = Lens.view (theme . color)
 indicatorColor Prev _ = Lens.view (theme . Theme.disabledColor)
 
-indicator ::
+makeIndicator ::
     ( MonadReader env m, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
     CurPrevTag -> Lens' Theme Draw.Color -> Text -> m (Align.WithTextPos View)
-indicator tag enabledColor text =
+makeIndicator tag enabledColor text =
     do
         color <- indicatorColor tag enabledColor
         TextView.makeLabel text & Reader.local (TextView.color .~ color)
 
+errorIndicator ::
+    ( MonadReader env m, Applicative f, Element.HasAnimIdPrefix env
+    , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
+    , HasTheme env
+    ) =>
+    Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
+    m (Align.WithTextPos (Widget (f GuiState.Update)))
+errorIndicator myId tag err =
+    do
+        indicator <-
+            (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            <*> makeIndicator tag Theme.errorColor  "⚠"
+        if Widget.isFocused (indicator ^. Align.tValue)
+            then
+            do
+                errorColor <- Lens.view (theme . Theme.errorColor)
+                descLabel <-
+                    TextView.makeLabel (err ^. Sugar.evalExceptionDesc)
+                    & Reader.local (TextView.color .~ errorColor)
+                hspace <- Spacer.stdHSpace
+                vspace <- Spacer.stdVSpace
+                hover <- Hover.hover
+                let hDescLabel f = hover (f descLabel) & Hover.sequenceHover
+                let hoverOptions =
+                        [ anchor indicator /|/ hDescLabel (hspace /|/)
+                        , anchor indicator /-/ hDescLabel (vspace /-/)
+                        ] <&> (^. Align.tValue)
+                anchor indicator
+                    <&> Hover.hoverInPlaceOf hoverOptions
+                    & pure
+            else
+                pure indicator
+    where
+        anchor = fmap Hover.anchor
 
 resultWidget ::
-    ( MonadReader env m
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
+    ( MonadReader env m, Applicative f, GuiState.HasCursor env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
+    , HasTheme env, Hover.HasStyle env
     ) =>
-    CurPrevTag -> Maybe (Sugar.EvalCompletionResult name o) ->
-    Maybe (m (Align.WithTextPos View))
-resultWidget _ Nothing = Nothing
-resultWidget tag (Just Sugar.EvalSuccess {}) =
-    indicator tag Theme.successColor "✔" & Just
-resultWidget tag (Just (Sugar.EvalError _err)) =
-    indicator tag Theme.errorColor  "⚠" & Just
+    Widget.Id -> CurPrevTag -> Maybe (Sugar.EvalCompletionResult name o) ->
+    Maybe (m (Align.WithTextPos (Widget (f GuiState.Update))))
+resultWidget _ _ Nothing = Nothing
+resultWidget _ tag (Just Sugar.EvalSuccess {}) =
+    makeIndicator tag Theme.successColor "✔"
+    <&> Align.tValue %~ Widget.fromView & Just
+resultWidget myId tag (Just (Sugar.EvalError err)) =
+    errorIndicator myId tag err & Just
 
 make ::
     Monad m =>
@@ -119,7 +158,7 @@ make exportRepl (Sugar.Repl replExpr replResult) =
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
-            resultWidget <$> curPrevTag <*> replResult
+            resultWidget errorIndicatorId <$> curPrevTag <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
@@ -137,5 +176,6 @@ make exportRepl (Sugar.Repl replExpr replResult) =
             <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExpr)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
+        errorIndicatorId = replExprId `Widget.joinId` ["error indicator"]
         centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
         replExprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
