@@ -130,14 +130,10 @@ definitionTypeChangeBox ::
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
-        infoColor <-
-            Lens.view (Theme.theme . Theme.textColors . TextColors.infoTextColor)
-        let infoLabel text =
-                TextView.makeLabel text & Reader.local (TextView.color .~ infoColor)
         updateLabel <- Styled.actionable myId "Update" updateDoc update
-        toLabel <- infoLabel "to: "
+        toLabel <- Styled.infoLabel "to: "
 
-        oldTypeRow <- infoLabel "Type was: "
+        oldTypeRow <- Styled.infoLabel "Type was: "
         hspace <- Spacer.stdHSpace
         let newTypeRow = updateLabel /|/ hspace /|/ toLabel
 

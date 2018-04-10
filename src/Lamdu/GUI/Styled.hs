@@ -2,7 +2,7 @@
 -- Apply the Lamdu theme to various widgets and guis
 {-# LANGUAGE OverloadedStrings, RankNTypes #-}
 module Lamdu.GUI.Styled
-    ( grammarLabel, grammarText
+    ( infoLabel, grammarLabel, grammarText
     , addValBG, addBgColor
     , addValPadding, addValFrame
     , addDeletionDiagonal
@@ -38,6 +38,14 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
+
+infoLabel ::
+    ( MonadReader env m
+    , HasTheme env
+    , TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) => Text -> m (WithTextPos View)
+infoLabel text = TextView.makeLabel text & withColor TextColors.infoTextColor
 
 grammarLabel ::
     ( MonadReader env m

@@ -273,7 +273,6 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                         (TextView.make ?? "(new)") <*> Element.subAnimId ["label"]
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
-                    let anchor = fmap Hover.anchor
                     let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
                     let hoverOptions =
                             [ anchor (term /|/ space) /|/ hNewTagLabel
@@ -286,6 +285,8 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                     & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
+    where
+        anchor = fmap Hover.anchor
 
 makeTagHoleEdit ::
     (Monad i, Monad o) =>
