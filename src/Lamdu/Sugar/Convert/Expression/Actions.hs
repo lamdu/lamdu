@@ -186,14 +186,14 @@ addActions exprPl body =
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =
-    do
-        typS <- convertType (EntityId.ofTypeOf entityId) typ
-        pure Annotation
-            { _aInferredType = typS
-            , _aMEvaluationResult =
-                payload ^. Input.evalResults <&> (^. Input.eResults)
-                & ConvertEval.results (EntityId.ofEvalOf entityId)
-            }
+    convertType (EntityId.ofTypeOf entityId) typ
+    <&> \typS ->
+    Annotation
+    { _aInferredType = typS
+    , _aMEvaluationResult =
+        payload ^. Input.evalResults <&> (^. Input.eResults)
+        & ConvertEval.results (EntityId.ofEvalOf entityId)
+    }
     where
         entityId = payload ^. Input.entityId
         typ = payload ^. Input.inferredType

@@ -505,18 +505,18 @@ mkFuncParam ::
     EntityId -> Input.Payload m a -> info ->
     ConvertM m (FuncParam InternalName info)
 mkFuncParam entityId lamExprPl info =
-    do
-        typS <- convertType (EntityId.ofTypeOf entityId) typ
-        pure FuncParam
-            { _fpInfo = info
-            , _fpAnnotation =
-                Annotation
-                { _aInferredType = typS
-                , _aMEvaluationResult =
-                    lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
-                    & ConvertEval.param (EntityId.ofEvalOf entityId)
-                }
-            }
+    convertType (EntityId.ofTypeOf entityId) typ
+    <&> \typS ->
+    FuncParam
+    { _fpInfo = info
+    , _fpAnnotation =
+        Annotation
+        { _aInferredType = typS
+        , _aMEvaluationResult =
+            lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
+            & ConvertEval.param (EntityId.ofEvalOf entityId)
+        }
+    }
     where
         typ = lamParamType lamExprPl
 
