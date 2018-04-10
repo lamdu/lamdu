@@ -4,6 +4,7 @@ module Lamdu.Eval.Results.Process
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
@@ -37,6 +38,9 @@ extractVariantTypeField tag typ =
 
 type AddTypes val res = (T.Type -> val -> res) -> T.Type -> Body res
 
+typeError :: String -> Body val
+typeError = RError . ER.EvalTypeError . Text.pack
+
 addTypesRecExtend :: V.RecExtend val -> AddTypes val res
 addTypesRecExtend (V.RecExtend tag val rest) go typ =
     case extractRecordTypeField tag typ of
@@ -52,7 +56,7 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
         T.TInst{} ->
             -- Work around for MutRefs: todo better presentation which shows their current value?
             RRecEmpty
-        _ -> "addTypesRecExtend got " ++ show typ & ER.EvalTypeError & RError
+        _ -> "addTypesRecExtend got " ++ show typ & typeError
     Just (valType, restType) ->
         V.RecExtend tag
         (go valType val)
@@ -67,7 +71,7 @@ addTypesInject (V.Inject tag val) go typ =
         -- we currently don't know types for eval results of polymorphic values
         case typ of
         T.TVar{} -> go typ val & V.Inject tag & RInject
-        _ -> "addTypesInject got " ++ show typ & ER.EvalTypeError & RError
+        _ -> "addTypesInject got " ++ show typ & typeError
     Just valType -> go valType val & V.Inject tag & RInject
 
 addTypesArray :: [val] -> AddTypes val res
@@ -78,7 +82,7 @@ addTypesArray items go typ =
         -- we currently don't know types for eval results of polymorphic values
         case typ of
         T.TVar{} -> items <&> go typ & RArray
-        _ -> "addTypesArray got " ++ show typ & ER.EvalTypeError & RError
+        _ -> "addTypesArray got " ++ show typ & typeError
     Just paramType -> items <&> go paramType & RArray
 
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type

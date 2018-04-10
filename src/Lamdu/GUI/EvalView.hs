@@ -60,14 +60,9 @@ makeField tag val =
 
 makeError ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    ) => Sugar.EvalError -> m (WithTextPos View)
-makeError err =
+    ) => Sugar.EvalTypeError -> m (WithTextPos View)
+makeError (Sugar.EvalTypeError msg) =
     textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
-    where
-        msg =
-            case err of
-            Sugar.EvalHole -> "?"
-            _ -> Text.pack (show err)
 
 arrayCutoff :: Int
 arrayCutoff = 10

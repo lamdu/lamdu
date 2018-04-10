@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types.Eval
     ( EvalScopes
     , ChildScopes, ParamScopes, EvaluationScopes
     , ScopeId
-    , EvalError(..)
+    , EvalTypeError(..)
     , ResRecord(..), recordFields
     , ResTable(..), rtHeaders, rtRows
     , ResTree(..), rtRoot, rtSubtrees
@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types.Eval
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Lamdu.Data.Anchors (BinderParamScopeId)
-import           Lamdu.Eval.Results (ScopeId, EvalError(..))
+import           Lamdu.Eval.Results (ScopeId, EvalTypeError(..))
 import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag
 
@@ -53,7 +53,7 @@ data ResBody name v
     | RInject (ResInject name v)
     | RFunc Int -- Identifier for function instance
     | RArray [v] -- TODO: Vector here?
-    | RError EvalError
+    | RError EvalTypeError
     | RBytes ByteString
     | RFloat Double
     -- Sugared forms:

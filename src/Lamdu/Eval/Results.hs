@@ -3,7 +3,7 @@ module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
     , Val(..), payload, body
     , ScopeId(..), topLevelScopeId
-    , EvalError(..)
+    , EvalTypeError(..)
     , EvalResults(..), erExprValues, erAppliesOfLam, erCache, empty
     , extractField
     ) where
@@ -13,6 +13,7 @@ import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import qualified Data.Map as Map
+import qualified Data.Text as Text
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 
@@ -21,10 +22,7 @@ import           Lamdu.Prelude
 newtype ScopeId = ScopeId Int
     deriving (Show, Eq, Ord, Binary)
 
-data EvalError
-    = EvalHole
-    | EvalTypeError String
-    deriving (Show, Eq, Ord)
+newtype EvalTypeError = EvalTypeError Text deriving (Show, Eq, Ord)
 
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
@@ -36,7 +34,7 @@ data Body val
     | RRecEmpty
     | RPrimVal V.PrimVal
     | RArray [val]
-    | RError EvalError
+    | RError EvalTypeError
     deriving (Show, Functor, Foldable, Traversable)
 
 data Val pl = Val
@@ -51,7 +49,7 @@ extractField errPl tag (Val _ (RRecExtend (V.RecExtend vt vv vr)))
 extractField _ _ v@(Val _ RError {}) = v
 extractField errPl tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & EvalTypeError & RError & Val errPl
+    & Text.pack & EvalTypeError & RError & Val errPl
 
 data EvalResults srcId =
     EvalResults

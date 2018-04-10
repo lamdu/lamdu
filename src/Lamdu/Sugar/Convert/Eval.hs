@@ -44,7 +44,7 @@ convertPrimVal _ p =
 
 type ERV = ER.Val T.Type
 
-flattenRecord :: ERV -> Either EvalError ([(T.Tag, ERV)], Map T.Tag ERV)
+flattenRecord :: ERV -> Either EvalTypeError ([(T.Tag, ERV)], Map T.Tag ERV)
 flattenRecord (ER.Val _ ER.RRecEmpty) = Right ([], Map.empty)
 flattenRecord (ER.Val _ (ER.RRecExtend (V.RecExtend tag val rest))) =
     flattenRecord rest
@@ -94,7 +94,7 @@ convertInject entityId typ inj =
 
 convertPlainRecord ::
     Monad m =>
-    EntityId -> Either EvalError [(T.Tag, ER.Val T.Type)] ->
+    EntityId -> Either EvalTypeError [(T.Tag, ER.Val T.Type)] ->
     ConvertM m (ResVal InternalName)
 convertPlainRecord entityId (Left err) = RError err & ResVal entityId & pure
 convertPlainRecord entityId (Right fields) =
