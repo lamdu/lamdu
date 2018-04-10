@@ -393,11 +393,7 @@ compileGlobalVar valId var =
                     >>= maybe newGlobalType pure
                 if Scheme.alphaEq scheme expectedType
                     then loadGlobal
-                    else
-                        readName var (pure "unnamed")
-                        <&> ("Types of dependencies not updated: " <>)
-                        <&> Text.unpack
-                        >>= throwErr valId "BrokenDef"
+                    else throwErr valId "BrokenDef" "Dependency type needs update"
         newGlobalType =
             do
                 scheme <- performAction (`readGlobalType` var)
