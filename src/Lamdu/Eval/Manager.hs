@@ -61,16 +61,10 @@ data Evaluator = Evaluator
 
 new :: NewParams -> IO Evaluator
 new params =
-    do
-        ref <- newIORef NotStarted
-        resultsRef <- newIORef EvalResults.empty
-        cancelRef <- newIORef Nothing
-        pure Evaluator
-            { eParams = params
-            , eEvaluatorRef = ref
-            , ePrevResultsRef = resultsRef
-            , eCancelTimerRef = cancelRef
-            }
+    Evaluator params
+    <$> newIORef NotStarted
+    <*> newIORef EvalResults.empty
+    <*> newIORef Nothing
 
 withDb :: MVar (Maybe (Transaction.Store DbM)) -> (Transaction.Store DbM -> IO a) -> IO a
 withDb mvar action =
@@ -107,11 +101,12 @@ evalActions :: Evaluator -> Eval.Actions (ValI ViewM)
 evalActions evaluator =
     Eval.Actions
     { Eval._aLoadGlobal = loadGlobal
-    , Eval._aReportUpdatesAvailable = resultsUpdated (eParams evaluator)
-    , Eval._aCompleted = \_ ->
-          do
-              atomicModifyIORef_ (ePrevResultsRef evaluator) (const EvalResults.empty)
-              resultsUpdated (eParams evaluator)
+    , Eval._aReportUpdatesAvailable =
+      do
+          res <- getLatestResults evaluator
+          when (Lens.has (EvalResults.erCompleted . Lens._Just) res) $
+              writeIORef (ePrevResultsRef evaluator) EvalResults.empty
+          resultsUpdated (eParams evaluator)
     , Eval._aCopyJSOutputPath = copyJSOutputPath (eParams evaluator)
     }
     where

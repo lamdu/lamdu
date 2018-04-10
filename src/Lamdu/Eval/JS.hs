@@ -2,7 +2,7 @@
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( Evaluator
-    , Actions(..), aLoadGlobal, aReportUpdatesAvailable, aCompleted
+    , Actions(..), aLoadGlobal, aReportUpdatesAvailable
     , start, stop, executeReplIOProcess
     , Dependencies(..), whilePaused
     , getResults
@@ -51,6 +51,7 @@ import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, hFlush, withFile)
 import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
+import           Text.Read (readMaybe)
 
 import           Lamdu.Prelude
 
@@ -59,7 +60,6 @@ import           Lamdu.Prelude
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , _aReportUpdatesAvailable :: IO ()
-    , _aCompleted :: Either E.SomeException (ER.Val ()) -> IO ()
     , _aCopyJSOutputPath :: Maybe FilePath
     }
 Lens.makeLenses ''Actions
@@ -127,7 +127,7 @@ parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
 parseRecord obj =
     HashMap.toList obj & foldM step (ER.Val () ER.RRecEmpty)
     where
-        step r ("cacheId", _) = pure r
+        step r ("cacheId", _) = pure r -- TODO: Explain/fix this
         step r (k, v) =
             parseResult v
             <&> \pv ->
@@ -162,8 +162,8 @@ parseInject tag mData =
     , V._injectVal = iv
     } & ER.Val ()
 
-(.?) :: Json.FromJSON a => Json.Object -> Text -> Maybe a
-obj .? tag = Json.parseMaybe (.: tag) obj
+(.?) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a
+obj .? tag = Json.parseEither (.: tag) obj & either fail return
 
 parseObj :: Json.Object -> Parse (ER.Val ())
 parseObj obj =
@@ -242,46 +242,49 @@ completionSuccess obj =
     Nothing -> fail "Completion success report missing result"
     Just x -> parseResult x
 
-newtype NodeException = NodeException Text
-instance Show NodeException where
-    show (NodeException txt) = "Node exception: " ++ Text.unpack txt
-instance E.Exception NodeException
-
-completionError :: Json.Object -> Parse E.SomeException
-completionError obj =
+completionError ::
+    Monad m => (UUID -> srcId) -> Json.Object -> m (ER.EvalException srcId)
+completionError fromUUID obj =
     case obj .? "err" of
-    Nothing -> fail "Completion error report missing err"
-    Just x -> NodeException x & E.SomeException & pure
+    Nothing -> "Completion error report missing valid err: " ++ show obj & fail
+    Just x ->
+        ER.EvalException
+        <$> do
+                errTypeStr <- x .? "error"
+                readMaybe errTypeStr & toEither "invalid error type"
+        <*> x .? "desc"
+        <*> (x .? "globalId" >>= ER.decodeWhichGlobal)
+        <*> (x .? "exprId" <&> parseUUID <&> fromUUID)
+        & either fail return
+    where
+        toEither msg = maybe (Left msg) Right
 
 processEvent ::
     Ord srcId =>
-    (UUID -> srcId) -> IORef (EvalResults srcId) -> Actions srcId1 ->
+    (UUID -> srcId) -> IORef (EvalResults srcId) -> Actions srcId ->
     Json.Object -> IO ()
 processEvent fromUUID resultsRef actions obj =
     case event of
     "Result" ->
-        runParse (addVal fromUUID obj) (onResults (ER.erExprValues %~))
-        >> actions ^. aReportUpdatesAvailable
+        runParse (addVal fromUUID obj) (ER.erExprValues %~)
     "NewScope" ->
-        runParse (newScope fromUUID obj) (onResults (ER.erAppliesOfLam %~))
-        >> actions ^. aReportUpdatesAvailable
+        runParse (newScope fromUUID obj) (ER.erAppliesOfLam %~)
     "CompletionSuccess" ->
-        runParse (completionSuccess obj) getResult
-        <&> Right >>= actions ^. aCompleted
+        runParse (completionSuccess obj) (\res -> ER.erCompleted ?~ Right res)
     "CompletionError" ->
-        runParse (completionError obj) getResult
-        <&> Left >>= actions ^. aCompleted
+        runParse (completionError fromUUID obj) (\exc -> ER.erCompleted ?~ Left exc)
     _ -> "Unknown event " ++ event & putStrLn
     where
-        onResults f res evalResults = (f res evalResults, ())
-        getResult res evalResults = (evalResults, res)
         runParse act postProcess =
-            atomicModifyIORef' resultsRef $
-            \oldEvalResults ->
-            let (res, newCache) = runState act (oldEvalResults ^. ER.erCache)
-            in  oldEvalResults
-                & ER.erCache .~ newCache
-                & postProcess res
+            do
+                atomicModifyIORef' resultsRef $
+                    \oldEvalResults ->
+                    let (res, newCache) = runState act (oldEvalResults ^. ER.erCache)
+                    in  oldEvalResults
+                        & ER.erCache .~ newCache
+                        & postProcess res
+                        & flip (,) ()
+                actions ^. aReportUpdatesAvailable
         Just event = obj .? "event"
 
 withCopyJSOutput :: Maybe FilePath -> (Maybe Handle -> IO a) -> IO a

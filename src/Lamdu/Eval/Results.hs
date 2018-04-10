@@ -4,7 +4,12 @@ module Lamdu.Eval.Results
     , Val(..), payload, body
     , ScopeId(..), topLevelScopeId
     , EvalTypeError(..)
-    , EvalResults(..), erExprValues, erAppliesOfLam, erCache, empty
+    , WhichGlobal(..), encodeWhichGlobal, decodeWhichGlobal
+    , EvalCompletion
+    , ErrorType(..), _LamduBug, _BrokenDef, _ReachedHole
+    , EvalException(..), errorType, errorDesc, errorGlobalId, errorExprId
+    , EvalResults(..), erExprValues, erAppliesOfLam, erCache, erCompleted
+    , empty
     , extractField
     ) where
 
@@ -12,8 +17,10 @@ import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
+import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 
@@ -42,6 +49,38 @@ data Val pl = Val
     , _body :: Body (Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
+data ErrorType = LamduBug | BrokenDef | ReachedHole
+    deriving (Read, Show)
+Lens.makePrisms ''ErrorType
+
+data WhichGlobal = GlobalRepl | GlobalDef V.Var
+Lens.makePrisms ''WhichGlobal
+
+encodeWhichGlobal :: WhichGlobal -> String
+encodeWhichGlobal GlobalRepl = "REPL"
+encodeWhichGlobal (GlobalDef (V.Var var)) = "DEF_" ++ identHex var
+
+decodeWhichGlobal :: String -> Either String WhichGlobal
+decodeWhichGlobal "REPL" = Right GlobalRepl
+decodeWhichGlobal x =
+    x ^? prefixed "DEF_" & maybe (Left "Not REPL or DEF_*") Right
+    >>= identFromHex <&> V.Var <&> GlobalDef
+
+data EvalException srcId = EvalException
+    { _errorType :: ErrorType
+    , _errorDesc :: Text
+    , _errorGlobalId :: WhichGlobal
+    , _errorExprId :: srcId
+    }
+Lens.makeLenses ''EvalException
+
+instance Show srcId => Show (EvalException srcId) where
+    show (EvalException t d g e) =
+        "Eval exception: " ++ show t ++ " (" ++ Text.unpack d ++ ") at " ++
+        encodeWhichGlobal g ++ ":" ++ show e
+
+type EvalCompletion srcId = Either (EvalException srcId) (Val ())
+
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
 extractField errPl tag (Val _ (RRecExtend (V.RecExtend vt vv vr)))
     | vt == tag = vv
@@ -56,6 +95,7 @@ data EvalResults srcId =
     { _erExprValues :: Map srcId (Map ScopeId (Val ()))
     , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, Val ())])
     , _erCache :: IntMap (Val ())
+    , _erCompleted :: Maybe (EvalCompletion srcId)
     } deriving Show
 
 empty :: EvalResults srcId
@@ -64,6 +104,7 @@ empty =
     { _erExprValues = Map.empty
     , _erAppliesOfLam = Map.empty
     , _erCache = IntMap.empty
+    , _erCompleted = Nothing
     }
 
 Lens.makeLenses ''EvalResults

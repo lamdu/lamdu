@@ -34,6 +34,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Compiler.Flatten as Flatten
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Eval.Results (WhichGlobal(..), encodeWhichGlobal)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
@@ -67,9 +68,6 @@ newtype LoggingInfo = LoggingInfo
     { _liScopeDepth :: Int
     } deriving Show
 Lens.makeLenses ''LoggingInfo
-
-data WhichGlobal = GlobalRepl | GlobalDef V.Var
-Lens.makePrisms ''WhichGlobal
 
 data Env m = Env
     { _envActions :: Actions m
@@ -353,8 +351,20 @@ compileGlobal globalId =
             Definition.BodyExpr defExpr -> compileDefExpr defExpr
     & withGlobal (GlobalDef globalId)
 
-compileGlobalVar :: Monad m => V.Var -> M m CodeGen
-compileGlobalVar var =
+throwErr :: Monad m => ValId -> String -> String -> M m CodeGen
+throwErr valId errName desc =
+    Lens.view envCurrentGlobal
+    <&> \curGlobal ->
+    [ (rts "exceptions" $. JS.ident errName)
+        `JS.call`
+        [ JS.string desc
+        , JS.string (encodeWhichGlobal curGlobal)
+        , jsValId valId
+        ] & JS.throw
+    ] & codeGenFromLamStmts
+
+compileGlobalVar :: Monad m => ValId -> V.Var -> M m CodeGen
+compileGlobalVar valId var =
     Lens.view (envExpectedTypes . Lens.at var)
     >>= maybe loadGlobal verifyType
     where
@@ -385,7 +395,9 @@ compileGlobalVar var =
                     then loadGlobal
                     else
                         readName var (pure "unnamed")
-                        <&> ("Reached broken def: " <>) <&> throwStr
+                        <&> ("Types of dependencies not updated: " <>)
+                        <&> Text.unpack
+                        >>= throwErr valId "BrokenDef"
         newGlobalType =
             do
                 scheme <- performAction (`readGlobalType` var)
@@ -395,10 +407,10 @@ compileGlobalVar var =
 compileLocalVar :: JSS.Id () -> CodeGen
 compileLocalVar = codeGenFromExpr . JS.var
 
-compileVar :: Monad m => V.Var -> M m CodeGen
-compileVar v =
+compileVar :: Monad m => ValId -> V.Var -> M m CodeGen
+compileVar valId v =
     Lens.view (envLocals . Lens.at v)
-    >>= maybe (compileGlobalVar v) (pure . compileLocalVar)
+    >>= maybe (compileGlobalVar valId v) (pure . compileLocalVar)
 
 data CodeGen = CodeGen
     { codeGenLamStmts :: [JSS.Statement ()]
@@ -407,9 +419,6 @@ data CodeGen = CodeGen
 
 unitRedex :: [JSS.Statement ()] -> JSS.Expression ()
 unitRedex stmts = JS.lambda [] stmts `JS.call` []
-
-throwStr :: Text -> CodeGen
-throwStr str = codeGenFromLamStmts [JS.throw (JS.string (Text.unpack str))]
 
 codeGenFromLamStmts :: [JSS.Statement ()] -> CodeGen
 codeGenFromLamStmts stmts =
@@ -483,28 +492,26 @@ compileInject (V.Inject tag dat) =
         dat' <- compileVal dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
 
-compileCase :: Monad m => V.Case (Val ValId) -> M m CodeGen
-compileCase = fmap codeGenFromExpr . lam "x" . compileCaseOnVar
+compileCase :: Monad m => ValId -> V.Case (Val ValId) -> M m CodeGen
+compileCase valId = fmap codeGenFromExpr . lam "x" . compileCaseOnVar valId
 
 compileCaseOnVar ::
-    Monad m => V.Case (Val ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
-compileCaseOnVar x scrutineeVar =
+    Monad m => ValId -> V.Case (Val ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
+compileCaseOnVar valId x scrutineeVar =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
         cases <- traverse makeCase tagsStr
         defaultCase <-
             case mRestHandler of
-            Nothing ->
-                pure [JS.throw (JS.string "Unhandled case? This is a type error!")]
-            Just restHandler ->
-                compileAppliedFunc restHandler scrutineeVar
-                <&> codeGenLamStmts
+            Nothing -> throwErr valId "LamduBug" "Unhandled case"
+            Just restHandler -> compileAppliedFunc valId restHandler scrutineeVar
+            <&> codeGenLamStmts
             <&> JS.defaultc
         pure [JS.switch (scrutineeVar $. "tag") (cases ++ [defaultCase])]
     where
         Flatten.Composite tags mRestHandler = Flatten.case_ x
         makeCase (tagStr, handler) =
-            compileAppliedFunc handler (scrutineeVar $. "data")
+            compileAppliedFunc valId handler (scrutineeVar $. "data")
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
@@ -571,11 +578,11 @@ compileLambda (V.Lam v res) valId =
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
         compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
 
-compileApply :: Monad m => V.Apply (Val ValId) -> M m CodeGen
-compileApply (V.Apply func arg) =
+compileApply :: Monad m => ValId -> V.Apply (Val ValId) -> M m CodeGen
+compileApply valId (V.Apply func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression
-        compileAppliedFunc func arg'
+        compileAppliedFunc valId func arg'
 
 maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 maybeLogSubexprResult valId codeGen =
@@ -590,13 +597,13 @@ logSubexprResult valId codeGen =
     (JS.var "log" `JS.call` [jsValId valId, codeGenExpression codeGen])
     <$ tell LogUsed
 
-compileAppliedFunc :: Monad m => Val ValId -> JSS.Expression () -> M m CodeGen
-compileAppliedFunc func arg' =
+compileAppliedFunc :: Monad m => ValId -> Val ValId -> JSS.Expression () -> M m CodeGen
+compileAppliedFunc valId func arg' =
     do
         mode <- Lens.view envMode
         case (func ^. Val.body, mode) of
             (V.BCase case_, FastSilent) ->
-                compileCaseOnVar case_ (JS.var "x")
+                compileCaseOnVar valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
             (V.BLam (V.Lam v res), FastSilent) ->
@@ -618,10 +625,10 @@ compileAppliedFunc func arg' =
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf leaf valId =
     case leaf of
-    V.LHole -> throwStr "Reached hole!" & pure
+    V.LHole -> throwErr valId "ReachedHole" "Reached a hole"
     V.LRecEmpty -> JS.object [] & codeGenFromExpr & pure
-    V.LAbsurd -> throwStr "Reached absurd!" & pure
-    V.LVar var -> compileVar var >>= maybeLogSubexprResult valId
+    V.LAbsurd -> throwErr valId "LamduBug" "Reached absurd"
+    V.LVar var -> compileVar valId var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & pure
 
 compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
@@ -639,12 +646,12 @@ compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Val valId body) =
     case body of
     V.BLeaf leaf                -> compileLeaf leaf valId
-    V.BApp x                    -> compileApply x    >>= maybeLog
+    V.BApp x                    -> compileApply valId x    >>= maybeLog
     V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x   >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
-    V.BCase x                   -> compileCase x
+    V.BCase x                   -> compileCase valId x
     V.BFromNom (V.Nom _tId val) -> compileVal val    >>= maybeLog
     V.BToNom x                  -> compileToNom x valId
     where

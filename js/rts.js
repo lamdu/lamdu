@@ -69,11 +69,14 @@ var mutVoidWithError = function (inner) {
 
 var conf = require('./rtsConfig.js');
 
+var protocol = require("./protocol.js");
+
 module.exports = {
     logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
     logResult: conf.logResult,
     logNewScope: conf.logNewScope,
+    exceptions: protocol.exceptions,
     memo: function (thunk) {
         var done = false;
         var memo;

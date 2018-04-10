@@ -199,7 +199,9 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
         let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
-                    exportActions config (evalResults ^. current) (EvalManager.executeReplIOProcess evaluator)
+                    exportActions config
+                    (evalResults ^. current)
+                    (EvalManager.executeReplIOProcess evaluator)
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = Property.value settingsProp
