@@ -183,6 +183,9 @@ data Fragment name i o expr = Fragment
     , _fOptions :: i [HoleOption i o (Expression name i o ())]
     } deriving (Functor, Foldable, Traversable)
 
+instance Show expr => Show (Fragment name i o expr) where
+    show (Fragment expr _ _) = "(Fragment " ++ show expr ++ ")"
+
 data Body name i o expr
     = BodyLam (Lambda name i o expr)
     | BodySimpleApply (V.Apply expr)
@@ -220,7 +223,7 @@ instance (Show name, Show expr) => Show (Body name i o expr) where
     show BodyFromNom {} = "FromNom:TODO"
     show BodyToNom {} = "ToNom:TODO"
     show BodyPlaceHolder {} = "InjectedExpression"
-    show BodyFragment {} = "Fragment:TODO"
+    show (BodyFragment x) = show x
 
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''Body
