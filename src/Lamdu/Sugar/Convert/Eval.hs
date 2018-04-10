@@ -4,9 +4,8 @@ module Lamdu.Sugar.Convert.Eval
     ( convertEvalResults, convertEvalParam
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
-import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -59,83 +58,76 @@ mkTagInfo entityId tag =
     , _tagVal = tag
     }
 
-convertNullaryInject :: EntityId -> V.Inject (ER.Val pl) -> Maybe (ResBody InternalName a)
+convertNullaryInject :: EntityId -> V.Inject (ER.Val pl) -> Maybe (ResVal InternalName)
 convertNullaryInject entityId (V.Inject tag (ER.Val _ ER.RRecEmpty)) =
-    RInject (ResInject (mkTagInfo entityId tag) Nothing) & Just
+    RInject (ResInject (mkTagInfo entityId tag) Nothing) & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
-convertStream ::
-    Monad m =>
-    EntityId -> T.Type -> V.Inject ERV -> MaybeT m (ResVal InternalName)
+convertStream :: EntityId -> T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
 convertStream entityId typ (V.Inject _ val) =
     do
-        T.TInst tid _ <- pure typ
+        T.TInst tid _ <- Just typ
         guard (tid == Builtins.streamTid)
         (_, fields) <- flattenRecord val & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
         ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . ER.body & maybeToMPlus
-        hdS <- convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd & lift
-        ResStream hdS & RStream & ResVal entityId & pure
+        convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
+            & ResStream & RStream & ResVal entityId & Just
 
-convertInject ::
-    Monad m => EntityId -> T.Type -> V.Inject ERV -> m (ResVal InternalName)
+simpleInject :: EntityId -> V.Inject (ER.Val T.Type) -> ResVal InternalName
+simpleInject entityId (V.Inject tag val) =
+    convertVal (EntityId.ofEvalField tag entityId) val
+    & Just
+    & ResInject (mkTagInfo entityId tag) & RInject
+    & ResVal entityId
+
+convertInject :: EntityId -> T.Type -> V.Inject ERV -> ResVal InternalName
 convertInject entityId typ inj =
-    do
-        convertNullaryInject entityId inj <&> ResVal entityId & maybeToMPlus & justToLeft
-        convertStream entityId typ inj & justToLeft
-        case inj of
-            V.Inject tag val ->
-                convertVal (EntityId.ofEvalField tag entityId) val <&> Just
-                <&> ResInject (mkTagInfo entityId tag) <&> RInject
-                <&> ResVal entityId & lift
-    & runMatcherT
+    convertNullaryInject entityId inj
+    <|> convertStream entityId typ inj
+    & fromMaybe (simpleInject entityId inj)
 
 convertPlainRecord ::
-    Monad m =>
     EntityId -> Either EvalTypeError [(T.Tag, ER.Val T.Type)] ->
-    m (ResVal InternalName)
-convertPlainRecord entityId (Left err) = RError err & ResVal entityId & pure
+    ResVal InternalName
+convertPlainRecord entityId (Left err) = RError err & ResVal entityId
 convertPlainRecord entityId (Right fields) =
     fields
-    & traverse %%~ convertField
-    <&> ResRecord <&> RRecord <&> ResVal entityId
+    <&> convertField
+    & ResRecord & RRecord & ResVal entityId
     where
         convertField (tag, val) =
             convertVal (EntityId.ofEvalField tag entityId) val
-            <&> (,) (mkTagInfo entityId tag)
+            & (,) (mkTagInfo entityId tag)
 
 convertTree ::
-    Monad m =>
     EntityId -> T.Type -> Either e (Map T.Tag ERV) ->
-    MaybeT m (ResVal InternalName)
+    Maybe (ResVal InternalName)
 convertTree entityId typ fr =
     do
-        Right fields <- pure fr
-        T.TInst tid _ <- pure typ
+        Right fields <- Just fr
+        T.TInst tid _ <- Just typ
         guard (tid == Builtins.treeTid)
-        root <- fields ^? Lens.ix Builtins.rootTag & maybeToMPlus
-        subtrees <- fields ^? Lens.ix Builtins.subtreesTag & maybeToMPlus
-        rootS <-
-            convertVal (EntityId.ofEvalField Builtins.rootTag entityId) root
-            & lift
-        subtreesS <-
-            subtrees ^.. ER.body . ER._RArray . Lens.folded
-            & Lens.itraverse convertSubtree & lift
-        ResTree rootS subtreesS & RTree & ResVal entityId & pure
+        root <- fields ^? Lens.ix Builtins.rootTag
+        subtrees <- fields ^? Lens.ix Builtins.subtreesTag
+        RTree ResTree
+            { _rtRoot = convertVal (EntityId.ofEvalField Builtins.rootTag entityId) root
+            , _rtSubtrees =
+                subtrees ^.. (ER.body . ER._RArray) .> Lens.folded
+                & Lens.imapped %@~ convertSubtree
+            } & ResVal entityId & Just
     where
         convertSubtree idx =
             EntityId.ofEvalField Builtins.subtreesTag entityId
             & EntityId.ofEvalArrayIdx idx
             & convertVal
 
-convertRecord ::
-    Monad m => EntityId -> T.Type -> ERV -> m (ResVal InternalName)
+convertRecord :: EntityId -> T.Type -> ERV -> ResVal InternalName
 convertRecord entityId typ v =
-    do
-        let fr = flattenRecord v
-        convertTree entityId typ (fr <&> snd) & justToLeft
-        lift (convertPlainRecord entityId (fr <&> fst))
-    & runMatcherT
+    convertTree entityId typ (fr <&> snd)
+    & fromMaybe (convertPlainRecord entityId (fr <&> fst))
+    where
+        fr = flattenRecord v
 
 -- | Array of records -> Record of arrays
 convertRecordArray :: EntityId -> [ResVal name] -> Maybe (ResVal name)
@@ -163,24 +155,20 @@ convertRecordArray entityId rows =
                traverse (`List.lookup` rowFields) tags
                & fromMaybe (error "makeArray: tags mismatch")
 
-convertArray ::
-    Monad m =>
-    EntityId -> T.Type -> [ER.Val T.Type] -> m (ResVal InternalName)
+convertArray :: EntityId -> T.Type -> [ER.Val T.Type] -> ResVal InternalName
 convertArray entityId _typ vs =
-    do
-        vsS <- Lens.itraverse convertElem vs & lift
-        convertRecordArray entityId vsS & maybeToMPlus & justToLeft
-        RArray vsS & ResVal entityId & pure
-    & runMatcherT
+    convertRecordArray entityId vsS
+    & fromMaybe (RArray vsS & ResVal entityId)
     where
+        vsS = Lens.imap convertElem vs
         convertElem idx = convertVal (EntityId.ofEvalArrayIdx idx entityId)
 
-convertVal :: Monad m => EntityId -> ERV -> m (ResVal InternalName)
-convertVal entityId (ER.Val _ (ER.RError err)) = RError err & ResVal entityId & pure
-convertVal entityId (ER.Val _ (ER.RFunc i)) = RFunc i & ResVal entityId & pure
-convertVal entityId (ER.Val _ ER.RRecEmpty) = ResRecord [] & RRecord & ResVal entityId & pure
+convertVal :: EntityId -> ERV -> ResVal InternalName
+convertVal entityId (ER.Val _ (ER.RError err)) = RError err & ResVal entityId
+convertVal entityId (ER.Val _ (ER.RFunc i)) = RFunc i & ResVal entityId
+convertVal entityId (ER.Val _ ER.RRecEmpty) = ResRecord [] & RRecord & ResVal entityId
 convertVal entityId v@(ER.Val typ ER.RRecExtend{}) = convertRecord entityId typ v
-convertVal entityId (ER.Val typ (ER.RPrimVal p)) = convertPrimVal typ p & ResVal entityId & pure
+convertVal entityId (ER.Val typ (ER.RPrimVal p)) = convertPrimVal typ p & ResVal entityId
 convertVal entityId (ER.Val typ (ER.RInject x)) = convertInject entityId typ x
 convertVal entityId (ER.Val typ (ER.RArray x)) = convertArray entityId typ x
 
@@ -197,17 +185,15 @@ entityIdForParam entityId (ER.ScopeId scopeId) =
     EntityId.ofEvalArrayIdx scopeId entityId
 
 convertEvalResultsWith ::
-    Monad m =>
     (ScopeId -> EntityId) -> EvalScopes ERV ->
-    m (EvaluationScopes InternalName)
+    EvaluationScopes InternalName
 convertEvalResultsWith entityId evalResults =
     evalResults
-    & Lens.traversed .> Lens.itraversed %%@~ convertVal . entityId
-    <&> Lens.mapped %~ nullToNothing
+    & Lens.mapped .> Lens.imapped %@~ convertVal . entityId
+    <&> nullToNothing
 
 convertEvalResults ::
-    Monad m =>
-    EntityId -> EvalScopes ERV -> m (EvaluationScopes InternalName)
+    EntityId -> EvalScopes ERV -> EvaluationScopes InternalName
 convertEvalResults = convertEvalResultsWith . entityIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
@@ -215,9 +201,7 @@ convertEvalResults = convertEvalResultsWith . entityIdForEvalResult
 -- this map is used to just figure out the val of the param in some
 -- (deeply) nested scope
 convertEvalParam ::
-    Monad m =>
-    EntityId -> EvalScopes [(ScopeId, ERV)] ->
-    m (EvaluationScopes InternalName)
+    EntityId -> EvalScopes [(ScopeId, ERV)] -> EvaluationScopes InternalName
 convertEvalParam entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
     & convertEvalResultsWith (entityIdForParam entityId)

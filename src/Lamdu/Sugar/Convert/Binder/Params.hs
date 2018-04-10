@@ -376,11 +376,10 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagInfo . tagInstance
                 typeS <- convertType (EntityId.ofTypeOf paramEntityId) (fpFieldType fp)
-                evalResults <-
-                    fpValue fp & convertEvalParam (EntityId.ofEvalOf paramEntityId)
                 FuncParam Annotation
                     { _aInferredType = typeS
-                    , _aMEvaluationResult = evalResults
+                    , _aMEvaluationResult =
+                        fpValue fp & convertEvalParam (EntityId.ofEvalOf paramEntityId)
                     } paramInfo & pure
             where
                 tag = fpTag fp
@@ -508,15 +507,14 @@ mkFuncParam ::
 mkFuncParam entityId lamExprPl info =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
-        evalResults <-
-            lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
-            & convertEvalParam (EntityId.ofEvalOf entityId)
         pure FuncParam
             { _fpInfo = info
             , _fpAnnotation =
                 Annotation
                 { _aInferredType = typS
-                , _aMEvaluationResult = evalResults
+                , _aMEvaluationResult =
+                    lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
+                    & convertEvalParam (EntityId.ofEvalOf entityId)
                 }
             }
     where
