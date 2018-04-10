@@ -466,6 +466,12 @@ toPane ::
     m (Pane (NewName m) (IM m) o a)
 toPane = paneDefinition (toDef toExpression)
 
+toRepl ::
+    MonadNaming m =>
+    Repl (OldName m) (IM m) o a -> m (Repl (NewName m) (IM m) o a)
+toRepl (Repl expr res) =
+    Repl <$> toExpression expr <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
+
 toWorkArea ::
     MonadNaming m =>
     WorkArea (OldName m) (IM m) o a ->
@@ -473,4 +479,4 @@ toWorkArea ::
 toWorkArea WorkArea { _waPanes, _waRepl } =
     WorkArea
     <$> traverse toPane _waPanes
-    <*> toExpression _waRepl
+    <*> toRepl _waRepl

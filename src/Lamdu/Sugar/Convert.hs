@@ -7,21 +7,25 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Utils (insertAt, removeAt)
-import           Data.Property (Property(Property), MkProperty')
+import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (EvalResults)
+import qualified Lamdu.Eval.Results as ER
+import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
+import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
@@ -135,12 +139,11 @@ convertDefBody evalRes cp (Definition.Definition body defType defI) =
     Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
-convertExpr ::
+loadRepl ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m (ExpressionU m [EntityId])
-convertExpr evalRes cp prop =
+    T m (Repl InternalName (T m) (T m) [EntityId])
+loadRepl evalRes cp =
     do
         defExpr <- ExprLoad.defExprProperty prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
@@ -159,21 +162,29 @@ convertExpr evalRes cp prop =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
                 }
-        ConvertM.convertSubexpression valInferred & ConvertM.run context
+        nomsMap <-
+            valInferred ^.. Lens.folded . Input.inferredType & Load.makeNominalsMap
+        let typ = valInferred ^. Val.payload . Input.inferredType
+        let completion =
+                evalRes
+                <&> (^. ER.erCompleted)
+                <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
+        expr <-
+            ConvertM.convertSubexpression valInferred
+            & ConvertM.run context
+            <&> Lens.mapped %~ (^. pUserData)
+            >>= PresentationModes.addToExpr
+            >>= OrderTags.orderExpr
+        let replEntityId = expr ^. rPayload . plEntityId
+        pure Repl
+            { _replExpr = expr
+            , _replResult = ConvertEval.completion cp replEntityId completion
+            }
     where
+        prop = Anchors.repl cp
         setFrozenDeps deps =
             prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
-
-loadRepl ::
-    Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (Expression InternalName (T m) (T m) [EntityId])
-loadRepl evalRes cp =
-    convertExpr evalRes cp (Anchors.repl cp)
-    <&> Lens.mapped %~ (^. pUserData)
-    >>= PresentationModes.addToExpr
-    >>= OrderTags.orderExpr
 
 loadAnnotatedDef ::
     Monad m =>
@@ -239,10 +250,14 @@ loadPanes evalRes cp replEntityId =
         paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
-    Monad m => CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Monad m =>
+    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (WorkArea InternalName (T m) (T m) [EntityId])
 loadWorkArea evalRes cp =
     do
         repl <- loadRepl evalRes cp
-        panes <- loadPanes evalRes cp (repl ^. rPayload . plEntityId)
-        WorkArea panes repl & pure
+        panes <- loadPanes evalRes cp (repl ^. replExpr . rPayload . plEntityId)
+        pure WorkArea
+            { _waPanes = panes
+            , _waRepl = repl
+            }

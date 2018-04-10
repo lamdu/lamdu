@@ -5,6 +5,10 @@ module Lamdu.Sugar.Types.Eval
     , ChildScopes, ParamScopes, EvaluationScopes
     , ScopeId
     , EvalTypeError(..)
+    , ErrorType(..)
+    , EvalException(..), evalExceptionType, evalExceptionDesc, evalExceptionJumpTo
+    , EvalCompletionResult(..), _EvalSuccess, _EvalError
+    , EvalCompletion
     , ResRecord(..), recordFields
     , ResTable(..), rtHeaders, rtRows
     , ResTree(..), rtRoot, rtSubtrees
@@ -19,7 +23,7 @@ module Lamdu.Sugar.Types.Eval
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Lamdu.Data.Anchors (BinderParamScopeId)
-import           Lamdu.Eval.Results (ScopeId, EvalTypeError(..))
+import           Lamdu.Eval.Results (ScopeId, EvalTypeError(..), ErrorType(..))
 import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag
 
@@ -84,10 +88,24 @@ type ParamScopes = EvalScopes [BinderParamScopeId]
 -- scope-val pairs for lams?
 type EvaluationScopes name = CurAndPrev (Maybe (Map ScopeId (ResVal name)))
 
+data EvalException o = EvalException
+    { _evalExceptionType :: ErrorType
+    , _evalExceptionDesc :: Text
+    , _evalExceptionJumpTo :: o EntityId
+    }
+
+data EvalCompletionResult name o
+    = EvalSuccess (ResVal name)
+    | EvalError (EvalException o)
+
+type EvalCompletion name o = CurAndPrev (Maybe (EvalCompletionResult name o))
+
+Lens.makeLenses ''EvalException
 Lens.makeLenses ''ResInject
 Lens.makeLenses ''ResRecord
 Lens.makeLenses ''ResStream
 Lens.makeLenses ''ResTable
 Lens.makeLenses ''ResTree
 Lens.makeLenses ''ResVal
+Lens.makePrisms ''EvalCompletionResult
 Lens.makePrisms ''ResBody

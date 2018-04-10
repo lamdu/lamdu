@@ -5,7 +5,6 @@ module Lamdu.Eval.Results
     , ScopeId(..), topLevelScopeId
     , EvalTypeError(..)
     , WhichGlobal(..), encodeWhichGlobal, decodeWhichGlobal
-    , EvalCompletion
     , ErrorType(..), _LamduBug, _BrokenDef, _ReachedHole
     , EvalException(..), errorType, errorDesc, errorGlobalId, errorExprId
     , EvalResults(..), erExprValues, erAppliesOfLam, erCache, erCompleted
@@ -79,8 +78,6 @@ instance Show srcId => Show (EvalException srcId) where
         "Eval exception: " ++ show t ++ " (" ++ Text.unpack d ++ ") at " ++
         encodeWhichGlobal g ++ ":" ++ show e
 
-type EvalCompletion srcId = Either (EvalException srcId) (Val ())
-
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
 extractField errPl tag (Val _ (RRecExtend (V.RecExtend vt vv vr)))
     | vt == tag = vv
@@ -95,7 +92,7 @@ data EvalResults srcId =
     { _erExprValues :: Map srcId (Map ScopeId (Val ()))
     , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, Val ())])
     , _erCache :: IntMap (Val ())
-    , _erCompleted :: Maybe (EvalCompletion srcId)
+    , _erCompleted :: Maybe (Either (EvalException srcId) (Val ()))
     } deriving Show
 
 empty :: EvalResults srcId

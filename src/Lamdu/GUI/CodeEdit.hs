@@ -118,7 +118,7 @@ loadWorkArea theEvalResults cp =
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
     { _waPanes = _waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles
-    , _waRepl = _waRepl & exprAddNearestHoles
+    , _waRepl = _waRepl & Sugar.replExpr %~ exprAddNearestHoles
     }
     & SugarLens.workAreaExpressions %~ postProcessExpr
 
@@ -148,8 +148,9 @@ make cp gp width =
                 <&> Responsive.fromWidget
             eventMap <-
                 panesEventMap theExportActions cp gp
-                (workArea ^. Sugar.waRepl . Sugar.rPayload . Sugar.plAnnotation .
-                 Sugar.aInferredType)
+                (workArea ^.
+                 Sugar.waRepl . Sugar.replExpr . Sugar.rPayload .
+                 Sugar.plAnnotation . Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)

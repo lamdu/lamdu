@@ -133,7 +133,7 @@ workAreaExpressions ::
 workAreaExpressions f (WorkArea panes repl) =
     WorkArea
     <$> (traverse . paneDefinition . traverse) f panes
-    <*> f repl
+    <*> replExpr f repl
 
 holeOptionTransformExprs ::
     Monad i => (a -> i b) -> HoleOption i o a -> HoleOption i o b

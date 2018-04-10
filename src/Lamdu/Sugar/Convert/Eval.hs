@@ -1,11 +1,12 @@
 -- | Convert eval results
 
 module Lamdu.Sugar.Convert.Eval
-    ( results, param
+    ( results, param, completion
     ) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -15,12 +16,19 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results as ER
+import           Lamdu.Expr.IRef (ValI)
+import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 nullToNothing :: Map k v -> Maybe (Map k v)
 nullToNothing m
@@ -205,3 +213,23 @@ param ::
 param entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
     & convertEvalResultsWith (entityIdForParam entityId)
+
+completion ::
+    Monad m =>
+    Anchors.CodeAnchors m ->
+    EntityId -> CurAndPrev (Maybe (Either (ER.EvalException (ValI m)) ERV)) ->
+    EvalCompletion InternalName (T m)
+completion cp entityId completions =
+    completions <&> Lens._Just %~ f
+    where
+        f (Left (ER.EvalException errType desc whichGlobal valI)) =
+                EvalError EvalException
+                { _evalExceptionType = errType
+                , _evalExceptionDesc = desc
+                , _evalExceptionJumpTo =
+                    EntityId.ofValI valI
+                    <$ case whichGlobal of
+                    ER.GlobalRepl -> pure ()
+                    ER.GlobalDef varId -> DataOps.newPane cp (ExprIRef.defI varId)
+                }
+        f (Right val) = convertVal entityId val & EvalSuccess

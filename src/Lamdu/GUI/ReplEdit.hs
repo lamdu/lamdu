@@ -25,6 +25,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -73,9 +74,9 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
 make ::
     Monad m =>
     ExportRepl m ->
-    ExprGui.SugarExpr (T m) (T m) ->
+    Sugar.Repl (Name (T m)) (T m) (T m) ExprGui.Payload ->
     ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
-make exportRepl replExpr =
+make exportRepl (Sugar.Repl expr _result) =
     do
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
@@ -84,12 +85,12 @@ make exportRepl replExpr =
             sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"
-              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExpr buttonExtractKeys)
+              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap expr buttonExtractKeys)
               <&> Responsive.fromWithTextPos
-            , ExprGuiM.makeSubexpression replExpr
+            , ExprGuiM.makeSubexpression expr
             ]
             <&> Lens.mapped %~ IOTrans.liftTrans
-            <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExpr)
+            <&> Widget.weakerEvents (replEventMap theConfig exportRepl expr)
             & GuiState.assignCursor WidgetIds.replId exprId
     where
-        exprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+        exprId = expr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId

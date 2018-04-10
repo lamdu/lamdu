@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Load
     , inferCheckDef
     , inferCheckDefExpr
     , inferDefExpr
+    , makeNominalsMap
     , loadInferPrepareInput
     , readValAndAddProperties
     ) where
