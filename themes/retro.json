@@ -91,8 +91,8 @@
     "valFrameBGColor": [1.0, 1.0, 1.0, 0.05],
     "typeFrameBGColor": [0.5, 0.5, 0.5, 0.5],
     "typeIndicatorFrameWidth": [6.0, 6.0],
-    "typeIndicatorErrorColor": [1, 0.5, 0.5, 1.0],
-    "typeIndicatorMatchColor": [0.5, 1, 0.5, 1.0],
+    "errorColor": [1, 0.5, 0.5, 1.0],
+    "successColor": [0.5, 1, 0.5, 1.0],
     "disabledColor": [0.5, 0.5, 0.5, 0.5],
     "valAnnotation": {
         "spacing": 0.0,

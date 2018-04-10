@@ -176,7 +176,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         theme <- Lens.view Theme.theme
         let underline = Underline
-                { _underlineColor = theme ^. Theme.typeIndicatorErrorColor
+                { _underlineColor = theme ^. Theme.errorColor
                 , _underlineWidth = theme ^. Theme.wideUnderlineWidth
                 }
         layout <- Reader.local (TextView.underline ?~ underline) mkLayout

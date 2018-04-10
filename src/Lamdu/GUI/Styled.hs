@@ -106,7 +106,7 @@ addDeletionDiagonal ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
     m (Widget.R -> a -> a)
 addDeletionDiagonal =
-    addDiagonal <*> Lens.view (Theme.theme . Theme.typeIndicatorErrorColor)
+    addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor)
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>

@@ -12,7 +12,7 @@ module Lamdu.Config.Theme
         , animationRemainInPeriod, help, hole, menu, name, eval, hover, tooltip
         , textColors, topPadding, statusBar, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorBGColor
-        , typeIndicatorErrorColor, typeIndicatorMatchColor
+        , errorColor, successColor
         , typeIndicatorFrameWidth, letItemPadding, narrowUnderlineWidth
         , wideUnderlineWidth, valFrameBGColor, valFramePadding
         , typeFrameBGColor, stdSpacing, cursorColor, cursorDecayExponent
@@ -133,8 +133,8 @@ data Theme = Theme
     , _indent :: Expression.Style
     , _backgroundColor :: Draw.Color
     , _invalidCursorBGColor :: Draw.Color
-    , _typeIndicatorErrorColor :: Draw.Color
-    , _typeIndicatorMatchColor :: Draw.Color
+    , _errorColor :: Draw.Color
+    , _successColor :: Draw.Color
     , _typeIndicatorFrameWidth :: Vector2 Double
     , _letItemPadding :: Vector2 Double
     , _narrowUnderlineWidth :: Double
