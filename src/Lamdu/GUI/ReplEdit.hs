@@ -1,23 +1,32 @@
 -- | REPL Edit
-{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, OverloadedStrings, FlexibleContexts, RankNTypes #-}
 module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
+import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import           GUI.Momentu.Align (Aligned(..), value)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/))
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config, config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme, HasTheme(..))
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
@@ -71,26 +80,62 @@ replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
     where
         exportConfig = theConfig ^. Config.export
 
+indicatorColor ::
+    (MonadReader env m, HasTheme env) =>
+    CurPrevTag -> Lens' Theme Draw.Color -> m Draw.Color
+indicatorColor Current color = Lens.view (theme . color)
+indicatorColor Prev _ = Lens.view (theme . Theme.disabledColor)
+
+indicator ::
+    ( MonadReader env m, HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    CurPrevTag -> Lens' Theme Draw.Color -> Text -> m (Align.WithTextPos View)
+indicator tag enabledColor text =
+    do
+        color <- indicatorColor tag enabledColor
+        TextView.makeLabel text & Reader.local (TextView.color .~ color)
+
+
+resultWidget ::
+    ( MonadReader env m
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
+    ) =>
+    CurPrevTag -> Maybe (Sugar.EvalCompletionResult name o) ->
+    Maybe (m (Align.WithTextPos View))
+resultWidget _ Nothing = Nothing
+resultWidget tag (Just Sugar.EvalSuccess {}) =
+    indicator tag Theme.successColor "✔" & Just
+resultWidget tag (Just (Sugar.EvalError _err)) =
+    indicator tag Theme.errorColor  "⚠" & Just
+
 make ::
     Monad m =>
     ExportRepl m ->
     Sugar.Repl (Name (T m)) (T m) (T m) ExprGui.Payload ->
     ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
-make exportRepl (Sugar.Repl expr _result) =
+make exportRepl (Sugar.Repl replExpr replResult) =
     do
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
+        result <-
+            resultWidget <$> curPrevTag <*> replResult
+            & fallbackToPrev
+            & sequenceA
+            & Reader.local (Element.animIdPrefix <>~ ["result widget"])
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
             sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"
-              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap expr buttonExtractKeys)
+              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExpr buttonExtractKeys)
+              <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
-            , ExprGuiM.makeSubexpression expr
+            , ExprGuiM.makeSubexpression replExpr
             ]
             <&> Lens.mapped %~ IOTrans.liftTrans
-            <&> Widget.weakerEvents (replEventMap theConfig exportRepl expr)
-            & GuiState.assignCursor WidgetIds.replId exprId
+            <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExpr)
+            & GuiState.assignCursor WidgetIds.replId replExprId
     where
-        exprId = expr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+        centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
+        replExprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
