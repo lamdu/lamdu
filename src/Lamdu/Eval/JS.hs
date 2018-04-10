@@ -163,7 +163,7 @@ parseInject tag mData =
     } & ER.Val ()
 
 (.?) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a
-obj .? tag = Json.parseEither (.: tag) obj & either fail return
+obj .? tag = Json.parseEither (.: tag) obj & either fail pure
 
 parseObj :: Json.Object -> Parse (ER.Val ())
 parseObj obj =
@@ -255,7 +255,7 @@ completionError fromUUID obj =
         <*> x .? "desc"
         <*> (x .? "globalId" >>= ER.decodeWhichGlobal)
         <*> (x .? "exprId" <&> parseUUID <&> fromUUID)
-        & either fail return
+        & either fail pure
     where
         toEither msg = maybe (Left msg) Right
 
