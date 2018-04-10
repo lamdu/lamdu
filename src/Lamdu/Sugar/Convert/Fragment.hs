@@ -2,12 +2,18 @@
 
 module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole
+    , mkOptionFromFragment
+      -- Used by Convert.GetVar:
+    , fragmentVar
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (evalStateT, runStateT)
+import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
+import qualified Control.Monad.Trans.State as State
 import           Control.Monad.Transaction (transaction)
+import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -20,7 +26,8 @@ import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Hole as Hole
+import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -34,6 +41,15 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
+fragmentResultProcessor ::
+    Monad m => EntityId -> Val (Input.Payload m a) -> Hole.ResultProcessor m
+fragmentResultProcessor topEntityId fragment =
+    Hole.ResultProcessor
+    { Hole.rpEmptyPl = NotFragment
+    , Hole.rpPostProcess = holeResultsEmplaceFragment fragment
+    , Hole.rpPreConversion = replaceFragment topEntityId 0
+    }
+
 mkAppliedHoleOptions ::
     Monad m =>
     ConvertM.Context m ->
@@ -43,8 +59,11 @@ mkAppliedHoleOptions ::
     [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
 mkAppliedHoleOptions sugarContext argI argS exprPl =
     [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
-    <&> ConvertHole.SeedExpr
-    <&> ConvertHole.mkHoleOption sugarContext (Just argI) exprPl
+    <&> Hole.SeedExpr
+    <&> Hole.mkOption sugarContext
+        (fragmentResultProcessor topEntityId argI) exprPl
+    where
+        topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
 
 mkAppliedHoleSuggesteds ::
     Monad m =>
@@ -59,7 +78,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
     where
         onPl pl = (pl ^. Input.inferred, Just pl)
         onSuggestion (sugg, newInferCtx) =
-            ConvertHole.mkHoleOptionFromFragment
+            mkOptionFromFragment
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
             exprPl (sugg <&> _1 %~ (^. Infer.plType))
 
@@ -87,18 +106,18 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 mkAppliedHoleSuggesteds sugarContext argI exprPl
                 & transaction
             options <-
-                ConvertHole.mkOptions (Just argI) exprPl
+                Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
                 <&> Lens.mapped <>~ mkAppliedHoleOptions sugarContext argI (argS <&> (^. pUserData)) exprPl
-                <&> Lens.mapped %~ ConvertHole.addSuggestedOptions suggesteds
+                <&> Lens.mapped %~ Hole.addSuggestedOptions suggesteds
             BodyFragment Fragment
                 { _fExpr =
                       argS
                       & rPayload . plActions . detach .~ FragmentExprAlready storedEntityId
                       & rPayload . plActions . mSetToHole ?~
-                        (DataOps.setToHole (exprPl ^. Input.stored) <* postProcess <&> EntityId.ofValI)
+                        (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fAttach =
                       if isTypeMatch
-                      then DataOps.replace (exprPl ^. Input.stored)
+                      then DataOps.replace stored
                            (argI ^. Val.payload . Input.stored . Property.pVal)
                            <* postProcess
                            <&> EntityId.ofValI
@@ -110,4 +129,141 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             & lift
             <&> rPayload . plActions . detach .~ FragmentAlready storedEntityId
     where
-        storedEntityId = exprPl ^. Input.stored & Property.value & EntityId.ofValI
+        stored = exprPl ^. Input.stored
+        topEntityId = Property.value stored & EntityId.ofValI
+        storedEntityId = stored & Property.value & EntityId.ofValI
+
+exceptToListT :: Monad m => Either t a -> ListT m a
+exceptToListT (Left _) = mempty
+exceptToListT (Right x) = pure x
+
+holeResultsEmplaceFragment ::
+    Monad m =>
+    Val (Input.Payload n a) -> Hole.ResultVal n () ->
+    Hole.ResultGen m (Hole.ResultVal n IsFragment)
+holeResultsEmplaceFragment rawFragmentExpr val =
+    markNotFragment val
+    & emplaceInHoles emplace
+    & ListClass.fromList
+    & lift
+    & join
+    where
+        emplace pl =
+            ListClass.fromList
+            [ fragmentExpr
+              <$ (mapStateT exceptToListT . Infer.run . unify fragmentType)
+                  (fst pl ^. Infer.plType)
+            , V.Apply
+                (Val (fst pl & Infer.plType %~ (`T.TFun` fragmentType), (Nothing, NotFragment)) (V.BLeaf V.LHole))
+                fragmentExpr
+                & V.BApp & Val (fst pl, (Nothing, NotFragment))
+                & pure
+            ]
+            & lift
+            & join
+            & mapStateT (ListClass.take 1)
+        fragmentExpr = rawFragmentExpr <&> onFragmentPayload
+        onFragmentPayload pl =
+            ( pl ^. Input.inferred
+            , (Just (pl ^. Input.stored . Property.pVal), IsFragment)
+            )
+        fragmentType = rawFragmentExpr ^. Val.payload . Input.inferredType
+data IsFragment = IsFragment | NotFragment
+
+markNotFragment :: Hole.ResultVal n () -> Hole.ResultVal n IsFragment
+markNotFragment val = val <&> _2 . _2 .~ NotFragment
+
+-- TODO: Unify type according to IsFragment, avoid magic var
+fragmentVar :: V.Var
+fragmentVar = "HOLE FRAGMENT EXPR"
+
+replaceFragment :: EntityId -> Int -> Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
+replaceFragment parentEntityId idxInParent (Val pl body) =
+    case pl ^. Input.userData of
+    IsFragment ->
+        V.LVar fragmentVar & V.BLeaf
+        & Val (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId)
+    NotFragment ->
+        body & Lens.traversed %@~ replaceFragment (pl ^. Input.entityId)
+        & Val (void pl)
+
+emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
+emplaceInHoles replaceHole =
+    map fst . filter snd . (`runStateT` False) . go
+    where
+        go oldVal@(Val x body) =
+            do
+                alreadyReplaced <- State.get
+                if alreadyReplaced
+                    then pure (pure oldVal)
+                    else
+                        case body of
+                        V.BLeaf V.LHole ->
+                            join $ lift
+                                [ replace x
+                                , pure (pure oldVal)
+                                ]
+                        V.BApp (V.Apply (Val f (V.BLeaf V.LHole)) arg@(Val _ (V.BLeaf V.LHole))) ->
+                            join $ lift
+                                [ replace f
+                                    <&> fmap (Val x . V.BApp . (`V.Apply` arg))
+                                , pure (pure oldVal)
+                                ]
+                        _ -> traverse go body <&> fmap (Val x) . sequenceA
+        replace x = replaceHole x <$ State.put True
+
+mkResultValFragment ::
+    Monad m =>
+    Infer.Payload ->
+    Val (T.Type, Maybe (Input.Payload m a)) ->
+    StateT Infer.Context (T m) (Hole.ResultVal m IsFragment)
+mkResultValFragment inferred val =
+    val <&> onPl
+    & Hole.detachValIfNeeded emptyPl (inferred ^. Infer.plType)
+    where
+        emptyPl = (Nothing, NotFragment)
+        onPl (typ, mInputPl) =
+            ( inferred & Infer.plType .~ typ
+            , case mInputPl of
+              Nothing -> emptyPl
+              Just inputPl ->
+                (inputPl ^. Input.stored & Property.value & Just, IsFragment)
+            )
+
+mkOptionFromFragment ::
+    Monad m =>
+    ConvertM.Context m ->
+    Input.Payload m a ->
+    Val (T.Type, Maybe (Input.Payload m a)) ->
+    HoleOption' (T m) (Expression InternalName (T m) (T m) ())
+mkOptionFromFragment sugarContext exprPl val =
+    HoleOption
+    { _hoVal = baseExpr
+    , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
+    , _hoResults =
+        do
+            (result, inferContext) <-
+                mkResultValFragment (exprPl ^. Input.inferred) val
+                & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
+            let depsProp = sugarContext ^. ConvertM.scFrozenDeps
+            newDeps <-
+                Hole.loadNewDeps (depsProp ^. Property.pVal)
+                (exprPl ^. Input.inferred . Infer.plScope) val
+            let newSugarContext =
+                    sugarContext
+                    & ConvertM.scInferContext .~ inferContext
+                    & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
+            let updateDeps = Property.set depsProp newDeps
+            pure
+                ( resultScore (result <&> fst)
+                , Hole.mkResult (replaceFragment topEntityId 0) newSugarContext
+                    updateDeps stored result
+                )
+        <&> pure & ListClass.joinL
+    }
+    where
+        stored = exprPl ^. Input.stored
+        topEntityId = Property.value stored & EntityId.ofValI
+        baseExpr = pruneExpr val
+        pruneExpr (Val (_, Just{}) _) = P.hole
+        pruneExpr (Val _ b) = b <&> pruneExpr & Val ()

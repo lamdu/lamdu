@@ -20,7 +20,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
+import qualified Lamdu.Sugar.Convert.Fragment as ConvertFragment
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, siTagParamInfos, tpiFromParameters)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -169,7 +169,7 @@ convert ::
     Monad m =>
     V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert param exprPl
-    | param == ConvertHole.fragmentVar =
+    | param == ConvertFragment.fragmentVar =
         addActions exprPl BodyPlaceHolder
     | otherwise =
         do
