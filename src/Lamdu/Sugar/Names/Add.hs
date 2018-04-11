@@ -18,14 +18,13 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (singleton, hasKey)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
-import           Data.Property (MkProperty')
+import           Data.Property (Property(..), MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
-
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
@@ -406,10 +405,9 @@ mkSetName tag = Lens.view p2getNameProp <&> ($ tag) <&> Property.setP
 storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name tm)
 storedName tagsBelow aName storedText =
     StoredName
-    <$> mkSetName tag
+    <$> (Property (unStoredText storedText) <$> mkSetName tag)
     <*> getTagText tag storedText
     <*> getCollision tagsBelow aName
-    ?? unStoredText storedText
     <&> Stored
     where
         tag = aName ^. Clash.anTag

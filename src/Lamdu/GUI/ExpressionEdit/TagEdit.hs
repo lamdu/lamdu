@@ -11,7 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
-import           Data.Property (Property(..))
+
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -74,7 +74,7 @@ makeTagNameEdit ::
     ) =>
     NearestHoles -> Name.StoredName f -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeTagNameEdit nearestHoles (Name.StoredName setName tagText _tagCollision storedText) myId =
+makeTagNameEdit nearestHoles (Name.StoredName prop tagText _tagCollision) myId =
     do
         keys <- Lens.view (Config.config . Config.menu . Menu.keysPickOptionAndGotoNext)
         let jumpNextEventMap =
@@ -85,7 +85,7 @@ makeTagNameEdit nearestHoles (Name.StoredName setName tagText _tagCollision stor
                    pure . WidgetIds.fromEntityId)
         TextEdits.makeWordEdit
             ?? TextEdit.EmptyStrings (tagText ^. Name.ttText) ""
-            ?? Property storedText setName
+            ?? prop
             ?? tagRenameId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents jumpNextEventMap
