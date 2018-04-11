@@ -4,12 +4,12 @@ module Lamdu.Sugar.Names.Add
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (Reader, runReader, MonadReader(..))
+import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (runState, evalState)
+import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
-import           Control.Monad.Transaction (getP)
 import qualified Data.Char as Char
 import           Data.Foldable (fold)
 import           Data.MMap (MMap(..), _MMap)
@@ -18,13 +18,14 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (singleton, hasKey)
 import           Data.Monoid.Generic (def_mempty, def_mappend)
-import           Data.Property (MkProperty)
+import           Data.Property (MkProperty')
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Data.Anchors (assocTagNameRef, anonTag)
-import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Data.Anchors (anonTag)
+
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
@@ -35,11 +36,8 @@ import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Walk (MonadNaming, Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude hiding (Map)
-
-type T = Transaction
 
 newtype StoredText = StoredText { unStoredText :: Text }
     deriving (Eq, Ord)
@@ -56,20 +54,34 @@ data P0Name = P0Name
     }
 Lens.makeLenses ''P0Name
 
-newtype Pass0LoadNames tm a = Pass0LoadNames { runPass0LoadNames :: T tm a }
-    deriving (Functor, Applicative, Monad)
+newtype P0Env tm = P0Env
+    { _p0GetNameProp :: T.Tag -> MkProperty' tm Text
+    }
+Lens.makeLenses ''P0Env
+
+newtype Pass0LoadNames tm a =
+    Pass0LoadNames { unPass0LoadNames :: ReaderT (P0Env tm) tm a }
+    deriving (Functor, Applicative, Monad, MonadReader (P0Env tm))
+
+runPass0LoadNames :: P0Env tm -> Pass0LoadNames tm a -> tm a
+runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
+
+instance MonadTrans Pass0LoadNames where
+    lift = Pass0LoadNames . lift
 
 instance Monad tm => MonadNaming (Pass0LoadNames tm) where
     type OldName (Pass0LoadNames tm) = InternalName
     type NewName (Pass0LoadNames tm) = P0Name
-    type IM (Pass0LoadNames tm) = T tm
-    opRun = pure runPass0LoadNames
+    type IM (Pass0LoadNames tm) = tm
+    opRun = Reader.ask <&> runPass0LoadNames
     opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
     opGetName _ _ = getP0Name
 
 getP0Name :: Monad tm => InternalName -> Pass0LoadNames tm P0Name
 getP0Name internalName =
-    assocTagNameRef (internalName ^. inTag) & getP & Pass0LoadNames
+    do
+        nameProp <- Lens.view p0GetNameProp
+        internalName ^. inTag & nameProp & Property.getP & lift
     <&> StoredText
     <&> (`P0Name` internalName)
 
@@ -139,7 +151,7 @@ tellSome l v = mempty & l .~ v & Writer.tell
 instance Monad tm => MonadNaming (Pass1PropagateUp tm) where
     type OldName (Pass1PropagateUp tm) = P0Name
     type NewName (Pass1PropagateUp tm) = P1Name
-    type IM (Pass1PropagateUp tm) = T tm
+    type IM (Pass1PropagateUp tm) = tm
     opRun = pure (pure . fst . runPass1PropagateUp)
     opWithName _ = p1Name Nothing
     opGetName mDisambiguator nameType p0Name =
@@ -254,10 +266,11 @@ toSuffixMap tagContexts =
         eachTag tag contexts = zipWith (item tag) [0..] (Set.toList contexts) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: MkProperty (T tm) (T tm) (Set T.Tag) -> P1Out -> P2Env tm
-initialP2Env publishedTags (P1Out p1tags p1contexts p1localCollisions p1texts) =
+initialP2Env :: (T.Tag -> MkProperty' tm Text) -> P1Out -> P2Env tm
+initialP2Env getNameProp (P1Out p1tags p1contexts p1localCollisions p1texts) =
     P2Env
-    { _p2NameGen = NameGen.initial
+    { _p2getNameProp = getNameProp
+    , _p2NameGen = NameGen.initial
     , _p2AnonSuffixes =
         p1contexts ^.. Lens.ix anonTag . Lens.folded & (`zip` [0..])
         & Map.fromList
@@ -269,7 +282,6 @@ initialP2Env publishedTags (P1Out p1tags p1contexts p1localCollisions p1texts) =
     , _p2TagsAbove = globalTags
     , _p2TextsAbove = globalTags ^@.. Lens.itraversed <&> fst <&> lookupText & Set.fromList
     , _p2Tags = p1tags <&> tvIsClash
-    , _p2PublishedTags = publishedTags
     }
     where
         lookupText tag =
@@ -304,7 +316,8 @@ data TaggedVarId = TaggedVarId
     } deriving (Eq, Ord)
 
 data P2Env tm = P2Env
-    { _p2NameGen :: NameGen UUID -- Map anon name contexts to chosen auto-names
+    { _p2getNameProp :: T.Tag -> MkProperty' tm Text
+    , _p2NameGen :: NameGen UUID -- Map anon name contexts to chosen auto-names
     , _p2AnonSuffixes :: Map UUID CollisionSuffix
         -- ^ Untagged global names (defs/nominals) are presented as
         -- "Unnamed" with a collision suffix. This maps the contexts
@@ -325,16 +338,16 @@ data P2Env tm = P2Env
     , _p2Tags :: MMap T.Tag IsClash
         -- ^ All tags including locals from all inner scopes -- used to
         -- check collision of globals in hole results with everything.
-    , _p2PublishedTags :: MkProperty (T tm) (T tm) (Set T.Tag)
     }
 Lens.makeLenses ''P2Env
 
 newtype Pass2MakeNames (tm :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader (P2Env tm) a }
     deriving (Functor, Applicative, Monad, MonadReader (P2Env tm))
 
-runPass2MakeNamesInitial :: MkProperty (T tm) (T tm) (Set T.Tag) -> P1Out -> Pass2MakeNames tm a -> a
-runPass2MakeNamesInitial publishedTags p1out act =
-    initialP2Env publishedTags p1out & (runReader . runPass2MakeNames) act
+runPass2MakeNamesInitial ::
+    (T.Tag -> MkProperty' tm Text) -> P1Out -> Pass2MakeNames tm a -> a
+runPass2MakeNamesInitial getNameProp p1out act =
+    initialP2Env getNameProp p1out & (runReader . runPass2MakeNames) act
 
 getCollision :: MMap T.Tag TagVal -> AnnotatedName -> Pass2MakeNames tm Collision
 getCollision tagsBelow aName =
@@ -369,8 +382,8 @@ getCollision tagsBelow aName =
 
 instance Monad tm => MonadNaming (Pass2MakeNames tm) where
     type OldName (Pass2MakeNames tm) = P1Name
-    type NewName (Pass2MakeNames tm) = Name (T tm)
-    type IM (Pass2MakeNames tm) = T tm
+    type NewName (Pass2MakeNames tm) = Name tm
+    type IM (Pass2MakeNames tm) = tm
     opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
     opWithName varInfo _ = p2cpsNameConvertor varInfo
     opGetName _ = p2nameConvertor
@@ -387,10 +400,10 @@ getTagText tag text =
             | Set.member displayText (env ^. p2Texts) = UnknownCollision
             | otherwise = NoCollision
 
-mkSetName :: Monad tm => T.Tag -> Pass2MakeNames tm (Text -> Transaction tm ())
-mkSetName tag = Lens.view p2PublishedTags <&> (`DataOps.setTagName` tag)
+mkSetName :: Monad tm => T.Tag -> Pass2MakeNames tm (Text -> tm ())
+mkSetName tag = Lens.view p2getNameProp <&> ($ tag) <&> Property.setP
 
-storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name (T tm))
+storedName :: Monad tm => MMap T.Tag TagVal -> AnnotatedName -> StoredText -> Pass2MakeNames tm (Name tm)
 storedName tagsBelow aName storedText =
     StoredName
     <$> mkSetName tag
@@ -401,7 +414,7 @@ storedName tagsBelow aName storedText =
     where
         tag = aName ^. Clash.anTag
 
-p2nameConvertor :: Monad tm => Walk.NameType -> P1Name -> Pass2MakeNames tm (Name (T tm))
+p2nameConvertor :: Monad tm => Walk.NameType -> P1Name -> Pass2MakeNames tm (Name tm)
 p2nameConvertor nameType (P1Name (P1StoredName aName text) tagsBelow _) =
     storedName tagsBelow aName text
     <&>
@@ -454,22 +467,23 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
 
 runPasses ::
     Functor tm =>
-    MkProperty (T tm) (T tm) (Set T.Tag) ->
+    (T.Tag -> MkProperty' tm Text) ->
     (a -> Pass0LoadNames tm b) -> (b -> Pass1PropagateUp tm c) -> (c -> Pass2MakeNames tm d) ->
-    a -> T tm d
-runPasses publishedTags f0 f1 f2 =
+    a -> tm d
+runPasses getNameProp f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
-        pass0 = runPass0LoadNames . f0
+        pass0 = runPass0LoadNames (P0Env getNameProp) . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial publishedTags p1out
+        pass2 (x, p1out) =
+            f2 x & runPass2MakeNamesInitial getNameProp p1out
 
 addToWorkArea ::
     Monad tm =>
-    MkProperty (T tm) (T tm) (Set T.Tag) ->
-    WorkArea InternalName (T tm) (T tm) a ->
-    T tm (WorkArea (Name (T tm)) (T tm) (T tm) a)
-addToWorkArea publishedTags =
-    runPasses publishedTags f f f
+    (T.Tag -> MkProperty' tm Text) ->
+    WorkArea InternalName tm tm a ->
+    tm (WorkArea (Name tm) tm tm a)
+addToWorkArea getNameProp =
+    runPasses getNameProp f f f
     where
         f = Walk.toWorkArea

@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Tag
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import           Data.Property (MkProperty')
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -74,7 +75,7 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag published
         \newName ->
         do
             newTag <- DataOps.genNewTag
-            DataOps.setTagName publishedTagsProp newTag newName
+            Property.setP (DataOps.assocPublishedTagName publishedTagsProp newTag) newName
             setTag newTag <&> (,) (mkInstance newTag)
     , _tsAnon =
         case allowAnon of

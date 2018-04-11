@@ -5,7 +5,7 @@ module Lamdu.Data.Ops
     , CompositeExtendResult(..)
     , recExtend
     , case_
-    , genNewTag, setTagName
+    , genNewTag, assocPublishedTagName
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
     , newPane
@@ -13,7 +13,7 @@ module Lamdu.Data.Ops
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Property (MkProperty', Property(..), setP, modP)
+import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
@@ -115,12 +115,17 @@ case_ tag tailI =
         V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
             <&> CompositeExtendResult newValueI
 
--- | Set a tag's name and publish it if it isn't an empty one
-setTagName :: Monad m => MkProperty' (T m) (Set T.Tag) -> T.Tag -> Text -> T m ()
-setTagName publishedTagsProp tag newName =
-    do
-        setP (Anchors.assocTagNameRef tag) newName
-        modP publishedTagsProp (Lens.contains tag .~ (newName /= ""))
+-- | assocTagNameRef that publishes/unpublishes upon setting a
+-- non-empty/empty name
+assocPublishedTagName ::
+    Monad m => MkProperty' (T m) (Set T.Tag) -> T.Tag -> MkProperty' (T m) Text
+assocPublishedTagName publishedTagsProp tag =
+    Anchors.assocTagNameRef tag
+    & Property.mkProperty . Lens.mapped . Property.pSet .>
+    Lens.imapped %@~ \i -> (<* publish i)
+    where
+        publish newName =
+            Property.modP publishedTagsProp (Lens.contains tag .~ (newName /= ""))
 
 newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
 newPane codeAnchors defI =

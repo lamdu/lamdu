@@ -10,6 +10,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -22,6 +23,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -106,6 +108,9 @@ postProcessExpr ::
 postProcessExpr =
     fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
 
+getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Text
+getNameProp = DataOps.assocPublishedTagName . Anchors.tags
+
 loadWorkArea ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
@@ -113,7 +118,7 @@ loadWorkArea ::
     T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
 loadWorkArea theEvalResults cp =
     SugarConvert.loadWorkArea theEvalResults cp
-    >>= AddNames.addToWorkArea (Anchors.tags cp)
+    >>= AddNames.addToWorkArea (getNameProp cp)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl } ->
     Sugar.WorkArea
