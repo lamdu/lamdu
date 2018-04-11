@@ -3,10 +3,12 @@
 
 module Test.Lamdu.Instances () where
 
+import           Control.Applicative (Const(..))
 import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.String (IsString(..))
 import           Data.Vector.Vector2 (Vector2(..))
+import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           GUI.Momentu.Align (Aligned(..))
 import           GUI.Momentu.Animation (R)
@@ -46,11 +48,13 @@ deriving instance Data a => Data (Fonts a)
 deriving instance Data a => Data (Vector2 a)
 
 instance IsString EntityId where
+    fromString = EntityId . fromString
+
+instance IsString UUID where
     fromString s =
         fromString (s ++ replicate (16 - length s) '\0')
         & UUID.fromByteString
         & fromMaybe (error ("Failed to convert to UUID: " <> show s))
-        & EntityId
 
 instance Pretty Color where
     pPrint (Color r g b a)
@@ -86,3 +90,8 @@ instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = (:|) <$> arbitrary <*> arbitrary
     shrink (_ :| []) = []
     shrink (x0 :| (x1 : xs)) = (x1 :| xs) : (shrink (x1 : xs) <&> (x0 :|))
+
+-- Should use "Unit monad" instead.
+-- This instance proabably not coherent with the Applicative instance..
+instance Monoid a => Monad (Const a) where
+    Const x >>= _ = Const x

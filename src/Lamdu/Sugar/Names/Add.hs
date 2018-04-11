@@ -1,6 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, NoMonomorphismRestriction, OverloadedStrings #-}
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
+    , -- re-export for tests
+      InternalName(..), inTag, inContext
     ) where
 
 import qualified Control.Lens as Lens

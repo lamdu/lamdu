@@ -4,6 +4,7 @@ import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified TestAnimIdClash
 import qualified TestColorSchemes
 import qualified TestConfig
+import qualified TestDisambiguation
 import qualified TestJsRtsTags
 import qualified TestMomentu
 import qualified TestStdlib
@@ -25,6 +26,7 @@ main =
             [ TestAnimIdClash.test
             , TestColorSchemes.test
             , TestConfig.test
+            , TestDisambiguation.test
             , TestJsRtsTags.test
             , testCase "json-codec-migration" jsonCodecMigrationTest
             ]
