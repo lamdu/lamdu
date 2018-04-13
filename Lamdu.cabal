@@ -30,6 +30,43 @@ source-repository head
   type: git
   location: https://github.com/lamdu/lamdu.git
 
+Flag ekg
+  Description: Enable ekg support in Lamdu
+  Default: True
+
+Executable lamdu
+  main-is: src/Lamdu/Main.hs
+  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
+  build-depends: Lamdu, base, directory, filepath, lens, OpenGL
+  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
+  if flag(ekg)
+    ghc-options: -with-rtsopts=-T
+
+Test-Suite Tests
+  type: exitcode-stdio-1.0
+  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
+  hs-source-dirs: test
+  main-is: Tests.hs
+  other-modules: TestAnimIdClash
+               , TestColorSchemes
+               , TestConfig
+               , TestDisambiguation
+               , TestJsRtsTags
+               , TestMomentu
+               , TestStdlib
+               , Test.Lamdu.Db
+               , Test.Lamdu.FreshDb
+               , Test.Lamdu.GuiEnv
+               , Test.Lamdu.Instances
+               , Test.Lamdu.Theme
+  build-depends:
+    base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck, aeson-diff, split,
+    Lamdu, AlgoW, lamdu-calculus,
+    aeson, aeson-pretty, bytestring, containers, filepath, lens, mtl, pretty, random, text, uuid-types
+  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
+
 Library
   hs-Source-Dirs: src
   extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
@@ -177,6 +214,7 @@ Library
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
+                  , Lamdu.Ekg
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Manager
@@ -323,34 +361,6 @@ Library
 
   ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-cafs
-
-Executable lamdu
-  main-is: src/Lamdu/Main.hs
-  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
-  build-depends: Lamdu, base, directory, filepath, lens, OpenGL
-  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
-  ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
-
-Test-Suite Tests
-  type: exitcode-stdio-1.0
-  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
-  hs-source-dirs: test
-  main-is: Tests.hs
-  other-modules: TestAnimIdClash
-               , TestColorSchemes
-               , TestConfig
-               , TestDisambiguation
-               , TestJsRtsTags
-               , TestMomentu
-               , TestStdlib
-               , Test.Lamdu.Db
-               , Test.Lamdu.FreshDb
-               , Test.Lamdu.GuiEnv
-               , Test.Lamdu.Instances
-               , Test.Lamdu.Theme
-  build-depends:
-    base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2, QuickCheck, aeson-diff, split,
-    Lamdu, AlgoW, lamdu-calculus,
-    aeson, aeson-pretty, bytestring, containers, filepath, lens, mtl, pretty, random, text, uuid-types
-  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
-  ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
+  if flag(ekg)
+    cpp-options: -DWITH_EKG
+    build-depends: ekg

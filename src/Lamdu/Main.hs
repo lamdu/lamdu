@@ -34,6 +34,7 @@ import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
+import qualified Lamdu.Ekg as Ekg
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
@@ -107,7 +108,8 @@ main :: IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
-        Opts.Parsed{_pLamduDB,_pCommand} <- Opts.get
+        Opts.Parsed{_pLamduDB,_pCommand,_pEkgPort} <- Opts.get
+        foldMap Ekg.start _pEkgPort
         lamduDir <- maybe getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
@@ -115,7 +117,7 @@ main =
             Opts.Undo n -> withDB (undoN n)
             Opts.Import path -> withDB (importPath path)
             Opts.Export path -> withDB (exportToPath path)
-            Opts.Editor opts -> withDB $ runEditor opts
+            Opts.Editor opts -> withDB (runEditor opts)
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     whoCreated e >>= mapM_ (hPutStrLn stderr)

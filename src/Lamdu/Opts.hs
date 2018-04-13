@@ -1,14 +1,15 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoCopyJSOutputPath, eoWindowTitle, eoSubpixelEnabled
     , Command(..), _DeleteDb, _Undo, _Editor
-    , Parsed(..), pCommand, pLamduDB
+    , Parsed(..), pCommand, pLamduDB, pEkgPort
     , WindowMode(..), _VideoModeSize, _FullScreen
     , get
     ) where
 
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
+import           Data.Word (Word16)
 import           Options.Applicative ((<|>))
 import qualified Options.Applicative as P
 
@@ -33,6 +34,7 @@ data Command
 data Parsed = Parsed
     { _pCommand :: Command
     , _pLamduDB :: Maybe FilePath
+    , _pEkgPort :: Maybe Word16
     }
 
 Lens.makeLenses ''EditorOpts
@@ -98,6 +100,18 @@ parser =
     Parsed
     <$> command
     <*> maybePath (P.long "lamduDB" <> P.help "Override path to lamdu DB")
+    <*> optional
+        (P.option P.auto
+            ( P.long "with-ekg"
+            <> P.metavar "PORT"
+            <> P.help
+                ("Enable ekg monitoring of lamdu on given port"
+#ifndef WITH_EKG
+                <> " (DISABLED: Recompile with -fekg for ekg support)"
+#endif
+                )
+            )
+        )
 
 get :: IO Parsed
 get =
@@ -114,9 +128,13 @@ get =
    to give this header. So it doesn't print out too pretty. I tried
    chaining multiple headers with "<>", but it only keeps the last one.
  -}
-     <> P.header "Pressing F1 while in the Lamdu environment gives help in the\
-                 \ lower-right of the environment's screen. This help changes\
-                 \ based on what's selected.\
-                 \ For tutorials, please see the README."
+     <> P.header
+        ( concat
+            [ "Pressing F1 while in the Lamdu environment gives help in the"
+            , " lower-right of the environment's screen. This help changes"
+            , " based on what's selected."
+            , " For tutorials, please see the README."
+            ]
+        )
     )
     & P.execParser
