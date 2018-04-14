@@ -1,18 +1,14 @@
 -- | Name clash logic
-{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Names.Clash
-    ( AnnotatedName(..), anInternal, anDisambiguator, anNameType
-      , anTag
-    , NameContext
+    ( NameContext
     , IsClash(..), isClash, isClashOf
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import           Data.Map.Utils (unionWithM)
-import qualified Lamdu.Calc.Type as T
-import           Lamdu.Sugar.Internal (InternalName(..), internalNameMatch, inTag)
+import           Lamdu.Sugar.Internal (InternalName(..), internalNameMatch)
+import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 
@@ -27,19 +23,6 @@ collisionGroups =
     , [ Walk.TaggedNominal ]
     ]
 
--- | Info about a single instance of use of a name:
-data AnnotatedName = AnnotatedName
-    { _anInternal :: !InternalName
-    , -- | Is the name used in a function application context? We consider
-      -- the application as a disambiguator
-      _anDisambiguator :: !(Maybe Disambiguator)
-    , _anNameType :: !Walk.NameType
-    } deriving (Eq, Ord, Show)
-Lens.makeLenses ''AnnotatedName
-
-anTag :: Lens' AnnotatedName T.Tag
-anTag = anInternal . inTag
-
 data IsClash = Clash | NoClash NameContext
 
 data GroupNameContext = Ambiguous InternalName | Disambiguated (Map Disambiguator InternalName)
@@ -52,7 +35,7 @@ isClash :: IsClash -> Bool
 isClash Clash = True
 isClash NoClash {} = False
 
-isClashOf :: AnnotatedName -> IsClash
+isClashOf :: Annotated.Name -> IsClash
 isClashOf = NoClash . nameContextOf
 
 -- Returns (Maybe NameContext) isomorphic to IsClash because of the
@@ -74,13 +57,13 @@ groupNameContextMatch a b =
 nameContextMatch :: NameContext -> NameContext -> IsClash
 nameContextMatch x y = unionWithM groupNameContextMatch x y & maybe Clash NoClash
 
-groupNameContextOf :: AnnotatedName -> GroupNameContext
-groupNameContextOf (AnnotatedName internalName Nothing _) = Ambiguous internalName
-groupNameContextOf (AnnotatedName internalName (Just d) _) = Map.singleton d internalName & Disambiguated
+groupNameContextOf :: Annotated.Name -> GroupNameContext
+groupNameContextOf (Annotated.Name internalName Nothing _) = Ambiguous internalName
+groupNameContextOf (Annotated.Name internalName (Just d) _) = Map.singleton d internalName & Disambiguated
 
-nameContextOf :: AnnotatedName -> NameContext
+nameContextOf :: Annotated.Name -> NameContext
 nameContextOf inst =
-    filter (inst ^. anNameType `elem`) collisionGroups
+    filter (inst ^. Annotated.nameType `elem`) collisionGroups
     <&> ((,) ?? ctx)
     & Map.fromList
     where

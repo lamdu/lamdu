@@ -324,6 +324,7 @@ Library
                   , Lamdu.Sugar.Parens
                   , Lamdu.Sugar.Lens
                   , Lamdu.Sugar.Names.Add
+                  , Lamdu.Sugar.Names.Annotated
                   , Lamdu.Sugar.Names.CPS
                   , Lamdu.Sugar.Names.Clash
                   , Lamdu.Sugar.Names.Get
