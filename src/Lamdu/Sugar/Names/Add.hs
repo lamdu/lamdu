@@ -18,7 +18,6 @@ import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Map.Utils (singleton, hasKey)
-import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -95,11 +94,17 @@ data P1Out = P1Out
     , _p1Contexts :: MMap T.Tag (Set UUID)
         -- ^ Needed to generate suffixes
     , _p1Texts :: MMap DisplayText (Set T.Tag)
-    } deriving (Generic)
+    }
 instance Semigroup P1Out where
-    (<>) = def_mappend
+    P1Out xGlobals xLocals xContexts xTexts <>
+        P1Out yGlobals yLocals yContexts yTexts =
+        P1Out
+        (MMap.unionWith Clash.collide xGlobals yGlobals)
+        (xLocals <> yLocals)
+        (xContexts <> yContexts)
+        (xTexts <> yTexts)
 instance Monoid P1Out where
-    mempty = def_mempty
+    mempty = P1Out mempty mempty mempty mempty
     mappend = (<>)
 Lens.makeLenses ''P1Out
 
