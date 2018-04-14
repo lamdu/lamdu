@@ -7,7 +7,8 @@ import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import           Data.Map.Utils (unionWithM)
 import qualified Data.Set as Set
-import           Lamdu.Sugar.Internal (InternalName(..), internalNameMatch)
+import           Data.UUID.Types (UUID)
+import           Lamdu.Sugar.Internal (InternalName(..))
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
@@ -24,7 +25,7 @@ collisionGroups =
 
 data Info = Clash | NoClash NameContext
 
-data GroupNameContext = Ambiguous InternalName | Disambiguated (Map Disambiguator InternalName)
+data GroupNameContext = Ambiguous UUID | Disambiguated (Map Disambiguator UUID)
 
 -- A valid (non-clashing) context for a single name where multiple
 -- InternalNames may coexist
@@ -37,6 +38,11 @@ isClash NoClash {} = False
 infoOf :: Annotated.Name -> Info
 infoOf = NoClash . nameContextOf
 
+ctxMatch :: UUID -> UUID -> Maybe UUID
+ctxMatch x y
+    | x == y = Just x
+    | otherwise = Nothing
+
 -- Returns (Maybe NameContext) isomorphic to Info because of the
 -- useful Applicative instance for Maybe (used in nameContextMatch)
 -- i.e: Nothing indicates a clash
@@ -44,29 +50,31 @@ infoOf = NoClash . nameContextOf
 groupNameContextMatch :: GroupNameContext -> GroupNameContext -> Maybe GroupNameContext
 groupNameContextMatch a b =
     case (a, b) of
-    (Ambiguous internalName, Disambiguated m) -> matchAD internalName m
-    (Disambiguated m, Ambiguous internalName) -> matchAD internalName m
-    (Ambiguous x, Ambiguous y) -> internalNameMatch x y <&> Ambiguous
+    (Ambiguous ctx, Disambiguated m) -> matchAD ctx m
+    (Disambiguated m, Ambiguous ctx) -> matchAD ctx m
+    (Ambiguous x, Ambiguous y) -> ctxMatch x y <&> Ambiguous
     (Disambiguated x, Disambiguated y) ->
-        unionWithM internalNameMatch x y <&> Disambiguated
+        unionWithM ctxMatch x y <&> Disambiguated
     where
-        matchAD internalName m =
-            foldM internalNameMatch internalName m <&> Ambiguous
+        matchAD ctx m =
+            foldM ctxMatch ctx m <&> Ambiguous
 
 nameContextMatch :: NameContext -> NameContext -> Info
 nameContextMatch x y = unionWithM groupNameContextMatch x y & maybe Clash NoClash
 
-groupNameContextOf :: Annotated.Name -> GroupNameContext
-groupNameContextOf (Annotated.Name internalName Nothing _) = Ambiguous internalName
-groupNameContextOf (Annotated.Name internalName (Just d) _) = Map.singleton d internalName & Disambiguated
+groupNameContextOf :: UUID -> Maybe Disambiguator -> GroupNameContext
+groupNameContextOf ctx Nothing = Ambiguous ctx
+groupNameContextOf ctx (Just d) = Map.singleton d ctx & Disambiguated
 
 nameContextOf :: Annotated.Name -> NameContext
-nameContextOf inst =
-    filter (inst ^. Annotated.nameType `elem`) collisionGroups
+nameContextOf (Annotated.Name (InternalName (Just nameCtx) _tag) disamb nameType) =
+    filter (nameType `elem`) collisionGroups
     <&> ((,) ?? ctx)
     & Map.fromList
     where
-        ctx = groupNameContextOf inst
+        ctx = groupNameContextOf nameCtx disamb
+nameContextOf (Annotated.Name (InternalName Nothing _tag) _disamb _nameType) =
+    mempty
 
 instance Semigroup Info where
     NoClash x <> NoClash y = nameContextMatch x y
