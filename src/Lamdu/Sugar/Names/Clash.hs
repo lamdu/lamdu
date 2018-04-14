@@ -1,7 +1,6 @@
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
-    ( NameContext
-    , IsClash(..), isClash, isClashOf
+    ( IsClash, isClash, isClashOf
     ) where
 
 import           Control.Monad (foldM)

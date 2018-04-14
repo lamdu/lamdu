@@ -30,7 +30,7 @@ import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
-import           Lamdu.Sugar.Names.Clash (IsClash(..))
+import           Lamdu.Sugar.Names.Clash (IsClash)
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
@@ -360,13 +360,13 @@ getCollision tagsBelow aName =
         Nothing ->
             -- In hole results, the collsions suffixes are not precomputed,
             -- but rather computed here:
-            case tags ^. Lens.ix tag <> Clash.isClashOf aName of
-            NoClash{} -> NoCollision
-            Clash ->
+            if tags ^. Lens.ix tag <> Clash.isClashOf aName & Clash.isClash
+            then
                 -- Once a collision, other non-colliding instances
                 -- also get a suffix, so we have no idea what suffix
                 -- we'll get:
                 UnknownCollision
+            else NoCollision
             where
                 tags
                     | isGlobal = env ^. p2Tags
