@@ -26,13 +26,17 @@ collisionGroups =
     ] <&> Set.fromList
 
 data Info = Clash | NoClash NameContext
+    deriving Show
 
 data UUIDInfo = Single UUID | Multiple -- no need to store the UUIDs, they clash with any UUID
+    deriving Show
+
 instance Semigroup UUIDInfo where
     Single x <> Single y | x == y = Single x
     _ <> _ = Multiple
 
 data GroupNameContext = Ambiguous UUIDInfo | Disambiguated (MMap Disambiguator UUIDInfo)
+    deriving Show
 
 combineAD :: (Foldable f, Semigroup a) => a -> f a -> a
 combineAD x y = foldr (<>) x (y ^.. Lens.folded)
