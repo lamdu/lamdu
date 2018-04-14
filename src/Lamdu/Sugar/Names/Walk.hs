@@ -226,12 +226,6 @@ toTagInfoOf ::
     MonadNaming m => NameType -> TagInfo (OldName m) -> m (TagInfo (NewName m))
 toTagInfoOf nameType = tagName (opGetName Nothing nameType)
 
-withTagInfoOf ::
-    MonadNaming m =>
-    NameType -> NameGen.VarInfo ->
-    TagInfo (OldName m) -> CPS m (TagInfo (NewName m))
-withTagInfoOf nameType varInfo = tagName (opWithName varInfo nameType)
-
 toTagSelection ::
     MonadNaming m =>
     TagSelection (OldName m) (IM m) o a ->
@@ -257,7 +251,7 @@ withTag ::
     CPS m (Sugar.Tag (NewName m) (IM m) o)
 withTag nameType varInfo (Sugar.Tag info actions) =
     Sugar.Tag
-    <$> withTagInfoOf nameType varInfo info
+    <$> tagName (opWithName varInfo nameType) info
     <*> liftCPS (toTagSelection actions)
 
 toRelayedArg ::

@@ -12,8 +12,7 @@ Defs, Tags and NominalIds are considered to scope over everything.
 Collision groups (items in same group with differing UUIDs and same
 Text and no successful disambiguation are considered collisions).
 
-* Var, FieldParam, Def
-* FieldParam, Tag
+* GlobalDef, TaggedVar
 * NominalId
 
 * Vars that are defined via "Let" and Defs can be disambiguated via
