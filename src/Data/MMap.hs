@@ -5,6 +5,7 @@ module Data.MMap
     , fromList
     , fromSet, keysSet
     , filter, mapMaybe
+    , unionWithM, unionWith
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,6 +13,7 @@ import           Control.Lens.Operators
 import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.Map.Utils as MapUtils
 import           Data.Semigroup (Semigroup(..))
 import           Data.Set (Set)
 
@@ -53,3 +55,11 @@ filter p = _MMap %~ Map.filter p
 
 mapMaybe :: (a -> Maybe b) -> MMap k a -> MMap k b
 mapMaybe f = _MMap %~ Map.mapMaybe f
+
+unionWithM ::
+    (Applicative f, Ord k) =>
+    (a -> a -> f a) -> MMap k a -> MMap k a -> f (MMap k a)
+unionWithM f (MMap x) (MMap y) = MapUtils.unionWithM f x y <&> MMap
+
+unionWith :: Ord k => (a -> a -> a) -> MMap k a -> MMap k a -> MMap k a
+unionWith f (MMap x) (MMap y) = Map.unionWith f x y & MMap
