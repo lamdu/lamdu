@@ -13,6 +13,7 @@ import           Data.Property (Property(..), MkProperty(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
@@ -41,21 +42,27 @@ instance Walk.MonadNaming (CollectNames name) where
 test :: Test
 test =
     testGroup "Disambiguation"
-    [ testCase "disambiguation(#396)" (testWorkArea workArea396)
+    [ testCase "disambiguation(#396)" workArea396
+    , testCase "globals collide" workAreaGlobals
     ]
 
-testWorkArea :: Sugar.WorkArea InternalName Identity Unit a -> IO ()
-testWorkArea inputWorkArea =
+assertNoCollisions :: Name o -> IO ()
+assertNoCollisions name =
+    case Name.visible name of
+    (Name.TagText _ Name.NoCollision, Name.NoCollision) -> pure ()
+    (Name.TagText text textCollision, tagCollision) ->
+        unwords
+        [ "Unexpected collision for name", show text
+        , show textCollision, show tagCollision
+        ] & assertString
+
+testWorkArea ::
+    (Name Unit -> IO b) -> Sugar.WorkArea InternalName Identity Unit a -> IO ()
+testWorkArea verifyName inputWorkArea =
     addToWorkArea getNameProp inputWorkArea
     & runIdentity
     & getNames
     & traverse_ verifyName
-    where
-        verifyName name =
-            case Name.visible name of
-            (_, Name.NoCollision) -> pure ()
-            (Name.TagText text _, _) ->
-                assertString ("Unexpected collision for name " ++ show text)
 
 getNames :: Sugar.WorkArea name Identity o a -> [name]
 getNames workArea =
@@ -236,7 +243,7 @@ tagSelection =
 
 --- test inputs:
 
-workArea396 :: Sugar.WorkArea InternalName Identity Unit ()
+workArea396 :: IO ()
 workArea396 =
     Sugar.WorkArea
     { Sugar._waRepl = repl lamExpr
@@ -245,7 +252,7 @@ workArea396 =
             & def lamType "def" "def"
             & pane
         ]
-    }
+    } & testWorkArea assertNoCollisions
     where
         lamType = funcType numType numType
         leafExpr = expr numType Sugar.BodyPlaceHolder
@@ -254,3 +261,27 @@ workArea396 =
             { Sugar._lamMode = Sugar.NormalBinder
             , Sugar._lamBinder = binderExpr [("lamVar", "num", numType)] leafExpr
             } & expr lamType
+
+workAreaGlobals :: IO ()
+workAreaGlobals =
+    Sugar.WorkArea
+    { Sugar._waRepl = repl trivialExpr
+    , Sugar._waPanes =
+        -- 2 defs sharing the same tag with different Vars/UUIDs,
+        -- should collide with ordinary suffixes
+        [ def numType "def1" "def" trivialBinder & pane
+        , def numType "def2" "def" trivialBinder & pane
+        ]
+    } & testWorkArea verifyName
+    where
+        verifyName name =
+            case Name.visible name of
+            (Name.TagText _ Name.NoCollision, Name.NoCollision) -> pure ()
+            (Name.TagText _ Name.NoCollision, Name.Collision _) -> pure ()
+            (Name.TagText text textCollision, tagCollision) ->
+                unwords
+                [ "Unexpected/bad collision for name", show text
+                , show textCollision, show tagCollision
+                ] & assertString
+        trivialBinder = binderExpr [] trivialExpr
+        trivialExpr = expr numType Sugar.BodyPlaceHolder
