@@ -1,6 +1,6 @@
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
-    ( IsClash, isClash, isClashOf
+    ( Info, infoOf, isClash
     ) where
 
 import           Control.Monad (foldM)
@@ -22,7 +22,7 @@ collisionGroups =
     , [ Walk.TaggedNominal ]
     ]
 
-data IsClash = Clash | NoClash NameContext
+data Info = Clash | NoClash NameContext
 
 data GroupNameContext = Ambiguous InternalName | Disambiguated (Map Disambiguator InternalName)
 
@@ -30,14 +30,14 @@ data GroupNameContext = Ambiguous InternalName | Disambiguated (Map Disambiguato
 -- InternalNames may coexist
 type NameContext = Map CollisionGroup GroupNameContext
 
-isClash :: IsClash -> Bool
+isClash :: Info -> Bool
 isClash Clash = True
 isClash NoClash {} = False
 
-isClashOf :: Annotated.Name -> IsClash
-isClashOf = NoClash . nameContextOf
+infoOf :: Annotated.Name -> Info
+infoOf = NoClash . nameContextOf
 
--- Returns (Maybe NameContext) isomorphic to IsClash because of the
+-- Returns (Maybe NameContext) isomorphic to Info because of the
 -- useful Applicative instance for Maybe (used in nameContextMatch)
 -- i.e: Nothing indicates a clash
 --      Just nameContext indicates a disambiguated name context
@@ -53,7 +53,7 @@ groupNameContextMatch a b =
         matchAD internalName m =
             foldM internalNameMatch internalName m <&> Ambiguous
 
-nameContextMatch :: NameContext -> NameContext -> IsClash
+nameContextMatch :: NameContext -> NameContext -> Info
 nameContextMatch x y = unionWithM groupNameContextMatch x y & maybe Clash NoClash
 
 groupNameContextOf :: Annotated.Name -> GroupNameContext
@@ -68,10 +68,10 @@ nameContextOf inst =
     where
         ctx = groupNameContextOf inst
 
-instance Semigroup IsClash where
+instance Semigroup Info where
     NoClash x <> NoClash y = nameContextMatch x y
     _ <> _ = Clash
 
-instance Monoid IsClash where
+instance Monoid Info where
     mempty = NoClash mempty
     mappend = (<>)

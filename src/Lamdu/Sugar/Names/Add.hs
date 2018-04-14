@@ -30,7 +30,6 @@ import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
-import           Lamdu.Sugar.Names.Clash (IsClash)
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.NameGen (NameGen)
 import qualified Lamdu.Sugar.Names.NameGen as NameGen
@@ -90,7 +89,7 @@ getP0Name internalName =
 
 data TagVal = TagVal
     { tvAnyGlobal :: Bool
-    , tvIsClash :: IsClash
+    , tvIsClash :: Clash.Info
     }
 
 instance Semigroup TagVal where
@@ -108,7 +107,7 @@ tagMapSingleton k v =
         val =
             TagVal
             { tvAnyGlobal = v ^. Annotated.nameType & Walk.isGlobal
-            , tvIsClash = Clash.isClashOf v
+            , tvIsClash = Clash.infoOf v
             }
 
 data P1Out = P1Out
@@ -330,12 +329,12 @@ data P2Env = P2Env
         -- ^ When N (>1) different entities have the same tag in the
         -- same scope, the tag gets a different suffix for each of its
         -- entities
-    , _p2TagsAbove :: MMap T.Tag IsClash
+    , _p2TagsAbove :: MMap T.Tag Clash.Info
         -- ^ Tags used in containing scopes (above) -- used to
         -- generate "UnknownCollision" inside hole results
     , _p2TextsAbove :: Set DisplayText
         -- ^ Used to prevent auto-names from re-using texts from above
-    , _p2Tags :: MMap T.Tag IsClash
+    , _p2Tags :: MMap T.Tag Clash.Info
         -- ^ All tags including locals from all inner scopes -- used to
         -- check collision of globals in hole results with everything.
     }
@@ -360,7 +359,7 @@ getCollision tagsBelow aName =
         Nothing ->
             -- In hole results, the collsions suffixes are not precomputed,
             -- but rather computed here:
-            if tags ^. Lens.ix tag <> Clash.isClashOf aName & Clash.isClash
+            if tags ^. Lens.ix tag <> Clash.infoOf aName & Clash.isClash
             then
                 -- Once a collision, other non-colliding instances
                 -- also get a suffix, so we have no idea what suffix
@@ -448,7 +447,7 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
                 storedName tagsBelow aName text
                 <&> flip (,) (env0 & p2TagsAbove . Lens.at tag <>~ Just isClash)
                 where
-                    isClash = Clash.isClashOf aName
+                    isClash = Clash.infoOf aName
                     tag = aName ^. Annotated.tag
             P1AnonName ctx ->
                 NameGen.newName (accept . DisplayText) varInfo ctx
