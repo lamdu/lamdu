@@ -6,6 +6,7 @@ module Lamdu.Sugar.Names.Clash
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import           Data.Map.Utils (unionWithM)
+import qualified Data.Set as Set
 import           Lamdu.Sugar.Internal (InternalName(..), internalNameMatch)
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
@@ -13,14 +14,13 @@ import qualified Lamdu.Sugar.Names.Walk as Walk
 
 import           Lamdu.Prelude
 
--- TODO: Simplify CollisionGroup
-type CollisionGroup = [Walk.NameType]
+type CollisionGroup = Set Walk.NameType
 
 collisionGroups :: [CollisionGroup]
 collisionGroups =
     [ [ Walk.GlobalDef, Walk.TaggedVar ]
     , [ Walk.TaggedNominal ]
-    ]
+    ] <&> Set.fromList
 
 data Info = Clash | NoClash NameContext
 
