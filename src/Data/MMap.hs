@@ -35,9 +35,9 @@ instance Ord k => Lens.At (MMap k v) where at k = _MMap . Lens.at k
 instance (Ord k, Semigroup v) => Semigroup (MMap k v) where
     MMap m1 <> MMap m2 = Map.unionWith (<>) m1 m2 & MMap
 
-instance (Ord k, Monoid v) => Monoid (MMap k v) where
+instance (Ord k, Semigroup v) => Monoid (MMap k v) where
     mempty = MMap Map.empty
-    MMap m1 `mappend` MMap m2 = Map.unionWith mappend m1 m2 & MMap
+    mappend = (<>)
 
 fromList :: Ord k => [(k, v)] -> MMap k v
 fromList = MMap . Map.fromList

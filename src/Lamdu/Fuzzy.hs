@@ -36,7 +36,7 @@ instance Semigroup a => Semigroup (Fuzzy a) where
     Fuzzy xs xmore <> Fuzzy ys ymore =
         Fuzzy (xs <> ys) (xmore <> ymore)
 
-instance Monoid a => Monoid (Fuzzy a) where
+instance Semigroup a => Monoid (Fuzzy a) where
     mempty = Fuzzy mempty mempty
     Fuzzy xs xmore `mappend` Fuzzy ys ymore =
         Fuzzy (xs `mappend` ys) (xmore `mappend` ymore)
@@ -47,7 +47,7 @@ instance Pretty a => Pretty (Fuzzy a) where
         where
             payload = pPrintMMap (Pretty.text . Text.unpack) pPrint xs
 
-trieOf :: Monoid a => Text -> String -> a -> Fuzzy a
+trieOf :: Semigroup a => Text -> String -> a -> Fuzzy a
 trieOf s [] x = Fuzzy (singleton s x) mempty
 trieOf s (c:cs) x =
     Fuzzy mempty (singleton (toLower c) cont) `mappend` cont
@@ -61,7 +61,7 @@ make items =
     & mconcat
 
 -- | Takes the number of skips in given string that are allowed
-trieMatch :: Monoid a => Int -> String -> Fuzzy a -> MMap Text a
+trieMatch :: Semigroup a => Int -> String -> Fuzzy a -> MMap Text a
 trieMatch _ [] (Fuzzy xs _) = xs
 trieMatch n (c:cs) t@(Fuzzy _ m) =
     (m ^.. Lens.ix (toLower c) <&> trieMatch n cs)
@@ -101,7 +101,7 @@ distance rawX rawY =
 allowedSkips :: Int
 allowedSkips = 0
 
-matches :: Monoid a => Text -> Fuzzy a -> MMap Text a
+matches :: Semigroup a => Text -> Fuzzy a -> MMap Text a
 matches = trieMatch allowedSkips . Text.unpack
 
 memoableMake ::
