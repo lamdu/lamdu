@@ -102,7 +102,7 @@ inputWorkArea =
                         , Sugar._schemeType = lamType
                         }
                     , Sugar._dePresentationMode = Nothing
-                    , Sugar._deContent = binder
+                    , Sugar._deContent = binder "paneVar"
                     }
                 }
             , Sugar._paneClose = Const ()
@@ -118,13 +118,13 @@ lamExpr =
     { Sugar._rBody =
         Sugar.BodyLam Sugar.Lambda
         { Sugar._lamMode = Sugar.NormalBinder
-        , Sugar._lamBinder = binder
+        , Sugar._lamBinder = binder "lamVar"
         }
     , Sugar._rPayload = mkPayload lamType
     }
 
-binder :: Sugar.Binder InternalName Identity Unit (Sugar.Expression InternalName Identity Unit ())
-binder =
+binder :: UUID -> Sugar.Binder InternalName Identity Unit (Sugar.Expression InternalName Identity Unit ())
+binder var =
     Sugar.Binder
     { Sugar._bChosenScopeProp = Property Nothing (const (Const ())) & Identity
     , Sugar._bLamId = Just "dummy"
@@ -149,7 +149,7 @@ binder =
                     { Sugar._tagSelection = tagSelection
                     , Sugar._tagInfo =
                         Sugar.TagInfo
-                        { Sugar._tagName = numName Nothing
+                        { Sugar._tagName = numName var
                         , Sugar._tagInstance = "dummy"
                         , Sugar._tagVal = "num"
                         }
@@ -189,7 +189,7 @@ numType :: Sugar.Type InternalName
 numType =
     Sugar.Type
     { Sugar._tPayload = "dummy"
-    , Sugar._tBody = Sugar.TInst (Sugar.TId (numName (Just "num")) "num") mempty
+    , Sugar._tBody = Sugar.TInst (Sugar.TId (numName "numTid") "num") mempty
     }
 
 mkPayload :: Sugar.Type name -> Sugar.Payload name Identity Unit ()
@@ -215,10 +215,10 @@ nodeActions =
     , Sugar._wrapInRecord = tagSelection
     }
 
-numName :: Maybe UUID -> InternalName
+numName :: UUID -> InternalName
 numName ctx =
     InternalName
-    { _inContext = ctx
+    { _inContext = Just ctx
     , _inTag = "num"
     }
 
