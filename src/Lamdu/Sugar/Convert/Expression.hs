@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -55,22 +56,28 @@ convertLiteralBytes ::
     Monad m => ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
-addHiddenEntities :: Monoid a => Val (Input.Payload m a) -> ExpressionU m a -> ExpressionU m a
-addHiddenEntities val sugared =
+addHiddenPayloads :: Monoid a => Val (Input.Payload m a) -> ExpressionU m a -> ExpressionU m a
+addHiddenPayloads val sugared =
     sugared
-    & rPayload . plData . pUserData <>~ mconcat (val ^.. Val.body . traverse <&> bodyData)
+    & rPayload . plData . pUserData <>~
+      val ^. Val.body . Lens.folded . Lens.to bodyData
     where
+        -- | The direct child exprs of the sugar expr
         sugarChildren =
-            sugared ^.. rBody . traverse . rPayload . plData . pStored . Property.pVal
+            sugared ^.. rBody . Lens.folded . rPayload . plData . pStored . Property.pVal
             <&> ofValI
             & Set.fromList
-        bodyData node
-            | Set.member (node ^. Val.payload . Input.entityId) sugarChildren =
+        -- | Recursive descent into all Val subexprs until we hit sugar subexprs
+        bodyData subVal
+            | Set.member (subVal ^. Val.payload . Input.entityId) sugarChildren =
                 mempty
             | otherwise =
-                mconcat (node ^. Val.payload . Input.userData : (node ^.. Val.body . traverse <&> bodyData))
+                (subVal ^. Val.payload . Input.userData) `mappend`
+                (subVal ^. Val.body . Lens.folded . Lens.to bodyData)
 
-convert :: (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+convert ::
+    (Monad m, Monoid a) =>
+    Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
     v ^. Val.payload
     & case v ^. Val.body of
@@ -90,4 +97,4 @@ convert v =
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
-    <&> addHiddenEntities v
+    <&> addHiddenPayloads v
