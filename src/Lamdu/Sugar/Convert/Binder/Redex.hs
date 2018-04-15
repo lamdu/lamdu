@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Binder.Redex
       , lam
       , paramRefs
       , arg
-      , hiddenPayloads
     , check
     ) where
 
@@ -26,7 +25,6 @@ data Redex a = Redex
     , _lam :: V.Lam (Val a)
     , _paramRefs :: [EntityId]
     , _arg :: Val a
-    , _hiddenPayloads :: [a]
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Redex
 
@@ -41,7 +39,6 @@ check expr = do
             <&> (^. Input.eAppliesOfLam)
             <&> Lens.traversed %~ getRedexApplies
         , _arg = a
-        , _hiddenPayloads = (^. Val.payload) <$> [expr, func]
         , _paramRefs = func ^. Val.payload . Input.varRefsOfLambda
         }
     where
