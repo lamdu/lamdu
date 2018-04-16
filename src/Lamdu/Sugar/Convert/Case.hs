@@ -32,12 +32,12 @@ import           Lamdu.Prelude
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
-convertAbsurd :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertAbsurd :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd pl =
     convertEmptyComposite DataOps.case_ pl
     <&> Case LambdaCase
     <&> BodyCase
-    >>= addActions pl
+    >>= addActions [] pl
 
 convert ::
     (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
@@ -60,16 +60,17 @@ convert caseV exprPl =
                 <&> Case LambdaCase
                 <&> (,) id
         BodyCase cas_
-            & addActions exprPl
+            & addActions caseV exprPl
             <&> rPayload . plEntityId %~ modifyEntityId
     where
         mkCase t v r = V.Case t v r & V.BCase
 
 convertAppliedCase ::
-    Monad m =>
+    (Monad m, Foldable f, Monoid a) =>
+    f (Val (Input.Payload m a)) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedCase funcS argS exprPl =
+convertAppliedCase subexprs funcS argS exprPl =
     do
         caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
@@ -86,7 +87,7 @@ convertAppliedCase funcS argS exprPl =
                     }
         convertIfElse setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyIfElse
-            & addActions exprPl & lift
+            & addActions subexprs exprPl & lift
             <&> rPayload . plEntityId .~ funcS ^. rPayload . plEntityId
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a

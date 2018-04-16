@@ -33,7 +33,7 @@ convertFromNom ::
 convertFromNom nom pl =
     traverse ConvertM.convertSubexpression nom
     >>= convertNom <&> BodyFromNom
-    >>= addActions pl
+    >>= addActions nom pl
 
 convertToNom ::
     (Monad m, Monoid a) =>
@@ -44,6 +44,6 @@ convertToNom nom pl =
         ConvertText.text nom pl & justToLeft
         traverse ConvertBinder.convertBinderBody nom
             >>= convertNom <&> BodyToNom
-            >>= addActions pl
+            >>= addActions nom pl
             & lift
     & runMatcherT

@@ -224,7 +224,7 @@ convertLam lam exprPl =
                     & bBody . Lens.traverse %~ markLightParams paramNames
                     & Lambda LightLambda
         BodyLam lambda
-            & addActions exprPl
+            & addActions lam exprPl
             <&> rBody . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda ::

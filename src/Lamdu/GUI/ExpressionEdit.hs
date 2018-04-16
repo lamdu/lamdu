@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionEdit
     ) where
 
 import qualified Control.Monad.Reader as Reader
-import qualified Data.List as List
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -36,9 +35,7 @@ make :: (Monad i, Monad o) => ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionG
 make (Sugar.Expression body pl) =
     makeEditor body pl & assignCursor
     where
-        exprHiddenEntityIds =
-            List.delete (pl ^. Sugar.plEntityId)
-            (pl ^. Sugar.plData . ExprGui.plStoredEntityIds)
+        exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plStoredEntityIds
         myId = WidgetIds.fromExprPayload pl
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId

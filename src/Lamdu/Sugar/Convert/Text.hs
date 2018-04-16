@@ -24,10 +24,10 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 text ::
-    Monad m =>
+    (Monad m, Monoid a) =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-text (V.Nom tid (Val litPl body)) toNomPl =
+text n@(V.Nom tid (Val litPl body)) toNomPl =
     do
         guard $ tid == Builtins.textTid
         lit <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
@@ -43,7 +43,7 @@ text (V.Nom tid (Val litPl body)) toNomPl =
             , _pSet =
                 ExprIRef.writeValBody litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
-            } & LiteralText & BodyLiteral & addActions toNomPl
+            } & LiteralText & BodyLiteral & addActions n toNomPl
             & lift
     where
         litIRef = litPl ^. Input.stored . Property.pVal

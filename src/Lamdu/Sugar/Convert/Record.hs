@@ -22,11 +22,12 @@ import           Lamdu.Prelude
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
 plValI = Input.stored . Property.pVal
 
-convertEmpty :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertEmpty ::
+    (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty pl =
     convertEmptyComposite DataOps.recExtend pl
     <&> BodyRecord
-    >>= addActions pl
+    >>= addActions [] pl
 
 convertExtend ::
     (Monad m, Monoid a) => V.RecExtend (Val (Input.Payload m a)) ->
@@ -49,7 +50,7 @@ convertExtend recExtend exprPl =
                 <&> (,) id
         restRecord
             & BodyRecord
-            & addActions exprPl
+            & addActions recExtend exprPl
             <&> rPayload . plEntityId %~ modifyEntityId
     where
         mkRecExtend t v r = V.RecExtend t v r & V.BRecExtend

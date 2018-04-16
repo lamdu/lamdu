@@ -21,9 +21,9 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertGetFieldParam ::
-    Monad m =>
-    V.GetField (Val a) -> Input.Payload m b ->
-    ConvertM m (Maybe (ExpressionU m b))
+    (Monad m, Monoid a) =>
+    V.GetField (Val (Input.Payload m a)) -> Input.Payload m a ->
+    ConvertM m (Maybe (ExpressionU m a))
 convertGetFieldParam (V.GetField recExpr tag) exprPl =
     do
         tagParamInfos <- Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
@@ -38,7 +38,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
                   }
                 , _pBinderMode = NormalBinder
                 } & BodyGetVar & Just
-            & Lens._Just %%~ addActions exprPl
+            & Lens._Just %%~ addActions [recExpr] exprPl
 
 convertGetFieldNonParam ::
     (Monad m, Monoid a) =>
@@ -55,7 +55,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
                         protectedSetToVal recExprStored recExprI & void
             convertTag tag nameWithoutContext mempty (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
     <&> BodyGetField
-    >>= addActions exprPl
+    >>= addActions [recExpr] exprPl
     where
         valI = exprPl ^. Input.stored . Property.pVal
         recExprStored = recExpr ^. Val.payload . Input.stored

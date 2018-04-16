@@ -55,9 +55,9 @@ convert app@(V.Apply funcI argI) exprPl =
                       else funcS
                     , argS
                     )
-        justToLeft $ convertAppliedCase funcS argS exprPl
-        justToLeft $ convertLabeled funcS argS exprPl
-        lift $ convertPrefix funcS argS exprPl
+        justToLeft $ convertAppliedCase app funcS argS exprPl
+        justToLeft $ convertLabeled app funcS argS exprPl
+        lift $ convertPrefix app funcS argS exprPl
 
 noDuplicates :: Ord a => [a] -> Bool
 noDuplicates x = length x == Set.size (Set.fromList x)
@@ -80,10 +80,11 @@ validateDefParamsMatchArgs var record frozenDeps =
         guard (sFields == Map.keysSet (flatArgs ^. FlatComposite.fields))
 
 convertLabeled ::
-    Monad m =>
+    (Monad m, Foldable f, Monoid a) =>
+    f (Val (Input.Payload m a)) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertLabeled funcS argS exprPl =
+convertLabeled subexprs funcS argS exprPl =
     do
         -- Make sure it's a not a param, get the var
         sBinderVar <- funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
@@ -119,13 +120,14 @@ convertLabeled funcS argS exprPl =
                 -- Hidden args must be determined along with the special args.
                 -- One never wants to hide an infix operator's args.
                 []
-            } & lift . addActions exprPl
+            } & lift . addActions subexprs exprPl
 
 convertPrefix ::
-    Monad m =>
+    (Monad m, Foldable f, Monoid a) =>
+    f (Val (Input.Payload m a)) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
-convertPrefix funcS argS applyPl =
+convertPrefix subexprs funcS argS applyPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
@@ -136,4 +138,4 @@ convertPrefix funcS argS applyPl =
             { _applyFunc = funcS
             , _applyArg = argS & rBody . _BodyHole . holeMDelete ?~ del
             }
-            & addActions applyPl
+            & addActions subexprs applyPl

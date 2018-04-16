@@ -93,7 +93,7 @@ checkTypeMatch x y =
     <&> Lens.has Lens._Right
 
 convertAppliedHole ::
-    Monad m =>
+    (Monad m, Monoid a) =>
     V.Apply (Val (Input.Payload m a)) -> ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
@@ -123,7 +123,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                       else AttachTypeMismatch
                 , _fOptions = options
                 } & pure
-            >>= addActions exprPl
+            >>= addActions [funcI, argI] exprPl
             & lift
             <&> rPayload . plActions . detach .~ FragmentAlready storedEntityId
     where

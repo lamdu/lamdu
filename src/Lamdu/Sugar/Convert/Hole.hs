@@ -82,14 +82,14 @@ type Preconversion m a = Val (Input.Payload m a) -> Val (Input.Payload m ())
 
 type ResultGen m = StateT Infer.Context (ListT (T m))
 
-convert :: Monad m => Input.Payload m a -> ConvertM m (ExpressionU m a)
+convert :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert exprPl =
     Hole
     <$> mkOptions holeResultProcessor exprPl
     <*> mkLiteralOptions exprPl
     <*> pure Nothing
     <&> BodyHole
-    >>= addActions exprPl
+    >>= addActions [] exprPl
     <&> rPayload . plActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())

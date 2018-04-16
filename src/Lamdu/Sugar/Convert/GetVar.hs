@@ -166,11 +166,11 @@ convertParam param =
     }
 
 convert ::
-    Monad m =>
+    (Monad m, Monoid a) =>
     V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert param exprPl
     | param == ConvertFragment.fragmentVar =
-        addActions exprPl BodyPlaceHolder
+        addActions [] exprPl BodyPlaceHolder
     | otherwise =
         do
             convertGlobal param exprPl & justToLeft
@@ -179,4 +179,4 @@ convert param exprPl
             convertParam param & lift
         & runMatcherT
         <&> BodyGetVar
-        >>= addActions exprPl
+        >>= addActions [] exprPl

@@ -3,10 +3,8 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import qualified Data.Set as Set
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -25,7 +23,6 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
-import           Lamdu.Sugar.Internal.EntityId (ofValI)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -34,7 +31,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertLiteralCommon ::
-    Monad m =>
+    (Monad m, Monoid b) =>
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
     Input.Payload m b -> ConvertM m (ExpressionU m b)
@@ -44,36 +41,19 @@ convertLiteralCommon mkLit mkBody val exprPl =
     , _pSet =
       ExprIRef.writeValBody iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
-    } & mkLit & BodyLiteral & addActions exprPl
+    } & mkLit & BodyLiteral & addActions [] exprPl
     where
         iref = exprPl ^. Input.stored . Property.pVal
 
 convertLiteralFloat ::
-    Monad m => Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    (Monad m, Monoid a) =>
+    Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
-    Monad m => ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    (Monad m, Monoid a) =>
+    ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
-
-addHiddenPayloads :: Monoid a => Val (Input.Payload m a) -> ExpressionU m a -> ExpressionU m a
-addHiddenPayloads val sugared =
-    sugared
-    & rPayload . plData . pUserData <>~
-      val ^. Val.body . Lens.folded . Lens.to bodyData
-    where
-        -- | The direct child exprs of the sugar expr
-        sugarChildren =
-            sugared ^.. rBody . Lens.folded . rPayload . plData . pStored . Property.pVal
-            <&> ofValI
-            & Set.fromList
-        -- | Recursive descent into all Val subexprs until we hit sugar subexprs
-        bodyData subVal
-            | Set.member (subVal ^. Val.payload . Input.entityId) sugarChildren =
-                mempty
-            | otherwise =
-                (subVal ^. Val.payload . Input.userData) `mappend`
-                (subVal ^. Val.body . Lens.folded . Lens.to bodyData)
 
 convert ::
     (Monad m, Monoid a) =>
@@ -97,4 +77,3 @@ convert v =
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
-    <&> addHiddenPayloads v

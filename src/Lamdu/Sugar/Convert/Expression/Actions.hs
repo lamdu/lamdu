@@ -4,7 +4,10 @@ module Lamdu.Sugar.Convert.Expression.Actions
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
+import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Val.Annotated (Val)
+import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -160,17 +163,37 @@ setChildReplaceParentActions =
         <&> rBody . _BodyFragment . Lens.filtered (Lens.has (fAttach . _AttachTypeMismatch)) .
             fExpr . rPayload %~ join setToExpr
 
+subexprPayloads ::
+    (Monoid a, Foldable f) =>
+    f (Val (Input.Payload m a)) -> Body name i o (Expression name i o (ConvertPayload m a)) -> a
+subexprPayloads subexprs sugared =
+    subexprs ^. Lens.folded . Lens.to bodyData
+    where
+        -- | The direct child exprs of the sugar expr
+        sugarChildren =
+            sugared ^.. Lens.folded . rPayload . plData . pStored . Property.pVal
+            <&> EntityId.ofValI
+            & Set.fromList
+        -- | Recursive descent into all Val subexprs until we hit sugar subexprs
+        bodyData subVal
+            | Set.member (subVal ^. Val.payload . Input.entityId) sugarChildren =
+                mempty
+            | otherwise =
+                (subVal ^. Val.payload . Input.userData) `mappend`
+                (subVal ^. Val.body . Lens.folded . Lens.to bodyData)
+
 addActions ::
-    Monad m =>
-    Input.Payload m a -> Body InternalName (T m) (T m) (ExpressionU m a) ->
+    (Monad m, Monoid a, Foldable f) =>
+    f (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Body InternalName (T m) (T m) (ExpressionU m a) ->
     ConvertM m (ExpressionU m a)
-addActions exprPl body =
+addActions subexprs exprPl bodyS =
     do
         actions <- makeActions exprPl
         ann <- makeAnnotation exprPl
         addReplaceParents <- setChildReplaceParentActions
         pure Expression
-            { _rBody = addReplaceParents (exprPl ^. Input.stored) body
+            { _rBody = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _rPayload =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId
@@ -179,7 +202,7 @@ addActions exprPl body =
                 , _plData =
                     ConvertPayload
                     { _pStored = exprPl ^. Input.stored
-                    , _pUserData = exprPl ^. Input.userData
+                    , _pUserData = subexprPayloads subexprs bodyS
                     }
                 }
             }
