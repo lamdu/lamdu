@@ -90,7 +90,7 @@ postProcessSugar minOpPrec expr =
     where
         pl (x, needParens, ()) =
             ExprGui.Payload
-            { ExprGui._plStoredEntityIds = []
+            { ExprGui._plHiddenEntityIds = []
             , ExprGui._plNearestHoles = NearestHoles.none
             , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
             , ExprGui._plNeedParens = needParens == AddParens.NeedsParens

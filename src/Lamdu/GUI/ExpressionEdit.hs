@@ -35,7 +35,7 @@ make :: (Monad i, Monad o) => ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionG
 make (Sugar.Expression body pl) =
     makeEditor body pl & assignCursor
     where
-        exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plStoredEntityIds
+        exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
         myId = WidgetIds.fromExprPayload pl
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId

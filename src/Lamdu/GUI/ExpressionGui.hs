@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , SugarExpr, SugarExpr'
     , Payload(..)
-        , plStoredEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
+        , plHiddenEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
         , plMinOpPrec
     , EvalModeShow(..)
     , FuncApplyLimit(..)
@@ -64,7 +64,7 @@ alwaysShowAnnotations = ShowAnnotation True True EvalModeShowEval UnlimitedFuncA
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
-    { _plStoredEntityIds :: [Sugar.EntityId]
+    { _plHiddenEntityIds :: [Sugar.EntityId]
     , _plNearestHoles :: NearestHoles
     , _plShowAnnotation :: ShowAnnotation
     , _plNeedParens :: Bool
