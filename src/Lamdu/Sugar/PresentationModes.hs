@@ -23,7 +23,7 @@ addToLabeledApply ::
 addToLabeledApply a =
     case a ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->
-        a ^. Sugar.aFunc . Sugar.bvVar
+        a ^. Sugar.aFunc . Sugar.afVar . Sugar.bvVar
         & Anchors.assocPresentationMode & Property.getP
         <&> \presentationMode ->
         let (specialArgs, otherArgs) =

@@ -61,27 +61,27 @@ addInfixMarker widgetId =
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
-makeFuncVar ::
+makeFunc ::
     (Monad i, Monad o) =>
-    NearestHoles -> Sugar.BinderVarRef (Name o) o -> Widget.Id ->
+    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o a -> Widget.Id ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
-makeFuncVar nearestHoles funcVar myId =
+makeFunc nearestHoles func myId =
     do
         jump <- ExprEventMap.jumpHolesEventMap nearestHoles
-        GetVarEdit.makeGetBinder funcVar funcId
+        GetVarEdit.makeGetBinder (func ^. Sugar.afVar) funcId
             <&> Align.tValue %~ Widget.weakerEvents jump
     where
         funcId = Widget.joinId myId ["Func"]
 
-makeInfixFuncName ::
+makeInfixFunc ::
     (Monad i, Monad o) =>
-    NearestHoles -> Sugar.BinderVarRef (Name o) o -> Widget.Id ->
+    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o a -> Widget.Id ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
-makeInfixFuncName nearestHoles funcVar myId =
-    makeFuncVar nearestHoles funcVar myId <&> mAddMarker
+makeInfixFunc nearestHoles func myId =
+    makeFunc nearestHoles func myId <&> mAddMarker
     where
         nameText =
-            Name.visible (funcVar ^. Sugar.bvNameRef . Sugar.nrName)
+            Name.visible (func ^. Sugar.afVar . Sugar.bvNameRef . Sugar.nrName)
             ^. _1 . Name.ttText
         mAddMarker
             | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
@@ -102,7 +102,7 @@ makeFuncRow ::
 makeFuncRow mParensId apply applyNearestHoles myId =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->
-        makeFuncVar nextHoles funcVar
+        makeFunc nextHoles func
         myId <&> Responsive.fromWithTextPos
         where
             nextHoles =
@@ -112,7 +112,7 @@ makeFuncRow mParensId apply applyNearestHoles myId =
     Sugar.Object arg ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ makeFuncVar (ExprGui.nextHolesBefore arg) funcVar myId
+        [ makeFunc (ExprGui.nextHolesBefore arg) func myId
             <&> Responsive.fromWithTextPos
         , ExprGuiM.makeSubexpression arg
         ]
@@ -122,13 +122,13 @@ makeFuncRow mParensId apply applyNearestHoles myId =
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpression l
-            , makeInfixFuncName (ExprGui.nextHolesBefore r) funcVar myId
+            , makeInfixFunc (ExprGui.nextHolesBefore r) func myId
                 <&> Responsive.fromWithTextPos
             ]
         , ExprGuiM.makeSubexpression r
         ]
     where
-        funcVar = apply ^. Sugar.aFunc
+        func = apply ^. Sugar.aFunc
 
 makeLabeled ::
     (Monad i, Monad o) =>

@@ -67,9 +67,6 @@ precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
         (else_ ?? Just 0 ?? unambiguous)
     )
 
-binderName :: BinderVarRef name m -> name
-binderName x = x ^. bvNameRef . nrName
-
 precedenceOfLabeledApply ::
     HasPrecedence name =>
     LabeledApply name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
@@ -78,21 +75,29 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
     case specialArgs of
     Infix l r ->
         ( ParenIf (IfGreaterOrEqual prec) (IfGreater prec)
-        , LabeledApply func
-            (Infix
-             (l (Just 0) (Precedence Nothing (Just prec)))
-             (r (Just appendOpPrec) (Precedence (Just prec) Nothing)))
-            newAnnotatedArgs relayedArgs
+        , LabeledApply
+            { _aFunc = func
+            , _aSpecialArgs =
+              Infix
+              (l (Just 0) (Precedence Nothing (Just prec)))
+              (r (Just appendOpPrec) (Precedence (Just prec) Nothing))
+            , _aAnnotatedArgs = newAnnotatedArgs
+            , _aRelayedArgs = relayedArgs
+            }
         )
         where
             appendOpPrec
                 | notBoxed = prec+1
                 | otherwise = 0
-            prec = binderName func & precedence
+            prec = func ^. afVar . bvNameRef . nrName & precedence
     Object arg | notBoxed ->
         ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
-        , LabeledApply func (Object (arg (Just 13) (Precedence (Just 13) Nothing)))
-            newAnnotatedArgs relayedArgs
+        , LabeledApply
+            { _aFunc = func
+            , _aSpecialArgs = Object (arg (Just 13) (Precedence (Just 13) Nothing))
+            , _aAnnotatedArgs = newAnnotatedArgs
+            , _aRelayedArgs = relayedArgs
+            }
         )
     _ -> (NeverParen, apply ?? Just 0 ?? unambiguous)
     where

@@ -64,7 +64,7 @@ bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
     & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
-    & Lens.failing (_BodyLabeledApply . aFunc . binderVarRefUnfinished)
+    & Lens.failing (_BodyLabeledApply . aFunc . afVar . binderVarRefUnfinished)
 
 unfinishedExprPayloads ::
     Lens.IndexedTraversal'

@@ -113,7 +113,7 @@ convertLabeled subexprs funcS argS exprPl =
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         BodyLabeledApply LabeledApply
-            { _aFunc = sBinderVar
+            { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. rPayload))
             , _aSpecialArgs = Verbose
             , _aAnnotatedArgs = args
             , _aRelayedArgs =
@@ -137,5 +137,4 @@ convertPrefix subexprs funcS argS applyPl =
         BodySimpleApply Apply
             { _applyFunc = funcS
             , _applyArg = argS & rBody . _BodyHole . holeMDelete ?~ del
-            }
-            & addActions subexprs applyPl
+            } & addActions subexprs applyPl

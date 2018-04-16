@@ -29,6 +29,7 @@ module Lamdu.Sugar.Types.Expression
     , SpecialArgs(..)
     , AnnotatedArg(..), aaTag, aaExpr
     , RelayedArg(..), raValue, raId, raActions
+    , LabeledApplyFunc(..), afVar, afPayload
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fAttach, fOptions
     , Attach(..), _AttachAction, _AttachTypeMismatch
@@ -154,8 +155,13 @@ data RelayedArg name i o = RelayedArg
     , _raActions :: NodeActions name i o
     }
 
+data LabeledApplyFunc name i o a = LabeledApplyFunc
+    { _afVar :: BinderVarRef name o
+    , _afPayload :: Payload name i o a
+    } deriving (Functor, Foldable, Traversable)
+
 data LabeledApply name i o expr = LabeledApply
-    { _aFunc :: BinderVarRef name o
+    { _aFunc :: LabeledApplyFunc name i o ()
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     , _aRelayedArgs :: [RelayedArg name i o]
@@ -204,7 +210,10 @@ data Body name i o expr
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable)
 
-instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
+instance (Show name, Show expr) => Show (LabeledApplyFunc name i o expr) where
+    show (LabeledApplyFunc func pl) = concat [show func, "{", show pl, "}"]
+
+instance (Show name, Show a) => Show (LabeledApply name i o a) where
     show (LabeledApply func specialArgs _annArgs _relayedArgs) =
         unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
@@ -240,6 +249,7 @@ Lens.makeLenses ''IfElse
 Lens.makeLenses ''IfThen
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
+Lens.makeLenses ''LabeledApplyFunc
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Nominal
 Lens.makeLenses ''OpenCompositeActions

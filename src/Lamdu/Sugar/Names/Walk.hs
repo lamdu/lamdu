@@ -263,6 +263,16 @@ toRelayedArg RelayedArg{..} =
     <$> toGetVar _raValue
     <*> toNodeActions _raActions
 
+toLabeledApplyFunc ::
+    MonadNaming m =>
+    Maybe Disambiguator ->
+    LabeledApplyFunc (OldName m) (IM m) o a ->
+    m (LabeledApplyFunc (NewName m) (IM m) o a)
+toLabeledApplyFunc disambiguator (LabeledApplyFunc func pl) =
+    LabeledApplyFunc
+    <$> toBinderVarRef disambiguator func
+    <*> toPayload pl
+
 toLabeledApply ::
     MonadNaming m =>
     (a -> m b) ->
@@ -270,7 +280,7 @@ toLabeledApply ::
     m (LabeledApply (NewName m) (IM m) o b)
 toLabeledApply expr app@LabeledApply{..} =
     LabeledApply
-    <$> toBinderVarRef (Just (funcSignature app)) _aFunc
+    <$> toLabeledApplyFunc (Just (funcSignature app)) _aFunc
     <*> pure _aSpecialArgs
     <*> (traverse . aaTag) (toTagInfoOf Tag) _aAnnotatedArgs
     <*> traverse toRelayedArg _aRelayedArgs
