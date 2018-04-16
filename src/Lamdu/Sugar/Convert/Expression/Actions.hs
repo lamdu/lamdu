@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( addActions, makeAnnotation, makeActions
+    ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions
     ) where
 
 import qualified Control.Lens as Lens
@@ -7,7 +7,7 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -164,30 +164,24 @@ setChildReplaceParentActions =
             fExpr . rPayload %~ join setToExpr
 
 subexprPayloads ::
-    (Monoid a, Foldable f) =>
-    f (Val (Input.Payload m a)) -> Body name i o (Expression name i o (ConvertPayload m a)) -> a
-subexprPayloads subexprs sugared =
-    subexprs ^. Lens.folded . Lens.to bodyData
+    Foldable f =>
+    f (Val (Input.Payload m a)) -> [Payload name i o (ConvertPayload m a)] -> [a]
+subexprPayloads subexprs cullPoints =
+    subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded . Input.userData
     where
         -- | The direct child exprs of the sugar expr
-        sugarChildren =
-            sugared ^.. Lens.folded . rPayload . plData . pStored . Property.pVal
+        cullSet =
+            cullPoints ^.. Lens.folded . plData . pStored . Property.pVal
             <&> EntityId.ofValI
             & Set.fromList
-        -- | Recursive descent into all Val subexprs until we hit sugar subexprs
-        bodyData subVal
-            | Set.member (subVal ^. Val.payload . Input.entityId) sugarChildren =
-                mempty
-            | otherwise =
-                (subVal ^. Val.payload . Input.userData) `mappend`
-                (subVal ^. Val.body . Lens.folded . Lens.to bodyData)
+        toCull pl = (pl ^. Input.entityId) `Set.member` cullSet
 
-addActions ::
-    (Monad m, Monoid a, Foldable f) =>
-    f (Val (Input.Payload m a)) -> Input.Payload m a ->
+addActionsWith ::
+    Monad m =>
+    a -> Input.Payload m a ->
     Body InternalName (T m) (T m) (ExpressionU m a) ->
     ConvertM m (ExpressionU m a)
-addActions subexprs exprPl bodyS =
+addActionsWith userData exprPl bodyS =
     do
         actions <- makeActions exprPl
         ann <- makeAnnotation exprPl
@@ -202,10 +196,20 @@ addActions subexprs exprPl bodyS =
                 , _plData =
                     ConvertPayload
                     { _pStored = exprPl ^. Input.stored
-                    , _pUserData = subexprPayloads subexprs bodyS
+                    , _pUserData = userData
                     }
                 }
             }
+
+addActions ::
+    (Monad m, Monoid a, Foldable f) =>
+    f (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Body InternalName (T m) (T m) (ExpressionU m a) ->
+    ConvertM m (ExpressionU m a)
+addActions subexprs exprPl bodyS =
+    addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS
+    where
+        childPayloads = bodyS ^.. Lens.folded . rPayload
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =

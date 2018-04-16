@@ -5,8 +5,6 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
 
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos)
-import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
@@ -17,7 +15,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
@@ -28,7 +25,7 @@ import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -61,24 +58,37 @@ addInfixMarker widgetId =
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
+guiPayload :: NearestHoles -> ExprGui.Payload
+guiPayload nearestHoles = ExprGui.Payload
+    { ExprGui._plHiddenEntityIds = []
+    , ExprGui._plNearestHoles = nearestHoles
+    , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
+    , ExprGui._plNeedParens = False
+    , ExprGui._plMinOpPrec = 13 -- TODO: Export Parens.applyPrec?
+    }
+
+
 makeFunc ::
     (Monad i, Monad o) =>
-    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o a -> Widget.Id ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
-makeFunc nearestHoles func myId =
-    do
-        jump <- ExprEventMap.jumpHolesEventMap nearestHoles
-        GetVarEdit.makeGetBinder (func ^. Sugar.afVar) funcId
-            <&> Align.tValue %~ Widget.weakerEvents jump
+    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o () ->
+    ExprGuiM i o (ExpressionGui o)
+makeFunc nearestHoles func =
+    stdWrap pl <*>
+    ( GetVarEdit.makeGetBinder (func ^. Sugar.afVar) myId
+        <&> Responsive.fromWithTextPos
+    )
     where
-        funcId = Widget.joinId myId ["Func"]
+        pl =
+            func ^. Sugar.afPayload
+            & Sugar.plData .~ guiPayload nearestHoles
+        myId = WidgetIds.fromExprPayload pl
 
 makeInfixFunc ::
     (Monad i, Monad o) =>
-    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o a -> Widget.Id ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
-makeInfixFunc nearestHoles func myId =
-    makeFunc nearestHoles func myId <&> mAddMarker
+    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o () ->
+    ExprGuiM i o (ExpressionGui o)
+makeInfixFunc nearestHoles func =
+    makeFunc nearestHoles func <&> mAddMarker
     where
         nameText =
             Name.visible (func ^. Sugar.afVar . Sugar.bvNameRef . Sugar.nrName)
@@ -86,6 +96,7 @@ makeInfixFunc nearestHoles func myId =
         mAddMarker
             | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
             | otherwise = addInfixMarker myId
+        myId = func ^. Sugar.afPayload & WidgetIds.fromExprPayload
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
 isBoxed apply =
@@ -97,13 +108,11 @@ makeFuncRow ::
     Maybe AnimId ->
     Sugar.LabeledApply (Name o) i o (ExprGui.SugarExpr i o) ->
     NearestHoles ->
-    Widget.Id ->
     ExprGuiM i o (ExpressionGui o)
-makeFuncRow mParensId apply applyNearestHoles myId =
+makeFuncRow mParensId apply applyNearestHoles =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.Verbose ->
         makeFunc nextHoles func
-        myId <&> Responsive.fromWithTextPos
         where
             nextHoles =
                 case apply ^. Sugar.aAnnotatedArgs of
@@ -112,8 +121,7 @@ makeFuncRow mParensId apply applyNearestHoles myId =
     Sugar.Object arg ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ makeFunc (ExprGui.nextHolesBefore arg) func myId
-            <&> Responsive.fromWithTextPos
+        [ makeFunc (ExprGui.nextHolesBefore arg) func
         , ExprGuiM.makeSubexpression arg
         ]
     Sugar.Infix l r ->
@@ -122,8 +130,7 @@ makeFuncRow mParensId apply applyNearestHoles myId =
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpression l
-            , makeInfixFunc (ExprGui.nextHolesBefore r) func myId
-                <&> Responsive.fromWithTextPos
+            , makeInfixFunc (ExprGui.nextHolesBefore r) func
             ]
         , ExprGuiM.makeSubexpression r
         ]
@@ -138,7 +145,7 @@ makeLabeled ::
 makeLabeled apply pl =
     stdWrapParentExpr pl
     <*> ( makeFuncRow mParensId apply
-            (pl ^. Sugar.plData . ExprGui.plNearestHoles) myId
+            (pl ^. Sugar.plData . ExprGui.plNearestHoles)
             >>= addBox
         )
     where

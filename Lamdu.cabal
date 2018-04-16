@@ -188,6 +188,7 @@ Library
                   , Graphics.UI.GLFW.Utils
                   , Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.PrimVal
+                  , Lamdu.Calc.Val.Utils
                   , Lamdu.CharClassification
                   , Lamdu.Compiler.Flatten
                   , Lamdu.Config

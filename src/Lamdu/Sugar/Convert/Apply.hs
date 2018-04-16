@@ -20,7 +20,7 @@ import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -112,15 +112,21 @@ convertLabeled subexprs funcS argS exprPl =
         let args = record ^. cItems <&> getArg
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
-        BodyLabeledApply LabeledApply
-            { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. rPayload))
-            , _aSpecialArgs = Verbose
-            , _aAnnotatedArgs = args
-            , _aRelayedArgs =
-                -- Hidden args must be determined along with the special args.
-                -- One never wants to hide an infix operator's args.
-                []
-            } & lift . addActions subexprs exprPl
+        let body =
+                BodyLabeledApply LabeledApply
+                { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. rPayload))
+                , _aSpecialArgs = Verbose
+                , _aAnnotatedArgs = args
+                , _aRelayedArgs =
+                    -- Hidden args must be determined along with the special args.
+                    -- One never wants to hide an infix operator's args.
+                    []
+                }
+        let userPayload =
+                subexprPayloads subexprs
+                (funcS ^. rPayload : body ^.. Lens.folded . rPayload)
+                & mconcat
+        addActionsWith userPayload exprPl body & lift
 
 convertPrefix ::
     (Monad m, Foldable f, Monoid a) =>
