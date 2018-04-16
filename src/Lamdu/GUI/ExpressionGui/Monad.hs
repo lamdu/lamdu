@@ -8,6 +8,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , readMScopeId, withLocalMScopeId
     --
+    , isHoleResult, withLocalIsHoleResult
+    --
     , im
     , IOM(..), iom
     , makeSubexpression
@@ -68,6 +70,7 @@ data Askable i o = Askable
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
+    , _aIsHoleResult :: Bool
     , aIom :: forall x. i x -> o x
     }
 
@@ -165,6 +168,12 @@ makeSubexpression expr =
     where
         animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
 
+isHoleResult :: MonadReader (Askable i o) m => m Bool
+isHoleResult = Lens.view aIsHoleResult
+
+withLocalIsHoleResult :: MonadReader (Askable i o) m => m a -> m a
+withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
+
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
@@ -188,5 +197,6 @@ run makeSubexpr theGuiAnchors env liftIom (ExprGuiM action) =
     , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
+    , _aIsHoleResult = False
     , aIom = liftIom
     }

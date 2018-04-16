@@ -12,7 +12,6 @@ module Lamdu.GUI.ExpressionGui
       , showAnnotationWhenVerbose
       , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
-    , isHoleResult
     , ExpressionN
     ) where
 
@@ -72,10 +71,6 @@ data Payload = Payload
     , _plMinOpPrec :: Int
     }
 Lens.makeLenses ''Payload
-
-isHoleResult :: Sugar.Payload name i o Payload -> Bool
-isHoleResult =
-    Lens.nullOf (Sugar.plData . plStoredEntityIds . Lens.traversed)
 
 type ExpressionN i o a = Sugar.Expression (Name o) i o a
 type SugarExpr i o = ExpressionN i o Payload

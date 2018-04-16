@@ -21,6 +21,8 @@ import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (precedence)
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -49,26 +51,24 @@ defaultOptions =
     }
 
 exprInfoFromPl ::
-    (MonadReader env m, GuiState.HasCursor env) =>
-    Sugar.Payload name i o ExprGui.Payload -> m (ExprInfo name i o)
+    Monad i =>
+    Sugar.Payload name i0 o0 ExprGui.Payload -> ExprGuiM i o (ExprInfo name i0 o0)
 exprInfoFromPl pl =
-    GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
-    <&>
-    \isSelected ->
-    ExprInfo
-    { exprInfoIsHoleResult = ExprGui.isHoleResult pl
-    , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
-    , exprInfoActions = pl ^. Sugar.plActions
-    , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
-    , exprInfoIsSelected = isSelected
-    }
+    do
+        isSelected <- GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
+        isHoleResult <- ExprGuiM.isHoleResult
+        pure ExprInfo
+            { exprInfoIsHoleResult = isHoleResult
+            , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
+            , exprInfoActions = pl ^. Sugar.plActions
+            , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
+            , exprInfoIsSelected = isSelected
+            }
 
 add ::
-    ( MonadReader env m, Config.HasConfig env, HasWidget w, Applicative o
-    , GuiState.HasCursor env
-    ) =>
-    Options -> Sugar.Payload name i o ExprGui.Payload ->
-    m (w (o GuiState.Update) -> w (o GuiState.Update))
+    (Monad i, HasWidget w, Applicative o0) =>
+    Options -> Sugar.Payload name i0 o0 ExprGui.Payload ->
+    ExprGuiM i o (w (o0 GuiState.Update) -> w (o0 GuiState.Update))
 add options pl = exprInfoFromPl pl >>= addWith options
 
 addWith ::

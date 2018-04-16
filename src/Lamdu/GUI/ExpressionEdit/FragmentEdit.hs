@@ -52,6 +52,7 @@ make fragment pl =
         hover <- Hover.hover
         searchAreaGui <-
             SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
+        isHoleResult <- ExprGuiM.isHoleResult
         let f layoutMode fragmentExpr
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =
@@ -69,7 +70,7 @@ make fragment pl =
                             & Align.tValue %~ setFocalArea
                             & Align.tValue %~ Hover.anchor
                         searchArea p
-                            | ExprGui.isHoleResult pl = Element.empty
+                            | isHoleResult = Element.empty
                             | otherwise = render (searchAreaGui p)
                         render x = (x ^. Responsive.render) layoutMode
                         setFocalArea w

@@ -81,6 +81,7 @@ makeWidget resultId holeResultConverted =
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
             <&> Element.pad padding
+            & ExprGuiM.withLocalIsHoleResult
 
 make ::
     (Monad i, Functor o) =>

@@ -192,6 +192,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 (Hover.anchor open `Hover.emplaceAt`) . Hover.anchor
+        isAHoleInHole <- ExprGuiM.isHoleResult
         if isActive && not isAHoleInHole
             then
                 do
@@ -222,7 +223,6 @@ make mkOptions mOptionLiteral pl allowedTerms =
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         searchMenuId = hidOpen widgetIds
-        isAHoleInHole = ExprGui.isHoleResult pl
         adhocAllowedTerms txt
             | Text.length txt == 1 && Text.all (`elem` Chars.operator) txt =
                 -- Don't add first operator char,
