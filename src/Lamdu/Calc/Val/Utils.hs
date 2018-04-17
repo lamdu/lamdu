@@ -14,4 +14,4 @@ culledSubexprPayloads cut =
     where
         go (Val pl body)
             | cut pl = []
-            | otherwise = body ^. Lens.folded . Lens.to go
+            | otherwise = pl : body ^. Lens.folded . Lens.to go
