@@ -14,6 +14,8 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -175,14 +177,32 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 { _underlineColor = theme ^. Theme.errorColor
                 , _underlineWidth = theme ^. Theme.wideUnderlineWidth
                 }
-        layout <- Reader.local (TextView.underline ?~ underline) mkLayout
+        layout <-
+            Reader.local (TextView.underline ?~ underline) mkLayout
+            & GuiState.assignCursor hiddenId myId
         isSelected <- GuiState.isSubCursor ?? myId
-        if isSelected
-            then
+        isHidden <- GuiState.isSubCursor ?? hiddenId
+        case (isHidden, isSelected) of
+            (True, _) ->
+                layout
+                <&> Widget.strongerEventsWithoutPreevents showDialogEventMap
+                & pure
+            (False, True) ->
                 ( Hover.hoverBeside Align.tValue ?? layout )
                 <*>
                 ( definitionTypeChangeBox info myId <&> (^. Align.tValue) )
-            else pure layout
+                <&> fmap (Widget.weakerEventsWithoutPreevents hideDialogEventMap)
+            (False, False) -> pure layout
+    where
+        showDialogEventMap =
+            pure myId
+            & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
+            (E.Doc ["View", "Type update dialog", "Show"])
+        hideDialogEventMap =
+            pure hiddenId
+            & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
+            (E.Doc ["View", "Type update dialog", "Hide"])
+        hiddenId = myId `Widget.joinId` ["hidden"]
 
 makeGetBinder ::
     (Monad i, Monad o) =>
