@@ -31,8 +31,8 @@ source-repository head
   location: https://github.com/lamdu/lamdu.git
 
 Flag ekg
-  Description: Enable ekg support in Lamdu
-  Default: True
+  description: Enable ekg support in Lamdu
+  default: True
 
 Executable lamdu
   main-is: src/Lamdu/Main.hs
@@ -54,6 +54,7 @@ Test-Suite Tests
                , TestDisambiguation
                , TestJsRtsTags
                , TestMomentu
+               , TestNix
                , TestStdlib
                , TestValUtils
                , Test.Lamdu.Db
@@ -69,9 +70,9 @@ Test-Suite Tests
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 
 Library
-  hs-Source-Dirs: src
+  hs-source-dirs: src
   extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
-  Build-Depends:    AlgoW
+  build-depends:    AlgoW
                   , aeson >= 1.1
                   , aeson-pretty
                   , base >= 4.7
@@ -117,7 +118,7 @@ Library
                   , zip-archive
                   , cryptohash-sha256
 
-  Exposed-modules:  Control.Concurrent.Utils
+  exposed-modules:  Control.Concurrent.Utils
                   , Control.Lens.Utils
                   , Control.Monad.Trans.Except.Utils
                   , Control.Monad.Trans.FastRWS
