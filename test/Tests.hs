@@ -8,6 +8,7 @@ import qualified TestDisambiguation
 import qualified TestJsRtsTags
 import qualified TestMomentu
 import qualified TestStdlib
+import qualified TestValUtils
 import           Test.Framework
 import           Test.Framework.Providers.HUnit (testCase)
 
@@ -28,5 +29,6 @@ main =
             , TestConfig.test
             , TestDisambiguation.test
             , TestJsRtsTags.test
+            , TestValUtils.test
             , testCase "json-codec-migration" jsonCodecMigrationTest
             ]
