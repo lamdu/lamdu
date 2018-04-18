@@ -1,4 +1,4 @@
--- What to do when "verify-nix-cabal" fails -
+-- What to do when "verify-nix-stack" fails -
 --
 -- Update of .nix files is requiried:
 -- * Update the "rev" value
@@ -39,7 +39,7 @@ stackDepsTest =
             :: IO Yaml.Value
         let deps = stackYaml ^.. LensAeson.key "packages" . LensAeson.values . LensAeson.key "location"
         traverse_ verifyStackDep deps
-    & testCase "verify-nix-cabal"
+    & testCase "verify-nix-stack"
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
