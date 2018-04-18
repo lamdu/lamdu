@@ -17,12 +17,21 @@ test :: Test
 test =
     do
         cabalDeps <- readFile "Lamdu.cabal" <&> parseCabalDeps
-        nixHaskellDeps <-
-            readFile "nix/lamdu.nix"
-            <&> dropWhile (/= '[') <&> tail <&> takeWhile (/= ']')
-            <&> words
-            <&> Set.fromList
+        nixFile <- readFile "nix/lamdu.nix"
+        let nixHaskellDeps =
+                nixFile
+                & dropWhile (/= '[') & tail & takeWhile (/= ']')
+                & words
+                & Set.fromList
+        let nixVars =
+                tail nixFile
+                & takeWhile (/= '}')
+                & words
+                <&> takeWhile (/= ',')
+                & filter (/= "")
+                & Set.fromList
         checkMissing cabalDeps nixHaskellDeps "Missing nix deps"
+        checkMissing nixHaskellDeps nixVars "Undeclared nix vars"
         checkMissing nixHaskellDeps cabalDeps "Unneccesary nix deps"
     & testCase "verify-nix-packaging"
 
