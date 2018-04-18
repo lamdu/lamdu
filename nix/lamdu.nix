@@ -4,8 +4,8 @@
 , directory, edit-distance, filepath, GLFW-b, graphics-drawingcombinators
 , hashable, JuicyPixels, lamdu-calculus, language-ecmascript, lens
 , leveldb-haskell, List, mtl, nodejs-exec, OpenGL
-, optparse-applicative, pretty, process, random, safe-exceptions
-, StateVar, stdenv, stm, test-framework, test-framework-hunit
+, optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
+, split, StateVar, stdenv, stm, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, transformers, unordered-containers
 , uuid, uuid-types, vector, wl-pprint, zip-archive, imagemagick, HUnit
 }:
