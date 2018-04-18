@@ -4,7 +4,12 @@ module GUI.Momentu.Widgets.EventMapHelp
     , IsHelpShown(..)
     , makeToggledHelpAdder
     , addHelpView
-    , Config(..), defaultConfig
+    , Style(..), styleText, styleInputDocColor, styleBGColor, styleTint
+    , Config(..), configOverlayDocKeys
+    , Env(..), eConfig, eStyle
+    , defaultStyle
+    , defaultConfig
+    , defaultEnv
     ) where
 
 import qualified Control.Lens as Lens
@@ -40,36 +45,54 @@ import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
-data Config = Config
-    { _configStyle :: TextView.Style
-    , _configInputDocColor :: Draw.Color
-    , _configBGColor :: Draw.Color
-    , _configOverlayDocKeys :: [MetaKey]
-    , _configTint :: Draw.Color
+data Style = Style
+    { _styleText :: TextView.Style
+    , _styleInputDocColor :: Draw.Color
+    , _styleBGColor :: Draw.Color
+    , _styleTint :: Draw.Color
+    }
+Lens.makeLenses ''Style
+
+newtype Config = Config
+    { _configOverlayDocKeys :: [MetaKey]
     }
 Lens.makeLenses ''Config
 
 data Env = Env
     { _eConfig :: Config
+    , _eStyle :: Style
     , _eAnimIdPrefix :: AnimId
     }
 Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
-instance TextView.HasStyle Env where style = eConfig . configStyle
+instance TextView.HasStyle Env where style = eStyle . styleText
 
-defaultConfig :: Draw.Font -> Config
-defaultConfig font =
-    Config
-    { _configStyle =
+defaultStyle :: Draw.Font -> Style
+defaultStyle font =
+    Style
+    { _styleText =
         TextView.Style
         { TextView._styleColor = Draw.Color 1 1 1 1
         , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
-    , _configInputDocColor = Draw.Color 0.1 0.7 0.7 1
-    , _configBGColor = Draw.Color 0.2 0.15 0.1 0.5
-    , _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
-    , _configTint = Draw.Color 1 1 1 0.8
+    , _styleInputDocColor = Draw.Color 0.1 0.7 0.7 1
+    , _styleBGColor = Draw.Color 0.2 0.15 0.1 0.5
+    , _styleTint = Draw.Color 1 1 1 0.8
+    }
+
+defaultConfig :: Config
+defaultConfig =
+    Config
+    { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
+    }
+
+defaultEnv :: Draw.Font -> Env
+defaultEnv font =
+    Env
+    { _eConfig = defaultConfig
+    , _eStyle = defaultStyle font
+    , _eAnimIdPrefix = ["help box"]
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -113,12 +136,9 @@ makeShortcutKeyView inputDocs =
     & Reader.local setColor
     where
         setColor env =
-            env & TextView.style . TextView.styleColor .~ (env ^. eConfig . configInputDocColor)
+            env & TextView.style . TextView.styleColor .~ (env ^. eStyle . styleInputDocColor)
 
-makeTextViews ::
-    Tree E.Subtitle [E.InputDoc] ->
-    Env ->
-    Tree View View
+makeTextViews :: Tree E.Subtitle [E.InputDoc] -> Env -> Tree View View
 makeTextViews tree =
     addAnimIds helpAnimId tree
     & traverse shortcut
@@ -219,21 +239,20 @@ toggle HelpNotShown = HelpShown
 helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
-addHelpView :: Config -> Vector2 R -> Widget.Focused (f a) -> Widget.Focused (f a)
+addHelpView :: Env -> Vector2 R -> Widget.Focused (f a) -> Widget.Focused (f a)
 addHelpView = addHelpViewWith HelpShown
 
 addHelpViewWith ::
-    IsHelpShown -> Config -> Vector2 R ->
+    IsHelpShown -> Env -> Vector2 R ->
     Widget.Focused (f a) -> Widget.Focused (f a)
-addHelpViewWith showingHelp config size focus =
+addHelpViewWith showingHelp env size focus =
     focus
     & Widget.fLayers %~ addToBottomRight bgHelpView size
     where
-        env = Env config ["help box"]
         helpView =
             env &
             case showingHelp of
-            HelpNotShown -> makeTooltip (config ^. configOverlayDocKeys <&> toModKey)
+            HelpNotShown -> makeTooltip (env ^. eConfig . configOverlayDocKeys <&> toModKey)
             HelpShown ->
                 make size
                 ( (focus ^. Widget.fEventMap)
@@ -244,16 +263,16 @@ addHelpViewWith showingHelp config size focus =
                 )
         bgHelpView =
             helpView
-            & MDraw.backgroundColor helpAnimId (config ^. configBGColor)
-            & Element.tint (config ^. configTint)
+            & MDraw.backgroundColor helpAnimId (env ^. eStyle . styleBGColor)
+            & Element.tint (env ^. eStyle . styleTint)
 
 toggleEventMap ::
     (MonadIO f, Monoid a) =>
-    IORef IsHelpShown -> IsHelpShown -> Config -> EventMap (f a)
-toggleEventMap showingHelpVar showingHelp config =
+    IORef IsHelpShown -> IsHelpShown -> Env -> EventMap (f a)
+toggleEventMap showingHelpVar showingHelp env =
     modifyIORef showingHelpVar toggle
     & liftIO
-    & E.keysEventMap (config ^. configOverlayDocKeys)
+    & E.keysEventMap (env ^. eConfig . configOverlayDocKeys)
         (E.Doc ["Help", "Key Bindings", docStr])
     where
         docStr =
@@ -265,13 +284,13 @@ makeToggledHelpAdder ::
     MonadIO m =>
     IsHelpShown ->
     IO
-    (Config -> Widget.Size ->
+    (Env -> Widget.Size ->
      Widget (m State.Update) ->
      IO (Widget (m State.Update)))
 makeToggledHelpAdder startValue =
     newIORef startValue
     <&>
-    \showingHelpVar config size widget ->
+    \showingHelpVar env size widget ->
     widget & Widget.wState %%~
     \case
     Widget.StateUnfocused {} -> fail "adding help to non-focused root widget!"
@@ -279,7 +298,7 @@ makeToggledHelpAdder startValue =
         readIORef showingHelpVar
         <&> (\showingHelp ->
                 makeFocus
-                <&> addHelpViewWith showingHelp config size
-                <&> Widget.fEventMap . Lens.mapped %~ (toggleEventMap showingHelpVar showingHelp config <>)
+                <&> addHelpViewWith showingHelp env size
+                <&> Widget.fEventMap . Lens.mapped %~ (toggleEventMap showingHelpVar showingHelp env <>)
             )
         <&> Widget.StateFocused

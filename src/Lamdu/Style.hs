@@ -42,19 +42,29 @@ Lens.makeLenses ''Style
 
 class TextEdit.HasStyle env => HasStyle env where style :: Lens' env Style
 
-helpConfig :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
-helpConfig font helpKeys theme =
-    EventMapHelp.Config
-    { EventMapHelp._configStyle =
+helpStyle :: Font -> Theme.Help -> EventMapHelp.Style
+helpStyle font theme =
+    EventMapHelp.Style
+    { EventMapHelp._styleText =
         TextView.Style
         { TextView._styleColor = theme ^. Theme.helpTextColor
         , TextView._styleFont = font
         , TextView._styleUnderline = Nothing
         }
-    , EventMapHelp._configInputDocColor = theme ^. Theme.helpInputDocColor
-    , EventMapHelp._configBGColor = theme ^. Theme.helpBGColor
-    , EventMapHelp._configOverlayDocKeys = helpKeys
-    , EventMapHelp._configTint = theme ^. Theme.helpTint
+    , EventMapHelp._styleInputDocColor = theme ^. Theme.helpInputDocColor
+    , EventMapHelp._styleBGColor = theme ^. Theme.helpBGColor
+    , EventMapHelp._styleTint = theme ^. Theme.helpTint
+    }
+
+helpEnv :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Env
+helpEnv font helpKeys theme =
+    EventMapHelp.Env
+    { EventMapHelp._eConfig =
+        EventMapHelp.Config
+        { EventMapHelp._configOverlayDocKeys = helpKeys
+        }
+    , EventMapHelp._eStyle = helpStyle font theme
+    , EventMapHelp._eAnimIdPrefix = ["help box"]
     }
 
 makeStyle :: TextColors -> Fonts Font -> Style
@@ -103,9 +113,9 @@ mainLoopConfig getFontInfo getConfig =
             }
         }
     , cZoom = getConfig <&> (^. _1 . Config.zoom)
-    , cHelpConfig =
+    , cHelpEnv =
         Just $ \zoom ->
         (,) <$> getFontInfo zoom <*> getConfig
         <&> \(fi, (config, theme)) ->
-        helpConfig (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
+        helpEnv (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
     }
