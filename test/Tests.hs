@@ -7,6 +7,7 @@ import qualified TestConfig
 import qualified TestDisambiguation
 import qualified TestJsRtsTags
 import qualified TestMomentu
+import qualified TestNix
 import qualified TestStdlib
 import qualified TestValUtils
 import           Test.Framework
@@ -29,6 +30,7 @@ main =
             , TestConfig.test
             , TestDisambiguation.test
             , TestJsRtsTags.test
+            , TestNix.test
             , TestValUtils.test
             , testCase "json-codec-migration" jsonCodecMigrationTest
             ]
