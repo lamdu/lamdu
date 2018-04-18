@@ -50,7 +50,11 @@ convertExtend recExtend exprPl =
                 <&> (,) id
         restRecord
             & BodyRecord
-            & addActions recExtend exprPl
+            & addActions
+                ( recExtend ^. V.recFieldVal
+                : recExtend ^.. V.recRest . Val.body . Lens.folded
+                ) exprPl
             <&> rPayload . plEntityId %~ modifyEntityId
+            <&> rPayload . plData . pUserData <>~ exprPl ^. Input.userData
     where
         mkRecExtend t v r = V.RecExtend t v r & V.BRecExtend
