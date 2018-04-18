@@ -150,14 +150,13 @@ resultWidget ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
     , HasTheme env, HasConfig env
     ) =>
-    Widget.Id -> CurPrevTag -> Maybe (Sugar.EvalCompletionResult name o) ->
-    Maybe (m (Align.WithTextPos (Widget (o GuiState.Update))))
-resultWidget _ _ Nothing = Nothing
-resultWidget _ tag (Just Sugar.EvalSuccess {}) =
+    Widget.Id -> CurPrevTag -> Sugar.EvalCompletionResult name o ->
+    m (Align.WithTextPos (Widget (o GuiState.Update)))
+resultWidget _ tag Sugar.EvalSuccess {} =
     makeIndicator tag Theme.successColor "✔"
-    <&> Align.tValue %~ Widget.fromView & Just
-resultWidget myId tag (Just (Sugar.EvalError err)) =
-    errorIndicator myId tag err & Just
+    <&> Align.tValue %~ Widget.fromView
+resultWidget myId tag (Sugar.EvalError err) =
+    errorIndicator myId tag err
 
 make ::
     Monad m =>
@@ -169,7 +168,7 @@ make exportRepl (Sugar.Repl replExpr replResult) =
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
-            resultWidget errorIndicatorId <$> curPrevTag <*> replResult
+            (resultWidget errorIndicatorId <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
