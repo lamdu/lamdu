@@ -164,13 +164,18 @@ createWindow title mode =
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
             Opts.VideoModeSize      -> createWin Nothing videoModeSize
 
-settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Settings -> IO ()
-settingsChangeHandler configSampler evaluator (Settings annotationMode theme) =
+settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Maybe Settings -> Settings -> IO ()
+settingsChangeHandler configSampler evaluator mOld new =
     do
-        case annotationMode of
+        whenChanged Settings.sAnnotationMode $ \case
             Evaluation -> EvalManager.start evaluator
             _ -> EvalManager.stop evaluator
-        ConfigSampler.setTheme configSampler theme
+        whenChanged Settings.sSelectedTheme $ ConfigSampler.setTheme configSampler
+    where
+        whenChanged lens f =
+            case mOld of
+            Nothing -> f (new ^. lens)
+            Just old -> when (old ^. lens /= new ^. lens) $ f (new ^. lens)
 
 exportActions ::
     Config -> EvalResults (ValI ViewM) -> IO () -> GUIMain.ExportActions ViewM
@@ -242,9 +247,10 @@ newSettingsProp initial configSampler evaluator =
         settingsRef <- newIORef initial
         let setSettings val =
                 do
+                    oldVal <- readIORef settingsRef
                     writeIORef settingsRef val
-                    settingsChangeHandler configSampler evaluator val
-        settingsChangeHandler configSampler evaluator initial
+                    settingsChangeHandler configSampler evaluator (Just oldVal) val
+        settingsChangeHandler configSampler evaluator Nothing initial
         readIORef settingsRef <&> (`Property` setSettings) & pure
 
 newEvaluator ::
