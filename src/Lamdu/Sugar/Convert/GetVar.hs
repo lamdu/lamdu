@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.GetVar
-    ( convert
+    ( convert, globalNameRef
     ) where
 
 import qualified Control.Lens as Lens
@@ -70,9 +70,20 @@ inlineDef ctx globalId dest =
                 _ <- ctx ^. ConvertM.scPostProcessRoot
                 defExpr ^. Def.expr & EntityId.ofValI & pure
 
+globalNameRef ::
+    (MonadTransaction n m, Monad f) =>
+    Anchors.CodeAnchors f -> DefI f -> m (NameRef InternalName (T f))
+globalNameRef cp defI =
+    do
+        tag <- Anchors.assocTag defI & getP
+        pure NameRef
+            { _nrName = nameWithContext defI tag
+            , _nrGotoDefinition = jumpToDefI cp defI
+            }
+
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
-convertGlobal param exprPl =
+convertGlobal var exprPl =
     do
         ctx <- Lens.view id
         let recursiveVar =
@@ -85,31 +96,28 @@ convertGlobal param exprPl =
                 case lifeState of
                 DeletedDefinition -> DefDeleted
                 LiveDefinition ->
-                    ctx ^. ConvertM.scOutdatedDefinitions . Lens.at param
+                    ctx ^. ConvertM.scOutdatedDefinitions . Lens.at var
                     <&> Lens.mapped . Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
-        tag <- Anchors.assocTag param & getP
+        nameRef <- globalNameRef (ctx ^. ConvertM.scCodeAnchors) defI & lift
         GetBinder BinderVarRef
-            { _bvNameRef = NameRef
-              { _nrName = nameWithContext param tag
-              , _nrGotoDefinition = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
-              }
-            , _bvVar = param
+            { _bvNameRef = nameRef
+            , _bvVar = var
             , _bvForm = GetDefinition defForm
             , _bvInline =
                 case defForm of
                 DefUpToDate
-                    | (ctx ^. ConvertM.scInlineableDefinition) param (exprPl ^. Input.entityId) ->
-                        inlineDef ctx param (exprPl ^. Input.stored)
+                    | (ctx ^. ConvertM.scInlineableDefinition) var (exprPl ^. Input.entityId) ->
+                        inlineDef ctx var (exprPl ^. Input.stored)
                         & InlineVar
                 _ -> CannotInline
             } & pure
     where
-        defI = ExprIRef.defI param
+        defI = ExprIRef.defI var
         notInScope =
             exprPl ^. Input.inferred . Infer.plScope
             & Infer.scopeToTypeMap
-            & Lens.has (Lens.at param . Lens._Nothing)
+            & Lens.has (Lens.at var . Lens._Nothing)
 
 convertGetLet ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))

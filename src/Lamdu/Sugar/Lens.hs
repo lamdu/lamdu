@@ -130,10 +130,11 @@ workAreaExpressions ::
     Lens.Traversal
     (WorkArea name i o a) (WorkArea name i o b)
     (Expression name i o a) (Expression name i o b)
-workAreaExpressions f (WorkArea panes repl) =
+workAreaExpressions f (WorkArea panes repl globals) =
     WorkArea
     <$> (traverse . paneDefinition . traverse) f panes
     <*> replExpr f repl
+    ?? globals
 
 holeOptionTransformExprs ::
     Monad i => (a -> i b) -> HoleOption i o a -> HoleOption i o b

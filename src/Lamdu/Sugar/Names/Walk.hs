@@ -480,7 +480,12 @@ toWorkArea ::
     MonadNaming m =>
     WorkArea (OldName m) (IM m) o a ->
     m (WorkArea (NewName m) (IM m) o a)
-toWorkArea WorkArea { _waPanes, _waRepl } =
-    WorkArea
-    <$> traverse toPane _waPanes
-    <*> toRepl _waRepl
+toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
+    do
+        run <- opRun
+        panes <- traverse toPane _waPanes
+        repl <- toRepl _waRepl
+        let globals = _waGlobals >>= run . toGlobals
+        WorkArea panes repl globals & pure
+    where
+        toGlobals = (traverse . nrName) (opGetName Nothing GlobalDef)

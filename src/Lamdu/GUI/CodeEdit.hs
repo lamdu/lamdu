@@ -119,10 +119,11 @@ loadWorkArea theEvalResults cp =
     SugarConvert.loadWorkArea theEvalResults cp
     >>= AddNames.addToWorkArea (getNameProp cp)
     <&>
-    \Sugar.WorkArea { _waPanes, _waRepl } ->
+    \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
     Sugar.WorkArea
     { _waPanes = _waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles
     , _waRepl = _waRepl & Sugar.replExpr %~ exprAddNearestHoles
+    , _waGlobals = _waGlobals
     }
     & SugarLens.workAreaExpressions %~ postProcessExpr
 

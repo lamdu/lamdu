@@ -252,6 +252,7 @@ workArea396 =
             & def lamType "def" "def"
             & pane
         ]
+    , Sugar._waGlobals = pure []
     } & testWorkArea assertNoCollisions
     where
         lamType = funcType numType numType
@@ -272,6 +273,7 @@ workAreaGlobals =
         [ def numType "def1" "def" trivialBinder & pane
         , def numType "def2" "def" trivialBinder & pane
         ]
+    , Sugar._waGlobals = pure []
     } & testWorkArea verifyName
     where
         verifyName name =

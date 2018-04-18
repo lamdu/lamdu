@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types
     , EntityId
     , Pane(..), paneDefinition, paneClose, paneMoveDown, paneMoveUp
     , Repl(..), replExpr, replResult
-    , WorkArea(..), waPanes, waRepl
+    , WorkArea(..), waPanes, waRepl, waGlobals
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
@@ -69,6 +69,7 @@ data Repl name i o a = Repl
 data WorkArea name i o a = WorkArea
     { _waPanes :: [Pane name i o a]
     , _waRepl :: Repl name i o a
+    , _waGlobals :: i [NameRef name o]
     } deriving (Functor, Foldable, Traversable)
 
 Lens.makeLenses ''Definition

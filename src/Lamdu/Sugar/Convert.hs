@@ -27,6 +27,7 @@ import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
+import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
@@ -260,4 +261,7 @@ loadWorkArea evalRes cp =
         pure WorkArea
             { _waPanes = panes
             , _waRepl = repl
+            , _waGlobals =
+                Anchors.globals cp & Property.getP <&> Set.toList
+                >>= traverse (ConvertGetVar.globalNameRef cp)
             }
