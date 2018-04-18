@@ -18,9 +18,7 @@ import           Data.Text
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
-import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (Image)
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import qualified Graphics.DrawingCombinators.Extended as Draw
 
 import           Lamdu.Prelude
 
@@ -58,7 +56,7 @@ height = Draw.fontHeight
 
 render ::
     Draw.Font -> Draw.Color -> Maybe Underline -> Text ->
-    RenderedText Image
+    RenderedText (Draw.Image ())
 render font color mUnderline str =
     r
     & renderedText <>~
@@ -73,9 +71,9 @@ render font color mUnderline str =
 
 drawUnderline :: Draw.Font -> Vector2 Draw.R -> Underline -> Draw.Image ()
 drawUnderline font size (Underline color relativeWidth) =
-    DrawUtils.square
-    & (DrawUtils.scale (Vector2 (size ^. _1) width) %%)
-    & (DrawUtils.translate (Vector2 0 (size ^. _2 + descender + width/2)) %%)
+    Draw.square
+    & (Draw.scale (size ^. _1) width %%)
+    & (Draw.translate (0, size ^. _2 + descender + width/2) %%)
     & Draw.tint color
     where
         width = relativeWidth * height font
@@ -101,7 +99,7 @@ textSize font str =
         totalHeight = height font * fromIntegral numLines
         numLines = 1 + Text.count "\n" str
 
-renderText :: Draw.Font -> Draw.TextAttrs -> Text -> RenderedText Image
+renderText :: Draw.Font -> Draw.TextAttrs -> Text -> RenderedText (Draw.Image ())
 renderText font textAttrs str =
     RenderedText
     { _renderedTextSize = textSize font str
@@ -109,8 +107,8 @@ renderText font textAttrs str =
         Draw.text font str textAttrs
         & void
         -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-        & (DrawUtils.translate (Vector2 0 (-Draw.fontHeight font - Draw.fontDescender font)) %%)
+        & (Draw.translate (0, -Draw.fontHeight font - Draw.fontDescender font) %%)
         -- We want to reverse it so that higher y is down, and it is also
         -- moved to 0..2
-        & (DrawUtils.scale (Vector2 1 (-1)) %%)
+        & (Draw.scale 1 (-1) %%)
     }

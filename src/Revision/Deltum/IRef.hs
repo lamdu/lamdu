@@ -8,7 +8,7 @@ module Revision.Deltum.IRef
 import           Control.DeepSeq (NFData(..))
 import           Data.Binary (Binary(..))
 import qualified Data.ByteString.Char8 as SBS8
-import           Data.List.Utils (rightPad)
+import           Data.List.Extended (rightPad)
 import           Data.UUID.Types (UUID)
 import           Data.UUID.Utils (fromSBS16)
 

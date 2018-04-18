@@ -1,8 +1,9 @@
-module Control.Concurrent.Utils
-    ( forkIOUnmasked, runAfter, forwardSynchronuousExceptions, withForkedIO
+module Control.Concurrent.Extended
+    ( module Control.Concurrent
+    , forkIOUnmasked, runAfter, forwardSynchronuousExceptions, withForkedIO
     ) where
 
-import           Control.Concurrent (ThreadId, forkIOWithUnmask, threadDelay, myThreadId)
+import           Control.Concurrent
 import qualified Control.Exception as E
 import qualified Control.Exception.Safe as ES
 import           Control.Lens.Operators

@@ -1,5 +1,6 @@
-module Data.List.Utils
-    ( groupOn
+module Data.List.Extended
+    ( module Data.List
+    , groupOn
     , minimumOn
     , insertAt
     , removeAt
@@ -10,7 +11,7 @@ module Data.List.Utils
 
 import qualified Control.Lens as Lens
 import           Data.Function (on)
-import           Data.List (groupBy, minimumBy)
+import           Data.List
 import           Data.Ord (comparing)
 
 import           Prelude

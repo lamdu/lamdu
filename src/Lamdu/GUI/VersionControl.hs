@@ -5,7 +5,7 @@ module Lamdu.GUI.VersionControl
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.List.Utils as ListUtils
+import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -111,7 +111,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                       <&> (^. Align.tValue) )
                 config <- Lens.view VersionControl.config
                 let delEventMap
-                        | ListUtils.isLengthAtLeast 2 (branches actions) =
+                        | List.isLengthAtLeast 2 (branches actions) =
                             E.keysEventMapMovesCursor
                             (config ^. VersionControl.delBranchKeys)
                             (E.Doc ["Branches", "Delete"])

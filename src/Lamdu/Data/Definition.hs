@@ -9,7 +9,7 @@ module Lamdu.Data.Definition
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
-import           Data.Map.Utils (setMapIntersection)
+import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lamdu.Calc.Type (Tag)

@@ -7,13 +7,11 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
-import           Control.Concurrent (ThreadId, killThread)
+import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
-import           Control.Concurrent.Utils (runAfter)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.IORef
-import           Data.IORef.Utils (atomicModifyIORef_)
+import           Data.IORef.Extended
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set

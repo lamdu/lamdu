@@ -13,8 +13,7 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (asum)
-import qualified Data.Map as Map
-import           Data.Map.Utils (setMapIntersection)
+import qualified Data.Map.Extended as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -78,7 +77,7 @@ addFrozenDeps nominalMap frozenDefTypes defObj =
         unless (Set.null (usedNoms `Set.difference` Map.keysSet nominalMap))
             (Left "undefined noms used")
         let frozenNominals =
-                setMapIntersection usedNoms nominalMap
+                Map.setMapIntersection usedNoms nominalMap
                 & Aeson.toJSON
         let frozenDeps =
                 mempty
@@ -115,7 +114,7 @@ replDefExpr ::
 replDefExpr nominalMap defMap val =
     do
         usedVars <- scanVars val
-        let frozenDefs = setMapIntersection usedVars defMap & Aeson.toJSON
+        let frozenDefs = Map.setMapIntersection usedVars defMap & Aeson.toJSON
         mempty
             & Lens.at "val" ?~ val
             & addFrozenDeps nominalMap frozenDefs

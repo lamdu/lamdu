@@ -1,6 +1,7 @@
 {-# LANGUAGE TupleSections #-}
-module Data.IORef.Utils
-    ( atomicModifyIORef_
+module Data.IORef.Extended
+    ( module Data.IORef
+    , atomicModifyIORef_
     ) where
 
 import Data.IORef

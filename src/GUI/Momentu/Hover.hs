@@ -16,7 +16,7 @@ module GUI.Momentu.Hover
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
-import           Data.List.Utils (minimumOn)
+import           Data.List.Extended (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
 import qualified GUI.Momentu.Draw as Draw

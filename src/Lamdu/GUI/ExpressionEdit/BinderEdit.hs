@@ -10,7 +10,7 @@ import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
-import           Data.List.Utils (withPrevNext)
+import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property

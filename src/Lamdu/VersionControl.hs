@@ -3,9 +3,8 @@ module Lamdu.VersionControl
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.List (elemIndex)
-import           Data.List.Utils (removeAt)
-import           Data.Maybe.Utils (unsafeUnjust)
+import           Data.List.Extended (elemIndex, removeAt)
+import           Data.Maybe.Extended (unsafeUnjust)
 import qualified Data.Property as Property
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState

@@ -1,10 +1,12 @@
-module Data.Maybe.Utils
-    ( unsafeUnjust, maybeToMPlus, unionMaybeWith
+module Data.Maybe.Extended
+    ( module Data.Maybe
+    , unsafeUnjust, maybeToMPlus, unionMaybeWith
     ) where
 
-import Control.Monad (MonadPlus(..))
+import           Control.Monad (MonadPlus(..))
+import qualified Data.Maybe
 
-import Prelude
+import           Prelude
 
 unsafeUnjust :: String -> Maybe a -> a
 unsafeUnjust msg Nothing = error ("unsafeUnjust: " ++ msg)

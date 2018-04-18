@@ -9,10 +9,9 @@ module GUI.Momentu.Widgets.TextEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Binary.Utils as BinUtils
+import qualified Data.Binary.Extended as Binary
 import           Data.Char (isSpace)
-import           Data.List (genericLength)
-import           Data.List.Utils (minimumOn)
+import           Data.List.Extended (genericLength, minimumOn)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
@@ -75,7 +74,7 @@ makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = Text.take 5000 str
 
 encodeCursor :: Widget.Id -> Cursor -> Widget.Id
-encodeCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
+encodeCursor myId = Widget.joinId myId . (:[]) . Binary.encodeS
 
 rightSideOfRect :: Rect -> Rect
 rightSideOfRect rect =
@@ -344,7 +343,7 @@ getCursor =
         f sub str myId =
             sub myId <&> decodeCursor
             where
-                decodeCursor [x] = min (Text.length str) $ BinUtils.decodeS x
+                decodeCursor [x] = min (Text.length str) $ Binary.decodeS x
                 decodeCursor _ = Text.length str
 
 make ::

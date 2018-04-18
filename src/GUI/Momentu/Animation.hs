@@ -19,8 +19,7 @@ import           GUI.Momentu.Animation.Id
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
 import           Graphics.DrawingCombinators (R, (%%))
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import qualified Graphics.DrawingCombinators.Extended as Draw
 
 import           Lamdu.Prelude
 
@@ -52,7 +51,7 @@ singletonFrame :: Size -> AnimId -> Draw.Image () -> Frame
 singletonFrame size animId =
     scale size .
     singletonUnitImage .
-    (DrawUtils.scale (1 / size) %%)
+    (Draw.scaleV (1 / size) %%)
     where
         singletonUnitImage image = Frame [Image animId image (Rect 0 1)]
 
@@ -70,15 +69,15 @@ draw frame =
     & mconcat
     where
         posImage (Image _ img rect) =
-            DrawUtils.translate (rect ^. Rect.topLeft) %%
-            DrawUtils.scale (rect ^. Rect.size) %%
+            Draw.translateV (rect ^. Rect.topLeft) %%
+            Draw.scaleV (rect ^. Rect.size) %%
             img
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
 mapIdentities f = images . iAnimId %~ f
 
 unitSquare :: AnimId -> Frame
-unitSquare animId = singletonFrame 1 animId DrawUtils.square
+unitSquare animId = singletonFrame 1 animId Draw.square
 
 emptyRectangle :: Vector2 R -> Vector2 R -> AnimId -> Frame
 emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
@@ -91,9 +90,9 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
     & singletonFrame totalSize animId
     where
         rect origin size =
-            DrawUtils.square
-            & (DrawUtils.scale size %%)
-            & (DrawUtils.translate origin %%)
+            Draw.square
+            & (Draw.scaleV size %%)
+            & (Draw.translateV origin %%)
 
 coloredRectangle :: AnimId -> Draw.Color -> Vector2 R -> Frame
 coloredRectangle animId color size =

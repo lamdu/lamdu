@@ -11,7 +11,7 @@ module GUI.Momentu.Widget.Instances
 
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
-import           Data.Maybe.Utils (unionMaybeWith)
+import           Data.Maybe.Extended (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim

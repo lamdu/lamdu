@@ -5,11 +5,11 @@ module Lamdu.Sugar.Convert.Apply
 
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
-import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Data.List.Utils (isLengthAtLeast)
+import           Data.List.Extended (isLengthAtLeast)
 import qualified Data.Map as Map
-import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T

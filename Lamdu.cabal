@@ -119,23 +119,23 @@ Library
                   , zip-archive
                   , cryptohash-sha256
 
-  exposed-modules:  Control.Concurrent.Utils
-                  , Control.Lens.Utils
-                  , Control.Monad.Trans.Except.Utils
+  exposed-modules:  Control.Concurrent.Extended
+                  , Control.Lens.Extended
+                  , Control.Monad.Trans.Except.Extended
                   , Control.Monad.Trans.FastRWS
                   , Control.Monad.Trans.FastWriter
                   , Control.Monad.Transaction
                   , Data.Aeson.Utils
-                  , Data.Binary.Utils
-                  , Data.ByteString.Utils
+                  , Data.Binary.Extended
+                  , Data.ByteString.Extended
                   , Data.CurAndPrev
                   , Data.Function.Decycle
-                  , Data.IORef.Utils
-                  , Data.List.Utils
+                  , Data.IORef.Extended
+                  , Data.List.Extended
                   , Data.MMap
                   , Data.MRUMemo
-                  , Data.Map.Utils
-                  , Data.Maybe.Utils
+                  , Data.Map.Extended
+                  , Data.Maybe.Extended
                   , Data.Monoid.Generic
                   , Data.Property
                   , Data.Set.Ordered
@@ -185,7 +185,7 @@ Library
                   , GUI.Momentu.Widgets.TextEdit.Property
                   , GUI.Momentu.Widgets.TextView
                   , GUI.Momentu.Zoom
-                  , Graphics.DrawingCombinators.Utils
+                  , Graphics.DrawingCombinators.Extended
                   , Graphics.UI.GLFW.Events
                   , Graphics.UI.GLFW.Instances
                   , Graphics.UI.GLFW.Utils
@@ -347,7 +347,7 @@ Library
                   , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
-                  , Numeric.Utils
+                  , Numeric.Extended
                   , Paths.Utils
                   , Revision.Deltum.Db
                   , Revision.Deltum.IRef
@@ -357,7 +357,7 @@ Library
                   , Revision.Deltum.Rev.View
                   , Revision.Deltum.Rev.ViewBranchInternal
                   , Revision.Deltum.Transaction
-                  , System.Random.Utils
+                  , System.Random.Extended
 
   other-modules:    Lamdu.Sugar.Internal
                   , Paths_Lamdu

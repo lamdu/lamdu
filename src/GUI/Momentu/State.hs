@@ -16,9 +16,8 @@ module GUI.Momentu.State
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Binary (Binary, decodeOrFail)
-import           Data.Binary.Utils (encodeS)
-import           Data.ByteString.Utils (lazifyBS)
+import           Data.Binary.Extended (Binary, decodeOrFail, encodeS)
+import           Data.ByteString.Extended as BS
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           Data.Monoid.Generic (def_mempty, def_mappend)
@@ -122,7 +121,7 @@ readWidgetState ::
 readWidgetState wid =
     Lens.view (state . sWidgetStates . Lens.at wid) <&> (>>= f)
     where
-        f x = decodeOrFail (lazifyBS x) ^? Lens._Right . _3
+        f x = decodeOrFail (BS.lazify x) ^? Lens._Right . _3
 
 updateWidgetState :: Binary a => Id -> a -> Update
 updateWidgetState wid val = mempty & uWidgetStateUpdates . Lens.at wid ?~ encodeS val

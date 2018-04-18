@@ -1,9 +1,12 @@
-module Numeric.Utils (encodeHex, word8Hex) where
+module Numeric.Extended
+    ( module Numeric
+    , encodeHex, word8Hex
+    ) where
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as SBS
 import           Data.Word (Word8)
-import           Numeric (showHex)
+import           Numeric
 
 import           Prelude
 

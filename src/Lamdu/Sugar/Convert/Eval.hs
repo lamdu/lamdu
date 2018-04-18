@@ -10,7 +10,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List as List
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal

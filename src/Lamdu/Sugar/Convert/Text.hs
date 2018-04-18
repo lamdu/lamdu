@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Text
 
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)

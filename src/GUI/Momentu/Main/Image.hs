@@ -15,9 +15,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (Size)
 import qualified GUI.Momentu.Font as Font
 import           Graphics.DrawingCombinators ((%%))
-import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils (Image)
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import qualified Graphics.DrawingCombinators.Extended as Draw
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
@@ -29,8 +27,8 @@ import           Lamdu.Prelude
 
 data Handlers = Handlers
     { eventHandler :: Event -> IO ()
-    , update :: IO (Maybe Image)
-    , refresh :: IO Image
+    , update :: IO (Maybe (Draw.Image ()))
+    , refresh :: IO (Draw.Image ())
     , fpsFont :: IO (Maybe Draw.Font)
     }
 
@@ -68,7 +66,7 @@ renderFPS font win fps =
                 Font.render font white Nothing fpsText
         winSize <- windowSize win
         let translation = winSize - (sz ^. Font.bounding) & _2 .~ 0
-        (DrawUtils.translate translation %% img) & pure
+        (Draw.translateV translation %% img) & pure
     where
         white = Draw.Color 1 1 1 1
 

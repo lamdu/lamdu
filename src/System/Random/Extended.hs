@@ -1,11 +1,12 @@
 {-# OPTIONS -fno-warn-orphans #-}
-module System.Random.Utils
-    ( randFunc, genFromHashable
+module System.Random.Extended
+    ( module System.Random
+    , randFunc, genFromHashable
     ) where
 
 import Data.Binary (Binary(..))
 import Data.Hashable (Hashable, hashWithSalt)
-import System.Random (Random, StdGen, mkStdGen, random)
+import System.Random
 
 import Prelude
 

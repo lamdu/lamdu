@@ -8,8 +8,7 @@ module Graphics.UI.GLFW.Events
 
 import qualified Control.Exception as E
 import           Control.Monad (when)
-import           Data.IORef
-import           Data.IORef.Utils (atomicModifyIORef_)
+import           Data.IORef.Extended
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW

@@ -23,8 +23,7 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State
-import           Data.Binary (Binary)
-import           Data.Binary.Utils (encodeS, decodeS)
+import           Data.Binary.Extended (Binary, encodeS, decodeS)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
 import           Data.Property (Property, MkProperty')

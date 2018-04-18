@@ -1,23 +1,23 @@
-module Data.Map.Utils
-    ( setMapIntersection
+module Data.Map.Extended
+    ( module Data.Map
+    , setMapIntersection
     , unionWithM
     ) where
 
-import           Data.Map (Map)
-import qualified Data.Map as Map
+import           Data.Map
 import           Data.Set (Set)
 
 import           Prelude
 
 setMapIntersection :: Ord k => Set k -> Map k a -> Map k a
-setMapIntersection s m = m `Map.intersection` Map.fromSet (const ()) s
+setMapIntersection s m = m `intersection` fromSet (const ()) s
 
 unionWithM :: (Applicative f, Ord k) => (a -> a -> f a) -> Map k a -> Map k a -> f (Map k a)
 unionWithM f m0 m1 =
-    Map.fromAscList <$>
+    fromAscList <$>
     go
-    (Map.toAscList m0)
-    (Map.toAscList m1)
+    (toAscList m0)
+    (toAscList m1)
     where
         go [] ns = pure ns
         go ms [] = pure ms

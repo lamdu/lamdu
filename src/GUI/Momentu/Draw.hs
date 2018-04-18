@@ -13,8 +13,7 @@ import           GUI.Momentu.Animation (R)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
-import qualified Graphics.DrawingCombinators as Draw
-import           Graphics.DrawingCombinators.Utils ()
+import qualified Graphics.DrawingCombinators.Extended as Draw
 
 import           Lamdu.Prelude
 

@@ -3,8 +3,7 @@ module Lamdu.Sugar.OrderTags
     , orderedClosedFlatComposite
     ) where
 
-import qualified Control.Lens as Lens
-import           Control.Lens.Utils (tagged)
+import qualified Control.Lens.Extended as Lens
 import           Control.Monad ((>=>))
 import           Data.List (sortOn)
 import qualified Data.Property as Property
@@ -114,4 +113,4 @@ orderedFlatComposite =
         from ((tag,typ):rest, v) = (rest, v) & from & T.CExtend tag typ
 
 orderedClosedFlatComposite :: Lens.Prism' (T.Composite b) [(T.Tag, T.Type)]
-orderedClosedFlatComposite = orderedFlatComposite . tagged Lens._Nothing
+orderedClosedFlatComposite = orderedFlatComposite . Lens.tagged Lens._Nothing

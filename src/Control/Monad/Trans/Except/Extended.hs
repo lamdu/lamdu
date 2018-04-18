@@ -1,11 +1,12 @@
-module Control.Monad.Trans.Except.Utils
-    ( justToLeft
+module Control.Monad.Trans.Except.Extended
+    ( module Control.Monad.Trans.Except
+    , justToLeft
     , MatcherT, runMatcherT
     ) where
 
 import Control.Monad ((<=<))
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Except (ExceptT(..), runExceptT, throwE)
+import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe (MaybeT(..))
 
 import Prelude

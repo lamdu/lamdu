@@ -20,8 +20,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
 import           Data.Bits (xor)
-import qualified Data.ByteString as SBS
-import           Data.ByteString.Utils (lazifyBS, strictifyBS)
+import qualified Data.ByteString.Extended as BS
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
@@ -66,8 +65,7 @@ import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (random)
-import qualified System.Random as Random
-import           System.Random.Utils (genFromHashable)
+import qualified System.Random.Extended as Random
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -286,7 +284,7 @@ sugar ::
 sugar sugarContext exprPl val =
     val
     <&> mkPayload
-    & (EntityId.randomizeExprAndParams . genFromHashable)
+    & (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (exprPl ^. Input.entityId)
     & prepareUnstoredPayloads
     & ConvertM.convertSubexpression
@@ -585,7 +583,7 @@ mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext exprP
     & toScoredResults emptyPl preConversion sugarContext exprPl
 
 xorBS :: ByteString -> ByteString -> ByteString
-xorBS x y = SBS.pack $ SBS.zipWith xor x y
+xorBS x y = BS.pack $ BS.zipWith xor x y
 
 randomizeNonStoredParamIds ::
     Random.StdGen -> Val (StorePoint m a) -> Val (StorePoint m a)
@@ -603,9 +601,9 @@ randomizeNonStoredRefs uniqueIdent gen val =
     where
         f Nothing =
             state random
-            <&> UUID.toByteString <&> strictifyBS
+            <&> UUID.toByteString <&> BS.strictify
             <&> xorBS uniqueIdent
-            <&> lazifyBS <&> UUID.fromByteString
+            <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
             <&> IRef.unsafeFromUUID <&> ValI <&> Just
         f (Just x) = Just x & pure
@@ -624,5 +622,5 @@ writeExprMStored exprIRef exprMStorePoint =
             , exprIRef
             )
             & SHA256.hashlazy
-        (genParamIds, genRefs) = genFromHashable uniqueIdent & Random.split
+        (genParamIds, genRefs) = Random.genFromHashable uniqueIdent & Random.split
 

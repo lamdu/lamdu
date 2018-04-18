@@ -5,9 +5,8 @@ module GUI.Momentu.Main.Animation
     , wakeUp
     ) where
 
-import           Control.Concurrent (rtsSupportsBoundThreads)
+import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
-import           Control.Concurrent.Utils (forwardSynchronuousExceptions, withForkedIO)
 import           Control.Exception (evaluate, onException)
 import qualified Control.Lens as Lens
 import           Control.Monad (mplus)

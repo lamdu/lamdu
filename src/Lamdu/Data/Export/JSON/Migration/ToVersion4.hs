@@ -11,7 +11,7 @@ import           Data.String (IsString(..))
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Data.Vector as Vector
-import           Numeric.Utils (encodeHex)
+import           Numeric.Extended (encodeHex)
 
 import           Lamdu.Prelude
 

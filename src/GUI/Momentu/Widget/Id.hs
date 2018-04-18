@@ -8,7 +8,7 @@ import Data.Binary (Binary)
 import Data.List (intercalate)
 import Data.List.Lens (prefixed)
 import GUI.Momentu.Animation.Id (AnimId)
-import Numeric.Utils (encodeHex)
+import Numeric.Extended (encodeHex)
 
 import Lamdu.Prelude
 

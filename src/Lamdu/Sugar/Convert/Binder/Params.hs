@@ -12,10 +12,9 @@ module Lamdu.Sugar.Convert.Binder.Params
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
-import qualified Data.List as List
-import qualified Data.List.Utils as ListUtils
+import qualified Data.List.Extended as List
 import qualified Data.Map as Map
-import           Data.Maybe.Utils (unsafeUnjust)
+import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -250,7 +249,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                     -- using pre-events.
                     getP (slParamList storedLam)
                         <&> fromMaybe (error "no params?")
-                        <&> flip (ListUtils.insertAt (length tagsBefore + 1))
+                        <&> flip (List.insertAt (length tagsBefore + 1))
                         >>= (addFieldParam mPresMode DataOps.newHole binderKind
                              storedLam ?? newTag)
                     postProcess
@@ -630,7 +629,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
                 | Just fields <- composite ^? orderedClosedFlatComposite <&> List.sortOn (presModeOrder . fst)
-                , ListUtils.isLengthAtLeast 2 fields
+                , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
                 , let fieldParams = fields <&> makeFieldParam lambdaPl

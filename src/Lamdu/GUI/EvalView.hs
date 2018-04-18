@@ -23,7 +23,7 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Graphics.DrawingCombinators ((%%))
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import qualified Graphics.DrawingCombinators.Extended as Draw
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.ExpressionEdit.TagEdit (makeTagView)
@@ -183,7 +183,7 @@ fixSize view =
             image
             & Anim.iRect . Rect.size .~ size
             & Anim.iUnitImage %~
-            (DrawUtils.scale (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
+            (Draw.scaleV (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
 makeInner ::
     (Monad i, Monad o) => ResVal (Name f) -> ExprGuiM i o (WithTextPos View)

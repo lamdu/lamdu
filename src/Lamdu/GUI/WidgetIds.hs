@@ -11,7 +11,7 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
-import           System.Random.Utils (randFunc)
+import           System.Random.Extended (randFunc)
 
 import           Lamdu.Prelude
 

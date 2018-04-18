@@ -7,9 +7,8 @@ module Lamdu.Config.Sampler
     , readJson -- Exposed for test
     ) where
 
-import           Control.Concurrent (threadDelay, ThreadId)
+import           Control.Concurrent.Extended (ThreadId, threadDelay, forkIOUnmasked)
 import           Control.Concurrent.MVar
-import           Control.Concurrent.Utils (forkIOUnmasked)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson

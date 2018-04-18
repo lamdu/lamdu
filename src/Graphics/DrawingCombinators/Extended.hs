@@ -1,9 +1,9 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, StandaloneDeriving #-}
-module Graphics.DrawingCombinators.Utils
-    ( Image
+module Graphics.DrawingCombinators.Extended
+    ( module Graphics.DrawingCombinators
     , square
-    , scale, translate
+    , scaleV, translateV
     ) where
 
 import           Control.Monad (void)
@@ -12,26 +12,24 @@ import           Data.Aeson.Types (defaultOptions)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
-import qualified Graphics.DrawingCombinators as Draw
+import           Graphics.DrawingCombinators
 
 import           Prelude
 
-type Image = Draw.Image ()
+deriving instance Read Color
+deriving instance Generic Color
+deriveJSON defaultOptions ''Color
 
-deriving instance Read Draw.Color
-deriving instance Generic Draw.Color
-deriveJSON defaultOptions ''Draw.Color
+scaleV :: Vector2 R -> Affine
+scaleV (Vector2 x y) = scale x y
 
-scale :: Vector2 Draw.R -> Draw.Affine
-scale (Vector2 x y) = Draw.scale x y
-
-roundR :: Draw.R -> Draw.R
+roundR :: R -> R
 roundR x = fromIntegral (round x :: Int)
 
-translate :: Vector2 Draw.R -> Draw.Affine
+translateV :: Vector2 R -> Affine
 -- Translating to fractional positions causes drawing artefacts for
 -- text, so we round all positions to nearest pixel boundary
-translate (Vector2 x y) = Draw.translate (roundR x, roundR y)
+translateV (Vector2 x y) = translate (roundR x, roundR y)
 
-square :: Image
-square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
+square :: Image ()
+square = void $ convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]

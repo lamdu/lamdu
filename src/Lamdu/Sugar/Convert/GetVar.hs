@@ -3,11 +3,11 @@ module Lamdu.Sugar.Convert.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.Except.Utils (runMatcherT, justToLeft)
+import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
-import           Data.Maybe.Utils (maybeToMPlus)
+import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme

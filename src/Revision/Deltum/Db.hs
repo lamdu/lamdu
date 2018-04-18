@@ -2,7 +2,7 @@ module Revision.Deltum.Db
     ( withDB, DB.defaultOptions, DB.Options(..)
     ) where
 
-import           Data.ByteString.Utils (strictifyBS)
+import qualified Data.ByteString.Extended as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Database.LevelDB.Base (DB)
@@ -13,14 +13,14 @@ import           System.Random (randomIO)
 import           Lamdu.Prelude hiding (lookup)
 
 lookup :: DB -> UUID -> IO (Maybe ByteString)
-lookup db = DB.get db DB.defaultReadOptions . strictifyBS . UUID.toByteString
+lookup db = DB.get db DB.defaultReadOptions . BS.strictify . UUID.toByteString
 
 transaction :: DB -> [(UUID, Maybe ByteString)] -> IO ()
 transaction db =
     DB.write db DB.defaultWriteOptions . map batchOp
     where
-        batchOp (key, Nothing) = (DB.Del . strictifyBS . UUID.toByteString) key
-        batchOp (key, Just value) = (DB.Put . strictifyBS . UUID.toByteString) key value
+        batchOp (key, Nothing) = (DB.Del . BS.strictify . UUID.toByteString) key
+        batchOp (key, Just value) = (DB.Put . BS.strictify . UUID.toByteString) key value
 
 store :: DB -> Store IO
 store db =

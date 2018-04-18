@@ -7,10 +7,9 @@ module GUI.Momentu.Widgets.Grid
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
 import           Data.Foldable (toList)
-import           Data.List (foldl', transpose, sortOn)
-import           Data.List.Utils (groupOn, minimumOn)
+import           Data.List.Extended (foldl', transpose, sortOn, groupOn, minimumOn)
 import           Data.MRUMemo (memo)
-import           Data.Maybe.Utils (unionMaybeWith)
+import           Data.Maybe.Extended (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))

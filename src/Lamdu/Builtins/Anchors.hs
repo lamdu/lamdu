@@ -7,7 +7,7 @@ module Lamdu.Builtins.Anchors
     , valTypeParamId
     ) where
 
-import           Data.List.Utils (rightPad)
+import           Data.List.Extended (rightPad)
 import           Data.String (IsString(..))
 import           Lamdu.Calc.Type (Tag)
 import qualified Lamdu.Calc.Type as T

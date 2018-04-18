@@ -25,15 +25,14 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (Random, RandomGen, random)
-import qualified System.Random as Random
-import qualified System.Random.Utils as RandomUtils
+import qualified System.Random.Extended as Random
 
 import           Lamdu.Prelude
 
 type T = Transaction
 
 transaction :: Monad m => (Random.StdGen -> (a, Random.StdGen)) -> T m a
-transaction f = Transaction.newKey <&> fst . f . RandomUtils.genFromHashable
+transaction f = Transaction.newKey <&> fst . f . Random.genFromHashable
 
 randomIdentifier :: RandomGen g => g -> (Identifier, g)
 randomIdentifier =

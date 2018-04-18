@@ -9,9 +9,8 @@ module Lamdu.Eval.JS
     ) where
 
 import           Control.Applicative ((<|>))
-import           Control.Concurrent (forkIO, killThread)
+import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
-import           Control.Concurrent.Utils (withForkedIO)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM, msum)
@@ -20,8 +19,7 @@ import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types ((.:))
 import qualified Data.Aeson.Types as Json
-import qualified Data.ByteString as SBS
-import           Data.ByteString.Utils (lazifyBS)
+import qualified Data.ByteString.Extended as BS
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
@@ -109,7 +107,7 @@ withProcess createProc =
 
 parseHexBs :: Text -> ByteString
 parseHexBs =
-    SBS.pack . map (fst . sHead . readHex . Text.unpack) . Text.chunksOf 2
+    BS.pack . map (fst . sHead . readHex . Text.unpack) . Text.chunksOf 2
     where
         sHead [] = error "parseHexBs got bad input"
         sHead (x:_) = x
@@ -148,7 +146,7 @@ parseBytes :: Json.Value -> ER.Val ()
 parseBytes (Json.Array vals) =
     Vec.toList vals
     <&> parseWord8
-    & SBS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
+    & BS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
 parseBytes _ = error "Bytes with non-array data"
 
 parseInject :: Text -> Maybe Json.Value -> Parse (ER.Val ())
@@ -328,10 +326,10 @@ compilerActions toUUID depsMVar actions output =
 
 stripInteractive :: ByteString -> ByteString
 stripInteractive line
-    | "> " `SBS.isPrefixOf` line = stripInteractive (SBS.drop 2 line)
-    | otherwise = SBS.dropWhile (`elem` irrelevant) line
+    | "> " `BS.isPrefixOf` line = stripInteractive (BS.drop 2 line)
+    | otherwise = BS.dropWhile (`elem` irrelevant) line
     where
-        irrelevant = SBS.unpack ". "
+        irrelevant = BS.unpack ". "
 
 processNodeOutput :: (Json.Object -> IO ()) -> Handle -> IO ()
 processNodeOutput handleEvent stdout =
@@ -339,8 +337,8 @@ processNodeOutput handleEvent stdout =
     do
         isEof <- hIsEOF stdout & lift
         when isEof $ throwError "EOF"
-        line <- SBS.hGetLine stdout <&> stripInteractive & lift
-        case Aeson.decode (lazifyBS line) of
+        line <- BS.hGetLine stdout <&> stripInteractive & lift
+        case Aeson.decode (BS.lazify line) of
             Nothing
                 | line `elem` ["'use strict'", "undefined", ""] -> pure ()
                 | otherwise -> "Failed to decode: " ++ show line & throwError
