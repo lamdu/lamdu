@@ -42,8 +42,8 @@ Lens.makeLenses ''Style
 
 class TextEdit.HasStyle env => HasStyle env where style :: Lens' env Style
 
-helpStyle :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
-helpStyle font helpKeys theme =
+helpConfig :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Config
+helpConfig font helpKeys theme =
     EventMapHelp.Config
     { EventMapHelp._configStyle =
         TextView.Style
@@ -103,9 +103,9 @@ mainLoopConfig getFontInfo getConfig =
             }
         }
     , cZoom = getConfig <&> (^. _1 . Config.zoom)
-    , cHelpStyle =
+    , cHelpConfig =
         \zoom ->
         (,) <$> getFontInfo zoom <*> getConfig
         <&> \(fi, (config, theme)) ->
-        helpStyle (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
+        helpConfig (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
     }

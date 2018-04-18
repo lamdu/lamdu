@@ -30,7 +30,7 @@ import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as State
-import           GUI.Momentu.Widget (Widget)
+import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
@@ -45,7 +45,7 @@ data Config = Config
     { cAnim :: IO MainAnim.AnimConfig
     , cCursor :: Zoom -> IO Cursor.Config
     , cZoom :: IO Zoom.Config
-    , cHelpStyle :: Zoom -> IO EventMapHelp.Config
+    , cHelpConfig :: Zoom -> IO EventMapHelp.Config
     }
 
 newtype ExecuteInMainThread m = ExecuteInMainThread (m ())
@@ -111,7 +111,7 @@ defaultOptions helpFontPath =
                     , Cursor.decay = Nothing
                     }
                 , cZoom = pure Zoom.defaultConfig
-                , cHelpStyle =
+                , cHelpConfig =
                     \zoom ->
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
@@ -140,7 +140,7 @@ instance HasMainLoopEnv Env where mainLoopEnv = id
 
 lookupEvent ::
     IO (Maybe E.Clipboard) -> IORef (Maybe State.VirtualCursor) ->
-    Maybe (Vector2 Widget.R -> Widget.EnterResult a) ->
+    Maybe (Vector2 R -> Widget.EnterResult a) ->
     Maybe (Rect, State.VirtualCursor -> EventMap a) -> Event -> IO (Maybe a)
 lookupEvent getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
@@ -188,7 +188,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomEventMap <- cZoom config <&> Zoom.eventMap zoom <&> fmap liftIO
                     s <- readState stateStorage_
-                    helpStyle <- cHelpStyle config zoom
+                    helpConfig <- cHelpConfig config zoom
                     mkWidgetUnmemod
                         Env
                         { _eZoom = zoom
@@ -196,7 +196,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         , _eState = s
                         }
                         <&> Widget.eventMapMaker . Lens.mapped %~ (zoomEventMap <>)
-                        >>= addHelp helpStyle size
+                        >>= addHelp helpConfig size
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =
