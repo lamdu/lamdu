@@ -17,7 +17,7 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Map.Utils (singleton, hasKey)
+import           Data.Map.Utils (singleton)
 import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -412,7 +412,7 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
     do
         env0 <- Lens.view id
         let accept autoText =
-                not (hasKey autoText textsBelow)
+                Lens.nullOf (Lens.ix autoText) textsBelow
                 && Set.notMember autoText (env0 ^. p2TextsAbove)
         (newNameForm, env1) <-
             case kName of
