@@ -26,7 +26,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/nodejs-exec
-    commit: 614cfa868899f2dde5801e1b95d4bc43815e9851
+    commit: 7c763e1acf9c28d35aae034fdab6ee592ac8031d
   extra-dep: True
 extra-deps:
 - bitmap-0.0.2
