@@ -13,6 +13,8 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
+import qualified Data.Property as Property
+import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -21,9 +23,11 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
+import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -38,6 +42,7 @@ import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
+import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
@@ -49,6 +54,28 @@ import           Lamdu.Prelude
 type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
+
+helpEnv :: (MonadReader env m, HasConfig env, HasStyle env) => m EventMapHelp.Env
+helpEnv =
+    (,) <$> Lens.view Config.config <*> Lens.view Style.style
+    <&> \(config, style) ->
+    EventMapHelp.Env
+    { EventMapHelp._eConfig =
+        EventMapHelp.Config
+        { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
+        }
+    , EventMapHelp._eStyle = style ^. Style.help
+    , EventMapHelp._eAnimIdPrefix = ["help box"]
+    }
+
+addHelp ::
+    (MonadReader env m, HasConfig env, HasStyle env) =>
+    Vector2 R -> m (Widget (f a) -> Widget (f a))
+addHelp size =
+    helpEnv
+    <&> \env ->
+    Widget.wState . Widget._StateFocused . Lens.mapped %~
+    EventMapHelp.addHelpView env size
 
 type Ctx env =
     ( MainLoop.HasMainLoopEnv env
@@ -93,8 +120,14 @@ layout themeNames settingsProp =
         statusBarWidget /-/ topPadding /-/ codeEdit
             & Scroll.focusAreaInto fullSize
             & Widget.weakerEventsWithoutPreevents
-              (statusBar ^. StatusBar.globalEventMap <> quitEventMap <> vcEventMap)
-            & pure
+                (statusBar ^. StatusBar.globalEventMap <> quitEventMap
+                    <> vcEventMap)
+            & (maybeAddHelp fullSize ??)
+    where
+        maybeAddHelp size =
+            case settingsProp ^. Property.pVal . Settings.sHelpShown of
+            Settings.HelpShown -> addHelp size
+            Settings.HelpNotShown -> pure id
 
 make ::
     Ctx env =>

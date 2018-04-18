@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.Style
-    ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num
+    ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num, help
     , make
     , HasStyle(..)
     , FontInfo(..)
@@ -12,7 +12,6 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.Main.Animation (AnimConfig(..))
-import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -22,7 +21,6 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Font (Fonts(..))
 import qualified Lamdu.Font as Font
@@ -36,6 +34,7 @@ data Style = Style
     , _bytes :: TextEdit.Style
     , _text :: TextEdit.Style
     , _num :: TextEdit.Style
+    , _help :: EventMapHelp.Style
     }
 Lens.makeLenses ''Style
 
@@ -55,19 +54,8 @@ helpStyle font theme =
     , EventMapHelp._styleTint = theme ^. Theme.helpTint
     }
 
-helpEnv :: Font -> [MetaKey] -> Theme.Help -> EventMapHelp.Env
-helpEnv font helpKeys theme =
-    EventMapHelp.Env
-    { EventMapHelp._eConfig =
-        EventMapHelp.Config
-        { EventMapHelp._configOverlayDocKeys = helpKeys
-        }
-    , EventMapHelp._eStyle = helpStyle font theme
-    , EventMapHelp._eAnimIdPrefix = ["help box"]
-    }
-
-make :: TextColors -> Fonts Font -> Style
-make config fonts =
+make :: Fonts Font -> Theme -> Style
+make fonts theme =
     Style
     { _base           = textEdit TextColors.baseColor    Font.fontDefault
     , _autoNameOrigin = textEdit TextColors.baseColor    Font.fontAutoName
@@ -75,20 +63,18 @@ make config fonts =
     , _bytes          = textEdit TextColors.literalColor Font.fontLiteralBytes
     , _text           = textEdit TextColors.literalColor Font.fontLiteralText
     , _num            = textEdit TextColors.literalColor Font.fontDefault
+    , _help           = helpStyle (fonts ^. Font.fontHelp) (theme ^. Theme.help)
     }
     where
         textEdit color font =
             TextEdit.defaultStyle
             TextView.Style
-            { TextView._styleColor = config ^. color
+            { TextView._styleColor = theme ^. Theme.textColors . color
             , TextView._styleFont = fonts ^. font
             , TextView._styleUnderline = Nothing
             }
 
-data FontInfo = FontInfo
-    { primaryFontHeight :: Draw.R
-    , helpFont :: Font
-    }
+newtype FontInfo = FontInfo { fontHeight :: Draw.R }
 
 mainLoopConfig :: (Zoom -> IO FontInfo) -> IO (Config, Theme) -> MainLoop.Config
 mainLoopConfig getFontInfo getConfig =
@@ -107,14 +93,10 @@ mainLoopConfig getFontInfo getConfig =
         Cursor.Config
         { cursorColor = theme ^. Theme.cursorColor
         , Cursor.decay = Just Cursor.Decay
-            { Cursor.heightUnit = primaryFontHeight fi
+            { Cursor.heightUnit = fontHeight fi
             , Cursor.heightExponent = theme ^. Theme.cursorDecayExponent
             }
         }
     , cZoom = getConfig <&> (^. _1 . Config.zoom)
-    , cHelpEnv =
-        Just $ \zoom ->
-        (,) <$> getFontInfo zoom <*> getConfig
-        <&> \(fi, (config, theme)) ->
-        helpEnv (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
+    , cHelpEnv = Nothing
     }

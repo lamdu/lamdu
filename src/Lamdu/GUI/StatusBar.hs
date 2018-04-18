@@ -20,7 +20,7 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
-import qualified Lamdu.GUI.Settings as SettingsWidget
+import qualified Lamdu.GUI.Settings as SettingsGui
 import           Lamdu.GUI.StatusBar.Common (StatusWidget)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
@@ -48,13 +48,18 @@ make themeNames settingsProp width vcActions =
             IOTrans.liftTrans transaction vcActions
         branchSelector <- StatusBar.makeStatusWidget "Branch" branchChoice
 
-        settings <-
-            SettingsWidget.makeStatusWidget themeNames settingsProp
-            <&> StatusBar.hoist IOTrans.liftIO
+        statusWidgets <-
+            SettingsGui.makeStatusWidgets themeNames settingsProp
+            <&> SettingsGui.hoist IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
         bgColor <-
             Draw.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
-        StatusBar.combine ?? [settings, branchSelector]
+        StatusBar.combine
+            ??  [ statusWidgets ^. SettingsGui.annotationWidget
+                , statusWidgets ^. SettingsGui.themeWidget
+                , branchSelector
+                ]
+            <&> (StatusBar.combineEdges width ?? statusWidgets ^. SettingsGui.helpWidget)
             <&> StatusBar.widget . Align.tValue . Element.width .~ width
             <&> StatusBar.widget %~ bgColor

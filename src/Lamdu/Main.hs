@@ -212,7 +212,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = Property.value settingsProp
-                , _envStyle = Style.make (theme ^. Theme.textColors) fonts
+                , _envStyle = Style.make fonts theme
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
                 }
@@ -355,12 +355,8 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
         let mkFontInfo zoom =
                 do
                     sample <- ConfigSampler.getSample configSampler
-                    fonts <- getFonts zoom sample
-                    let height = fonts ^. Font.fontDefault & Font.height
-                    pure FontInfo
-                        { primaryFontHeight = height
-                        , helpFont = fonts ^. Font.fontHelp
-                        }
+                    getFonts zoom sample
+                        <&> (^. Font.fontDefault) <&> Font.height <&> FontInfo
         let mkConfigTheme =
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)

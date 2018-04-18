@@ -5,7 +5,7 @@ module Lamdu.GUI.StatusBar.Common
     , hoist
     , makeSwitchStatusWidget, makeBoundedSwitchStatusWidget
     , makeStatusWidget
-    , combine
+    , combine, combineEdges
     ) where
 
 import qualified Control.Lens as Lens
@@ -24,7 +24,7 @@ import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
+import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
@@ -153,8 +153,7 @@ hspacer = do
 combine ::
     ( MonadReader env m, Functor f
     , HasStdSpacing env, HasTheme env
-    ) =>
-    m ([StatusWidget f] -> StatusWidget f)
+    ) => m ([StatusWidget f] -> StatusWidget f)
 combine =
     hspacer
     <&> \space statusWidgets ->
@@ -170,3 +169,15 @@ combine =
             & ((x ^. widget) /|/)
     , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
     }
+
+combineEdges ::
+    Functor f =>
+    R -> StatusWidget f -> StatusWidget f -> StatusWidget f
+combineEdges width (StatusWidget xw xe) (StatusWidget yw ye) =
+    StatusWidget
+    { _widget = xw /|/ Spacer.makeHorizontal padding /|/ yw
+    , _globalEventMap = xe <> ye
+    }
+    where
+        padding = max 0 (width - combinedWidths)
+        combinedWidths = xw ^. Element.width + yw ^. Element.width

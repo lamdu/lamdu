@@ -230,7 +230,7 @@ addToBottomRight (View eventMapSize eventMapLayers) size =
         docLayers = Element.translateLayers (size - eventMapSize) eventMapLayers
 
 data IsHelpShown = HelpShown | HelpNotShown
-    deriving (Eq, Ord, Read, Show)
+    deriving (Eq, Ord, Read, Show, Enum, Bounded)
 
 toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown
