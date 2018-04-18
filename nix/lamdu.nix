@@ -2,12 +2,12 @@
 , base-orphans, base16-bytestring, binary, bytestring, containers
 , cryptohash-sha256, data-default, deepseq, deepseq-generics
 , directory, edit-distance, filepath, GLFW-b, graphics-drawingcombinators
-, hashable, JuicyPixels, lamdu-calculus, language-ecmascript, lens
+, hashable, JuicyPixels, lamdu-calculus, language-ecmascript, lens, lens-aeson
 , leveldb-haskell, List, mtl, nodejs-exec, OpenGL
 , optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
 , split, StateVar, stdenv, stm, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, transformers, unordered-containers
-, uuid, uuid-types, vector, wl-pprint, zip-archive, imagemagick, HUnit
+, uuid, uuid-types, vector, wl-pprint, yaml, zip-archive, imagemagick, HUnit
 }:
 mkDerivation {
   pname = "Lamdu";
@@ -21,11 +21,11 @@ mkDerivation {
     base16-bytestring binary bytestring containers cryptohash-sha256
     data-default deepseq deepseq-generics directory edit-distance filepath GLFW-b
     graphics-drawingcombinators hashable HUnit JuicyPixels lamdu-calculus
-    language-ecmascript lens leveldb-haskell List mtl nodejs-exec
+    language-ecmascript lens lens-aeson leveldb-haskell List mtl nodejs-exec
     OpenGL optparse-applicative pretty process random QuickCheck safe-exceptions
     split StateVar stm test-framework test-framework-hunit test-framework-quickcheck2
     text time transformers unordered-containers uuid uuid-types vector wl-pprint
-    zip-archive
+    yaml zip-archive
   ];
   executablePkgconfigDepends = [ imagemagick ];
   homepage = "http://www.lamdu.org";

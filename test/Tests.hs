@@ -24,13 +24,13 @@ main =
     where
         tests =
             TestStdlib.tests ++
+            TestNix.tests ++
             TestMomentu.tests ++
             [ TestAnimIdClash.test
             , TestColorSchemes.test
             , TestConfig.test
             , TestDisambiguation.test
             , TestJsRtsTags.test
-            , TestNix.test
             , TestValUtils.test
             , testCase "json-codec-migration" jsonCodecMigrationTest
             ]
