@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, FlexibleContexts, NoMonomorphismRestriction, RankNTypes #-}
+{-# LANGUAGE NamedFieldPuns, FlexibleContexts, NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderBodyEdit
@@ -65,7 +65,7 @@ makeBinderNameEdit ::
     (Monad i, Monad o) =>
     Widget.Id -> Sugar.BinderActions (Name o) i o ->
     EventMap (o GuiState.Update) ->
-    Sugar.Tag (Name o) i o -> Lens.Getter TextColors Draw.Color ->
+    Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeBinderNameEdit binderId binderActions rhsJumperEquals tag color =
     do
@@ -354,7 +354,7 @@ make ::
     (Monad i, Monad o) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     EventMap (o GuiState.Update) ->
-    Sugar.Tag (Name o) i o -> Lens.Getter TextColors Draw.Color ->
+    Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Sugar.Binder (Name o) i o (ExprGui.SugarExpr i o) ->
     Widget.Id ->
     ExprGuiM i o (ExpressionGui o)

@@ -1,6 +1,5 @@
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
-{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.Styled
     ( infoLabel, grammarLabel, grammarText
     , addValBG, addBgColor
@@ -71,9 +70,9 @@ addValBG = addBgColor Theme.valFrameBGColor
 addBgColor ::
     ( MonadReader env m, Element a
     , Element.HasAnimIdPrefix env, HasTheme env
-    ) => Lens.Getter Theme Draw.Color -> m (a -> a)
+    ) => Lens.ALens' Theme Draw.Color -> m (a -> a)
 addBgColor getColor =
-    Draw.backgroundColor <*> Lens.view (Theme.theme . getColor)
+    Draw.backgroundColor <*> Lens.view (Theme.theme . Lens.cloneLens getColor)
 
 addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
 addValPadding = Lens.view (Theme.theme . Theme.valFramePadding) <&> Element.pad
@@ -118,10 +117,10 @@ addDeletionDiagonal =
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
-    Lens.Getter TextColors Draw.Color -> m a -> m a
+    Lens.ALens' TextColors Draw.Color -> m a -> m a
 withColor textColor act =
     do
-        color <- Lens.view (Theme.theme . Theme.textColors . textColor)
+        color <- Lens.view (Theme.theme . Theme.textColors . Lens.cloneLens textColor)
         Reader.local (TextView.color .~ color) act
 
 actionable ::

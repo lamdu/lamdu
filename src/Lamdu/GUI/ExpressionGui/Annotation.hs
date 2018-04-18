@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
@@ -48,12 +48,12 @@ import           Lamdu.Prelude
 
 addAnnotationBackgroundH ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
-    Lens.Getter ValAnnotation Draw.Color -> m (a -> a)
+    Lens.ALens' ValAnnotation Draw.Color -> m (a -> a)
 addAnnotationBackgroundH color =
     do
         t <- Lens.view theme
         bgAnimId <- Element.subAnimId ["annotation background"]
-        Draw.backgroundColor bgAnimId (t ^. Theme.valAnnotation . color) & pure
+        Draw.backgroundColor bgAnimId (t ^# Theme.valAnnotation . color) & pure
 
 addAnnotationBackground ::
     (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
