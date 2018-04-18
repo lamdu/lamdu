@@ -18,17 +18,11 @@ module.exports = {
         }
         return encoded;
     },
-    logRepl: function (res) {
-        protocol.sendCompletionSuccess(res);
-    },
-    logReplErr: function (err) {
-        protocol.sendCompletionError(err);
-    },
+    logRepl: protocol.sendCompletionSuccess,
+    logReplErr: protocol.sendCompletionError,
     logResult: function (scope, exprId, result) {
         protocol.sendResult(scope, exprId, result);
         return result;
     },
-    logNewScope: function (parentScope, scope, lamId, arg) {
-        protocol.sendNewScope(parentScope, scope, lamId, arg);
-    },
+    logNewScope: protocol.sendNewScope,
 };
