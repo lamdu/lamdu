@@ -86,7 +86,7 @@ instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
 instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
 instance M.HasCursor Env
 instance M.HasState Env where state = envMainLoop . M.state
-instance TextEdit.HasStyle Env where style = envStyle . Style.styleBase
+instance TextEdit.HasStyle Env where style = envStyle . Style.base
 instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
 instance Theme.HasTheme Env where theme = envTheme
 instance Config.HasConfig Env where config = envConfig
@@ -212,7 +212,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
                 , _envConfig = config
                 , _envTheme = theme
                 , _envSettings = Property.value settingsProp
-                , _envStyle = Style.makeStyle (theme ^. Theme.textColors) fonts
+                , _envStyle = Style.make (theme ^. Theme.textColors) fonts
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
                 }

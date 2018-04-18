@@ -427,7 +427,7 @@ makeLHSTag onPickNext color tag =
         (tagEditType, tagEdit) <-
             makeTagEditWith onView onPickNext NearestHoles.none tag
             & Styled.withColor color
-            & Reader.local (TextEdit.style .~ style ^. Style.styleNameAtBinder)
+            & Reader.local (TextEdit.style .~ style ^. Style.nameAtBinder)
         let eventMap =
                 case tagEditType of
                 SimpleView -> chooseEventMap

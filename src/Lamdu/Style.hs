@@ -1,11 +1,10 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.Style
-    ( Style(..), makeStyle
+    ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num
+    , make
     , HasStyle(..)
-    , FontInfo(..), mainLoopConfig
-
-    , styleBase, styleAutoNameOrigin, styleNameAtBinder
-    , styleBytes, styleText, styleNum
+    , FontInfo(..)
+    , mainLoopConfig
     ) where
 
 import qualified Control.Lens as Lens
@@ -31,12 +30,12 @@ import qualified Lamdu.Font as Font
 import           Lamdu.Prelude
 
 data Style = Style
-    { _styleBase :: TextEdit.Style
-    , _styleAutoNameOrigin :: TextEdit.Style
-    , _styleNameAtBinder :: TextEdit.Style
-    , _styleBytes :: TextEdit.Style
-    , _styleText :: TextEdit.Style
-    , _styleNum :: TextEdit.Style
+    { _base :: TextEdit.Style
+    , _autoNameOrigin :: TextEdit.Style
+    , _nameAtBinder :: TextEdit.Style
+    , _bytes :: TextEdit.Style
+    , _text :: TextEdit.Style
+    , _num :: TextEdit.Style
     }
 Lens.makeLenses ''Style
 
@@ -67,15 +66,15 @@ helpEnv font helpKeys theme =
     , EventMapHelp._eAnimIdPrefix = ["help box"]
     }
 
-makeStyle :: TextColors -> Fonts Font -> Style
-makeStyle config fonts =
+make :: TextColors -> Fonts Font -> Style
+make config fonts =
     Style
-    { _styleBase           = textEdit TextColors.baseColor    Font.fontDefault
-    , _styleAutoNameOrigin = textEdit TextColors.baseColor    Font.fontAutoName
-    , _styleNameAtBinder   = textEdit TextColors.baseColor    Font.fontBinders
-    , _styleBytes          = textEdit TextColors.literalColor Font.fontLiteralBytes
-    , _styleText           = textEdit TextColors.literalColor Font.fontLiteralText
-    , _styleNum            = textEdit TextColors.literalColor Font.fontDefault
+    { _base           = textEdit TextColors.baseColor    Font.fontDefault
+    , _autoNameOrigin = textEdit TextColors.baseColor    Font.fontAutoName
+    , _nameAtBinder   = textEdit TextColors.baseColor    Font.fontBinders
+    , _bytes          = textEdit TextColors.literalColor Font.fontLiteralBytes
+    , _text           = textEdit TextColors.literalColor Font.fontLiteralText
+    , _num            = textEdit TextColors.literalColor Font.fontDefault
     }
     where
         textEdit color font =

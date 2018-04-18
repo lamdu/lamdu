@@ -125,7 +125,7 @@ textEdit prop pl =
             TextView.makeLabel "„"
             <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
         withFd ?? myId ?? left /|/ text /|/ right
-    & withStyle Style.styleText
+    & withStyle Style.text
     where
         empty = TextEdit.EmptyStrings "" ""
         myId = WidgetIds.fromExprPayload pl
@@ -198,7 +198,7 @@ numEdit prop pl =
             <&> Align.tValue . Lens.mapped %~ event
             <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
             <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
-    & withStyle Style.styleNum
+    & withStyle Style.num
     where
         setPos newPos = TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
         innerId = WidgetIds.literalEditOf myId
@@ -219,5 +219,5 @@ make lit pl =
     <*>
     case lit of
     Sugar.LiteralNum x -> numEdit x pl <&> Responsive.fromWithTextPos
-    Sugar.LiteralBytes x -> genericEdit Style.styleBytes x pl
+    Sugar.LiteralBytes x -> genericEdit Style.bytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
