@@ -22,8 +22,8 @@ mkDerivation {
     data-default deepseq deepseq-generics directory edit-distance filepath GLFW-b
     graphics-drawingcombinators hashable HUnit JuicyPixels lamdu-calculus
     language-ecmascript lens leveldb-haskell List mtl nodejs-exec
-    OpenGL optparse-applicative pretty process random safe-exceptions
-    StateVar stm test-framework test-framework-hunit test-framework-quickcheck2
+    OpenGL optparse-applicative pretty process random QuickCheck safe-exceptions
+    split StateVar stm test-framework test-framework-hunit test-framework-quickcheck2
     text time transformers unordered-containers uuid uuid-types vector wl-pprint
     zip-archive
   ];
