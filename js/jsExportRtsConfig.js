@@ -16,5 +16,8 @@ module.exports = {
     logReplErr: function (x) { console.log("Error: " + String.fromCharCode.apply(null, x)); },
     // Not used in JS export:
     logResult: undefined,
-    logNewScope: undefined
+    logNewScope: undefined,
+    error: function (name, desc, globalId, exprId) {
+        throw name;
+    }
 };

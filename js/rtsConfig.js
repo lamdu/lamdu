@@ -25,4 +25,5 @@ module.exports = {
         return result;
     },
     logNewScope: protocol.sendNewScope,
+    error: protocol.error
 };

@@ -69,14 +69,22 @@ var mutVoidWithError = function (inner) {
 
 var conf = require('./rtsConfig.js');
 
-var protocol = require("./protocol.js");
+var curried_error = function(name) {
+    return function(desc, globalId, exprId) {
+        return conf.error(name, desc, globalId, exprId);
+    };
+};
 
 module.exports = {
     logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
     logResult: conf.logResult,
     logNewScope: conf.logNewScope,
-    exceptions: protocol.exceptions,
+    exceptions: {
+        BrokenDef: curried_error("BrokenDef"),
+        ReachedHole: curried_error("ReachedHole"),
+        LamduBug: curried_error("LamduBug"),
+    },
     memo: function (thunk) {
         var done = false;
         var memo;

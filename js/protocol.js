@@ -52,28 +52,15 @@ var sendEvent = function (obj) {
     process.stdout.write("\n");
 };
 
-var error = function(name, desc, globalId, exprId) {
-    return {
-        "error": name,
-        "desc": desc,
-        "globalId": globalId,
-        "exprId": exprId,
-    };
-};
-
-var curried_error = function(name) {
-    return function(desc, globalId, exprId) {
-        return error(name, desc, globalId, exprId);
-    };
-};
-
 module.exports = {
-    exceptions: {
-        BrokenDef: curried_error("BrokenDef"),
-        ReachedHole: curried_error("ReachedHole"),
-        LamduBug: curried_error("LamduBug"),
+    error: function(name, desc, globalId, exprId) {
+        return {
+            "error": name,
+            "desc": desc,
+            "globalId": globalId,
+            "exprId": exprId,
+        };
     },
-
     sendResult: function(scope, exprId, result) {
         sendEvent({
             event:"Result",
