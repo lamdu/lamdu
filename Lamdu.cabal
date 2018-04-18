@@ -232,7 +232,6 @@ Library
                   , Lamdu.GUI.AnnotationsPass
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.AnnotationMode
-                  , Lamdu.GUI.CodeEdit.AnnotationMode.Widget
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView
                   , Lamdu.GUI.ExpressionEdit

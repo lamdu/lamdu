@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Property as Property
+import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -85,7 +86,7 @@ makeBranchSelector ::
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
-    mr (Widget (mw GuiState.Update))
+    mr (WithTextPos (Widget (mw GuiState.Update)))
 makeBranchSelector rwtransaction rtransaction actions =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
@@ -93,6 +94,7 @@ makeBranchSelector rwtransaction rtransaction actions =
             ?? branchNameEdits ?? currentBranch actions
             ?? Choice.defaultConfig "Branches"
             ?? WidgetIds.branchSelection
+            <&> WithTextPos 0 -- TODO: Should come from Choice
     where
         empty = TextEdit.EmptyStrings "unnamed branch" ""
         makeBranchNameEdit branch =

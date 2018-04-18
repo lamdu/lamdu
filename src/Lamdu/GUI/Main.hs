@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, ConstraintKinds #-}
 module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportRepl(..)
@@ -13,6 +13,7 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
@@ -32,7 +33,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
-import qualified Lamdu.GUI.Settings as SettingsWidget
 import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
@@ -50,7 +50,7 @@ type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
-layout ::
+type Ctx env =
     ( MainLoop.HasMainLoopEnv env
     , Style.HasStyle env
     , Hover.HasStyle env
@@ -63,11 +63,16 @@ layout ::
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
-    ) =>
-    [Themes.Selection] -> Property IO Settings -> VCActions.Actions DbM (IOTrans DbM) ->
+    )
+
+layout ::
+    Ctx env =>
+    [Themes.Selection] -> Property IO Settings ->
     ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
-layout themeNames settingsProp vcActions =
+layout themeNames settingsProp =
     do
+        vcActions <-
+            VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
         statusBar <- StatusBar.make themeNames settingsProp (fullSize ^. _1) vcActions
@@ -77,40 +82,22 @@ layout themeNames settingsProp vcActions =
             & Reader.mapReaderT VersionControl.runAction
             <&> Lens.mapped . IOTrans.trans %~ VersionControl.runEvent state
         topPadding <- Spacer.vspaceLines (theTheme ^. Theme.topPadding)
-        statusBar /-/ topPadding /-/ codeEdit
-            & Scroll.focusAreaInto fullSize & pure
+        let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
+
+        versionControlCfg <- Lens.view (Config.config . Config.versionControl)
+        let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
+
+        quitKeys <- Lens.view (Config.config . Config.quitKeys)
+        let quitEventMap = E.keysEventMap quitKeys (E.Doc ["Quit"]) (error "Quit")
+
+        statusBarWidget /-/ topPadding /-/ codeEdit
+            & Scroll.focusAreaInto fullSize
+            & Widget.weakerEventsWithoutPreevents
+              (statusBar ^. StatusBar.globalEventMap <> quitEventMap <> vcEventMap)
+            & pure
 
 make ::
-    ( MainLoop.HasMainLoopEnv env
-    , Style.HasStyle env
-    , Hover.HasStyle env
-    , Element.HasAnimIdPrefix env
-    , Config.HasConfig env
-    , Spacer.HasStdSpacing env
-    , Theme.HasTheme env
-    , Settings.HasSettings env
-    , GuiState.HasState env
-    , CodeEdit.HasEvalResults env ViewM
-    , CodeEdit.HasExportActions env ViewM
-    , VCConfig.HasConfig env, VCConfig.HasTheme env
-    ) =>
+    Ctx env =>
     [Themes.Selection] -> Property IO Settings -> env ->
     T DbM (Widget (IOTrans DbM GuiState.Update))
-make themeNames settingsProp env =
-    do
-        vcActions <-
-            VersionControl.makeActions
-            <&> VCActions.hoist IOTrans.liftTrans
-        let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
-        layout themeNames settingsProp vcActions
-            <&> Widget.weakerEventsWithoutPreevents
-                (settingsEventMap <> quitEventMap <> vcEventMap)
-            & (`runReaderT` env)
-    where
-        settingsEventMap =
-            SettingsWidget.eventMap themeNames settingsProp config
-            <&> IOTrans.liftIO
-        config = env ^. Config.config
-        versionControlCfg = config ^. Config.versionControl
-        quitEventMap =
-            E.keysEventMap (config ^. Config.quitKeys) (E.Doc ["Quit"]) (error "Quit")
+make themeNames settingsProp env = layout themeNames settingsProp & (`runReaderT` env)
