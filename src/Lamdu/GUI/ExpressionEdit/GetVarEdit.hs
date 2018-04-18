@@ -7,6 +7,7 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -28,6 +29,7 @@ import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -48,11 +50,12 @@ makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
-    Name x -> Widget.Id ->
+    Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
-makeSimpleView name myId =
+makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
+    & Styled.withColor (Lens.cloneLens color)
 
 makeParamsRecord ::
     ( MonadReader env m, HasTheme env, GuiState.HasCursor env
@@ -73,8 +76,8 @@ makeParamsRecord myId paramsRecordVar =
                     let paramId = ["params", SBS8.pack (show (i :: Int))]
                     in
                     Widget.joinId myId paramId
-                    & makeSimpleView fieldName <&> Responsive.fromWithTextPos
-                    & Styled.withColor TextColors.parameterColor
+                    & makeSimpleView TextColors.parameterColor fieldName
+                    <&> Responsive.fromWithTextPos
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
@@ -85,10 +88,10 @@ makeParamsRecord myId paramsRecordVar =
 
 makeNameRef ::
     (Monad i, Monad o) =>
-    Widget.Id -> Sugar.NameRef name o ->
-    (name -> Widget.Id -> ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))) ->
+    Lens.ALens' TextColors Draw.Color -> Widget.Id ->
+    Sugar.NameRef (Name x) o ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
-makeNameRef myId nameRef maker =
+makeNameRef color myId nameRef =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
         config <- Lens.view Config.config
@@ -100,7 +103,7 @@ makeNameRef myId nameRef maker =
                 do
                     savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
-        maker (nameRef ^. Sugar.nrName) nameId
+        makeSimpleView color (nameRef ^. Sugar.nrName) nameId
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
@@ -127,7 +130,7 @@ definitionTypeChangeBox ::
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
     , HasConfig env, Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType (Name g) (f Sugar.EntityId) -> Widget.Id ->
+    Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update)))
 definitionTypeChangeBox info getVarId =
     do
@@ -162,7 +165,7 @@ processDefinitionWidget ::
     , GuiState.HasCursor env, Hover.HasStyle env
     , Applicative f
     ) =>
-    Sugar.DefinitionForm (Name g) f -> Widget.Id ->
+    Sugar.DefinitionForm (Name x) f -> Widget.Id ->
     m (WithTextPos (Widget (f GuiState.Update))) ->
     m (WithTextPos (Widget (f GuiState.Update)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
@@ -205,7 +208,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 
 makeGetBinder ::
     (Monad i, Monad o) =>
-    Sugar.BinderVarRef (Name o) o -> Widget.Id ->
+    Sugar.BinderVarRef (Name x) o -> Widget.Id ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeGetBinder binderVar myId =
     do
@@ -217,29 +220,25 @@ makeGetBinder binderVar myId =
                     ( TextColors.definitionColor
                     , processDefinitionWidget defForm myId
                     )
-        makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor (Lens.cloneLens color)
-            & makeNameRef myId (binderVar ^. Sugar.bvNameRef)
+        makeNameRef color myId (binderVar ^. Sugar.bvNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             & processDef
 
 makeGetParam ::
     (Monad i, Monad o) =>
-    Sugar.ParamRef (Name o) o -> Widget.Id ->
+    Sugar.ParamRef (Name x) o -> Widget.Id ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
+        let mk = makeNameRef TextColors.parameterColor myId (param ^. Sugar.pNameRef)
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->
-                makeSimpleView
-                <&> Lens.mapped %~ Reader.local (TextView.underline ?~ LightLambda.underline theme)
-                <&> Lens.mapped %~ Styled.nameAtBinder TextColors.parameterColor name
-            _ ->
-                makeSimpleView
-            <&> Lens.mapped %~ Styled.withColor TextColors.parameterColor
-            & makeNameRef myId (param ^. Sugar.pNameRef)
+                mk
+                & Reader.local (TextView.underline ?~ LightLambda.underline theme)
+                & Styled.nameAtBinder name
+            Sugar.NormalBinder -> mk
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName
 
