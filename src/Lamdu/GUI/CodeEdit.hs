@@ -22,7 +22,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -269,13 +268,13 @@ panesEventMap theExportActions cp gp replType =
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
-            , case replType ^. Sugar.tBody of
-                Sugar.TInst tid _
-                    | tid ^. Sugar.tidTId == Builtins.mutTid ->
-                        E.keysEventMap (exportConfig ^. Config.executeKeys)
-                        (E.Doc ["Execute Repl Process"])
-                        (IOTrans.liftIO executeRepl)
-                _ -> mempty
+            , if ReplEdit.isExecutableType replType
+                then
+                    E.keysEventMap (exportConfig ^. Config.executeKeys)
+                    (E.Doc ["Execute Repl Process"])
+                    (IOTrans.liftIO executeRepl)
+                else
+                    mempty
             ]
     where
         executeRepl = exportReplActions theExportActions & ReplEdit.executeIOProcess

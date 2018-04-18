@@ -1,7 +1,7 @@
 -- | REPL Edit
 {-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, FlexibleContexts, RankNTypes #-}
 module Lamdu.GUI.ReplEdit
-    ( ExportRepl(..), make
+    ( ExportRepl(..), make, isExecutableType
     ) where
 
 import qualified Control.Lens as Lens
@@ -26,6 +26,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Config (Config, HasConfig(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
@@ -145,18 +146,41 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
         jumpDoc = E.Doc ["Navigation", "Jump to error"]
         anchor = fmap Hover.anchor
 
+indicatorId :: Sugar.Payload name i o a -> Widget.Id
+indicatorId pl =
+    WidgetIds.fromEntityId (pl ^. Sugar.plEntityId) `Widget.joinId` ["result indicator"]
+
+isExecutableType :: Sugar.Type name -> Bool
+isExecutableType t =
+    case t ^. Sugar.tBody of
+    Sugar.TInst tid _ -> tid ^. Sugar.tidTId == Builtins.mutTid
+    _ -> False
+
 resultWidget ::
-    ( MonadReader env m, Applicative o, GuiState.HasCursor env
+    ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
     , HasTheme env, HasConfig env
     ) =>
-    Widget.Id -> CurPrevTag -> Sugar.EvalCompletionResult name o ->
-    m (Align.WithTextPos (Widget (o GuiState.Update)))
-resultWidget _ tag Sugar.EvalSuccess {} =
-    makeIndicator tag Theme.successColor "✔"
-    <&> Align.tValue %~ Widget.fromView
-resultWidget myId tag (Sugar.EvalError err) =
-    errorIndicator myId tag err
+    ExportRepl o -> Sugar.Payload name i (T o) a -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
+    m (Align.WithTextPos (Widget (IOTrans o GuiState.Update)))
+resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
+    do
+        view <- makeIndicator tag Theme.successColor "✔"
+        if isExecutableType (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
+            then
+                do
+                    actionKeys <- Lens.view (Config.config . Config.actionKeys)
+                    let executeEventMap =
+                            executeIOProcess exportRepl
+                            & IOTrans.liftIO
+                            & E.keysEventMap actionKeys (E.Doc ["Execute"])
+                    (Widget.makeFocusableView ?? indicatorId pl <&> (Align.tValue %~)) ?? view
+                        <&> Align.tValue %~ Widget.weakerEvents executeEventMap
+            else
+                view & Align.tValue %~ Widget.fromView & pure
+resultWidget _ pl tag (Sugar.EvalError err) =
+    errorIndicator (indicatorId pl) tag err
+    <&> Align.tValue . Lens.mapped %~ IOTrans.liftTrans
 
 make ::
     Monad m =>
@@ -168,7 +192,7 @@ make exportRepl (Sugar.Repl replExpr replResult) =
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
-            (resultWidget errorIndicatorId <$> curPrevTag <&> fmap) <*> replResult
+            (resultWidget exportRepl (replExpr ^. Sugar.rPayload) <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
@@ -178,14 +202,14 @@ make exportRepl (Sugar.Repl replExpr replResult) =
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"
               <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExpr buttonExtractKeys)
+              <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
             , ExprGuiM.makeSubexpression replExpr
+                <&> Lens.mapped %~ IOTrans.liftTrans
             ]
-            <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExpr)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
-        errorIndicatorId = replExprId `Widget.joinId` ["error indicator"]
         centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
         replExprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
