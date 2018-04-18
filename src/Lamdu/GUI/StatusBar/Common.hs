@@ -70,6 +70,28 @@ makeStatusWidget headerText w =
     makeLabeledWidget headerText w
     <&> (`StatusWidget` mempty)
 
+makeChoice ::
+    ( MonadReader env m, Applicative f, Eq a
+    , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    Text -> Property f a -> [(Text, a)] ->
+    m (WithTextPos (Widget (f GuiState.Update)))
+makeChoice headerText prop choiceVals =
+    do
+        choices <- traverse mkChoice choiceVals
+        Choice.make
+            ?? Property.set prop ?? choices ?? cur
+            ?? Choice.defaultConfig headerText ?? myId
+            <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
+    where
+        cur = Property.value prop
+        myId = Widget.Id [encodeUtf8 headerText]
+        mkChoice (text, val) =
+            TextView.makeFocusableLabel text
+            <&> (^. Align.tValue)
+            <&> (,) val
+
 makeSwitchWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
@@ -79,20 +101,8 @@ makeSwitchWidget ::
     m (WithTextPos (Widget (f GuiState.Update)))
 makeSwitchWidget headerText prop choiceVals =
     do
-        choices <- traverse mkChoice choiceVals
-        choice <-
-            Choice.make
-            ?? Property.set prop ?? choices ?? cur
-            ?? Choice.defaultConfig headerText ?? myId
-            <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
+        choice <- makeChoice headerText prop choiceVals
         makeLabeledWidget headerText choice
-    where
-        myId = Widget.Id [encodeUtf8 headerText]
-        mkChoice (text, val) =
-            TextView.makeFocusableLabel text
-            <&> (^. Align.tValue)
-            <&> (,) val
-        cur = Property.value prop
 
 makeSwitchEventMap ::
     (MonadReader env m, HasConfig env, Eq a, Functor f) =>
@@ -134,13 +144,7 @@ makeBoundedSwitchStatusWidget ::
     Property f a ->
     m (StatusWidget f)
 makeBoundedSwitchStatusWidget headerText keysGetter prop =
-    do
-        w <- makeSwitchWidget headerText prop choiceVals
-        e <- makeSwitchEventMap headerText keysGetter prop (map snd choiceVals)
-        pure StatusWidget
-            { _widget = w
-            , _globalEventMap = e
-            }
+    makeSwitchStatusWidget headerText keysGetter prop choiceVals
     where
         choiceVals = [minBound..maxBound] <&> \val -> (Text.pack (show val), val)
 
