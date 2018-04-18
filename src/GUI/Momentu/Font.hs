@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | A font attached to its size
 
 module GUI.Momentu.Font

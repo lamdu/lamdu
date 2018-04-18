@@ -1,5 +1,4 @@
 -- | The widget ids of exposed hole components
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
     ( WidgetIds(..), make
     , isActive

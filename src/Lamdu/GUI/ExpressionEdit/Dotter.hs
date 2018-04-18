@@ -12,7 +12,6 @@
 --
 -- In this state, the gui presents a dot besides the dotted expression.
 
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.Dotter
     ( with, addEventMap
     ) where

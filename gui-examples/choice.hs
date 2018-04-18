@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, OverloadedStrings, TemplateHaskell, DisambiguateRecordFields #-}
+{-# LANGUAGE NoImplicitPrelude, TemplateHaskell, DisambiguateRecordFields #-}
 
 module Main where
 

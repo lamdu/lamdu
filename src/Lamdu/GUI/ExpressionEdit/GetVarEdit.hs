@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make, makeGetBinder, makeNoActions
     ) where

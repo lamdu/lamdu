@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Definition
     ( FFIName(..)
     , Expr(..), expr, exprFrozenDeps, exprTags

@@ -1,5 +1,4 @@
 -- | The widget/event map that controls the annotation mode
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.CodeEdit.AnnotationMode.Widget
     ( switchEventMap
     , forStatusBar

@@ -1,5 +1,4 @@
 -- | Initialize a database, populating it with "freshdb.json" if needed
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Data.Db.Init
     ( initFreshDb
     ) where

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Lamdu.Data.Export.JS
     ( exportFancy
     ) where

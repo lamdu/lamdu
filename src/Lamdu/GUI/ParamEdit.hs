@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
     , eventMapAddFirstParam, mkParamPickResult

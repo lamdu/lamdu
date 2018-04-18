@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | A vertical-expand (combo-like) choice widget
 
 module GUI.Momentu.Widgets.Choice

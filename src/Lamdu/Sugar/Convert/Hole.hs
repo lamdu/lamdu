@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:

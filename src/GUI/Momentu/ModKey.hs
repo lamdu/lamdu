@@ -1,6 +1,5 @@
 -- | ModKey type: Grouping the modifier keys with the key
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE OverloadedStrings #-}
 module GUI.Momentu.ModKey
     ( ModKey(..), ctrlMods, altMods, shiftMods, superMods
     , GLFW.KeyState(..), GLFW.Key(..)

@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.GUI.DefinitionEdit
     ( make
     ) where

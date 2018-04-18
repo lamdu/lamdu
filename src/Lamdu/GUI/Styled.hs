@@ -1,6 +1,6 @@
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
-{-# LANGUAGE OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.Styled
     ( infoLabel, grammarLabel, grammarText
     , addValBG, addBgColor

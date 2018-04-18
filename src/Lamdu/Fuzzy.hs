@@ -1,5 +1,5 @@
 -- | A wrapper for the fuzzyset library that makes it a Fuzzy map
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Fuzzy
     ( Fuzzy, make, matches
     , Distance(..), isFuzzy, distanceInts

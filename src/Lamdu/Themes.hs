@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Lamdu.Themes
     ( Selection, initial, getFiles, getNames
     ) where

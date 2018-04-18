@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveDataTypeable, OverloadedStrings, FlexibleInstances #-}
+{-# LANGUAGE NoImplicitPrelude, StandaloneDeriving, DeriveDataTypeable, FlexibleInstances #-}
 
 module Test.Lamdu.Instances () where
 

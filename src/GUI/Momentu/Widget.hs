@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module GUI.Momentu.Widget
     ( module Types
 

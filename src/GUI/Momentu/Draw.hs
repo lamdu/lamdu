@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 -- | Draw on elements
 
 module GUI.Momentu.Draw

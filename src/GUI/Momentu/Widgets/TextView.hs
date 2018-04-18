@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE BangPatterns, TemplateHaskell #-}
 module GUI.Momentu.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline, whiteText

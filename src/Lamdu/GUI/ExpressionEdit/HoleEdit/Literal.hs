@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
     ( makeLiteralEventMap

@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lamdu.Data.Export.JSON.Migration.ToVersion4 (migrate) where
 
 import qualified Control.Lens as Lens
