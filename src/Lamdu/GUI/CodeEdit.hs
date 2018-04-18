@@ -8,9 +8,7 @@ module Lamdu.GUI.CodeEdit
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -22,7 +20,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -34,7 +31,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
-import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
+import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
@@ -48,12 +45,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
-import qualified Lamdu.Sugar.Convert as SugarConvert
-import qualified Lamdu.Sugar.Lens as SugarLens
-import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
-import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -72,60 +63,6 @@ class HasEvalResults env m where
     evalResults :: Lens' env (CurAndPrev (EvalResults (ValI m)))
 
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
-
-toExprGuiMPayload ::
-    ( AddParens.MinOpPrec, AddParens.NeedsParens
-    , ( ExprGui.ShowAnnotation
-      , ([Sugar.EntityId], NearestHoles)
-      )
-    ) -> ExprGui.Payload
-toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) =
-    ExprGui.Payload entityIds nearestHoles showAnn
-    (needParens == AddParens.NeedsParens)
-    minOpPrec
-
-traverseAddNearestHoles ::
-    Traversable t =>
-    t (Sugar.Expression name i o a) ->
-    t (Sugar.Expression name i o (a, NearestHoles))
-traverseAddNearestHoles binder =
-    binder
-    <&> Lens.mapped %~ (,)
-    & NearestHoles.add traverse
-
-exprAddNearestHoles ::
-    Sugar.Expression name i o a ->
-    Sugar.Expression name i o (a, NearestHoles)
-exprAddNearestHoles expr =
-    Identity expr
-    & traverseAddNearestHoles
-    & runIdentity
-
-postProcessExpr ::
-    Sugar.Expression (Name n) i o ([Sugar.EntityId], NearestHoles) ->
-    Sugar.Expression (Name n) i o ExprGui.Payload
-postProcessExpr =
-    fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
-
-getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Text
-getNameProp = DataOps.assocPublishedTagName . Anchors.tags
-
-loadWorkArea ::
-    Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
-    Anchors.CodeAnchors m ->
-    T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
-loadWorkArea theEvalResults cp =
-    SugarConvert.loadWorkArea theEvalResults cp
-    >>= AddNames.addToWorkArea (getNameProp cp)
-    <&>
-    \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
-    Sugar.WorkArea
-    { _waPanes = _waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles
-    , _waRepl = _waRepl & Sugar.replExpr %~ exprAddNearestHoles
-    , _waGlobals = _waGlobals
-    }
-    & SugarLens.workAreaExpressions %~ postProcessExpr
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
