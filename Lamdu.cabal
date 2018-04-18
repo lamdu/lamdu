@@ -234,6 +234,7 @@ Library
                   , Lamdu.GUI.AnnotationsPass
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.AnnotationMode
+                  , Lamdu.GUI.CodeEdit.GotoDefinition
                   , Lamdu.GUI.CodeEdit.Load
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView

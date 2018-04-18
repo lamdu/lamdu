@@ -4,6 +4,7 @@ module GUI.Momentu.Widgets.Menu
     ( Style(..), submenuSymbolColorUnselected, submenuSymbolColorSelected
     , Keys(..), keysPickOption, keysPickOptionAndGotoNext
     , Config(..), configStyle, configKeys
+    , configLens
     , HasConfig(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
@@ -87,6 +88,18 @@ deriveJSON defaultOptions
     ''Config
 
 Lens.makeLenses ''Config
+
+configLens ::
+    Functor f =>
+    Lens.ALens' env Keys -> Lens.ALens' env Style -> Lens.LensLike' f env Config
+configLens keys style f env =
+    f Config
+    { _configKeys = env ^# keys
+    , _configStyle = env ^# style
+    }
+    <&>
+    \(Config newStyle newKeys) -> env & keys #~ newKeys & style #~ newStyle
+
 
 -- | Menu supports picking results and setting cursor directly to it
 -- (return), or picking and going to the next "entry point" (space).

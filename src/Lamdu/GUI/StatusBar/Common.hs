@@ -15,6 +15,7 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -43,6 +44,13 @@ data StatusWidget f = StatusWidget
     , _globalEventMap :: EventMap (f GuiState.Update)
     }
 Lens.makeLenses ''StatusWidget
+
+instance Functor f => Element (StatusWidget f) where
+    setLayers = widget . setLayers
+    hoverLayers = widget %~ hoverLayers
+    assymetricPad x y = widget %~ assymetricPad x y
+    scale x = widget %~ scale x
+    empty = StatusWidget Element.empty mempty
 
 hoist :: (f GuiState.Update -> g GuiState.Update) -> StatusWidget f -> StatusWidget g
 hoist f (StatusWidget w e) =

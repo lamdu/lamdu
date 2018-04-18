@@ -1,5 +1,5 @@
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
-    ( make, makeGetBinder, makeNoActions
+    ( make, makeGetBinder, makeNoActions, makeSimpleView
     ) where
 
 import qualified Control.Lens as Lens

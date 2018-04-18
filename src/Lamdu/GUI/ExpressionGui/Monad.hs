@@ -93,16 +93,7 @@ instance Config.HasConfig (Askable i o) where config = aConfig
 instance HasTheme (Askable i o) where theme = aTheme
 instance ResponsiveExpr.HasStyle (Askable i o) where style = aTheme . ResponsiveExpr.style
 instance Menu.HasConfig (Askable i o) where
-    config f askable =
-        f Menu.Config
-        { Menu._configKeys = askable ^. aConfig . Config.menu
-        , Menu._configStyle = askable ^. aTheme . Theme.menu
-        }
-        <&>
-        \menuConfig ->
-        askable
-        & aTheme . Theme.menu .~ menuConfig ^. Menu.configStyle
-        & aConfig . Config.menu .~ menuConfig ^. Menu.configKeys
+    config = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
 instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings

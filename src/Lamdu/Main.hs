@@ -20,6 +20,7 @@ import qualified GUI.Momentu as M
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
@@ -94,6 +95,8 @@ instance M.HasAnimIdPrefix Env where animIdPrefix = envAnimIdPrefix
 instance Hover.HasStyle Env where style = envTheme . Hover.style
 instance VCConfig.HasTheme Env where theme = envTheme . Theme.versionControl
 instance VCConfig.HasConfig Env where config = envConfig . Config.versionControl
+instance Menu.HasConfig Env where
+    config = Menu.configLens (envConfig . Config.menu) (envTheme . Theme.menu)
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =

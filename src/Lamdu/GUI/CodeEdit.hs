@@ -14,11 +14,13 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -31,6 +33,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
+import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
@@ -40,6 +43,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
+import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -68,16 +72,20 @@ make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
+    , Element.HasAnimIdPrefix env
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
-    n (Widget (IOTrans m GuiState.Update))
+    n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m GuiState.Update))
 make cp gp width =
     do
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
         workArea <- loadWorkArea theEvalResults cp & transaction
+        gotoDefinition <-
+            GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
+            <&> StatusBar.hoist IOTrans.liftTrans
         do
             replGui <-
                 ReplEdit.make (exportReplActions theExportActions)
@@ -100,6 +108,7 @@ make cp gp width =
             & transaction
             <&> render
             <&> (^. Align.tValue)
+            <&> (,) gotoDefinition
     where
         render gui =
             Responsive.LayoutParams

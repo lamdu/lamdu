@@ -26,6 +26,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
@@ -90,6 +91,7 @@ type Ctx env =
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
+    , Menu.HasConfig env
     )
 
 layout ::
@@ -102,12 +104,16 @@ layout themeNames settingsProp =
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        statusBar <- StatusBar.make themeNames settingsProp (fullSize ^. _1) vcActions
         state <- Lens.view GuiState.state
-        codeEdit <-
+        let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
+        (gotoDefinition, codeEdit) <-
             CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
-            <&> Lens.mapped . IOTrans.trans %~ VersionControl.runEvent state
+            <&> _1 %~ StatusBar.hoist viewToDb
+            <&> _2 . Lens.mapped %~ viewToDb
+        statusBar <-
+            StatusBar.make gotoDefinition themeNames settingsProp
+            (fullSize ^. _1) vcActions
         topPadding <- Spacer.vspaceLines (theTheme ^. Theme.topPadding)
         let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
 

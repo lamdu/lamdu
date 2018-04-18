@@ -1,7 +1,7 @@
 -- | The Lamdu status bar
 {-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.StatusBar
-    ( StatusWidget(..), StatusBar.widget, StatusBar.globalEventMap
+    ( module Lamdu.GUI.StatusBar.Common
     , make
     ) where
 
@@ -21,7 +21,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Settings as SettingsGui
-import           Lamdu.GUI.StatusBar.Common (StatusWidget)
+import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
@@ -34,14 +34,15 @@ import           Lamdu.Prelude
 make ::
     ( MonadReader env m, MonadTransaction n m
     , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
-    , GuiState.HasCursor env, Element.HasAnimIdPrefix env
+    , GuiState.HasState env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
     , HasConfig env
     ) =>
+    StatusWidget (IOTrans n) ->
     [Themes.Selection] -> Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))
-make themeNames settingsProp width vcActions =
+make gotoDefinition themeNames settingsProp width vcActions =
     do
         branchChoice <-
             VersionControlGUI.makeBranchSelector
@@ -59,7 +60,8 @@ make themeNames settingsProp width vcActions =
             ??  [ statusWidgets ^. SettingsGui.annotationWidget
                 , statusWidgets ^. SettingsGui.themeWidget
                 , branchSelector
+                , statusWidgets ^. SettingsGui.helpWidget
                 ]
-            <&> (StatusBar.combineEdges width ?? statusWidgets ^. SettingsGui.helpWidget)
+            <&> StatusBar.combineEdges width gotoDefinition
             <&> StatusBar.widget . Align.tValue . Element.width .~ width
             <&> StatusBar.widget %~ bgColor
