@@ -97,9 +97,9 @@ parseCabalDeps cabal =
     scanl processLine (False, mempty) (lines cabal) ^. traverse . Lens._2
     where
         processLine (isDeps, _) line
-            | isPrefixOf buildDepsPrefix line =
+            | buildDepsPrefix `isPrefixOf` line =
                 (True, parseDeps (drop (length buildDepsPrefix) line))
-            | isInfixOf ":" line = (False, mempty)
+            | ":" `isInfixOf` line = (False, mempty)
             | isDeps = (True, parseDeps line)
             | otherwise = (False, mempty)
         parseDeps line =

@@ -18,8 +18,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/), hbox)
-import           GUI.Momentu.Glue (GluesTo)
+import           GUI.Momentu.Glue (GluesTo, (/|/), hbox)
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.State as GuiState
