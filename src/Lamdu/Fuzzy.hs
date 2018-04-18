@@ -7,10 +7,10 @@ module Lamdu.Fuzzy
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Utils (singletonAt)
 import           Data.Char (toLower)
 import           Data.List (sortOn)
 import           Data.MMap (MMap)
-import           Data.Map.Utils (singleton)
 import           Data.Semigroup (Semigroup)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -48,9 +48,9 @@ instance Pretty a => Pretty (Fuzzy a) where
             payload = pPrintMMap (Pretty.text . Text.unpack) pPrint xs
 
 trieOf :: Semigroup a => Text -> String -> a -> Fuzzy a
-trieOf s [] x = Fuzzy (singleton s x) mempty
+trieOf s [] x = Fuzzy (singletonAt s x) mempty
 trieOf s (c:cs) x =
-    Fuzzy mempty (singleton (toLower c) cont) `mappend` cont
+    Fuzzy mempty (singletonAt (toLower c) cont) `mappend` cont
     where
         cont = trieOf s cs x
 

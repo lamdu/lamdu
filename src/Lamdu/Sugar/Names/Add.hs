@@ -6,6 +6,7 @@ module Lamdu.Sugar.Names.Add
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Utils (singletonAt)
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (runState, evalState)
@@ -17,7 +18,6 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Map.Utils (singleton)
 import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -163,7 +163,7 @@ p1Tagged ::
     CPS (Pass1PropagateUp i o) (P1Name o)
 p1Tagged mDisambiguator nameType (P0Name prop internalName) =
     CPS $ \inner ->
-    tellSome p1Texts (singleton displayText (Set.singleton tag))
+    tellSome p1Texts (singletonAt displayText (Set.singleton tag))
     *> inner
     & Writer.censor (p1lens %~ MMap.unionWith Clash.collide myTags)
     & Writer.listen
@@ -178,7 +178,7 @@ p1Tagged mDisambiguator nameType (P0Name prop internalName) =
         p1lens
             | Walk.isGlobal nameType = p1Globals
             | otherwise              = p1Locals
-        myTags = singleton tag (Clash.infoOf aName)
+        myTags = singletonAt tag (Clash.infoOf aName)
         tag = internalName ^. inTag
         displayText = displayOf prop
         aName =
@@ -193,7 +193,7 @@ p1Name ::
     CPS (Pass1PropagateUp i o) (P1Name o)
 p1Name mDisambiguator nameType p0Name =
     -- NOTE: We depend on the anonTag key in the map
-    liftCPS (traverse_ (tellSome p1Contexts . singleton tag . Set.singleton) ctx)
+    liftCPS (traverse_ (tellSome p1Contexts . singletonAt tag . Set.singleton) ctx)
     *> if tag == anonTag
         then p1Anon ctx
         else p1Tagged mDisambiguator nameType p0Name

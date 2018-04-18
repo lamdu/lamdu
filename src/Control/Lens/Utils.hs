@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 module Control.Lens.Utils
-    ( tagged
+    ( singletonAt, tagged
     ) where
 
 import qualified Control.Lens as Lens
@@ -17,3 +17,7 @@ tagged prism =
       Left tag2 -> Left (a, tag2)
       Right () -> Right a
     )
+
+-- Generalization of Data.Map.singleton
+singletonAt :: (Lens.At a, Monoid a) => Lens.Index a -> Lens.IxValue a -> a
+singletonAt k v = mempty & Lens.at k ?~ v
