@@ -49,8 +49,12 @@ makeStatusWidgets themeNames prop =
     <$> StatusBar.makeBoundedSwitchStatusWidget "Annotations"
         Config.nextAnnotationModeKeys annotationModeProp
     <*> Themes.makeStatusWidget themeNames themeProp
-    <*> StatusBar.makeBoundedSwitchStatusWidget "Help" Config.helpKeys helpProp
+    <*> StatusBar.makeSwitchStatusWidget "Help" Config.helpKeys helpProp helpVals
     where
+        helpVals =
+            [ ("hidden", Settings.HelpNotShown)
+            , ("shown", Settings.HelpShown)
+            ]
         themeProp = composeLens Settings.sSelectedTheme prop
         annotationModeProp = composeLens Settings.sAnnotationMode prop
         helpProp = composeLens Settings.sHelpShown prop
