@@ -16,9 +16,9 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import qualified Lamdu.GUI.Themes as Themes
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
+import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
 
@@ -48,13 +48,15 @@ makeStatusWidgets themeNames prop =
     StatusWidgets
     <$> StatusBar.makeBoundedSwitchStatusWidget "Annotations"
         Config.nextAnnotationModeKeys annotationModeProp
-    <*> Themes.makeStatusWidget themeNames themeProp
+    <*> StatusBar.makeSwitchStatusWidget "Theme" Config.changeThemeKeys themeProp
+        themeVals
     <*> StatusBar.makeSwitchStatusWidget "Help" Config.helpKeys helpProp helpVals
     where
         helpVals =
             [ ("hidden", Settings.HelpNotShown)
             , ("shown", Settings.HelpShown)
             ]
+        themeVals = themeNames <&> join (,)
         themeProp = composeLens Settings.sSelectedTheme prop
         annotationModeProp = composeLens Settings.sAnnotationMode prop
         helpProp = composeLens Settings.sHelpShown prop
