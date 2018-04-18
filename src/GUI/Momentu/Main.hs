@@ -45,7 +45,7 @@ data Config = Config
     { cAnim :: IO MainAnim.AnimConfig
     , cCursor :: Zoom -> IO Cursor.Config
     , cZoom :: IO Zoom.Config
-    , cHelpConfig :: Zoom -> IO EventMapHelp.Config
+    , cHelpConfig :: Maybe (Zoom -> IO EventMapHelp.Config)
     }
 
 newtype ExecuteInMainThread m = ExecuteInMainThread (m ())
@@ -112,7 +112,7 @@ defaultOptions helpFontPath =
                     }
                 , cZoom = pure Zoom.defaultConfig
                 , cHelpConfig =
-                    \zoom ->
+                    Just $ \zoom ->
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
@@ -188,7 +188,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                 do
                     zoomEventMap <- cZoom config <&> Zoom.eventMap zoom <&> fmap liftIO
                     s <- readState stateStorage_
-                    helpConfig <- cHelpConfig config zoom
+                    helpConfig <- cHelpConfig config ?? zoom & sequenceA
                     mkWidgetUnmemod
                         Env
                         { _eZoom = zoom
@@ -196,7 +196,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         , _eState = s
                         }
                         <&> Widget.eventMapMaker . Lens.mapped %~ (zoomEventMap <>)
-                        >>= addHelp helpConfig size
+                        >>= maybe pure (addHelp ?? size) helpConfig
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =

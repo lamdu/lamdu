@@ -104,7 +104,7 @@ mainLoopConfig getFontInfo getConfig =
         }
     , cZoom = getConfig <&> (^. _1 . Config.zoom)
     , cHelpConfig =
-        \zoom ->
+        Just $ \zoom ->
         (,) <$> getFontInfo zoom <*> getConfig
         <&> \(fi, (config, theme)) ->
         helpConfig (helpFont fi) (config ^. Config.helpKeys) (theme ^. Theme.help)
