@@ -23,10 +23,10 @@ main =
     defaultMainWithOpts tests mempty
     where
         tests =
-            TestStdlib.tests ++
-            TestNix.tests ++
-            TestMomentu.tests ++
-            [ TestAnimIdClash.test
+            [ TestStdlib.test
+            , TestNix.test
+            , TestMomentu.test
+            , TestAnimIdClash.test
             , TestColorSchemes.test
             , TestConfig.test
             , TestDisambiguation.test

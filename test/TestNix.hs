@@ -9,7 +9,7 @@
 -- Make sure to do these steps and not just make the test pass by changing the "rev" value,
 -- otherwise the nix build will be broken!
 
-module TestNix (tests) where
+module TestNix (test) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.Lens as LensAeson
@@ -18,7 +18,7 @@ import qualified Data.Text as Text
 import           Data.List (isInfixOf, isPrefixOf)
 import           Data.List.Split (splitOn)
 import qualified Data.Yaml as Yaml
-import           Test.Framework (Test)
+import           Test.Framework (Test, testGroup)
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.HUnit (assertString)
 
@@ -27,8 +27,8 @@ import           Lamdu.Prelude
 -- TODO: Consider using Cabal & nix format parsers
 -- instead of quick & dirty string manipulations
 
-tests :: [Test]
-tests = [stackDepsTest, cabalDepsTest]
+test :: Test
+test = testGroup "Nix" [stackDepsTest, cabalDepsTest]
 
 stackDepsTest :: Test
 stackDepsTest =

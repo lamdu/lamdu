@@ -1,4 +1,4 @@
-module TestMomentu (tests) where
+module TestMomentu (test) where
 
 import qualified Control.Lens as Lens
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -22,8 +22,9 @@ import           Test.Lamdu.Instances ()
 
 import           Lamdu.Prelude
 
-tests :: [Test]
-tests =
+test :: Test
+test =
+    testGroup "Momentu"
     [ testCase "vertical-disambguation" verticalDisambigTest
     , testProperty "grid-sensible-size" propGridSensibleSize
         & plusTestOptions mempty

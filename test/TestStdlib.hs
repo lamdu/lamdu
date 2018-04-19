@@ -1,4 +1,4 @@
-module TestStdlib (tests) where
+module TestStdlib (test) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
@@ -13,7 +13,7 @@ import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import qualified Lamdu.Infer as Infer
-import           Test.Framework (Test)
+import           Test.Framework (Test, testGroup)
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.HUnit (assertString)
 import           Test.Lamdu.FreshDb (readFreshDb)
@@ -21,8 +21,9 @@ import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
-tests :: [Test]
-tests =
+test :: Test
+test =
+    testGroup "Stdlib"
     [ testCase "sensible-tags" verifyTagsTest
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     ]
