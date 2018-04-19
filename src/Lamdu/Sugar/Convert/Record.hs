@@ -50,10 +50,15 @@ convertExtend recExtend exprPl =
                 <&> (,) id
         restRecord
             & BodyRecord
-            & addActions
-                ( recExtend ^. V.recFieldVal
-                : recExtend ^.. V.recRest . Val.body . Lens.folded
-                ) exprPl
+            -- Sugar Record use their tail as an entity id, unlike
+            -- other sugar constructs.
+
+            -- All the RecExtends entity ids are "hidden", the vals
+            -- are directly sugared separately, so using addActions to
+            -- add the hidden payloads is complex. No subexprs given
+            -- will add no hidden payloads. Then we add the rec-extend
+            -- only to pUserData as the hidden payload
+            & addActions [] exprPl
             <&> rPayload . plEntityId %~ modifyEntityId
             <&> rPayload . plData . pUserData <>~ exprPl ^. Input.userData
     where
