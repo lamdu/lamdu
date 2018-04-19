@@ -4,7 +4,7 @@
 
 module TestDisambiguation (test) where
 
-import           Control.Applicative (Const(..))
+import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -25,8 +25,6 @@ import           Test.HUnit (assertString)
 import           Test.Lamdu.Instances ()
 
 import           Lamdu.Prelude
-
-type Unit = Const ()
 
 newtype CollectNames name a = CollectNames { runCollectNames :: Writer [name] a }
     deriving (Functor, Applicative, Monad, MonadWriter [name])
@@ -73,16 +71,16 @@ getNames workArea =
 
 getNameProp :: T.Tag -> MkProperty Identity Unit Text
 getNameProp tag =
-    Property (fromString (show tag)) (const (Const ()))
+    Property (fromString (show tag)) (const Unit)
     & Identity & MkProperty
 
 pane ::
-    Sugar.Definition name i (Const ()) (Sugar.Expression name i (Const ()) a) ->
-    Sugar.Pane name i (Const ()) a
+    Sugar.Definition name i Unit (Sugar.Expression name i Unit a) ->
+    Sugar.Pane name i Unit a
 pane body =
     Sugar.Pane
     { Sugar._paneDefinition = body
-    , Sugar._paneClose = Const ()
+    , Sugar._paneClose = Unit
     , Sugar._paneMoveDown = Nothing
     , Sugar._paneMoveUp = Nothing
     }
@@ -110,7 +108,7 @@ def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkTag var tag
     , Sugar._drDefI = "def"
-    , Sugar._drDefinitionState = Property Sugar.LiveDefinition (const (Const ())) & Identity
+    , Sugar._drDefinitionState = Property Sugar.LiveDefinition (const Unit) & Identity
     , Sugar._drEntityId = "dummy"
     , Sugar._drBody =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
@@ -144,7 +142,7 @@ mkFuncParam (paramVar, paramTag, paramType) =
         , Sugar._piActions =
             Sugar.FuncParamActions
             { Sugar._fpAddNext = Sugar.AddNext tagSelection
-            , Sugar._fpDelete = Const ()
+            , Sugar._fpDelete = Unit
             , Sugar._fpMOrderBefore = Nothing
             , Sugar._fpMOrderAfter = Nothing
             }
@@ -158,7 +156,7 @@ binderExpr ::
     (Sugar.Expression InternalName Identity Unit ())
 binderExpr params body =
     Sugar.Binder
-    { Sugar._bChosenScopeProp = Property Nothing (const (Const ())) & Identity
+    { Sugar._bChosenScopeProp = Property Nothing (const Unit) & Identity
     , Sugar._bLamId =
         case params of
         [] -> Nothing
@@ -172,7 +170,7 @@ binderExpr params body =
     , Sugar._bParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._bBody =
         Sugar.BinderBody
-        { Sugar._bbAddOuterLet = Const ()
+        { Sugar._bbAddOuterLet = Unit
         , Sugar._bbContent = Sugar.BinderExpr body
         }
     }
@@ -218,9 +216,9 @@ annotation typ =
 nodeActions :: Sugar.NodeActions name Identity Unit
 nodeActions =
     Sugar.NodeActions
-    { Sugar._detach = Sugar.DetachAction (Const ())
+    { Sugar._detach = Sugar.DetachAction Unit
     , Sugar._mSetToHole = Nothing
-    , Sugar._extract = Const ()
+    , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
     , Sugar._wrapInRecord = tagSelection
     }
@@ -236,7 +234,7 @@ tagSelection :: Sugar.TagSelection name Identity Unit ()
 tagSelection =
     Sugar.TagSelection
     { Sugar._tsOptions = Identity []
-    , Sugar._tsNewTag = const (Const ())
+    , Sugar._tsNewTag = const Unit
     , Sugar._tsAnon = Nothing
     }
 
