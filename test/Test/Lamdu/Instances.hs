@@ -3,7 +3,6 @@
 
 module Test.Lamdu.Instances () where
 
-import           Control.Applicative (Const(..))
 import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.String (IsString(..))
@@ -90,8 +89,3 @@ instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = (:|) <$> arbitrary <*> arbitrary
     shrink (_ :| []) = []
     shrink (x0 :| (x1 : xs)) = (x1 :| xs) : (shrink (x1 : xs) <&> (x0 :|))
-
--- Should use "Unit monad" instead.
--- This instance proabably not coherent with the Applicative instance..
-instance Monoid a => Monad (Const a) where
-    Const x >>= _ = Const x
