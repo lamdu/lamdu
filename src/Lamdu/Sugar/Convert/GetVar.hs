@@ -74,12 +74,13 @@ globalNameRef ::
     (MonadTransaction n m, Monad f) =>
     Anchors.CodeAnchors f -> DefI f -> m (NameRef InternalName (T f))
 globalNameRef cp defI =
-    do
-        tag <- Anchors.assocTag defI & getP
-        pure NameRef
-            { _nrName = nameWithContext defI tag
-            , _nrGotoDefinition = jumpToDefI cp defI
-            }
+    Anchors.assocTag defI & getP
+    <&>
+    \tag ->
+    NameRef
+    { _nrName = nameWithContext defI tag
+    , _nrGotoDefinition = jumpToDefI cp defI
+    }
 
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
