@@ -13,7 +13,7 @@ import           Lamdu.Prelude
 
 -- | Do we need parenthesis (OR any other visual disambiguation?)
 data NeedsParens = NeedsParens | NoNeedForParens
-    deriving (Eq)
+    deriving (Eq, Show)
 
 data PrecCheck = Never | IfGreater !Int | IfGreaterOrEqual !Int
 

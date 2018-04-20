@@ -16,7 +16,7 @@ module Lamdu.Sugar.Types.Binder
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , ParamInfo(..), piActions, piTag
     , FuncParam(..), fpInfo, fpAnnotation
-    , Meta.SpecialArgs(..)
+    , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderActions(..), baAddFirstParam, baMNodeActions
     , NullParamActions(..), npDeleteLambda

@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Meta
     ( DefinitionState(..)
-    , SpecialArgs(..), PresentationMode
+    , SpecialArgs(..), _Verbose, _Object, _Infix
+    , PresentationMode
     , ParamList
     ) where
 

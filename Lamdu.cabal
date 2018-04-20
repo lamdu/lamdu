@@ -327,6 +327,7 @@ Library
                   , Lamdu.Sugar.Convert.Text
                   , Lamdu.Sugar.Convert.Type
                   , Lamdu.Sugar.EntityId
+                  , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.Parens
                   , Lamdu.Sugar.Lens
@@ -364,8 +365,7 @@ Library
                   , Revision.Deltum.Transaction
                   , System.Random.Extended
 
-  other-modules:    Lamdu.Sugar.Internal
-                  , Paths_Lamdu
+  other-modules:    Paths_Lamdu
 
   ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-cafs

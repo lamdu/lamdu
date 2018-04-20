@@ -1,6 +1,8 @@
 module Main where
 
 import qualified Lamdu.Data.Export.JSON as JsonFormat
+import           Test.Framework
+import           Test.Framework.Providers.HUnit (testCase)
 import qualified TestAnimIdClash
 import qualified TestColorSchemes
 import qualified TestConfig
@@ -10,8 +12,6 @@ import qualified TestMomentu
 import qualified TestNix
 import qualified TestStdlib
 import qualified TestValUtils
-import           Test.Framework
-import           Test.Framework.Providers.HUnit (testCase)
 
 import           Lamdu.Prelude
 

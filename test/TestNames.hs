@@ -4,8 +4,8 @@
 
 module TestNames where
 
-import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
+import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property(..), MkProperty(..))
@@ -21,6 +21,7 @@ import           Test.Framework (Test, testGroup)
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.HUnit (assertString)
 import           Test.Lamdu.Instances ()
+import           Test.Lamdu.SugarStubs ((~>))
 import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Lamdu.Prelude
@@ -87,7 +88,7 @@ workArea396 =
     , Sugar._waGlobals = pure []
     } & testWorkArea assertNoCollisions
     where
-        lamType = Stub.funcType Stub.numType Stub.numType
+        lamType = Stub.numType ~> Stub.numType
         leafExpr = Stub.expr Stub.numType Sugar.BodyPlaceHolder
         lamExpr =
             Sugar.BodyLam Sugar.Lambda
