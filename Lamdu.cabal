@@ -51,9 +51,9 @@ Test-Suite Tests
   other-modules: TestAnimIdClash
                , TestColorSchemes
                , TestConfig
-               , TestDisambiguation
                , TestJsRtsTags
                , TestMomentu
+               , TestNames
                , TestNix
                , TestStdlib
                , TestValUtils
