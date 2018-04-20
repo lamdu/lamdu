@@ -112,8 +112,11 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
     do
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let jumpEventMap =
-                jumpToErr <&> dest
-                & E.keysEventMapMovesCursor actionKeys jumpDoc
+                case jumpToErr of
+                Nothing -> mempty
+                Just j ->
+                    j <&> dest
+                    & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> makeIndicator tag Theme.errorColor  "⚠"
@@ -141,8 +144,7 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
         dest entityId =
             case errorType of
             Sugar.ReachedHole -> HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
-            Sugar.LamduBug -> WidgetIds.fromEntityId entityId
-            Sugar.BrokenDef -> WidgetIds.fromEntityId entityId
+            _ -> WidgetIds.fromEntityId entityId
         jumpDoc = E.Doc ["Navigation", "Jump to error"]
         anchor = fmap Hover.anchor
 

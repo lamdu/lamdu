@@ -55,10 +55,10 @@ var sendEvent = function (obj) {
 module.exports = {
     error: function(name, desc, globalId, exprId) {
         return {
-            "error": name,
-            "desc": desc,
-            "globalId": globalId,
-            "exprId": exprId,
+            error: name,
+            desc: desc,
+            globalId: globalId,
+            exprId: exprId,
         };
     },
     sendResult: function(scope, exprId, result) {
@@ -85,6 +85,17 @@ module.exports = {
         });
     },
     sendCompletionError: function(err) {
+        if (Error.prototype.isPrototypeOf(err))
+        {
+            sendEvent({
+                event:"CompletionError",
+                err: {
+                    error: "RuntimeError",
+                    desc: err.toString()
+                }
+            });
+            return;
+        }
         sendEvent({
             event:"CompletionError",
             err:err

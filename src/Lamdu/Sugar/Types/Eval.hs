@@ -91,7 +91,7 @@ type EvaluationScopes name = CurAndPrev (Maybe (Map ScopeId (ResVal name)))
 data EvalException o = EvalException
     { _evalExceptionType :: ErrorType
     , _evalExceptionDesc :: Text
-    , _evalExceptionJumpTo :: o EntityId
+    , _evalExceptionJumpTo :: Maybe (o EntityId)
     }
 
 data EvalCompletionResult name o

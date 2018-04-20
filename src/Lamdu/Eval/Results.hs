@@ -6,7 +6,7 @@ module Lamdu.Eval.Results
     , EvalTypeError(..)
     , WhichGlobal(..), encodeWhichGlobal, decodeWhichGlobal
     , ErrorType(..), _LamduBug, _BrokenDef, _ReachedHole
-    , EvalException(..), errorType, errorDesc, errorGlobalId, errorExprId
+    , EvalException(..), errorType, errorDesc, errorPosition
     , EvalResults(..), erExprValues, erAppliesOfLam, erCache, erCompleted
     , empty
     , extractField
@@ -48,7 +48,7 @@ data Val pl = Val
     , _body :: Body (Val pl)
     } deriving (Show, Functor, Foldable, Traversable)
 
-data ErrorType = LamduBug | BrokenDef | ReachedHole
+data ErrorType = LamduBug | BrokenDef | ReachedHole | RuntimeError
     deriving (Read, Show)
 Lens.makePrisms ''ErrorType
 
@@ -68,15 +68,16 @@ decodeWhichGlobal x =
 data EvalException srcId = EvalException
     { _errorType :: ErrorType
     , _errorDesc :: Text
-    , _errorGlobalId :: WhichGlobal
-    , _errorExprId :: srcId
+    , _errorPosition :: Maybe (WhichGlobal, srcId)
     }
 Lens.makeLenses ''EvalException
 
 instance Show srcId => Show (EvalException srcId) where
-    show (EvalException t d g e) =
+    show (EvalException t d p) =
         "Eval exception: " ++ show t ++ " (" ++ Text.unpack d ++ ") at " ++
-        encodeWhichGlobal g ++ ":" ++ show e
+        case p of
+        Nothing -> "N/A"
+        Just (g, e) -> encodeWhichGlobal g ++ ":" ++ show e
 
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
 extractField errPl tag (Val _ (RRecExtend (V.RecExtend vt vv vr)))

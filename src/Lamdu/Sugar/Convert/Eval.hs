@@ -222,11 +222,14 @@ completion ::
 completion cp entityId completions =
     completions <&> Lens._Just %~ f
     where
-        f (Left (ER.EvalException errType desc whichGlobal valI)) =
+        f (Left (ER.EvalException errType desc position)) =
                 EvalError EvalException
                 { _evalExceptionType = errType
                 , _evalExceptionDesc = desc
                 , _evalExceptionJumpTo =
+                    position
+                    <&>
+                    \(whichGlobal, valI) ->
                     EntityId.ofValI valI
                     <$ case whichGlobal of
                     ER.GlobalRepl -> pure ()

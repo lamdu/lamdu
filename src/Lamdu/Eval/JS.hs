@@ -251,8 +251,15 @@ completionError fromUUID obj =
                 errTypeStr <- x .? "error"
                 readMaybe errTypeStr & toEither "invalid error type"
         <*> x .? "desc"
-        <*> (x .? "globalId" >>= ER.decodeWhichGlobal)
-        <*> (x .? "exprId" <&> parseUUID <&> fromUUID)
+        <*> (
+            case (,) <$> (x .? "globalId") <*> (x .? "exprId") of
+            Nothing -> pure Nothing
+            Just (g, e) ->
+                (,)
+                <$> ER.decodeWhichGlobal g
+                ?? fromUUID (parseUUID e)
+                <&> Just
+        )
         & either fail pure
     where
         toEither msg = maybe (Left msg) Right
