@@ -10,6 +10,7 @@ import qualified TestNames
 import qualified TestJsRtsTags
 import qualified TestMomentu
 import qualified TestNix
+import qualified TestPrecedence
 import qualified TestStdlib
 import qualified TestValUtils
 
@@ -23,7 +24,8 @@ main =
     defaultMainWithOpts tests mempty
     where
         tests =
-            [ TestStdlib.test
+            [ TestPrecedence.test
+            , TestStdlib.test
             , TestNix.test
             , TestMomentu.test
             , TestAnimIdClash.test

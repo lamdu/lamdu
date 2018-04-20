@@ -55,6 +55,7 @@ Test-Suite Tests
                , TestMomentu
                , TestNames
                , TestNix
+               , TestPrecedence
                , TestStdlib
                , TestValUtils
                , Test.Lamdu.Db
