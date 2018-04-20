@@ -285,6 +285,7 @@ Library
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.Infer.Trans
+                  , Lamdu.Name
                   , Lamdu.Opts
                   , Lamdu.Paths
                   , Lamdu.Precedence
@@ -334,8 +335,8 @@ Library
                   , Lamdu.Sugar.Names.CPS
                   , Lamdu.Sugar.Names.Clash
                   , Lamdu.Sugar.Names.Get
+                  , Lamdu.Sugar.Names.Map
                   , Lamdu.Sugar.Names.NameGen
-                  , Lamdu.Name
                   , Lamdu.Sugar.Names.Walk
                   , Lamdu.Sugar.NearestHoles
                   , Lamdu.Sugar.OrderTags
