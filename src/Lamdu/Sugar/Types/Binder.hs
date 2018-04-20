@@ -64,21 +64,20 @@ data FuncParamActions name i o =
 newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
     }
+instance Show (NullParamActions o) where
+    show (NullParamActions _) = "(NullParamActions)"
 
 data ParamInfo name i o = ParamInfo
     { _piTag :: Tag name i o
     , _piActions :: FuncParamActions name i o
     }
+instance Show name => Show (ParamInfo name i o) where
+    show (ParamInfo tag _) = show tag
 
 data FuncParam name info = FuncParam
     { _fpAnnotation :: Annotation name
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable)
-
-instance (Show info, Show name) => Show (FuncParam name info) where
-    show FuncParam{..} =
-        "(FuncParam " ++ show _fpInfo ++
-        " " ++ show _fpAnnotation ++ " )"
 
 data ExtractDestination
     = ExtractToLet EntityId
@@ -103,15 +102,19 @@ data LetActions name i o = LetActions
     }
 
 data Let name i o expr = Let
-    { _lValue :: Binder name i o expr -- "let [[foo = bar]] in x"
+    { _lValue :: Binder name i o expr -- "let foo = [[bar]] in x"
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation name
-    , _lName :: Tag name i o
+    , _lName :: Tag name i o -- let [[foo]] = bar in x
     , _lActions :: LetActions name i o
     , _lBodyScope :: ChildScopes
     , _lBody :: BinderBody name i o expr -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable)
+
+instance (Show name, Show expr) => Show (Let name i o expr) where
+    show (Let binder _ _ _ann name _ _ body) =
+        "let " ++ show name ++ " = " ++ show binder ++ "\n in " ++ show body
 
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
@@ -134,11 +137,12 @@ data BinderParams name i o
       -- This is often used to represent "deferred execution"
       NullParam (FuncParam name (NullParamActions o))
     | Params [FuncParam name (ParamInfo name i o)]
+    deriving Show
 
 data BinderContent name i o expr
     = BinderLet (Let name i o expr)
     | BinderExpr expr
-    deriving (Functor, Foldable, Traversable)
+    deriving (Show, Functor, Foldable, Traversable)
 
 data BinderBody name i o expr = BinderBody
     { _bbAddOuterLet :: o EntityId
@@ -161,6 +165,17 @@ data Binder name i o expr = Binder
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable)
+
+instance (Show info, Show name) => Show (FuncParam name info) where
+    show FuncParam{..} =
+        "(FuncParam " ++ show _fpInfo ++
+        " " ++ show _fpAnnotation ++ " )"
+
+instance (Show name, Show expr) => Show (BinderBody name i o expr) where
+    show (BinderBody _ content) = show content
+
+instance (Show name, Show expr) => Show (Binder name i o expr) where
+    show (Binder _ params _lamId body _ _) = show params ++ " => " ++ show body
 
 Lens.makeLenses ''Annotation
 Lens.makeLenses ''Binder

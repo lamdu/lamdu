@@ -213,12 +213,15 @@ data Body name i o expr
 instance (Show name, Show expr) => Show (LabeledApplyFunc name i o expr) where
     show (LabeledApplyFunc func pl) = concat [show func, "{", show pl, "}"]
 
-instance (Show name, Show a) => Show (LabeledApply name i o a) where
+instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
     show (LabeledApply func specialArgs _annArgs _relayedArgs) =
         unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
+instance (Show name, Show expr) => Show (Lambda name i o expr) where
+    show (Lambda mode binder) = concat $ ["\\(", show mode, ") ", show binder]
+
 instance (Show name, Show expr) => Show (Body name i o expr) where
-    show (BodyLam _) = "TODO show lam"
+    show (BodyLam lam) = show lam
     show BodyHole {} = "Hole"
     show BodyLiteral {} = "Literal"
     show BodySimpleApply {} = "SimpleApply:TODO"

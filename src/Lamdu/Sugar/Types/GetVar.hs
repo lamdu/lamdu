@@ -20,6 +20,7 @@ import           Lamdu.Sugar.Types.Type
 import           Lamdu.Prelude
 
 data BinderMode = NormalBinder | LightLambda
+    deriving Show
 
 data NameRef name o = NameRef
     { _nrName :: name
