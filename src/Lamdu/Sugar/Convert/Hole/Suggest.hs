@@ -3,13 +3,16 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
     , fillHoles
+    , applyForms
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Trans.Reader (ReaderT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Lamdu.Calc.Type (Type)
@@ -23,8 +26,10 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Infer (Context, Payload(..))
 import qualified Lamdu.Infer as Infer
+import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -212,3 +217,49 @@ fillHoles _ v@(Val _ (V.BGetField (V.GetField (Val _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     v
 fillHoles empty val = val & Val.body . Lens.traversed %~ fillHoles empty
+
+applyForms ::
+    ListClass.List m =>
+    (T.NominalId -> StateT Context m Nominal) -> a -> Val (Payload, a) ->
+    StateT Context m (Val (Payload, a))
+applyForms _ _ v@(Val _ V.BLam {}) = pure v
+applyForms _ _ v@(Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LHole))))) =
+    pure (Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LRecEmpty)))))
+    <|> pure v
+applyForms loadNominal empty val =
+    case inferPl ^. Infer.plType of
+    T.TVar tv
+        | any (`Lens.has` val)
+            [ ExprLens.valVar
+            , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
+            ] ->
+            -- a variable that's compatible with a function type
+            pure val <|>
+            do
+                arg <- freshVar "af"
+                res <- freshVar "af"
+                let varTyp = T.TFun arg res
+                unify varTyp (T.TVar tv)
+                    & Infer.run & mapStateT assertSuccess
+                pure $ Val (plSameScope res) $ V.BApp $ V.Apply val $
+                    Val (plSameScope arg) (V.BLeaf V.LHole)
+        where
+            assertSuccess (Left err) =
+                fail $
+                "Unify of a tv with function type should always succeed, but failed: " ++
+                prettyShow err
+            assertSuccess (Right x) = pure x
+            freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
+            scope = inferPl ^. Infer.plScope
+            plSameScope t = (Infer.Payload t scope, empty)
+    T.TRecord{} | Lens.has ExprLens.valVar val ->
+        -- A "params record" (or just a let item which is a record..)
+        pure val
+    _ ->
+        val
+        & fillHoles empty
+        & valueConversion loadNominal empty
+        <&> mapStateT ListClass.fromList
+        & join
+    where
+        inferPl = val ^. Val.payload . _1

@@ -10,7 +10,6 @@ module Lamdu.Sugar.Convert.Hole
     , BaseExpr(..)
     ) where
 
-import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT)
@@ -66,7 +65,6 @@ import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (random)
 import qualified System.Random.Extended as Random
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -273,7 +271,7 @@ prepareUnstoredPayloads val =
               , Input._entityId = eId
               , Input._stored = error "TODO: Nothing stored?!"
               , Input._evalResults =
-                CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
+                  CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
               }
             )
 
@@ -415,50 +413,6 @@ writeConvertTypeChecked preConversion sugarContext holeStored inferredVal =
 exceptTtoListT :: Monad m => ExceptT err m a -> ListT m a
 exceptTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runExceptT
 
-applyForms ::
-    Monad m => a -> Val (Infer.Payload, a) -> ResultGen m (Val (Infer.Payload, a))
-applyForms _ v@(Val _ V.BLam {}) = pure v
-applyForms _ v@(Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LHole))))) =
-    pure (Val pl0 (V.BInject (V.Inject tag (Val pl1 (V.BLeaf V.LRecEmpty)))))
-    <|> pure v
-applyForms empty val =
-    case inferPl ^. Infer.plType of
-    T.TVar tv
-        | any (`Lens.has` val)
-            [ ExprLens.valVar
-            , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
-            ] ->
-            -- a variable that's compatible with a function type
-            pure val <|>
-            do
-                arg <- freshVar "af"
-                res <- freshVar "af"
-                let varTyp = T.TFun arg res
-                unify varTyp (T.TVar tv)
-                    & Infer.run & mapStateT assertSuccess
-                pure $ Val (plSameScope res) $ V.BApp $ V.Apply val $
-                    Val (plSameScope arg) (V.BLeaf V.LHole)
-        where
-            assertSuccess (Left err) =
-                fail $
-                "Unify of a tv with function type should always succeed, but failed: " ++
-                prettyShow err
-            assertSuccess (Right x) = pure x
-            freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
-            scope = inferPl ^. Infer.plScope
-            plSameScope t = (Infer.Payload t scope, empty)
-    T.TRecord{} | Lens.has ExprLens.valVar val ->
-        -- A "params record" (or just a let item which is a record..)
-        pure val
-    _ ->
-        val
-        & Suggest.fillHoles empty
-        & Suggest.valueConversion Load.nominal empty
-        <&> mapStateT ListClass.fromList
-        & lift & lift & join
-    where
-        inferPl = val ^. Val.payload . _1
-
 detachValIfNeeded ::
     Monad m =>
     a -> T.Type -> Val (Infer.Payload, a) ->
@@ -513,7 +467,7 @@ mkResultVals sugarContext scope base =
                         <&> Lens.traversed . _2 %~ \() -> emptyPl
                     pure (seedDeps, inferResult)
                 & mapStateT exceptTtoListT
-            form <- applyForms emptyPl inferResult
+            form <- Suggest.applyForms (lift . lift . Load.nominal) emptyPl inferResult
             newDeps <- loadNewDeps seedDeps scope form & lift & lift
             pure (newDeps, form)
     SuggestedExpr sugg ->
