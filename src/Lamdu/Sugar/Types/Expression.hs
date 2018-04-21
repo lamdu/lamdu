@@ -218,7 +218,7 @@ instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
         unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
 instance (Show name, Show expr) => Show (Lambda name i o expr) where
-    show (Lambda mode binder) = concat $ ["\\(", show mode, ") ", show binder]
+    show (Lambda mode binder) = concat ["\\(", show mode, ") ", show binder]
 
 instance (Show name, Show expr) => Show (Body name i o expr) where
     show (BodyLam lam) = show lam

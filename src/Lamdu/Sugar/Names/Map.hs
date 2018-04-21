@@ -21,10 +21,7 @@ instance Monad m => MonadNaming (MapNames m a b) where
     type OldName (MapNames m a b) = a
     type NewName (MapNames m a b) = b
     type IM (MapNames m a b) = m
-    opRun =
-        do
-            f <- Lens.view envMapping
-            pure (pure . runMapNames f)
+    opRun = Lens.view envMapping <&> \f -> pure . runMapNames f
     opWithName _ _ name = liftCPS (Lens.view envMapping) ?? name
     opGetName _ _ name = Lens.view envMapping ?? name
 
