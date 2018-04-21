@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Definition
     ( FFIName(..)
-    , Expr(..), expr, exprFrozenDeps, exprTags
+    , Expr(..), expr, exprFrozenDeps
     , Body(..), _BodyExpr, _BodyBuiltin
     , Definition(..), defBody, defType, defPayload
     , pruneDefExprDeps
@@ -12,11 +12,10 @@ import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Lamdu.Calc.Type (Tag)
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Expr.Lens as ExprLens
-import           Lamdu.Infer (Dependencies, depTags)
+import           Lamdu.Infer (Dependencies)
 import qualified Lamdu.Infer as Infer
 
 import           Lamdu.Prelude
@@ -34,9 +33,6 @@ data Expr valExpr = Expr
     { _expr :: valExpr
     , _exprFrozenDeps :: Dependencies
     } deriving (Generic, Show, Functor, Foldable, Traversable)
-
-exprTags :: Lens.Settable f => Lens.LensLike' f a Tag -> Lens.LensLike' f (Expr a) Tag
-exprTags inVal f (Expr val deps) = Expr <$> inVal f val <*> depTags f deps
 
 data Body valExpr
     = BodyExpr (Expr valExpr)
