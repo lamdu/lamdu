@@ -138,10 +138,11 @@ exportDef globalId =
     do
         presentationMode <- Property.getP (Anchors.assocPresentationMode globalId) & trans
         tag <- readAssocTag globalId & trans
+        exportTag tag
         def <-
             Load.def defI & trans
             <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
-        traverse_ exportVal (def ^. Definition.defBody)
+        def ^. Definition.defBody & traverse_ exportVal
         let def' = def & Definition.defBody . Lens.mapped . Lens.mapped %~ valIToUUID
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
