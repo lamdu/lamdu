@@ -22,7 +22,6 @@ infixArgs = Sugar.rBody . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._
 test :: Test
 test =
     do
-        print expr
         (minOpPrec, needsParens, ()) <-
             expr ^?! infixArgs . _2 . Sugar.rPayload . Sugar.plData
             & pure
