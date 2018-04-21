@@ -202,6 +202,23 @@ module.exports = {
                 writeFile: mutVoidWithError(x =>
                     require('fs').writeFile.bind(null, toString(x[tags.filePath]), Buffer.from(x[tags.data])), null),
             },
+            os: {
+                // TODO: When Lamdu has dicts, maybe just expose the whole env as one piece?
+                env: mutFunc(x => {
+                    var name = toString(x);
+                    if (process.env.hasOwnProperty(name))
+                    {
+                        return {
+                            tag: tags.just,
+                            data: bytes(Buffer.from(process.env[name]))
+                        };
+                    }
+                    return {
+                        tag: tags.nothing,
+                        data: {}
+                    };
+                })
+            },
             network: {
                 openTcpServer: mutFunc(x => {
                     var server = require('net').Server(socket => {

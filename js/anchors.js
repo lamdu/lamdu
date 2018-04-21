@@ -36,5 +36,7 @@ module.exports = {
         socket:            conf.builtinTagName('socket'),
         error:             conf.builtinTagName('error'),
         success:           conf.builtinTagName('success'),
+        nothing:           conf.builtinTagName('nothing'),
+        just:              conf.builtinTagName('just')
     },
 };
