@@ -467,14 +467,15 @@ mkResultVals sugarContext scope base =
                         <&> Lens.traversed . _2 %~ \() -> emptyPl
                     pure (seedDeps, inferResult)
                 & mapStateT exceptTtoListT
-            form <- Suggest.applyForms (lift . lift . Load.nominal) emptyPl inferResult
-            newDeps <- loadNewDeps seedDeps scope form & lift & lift
+            form <- Suggest.applyForms (transaction . Load.nominal) emptyPl inferResult
+            newDeps <- loadNewDeps seedDeps scope form & transaction
             pure (newDeps, form)
     SuggestedExpr sugg ->
         (,)
         <$> mapStateT exceptTtoListT (loadTheNewDeps sugg)
         ?? (sugg & Lens.traversed %~ flip (,) (Nothing, ()))
     where
+        transaction = lift . lift
         emptyPl = (Nothing, ())
         loadTheNewDeps expr =
             loadNewDeps (sugarContext ^. ConvertM.scFrozenDeps . Property.pVal)
