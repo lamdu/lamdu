@@ -10,6 +10,7 @@ import qualified Data.Text as Text
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import qualified Lamdu.Infer as Infer
@@ -31,8 +32,12 @@ test =
 verifyTagsTest :: IO ()
 verifyTagsTest =
     readFreshDb
-    <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . Lens._Just)
+    <&> (^.. traverse . JsonCodec._EntityTag)
+    >>= traverse verifyHasName
     >>= verifyTagNames
+    where
+        verifyHasName (_, Nothing, tag) = fail ("stdlib tag with no name:" <> show tag)
+        verifyHasName (_, Just x, _) = pure x
 
 verifyTagNames :: [Text] -> IO ()
 verifyTagNames names =
@@ -59,6 +64,7 @@ prefixesWhitelist =
     , "data" -- prefix of "database"
     , "head" -- prefix of "header"
     , "not" -- prefix of "nothing"
+    , "or" -- prefix of "order"
     ]
 
 suffixesWhitelist :: Set Text
@@ -71,10 +77,15 @@ suffixesWhitelist =
 
 verifyNoBrokenDefsTest :: IO ()
 verifyNoBrokenDefsTest =
-    readFreshDb
-    <&> (^.. traverse . JsonCodec._EntityDef)
-    <&> traverse . Def.defPayload %~ (^. Lens._3)
-    >>= verifyDefs
+    do
+        defs <- readFreshDb <&> (^.. traverse . JsonCodec._EntityDef)
+        traverse_ verifyTag (defs <&> (^. Def.defPayload))
+        defs <&> Def.defPayload %~ (^. Lens._3) & verifyDefs
+    where
+        verifyTag (_, tag, var)
+            | tag == anonTag =
+                assertString ("Definition with no tag: " ++ identHex (V.vvName var))
+            | otherwise = pure ()
 
 verifyDefs :: [Def.Definition v V.Var] -> IO ()
 verifyDefs defs =
