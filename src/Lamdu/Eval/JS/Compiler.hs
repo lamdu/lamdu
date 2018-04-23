@@ -349,14 +349,14 @@ compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
 compileDefExpr (Definition.Expr x frozenDeps) =
     compileVal x & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
 
-compileGlobal :: Monad m => V.Var -> M m CodeGen
+compileGlobal :: Monad m => V.Var -> M m (JSS.Expression ())
 compileGlobal globalId =
     do
         def <- performAction (`readGlobal` globalId)
         globalTypes . Lens.at globalId ?= def ^. Definition.defType
         case def ^. Definition.defBody of
-            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
-            Definition.BodyExpr defExpr -> compileDefExpr defExpr
+            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & pure
+            Definition.BodyExpr defExpr -> compileDefExpr defExpr <&> codeGenExpression
     & withGlobal (GlobalDef globalId)
 
 throwErr :: Monad m => ValId -> String -> String -> M m CodeGen
@@ -379,18 +379,13 @@ compileGlobalVar valId var =
         loadGlobal =
             Lens.use (globalVarNames . Lens.at var)
             >>= maybe newGlobal pure
-            <&> useGlobal
+            <&> JS.var
             <&> codeGenFromExpr
-        useGlobal varName = JS.var varName `JS.call` []
         newGlobal =
             do
                 varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
                 globalVarNames . Lens.at var ?= varName
                 compileGlobal var
-                    <&> codeGenLamStmts
-                    <&> JS.lambda []
-                    <&> (: [])
-                    <&> (rts "memo" `JS.call`)
                     <&> varinit varName
                     >>= ppOut
                 pure varName
@@ -654,7 +649,7 @@ optimizeExpr x@(JSS.CallExpr () func [arg])
             | k0 == key "tag" && k1 == key "data" =
                 Just []
         arrayLit _ = Nothing
-        def g = JSS.CallExpr () (JSS.VarRef () (JSS.Id () g)) []
+        def g = JSS.VarRef () (JSS.Id () g)
         key n = JSS.PropId () (JSS.Id () n)
 optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.CallExpr () func [JSS.VarRef () var]))])
     | param == var = func

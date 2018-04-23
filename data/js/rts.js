@@ -99,16 +99,6 @@ module.exports = {
         ReachedHole: curried_error("ReachedHole"),
         LamduBug: curried_error("LamduBug"),
     },
-    memo: function (thunk) {
-        var done = false;
-        var memo;
-        return function() {
-            if(done) return memo;
-            memo = thunk();
-            done = true;
-            return memo;
-        };
-    },
     wrap: function (fast, slow) {
         var count = 0;
         var callee = function() {
