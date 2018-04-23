@@ -616,7 +616,28 @@ compileAppliedFunc valId func arg' =
                 compileVal func
                 <&> codeGenExpression
                 <&> ($$ arg')
+                <&> optimizeExpr
                 <&> codeGenFromExpr
+
+optimizeExpr :: JSS.Expression () -> JSS.Expression ()
+optimizeExpr x@(JSS.CallExpr () toArray [stream])
+    | toArray == def "toArray" =
+        check stream
+        & maybe x (JSS.ArrayLit ())
+    where
+        check (JSS.CallExpr () cons [JSS.ObjectLit ()
+            [(k0, v0), (k1, JSS.FuncExpr () Nothing [_] [JSS.ReturnStmt () (Just v1)])]
+            ])
+            | cons == def "_3a__3a_" && k0 == key "infixl" && k1 == key "infixr" =
+                check v1 <&> (v0 :)
+            | otherwise = Nothing
+        check (JSS.ObjectLit () [(k0, JSS.StringLit () "empty"), (k1, JSS.ObjectLit () [])])
+            | k0 == key "tag" && k1 == key "data" =
+                Just []
+        check _ = Nothing
+        def g = JSS.CallExpr () (JSS.VarRef () (JSS.Id () g)) []
+        key n = JSS.PropId () (JSS.Id () n)
+optimizeExpr x = x
 
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf leaf valId =
