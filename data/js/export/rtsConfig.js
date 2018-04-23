@@ -3,7 +3,8 @@
 
 var nameMap = {
     data: '__data',
-    val: 'value'
+    val: 'value',
+    subtrees: 'subTrees'
 };
 
 module.exports = {

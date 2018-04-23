@@ -559,6 +559,11 @@
     },
     {
         "tagOrder": 0,
+        "tag": "6e7eb85f0d34f051a13516c1c144d221",
+        "name": "renderHtml"
+    },
+    {
+        "tagOrder": 0,
         "tag": "6eeb55f76600d4ad08be72ad3ac13d96",
         "name": "result"
     },
@@ -4829,6 +4834,30 @@
                     "id": "8483d7c8-d11d-42ff-94f3-d0b94e3b3999"
                 },
                 "id": "a5d0a997-c713-40b2-b9d1-48187aeb6d00"
+            }
+        }
+    },
+    {
+        "tag": "6e7eb85f0d34f051a13516c1c144d221",
+        "defPresentationMode": "Verbose",
+        "builtin": [
+            "Optimized",
+            "renderHtml"
+        ],
+        "def": "1cf77616503b4f0888595b771e64dc98",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomParams": {
+                        "42493a76616c00000000000000000000": {
+                            "nomId": "42493a74657874000000000000000000"
+                        }
+                    },
+                    "nomId": "42493a74726565000000000000000000"
+                },
+                "funcResult": {
+                    "nomId": "42493a74657874000000000000000000"
+                }
             }
         }
     },

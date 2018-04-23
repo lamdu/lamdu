@@ -38,6 +38,8 @@ module.exports = {
         error:             conf.builtinTagName('error'),
         success:           conf.builtinTagName('success'),
         nothing:           conf.builtinTagName('nothing'),
-        just:              conf.builtinTagName('just')
+        just:              conf.builtinTagName('just'),
+        root:              conf.builtinTagName('root'),
+        subtrees:          conf.builtinTagName('subtrees')
     },
 };

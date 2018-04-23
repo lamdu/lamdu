@@ -67,6 +67,20 @@ var mutVoidWithError = function (inner) {
     };
 };
 
+var bytesConcat = function (x) {
+    var i, pos = 0;
+    for (i = 0; i < x.length; i++) {
+        pos += x[i].length;
+    }
+    var result = new Uint8Array (pos);
+    pos = 0;
+    for (i = 0; i < x.length; i++) {
+        result.set(x[i], pos);
+        pos += x[i].length;
+    }
+    return result;
+};
+
 var conf = require('rtsConfig.js');
 
 var curried_error = function(name) {
@@ -141,6 +155,32 @@ module.exports = {
             slice: function (x) { return x[tags.obj].subarray(x[tags.start], x[tags.stop]); },
             unshare: function (x) { return x.slice(); },
             fromArray: function (x) { return bytes(x); },
+        },
+        Optimized: {
+            renderHtml: function (tree) {
+                var bufs = [];
+                var go = function (node) {
+                    var root = node[tags.root];
+                    var subtrees = node[tags.subtrees];
+                    bufs.push(root);
+                    for (var i = 0; i < subtrees.length; i++) {
+                        go(subtrees[i]);
+                    }
+                    if (root.length > 2 && root[0] == 60 && root[root.length] != 47) {
+                        bufs.push(new Uint8Array([60, 47]));
+                        var k;
+                        for (k = 1; k < root.length; k++) {
+                            var c = root[k];
+                            if (c == 32 || c == 62)
+                                break;
+                        }
+                        bufs.push(root.slice(1, k));
+                        bufs.push(new Uint8Array([62]));
+                    }
+                };
+                go(tree);
+                return bytesConcat(bufs);
+            },
         },
         Array: {
             length: function (x) { return x.length; },
