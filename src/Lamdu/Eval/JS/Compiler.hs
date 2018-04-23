@@ -569,6 +569,7 @@ compileLambda (V.Lam v res) valId =
                     [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & pure
             where
                 parentScopeDepth = loggingInfo ^. liScopeDepth
+    <&> optimizeExpr
     <&> codeGenFromExpr
     where
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
@@ -646,6 +647,8 @@ optimizeExpr x@(JSS.CallExpr () func [arg])
         arrayLit _ = Nothing
         def g = JSS.CallExpr () (JSS.VarRef () (JSS.Id () g)) []
         key n = JSS.PropId () (JSS.Id () n)
+optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.CallExpr () func [JSS.VarRef () var]))])
+    | param == var = func
 optimizeExpr x = x
 
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
