@@ -141,19 +141,6 @@ module.exports = {
             slice: function (x) { return x[tags.obj].subarray(x[tags.start], x[tags.stop]); },
             unshare: function (x) { return x.slice(); },
             fromArray: function (x) { return bytes(x); },
-            concat: function (x) {
-                var i, pos = 0;
-                for (i = 0; i < x.length; i++) {
-                    pos += x[i].length;
-                }
-                var result = new Uint8Array (pos);
-                pos = 0;
-                for (i = 0; i < x.length; i++) {
-                    result.set(x[i], pos);
-                    pos += x[i].length;
-                }
-                return result;
-            },
         },
         Array: {
             length: function (x) { return x.length; },
