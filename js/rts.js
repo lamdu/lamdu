@@ -267,6 +267,7 @@ module.exports = {
                     },
                     query: function(x) {
                         return function(cont) {
+                            var utf8 = require('utf8');
                             x[tags.database].query(toString(x[tags.obj]), (err, resJs) => {
                                 if (err) {
                                     cont({tag: tags.error, data: bytesFromAscii(err.message)});
@@ -281,7 +282,7 @@ module.exports = {
                                     var jsRow = resJs.rows[i];
                                     var row = [];
                                     for (var k = 0; k < resJs.fields.length; ++k) {
-                                        row.push(bytesFromAscii(String(jsRow[resJs.fields[k].name])));
+                                        row.push(bytesFromAscii(utf8.encode(String(jsRow[resJs.fields[k].name]))));
                                     }
                                     rows.push(row);
                                 }
