@@ -4,10 +4,12 @@ import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
 import qualified Data.Char as Char
 import           Data.List (sort)
+import           Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lamdu.Calc.Identifier (identHex)
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (anonTag)
@@ -78,30 +80,35 @@ suffixesWhitelist =
 verifyNoBrokenDefsTest :: IO ()
 verifyNoBrokenDefsTest =
     do
-        defs <- readFreshDb <&> (^.. traverse . JsonCodec._EntityDef)
+        db <- readFreshDb
+        let tags =
+                Map.fromList
+                [ (tag, name)
+                | (_, Just name, tag) <- db ^.. Lens.folded . JsonCodec._EntityTag
+                ]
+        let defs = db ^.. Lens.folded . JsonCodec._EntityDef
         traverse_ verifyTag (defs <&> (^. Def.defPayload))
-        defs <&> Def.defPayload %~ (^. Lens._3) & verifyDefs
+        verifyDefs (tags !) defs
     where
         verifyTag (_, tag, var)
             | tag == anonTag =
                 assertString ("Definition with no tag: " ++ identHex (V.vvName var))
             | otherwise = pure ()
 
-verifyDefs :: [Def.Definition v V.Var] -> IO ()
-verifyDefs defs =
-    defs ^.. traverse . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . Infer.depsGlobalTypes
+verifyDefs :: (T.Tag -> Text) -> [Def.Definition v (presMode, T.Tag, V.Var)] -> IO ()
+verifyDefs tagName defs =
+    defs ^.. Lens.folded . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . Infer.depsGlobalTypes
     <&> Map.toList & concat
     & traverse_ (uncurry verifyGlobalType)
     where
-        defTypes = defs <&> (\x -> (x ^. Def.defPayload, x ^. Def.defType)) & Map.fromList
+        defTypes =
+            defs <&> (\x -> (x ^. Def.defPayload . _3, (x ^. Def.defPayload . _2, x ^. Def.defType))) & Map.fromList
         verifyGlobalType var typ =
             case defTypes ^. Lens.at var of
-            Nothing -> assertString ("Missing def referred in frozen deps: " ++ showVar)
-            Just x
+            Nothing -> assertString ("Missing def referred in frozen deps: " ++ identHex (V.vvName var))
+            Just (tag, x)
                 | Scheme.alphaEq x typ -> pure ()
                 | otherwise ->
                     assertString
-                    ("Frozen def type mismatch for " ++ showVar ++ ":\n" ++
+                    ("Frozen def type mismatch for " ++ show (tagName tag) ++ ":\n" ++
                     prettyShow x ++ "\nvs\n" ++ prettyShow typ)
-            where
-                showVar = V.vvName var & identHex
