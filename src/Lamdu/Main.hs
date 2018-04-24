@@ -112,7 +112,7 @@ main =
     do
         setNumCapabilities =<< getNumProcessors
         Opts.Parsed{_pLamduDB,_pCommand,_pEkgPort} <- Opts.get
-        foldMap Ekg.start _pEkgPort
+        _ekg <- traverse Ekg.start _pEkgPort
         lamduDir <- maybe getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
