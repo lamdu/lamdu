@@ -13,7 +13,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertCompositeExtend, convertOneItemOpenComposite)
+import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertComposite)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -39,6 +39,12 @@ convertAbsurd pl =
     <&> BodyCase
     >>= addActions [] pl
 
+_CaseThatIsLambdaCase :: Lens.Prism' (Case name i o expr) (Composite name i o expr)
+_CaseThatIsLambdaCase =
+    Lens.prism' (Case LambdaCase) $ \case
+    Case LambdaCase body -> Just body
+    _ -> Nothing
+
 convert ::
     (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
@@ -50,27 +56,17 @@ convert caseV exprPl =
                 , caseV ^. V.caseMatch . Val.payload . plValI
                 , caseV ^. V.caseMismatch . Val.payload
                 )
-        (modifyEntityId, cas_) <-
-            case restS ^. rBody of
-            BodyCase r | Lens.has (cKind . _LambdaCase) r ->
-                r & cBody %%~ convertCompositeExtend mkCase DataOps.case_ valS exprPl caseP
-                <&> (,) (const (restS ^. rPayload . plEntityId))
-            _ ->
-                convertOneItemOpenComposite V.LAbsurd mkCase DataOps.case_ valS restS exprPl caseP
-                <&> Case LambdaCase
-                <&> (,) id
-        BodyCase cas_
-            & addActions caseV exprPl
-            <&> rPayload . plEntityId %~ modifyEntityId
+        convertComposite DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
+            exprPl caseP
     where
         mkCase t v r = V.Case t v r & V.BCase
 
 convertAppliedCase ::
-    (Monad m, Foldable f, Monoid a) =>
-    f (Val (Input.Payload m a)) ->
+    (Monad m, Monoid a) =>
+    V.Apply (Val (Input.Payload m a)) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedCase subexprs funcS argS exprPl =
+convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
     do
         caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
@@ -87,8 +83,10 @@ convertAppliedCase subexprs funcS argS exprPl =
                     }
         convertIfElse setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyIfElse
-            & addActions subexprs exprPl & lift
+            -- func will be our entity id, so remove it from the hidden ids
+            & addActions [arg] exprPl & lift
             <&> rPayload . plEntityId .~ funcS ^. rPayload . plEntityId
+            <&> rPayload . plData . pUserData <>~ funcS ^. rPayload . plData . pUserData
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =

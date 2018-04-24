@@ -9,7 +9,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertCompositeExtend, convertOneItemOpenComposite)
+import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertComposite)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -40,26 +40,6 @@ convertExtend recExtend exprPl =
                 , recExtend ^. V.recFieldVal . Val.payload . plValI
                 , recExtend ^. V.recRest . Val.payload
                 )
-        (modifyEntityId, restRecord) <-
-            case restS ^. rBody of
-            BodyRecord r ->
-                convertCompositeExtend mkRecExtend DataOps.recExtend valS exprPl recP r
-                <&> (,) (const (restS ^. rPayload . plEntityId))
-            _ ->
-                convertOneItemOpenComposite V.LRecEmpty mkRecExtend DataOps.recExtend valS restS exprPl recP
-                <&> (,) id
-        restRecord
-            & BodyRecord
-            -- Sugar Record use their tail as an entity id, unlike
-            -- other sugar constructs.
-
-            -- All the RecExtends entity ids are "hidden", the vals
-            -- are directly sugared separately, so using addActions to
-            -- add the hidden payloads is complex. No subexprs given
-            -- will add no hidden payloads. Then we add the rec-extend
-            -- only to pUserData as the hidden payload
-            & addActions [] exprPl
-            <&> rPayload . plEntityId %~ modifyEntityId
-            <&> rPayload . plData . pUserData <>~ exprPl ^. Input.userData
+        convertComposite DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where
         mkRecExtend t v r = V.RecExtend t v r & V.BRecExtend
