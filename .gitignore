@@ -32,3 +32,5 @@
 /ghci-out/
 /node_modules/
 /git-cache/
+/cabal.project.local
+/dist-newstyle/
