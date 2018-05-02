@@ -117,7 +117,6 @@ main =
         Opts.Parsed{_pLamduDB,_pCommand,_pEkgPort} <- Opts.get
         ekg <- traverse Ekg.start _pEkgPort
         ctrs <- traverse Debug.makeCounters ekg
-        monitors <- Debug.makeMonitors ctrs
         lamduDir <- maybe getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
@@ -125,7 +124,7 @@ main =
             Opts.Undo n -> withDB (undoN n)
             Opts.Import path -> withDB (importPath path)
             Opts.Export path -> withDB (exportToPath path)
-            Opts.Editor opts -> withDB (runEditor monitors opts)
+            Opts.Editor opts -> withDB (runEditor ctrs opts)
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     whoCreated e >>= mapM_ (hPutStrLn stderr)
@@ -206,12 +205,13 @@ exportActions config evalResults executeIOProcess =
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
-    Debug.Monitors -> Fonts M.Font -> Transaction.Store DbM ->
+    Maybe Debug.Counters -> Fonts M.Font -> Transaction.Store DbM ->
     EvalManager.Evaluator -> Config -> Theme -> MainLoop.Env ->
     Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
-makeRootWidget monitors fonts db evaluator config theme mainLoopEnv settingsProp =
+makeRootWidget counters fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
+        monitors <- Debug.makeMonitors counters
         let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
@@ -272,8 +272,8 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
     }
 
-runEditor :: Debug.Monitors -> Opts.EditorOpts -> Transaction.Store DbM -> IO ()
-runEditor monitors opts db =
+runEditor :: Maybe Debug.Counters -> Opts.EditorOpts -> Transaction.Store DbM -> IO ()
+runEditor counters opts db =
     withMVarProtection db $ \dbMVar ->
     do
         refreshScheduler <- newRefreshScheduler
@@ -295,7 +295,7 @@ runEditor monitors opts db =
             mainLoop stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
                 mkSettingsProp
-                >>= makeRootWidget monitors fonts db evaluator config theme env
+                >>= makeRootWidget counters fonts db evaluator config theme env
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel

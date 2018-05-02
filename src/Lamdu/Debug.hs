@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module Lamdu.Debug
     ( Tasks(..), inference
-    , Monitors
+    , Monitors, Counters
     , HasMonitors(..)
     , Evaluator(..)
     , makeCounters
@@ -24,6 +24,7 @@ newtype Tasks a = Tasks
 Lens.makeLenses ''Tasks
 
 type Monitors = Tasks Evaluator
+type Counters = Tasks Counter
 
 class HasMonitors env where
     monitors :: Lens' env Monitors
@@ -43,7 +44,7 @@ makeCounters :: Ekg.Server -> IO (Tasks Counter)
 makeCounters ekg =
     traverse (`Metrics.createCounter` (Ekg.serverMetricStore ekg)) taskNames
 
-makeMonitors :: Maybe (Tasks Counter) -> IO Monitors
+makeMonitors :: Maybe Counters -> IO Monitors
 makeMonitors Nothing = Tasks idE & pure
 makeMonitors (Just tasks) =
     traverse f tasks
