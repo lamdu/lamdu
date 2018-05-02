@@ -2,52 +2,33 @@
 -- compile-flag to seemlessly disable ekg support
 {-# LANGUAGE CPP, EmptyCase #-}
 module System.Remote.Monitoring.Shim
-    ( Ekg, start, registerGauge
-    , Evaluator(..), timedEvaluator
+    ( Server, serverMetricStore
+    , start
     ) where
 
-import           Data.Int (Int64)
 import           Data.Word (Word16)
-import           System.TimeIt.Pure (Evaluator(..))
 
 import           Lamdu.Prelude
 
 #ifdef WITH_EKG
 
-import qualified System.Metrics as Metrics
-import qualified System.Metrics.Counter as Counter
+import           System.Remote.Monitoring (Server, serverMetricStore)
 import qualified System.Remote.Monitoring as Ekg
-import qualified System.TimeIt.Pure as TimeIt
 
-newtype Ekg = Ekg { server :: Ekg.Server }
-
-store :: Ekg -> Metrics.Store
-store = Ekg.serverMetricStore . server
-
-registerGauge :: Text -> IO Int64 -> Ekg -> IO ()
-registerGauge label getVal = Metrics.registerGauge label getVal . store
-
-start :: Word16 -> IO Ekg
-start port = Ekg.forkServer "localhost" (fromIntegral port) <&> Ekg
-
-timedEvaluator :: Text -> Ekg -> IO Evaluator
-timedEvaluator label ekg =
-    do
-        ctr <- Metrics.createCounter label (store ekg)
-        TimeIt.timedEvaluator (Counter.add ctr . round . (*1e6))
+start :: Word16 -> IO Server
+start port = Ekg.forkServer "localhost" (fromIntegral port)
 
 #else
 -- EKG stub:
 
-data Ekg
+import           System.Metrics (Store)
 
-registerGauge :: Text -> IO Int64 -> Ekg -> IO ()
-registerGauge _ _ = \case
+data Server
 
-start :: Word16 -> IO Ekg
+start :: Word16 -> IO Server
 start = fail "Lamdu is compiled without ekg support. Rebuild it with the ekg cabal flag"
 
-timedEvaluator :: Text -> Ekg -> IO Evaluator
-timedEvaluator _ = \case
+serverMetricStore :: Server -> Store
+serverMetricStore = \case
 
 #endif

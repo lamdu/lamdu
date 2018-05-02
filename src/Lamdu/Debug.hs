@@ -3,13 +3,18 @@ module Lamdu.Debug
     ( Tasks(..), inference
     , Monitors
     , HasMonitors(..)
-    , Ekg.Evaluator(..)
+    , Evaluator(..)
+    , makeCounters
     , makeMonitors
     ) where
 
 import qualified Control.Lens as Lens
-import           System.Remote.Monitoring.Shim (Ekg)
+import qualified System.Metrics as Metrics
+import           System.Metrics.Counter (Counter)
+import qualified System.Metrics.Counter as Counter
 import qualified System.Remote.Monitoring.Shim as Ekg
+import           System.TimeIt.Pure (Evaluator(..))
+import qualified System.TimeIt.Pure as TimeIt
 
 import           Lamdu.Prelude
 
@@ -18,15 +23,15 @@ newtype Tasks a = Tasks
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Tasks
 
-type Monitors = Tasks Ekg.Evaluator
+type Monitors = Tasks Evaluator
 
 class HasMonitors env where
     monitors :: Lens' env Monitors
 
-instance HasMonitors (Tasks Ekg.Evaluator) where monitors = id
+instance HasMonitors (Tasks Evaluator) where monitors = id
 
-idE :: Ekg.Evaluator
-idE = Ekg.Evaluator id
+idE :: Evaluator
+idE = Evaluator id
 
 taskNames :: Tasks Text
 taskNames =
@@ -34,7 +39,13 @@ taskNames =
     { _inference = "Inference"
     }
 
-makeMonitors :: Maybe Ekg -> IO Monitors
+makeCounters :: Ekg.Server -> IO (Tasks Counter)
+makeCounters ekg =
+    traverse (`Metrics.createCounter` (Ekg.serverMetricStore ekg)) taskNames
+
+makeMonitors :: Maybe (Tasks Counter) -> IO Monitors
 makeMonitors Nothing = Tasks idE & pure
-makeMonitors (Just ekg) =
-    traverse (`Ekg.timedEvaluator` ekg) taskNames
+makeMonitors (Just tasks) =
+    traverse f tasks
+    where
+        f ctr = TimeIt.timedEvaluator (Counter.add ctr . round . (*1e6))

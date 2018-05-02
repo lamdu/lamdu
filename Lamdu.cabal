@@ -89,6 +89,7 @@ Library
                   , deepseq
                   , deepseq-generics >= 0.1
                   , directory >= 1.0.1.1
+                  , ekg-core
                   , filepath >= 1.1
                   , edit-distance
                   , GLFW-b >= 1.4.8.0
@@ -375,4 +376,4 @@ Library
   ghc-prof-options:    -fprof-auto -fprof-cafs
   if flag(ekg)
     cpp-options: -DWITH_EKG
-    build-depends: ekg, ekg-core
+    build-depends: ekg

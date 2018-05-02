@@ -116,9 +116,8 @@ main =
         setNumCapabilities =<< getNumProcessors
         Opts.Parsed{_pLamduDB,_pCommand,_pEkgPort} <- Opts.get
         ekg <- traverse Ekg.start _pEkgPort
-        monitors <- Debug.makeMonitors ekg
-        ctr <- newIORef 0
-        ekg & traverse_ (Ekg.registerGauge "current time" (atomicModifyIORef ctr (\old -> (old+1, old))))
+        ctrs <- traverse Debug.makeCounters ekg
+        monitors <- Debug.makeMonitors ctrs
         lamduDir <- maybe getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
