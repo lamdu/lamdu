@@ -53,8 +53,6 @@ import           Text.Read (readMaybe)
 
 import           Lamdu.Prelude
 
-{-# ANN module ("HLint: ignore Use camelCase"::String) #-}
-
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , _aReportUpdatesAvailable :: IO ()
