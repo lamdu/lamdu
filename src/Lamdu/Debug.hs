@@ -42,7 +42,7 @@ taskNames =
 
 makeCounters :: Ekg.Server -> IO (Tasks Counter)
 makeCounters ekg =
-    traverse (`Metrics.createCounter` (Ekg.serverMetricStore ekg)) taskNames
+    traverse (`Metrics.createCounter` Ekg.serverMetricStore ekg) taskNames
 
 makeMonitors :: Maybe Counters -> IO Monitors
 makeMonitors Nothing = Tasks idE & pure
