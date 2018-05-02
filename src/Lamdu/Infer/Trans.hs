@@ -28,5 +28,5 @@ run :: Functor m => Debug.Monitors -> M m a -> m (Either InferErr.Error (a, Infe
 run monitors =
     fmap reportInferenceTime . runExceptT . (`runStateT` Infer.initialContext)
     where
-        Debug.TimedEvaluator reportInferenceTime =
+        Debug.Evaluator reportInferenceTime =
             monitors ^. Debug.inference

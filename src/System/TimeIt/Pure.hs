@@ -1,22 +1,24 @@
 {-# LANGUAGE RankNTypes #-}
 -- | Measure pure computation times
 
-module System.TimeIt.Pure where
+module System.TimeIt.Pure
+    ( Evaluator(..), timedEvaluator
+    ) where
 
-import Control.Exception (evaluate)
-import System.TimeIt
-import System.IO.Unsafe
+import qualified Control.Exception as E
+import           System.IO.Unsafe
+import           System.TimeIt
 
-import Lamdu.Prelude
+import           Lamdu.Prelude
 
-newtype TimedEvaluator = TimedEvaluator { reportEvalTime :: forall a. a -> a }
+newtype Evaluator = Evaluator { evaluate :: forall a. a -> a }
 
-timedEvaluator :: (Double -> IO ()) -> IO TimedEvaluator
+timedEvaluator :: (Double -> IO ()) -> IO Evaluator
 timedEvaluator report =
-    pure TimedEvaluator
-    { reportEvalTime = \x ->
+    pure Evaluator
+    { evaluate = \x ->
         do
-            (time, res) <- evaluate x & timeItT
+            (time, res) <- E.evaluate x & timeItT
             report time
             pure res
         & unsafePerformIO

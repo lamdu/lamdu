@@ -3,12 +3,12 @@
 {-# LANGUAGE CPP, EmptyCase #-}
 module System.Remote.Monitoring.Shim
     ( Ekg, start, registerGauge
-    , TimedEvaluator(..), timedEvaluator
+    , Evaluator(..), timedEvaluator
     ) where
 
 import           Data.Int (Int64)
 import           Data.Word (Word16)
-import           System.TimeIt.Pure (TimedEvaluator(..))
+import           System.TimeIt.Pure (Evaluator(..))
 
 import           Lamdu.Prelude
 
@@ -30,7 +30,7 @@ registerGauge label getVal = Metrics.registerGauge label getVal . store
 start :: Word16 -> IO Ekg
 start port = Ekg.forkServer "localhost" (fromIntegral port) <&> Ekg
 
-timedEvaluator :: Text -> Ekg -> IO TimedEvaluator
+timedEvaluator :: Text -> Ekg -> IO Evaluator
 timedEvaluator label ekg =
     do
         ctr <- Metrics.createCounter label (store ekg)
@@ -47,7 +47,7 @@ registerGauge _ _ = \case
 start :: Word16 -> IO Ekg
 start = fail "Lamdu is compiled without ekg support. Rebuild it with the ekg cabal flag"
 
-timedEvaluator :: Text -> Ekg -> IO TimedEvaluator
+timedEvaluator :: Text -> Ekg -> IO Evaluator
 timedEvaluator _ = \case
 
 #endif

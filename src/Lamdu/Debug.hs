@@ -2,7 +2,7 @@
 module Lamdu.Debug
     ( Monitors(..), inference
     , HasMonitors(..)
-    , Ekg.TimedEvaluator(..)
+    , Ekg.Evaluator(..)
     , makeMonitors
     ) where
 
@@ -13,7 +13,7 @@ import qualified System.Remote.Monitoring.Shim as Ekg
 import           Lamdu.Prelude
 
 newtype Monitors = Monitors
-    { _inference :: Ekg.TimedEvaluator
+    { _inference :: Ekg.Evaluator
     }
 Lens.makeLenses ''Monitors
 
@@ -22,8 +22,8 @@ class HasMonitors env where
 
 instance HasMonitors Monitors where monitors = id
 
-idE :: Ekg.TimedEvaluator
-idE = Ekg.TimedEvaluator id
+idE :: Ekg.Evaluator
+idE = Ekg.Evaluator id
 
 makeMonitors :: Maybe Ekg -> IO Monitors
 makeMonitors Nothing = Monitors idE & pure
