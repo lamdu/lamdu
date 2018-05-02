@@ -35,7 +35,6 @@ import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
-import qualified Lamdu.Ekg as Ekg
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
@@ -62,6 +61,7 @@ import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 import           System.IO (hPutStrLn, stderr)
+import qualified System.Remote.Monitoring.Shim as Ekg
 
 import           Lamdu.Prelude
 

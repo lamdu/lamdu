@@ -221,7 +221,6 @@ Library
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
-                  , Lamdu.Ekg
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Manager
@@ -365,6 +364,7 @@ Library
                   , Revision.Deltum.Rev.ViewBranchInternal
                   , Revision.Deltum.Transaction
                   , System.Random.Extended
+                  , System.Remote.Monitoring.Shim
 
   other-modules:    Paths_Lamdu
 
