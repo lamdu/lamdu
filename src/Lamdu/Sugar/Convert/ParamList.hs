@@ -54,7 +54,8 @@ mkFuncType scope paramList =
     where
         step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
-loadForLambdas :: ParamListPayload a => Val a -> InferT.M (T (M a)) (Val a)
+loadForLambdas ::
+    ParamListPayload a => Val a -> InferT.M (T (M a)) (Val a)
 loadForLambdas val =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val

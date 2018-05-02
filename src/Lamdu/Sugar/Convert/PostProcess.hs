@@ -6,6 +6,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
@@ -20,8 +21,8 @@ type T = Transaction
 
 data PostProcessResult = GoodExpr | BadExpr InferErr.Error
 
-postProcessDef :: Monad m => DefI m -> T m PostProcessResult
-postProcessDef defI =
+postProcessDef :: Monad m => Debug.Monitors -> DefI m -> T m PostProcessResult
+postProcessDef monitors defI =
     do
         def <- Transaction.readIRef defI
         case def ^. Definition.defBody of
@@ -29,7 +30,7 @@ postProcessDef defI =
             Definition.BodyExpr defExpr ->
                 do
                     loaded <- Definition.expr ExprIRef.readVal defExpr
-                    checked <- Load.inferCheckDef loaded (ExprIRef.globalId defI)
+                    checked <- Load.inferCheckDef monitors loaded (ExprIRef.globalId defI)
                     case checked of
                         Left err -> BadExpr err & pure
                         Right (inferredVal, inferContext) ->
@@ -47,15 +48,15 @@ postProcessDef defI =
 
 postProcessExpr ::
     Monad m =>
-    MkProperty' (T m) (Definition.Expr (ValI m)) ->
+    Debug.Monitors -> MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m PostProcessResult
-postProcessExpr mkProp =
+postProcessExpr monitors mkProp =
     do
         prop <- mkProp ^. Property.mkProperty
         -- TODO: This is code duplication with the above Load.inferDef
         -- & functions inside Load itself
         defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)
-        inferred <- Load.inferCheckDefExpr defExpr
+        inferred <- Load.inferCheckDefExpr monitors defExpr
         case inferred of
             Left err -> BadExpr err & pure
             Right _ ->

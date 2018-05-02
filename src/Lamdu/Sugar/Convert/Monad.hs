@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scPostProcessRoot, siRecursiveRef
-    , scCodeAnchors, scScopeInfo
+    , scCodeAnchors, scScopeInfo, scDebugMonitors
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinition
 
     , ConvertM(..), run
@@ -28,6 +28,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -94,6 +95,7 @@ data Context m = Context
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ()))
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
     , _scFrozenDeps :: Property (T m) Infer.Dependencies
+    , _scDebugMonitors :: Debug.Monitors
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }

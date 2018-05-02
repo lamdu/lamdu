@@ -27,6 +27,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (ValI, ValIProperty)
@@ -156,26 +157,26 @@ Lens.makeLenses ''InferResult
 
 runInferResult ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     InferT.M (T m) (Val (Infer.Payload, ValIProperty m)) ->
     T m (Either Infer.Error (InferResult m))
-runInferResult results act =
+runInferResult monitors results act =
     act
     >>= loadInferPrepareInput results
-    & InferT.run
+    & InferT.run monitors
     <&> fmap toResult
     where
         toResult (val, ctx) = InferResult val ctx
 
 inferDef ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValIProperty m)) ->
     V.Var ->
     T m (Either Infer.Error (InferResult m))
-inferDef results defExpr defVar =
+inferDef monitors results defExpr defVar =
     inferDefExprWithRecursiveRef defExpr defVar
-    & runInferResult results
+    & runInferResult monitors results
 
 inferDefExprHelper ::
     Monad m => Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
@@ -186,27 +187,27 @@ inferDefExprHelper defExpr =
 
 inferDefExpr ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValIProperty m)) ->
     T m (Either Infer.Error (InferResult m))
-inferDefExpr results defExpr =
+inferDefExpr monitors results defExpr =
     inferDefExprHelper defExpr
-    & runInferResult results
+    & runInferResult monitors results
 
 inferCheckDef ::
     Monad m =>
-    Definition.Expr (Val (ValI m)) -> V.Var ->
+    Debug.Monitors -> Definition.Expr (Val (ValI m)) -> V.Var ->
     T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
-inferCheckDef defExpr defVar =
+inferCheckDef monitors defExpr defVar =
     inferDefExprWithRecursiveRef defExpr defVar
     >>= ParamList.loadForLambdas
-    & InferT.run
+    & InferT.run monitors
 
 inferCheckDefExpr ::
     Monad m =>
-    Definition.Expr (Val (ValI m)) ->
+    Debug.Monitors -> Definition.Expr (Val (ValI m)) ->
     T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
-inferCheckDefExpr defExpr =
+inferCheckDefExpr monitors defExpr =
     inferDefExprHelper defExpr
     >>= ParamList.loadForLambdas
-    & InferT.run
+    & InferT.run monitors

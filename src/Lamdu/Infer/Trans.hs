@@ -9,6 +9,7 @@ module Lamdu.Infer.Trans
 
 import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
@@ -17,11 +18,15 @@ import           Lamdu.Prelude
 
 type M m = StateT Infer.Context (ExceptT InferErr.Error m)
 
-liftInfer :: Monad m => Infer a -> M m a
+liftInfer :: Applicative m => Infer a -> M m a
 liftInfer = mapStateT (ExceptT . pure) . Infer.run
 
 liftInner :: Monad m => m a -> M m a
 liftInner = lift . lift
 
-run :: M m a -> m (Either InferErr.Error (a, Infer.Context))
-run = runExceptT . (`runStateT` Infer.initialContext)
+run :: Functor m => Debug.Monitors -> M m a -> m (Either InferErr.Error (a, Infer.Context))
+run monitors =
+    fmap reportInferenceTime . runExceptT . (`runStateT` Infer.initialContext)
+    where
+        Debug.TimedEvaluator reportInferenceTime =
+            monitors ^. Debug.inference

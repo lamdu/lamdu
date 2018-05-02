@@ -112,6 +112,7 @@ Library
                   , stm
                   , text
                   , time >= 1.2
+                  , timeit
                   , transformers >= 0.4.3
                   , unordered-containers
                   , uuid >= 1.3
@@ -221,6 +222,7 @@ Library
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
+                  , Lamdu.Debug
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Manager
@@ -365,6 +367,7 @@ Library
                   , Revision.Deltum.Transaction
                   , System.Random.Extended
                   , System.Remote.Monitoring.Shim
+                  , System.TimeIt.Pure
 
   other-modules:    Paths_Lamdu
 

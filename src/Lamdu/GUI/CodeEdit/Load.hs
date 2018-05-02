@@ -13,6 +13,7 @@ import           Data.Property (MkProperty')
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
@@ -70,11 +71,11 @@ getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 
 loadWorkArea ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
-loadWorkArea theEvalResults cp =
-    SugarConvert.loadWorkArea theEvalResults cp
+loadWorkArea monitors theEvalResults cp =
+    SugarConvert.loadWorkArea monitors theEvalResults cp
     >>= AddNames.addToWorkArea (getNameProp cp)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->

@@ -6,7 +6,7 @@
 , leveldb-haskell, List, mtl, nodejs-exec, OpenGL
 , optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
 , split, StateVar, stdenv, stm, test-framework, test-framework-hunit
-, test-framework-quickcheck2, text, time, transformers, unordered-containers
+, test-framework-quickcheck2, text, time, timeit, transformers, unordered-containers
 , uuid, uuid-types, vector, wl-pprint, yaml, zip-archive, imagemagick, HUnit
 }:
 mkDerivation {
@@ -24,7 +24,7 @@ mkDerivation {
     language-ecmascript lens lens-aeson leveldb-haskell List mtl nodejs-exec
     OpenGL optparse-applicative pretty process random QuickCheck safe-exceptions
     split StateVar stm test-framework test-framework-hunit test-framework-quickcheck2
-    text time transformers unordered-containers uuid uuid-types vector wl-pprint
+    text time timeit transformers unordered-containers uuid uuid-types vector wl-pprint
     yaml zip-archive
   ];
   executablePkgconfigDepends = [ imagemagick ];

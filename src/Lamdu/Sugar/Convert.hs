@@ -16,6 +16,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Results.Process (addTypes)
@@ -87,17 +88,17 @@ canInlineDefinition defExpr recursiveVars var entityId =
 
 convertInferDefExpr ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
-convertInferDefExpr evalRes cp defType defExpr defI =
+convertInferDefExpr monitors evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
-            Load.inferDef evalRes defExpr defVar <&> Load.assertInferSuccess
+            Load.inferDef monitors evalRes defExpr defVar
+            <&> Load.assertInferSuccess
         outdatedDefinitions <-
-            OutdatedDefs.scan entityId defExpr setDefExpr
-            (postProcessDef defI)
-            <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcessDef defI)
+            OutdatedDefs.scan entityId defExpr setDefExpr postProcess
+            <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcess)
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -109,7 +110,8 @@ convertInferDefExpr evalRes cp defType defExpr defI =
                           , _rrDefType = defType
                           }
                         )
-                , _scPostProcessRoot = postProcessDef defI
+                , _scDebugMonitors = monitors
+                , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinition = canInlineDefinition valInferred (Set.singleton defVar)
                 , _scFrozenDeps =
@@ -120,6 +122,7 @@ convertInferDefExpr evalRes cp defType defExpr defI =
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
+        postProcess = postProcessDef monitors defI
         entityId = EntityId.ofBinder defVar
         defVar = ExprIRef.globalId defI
         setDefExpr x =
@@ -132,31 +135,33 @@ convertInferDefExpr evalRes cp defType defExpr defI =
 
 convertDefBody ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
-convertDefBody evalRes cp (Definition.Definition body defType defI) =
+convertDefBody monitors evalRes cp (Definition.Definition body defType defI) =
     case body of
-    Definition.BodyExpr defExpr -> convertInferDefExpr evalRes cp defType defExpr defI
+    Definition.BodyExpr defExpr -> convertInferDefExpr monitors evalRes cp defType defExpr defI
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
 loadRepl ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (Repl InternalName (T m) (T m) [EntityId])
-loadRepl evalRes cp =
+loadRepl monitors evalRes cp =
     do
         defExpr <- ExprLoad.defExprProperty prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
         Load.InferResult valInferred newInferContext <-
-            Load.inferDefExpr evalRes defExpr <&> Load.assertInferSuccess
-        outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) (postProcessExpr prop)
+            Load.inferDefExpr monitors evalRes defExpr
+            <&> Load.assertInferSuccess
+        outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
         let context =
                 Context
                 { _scInferContext = newInferContext
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo Nothing
-                , _scPostProcessRoot = postProcessExpr prop
+                , _scDebugMonitors = monitors
+                , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinition = canInlineDefinition valInferred mempty
                 , _scFrozenDeps =
@@ -182,6 +187,7 @@ loadRepl evalRes cp =
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where
+        postProcess = postProcessExpr monitors prop
         prop = Anchors.repl cp
         setFrozenDeps deps =
             prop ^. Property.mkProperty
@@ -196,9 +202,9 @@ loadAnnotatedDef getDefI annotation =
 
 loadPanes ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m -> EntityId ->
-    T m [Pane InternalName (T m) (T m) [EntityId]]
-loadPanes evalRes cp replEntityId =
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    EntityId -> T m [Pane InternalName (T m) (T m) [EntityId]]
+loadPanes monitors evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
         paneDefs <- mapM (loadAnnotatedDef Anchors.paneDef) panes
@@ -227,7 +233,7 @@ loadPanes evalRes cp replEntityId =
                     bodyS <-
                         def
                         <&> Anchors.paneDef
-                        & convertDefBody evalRes cp
+                        & convertDefBody monitors evalRes cp
                         <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
@@ -252,12 +258,12 @@ loadPanes evalRes cp replEntityId =
 
 loadWorkArea ::
     Monad m =>
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (WorkArea InternalName (T m) (T m) [EntityId])
-loadWorkArea evalRes cp =
+loadWorkArea monitors evalRes cp =
     do
-        repl <- loadRepl evalRes cp
-        panes <- loadPanes evalRes cp (repl ^. replExpr . rPayload . plEntityId)
+        repl <- loadRepl monitors evalRes cp
+        panes <- loadPanes monitors evalRes cp (repl ^. replExpr . rPayload . plEntityId)
         pure WorkArea
             { _waPanes = panes
             , _waRepl = repl

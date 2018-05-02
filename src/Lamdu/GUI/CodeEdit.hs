@@ -31,6 +31,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
@@ -70,6 +71,7 @@ class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
+    , Debug.HasMonitors env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
@@ -82,7 +84,7 @@ make cp gp width =
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
-        workArea <- loadWorkArea theEvalResults cp & transaction
+        workArea <- loadWorkArea (env ^. Debug.monitors) theEvalResults cp & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans

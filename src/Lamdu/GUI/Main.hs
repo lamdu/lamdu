@@ -33,6 +33,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as Results
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
@@ -80,6 +81,7 @@ addHelp size =
 
 type Ctx env =
     ( MainLoop.HasMainLoopEnv env
+    , Debug.HasMonitors env
     , Style.HasStyle env
     , Hover.HasStyle env
     , Settings.HasSettings env

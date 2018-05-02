@@ -35,6 +35,7 @@ import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
+import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
@@ -76,6 +77,7 @@ data Env = Env
     , _envStyle :: Style.Style
     , _envMainLoop :: MainLoop.Env
     , _envAnimIdPrefix :: AnimId
+    , _envDebugMonitors :: Debug.Monitors
     }
 Lens.makeLenses ''Env
 
@@ -97,6 +99,7 @@ instance VCConfig.HasTheme Env where theme = envTheme . Theme.versionControl
 instance VCConfig.HasConfig Env where config = envConfig . Config.versionControl
 instance Menu.HasConfig Env where
     config = Menu.configLens (envConfig . Config.menu) (envTheme . Theme.menu)
+instance Debug.HasMonitors Env where monitors = envDebugMonitors
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =
@@ -112,7 +115,10 @@ main =
     do
         setNumCapabilities =<< getNumProcessors
         Opts.Parsed{_pLamduDB,_pCommand,_pEkgPort} <- Opts.get
-        _ekg <- traverse Ekg.start _pEkgPort
+        ekg <- traverse Ekg.start _pEkgPort
+        monitors <- Debug.makeMonitors ekg
+        ctr <- newIORef 0
+        ekg & traverse_ (Ekg.registerGauge "current time" (atomicModifyIORef ctr (\old -> (old+1, old))))
         lamduDir <- maybe getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
@@ -120,7 +126,7 @@ main =
             Opts.Undo n -> withDB (undoN n)
             Opts.Import path -> withDB (importPath path)
             Opts.Export path -> withDB (exportToPath path)
-            Opts.Editor opts -> withDB (runEditor opts)
+            Opts.Editor opts -> withDB (runEditor monitors opts)
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
     whoCreated e >>= mapM_ (hPutStrLn stderr)
@@ -201,9 +207,10 @@ exportActions config evalResults executeIOProcess =
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
-    Fonts M.Font -> Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
-    MainLoop.Env -> Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
-makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
+    Debug.Monitors -> Fonts M.Font -> Transaction.Store DbM ->
+    EvalManager.Evaluator -> Config -> Theme -> MainLoop.Env ->
+    Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
+makeRootWidget monitors fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
@@ -218,6 +225,7 @@ makeRootWidget fonts db evaluator config theme mainLoopEnv settingsProp =
                 , _envStyle = Style.make fonts theme
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
+                , _envDebugMonitors = monitors
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
@@ -265,8 +273,8 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
     }
 
-runEditor :: Opts.EditorOpts -> Transaction.Store DbM -> IO ()
-runEditor opts db =
+runEditor :: Debug.Monitors -> Opts.EditorOpts -> Transaction.Store DbM -> IO ()
+runEditor monitors opts db =
     withMVarProtection db $ \dbMVar ->
     do
         refreshScheduler <- newRefreshScheduler
@@ -287,7 +295,8 @@ runEditor opts db =
             printGLVersion
             mainLoop stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
-                mkSettingsProp >>= makeRootWidget fonts db evaluator config theme env
+                mkSettingsProp
+                >>= makeRootWidget monitors fonts db evaluator config theme env
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
