@@ -87,7 +87,7 @@ canInlineDefinition defExpr recursiveVars var entityId =
         f pl v = v == var && entityId `notElem` pl ^. Input.userData
 
 convertInferDefExpr ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
@@ -134,7 +134,7 @@ convertInferDefExpr monitors evalRes cp defType defExpr defI =
             >>= Transaction.writeIRef defI
 
 convertDefBody ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValIProperty m)) (DefI m) ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
@@ -144,7 +144,7 @@ convertDefBody monitors evalRes cp (Definition.Definition body defType defI) =
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
 loadRepl ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (Repl InternalName (T m) (T m) [EntityId])
 loadRepl monitors evalRes cp =
@@ -257,7 +257,7 @@ loadPanes monitors evalRes cp replEntityId =
         paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (WorkArea InternalName (T m) (T m) [EntityId])
 loadWorkArea monitors evalRes cp =

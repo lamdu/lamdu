@@ -80,7 +80,8 @@ addHelp size =
     EventMapHelp.addHelpView env size
 
 type Ctx env =
-    ( MainLoop.HasMainLoopEnv env
+    ( HasCallStack
+    , MainLoop.HasMainLoopEnv env
     , Debug.HasMonitors env
     , Style.HasStyle env
     , Hover.HasStyle env

@@ -20,6 +20,7 @@ import           Data.Set as X (Set)
 import           Data.Text as X (Text)
 import qualified Debug.Trace as Trace
 import           GHC.Generics as X (Generic)
+import           GHC.Stack.Types as X (HasCallStack)
 
 import           Prelude.Compat as X
 

@@ -12,6 +12,7 @@ import qualified Data.Aeson.Types as Aeson
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Zoom as Zoom
+import qualified Lamdu.Debug.Tasks as Debug
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 import           Lamdu.Prelude
@@ -88,6 +89,7 @@ Lens.makeLenses ''Literal
 data Debug = Debug
     { _debugShowFPS :: Bool
     , _virtualCursorShown :: Bool
+    , _breakpoints :: Debug.Tasks Bool
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
 #ifndef NO_CODE

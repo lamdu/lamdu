@@ -70,7 +70,7 @@ getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Te
 getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 
 loadWorkArea ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)

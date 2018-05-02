@@ -24,7 +24,7 @@ liftInfer = mapStateT (ExceptT . pure) . Infer.run
 liftInner :: Monad m => m a -> M m a
 liftInner = lift . lift
 
-run :: Functor m => Debug.Monitors -> M m a -> m (Either InferErr.Error (a, Infer.Context))
+run :: (HasCallStack, Functor m) => Debug.Monitors -> M m a -> m (Either InferErr.Error (a, Infer.Context))
 run monitors =
     fmap reportInferenceTime . runExceptT . (`runStateT` Infer.initialContext)
     where

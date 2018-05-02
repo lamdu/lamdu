@@ -76,6 +76,7 @@ make ::
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , Element.HasAnimIdPrefix env
+    , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
     n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m GuiState.Update))

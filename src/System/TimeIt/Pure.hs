@@ -11,7 +11,7 @@ import           System.TimeIt
 
 import           Lamdu.Prelude
 
-newtype Evaluator = Evaluator { evaluate :: forall a. a -> a }
+newtype Evaluator = Evaluator { evaluate :: forall a. HasCallStack => a -> a }
 
 timedEvaluator :: (Double -> IO ()) -> IO Evaluator
 timedEvaluator report =

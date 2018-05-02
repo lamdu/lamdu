@@ -156,7 +156,7 @@ data InferResult m = InferResult
 Lens.makeLenses ''InferResult
 
 runInferResult ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     InferT.M (T m) (Val (Infer.Payload, ValIProperty m)) ->
     T m (Either Infer.Error (InferResult m))
@@ -169,7 +169,7 @@ runInferResult monitors results act =
         toResult (val, ctx) = InferResult val ctx
 
 inferDef ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValIProperty m)) ->
     V.Var ->
@@ -186,7 +186,7 @@ inferDefExprHelper defExpr =
     & InferT.liftInfer
 
 inferDefExpr ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValIProperty m)) ->
     T m (Either Infer.Error (InferResult m))

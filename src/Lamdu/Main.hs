@@ -211,7 +211,9 @@ makeRootWidget ::
 makeRootWidget counters fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
-        monitors <- Debug.makeMonitors counters
+        monitors <-
+            Debug.makeMonitors (config ^. Config.debug . Config.breakpoints)
+            counters
         let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
@@ -432,6 +434,7 @@ mkWidgetWithFallback settingsProp dbToIO env =
         bgColor True = Theme.backgroundColor
 
 makeMainGui ::
+    HasCallStack =>
     [Themes.Selection] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (M.Widget (MainLoop.M IO M.Update))

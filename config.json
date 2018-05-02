@@ -2,7 +2,10 @@
     "maxExprDepth": 40,
     "debug": {
         "showFPS": false,
-        "virtualCursorShown": false
+        "virtualCursorShown": false,
+        "breakpoints": {
+            "inference": false
+        }
     },
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],

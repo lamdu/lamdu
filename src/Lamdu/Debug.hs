@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Lamdu.Debug
-    ( Tasks(..), inference
+    ( module Lamdu.Debug.Tasks
     , Monitors, Counters
     , HasMonitors(..)
     , Evaluator(..)
@@ -8,7 +8,8 @@ module Lamdu.Debug
     , makeMonitors
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Data.Text as Text
+import           Lamdu.Debug.Tasks
 import qualified System.Metrics as Metrics
 import           System.Metrics.Counter (Counter)
 import qualified System.Metrics.Counter as Counter
@@ -17,11 +18,6 @@ import           System.TimeIt.Pure (Evaluator(..))
 import qualified System.TimeIt.Pure as TimeIt
 
 import           Lamdu.Prelude
-
-newtype Tasks a = Tasks
-    { _inference :: a
-    } deriving (Functor, Foldable, Traversable)
-Lens.makeLenses ''Tasks
 
 type Monitors = Tasks Evaluator
 type Counters = Tasks Counter
@@ -44,9 +40,25 @@ makeCounters :: Ekg.Server -> IO (Tasks Counter)
 makeCounters ekg =
     traverse (`Metrics.createCounter` Ekg.serverMetricStore ekg) taskNames
 
-makeMonitors :: Maybe Counters -> IO Monitors
-makeMonitors Nothing = Tasks idE & pure
-makeMonitors (Just tasks) =
-    traverse f tasks
-    where
-        f ctr = TimeIt.timedEvaluator (Counter.add ctr . round . (*1e6))
+counterEvaluator :: Counter -> IO Evaluator
+counterEvaluator ctr = TimeIt.timedEvaluator (Counter.add ctr . round . (*1e6))
+
+makeBreakpoint :: Text -> Bool -> Evaluator
+makeBreakpoint _ False = idE
+makeBreakpoint msg True =
+    Evaluator (\_ -> error ("Breakpoint encountered: " ++ Text.unpack msg))
+
+compose :: Evaluator -> Evaluator -> Evaluator
+compose (Evaluator f) (Evaluator g) = Evaluator (f . g)
+
+makeMonitors :: Tasks Bool -> Maybe Counters -> IO Monitors
+makeMonitors breakpoints mCounters =
+    do
+        countersEval <-
+            case mCounters of
+            Nothing -> pure (pure idE)
+            Just counters -> traverse counterEvaluator counters
+        compose
+            <$> (makeBreakpoint <$> taskNames <*> breakpoints)
+            <*> countersEval
+            & pure
