@@ -1,6 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module Lamdu.Debug
-    ( Monitors(..), inference
+    ( Tasks(..), inference
+    , Monitors
     , HasMonitors(..)
     , Ekg.Evaluator(..)
     , makeMonitors
@@ -12,21 +13,28 @@ import qualified System.Remote.Monitoring.Shim as Ekg
 
 import           Lamdu.Prelude
 
-newtype Monitors = Monitors
-    { _inference :: Ekg.Evaluator
-    }
-Lens.makeLenses ''Monitors
+newtype Tasks a = Tasks
+    { _inference :: a
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''Tasks
+
+type Monitors = Tasks Ekg.Evaluator
 
 class HasMonitors env where
     monitors :: Lens' env Monitors
 
-instance HasMonitors Monitors where monitors = id
+instance HasMonitors (Tasks Ekg.Evaluator) where monitors = id
 
 idE :: Ekg.Evaluator
 idE = Ekg.Evaluator id
 
+taskNames :: Tasks Text
+taskNames =
+    Tasks
+    { _inference = "Inference"
+    }
+
 makeMonitors :: Maybe Ekg -> IO Monitors
-makeMonitors Nothing = Monitors idE & pure
+makeMonitors Nothing = Tasks idE & pure
 makeMonitors (Just ekg) =
-    Monitors
-    <$> Ekg.timedEvaluator "Inference" ekg
+    traverse (`Ekg.timedEvaluator` ekg) taskNames
