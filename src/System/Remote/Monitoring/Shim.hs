@@ -1,6 +1,6 @@
 -- | Shim for Ekg's System.Remote.Monitoring that supports
 -- compile-flag to seemlessly disable ekg support
-{-# LANGUAGE CPP, EmptyCase #-}
+{-# LANGUAGE CPP #-}
 module System.Remote.Monitoring.Shim
     ( Server, serverMetricStore
     , start
@@ -29,6 +29,6 @@ start :: Word16 -> IO Server
 start = fail "Lamdu is compiled without ekg support. Rebuild it with the ekg cabal flag"
 
 serverMetricStore :: Server -> Store
-serverMetricStore = \case
+serverMetricStore = error "absurd"
 
 #endif
