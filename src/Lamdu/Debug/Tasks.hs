@@ -1,15 +1,13 @@
 -- | Debug.Tasks data-type, to avoid Config dependency on debug code
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Debug.Tasks
     ( Tasks(..), inference
     ) where
 
 import qualified Control.Lens as Lens
-#ifndef NO_CODE
-import           Data.Aeson.Utils (removePrefix)
-#endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 
 import           Lamdu.Prelude
 
@@ -18,9 +16,7 @@ newtype Tasks a = Tasks
     } deriving (Eq, Show, Functor, Foldable, Traversable)
 Lens.makeLenses ''Tasks
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Tasks
 
 instance Applicative Tasks where

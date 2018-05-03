@@ -1,7 +1,7 @@
 -- | Responsive layout for expressions express the hierarchy using parentheses and indentation,
 -- as is customary in many programming languages and in mathematics.
 
-{-# LANGUAGE TemplateHaskell, CPP, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module GUI.Momentu.Responsive.Expression
     ( Style(..), indentBarWidth, indentBarGap, indentBarColor
     , HasStyle(..)
@@ -10,7 +10,8 @@ module GUI.Momentu.Responsive.Expression
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
@@ -28,11 +29,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-#ifndef NO_CODE
-import           Data.Aeson.Utils (removePrefix)
-import qualified Data.Aeson.Types as Aeson
-#endif
-
 import           Lamdu.Prelude
 
 data Style = Style
@@ -40,10 +36,8 @@ data Style = Style
     , _indentBarGap :: Double
     , _indentBarColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Style
 Lens.makeLenses ''Style
 

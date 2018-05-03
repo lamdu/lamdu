@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
@@ -21,15 +21,11 @@ module Lamdu.Config.Theme
     ) where
 
 import qualified Control.Lens as Lens
-#ifndef NO_CODE
-import           Data.Aeson.Utils (decapitalize, removePrefix)
-#endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
+import           Data.Char (toLower)
+import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2)
-#ifndef NO_CODE
-import qualified Data.Char as Char
-#endif
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -50,9 +46,10 @@ data Help = Help
     , _helpTint :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_help"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_help")
+    }
     ''Help
 
 Lens.makeLenses ''Help
@@ -63,9 +60,10 @@ data Hole = Hole
     , _holeActiveSearchTermBGColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_hole"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_hole")
+    }
     ''Hole
 
 Lens.makeLenses ''Hole
@@ -76,9 +74,7 @@ data Eval = Eval
     , _staleResultTint :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Eval
 
 Lens.makeLenses ''Eval
@@ -88,9 +84,10 @@ data ToolTip = ToolTip
     , _tooltipBgColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_tooltip"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_tooltip")
+    }
     ''ToolTip
 
 Lens.makeLenses ''ToolTip
@@ -100,14 +97,10 @@ data StatusBar = StatusBar
     , _statusBarHSpaces :: Double
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier =
-     \name ->
-     name
-     & removePrefix "_statusBar"
-     & Lens.taking 2 traverse %~ Char.toLower
+    { Aeson.fieldLabelModifier
+        = (Lens.taking 2 traverse %~ toLower)
+        . (^?! prefixed "_statusBar")
     }
-#endif
     ''StatusBar
 
 Lens.makeLenses ''StatusBar
@@ -150,9 +143,7 @@ data Theme = Theme
     , _evaluatedPathBGColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Theme
 
 Lens.makeLenses ''Theme

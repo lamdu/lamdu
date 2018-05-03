@@ -1,14 +1,12 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens
-#ifndef NO_CODE
-import           Data.Aeson.Utils
-    ( removeOptionalPrefix, removePrefix, decapitalize )
-#endif
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
+import           Data.Char (toLower)
+import           Data.List.Lens (prefixed)
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Zoom as Zoom
@@ -26,9 +24,7 @@ data Export = Export
     , _importKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Export
 
 Lens.makeLenses ''Export
@@ -40,9 +36,11 @@ data Pane = Pane
     , _newDefinitionKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "pane" . removePrefix "_"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^. Lens.failing (prefixed "pane") id)
+        . (^?! prefixed "_")
+    }
     ''Pane
 
 Lens.makeLenses ''Pane
@@ -55,9 +53,10 @@ data Completion = Completion
     , _completionCloseKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_completion"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_completion")
+    }
     ''Completion
 
 Lens.makeLenses ''Completion
@@ -67,9 +66,7 @@ data Eval = Eval
     , _nextScopeKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Eval
 
 Lens.makeLenses ''Eval
@@ -79,9 +76,10 @@ data Literal = Literal
     , _literalStopEditingKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_literal"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_literal")
+    }
     ''Literal
 
 Lens.makeLenses ''Literal
@@ -92,9 +90,11 @@ data Debug = Debug
     , _breakpoints :: Debug.Tasks Bool
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removeOptionalPrefix "debug" . removePrefix "_"}
-#endif
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^. Lens.failing (prefixed "debug") id)
+        . (^?! prefixed "_")
+    }
     ''Debug
 
 Lens.makeLenses ''Debug
@@ -147,9 +147,7 @@ data Config = Config
     , _caseAddAltKeys :: [MetaKey]
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Config
 
 Lens.makeLenses ''Config

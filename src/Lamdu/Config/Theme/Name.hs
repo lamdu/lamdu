@@ -1,14 +1,11 @@
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.Name where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
-#ifndef NO_CODE
 import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson.Utils (removePrefix)
-#endif
+import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Draw as Draw
 
@@ -19,10 +16,8 @@ data Name = Name
     , _textCollisionSuffixBGColor :: Draw.Color
     , _collisionSuffixScaleFactor :: Vector2 Double
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Name
 
 Lens.makeLenses ''Name

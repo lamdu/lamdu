@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, DisambiguateRecordFields #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), submenuSymbolColorUnselected, submenuSymbolColorSelected
@@ -21,7 +21,8 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 import           GUI.Momentu.Align (WithTextPos, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -41,21 +42,14 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-#ifndef NO_CODE
-import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson.Utils (removePrefix)
-#endif
-
 import           Lamdu.Prelude
 
 data Style = Style
     { _submenuSymbolColorUnselected :: Draw.Color
     , _submenuSymbolColorSelected :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Style
 
 Lens.makeLenses ''Style
@@ -66,10 +60,8 @@ data Keys = Keys
     , _keysPickOptionAndGotoNext :: [MetaKey]
         -- ^ Pick option and goto the next "entry point" (see below)
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Keys
 
 Lens.makeLenses ''Keys
@@ -81,10 +73,8 @@ data Config = Config
     { _configStyle :: Style
     , _configKeys :: Keys
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Config
 
 Lens.makeLenses ''Config

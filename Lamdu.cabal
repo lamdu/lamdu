@@ -130,7 +130,6 @@ Library
                   , Control.Monad.Trans.FastWriter
                   , Control.Monad.Transaction
                   , Control.Monad.Unit
-                  , Data.Aeson.Utils
                   , Data.Binary.Extended
                   , Data.ByteString.Extended
                   , Data.CurAndPrev

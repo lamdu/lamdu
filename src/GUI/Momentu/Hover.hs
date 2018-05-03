@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, RankNTypes, UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, RankNTypes, UndecidableInstances #-}
 module GUI.Momentu.Hover
     ( Style(..), frameColor, framePadding, bgColor, bgPadding
     , Hover, hover, sequenceHover
@@ -15,8 +15,9 @@ module GUI.Momentu.Hover
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
 import           Data.List.Extended (minimumOn)
+import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
 import qualified GUI.Momentu.Draw as Draw
@@ -31,11 +32,6 @@ import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
 
-#ifndef NO_CODE
-import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson.Utils (removePrefix)
-#endif
-
 import           Lamdu.Prelude
 
 data Style = Style
@@ -44,11 +40,8 @@ data Style = Style
     , _bgColor :: Draw.Color
     , _bgPadding :: Vector2 R
     } deriving (Eq, Generic, Show)
-deriveJSON
-    defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Style
 
 Lens.makeLenses ''Style

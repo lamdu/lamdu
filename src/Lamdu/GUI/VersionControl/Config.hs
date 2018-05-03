@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.VersionControl.Config
     ( Config(..), undoKeys, redoKeys, makeBranchKeys, jumpToBranchesKeys, delBranchKeys
     , HasConfig(..)
@@ -8,14 +8,10 @@ module Lamdu.GUI.VersionControl.Config
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.MetaKey (MetaKey)
-
-#ifndef NO_CODE
-import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson.Utils (removePrefix)
-#endif
 
 import           Lamdu.Prelude
 
@@ -26,10 +22,8 @@ data Config = Config
     , _jumpToBranchesKeys :: [MetaKey]
     , _delBranchKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Config
 
 Lens.makeLenses ''Config
@@ -37,10 +31,8 @@ Lens.makeLenses ''Config
 newtype Theme = Theme
     { _selectedBranchColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Theme
 
 Lens.makeLenses ''Theme

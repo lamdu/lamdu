@@ -1,16 +1,12 @@
-{-# LANGUAGE CPP, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme.TextColors where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
-import qualified GUI.Momentu.Draw as Draw
-
-#ifndef NO_CODE
 import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson.Utils (removePrefix)
-#endif
+import           Data.List.Lens (prefixed)
+import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude
 
@@ -37,10 +33,8 @@ data TextColors = TextColors
     , _caseTagColor :: Draw.Color
     , _argTagColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = removePrefix "_"}
-#endif
+deriveJSON Aeson.defaultOptions
+    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''TextColors
 
 Lens.makeLenses ''TextColors

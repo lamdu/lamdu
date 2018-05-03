@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Font
     ( FontSize, Fonts(..)
     , LCDSubPixelEnabled(..), new
@@ -9,16 +9,13 @@ module Lamdu.Font
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
-import           Data.Aeson.Types (defaultOptions)
+import qualified Data.Aeson.Types as Aeson
+import           Data.Char (toLower)
+import           Data.List.Lens (prefixed)
 import           Data.Typeable (Typeable)
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory
-
-#ifndef NO_CODE
-import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson.Utils (removePrefix, decapitalize)
-#endif
 
 import           Lamdu.Prelude
 
@@ -33,11 +30,11 @@ data Fonts a = Fonts
     , _fontAutoName :: a
     , _fontBinders :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
-deriveJSON
-    defaultOptions
-#ifndef NO_CODE
-    {Aeson.fieldLabelModifier = decapitalize . removePrefix "_font"}
-#endif
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_font")
+    }
     ''Fonts
 Lens.makeLenses ''Fonts
 
