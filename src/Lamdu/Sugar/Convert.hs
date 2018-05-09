@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert
-    ( loadWorkArea
+    ( loadWorkArea, InternalName
     ) where
 
 import           Control.Applicative ((<|>))
