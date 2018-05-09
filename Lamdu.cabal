@@ -22,9 +22,8 @@ Data-files:          fonts/DejaVuSans.ttf
                    , freshdb.json
                    , js/rts.js
                    , js/rtsConfig.js
-
+                   , js/export/rtsConfig.js
                    , doc/JSExportReadMe.md
-                   , js/jsExportRtsConfig.js
 
 source-repository head
   type: git

@@ -17,7 +17,7 @@ test =
             readFreshDb
             <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . Lens._Just)
             <&> Set.fromList
-        rtsConfig <- readFile "js/jsExportRtsConfig.js"
+        rtsConfig <- readFile "js/export/rtsConfig.js"
         let (_:nameMapAndMore:_) = splitOn "var nameMap = {" rtsConfig
         let (nameMapTxt, _) = break (== '}') nameMapAndMore
         let nameMapItemTxts = splitOn "," nameMapTxt
