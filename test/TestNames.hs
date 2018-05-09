@@ -17,14 +17,10 @@ import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Framework (Test, testGroup)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
-import           Test.Lamdu.Instances ()
 import           Test.Lamdu.SugarStubs ((~>))
 import qualified Test.Lamdu.SugarStubs as Stub
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 newtype CollectNames name a = CollectNames { runCollectNames :: Writer [name] a }
     deriving (Functor, Applicative, Monad, MonadWriter [name])

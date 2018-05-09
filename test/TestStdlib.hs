@@ -16,13 +16,9 @@ import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import qualified Lamdu.Infer as Infer
-import           Test.Framework (Test, testGroup)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
 import           Test.Lamdu.FreshDb (readFreshDb)
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 test :: Test
 test =

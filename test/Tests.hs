@@ -1,8 +1,6 @@
 module Main where
 
 import qualified Lamdu.Data.Export.JSON as JsonFormat
-import           Test.Framework
-import           Test.Framework.Providers.HUnit (testCase)
 import qualified TestAnimIdClash
 import qualified TestColorSchemes
 import qualified TestConfig
@@ -15,7 +13,7 @@ import qualified TestStdlib
 import qualified TestSugar
 import qualified TestValUtils
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 jsonCodecMigrationTest :: Test
 jsonCodecMigrationTest =

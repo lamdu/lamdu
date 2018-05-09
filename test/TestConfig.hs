@@ -10,11 +10,8 @@ import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Paths as Paths
 import qualified Lamdu.Themes as Themes
-import           Test.Framework
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 test :: Test
 test =

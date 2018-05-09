@@ -9,7 +9,7 @@ import           Test.Framework.Providers.HUnit (testCase)
 import           Test.HUnit (assertEqual)
 import qualified Test.Lamdu.SugarStubs as Stub
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 infixArgs ::
     Lens.Traversal'

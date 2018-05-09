@@ -10,7 +10,7 @@ import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
 import           Test.Framework (Test)
 import           Test.Framework.Providers.QuickCheck2 (testProperty)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 prop_allPayloads :: Ord a => Val a -> Bool
 prop_allPayloads val =

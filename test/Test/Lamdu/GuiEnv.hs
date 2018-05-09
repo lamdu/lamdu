@@ -13,10 +13,9 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import           Lamdu.Font (fontDefault)
 import qualified Lamdu.Paths as Paths
-import           Test.Lamdu.Instances ()
 import qualified Test.Lamdu.Theme as TestTheme
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 data Env =
     Env

@@ -15,7 +15,7 @@ import           Test.Framework
 import           Test.Framework.Providers.HUnit (testCase)
 import           Test.Lamdu.Db (withDB)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 type T = Transaction
 

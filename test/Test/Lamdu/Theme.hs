@@ -8,7 +8,7 @@ import qualified Lamdu.Paths as Paths
 import qualified Lamdu.Themes as Themes
 import           System.FilePath ((</>), takeDirectory)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 load :: IO Theme
 load =

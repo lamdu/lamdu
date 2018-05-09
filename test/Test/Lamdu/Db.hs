@@ -11,7 +11,7 @@ import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (randomIO)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 initFreshDb :: FilePath -> Transaction.Store DbM -> IO ()
 initFreshDb path db = fileImportAll path >>= DbInit.initDb db

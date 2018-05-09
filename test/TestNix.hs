@@ -18,11 +18,8 @@ import qualified Data.Text as Text
 import           Data.List (isInfixOf, isPrefixOf)
 import           Data.List.Split (splitOn)
 import qualified Data.Yaml as Yaml
-import           Test.Framework (Test, testGroup)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 -- TODO: Consider using Cabal & nix format parsers
 -- instead of quick & dirty string manipulations

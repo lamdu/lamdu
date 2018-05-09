@@ -12,9 +12,8 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal (nameWithoutContext)
 import           Lamdu.Sugar.Names.Add (InternalName(..))
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Lamdu.Instances ()
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 infixr 1 ~>
 (~>) :: Sugar.Type name -> Sugar.Type name -> Sugar.Type name

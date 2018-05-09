@@ -5,7 +5,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Lamdu.Data.Export.JSON.Codec (Entity)
 import qualified Lamdu.Paths as Paths
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 readFreshDb :: IO [Entity]
 readFreshDb =

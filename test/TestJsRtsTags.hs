@@ -6,12 +6,9 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import           Test.Framework (Test)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
 import           Test.Lamdu.FreshDb (readFreshDb)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 test :: Test
 test =

@@ -7,13 +7,9 @@ import qualified GUI.Momentu.View as View
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Framework
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
-import           Test.Lamdu.Instances ()
 import qualified Test.Lamdu.GuiEnv as GuiEnv
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 test :: Test
 test =

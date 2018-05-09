@@ -7,13 +7,8 @@ import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Themes as Themes
 import           System.FilePath (takeFileName)
-import           Test.Framework (Test)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertString)
-import           Test.Lamdu.Instances ()
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 test :: Test
 test =

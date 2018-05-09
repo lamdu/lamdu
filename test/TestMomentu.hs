@@ -14,13 +14,8 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
-import           Test.Framework
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.Framework.Providers.QuickCheck2 (testProperty)
-import           Test.HUnit (assertString)
-import           Test.Lamdu.Instances ()
 
-import           Lamdu.Prelude
+import           Test.Lamdu.Prelude
 
 test :: Test
 test =
