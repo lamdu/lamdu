@@ -1,6 +1,6 @@
 -- | Initialize a database, populating it with "freshdb.json" if needed
 module Lamdu.Data.Db.Init
-    ( initFreshDb
+    ( initDb
     ) where
 
 import qualified Data.Property as Property
@@ -8,10 +8,8 @@ import qualified GUI.Momentu as M
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.GUI.WidgetIdIRef as WidgetIdIRef
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Paths as Paths
 import           Revision.Deltum.Rev.Branch (Branch)
 import qualified Revision.Deltum.Rev.Branch as Branch
 import           Revision.Deltum.Rev.Version (Version)
@@ -65,8 +63,3 @@ initDb db importAct =
         -- Prevent undo into the invalid empty revision
         newVer <- Branch.curVersion master
         Version.preventUndo newVer
-
-initFreshDb :: Transaction.Store DbM -> IO ()
-initFreshDb db =
-    Paths.getDataFileName "freshdb.json"
-    >>= fileImportAll >>= initDb db
