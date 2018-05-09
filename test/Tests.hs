@@ -6,9 +6,9 @@ import           Test.Framework.Providers.HUnit (testCase)
 import qualified TestAnimIdClash
 import qualified TestColorSchemes
 import qualified TestConfig
-import qualified TestNames
 import qualified TestJsRtsTags
 import qualified TestMomentu
+import qualified TestNames
 import qualified TestNix
 import qualified TestPrecedence
 import qualified TestStdlib
@@ -16,8 +16,10 @@ import qualified TestValUtils
 
 import           Lamdu.Prelude
 
-jsonCodecMigrationTest :: IO ()
-jsonCodecMigrationTest = JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
+jsonCodecMigrationTest :: Test
+jsonCodecMigrationTest =
+    JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
+    & testCase "json-codec-migration"
 
 main :: IO ()
 main =
@@ -34,5 +36,5 @@ main =
             , TestNames.test
             , TestJsRtsTags.test
             , TestValUtils.test
-            , testCase "json-codec-migration" jsonCodecMigrationTest
+            , jsonCodecMigrationTest
             ]
