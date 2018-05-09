@@ -142,13 +142,17 @@ fixLamUsages ::
     ConvertM m
     ((ValI m -> T m (ValI m)) -> BinderKind m -> StoredLam m -> T m ())
 fixLamUsages =
-    pure $ \fixOp binderKind storedLam ->
+    ConvertM.typeProtectedSetToVal
+    <&> \protectedSetToVal fixOp binderKind storedLam ->
     case binderKind of
     BinderKindDef defI ->
         changeCallArgs fixOp (storedLam ^. slLam . V.lamResult) (ExprIRef.globalId defI)
     BinderKindLet redexLam ->
         changeCallArgs fixOp (redexLam ^. V.lamResult) (redexLam ^. V.lamParamId)
-    BinderKindLambda -> pure ()
+    BinderKindLambda ->
+        protectedSetToVal prop (prop ^. Property.pVal) & void
+        where
+            prop = storedLam ^. slLambdaProp
 
 addFieldParam ::
     Monad m =>
