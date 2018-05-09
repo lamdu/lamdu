@@ -367,6 +367,7 @@ Library
                   , Revision.Deltum.Rev.View
                   , Revision.Deltum.Rev.ViewBranchInternal
                   , Revision.Deltum.Transaction
+                  , System.Process.Utils
                   , System.Random.Extended
                   , System.Remote.Monitoring.Shim
                   , System.TimeIt.Pure

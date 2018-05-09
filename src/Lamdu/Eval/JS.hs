@@ -11,7 +11,6 @@ module Lamdu.Eval.JS
 import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
-import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM, msum)
 import           Control.Monad.Except (throwError, runExceptT)
@@ -46,9 +45,10 @@ import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Paths as Paths
 import           Numeric (readHex)
 import           System.FilePath (splitFileName)
-import           System.IO (IOMode(..), Handle, hClose, hIsEOF, hPutStrLn, hFlush, withFile)
+import           System.IO (IOMode(..), Handle, hIsEOF, hPutStrLn, hFlush, withFile)
 import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
+import           System.Process.Utils (withProcess)
 import           Text.Read (readMaybe)
 
 import           Lamdu.Prelude
@@ -79,29 +79,16 @@ data Evaluator srcId = Evaluator
 
 type Parse = State (IntMap (ER.Val ()))
 
-nodeRepl :: FilePath -> FilePath -> Proc.CreateProcess
-nodeRepl nodeExePath rtsPath =
-    (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
-    { Proc.cwd = Just rtsPath
-    }
-
-withProcess ::
-    Proc.CreateProcess ->
-    ((Maybe Handle, Maybe Handle, Maybe Handle, Proc.ProcessHandle) -> IO a) ->
-    IO a
-withProcess createProc =
-    E.bracket
-    (Proc.createProcess createProc
-     { Proc.std_in = Proc.CreatePipe
-     , Proc.std_out = Proc.CreatePipe
-     })
-    (E.uninterruptibleMask_ . close)
-    where
-      close (_, mStdout, mStderr, handle) =
-          do
-              _ <- [mStdout, mStderr] & Lens.traverse . Lens.traverse %%~ hClose
-              Proc.terminateProcess handle
-              Proc.waitForProcess handle
+nodeRepl :: IO Proc.CreateProcess
+nodeRepl =
+    do
+        cwd <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
+        nodeExePath <- NodeJS.path
+        pure (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
+            { Proc.cwd = Just cwd
+            , Proc.std_in = Proc.CreatePipe
+            , Proc.std_out = Proc.CreatePipe
+            }
 
 parseHexBs :: Text -> ByteString
 parseHexBs =
@@ -357,9 +344,8 @@ asyncStart ::
     IO ()
 asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
     do
-        nodeExePath <- NodeJS.path
-        rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
-        withProcess (nodeRepl nodeExePath rtsPath) $
+        procParams <- nodeRepl
+        withProcess procParams $
             \(Just stdin, Just stdout, Nothing, _handle) ->
             withCopyJSOutput (actions ^. aCopyJSOutputPath) $ \jsOut ->
             do
