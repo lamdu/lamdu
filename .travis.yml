@@ -1,7 +1,8 @@
 sudo: false
 
 before_install:
-  # Download and unpack the stack executable
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libxi-dev libxrandr-dev libxcursor-dev libxinerama-dev libleveldb-dev
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
