@@ -11,8 +11,6 @@ import qualified Lamdu.Sugar.Convert as Convert
 import           Lamdu.Sugar.Types
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
-import           Test.Framework
-import           Test.Framework.Providers.HUnit (testCase)
 import           Test.Lamdu.Db (withDB)
 
 import           Test.Lamdu.Prelude

@@ -7,8 +7,6 @@ import qualified Data.Set as Set
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Calc.Val.Annotated.Arbitrary ()
 import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
-import           Test.Framework (Test)
-import           Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import           Test.Lamdu.Prelude
 

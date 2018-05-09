@@ -4,9 +4,6 @@ module TestPrecedence (test) where
 import qualified Control.Lens as Lens
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Framework (Test)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit (assertEqual)
 import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
