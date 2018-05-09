@@ -169,7 +169,7 @@ createWindow title mode =
         let createWin = M.createWindow title
         case mode of
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
-            Opts.VideoModeSize      -> createWin Nothing videoModeSize
+            Opts.VideoModeSize      -> createWin Nothing (videoModeSize - 1)
 
 settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Maybe Settings -> Settings -> IO ()
 settingsChangeHandler configSampler evaluator mOld new =
