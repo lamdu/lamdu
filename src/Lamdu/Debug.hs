@@ -6,6 +6,7 @@ module Lamdu.Debug
     , Evaluator(..)
     , makeCounters
     , makeMonitors
+    , noopMonitors
     ) where
 
 import qualified Data.Text as Text
@@ -50,6 +51,9 @@ makeBreakpoint msg True =
 
 compose :: Evaluator -> Evaluator -> Evaluator
 compose (Evaluator f) (Evaluator g) = Evaluator (f . g)
+
+noopMonitors :: Monitors
+noopMonitors = pure idE
 
 makeMonitors :: Tasks Bool -> Maybe Counters -> IO Monitors
 makeMonitors breakpoints mCounters =
