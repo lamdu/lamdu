@@ -2,7 +2,8 @@ sudo: false
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libxi-dev libxrandr-dev libxcursor-dev libxinerama-dev libleveldb-dev
+  - sudo apt-get install -y zlib1g-dev libglew-dev libleveldb-dev libglfw-dev
+  - sudo apt-get install -y libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
