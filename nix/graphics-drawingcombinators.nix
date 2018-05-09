@@ -6,8 +6,8 @@ mkDerivation {
   version = "1.7.1";
   src = fetchgit {
     url = "https://github.com/lamdu/graphics-drawingcombinators.git";
-    sha256 = "0d0q84rfg5yajlphv5zh5z6pnj789m13z1h9h5393kclnb076fih";
-    rev = "83b468a530ff2c3b9ebd6b1fc018714d2a7b4907";
+    sha256 = "13bx2jpm7ml5x5vyjc3sgkasf8kxyma44pqp084yq0mhafsp5drh";
+    rev = "2d44457f0b8385af600289cb1feca4cc03a6e39e";
   };
   isLibrary = true;
   isExecutable = true;
