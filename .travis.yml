@@ -12,7 +12,7 @@ install:
   - stack setup
 
 script:
-  - stack test
+  - stack build --test -v
 
 cache:
   directories:
