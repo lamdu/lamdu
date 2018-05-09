@@ -18,7 +18,7 @@ import           Lamdu.Prelude
 
 jsonCodecMigrationTest :: Test
 jsonCodecMigrationTest =
-    JsonFormat.fileImportAll "test/old-codec-factorial.json" & void
+    JsonFormat.fileImportAll "test/programs/old-codec-factorial.json" & void
     & testCase "json-codec-migration"
 
 main :: IO ()
