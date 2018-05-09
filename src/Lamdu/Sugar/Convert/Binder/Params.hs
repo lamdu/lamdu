@@ -307,10 +307,13 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     <&>
     \postProcess chosenTag ->
     do
-        tagsBefore ++ chosenTag : tagsAfter & setParamList mPresMode (slParamList storedLam)
+        tagsBefore ++ chosenTag : tagsAfter
+            & setParamList mPresMode (slParamList storedLam)
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. V.recTag == prevTag =
-                    argI <$ ExprIRef.writeValBody argI (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
+                    argI <$
+                    ExprIRef.writeValBody argI
+                    (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
                 | otherwise =
                     argI <$
                     ( changeFieldToCall (recExtend ^. V.recRest)
@@ -324,7 +327,9 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
                 >>= ExprIRef.newValBody
             changeFieldToCall argI = ExprIRef.readValBody argI >>= fixArg argI
         fixUsagesOfLamBinder changeFieldToCall binderKind storedLam
-        changeGetFieldTags (storedLam ^. slLam . V.lamParamId) prevTag chosenTag (storedLam ^. slLam . V.lamResult)
+        changeGetFieldTags
+            (storedLam ^. slLam . V.lamParamId) prevTag chosenTag
+            (storedLam ^. slLam . V.lamResult)
         postProcess
     where
         (tagsBefore, _:tagsAfter) = break (== prevTag) prevTagList
