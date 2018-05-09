@@ -108,34 +108,39 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m -> T m (NewLet m)
+    V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m ->
+    ConvertM m (T m (NewLet m))
 convertLetParamToRecord var letLam storedLam =
+    Params.convertToRecordParams <&> \toRecordParams ->
     do
         tagForVar <- Anchors.assocTag var & Property.getP
         DataOps.genNewTag
-            >>= Params.convertToRecordParams mkNewArg (BinderKindLet letLam)
+            >>= toRecordParams mkNewArg (BinderKindLet letLam)
                 storedLam Params.NewParamAfter
         convertVarToGetFieldParam var tagForVar (storedLam ^. Params.slLam)
-        Params.slLambdaProp storedLam & Property.value & NewLet & pure
+        storedLam ^. Params.slLambdaProp . Property.pVal & NewLet & pure
     where
         mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 addFieldToLetParamsRecord ::
     Monad m =>
     [T.Tag] -> V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m ->
-    T m (NewLet m)
+    ConvertM m (T m (NewLet m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
+    Params.addFieldParam <&>
+    \addParam ->
     do
         paramTag <- DataOps.genNewTag
-        Params.addFieldParam Nothing mkNewArg (BinderKindLet letLam) storedLam
+        addParam Nothing mkNewArg (BinderKindLet letLam) storedLam
             ((fieldTags ++) . pure) paramTag
         convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
-        Params.slLambdaProp storedLam & Property.value & NewLet & pure
+        storedLam ^. Params.slLambdaProp . Property.pVal & NewLet & pure
     where
         mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 addLetParam ::
-    Monad m => V.Var -> Redex (Input.Payload m a) -> T m (NewLet m)
+    Monad m =>
+    V.Var -> Redex (Input.Payload m a) -> ConvertM m (T m (NewLet m))
 addLetParam var redex =
     case storedRedex ^. Redex.arg . Val.body of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
@@ -148,7 +153,7 @@ addLetParam var redex =
         _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
         where
             storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . Val.payload)
-    _ -> convertLetToLam var storedRedex
+    _ -> convertLetToLam var storedRedex & pure
     where
         storedRedex = redex <&> (^. Input.stored)
 
@@ -158,60 +163,74 @@ sameLet redex = redex ^. Redex.arg . Val.payload & Property.value & NewLet
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
 
-processLet ::
-    Monad m => ConvertM.ScopeInfo f -> Redex (Input.Payload m a) -> T m (NewLet m)
-processLet scopeInfo redex =
-    case varsExitingScope of
-    [] -> sameLet (redex <&> (^. Input.stored)) & pure
-    [x] -> addLetParam x redex
-    _ -> error "multiple osiVarsUnderPos not expected!?"
-    <* maybeDetach
+processLet :: Monad m => Redex (Input.Payload m a) -> ConvertM m (T m (NewLet m))
+processLet redex =
+    do
+        scopeInfo <- Lens.view ConvertM.scScopeInfo
+        let mRecursiveRef = scopeInfo ^. ConvertM.siRecursiveRef
+        let mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
+        let isRecursiveDefRef var = mDefI == Just var
+        let usedLocalVars =
+                redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
+                & ordNub
+                & filter (not . isRecursiveDefRef)
+                & filter (`Map.member` Infer.scopeToTypeMap innerScope)
+        let (varsExitingScope, skolemsExitingScope) =
+                case scopeInfo ^. ConvertM.siMOuter of
+                Nothing -> (usedLocalVars, mempty)
+                Just outerScopeInfo ->
+                    ( filter (`Map.notMember` Infer.scopeToTypeMap outerScope) usedLocalVars
+                    , innerSkolems `TV.difference` outerSkolems
+                    )
+                    where
+                        outerSkolems = Infer.skolems outerScope ^. Infer.skolemScopeVars
+                        outerScope = outerScopeInfo ^. ConvertM.osiScope
+        let maybeDetach
+                | TV.null skolemsExitingScope = pure ()
+                | otherwise =
+                    Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored)
+                    >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamParamId)
+        case varsExitingScope of
+            [] -> sameLet (redex <&> (^. Input.stored)) & pure & pure
+            [x] -> addLetParam x redex
+            _ -> error "multiple osiVarsUnderPos not expected!?"
+            <&> (<* maybeDetach)
     where
-        mRecursiveRef = scopeInfo ^. ConvertM.siRecursiveRef
-        mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
-        isRecursiveDefRef var = mDefI == Just var
-        maybeDetach
-            | TV.null skolemsExitingScope = pure ()
-            | otherwise =
-                Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored)
-                >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamParamId)
         innerScope =
             redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plScope
-        usedLocalVars =
-            redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
-            & ordNub
-            & filter (not . isRecursiveDefRef)
-            & filter (`Map.member` Infer.scopeToTypeMap innerScope)
         innerSkolems = Infer.skolems innerScope ^. Infer.skolemScopeVars
-        (varsExitingScope, skolemsExitingScope) =
-            case scopeInfo ^. ConvertM.siMOuter of
-            Nothing -> (usedLocalVars, mempty)
-            Just outerScopeInfo ->
-                ( filter (`Map.notMember` Infer.scopeToTypeMap outerScope) usedLocalVars
-                , innerSkolems `TV.difference` outerSkolems
-                )
-                where
-                    outerSkolems = Infer.skolems outerScope ^. Infer.skolemScopeVars
-                    outerScope = outerScopeInfo ^. ConvertM.osiScope
 
-floatLetToOuterScope ::
+makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
-    Redex (Input.Payload m a) -> ConvertM.Context m ->
-    T m ExtractDestination
-floatLetToOuterScope setTopLevel redex ctx =
+    Redex (Input.Payload m a) ->
+    ConvertM m (T m ExtractDestination)
+makeFloatLetToOuterScope setTopLevel redex =
+    (,)
+    <$>
+    ( redex
+    & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~
+        setTopLevel
+    & processLet
+    )
+    <*> Lens.view id
+    <&>
+    \(makeNewLet, ctx) ->
     do
-        redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pVal & setTopLevel
-        newLet <-
-            redex
-            & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~ setTopLevel
-            & processLet (ctx ^. ConvertM.scScopeInfo)
+        redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored .
+            Property.pVal & setTopLevel
+        newLet <- makeNewLet
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
                 moveToGlobalScope ctx param innerDefExpr
                 <&> ExtractToDef
                 where
+                    addRecursiveRefAsDep =
+                        case ctx ^. ConvertM.scScopeInfo . ConvertM.siRecursiveRef of
+                        Nothing -> id
+                        Just (ConvertM.RecursiveRef defI defType) ->
+                            Infer.depsGlobalTypes . Lens.at (ExprIRef.globalId defI) ?~ defType
                     innerDefExpr = Definition.Expr (nlIRef newLet) innerDeps
                     innerDeps =
                         -- Outer deps, pruned:
@@ -224,16 +243,4 @@ floatLetToOuterScope setTopLevel redex ctx =
                 DataOps.redexWrapWithGivenParam param (nlIRef newLet) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
     where
-        addRecursiveRefAsDep =
-            case ctx ^. ConvertM.scScopeInfo . ConvertM.siRecursiveRef of
-            Nothing -> id
-            Just (ConvertM.RecursiveRef defI defType) ->
-                Infer.depsGlobalTypes . Lens.at (ExprIRef.globalId defI) ?~ defType
         param = redex ^. Redex.lam . V.lamParamId
-
-makeFloatLetToOuterScope ::
-    Monad m =>
-    (ValI m -> T m ()) -> Redex (Input.Payload m a) ->
-    ConvertM m (T m ExtractDestination)
-makeFloatLetToOuterScope setTopLevel redex =
-    Lens.view id <&> floatLetToOuterScope setTopLevel redex
