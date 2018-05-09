@@ -12,7 +12,7 @@ install:
 
 script:
   - stack test
-  
+
 cache:
   directories:
   - $HOME/.stack
