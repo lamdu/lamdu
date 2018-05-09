@@ -4,6 +4,7 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y zlib1g-dev libglew-dev libleveldb-dev libglfw-dev
   - sudo apt-get install -y libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
+  - nvm install 7
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
@@ -12,7 +13,7 @@ install:
   - stack setup
 
 script:
-  - stack build --test -v
+  - stack test
 
 cache:
   directories:
