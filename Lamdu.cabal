@@ -57,6 +57,7 @@ Test-Suite Tests
                , TestNix
                , TestPrecedence
                , TestStdlib
+               , TestSugar
                , TestValUtils
                , Test.Lamdu.Db
                , Test.Lamdu.FreshDb

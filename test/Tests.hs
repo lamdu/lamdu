@@ -12,6 +12,7 @@ import qualified TestNames
 import qualified TestNix
 import qualified TestPrecedence
 import qualified TestStdlib
+import qualified TestSugar
 import qualified TestValUtils
 
 import           Lamdu.Prelude
@@ -26,7 +27,8 @@ main =
     defaultMainWithOpts tests mempty
     where
         tests =
-            [ TestPrecedence.test
+            [ TestSugar.test
+            , TestPrecedence.test
             , TestStdlib.test
             , TestNix.test
             , TestMomentu.test
