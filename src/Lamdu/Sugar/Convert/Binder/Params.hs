@@ -135,9 +135,9 @@ changeCallArgs change val var  =
         changeArg prop =
             Property.value prop & change >>= Property.set prop
 
-fixUsagesOfLamBinder ::
+fixLamUsages ::
     Monad m => (ValI m -> T m (ValI m)) -> BinderKind m -> StoredLam m -> T m ()
-fixUsagesOfLamBinder fixOp binderKind storedLam =
+fixLamUsages fixOp binderKind storedLam =
     case binderKind of
     BinderKindDef defI ->
         changeCallArgs fixOp (storedLam ^. slLam . V.lamResult) (ExprIRef.globalId defI)
@@ -153,7 +153,7 @@ addFieldParam ::
 addFieldParam mPresMode mkArg binderKind storedLam mkNewTags tag =
     do
         mkNewTags tag & setParamList mPresMode (slParamList storedLam)
-        fixUsagesOfLamBinder addFieldToCall binderKind storedLam
+        fixLamUsages addFieldToCall binderKind storedLam
     where
         addFieldToCall argI =
             do
@@ -220,7 +220,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
         setP (slParamList storedLam) newTags
         getFieldParamsToHole tag (storedLam ^. slLam)
         traverse_ onLastTag mLastTag
-        fixUsagesOfLamBinder fixRecurseArg binderKind storedLam
+        fixLamUsages fixRecurseArg binderKind storedLam
     where
         onLastTag lastTag =
             do
@@ -326,7 +326,7 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
                 <&> (`V.Apply` argI) <&> V.BApp
                 >>= ExprIRef.newValBody
             changeFieldToCall argI = ExprIRef.readValBody argI >>= fixArg argI
-        fixUsagesOfLamBinder changeFieldToCall binderKind storedLam
+        fixLamUsages changeFieldToCall binderKind storedLam
         changeGetFieldTags
             (storedLam ^. slLam . V.lamParamId) prevTag chosenTag
             (storedLam ^. slLam . V.lamResult)
@@ -460,7 +460,7 @@ convertToRecordParams mkNewArg binderKind storedLam newParamPosition newParam =
             & setParamList Nothing paramList
         convertVarToGetField oldParam paramVar
             (storedLam ^. slLam . V.lamResult)
-        fixUsagesOfLamBinder (wrapArgWithRecord mkNewArg oldParam newParam)
+        fixLamUsages (wrapArgWithRecord mkNewArg oldParam newParam)
             binderKind storedLam
     where
         paramVar = storedLam ^. slLam . V.lamParamId
