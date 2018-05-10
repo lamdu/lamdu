@@ -4,10 +4,12 @@ module TestSugar where
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
+import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import           Lamdu.Data.Db.Layout (runDbTransaction, codeAnchors, ViewM)
 import           Lamdu.Debug (noopMonitors)
 import qualified Lamdu.Eval.Results as EvalResults
-import qualified Lamdu.Sugar.Convert as Convert
+import           Lamdu.GUI.ExpressionGui as ExprGui
+import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Types
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
@@ -21,14 +23,14 @@ test :: Test
 test = testGroup "sugar-tests" [testChangeParam]
 
 convertWorkArea ::
-    T ViewM (WorkArea Convert.InternalName (T ViewM) (T ViewM) [EntityId])
+    T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
 convertWorkArea =
-    Convert.loadWorkArea noopMonitors (pure EvalResults.empty) codeAnchors
+    loadWorkArea noopMonitors (pure EvalResults.empty) codeAnchors
 
 -- | Verify that a sugar action does not result in a crash
 testSugarAction ::
     FilePath ->
-    (WorkArea Convert.InternalName (T ViewM) (T ViewM) [EntityId] -> T ViewM a) ->
+    (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload -> T ViewM a) ->
     IO ()
 testSugarAction program action =
     withDB ("test/programs/" <> program)
