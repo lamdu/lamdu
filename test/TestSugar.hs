@@ -2,6 +2,7 @@
 
 module TestSugar where
 
+import           Control.DeepSeq (deepseq)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
@@ -26,6 +27,7 @@ convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
 convertWorkArea =
     loadWorkArea noopMonitors (pure EvalResults.empty) codeAnchors
+    >>= \x -> deepseq x (pure x)
 
 -- | Verify that a sugar action does not result in a crash
 testSugarAction ::
