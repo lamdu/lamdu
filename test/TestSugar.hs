@@ -20,7 +20,7 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 test :: Test
-test = testGroup "sugar-tests" [testChangeParam]
+test = testGroup "sugar-tests" [testChangeParam, testExtract]
 
 convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
@@ -50,3 +50,18 @@ testChangeParam =
             rBody . _BodySimpleApply . V.applyArg .
             rBody . _BodyLam . lamBinder . bParams . _Params . Lens.ix 0 .
             fpInfo . piTag . tagSelection . tsNewTag
+
+-- | Test for issue #373
+-- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
+testExtract :: Test
+testExtract =
+    testSugarAction "let-items-extract.json" action
+    & testCase "reorder-lets"
+    where
+        action =
+            (^?! waRepl . replExpr
+            . rBody . _BodyLam . lamBinder . bBody
+            . bbContent . _BinderLet . lBody
+            . bbContent . _BinderLet . lValue
+            . bActions . baMNodeActions . Lens._Just . extract
+            )
