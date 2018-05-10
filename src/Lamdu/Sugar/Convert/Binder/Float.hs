@@ -114,9 +114,7 @@ convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
     do
         tagForVar <- Anchors.assocTag var & Property.getP
-        DataOps.genNewTag
-            >>= toRecordParams mkNewArg (BinderKindLet letLam)
-                storedLam Params.NewParamAfter
+        toRecordParams mkNewArg (BinderKindLet letLam) storedLam Params.NewParamAfter tagForVar
         convertVarToGetFieldParam var tagForVar (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp . Property.pVal & NewLet & pure
     where
