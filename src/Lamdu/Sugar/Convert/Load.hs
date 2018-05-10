@@ -51,7 +51,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-assertInferSuccess :: Either Infer.Error a -> a
+assertInferSuccess :: HasCallStack => Either Infer.Error a -> a
 assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
 
 inferDefExprWithRecursiveRef ::
