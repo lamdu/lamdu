@@ -25,22 +25,26 @@ convertWorkArea ::
 convertWorkArea =
     Convert.loadWorkArea noopMonitors (pure EvalResults.empty) codeAnchors
 
+-- | Verify that a sugar action does not result in a crash
+testSugarAction ::
+    FilePath ->
+    (WorkArea Convert.InternalName (T ViewM) (T ViewM) [EntityId] -> T ViewM a) ->
+    IO ()
+testSugarAction program action =
+    withDB ("test/programs/" <> program)
+    (runDbTransaction ?? runAction (void (convertWorkArea >>= action >> convertWorkArea)))
+
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
 testChangeParam :: Test
 testChangeParam =
-    testCase "change-param" $
-    withDB "test/programs/apply-id-of-lambda.json" $
-    \db ->
-    runDbTransaction db $ runAction $
-    do
-        sugarExpr <- convertWorkArea
-        let replaceParam =
-                sugarExpr ^?! waRepl . replExpr .
-                rBody . _BodySimpleApply . V.applyFunc .
-                rBody . _BodySimpleApply . V.applyArg .
-                rBody . _BodyLam . lamBinder . bParams . _Params . Lens.ix 0 .
-                fpInfo . piTag . tagSelection . tsNewTag
-        _ <- replaceParam "new"
-        _ <- convertWorkArea
-        pure ()
+    testSugarAction "apply-id-of-lambda.json" action
+    & testCase "change-param"
+    where
+        action workArea =
+            "new" &
+            workArea ^?! waRepl . replExpr .
+            rBody . _BodySimpleApply . V.applyFunc .
+            rBody . _BodySimpleApply . V.applyArg .
+            rBody . _BodyLam . lamBinder . bParams . _Params . Lens.ix 0 .
+            fpInfo . piTag . tagSelection . tsNewTag
