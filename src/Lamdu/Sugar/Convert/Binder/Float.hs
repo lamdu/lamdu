@@ -119,7 +119,7 @@ convertLetParamToRecord var letLam storedLam =
         addAsTag <-
             if tagForVar == tagForExistingParam
             then DataOps.genNewTag
-            else return tagForVar
+            else pure tagForVar
         toRecordParams mkNewArg (BinderKindLet letLam) storedLam Params.NewParamAfter addAsTag
         convertVarToGetFieldParam var addAsTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp . Property.pVal & NewLet & pure
