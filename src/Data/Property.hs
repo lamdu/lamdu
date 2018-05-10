@@ -16,7 +16,7 @@ import           Lamdu.Prelude
 data Property m a = Property
     { _pVal :: a
     , _pSet :: a -> m ()
-    }
+    } deriving Generic
 Lens.makeLenses ''Property
 
 value :: Property m a -> a

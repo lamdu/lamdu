@@ -29,13 +29,13 @@ import           Lamdu.Prelude
 type ExpressionGui m = Responsive (m GuiState.Update)
 
 data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 -- This is only relevant for function subexprs, and means their
 -- parameter can only ever get one scope per parent scope id, meaning
 -- we may avoid showing their scope nav altogether.
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
 
 data ShowAnnotation = ShowAnnotation
     { -- showExpanded means we:
@@ -45,7 +45,7 @@ data ShowAnnotation = ShowAnnotation
     , _showInTypeMode :: Bool
     , _showInEvalMode :: EvalModeShow
     , _funcApplyLimit :: FuncApplyLimit
-    } deriving (Eq, Ord, Show)
+    } deriving (Eq, Ord, Show, Generic)
 Lens.makeLenses ''ShowAnnotation
 
 showAnnotationWhenVerbose :: ShowAnnotation
@@ -69,7 +69,7 @@ data Payload = Payload
     , _plShowAnnotation :: ShowAnnotation
     , _plNeedParens :: Bool
     , _plMinOpPrec :: Int
-    }
+    } deriving Generic
 Lens.makeLenses ''Payload
 
 type ExpressionN i o a = Sugar.Expression (Name o) i o a

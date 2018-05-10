@@ -33,18 +33,18 @@ data DefinitionExpression name i o expr = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
     , _deContent :: Binder name i o expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data DefinitionBuiltin name o = DefinitionBuiltin
     { _biName :: Definition.FFIName
     , _biSetName :: Definition.FFIName -> o ()
     , _biType :: Scheme name
-    }
+    } deriving Generic
 
 data DefinitionBody name i o expr
     = DefinitionBodyExpression (DefinitionExpression name i o expr)
     | DefinitionBodyBuiltin (DefinitionBuiltin name o)
-    deriving (Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data Definition name i o expr = Definition
     { _drName :: Tag name i o
@@ -52,25 +52,25 @@ data Definition name i o expr = Definition
     , _drDefinitionState :: i (Property o Meta.DefinitionState)
     , _drEntityId :: EntityId
     , _drBody :: DefinitionBody name i o expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane name i o a = Pane
     { _paneDefinition :: Definition name i o (Expression name i o a)
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
     { _replExpr :: Expression name i o a
     , _replResult :: EvalCompletion name o
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data WorkArea name i o a = WorkArea
     { _waPanes :: [Pane name i o a]
     , _waRepl :: Repl name i o a
     , _waGlobals :: i [NameRef name o]
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionBuiltin

@@ -26,9 +26,10 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Prelude
 
 newtype ScopeId = ScopeId Int
-    deriving (Show, Eq, Ord, Binary)
+    deriving (Show, Eq, Ord, Binary, Generic)
 
-newtype EvalTypeError = EvalTypeError Text deriving (Show, Eq, Ord)
+newtype EvalTypeError = EvalTypeError Text
+    deriving (Show, Eq, Ord, Generic)
 
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
@@ -49,7 +50,7 @@ data Val pl = Val
     } deriving (Show, Functor, Foldable, Traversable)
 
 data ErrorType = LamduBug | BrokenDef | ReachedHole | RuntimeError
-    deriving (Read, Show)
+    deriving (Read, Show, Generic)
 Lens.makePrisms ''ErrorType
 
 data WhichGlobal = GlobalRepl | GlobalDef V.Var

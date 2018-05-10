@@ -33,12 +33,12 @@ type CompositeVar p = TVar (T.Composite p)
 data CompositeFields p name a = CompositeFields
     { _compositeFields :: [(TagInfo name, a)]
     , _compositeExtension :: Maybe (CompositeVar p) -- TyVar of more possible fields
-    } deriving (Show, Functor, Foldable, Traversable)
+    } deriving (Show, Functor, Foldable, Traversable, Generic)
 
 data TId name = TId
     { _tidName :: name
     , _tidTId :: NominalId
-    } deriving (Eq, Ord, Show)
+    } deriving (Eq, Ord, Show, Generic)
 
 data TBody name a
     = TVar T.TypeVar
@@ -52,18 +52,18 @@ data TBody name a
       -- ^ Lifts a composite record type
     | TVariant (VariantType name a)
       -- ^ Lifts a composite variant type
-    deriving (Show, Functor, Foldable, Traversable)
+    deriving (Show, Functor, Foldable, Traversable, Generic)
 
 data Type name = Type
     { _tPayload :: EntityId
     , _tBody :: TBody name (Type name)
-    } deriving (Show)
+    } deriving (Show, Generic)
 
 data Scheme name = Scheme
     { _schemeForAll :: TypeVars
     , _schemeConstraints :: Constraints
     , _schemeType :: Type name
-    } deriving Show
+    } deriving (Show, Generic)
 
 Lens.makeLenses ''CompositeFields
 Lens.makeLenses ''Scheme

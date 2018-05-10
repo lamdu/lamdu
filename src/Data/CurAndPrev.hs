@@ -15,7 +15,7 @@ import           Lamdu.Prelude
 data CurAndPrev a = CurAndPrev
     { _current :: a
     , _prev :: a
-    } deriving (Functor, Foldable, Traversable, Show, Eq, Ord)
+    } deriving (Functor, Foldable, Traversable, Show, Eq, Ord, Generic)
 Lens.makeLenses ''CurAndPrev
 
 instance Semigroup a => Semigroup (CurAndPrev a) where

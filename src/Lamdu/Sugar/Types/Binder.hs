@@ -45,13 +45,14 @@ import           Lamdu.Prelude
 data Annotation name = Annotation
     { _aInferredType :: Type name
     , _aMEvaluationResult :: EvaluationScopes name
-    } deriving Show
+    } deriving (Show, Generic)
 
 data AddNextParam name i o
     = AddNext (TagSelection name i o ())
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddNext EntityId
+    deriving Generic
 
 data FuncParamActions name i o =
     FuncParamActions
@@ -59,25 +60,25 @@ data FuncParamActions name i o =
     , _fpDelete :: o ()
     , _fpMOrderBefore :: Maybe (o ())
     , _fpMOrderAfter :: Maybe (o ())
-    }
+    } deriving Generic
 
 newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
-    }
+    } deriving Generic
 instance Show (NullParamActions o) where
     show (NullParamActions _) = "(NullParamActions)"
 
 data ParamInfo name i o = ParamInfo
     { _piTag :: Tag name i o
     , _piActions :: FuncParamActions name i o
-    }
+    } deriving Generic
 instance Show name => Show (ParamInfo name i o) where
     show (ParamInfo tag _) = show tag
 
 data FuncParam name info = FuncParam
     { _fpAnnotation :: Annotation name
     , _fpInfo :: info
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data ExtractDestination
     = ExtractToLet EntityId
@@ -87,6 +88,7 @@ data DetachAction o
     = FragmentAlready EntityId -- I'o an apply-of-hole, no need to detach
     | FragmentExprAlready EntityId -- I'o an arg of apply-of-hole, no need to detach
     | DetachAction (o EntityId) -- Detach me
+    deriving Generic
 
 data NodeActions name i o = NodeActions
     { _detach :: DetachAction o
@@ -94,12 +96,12 @@ data NodeActions name i o = NodeActions
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
     , _wrapInRecord :: TagSelection name i o ()
-    }
+    } deriving Generic
 
 data LetActions name i o = LetActions
     { _laDelete :: o ()
     , _laNodeActions :: NodeActions name i o
-    }
+    } deriving Generic
 
 data Let name i o expr = Let
     { _lValue :: Binder name i o expr -- "let foo = [[bar]] in x"
@@ -110,7 +112,7 @@ data Let name i o expr = Let
     , _lActions :: LetActions name i o
     , _lBodyScope :: ChildScopes
     , _lBody :: BinderBody name i o expr -- "let foo = bar in [[x]]"
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 instance (Show name, Show expr) => Show (Let name i o expr) where
     show (Let binder _ _ _ann name _ _ body) =
@@ -123,11 +125,12 @@ data AddFirstParam name i o
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddFirst EntityId
+    deriving Generic
 
 data BinderActions name i o = BinderActions
     { _baAddFirstParam :: AddFirstParam name i o
     , _baMNodeActions :: Maybe (NodeActions name i o)
-    }
+    } deriving Generic
 
 data BinderParams name i o
     = -- a definition or let-item without parameters
@@ -137,17 +140,17 @@ data BinderParams name i o
       -- This is often used to represent "deferred execution"
       NullParam (FuncParam name (NullParamActions o))
     | Params [FuncParam name (ParamInfo name i o)]
-    deriving Show
+    deriving (Show, Generic)
 
 data BinderContent name i o expr
     = BinderLet (Let name i o expr)
     | BinderExpr expr
-    deriving (Show, Functor, Foldable, Traversable)
+    deriving (Show, Functor, Foldable, Traversable, Generic)
 
 data BinderBody name i o expr = BinderBody
     { _bbAddOuterLet :: o EntityId
     , _bbContent :: BinderContent name i o expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data BinderBodyScope
     = SameAsParentScope
@@ -155,6 +158,7 @@ data BinderBodyScope
     | BinderBodyScope ParamScopes
       -- ^ binder has params, use the map to get the param application
       -- scopes
+    deriving Generic
 
 data Binder name i o expr = Binder
     { _bChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
@@ -164,7 +168,7 @@ data Binder name i o expr = Binder
     , _bActions :: BinderActions name i o
     , -- The scope inside a lambda (if exists)
       _bBodyScopes :: BinderBodyScope
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 instance (Show info, Show name) => Show (FuncParam name info) where
     show FuncParam{..} =

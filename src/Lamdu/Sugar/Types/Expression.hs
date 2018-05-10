@@ -55,7 +55,7 @@ data Payload name i o a = Payload
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId
     , _plData :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 instance Show a => Show (Payload name i o a) where
     show (Payload _ann _actions _entityId data_) = show data_
 
@@ -64,7 +64,7 @@ type Payload' name m = Payload name m m
 data Expression name i o a = Expression
     { _rBody :: Body name i o (Expression name i o a)
     , _rPayload :: Payload name i o a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 instance (Show name, Show a) => Show (Expression name i o a) where
     show (Expression body pl) = show body ++ "{" ++ show pl ++ "}"
 
@@ -73,41 +73,41 @@ data CompositeItem name i o expr = CompositeItem
     { _ciDelete :: o EntityId
     , _ciTag :: Tag name i o
     , _ciExpr :: expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
-    }
+    } deriving Generic
 
 newtype OpenCompositeActions o = OpenCompositeActions
     { _openCompositeClose :: o EntityId
-    }
+    } deriving Generic
 
 data CompositeTail o expr
     = OpenComposite (OpenCompositeActions o) expr
     | ClosedComposite (ClosedCompositeActions o)
-    deriving (Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data Composite name i o expr = Composite
     { _cItems :: [CompositeItem name i o expr]
     , _cTail :: CompositeTail o expr
     , _cAddItem :: TagSelection name i o EntityId
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data CaseArg o expr = CaseArg
     { _caVal :: expr
     , _caToLambdaCase :: o EntityId
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data CaseKind o expr
     = LambdaCase
     | CaseWithArg (CaseArg o expr)
-    deriving (Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data Case name i o expr = Case
     { _cKind :: CaseKind o expr
     , _cBody :: Composite name i o expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 {- Composites end -}
 
 -- An "if/elif <cond>: <then>" clause in an IfElse expression
@@ -115,7 +115,7 @@ data IfThen o expr = IfThen
     { _itIf :: expr
     , _itThen :: expr
     , _itDelete :: o EntityId
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
 data ElseIfContent name i o expr = ElseIfContent
@@ -124,62 +124,63 @@ data ElseIfContent name i o expr = ElseIfContent
     , _eiContent :: IfElse name i o expr
     , _eiCondAddLet :: o EntityId
     , _eiNodeActions :: NodeActions name i o
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Else name i o expr = SimpleElse expr | ElseIf (ElseIfContent name i o expr)
-    deriving (Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data IfElse name i o expr = IfElse
     { _iIfThen :: IfThen o expr
     , _iElse :: Else name i o expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data GetField name i o expr = GetField
     { _gfRecord :: expr
     , _gfTag :: Tag name i o
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Inject name i o expr = Inject
     { _iTag :: Tag name i o
     , _iMVal :: Maybe expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo name
     , _aaExpr :: expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data RelayedArg name i o = RelayedArg
     { _raValue :: GetVar name o
     , _raId :: EntityId
     , _raActions :: NodeActions name i o
-    }
+    } deriving Generic
 
 data LabeledApplyFunc name i o a = LabeledApplyFunc
     { _afVar :: BinderVarRef name o
     , _afPayload :: Payload name i o a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data LabeledApply name i o expr = LabeledApply
     { _aFunc :: LabeledApplyFunc name i o ()
     , _aSpecialArgs :: SpecialArgs expr
     , _aAnnotatedArgs :: [AnnotatedArg name expr]
     , _aRelayedArgs :: [RelayedArg name i o]
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Nominal name expr = Nominal
     { _nTId :: TId name
     , _nVal :: expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Lambda name i o expr = Lambda
     { _lamMode :: BinderMode
     , _lamBinder :: Binder name i o expr
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Attach o
     = AttachAction (o EntityId)
     | AttachTypeMismatch
+    deriving Generic
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
@@ -187,7 +188,7 @@ data Fragment name i o expr = Fragment
     { _fExpr :: expr
     , _fAttach :: Attach o
     , _fOptions :: i [HoleOption i o (Expression name i o ())]
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 instance Show expr => Show (Fragment name i o expr) where
     show (Fragment expr _ _) = "(Fragment " ++ show expr ++ ")"
@@ -208,7 +209,7 @@ data Body name i o expr
     | BodyFromNom (Nominal name expr)
     | BodyFragment (Fragment name i o expr)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
-    deriving (Functor, Foldable, Traversable)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 instance (Show name, Show expr) => Show (LabeledApplyFunc name i o expr) where
     show (LabeledApplyFunc func pl) = concat [show func, "{", show pl, "}"]

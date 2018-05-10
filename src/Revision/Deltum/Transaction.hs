@@ -67,7 +67,7 @@ Lens.makeLenses ''Askable
 -- Define transformer stack:
 newtype Transaction m a =
     Transaction (ReaderT (Askable m) (StateT ChangesMap m) a)
-    deriving (Functor, Applicative, Monad)
+    deriving (Functor, Applicative, Monad, Generic)
 instance (Monad m, Semigroup a) => Semigroup (Transaction m a) where
     (<>) = liftA2 (<>)
 instance (Monad m, Monoid a) => Monoid (Transaction m a) where

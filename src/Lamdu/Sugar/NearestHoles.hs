@@ -25,7 +25,7 @@ markStoredHoles expr =
 data NearestHoles = NearestHoles
     { _prev :: Maybe Sugar.EntityId
     , _next :: Maybe Sugar.EntityId
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 Lens.makeLenses ''NearestHoles
 
 none :: NearestHoles

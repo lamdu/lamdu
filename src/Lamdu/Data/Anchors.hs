@@ -75,7 +75,7 @@ onRevision f (Revision x0 x1 x2 x3) =
 
 newtype BinderParamScopeId = BinderParamScopeId
     { _bParamScopeId :: ScopeId
-    } deriving (Eq, Ord, Binary)
+    } deriving (Eq, Ord, Binary, Generic)
 
 type GuiAnchors i o = Gui (MkProperty i o)
 type CodeAnchors m = Code (MkProperty' (T m)) m

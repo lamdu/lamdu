@@ -23,19 +23,19 @@ import           Lamdu.Prelude
 data HoleResultScore = HoleResultScore
     { _hrsNumFragments :: !Int
     , _hrsScore :: ![Int]
-    } deriving (Eq, Ord)
+    } deriving (Eq, Ord, Generic)
 
 data HoleResult o resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
     , _holeResultPick :: o ()
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data HoleOption i o resultExpr = HoleOption
     { _hoVal :: Val ()
     , _hoSugaredBaseExpr :: i resultExpr
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult o resultExpr))
-    } deriving Functor
+    } deriving (Functor, Generic)
 
 type HoleOption' m = HoleOption m m
 
@@ -43,6 +43,7 @@ data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
+    deriving Generic
 
 type OptionLiteral i o resultExpr =
     Literal Identity -> i (HoleResultScore, i (HoleResult o resultExpr))
@@ -54,7 +55,7 @@ data Hole i o resultExpr = Hole
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (o EntityId)
-    } deriving Functor
+    } deriving (Functor, Generic)
 
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
