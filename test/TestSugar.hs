@@ -55,13 +55,18 @@ testChangeParam =
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
 testExtract :: Test
 testExtract =
-    testSugarAction "let-items-extract.json" action
-    & testCase "reorder-lets"
+    testGroup "reorder-lets"
+    [ f "let-items-extract.json"
+    , f "let-items-extract-with-tag-clash.json"
+    , f "let-items-extract-with-anon-tag.json"
+    ]
     where
-        action =
-            (^?! waRepl . replExpr
-            . rBody . _BodyLam . lamBinder . bBody
-            . bbContent . _BinderLet . lBody
-            . bbContent . _BinderLet . lValue
-            . bActions . baMNodeActions . Lens._Just . extract
-            )
+        f program =
+            testSugarAction program (^?! extractSecondLetItemInLambda)
+            & testCase (takeWhile (/= '.') program)
+        extractSecondLetItemInLambda =
+            waRepl . replExpr .
+            rBody . _BodyLam . lamBinder . bBody .
+            bbContent . _BinderLet . lBody .
+            bbContent . _BinderLet . lValue .
+            bActions . baMNodeActions . Lens._Just . extract

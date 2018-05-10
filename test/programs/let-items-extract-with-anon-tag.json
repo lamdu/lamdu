@@ -1,0 +1,67 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "tag": null,
+        "lamId": "2049a5a9-1442-485b-b9d7-b6fd98c2b70e",
+        "lamVar": "171f8f1e73164083923f9a094a269bda",
+        "lamFieldParams": null
+    },
+    {
+        "tag": null,
+        "lamId": "043b304f-657d-4c7c-9e28-5d5fab314125",
+        "lamVar": "62773c5589ad4562bea6ec221e02be2f",
+        "lamFieldParams": null
+    },
+    {
+        "tag": null,
+        "lamId": "6ad434e3-4a85-43c3-a0eb-552916acdab6",
+        "lamVar": "be9e5726cc0845ae9a20bd8fa9b08f34",
+        "lamFieldParams": null
+    },
+    {
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "lamId": "b516ef87-5078-4bae-abde-1c64d725754e",
+        "lamVar": "e375b3b37f584a659dd16a0be9da5f79",
+        "lamFieldParams": null
+    },
+    {
+        "repl": {
+            "val": {
+                "lamVar": "171f8f1e73164083923f9a094a269bda",
+                "id": "2049a5a9-1442-485b-b9d7-b6fd98c2b70e",
+                "lamBody": {
+                    "applyFunc": {
+                        "lamVar": "e375b3b37f584a659dd16a0be9da5f79",
+                        "id": "b516ef87-5078-4bae-abde-1c64d725754e",
+                        "lamBody": {
+                            "applyFunc": {
+                                "lamVar": "be9e5726cc0845ae9a20bd8fa9b08f34",
+                                "id": "6ad434e3-4a85-43c3-a0eb-552916acdab6",
+                                "lamBody": {
+                                    "hole": {},
+                                    "id": "74144639-d47d-4884-bb67-dd9ee1bc8226"
+                                }
+                            },
+                            "applyArg": {
+                                "lamVar": "62773c5589ad4562bea6ec221e02be2f",
+                                "id": "043b304f-657d-4c7c-9e28-5d5fab314125",
+                                "lamBody": {
+                                    "var": "e375b3b37f584a659dd16a0be9da5f79",
+                                    "id": "0b3879a0-e582-4788-0fa8-55f135e8d43c"
+                                }
+                            },
+                            "id": "b8ce7966-7709-46fb-9244-f4c68d9a6135"
+                        }
+                    },
+                    "applyArg": {
+                        "hole": {},
+                        "id": "b5429cb8-c2dd-44ac-a74b-a20337a85b58"
+                    },
+                    "id": "0121276f-b038-4e9b-8ccd-9c9f7c6d1d2f"
+                }
+            }
+        }
+    }
+]
