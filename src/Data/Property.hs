@@ -8,12 +8,10 @@ module Data.Property
     , getP, setP, modP
     ) where
 
-import           Control.Lens (Lens')
 import qualified Control.Lens as Lens
-import           Control.Lens.Operators
 import           Control.Monad ((<=<))
 
-import           Prelude
+import           Lamdu.Prelude
 
 data Property m a = Property
     { _pVal :: a
