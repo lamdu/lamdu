@@ -469,7 +469,13 @@ convertToRecordParams =
     \(postProcess, fixUsages) mkNewArg binderKind storedLam newParamPosition newParam ->
     do
         let paramVar = storedLam ^. slLam . V.lamParamId
-        oldParam <- Anchors.assocTag paramVar & getP
+        oldParam <-
+            getP (Anchors.assocTag paramVar)
+            >>=
+            \x ->
+            if x == Anchors.anonTag
+            then DataOps.genNewTag
+            else pure x
         -- the associated tag becomes an actual field in the new
         -- params record, remove the duplicate associated tag so that
         -- the params record is not named the same as the first param
