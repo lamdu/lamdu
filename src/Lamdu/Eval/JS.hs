@@ -14,7 +14,6 @@ import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM, msum)
 import           Control.Monad.Cont (ContT(..))
-import           Control.Monad.Except (throwError, runExceptT)
 import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types ((.:))
@@ -329,17 +328,17 @@ stripInteractive line
 
 processNodeOutput :: Maybe Handle -> (Json.Object -> IO ()) -> Handle -> IO ()
 processNodeOutput copyNodeOutput handleEvent stdout =
-    void $ runExceptT $ forever $
     do
-        isEof <- hIsEOF stdout & lift
-        when isEof $ throwError "EOF"
-        line <- BS.hGetLine stdout <&> stripInteractive & lift
-        traverse_ (`bsHPutStrLn` line) copyNodeOutput & lift
+        isEof <- hIsEOF stdout
+        when isEof $ fail "EOF"
+        line <- BS.hGetLine stdout <&> stripInteractive
+        traverse_ (`bsHPutStrLn` line) copyNodeOutput
         case Aeson.decode (BS.lazify line) of
             Nothing
                 | line `elem` ["'use strict'", "undefined", ""] -> pure ()
-                | otherwise -> "Failed to decode: " ++ show line & throwError
-            Just obj -> handleEvent obj & lift
+                | otherwise -> "Failed to decode: " ++ show line & fail
+            Just obj -> handleEvent obj
+    & forever
     where
         -- BS.hPutStrLn is deprecated
         bsHPutStrLn handle line =
