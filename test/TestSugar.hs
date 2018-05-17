@@ -21,7 +21,7 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 test :: Test
-test = testGroup "sugar-tests" [testChangeParam, testExtract]
+test = testGroup "sugar-tests" [testChangeParam, testReorderLets]
 
 convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
@@ -55,8 +55,8 @@ testChangeParam =
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
-testExtract :: Test
-testExtract =
+testReorderLets :: Test
+testReorderLets =
     testGroup "reorder-lets"
     [ f "let-items-extract.json"
     , f "let-items-extract-with-tag-clash.json"
