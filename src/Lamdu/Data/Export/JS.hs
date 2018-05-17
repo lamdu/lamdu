@@ -1,5 +1,7 @@
 module Lamdu.Data.Export.JS
     ( exportFancy
+    , -- | This compiles in the fast/minimal export-js mode
+      compile
     ) where
 
 import qualified Codec.Archive.Zip as Zip

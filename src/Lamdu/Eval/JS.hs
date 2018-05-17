@@ -6,6 +6,9 @@ module Lamdu.Eval.JS
     , start, stop, executeReplIOProcess
     , Dependencies(..), whilePaused
     , getResults
+
+      -- | Export for test purposes:
+    , nodeRepl
     ) where
 
 import           Control.Applicative ((<|>))

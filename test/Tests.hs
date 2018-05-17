@@ -4,6 +4,7 @@ import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified TestAnimIdClash
 import qualified TestColorSchemes
 import qualified TestConfig
+import qualified TestJsExport
 import qualified TestJsRtsTags
 import qualified TestMomentu
 import qualified TestNames
@@ -34,6 +35,7 @@ main =
             , TestColorSchemes.test
             , TestConfig.test
             , TestNames.test
+            , TestJsExport.test
             , TestJsRtsTags.test
             , TestValUtils.test
             , jsonCodecMigrationTest
