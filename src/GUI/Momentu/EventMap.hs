@@ -140,7 +140,7 @@ overrides
     x@(EventMap xMap xDropHandlers xCharGroups xMAllChars)
     (EventMap yMap yDropHandlers yCharGroups yMAllChars) =
     EventMap
-    (xMap `mappend` filteredYMap)
+    (xMap <> filteredYMap)
     (xDropHandlers ++ yDropHandlers)
     (xCharGroups ++ filteredYCharGroups)
     (xMAllChars ++ yMAllChars)

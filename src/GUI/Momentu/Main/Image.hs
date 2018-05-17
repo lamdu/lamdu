@@ -110,7 +110,7 @@ mainLoop win imageHandlers =
                         Nothing -> pure mempty
                         Just font -> updateFPS fps >>= renderFPS font win
                     let draw img =
-                            glDraw win winSize (fpsImg `mappend` img)
+                            glDraw win winSize (fpsImg <> img)
                     case eventResult of
                         ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw

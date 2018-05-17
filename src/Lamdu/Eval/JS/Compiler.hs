@@ -177,7 +177,7 @@ jsReservedNamespace =
     ]
 
 jsAllReserved :: Set Text
-jsAllReserved = jsReservedNamespace `mappend` jsReservedKeywords
+jsAllReserved = jsReservedNamespace <> jsReservedKeywords
 
 isReservedName :: Text -> Bool
 isReservedName name =

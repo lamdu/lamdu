@@ -211,7 +211,7 @@ makeScopeNavEdit binder myId curCursor =
                         <&> Glue.hbox <&> (^. Align.tValue)
                     )
                 <&> Widget.weakerEvents
-                    (mkScopeEventMap leftKeys rightKeys `mappend` blockEventMap)
+                    (mkScopeEventMap leftKeys rightKeys <> blockEventMap)
                 <&> Just
                 <&> (,) (mkScopeEventMap
                          (evalConfig ^. Config.prevScopeKeys)

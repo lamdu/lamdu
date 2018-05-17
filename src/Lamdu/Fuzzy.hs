@@ -38,7 +38,7 @@ instance Semigroup a => Semigroup (Fuzzy a) where
 instance Semigroup a => Monoid (Fuzzy a) where
     mempty = Fuzzy mempty mempty
     Fuzzy xs xmore `mappend` Fuzzy ys ymore =
-        Fuzzy (xs `mappend` ys) (xmore `mappend` ymore)
+        Fuzzy (xs <> ys) (xmore <> ymore)
 
 instance Pretty a => Pretty (Fuzzy a) where
     pPrint (Fuzzy xs m) =
@@ -49,7 +49,7 @@ instance Pretty a => Pretty (Fuzzy a) where
 trieOf :: Semigroup a => Text -> String -> a -> Fuzzy a
 trieOf s [] x = Fuzzy (Lens.singletonAt s x) mempty
 trieOf s (c:cs) x =
-    Fuzzy mempty (Lens.singletonAt (toLower c) cont) `mappend` cont
+    Fuzzy mempty (Lens.singletonAt (toLower c) cont) <> cont
     where
         cont = trieOf s cs x
 
