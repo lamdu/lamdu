@@ -18,6 +18,7 @@ import qualified Data.Text as Text
 import           Data.List (isInfixOf, isPrefixOf)
 import           Data.List.Split (splitOn)
 import qualified Data.Yaml as Yaml
+import           System.Directory (listDirectory)
 
 import           Test.Lamdu.Prelude
 
@@ -36,17 +37,26 @@ stackDepsTest =
             :: IO Yaml.Value
         let deps = stackYaml ^.. LensAeson.key "packages" . LensAeson.values . LensAeson.key "location"
         traverse_ verifyStackDep deps
+        let expectedNixFiles =
+                (deps ^.. traverse . LensAeson.key "git" . LensAeson._String . Lens.to Text.unpack
+                    <&> packageNameFromGitUrl
+                    <&> (<> ".nix")
+                ) <> extraNixFiles
+        nixFiles <- listDirectory "nix"
+        let unexpectedNixFiles = Set.difference (Set.fromList nixFiles) (Set.fromList expectedNixFiles)
+        unless (Set.null unexpectedNixFiles)
+            (assertString ("Unexpected nix files: " ++ show unexpectedNixFiles))
     & testCase "verify-nix-stack"
+    where
+        -- Nix files that don't reflect stack.yaml dependencies
+        extraNixFiles = ["AntTweakBar.nix", "OpenGL.nix", "freetype-gl.nix", "lamdu.nix"]
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
     do
         git <- getKey "git"
         commit <- getKey "commit"
-        let repoName = splitOn "/" git & last
-        let packageName
-                | repoName == "Algorithm-W-Step-By-Step" = "AlgoW"
-                | otherwise = repoName
+        let packageName = packageNameFromGitUrl git
         do
             nixFile <- readFile ("nix/" <> packageName <> ".nix")
             let nixCommit = splitOn "rev = \"" nixFile !! 1 & takeWhile (/= '"')
@@ -59,6 +69,13 @@ verifyStackDep dep =
         getKey key =
             dep ^? LensAeson.key key . LensAeson._String
             & maybe (fail ("stack.yaml dependency with no " <> show key <> "?")) (pure . Text.unpack)
+
+packageNameFromGitUrl :: String -> String
+packageNameFromGitUrl url
+    | repoName == "Algorithm-W-Step-By-Step" = "AlgoW"
+    | otherwise = repoName
+    where
+        repoName = splitOn "/" url & last
 
 cabalDepsTest :: Test
 cabalDepsTest =

@@ -70,7 +70,8 @@ Test-Suite Tests
       base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
     , aeson-diff, deepseq, deepseq-generics, lens-aeson, QuickCheck, split, yaml
     , Lamdu, AlgoW, lamdu-calculus, nodejs-exec
-    , aeson, aeson-pretty, bytestring, containers, filepath, lens, mtl, pretty, process, random, text, uuid-types
+    , aeson, aeson-pretty, bytestring, containers, directory, filepath
+    , lens, mtl, pretty, process, random, text, uuid-types
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 
