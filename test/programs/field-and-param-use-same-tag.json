@@ -1,0 +1,37 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a736f636b657400000000000000",
+        "name": "socket"
+    },
+    {
+        "tag": "42493a736f636b657400000000000000",
+        "lamId": "bfc93b9e-0918-6bbf-d7ee-8bc7515a71ac",
+        "lamVar": "416a8dc0207c6f21a6eb1b32afde4458",
+        "lamFieldParams": null
+    },
+    {
+        "repl": {
+            "val": {
+                "extendVal": {
+                    "lamVar": "416a8dc0207c6f21a6eb1b32afde4458",
+                    "id": "bfc93b9e-0918-6bbf-d7ee-8bc7515a71ac",
+                    "lamBody": {
+                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                        "primId": "42493a666c6f61740000000000000000",
+                        "id": "43d90e0e-56b3-7a8e-2344-4f1c01d3e87f"
+                    }
+                },
+                "extendTag": "42493a736f636b657400000000000000",
+                "id": "bd845b26-2c23-489c-9641-cd8a19d78463",
+                "extendRest": {
+                    "recEmpty": {},
+                    "id": "07ebc953-66ba-e00c-d44f-0009d1a0fc74"
+                }
+            }
+        }
+    }
+]

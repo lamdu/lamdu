@@ -4,19 +4,17 @@ module TestJsExport where
 
 import qualified Data.ByteString as BS
 import           Lamdu.Calc.Val.Annotated (Val)
-import           Lamdu.Data.Db.Layout (ViewM)
-import           Lamdu.Data.Db.Layout (runDbTransaction)
+import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Data.Export.JS (compile)
+import qualified Lamdu.Data.Export.JS as ExportJS
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Paths as Paths
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           System.FilePath ((</>))
-import           System.FilePath (splitFileName)
+import           System.FilePath ((</>), splitFileName)
 import qualified System.IO as IO
 import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
@@ -28,7 +26,11 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 test :: Test
-test = testGroup "js-export" [testOnePlusOne]
+test =
+    testGroup "js-export"
+    [ testOnePlusOne
+    , testFieldAndParamUseSameTag
+    ]
 
 readRepl :: T ViewM (Def.Expr (Val (ValI ViewM)))
 readRepl =
@@ -47,20 +49,34 @@ nodeRepl =
                 Just [("NODE_PATH", (rtsPath </> "export") ++ ":" ++ rtsPath)]
             }
 
-testOnePlusOne :: Test
-testOnePlusOne =
-    testCase "one-plus-one" $
+compile :: FilePath -> IO String
+compile program =
+    withDB ("test/programs" </> program) $
+    \db -> runDbTransaction db $ runAction $ readRepl >>= ExportJS.compile
+
+run :: FilePath -> IO ByteString
+run program =
     do
-        compiledCode <-
-            withDB "test/programs/one-plus-one.json" $
-            \db ->
-                runDbTransaction db $ runAction $ readRepl >>= compile
+        compiledCode <- compile program
         procParams <- nodeRepl
-        stdout <-
-            withProcess procParams $
+        withProcess procParams $
             \(Just stdin, Just stdout, Nothing, _procHandle) ->
             do
                 IO.hPutStrLn stdin compiledCode
                 IO.hClose stdin
                 BS.hGetContents stdout
-        assertEqual "Nodejs output for 1+1=" "2\n" stdout
+
+testProgram :: String -> ByteString -> Test
+testProgram program expectedOutput =
+    do
+        result <- program <> ".json" & run
+        assertEqual "Expected output" expectedOutput result
+    & testCase program
+
+testOnePlusOne :: Test
+testOnePlusOne = testProgram "one-plus-one" "2\n"
+
+testFieldAndParamUseSameTag :: Test
+testFieldAndParamUseSameTag =
+    testProgram "field-and-param-use-same-tag"
+    "{ socket: [Function: socket] }\n"
