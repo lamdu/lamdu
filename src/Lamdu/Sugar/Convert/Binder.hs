@@ -99,7 +99,9 @@ convertRedex expr redex =
         (_pMode, value) <-
             convertBinder binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
-        actions <- mkLetItemActions (expr ^. Val.payload) redex
+        actions <-
+            mkLetItemActions (expr ^. Val.payload) redex
+            & localNewExtractDestPos expr
         letBody <-
             convertBinderBody body
             & localNewExtractDestPos expr
