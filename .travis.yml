@@ -1,5 +1,9 @@
 sudo: false
 
+branches:
+  only:
+  - master
+
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y zlib1g-dev libglew-dev libleveldb-dev libglfw-dev
