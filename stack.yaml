@@ -28,10 +28,6 @@ packages:
     git: https://github.com/lamdu/nodejs-exec
     commit: 7c763e1acf9c28d35aae034fdab6ee592ac8031d
   extra-dep: True
-- location:
-    git: https://github.com/JonasDuregard/testing-feat
-    commit: 8e60d4dbd73c10d98f5f373c590772df0cc0d3a8
-  extra-dep: True
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
@@ -41,6 +37,7 @@ extra-deps:
 - tagshare-0.0
 - wl-pprint-1.2.1
 - size-based-0.1.1.0
+- testing-feat-1.0.1.0
 - testing-type-modifiers-0.1.0.1
 - dictionary-sharing-0.1.0.0
 
