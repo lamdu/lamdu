@@ -21,7 +21,7 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 test :: Test
-test = testGroup "sugar-tests" [testChangeParam, testReorderLets]
+test = testGroup "sugar-tests" [testChangeParam, testReorderLets, testExtract]
 
 convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
@@ -72,3 +72,15 @@ testReorderLets =
             bbContent . _BinderLet . lBody .
             bbContent . _BinderLet . lValue .
             bActions . baMNodeActions . Lens._Just . extract
+
+-- Test for issue #395
+-- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
+testExtract :: Test
+testExtract =
+    testSugarAction "extract-lambda-with-let.json" (^?! action)
+    & testCase "extract"
+    where
+        action =
+            waRepl . replExpr .
+            rBody . _BodyLam . lamBinder . bBody .
+            bbContent . _BinderLet . lActions . laNodeActions . extract
