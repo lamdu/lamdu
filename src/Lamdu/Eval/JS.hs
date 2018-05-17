@@ -42,6 +42,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (ScopeId(..), EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
+import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Paths as Paths
 import           Numeric (readHex)
 import           System.FilePath (splitFileName)
@@ -56,7 +57,7 @@ import           Lamdu.Prelude
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , _aReportUpdatesAvailable :: IO ()
-    , _aCopyJSOutputPath :: Maybe FilePath
+    , _aJSDebugPaths :: Opts.JSDebugPaths
     }
 Lens.makeLenses ''Actions
 
@@ -277,9 +278,9 @@ processEvent fromUUID resultsRef actions obj =
                 actions ^. aReportUpdatesAvailable
         Just event = obj .? "event"
 
-withCopyJSOutput :: Maybe FilePath -> (Maybe Handle -> IO a) -> IO a
-withCopyJSOutput Nothing f = f Nothing
-withCopyJSOutput (Just path) f = withFile path WriteMode $ f . Just
+withCopyJSCode :: Maybe FilePath -> (Maybe Handle -> IO a) -> IO a
+withCopyJSCode Nothing f = f Nothing
+withCopyJSCode (Just path) f = withFile path WriteMode $ f . Just
 
 compilerActions ::
     Ord a =>
@@ -347,7 +348,7 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
         procParams <- nodeRepl
         withProcess procParams $
             \(Just stdin, Just stdout, Nothing, _handle) ->
-            withCopyJSOutput (actions ^. aCopyJSOutputPath) $ \jsOut ->
+            withCopyJSCode (actions ^. aJSDebugPaths . Opts.jsDebugCodePath) $ \jsOut ->
             do
                 let handlesJS = stdin : jsOut ^.. Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS

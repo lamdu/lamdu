@@ -271,7 +271,7 @@ newEvaluator refresh dbMVar opts =
     EvalManager.new EvalManager.NewParams
     { EvalManager.resultsUpdated = refresh
     , EvalManager.dbMVar = dbMVar
-    , EvalManager.copyJSOutputPath = opts ^. Opts.eoCopyJSOutputPath
+    , EvalManager.jsDebugPaths = opts ^. Opts.eoJSDebugPaths
     }
 
 runEditor :: Maybe Debug.Counters -> Opts.EditorOpts -> Transaction.Store DbM -> IO ()

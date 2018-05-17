@@ -1,9 +1,10 @@
 {-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
-    ( EditorOpts(..), eoWindowMode, eoCopyJSOutputPath, eoWindowTitle, eoSubpixelEnabled
+    ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled
     , Command(..), _DeleteDb, _Undo, _Editor
     , Parsed(..), pCommand, pLamduDB, pEkgPort
     , WindowMode(..), _VideoModeSize, _FullScreen
+    , JSDebugPaths(..), jsDebugCodePath
     , get
     ) where
 
@@ -17,9 +18,13 @@ import           Lamdu.Prelude
 
 data WindowMode = VideoModeSize | FullScreen
 
+newtype JSDebugPaths = JSDebugPaths
+    { _jsDebugCodePath :: Maybe FilePath
+    }
+
 data EditorOpts = EditorOpts
     { _eoWindowMode :: WindowMode
-    , _eoCopyJSOutputPath :: Maybe FilePath
+    , _eoJSDebugPaths :: JSDebugPaths
     , _eoWindowTitle :: String
     , _eoSubpixelEnabled :: Bool
     }
@@ -38,9 +43,10 @@ data Parsed = Parsed
     }
 
 Lens.makeLenses ''EditorOpts
+Lens.makeLenses ''JSDebugPaths
+Lens.makeLenses ''Parsed
 Lens.makePrisms ''Command
 Lens.makePrisms ''WindowMode
-Lens.makeLenses ''Parsed
 
 subcommands :: P.Parser Command
 subcommands =
@@ -65,13 +71,18 @@ subcommands =
 maybePath :: P.Mod P.OptionFields String -> P.Parser (Maybe FilePath)
 maybePath m = optional (P.option P.str (P.metavar "PATH" <> m))
 
+jsDebugOpts :: P.Parser JSDebugPaths
+jsDebugOpts =
+    maybePath
+    (P.long "jsdebug" <>
+     P.help "Output the internal executed JS to a file")
+    <&> JSDebugPaths
+
 editorOpts :: P.Parser EditorOpts
 editorOpts =
     EditorOpts
     <$> windowMode
-    <*> maybePath
-        (P.long "copyjsoutput" <>
-         P.help "Output the internal executed JS to a file")
+    <*> jsDebugOpts
     <*> P.option P.str
         ( P.long "windowtitle"
           <> P.value "Lamdu"
