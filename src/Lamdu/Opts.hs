@@ -4,7 +4,7 @@ module Lamdu.Opts
     , Command(..), _DeleteDb, _Undo, _Editor
     , Parsed(..), pCommand, pLamduDB, pEkgPort
     , WindowMode(..), _VideoModeSize, _FullScreen
-    , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath
+    , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath, jsDebugInteractivePath
     , get
     ) where
 
@@ -22,6 +22,7 @@ data WindowMode = VideoModeSize | FullScreen
 data JSDebugPaths a = JSDebugPaths
     { _jsDebugCodePath :: Maybe a
     , _jsDebugNodeOutputPath :: Maybe a
+    , _jsDebugInteractivePath :: Maybe a
     } deriving (Functor, Foldable, Traversable)
 
 data EditorOpts = EditorOpts
@@ -74,18 +75,19 @@ jsDebugOpts :: P.Parser (JSDebugPaths FilePath)
 jsDebugOpts =
     optional
     (P.option (P.eitherReader readPaths)
-     (P.metavar "JSPATH[:OUTPATH]" <>
+     (P.metavar "JSPATH[:OUTPATH[:INTERACTIVEPATH]]" <>
       P.long "jsdebug" <>
       P.help "Output the executed JS and nodejs output to files"))
     <&> fromMaybe emptyJSDebugPaths
     where
-        emptyJSDebugPaths = JSDebugPaths Nothing Nothing
+        emptyJSDebugPaths = JSDebugPaths Nothing Nothing Nothing
         readPaths str
-            | length parts > 2 = Left "Too many file paths"
+            | length parts > 3 = Left "Too many file paths"
             | otherwise =
                 Right JSDebugPaths
                 { _jsDebugCodePath = parts ^? Lens.ix 0
                 , _jsDebugNodeOutputPath = parts ^? Lens.ix 1
+                , _jsDebugInteractivePath = parts ^? Lens.ix 2
                 }
             where
                 parts = splitOn ":" str

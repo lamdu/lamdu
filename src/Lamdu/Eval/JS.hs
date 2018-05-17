@@ -47,6 +47,7 @@ import qualified Lamdu.Paths as Paths
 import           Numeric (readHex)
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hIsEOF, hPutStrLn, hFlush, withFile)
+import           System.IO.Temp (withSystemTempFile)
 import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
 import           System.Process.Utils (withProcess)
@@ -83,12 +84,12 @@ type Parse = State (IntMap (ER.Val ()))
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
     do
-        cwd <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
+        rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
         nodeExePath <- NodeJS.path
         pure (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
-            { Proc.cwd = Just cwd
-            , Proc.std_in = Proc.CreatePipe
+            { Proc.std_in = Proc.CreatePipe
             , Proc.std_out = Proc.CreatePipe
+            , Proc.env = Just [("NODE_PATH", rtsPath)]
             }
 
 parseHexBs :: Text -> ByteString
@@ -331,8 +332,9 @@ processNodeOutput copyNodeOutput handleEvent stdout =
     do
         isEof <- hIsEOF stdout
         when isEof $ fail "EOF"
-        line <- BS.hGetLine stdout <&> stripInteractive
-        traverse_ (`bsHPutStrLn` line) copyNodeOutput
+        rawLine <- BS.hGetLine stdout
+        traverse_ (flushedLine rawLine) copyNodeOutput
+        let line = stripInteractive rawLine
         case Aeson.decode (BS.lazify line) of
             Nothing
                 | line `elem` ["'use strict'", "undefined", ""] -> pure ()
@@ -340,8 +342,7 @@ processNodeOutput copyNodeOutput handleEvent stdout =
             Just obj -> handleEvent obj
     & forever
     where
-        -- BS.hPutStrLn is deprecated
-        bsHPutStrLn handle line =
+        flushedLine line handle =
             do
                 BS.hPutStr handle line
                 BS.hPutStr handle "\n"
@@ -354,13 +355,15 @@ asyncStart ::
     Def.Expr (Val srcId) -> Actions srcId ->
     IO ()
 asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
+    withSystemTempFile "lamdu-output.js" $
+    \lamduOutputPath lamduOutputHandle ->
     do
         procParams <- nodeRepl
         withProcess procParams $
             \(Just stdin, Just stdout, Nothing, _handle) ->
             withJSDebugHandles (actions ^. aJSDebugPaths) $ \jsHandles ->
             do
-                let handlesJS = stdin : jsHandles ^.. Opts.jsDebugCodePath . Lens._Just
+                let handlesJS = lamduOutputHandle : jsHandles ^.. Opts.jsDebugCodePath . Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
                 let flushJS = traverse_ hFlush handlesJS
                 let handleEvent = processEvent fromUUID resultsRef actions
@@ -372,7 +375,22 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
                             & Compiler.compileRepl
                                 (compilerActions toUUID depsMVar actions outputJS)
                         flushJS
-                        forever (takeMVar executeReplMVar >> outputJS "repl(x => undefined);" >> flushJS)
+                        let flushedOutput handle msg =
+                                do
+                                    hPutStrLn handle msg
+                                    hFlush handle
+                        let outputInteractive msg =
+                                do
+                                    flushedOutput stdin msg
+                                    traverse_ (`flushedOutput` msg)
+                                        (jsHandles ^. Opts.jsDebugInteractivePath)
+                        "'use strict';\n" ++
+                            "var repl = require(" ++ show lamduOutputPath ++ ");"
+                            & outputInteractive
+                        do
+                            takeMVar executeReplMVar
+                            outputInteractive "repl(x => undefined);"
+                            & forever
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.

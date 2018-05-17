@@ -1,7 +1,7 @@
 /* jshint node: true */
 "use strict";
 
-var protocol = require("./protocol.js");
+var protocol = require("protocol.js");
 
 module.exports = {
     builtinTagName: function (x) {

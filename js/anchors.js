@@ -2,7 +2,7 @@
 /* jshint esversion: 6 */
 "use strict";
 
-var conf = require('./rtsConfig.js');
+var conf = require('rtsConfig.js');
 
 module.exports = {
     tags: {

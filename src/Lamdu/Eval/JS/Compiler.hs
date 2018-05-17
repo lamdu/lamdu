@@ -186,7 +186,7 @@ isReservedName name =
 topLevelDecls :: Mode -> [JSS.Statement ()]
 topLevelDecls mode =
     ( [ [jsstmt|"use strict";|]
-      , [jsstmt|var rts = require('./rts.js');|]
+      , [jsstmt|var rts = require('rts.js');|]
       ] <&> void
     ) ++
     case mode of

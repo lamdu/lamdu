@@ -113,6 +113,7 @@ Library
                   , split
                   , StateVar
                   , stm
+                  , temporary
                   , text
                   , time >= 1.2
                   , timeit
