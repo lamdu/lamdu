@@ -32,10 +32,6 @@ packages:
     git: https://github.com/JonasDuregard/testing-feat
     commit: 8e60d4dbd73c10d98f5f373c590772df0cc0d3a8
   extra-dep: True
-- location:
-    git: https://github.com/JonasDuregard/sized-functors
-    commit: 54e0218211138c153e9cc9c2e62ddfbaf4d9690e
-  extra-dep: True
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
@@ -44,6 +40,7 @@ extra-deps:
 - GLFW-b-3.2.1.0
 - tagshare-0.0
 - wl-pprint-1.2.1
+- size-based-0.1.1.0
 - testing-type-modifiers-0.1.0.1
 - dictionary-sharing-0.1.0.0
 
