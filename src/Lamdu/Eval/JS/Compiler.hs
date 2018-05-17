@@ -78,9 +78,14 @@ data Env m = Env
     }
 Lens.makeLenses ''Env
 
+data NameKind
+    = VarName -- name of Javascript variable (never exposed outside)
+    | TagName -- name of record field or inject-tag identifier
+    deriving (Eq, Ord, Show)
+
 data State = State
     { _freshId :: Int
-    , _names :: Map Text (Map UUID Text)
+    , _names :: Map (NameKind, Text) (Map UUID Text)
     , _globalVarNames :: Map V.Var GlobalVarName
     , _globalTypes :: Map V.Var Scheme
     }
@@ -289,13 +294,13 @@ readName g act =
     do
         tag <- performAction (`readAssocTag` uuid)
         (if tag == anonTag then act else readTagName tag act)
-            >>= generatedName uuid
+            >>= generatedName VarName uuid
     where
         uuid = UniqueId.toUUID g
 
-generatedName :: Monad m => UUID -> Text -> M m Text
-generatedName uuid name =
-    names . Lens.at name %%=
+generatedName :: Monad m => NameKind -> UUID -> Text -> M m Text
+generatedName kind uuid name =
+    names . Lens.at (kind, name) %%=
     \case
     Nothing -> (name, Just (Map.singleton uuid name))
     Just uuidMap ->
@@ -325,7 +330,7 @@ tagString :: Monad m => T.Tag -> M m Text
 tagString tag@(T.Tag ident) =
     "tag" ++ identHex ident & Text.pack & pure
     & readTagName tag
-    >>= generatedName (UniqueId.toUUID tag)
+    >>= generatedName TagName (UniqueId.toUUID tag)
 
 tagIdent :: Monad m => T.Tag -> M m (JSS.Id ())
 tagIdent = fmap (JS.ident . Text.unpack) . tagString
