@@ -48,7 +48,7 @@ data NewParams = NewParams
     { resultsUpdated :: IO ()
     -- ^ Callback for notifying that new evaluation results are available.
     , dbMVar :: MVar (Maybe (Transaction.Store DbM))
-    , jsDebugPaths :: Opts.JSDebugPaths
+    , jsDebugPaths :: Opts.JSDebugPaths FilePath
     }
 
 data Evaluator = Evaluator

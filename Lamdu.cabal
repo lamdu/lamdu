@@ -110,6 +110,7 @@ Library
                   , process
                   , random >= 1.0.0
                   , safe-exceptions >= 0.1.4
+                  , split
                   , StateVar
                   , stm
                   , text

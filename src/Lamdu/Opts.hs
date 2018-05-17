@@ -4,12 +4,13 @@ module Lamdu.Opts
     , Command(..), _DeleteDb, _Undo, _Editor
     , Parsed(..), pCommand, pLamduDB, pEkgPort
     , WindowMode(..), _VideoModeSize, _FullScreen
-    , JSDebugPaths(..), jsDebugCodePath
+    , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath
     , get
     ) where
 
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
+import           Data.List.Split (splitOn)
 import           Data.Word (Word16)
 import           Options.Applicative ((<|>))
 import qualified Options.Applicative as P
@@ -18,13 +19,14 @@ import           Lamdu.Prelude
 
 data WindowMode = VideoModeSize | FullScreen
 
-newtype JSDebugPaths = JSDebugPaths
-    { _jsDebugCodePath :: Maybe FilePath
-    }
+data JSDebugPaths a = JSDebugPaths
+    { _jsDebugCodePath :: Maybe a
+    , _jsDebugNodeOutputPath :: Maybe a
+    } deriving (Functor, Foldable, Traversable)
 
 data EditorOpts = EditorOpts
     { _eoWindowMode :: WindowMode
-    , _eoJSDebugPaths :: JSDebugPaths
+    , _eoJSDebugPaths :: JSDebugPaths FilePath
     , _eoWindowTitle :: String
     , _eoSubpixelEnabled :: Bool
     }
@@ -68,15 +70,25 @@ subcommands =
       )
     ] & P.hsubparser
 
-maybePath :: P.Mod P.OptionFields String -> P.Parser (Maybe FilePath)
-maybePath m = optional (P.option P.str (P.metavar "PATH" <> m))
-
-jsDebugOpts :: P.Parser JSDebugPaths
+jsDebugOpts :: P.Parser (JSDebugPaths FilePath)
 jsDebugOpts =
-    maybePath
-    (P.long "jsdebug" <>
-     P.help "Output the internal executed JS to a file")
-    <&> JSDebugPaths
+    optional
+    (P.option (P.eitherReader readPaths)
+     (P.metavar "JSPATH[:OUTPATH]" <>
+      P.long "jsdebug" <>
+      P.help "Output the executed JS and nodejs output to files"))
+    <&> fromMaybe emptyJSDebugPaths
+    where
+        emptyJSDebugPaths = JSDebugPaths Nothing Nothing
+        readPaths str
+            | length parts > 2 = Left "Too many file paths"
+            | otherwise =
+                Right JSDebugPaths
+                { _jsDebugCodePath = parts ^? Lens.ix 0
+                , _jsDebugNodeOutputPath = parts ^? Lens.ix 1
+                }
+            where
+                parts = splitOn ":" str
 
 editorOpts :: P.Parser EditorOpts
 editorOpts =
@@ -110,7 +122,10 @@ parser :: P.Parser Parsed
 parser =
     Parsed
     <$> command
-    <*> maybePath (P.long "lamduDB" <> P.help "Override path to lamdu DB")
+    <*> optional
+        (P.option P.str
+            (P.metavar "PATH" <> P.long "lamduDB" <>
+             P.help "Override path to lamdu DB"))
     <*> optional
         (P.option P.auto
             ( P.long "with-ekg"

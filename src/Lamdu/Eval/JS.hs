@@ -13,6 +13,7 @@ import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM, msum)
+import           Control.Monad.Cont (ContT(..))
 import           Control.Monad.Except (throwError, runExceptT)
 import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as Aeson
@@ -57,7 +58,7 @@ import           Lamdu.Prelude
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , _aReportUpdatesAvailable :: IO ()
-    , _aJSDebugPaths :: Opts.JSDebugPaths
+    , _aJSDebugPaths :: Opts.JSDebugPaths FilePath
     }
 Lens.makeLenses ''Actions
 
@@ -278,9 +279,11 @@ processEvent fromUUID resultsRef actions obj =
                 actions ^. aReportUpdatesAvailable
         Just event = obj .? "event"
 
-withCopyJSCode :: Maybe FilePath -> (Maybe Handle -> IO a) -> IO a
-withCopyJSCode Nothing f = f Nothing
-withCopyJSCode (Just path) f = withFile path WriteMode $ f . Just
+withJSDebugHandles :: Traversable t => t FilePath -> (t Handle -> IO a) -> IO a
+withJSDebugHandles paths =
+    traverse withPath paths & runContT
+    where
+        withPath path = withFile path WriteMode & ContT
 
 compilerActions ::
     Ord a =>
@@ -324,18 +327,26 @@ stripInteractive line
     where
         irrelevant = BS.unpack ". "
 
-processNodeOutput :: (Json.Object -> IO ()) -> Handle -> IO ()
-processNodeOutput handleEvent stdout =
+processNodeOutput :: Maybe Handle -> (Json.Object -> IO ()) -> Handle -> IO ()
+processNodeOutput copyNodeOutput handleEvent stdout =
     void $ runExceptT $ forever $
     do
         isEof <- hIsEOF stdout & lift
         when isEof $ throwError "EOF"
         line <- BS.hGetLine stdout <&> stripInteractive & lift
+        traverse_ (`bsHPutStrLn` line) copyNodeOutput & lift
         case Aeson.decode (BS.lazify line) of
             Nothing
                 | line `elem` ["'use strict'", "undefined", ""] -> pure ()
                 | otherwise -> "Failed to decode: " ++ show line & throwError
             Just obj -> handleEvent obj & lift
+    where
+        -- BS.hPutStrLn is deprecated
+        bsHPutStrLn handle line =
+            do
+                BS.hPutStr handle line
+                BS.hPutStr handle "\n"
+                hFlush handle
 
 asyncStart ::
     Ord srcId =>
@@ -348,13 +359,15 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
         procParams <- nodeRepl
         withProcess procParams $
             \(Just stdin, Just stdout, Nothing, _handle) ->
-            withCopyJSCode (actions ^. aJSDebugPaths . Opts.jsDebugCodePath) $ \jsOut ->
+            withJSDebugHandles (actions ^. aJSDebugPaths) $ \jsHandles ->
             do
-                let handlesJS = stdin : jsOut ^.. Lens._Just
+                let handlesJS = stdin : jsHandles ^.. Opts.jsDebugCodePath . Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
                 let flushJS = traverse_ hFlush handlesJS
                 let handleEvent = processEvent fromUUID resultsRef actions
-                withForkedIO (processNodeOutput handleEvent stdout) $
+                let nodeOutputHandle = jsHandles ^. Opts.jsDebugNodeOutputPath
+                let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
+                withForkedIO processOutput $
                     do
                         replVal <&> Lens.mapped %~ Compiler.ValId . toUUID
                             & Compiler.compileRepl
