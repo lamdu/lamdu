@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified TestAnimIdClash
+import qualified TestCodec
 import qualified TestColorSchemes
 import qualified TestConfig
 import qualified TestJsExport
@@ -16,11 +16,6 @@ import qualified TestValUtils
 
 import           Test.Lamdu.Prelude
 
-jsonCodecMigrationTest :: Test
-jsonCodecMigrationTest =
-    JsonFormat.fileImportAll "test/programs/old-codec-factorial.json" & void
-    & testCase "json-codec-migration"
-
 main :: IO ()
 main =
     defaultMainWithOpts tests mempty
@@ -32,11 +27,11 @@ main =
             , TestNix.test
             , TestMomentu.test
             , TestAnimIdClash.test
+            , TestCodec.test
             , TestColorSchemes.test
             , TestConfig.test
             , TestNames.test
             , TestJsExport.test
             , TestJsRtsTags.test
             , TestValUtils.test
-            , jsonCodecMigrationTest
             ]

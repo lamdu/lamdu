@@ -48,6 +48,7 @@ Test-Suite Tests
   hs-source-dirs: test
   main-is: Tests.hs
   other-modules: TestAnimIdClash
+               , TestCodec
                , TestColorSchemes
                , TestConfig
                , TestJsExport
