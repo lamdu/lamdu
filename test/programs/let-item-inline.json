@@ -1,0 +1,51 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "tagOrder": 0,
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
+        "name": "num"
+    },
+    {
+        "nomType": "OpaqueNominal",
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
+        "nom": "42493a666c6f61740000000000000000"
+    },
+    {
+        "tag": null,
+        "lamId": "2210ad98-83ef-5ca8-859e-adbd59f50931",
+        "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
+        "lamFieldParams": null
+    },
+    {
+        "tag": null,
+        "lamId": "2272c467-d24d-4372-aed0-a6e143645463",
+        "lamVar": "ae84b9eb16d3492c91aa6e5c4f79b554",
+        "lamFieldParams": null
+    },
+    {
+        "repl": {
+            "val": {
+                "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
+                "id": "2210ad98-83ef-5ca8-859e-adbd59f50931",
+                "lamBody": {
+                    "applyFunc": {
+                        "lamVar": "ae84b9eb16d3492c91aa6e5c4f79b554",
+                        "id": "2272c467-d24d-4372-aed0-a6e143645463",
+                        "lamBody": {
+                            "hole": {},
+                            "id": "b3d99eb0-9eea-56bf-8f2a-896934ca64e9"
+                        }
+                    },
+                    "applyArg": {
+                        "primBytes": "00000000000000000000000000",
+                        "primId": "42493a666c6f61740000000000000000",
+                        "id": "dc369a4b-e422-1e90-bf0f-125b23afa62b"
+                    },
+                    "id": "009d1193-3988-4010-bdd6-ffa5cc25ce8f"
+                }
+            }
+        }
+    }
+]

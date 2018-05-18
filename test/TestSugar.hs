@@ -4,6 +4,7 @@ module TestSugar where
 
 import           Control.DeepSeq (deepseq)
 import qualified Control.Lens as Lens
+import qualified Data.List.Class as List
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import           Lamdu.Data.Db.Layout (runDbTransaction, codeAnchors, ViewM)
@@ -21,7 +22,7 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 test :: Test
-test = testGroup "sugar-tests" [testChangeParam, testReorderLets, testExtract]
+test = testGroup "sugar-tests" [testChangeParam, testReorderLets, testExtract, testInline]
 
 convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
@@ -84,3 +85,46 @@ testExtract =
             waRepl . replExpr .
             rBody . _BodyLam . lamBinder . bBody .
             bbContent . _BinderLet . lActions . laNodeActions . extract
+
+-- Test for issue #402
+-- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
+testInline :: Test
+testInline =
+    testSugarActions "let-item-inline.json" [inline, verify]
+    & testCase "inline"
+    where
+        inline workArea =
+            do
+                Just yOption <-
+                    letItem ^. lBody . bbContent . _BinderExpr . rBody . _BodyHole . holeOptions
+                    >>= findM isY
+                List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
+                result <- mkResult
+                result ^. holeResultPick
+                _ <- result ^?! holeResultConverted . rBody . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                pure ()
+            where
+                letItem =
+                    workArea ^?! waRepl . replExpr .
+                    rBody . _BodyLam . lamBinder . bBody .
+                    bbContent . _BinderLet
+                isY option =
+                    option ^. hoSugaredBaseExpr
+                    <&> Lens.has (rBody . _BodyGetVar . _GetBinder . bvForm . _GetLet)
+        verify workArea
+            | Lens.has afterInline workArea = pure ()
+            | otherwise = fail "Expected inline result"
+        afterInline =
+            waRepl . replExpr .
+            rBody . _BodyLam . lamBinder . bBody .
+            bbContent . _BinderExpr .
+            rBody . _BodyLiteral . _LiteralNum
+
+findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
+findM _ [] = pure Nothing
+findM f (x:xs) =
+    do
+        found <- f x
+        if found
+            then Just x & pure
+            else findM f xs
