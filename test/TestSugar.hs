@@ -30,19 +30,19 @@ convertWorkArea =
     >>= \x -> deepseq x (pure x)
 
 -- | Verify that a sugar action does not result in a crash
-testSugarAction ::
+testSugarActions ::
     FilePath ->
-    (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload -> T ViewM a) ->
+    [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload -> T ViewM a] ->
     IO ()
-testSugarAction program action =
+testSugarActions program actions =
     withDB ("test/programs/" <> program)
-    (runDbTransaction ?? runAction (void (convertWorkArea >>= action >> convertWorkArea)))
+    (runDbTransaction ?? runAction (void (traverse_ (convertWorkArea >>=) actions >> convertWorkArea)))
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
 testChangeParam :: Test
 testChangeParam =
-    testSugarAction "apply-id-of-lambda.json" action
+    testSugarActions "apply-id-of-lambda.json" [action]
     & testCase "change-param"
     where
         action workArea =
@@ -64,7 +64,7 @@ testReorderLets =
     ]
     where
         f program =
-            testSugarAction program (^?! extractSecondLetItemInLambda)
+            testSugarActions program [(^?! extractSecondLetItemInLambda)]
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             waRepl . replExpr .
@@ -77,7 +77,7 @@ testReorderLets =
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
 testExtract :: Test
 testExtract =
-    testSugarAction "extract-lambda-with-let.json" (^?! action)
+    testSugarActions "extract-lambda-with-let.json" [(^?! action)]
     & testCase "extract"
     where
         action =
