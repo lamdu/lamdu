@@ -70,8 +70,10 @@ cursorDest val =
 inlineLet ::
     Monad m => ValIProperty m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
-    redex ^. Redex.lam . V.lamResult . Val.payload
-    & ExprIRef.readVal
+    Property.value topLevelProp & ExprIRef.readVal
+    <&> (^? Val.body . V._BApp . V.applyFunc . Val.body . V._BLam . V.lamResult . Val.payload)
+    <&> fromMaybe (error "malformed redex")
+    >>= ExprIRef.readVal
     <&> Lens.mapped %~ Just
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamParamId)
