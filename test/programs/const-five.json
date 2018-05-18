@@ -1,0 +1,34 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "tagOrder": 0,
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
+        "name": "num"
+    },
+    {
+        "nomType": "OpaqueNominal",
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
+        "nom": "42493a666c6f61740000000000000000"
+    },
+    {
+        "tag": null,
+        "lamId": "2210ad98-83ef-5ca8-859e-adbd59f50931",
+        "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
+        "lamFieldParams": null
+    },
+    {
+        "repl": {
+            "val": {
+                "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
+                "id": "2210ad98-83ef-5ca8-859e-adbd59f50931",
+                "lamBody": {
+                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
+                    "primId": "42493a666c6f61740000000000000000",
+                    "id": "ff1b1f1e-9316-ac4d-fa9b-a4a0d6966b48"
+                }
+            }
+        }
+    }
+]

@@ -22,7 +22,9 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 test :: Test
-test = testGroup "sugar-tests" [testChangeParam, testReorderLets, testExtract, testInline]
+test =
+    testGroup "sugar-tests"
+    [testChangeParam, testReorderLets, testExtract, testInline, delParam]
 
 convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
@@ -128,3 +130,17 @@ findM f (x:xs) =
         if found
             then Just x & pure
             else findM f xs
+
+delParam :: Test
+delParam =
+    testSugarActions "const-five.json" [(^?! action), verify]
+    & testCase "del-param"
+    where
+        action =
+            waRepl . replExpr .
+            rBody . _BodyLam . lamBinder . bParams . _Params . Lens.ix 0 .
+            fpInfo . piActions . fpDelete
+        verify workArea
+            | Lens.has afterDel workArea = pure ()
+            | otherwise = fail "Expected 5"
+        afterDel = waRepl . replExpr . rBody . _BodyLiteral . _LiteralNum
