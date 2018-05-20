@@ -39,7 +39,6 @@ import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, conve
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -598,29 +597,11 @@ isParamAlwaysUsedWithGetField (V.Lam param body) =
             V.BGetField (V.GetField r _) -> go True r
             x -> all (go False) (x ^.. Lens.traverse)
 
--- Post process param add and delete actions to detach lambda.
--- This isn't done for all actions as some already perform this function.
--- TODO: clean up responsibilities - make it clear why some actions already
--- take care of wrapping and some don't.
-postProcessActions ::
-    Monad m => T m () -> ConventionalParams m -> ConventionalParams m
-postProcessActions post x
-    | Lens.has (cpParams . _Params) x =
-        x & cpParams . SugarLens.binderFuncParamActions . fpDelete %~ (<* post)
-    | otherwise = x
-
 convertLamParams ::
     Monad m =>
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertLamParams lambda lambdaPl =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let maybeWrap = protectedSetToVal lambdaProp (Property.value lambdaProp)
-        convertNonEmptyParams Nothing BinderKindLambda lambda lambdaPl
-            <&> postProcessActions (void maybeWrap)
-    where
-        lambdaProp = lambdaPl ^. Input.stored
+convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
 makeFieldParam :: Input.Payload m a -> (T.Tag, T.Type) -> FieldParam
 makeFieldParam lambdaPl (tag, typeExpr) =
@@ -727,17 +708,14 @@ convertParams ::
     , Val (Input.Payload m a)
     )
 convertParams binderKind defVar expr =
-    do
-        postProcess <- ConvertM.postProcess
-        case expr ^. Val.body of
-            V.BLam lambda ->
-                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. Val.payload)
-                <&> f
-                where
-                    f convParams =
-                        (mPresMode convParams, convParams, lambda ^. V.lamResult)
-                    mPresMode convParams =
-                        presMode <$ convParams ^? cpParams . _Params . Lens.ix 1
-                    presMode = Anchors.assocPresentationMode defVar
-            _ -> convertEmptyParams binderKind expr <&> \x -> (Nothing, x, expr)
-            <&> _2 %~ postProcessActions postProcess
+    case expr ^. Val.body of
+    V.BLam lambda ->
+        convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. Val.payload)
+        <&> f
+        where
+            f convParams =
+                (mPresMode convParams, convParams, lambda ^. V.lamResult)
+            mPresMode convParams =
+                presMode <$ convParams ^? cpParams . _Params . Lens.ix 1
+            presMode = Anchors.assocPresentationMode defVar
+    _ -> convertEmptyParams binderKind expr <&> \x -> (Nothing, x, expr)
