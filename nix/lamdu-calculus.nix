@@ -7,8 +7,8 @@ mkDerivation {
   version = "0.1.0.0";
   src = fetchgit {
     url = "https://github.com/lamdu/lamdu-calculus.git";
-    sha256 = "1rzqbaiy2ams98blp77sf8li18j21053n4y7039pq1dvhl7248pr";
-    rev = "533aca8513575f681053aa1747d0f3c22230b86d";
+    sha256 = "0fk8rpgfy659ls3afiavk6n6ygmbmcm8fwf617w0gvvrb80ivkb7";
+    rev = "fd0adff0a85bfa7c1fdb04165869a0cb5698d852";
   };
   libraryHaskellDepends = [
     base base-compat base16-bytestring binary bytestring containers
