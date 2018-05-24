@@ -20,6 +20,7 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
@@ -40,7 +41,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 moveToGlobalScope ::
-    Monad m => ConvertM m (V.Var -> Definition.Expr (ValI m) -> T m ())
+    Monad m => ConvertM m (V.Var -> Definition.Expr (ValP m) -> T m ())
 moveToGlobalScope =
     (,)
     <$> Lens.view id
@@ -49,7 +50,7 @@ moveToGlobalScope =
     \(ctx, postProcess) param defExpr ->
     do
         inferRes <-
-            Definition.expr ExprIRef.readVal defExpr
+            traverse ExprLoad.expr defExpr
             >>= (Load.inferCheckDef (ctx ^. ConvertM.scDebugMonitors) ?? param)
         scheme <-
             case inferRes of
@@ -58,9 +59,10 @@ moveToGlobalScope =
                 inferredVal ^. Val.payload . _1 . Infer.plType
                 & Infer.makeScheme inferContext
                 & pure
+        let defExprI = defExpr <&> Property.value
         DataOps.newPublicDefinitionToIRef
             (ctx ^. ConvertM.scCodeAnchors)
-            (Definition.Definition (Definition.BodyExpr defExpr) scheme ())
+            (Definition.Definition (Definition.BodyExpr defExprI) scheme ())
             (ExprIRef.defI param)
         Infer.depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
@@ -224,19 +226,18 @@ makeFloatLetToOuterScope setTopLevel redex =
     do
         redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored .
             Property.pVal & setTopLevel
-        newLetI <- makeNewLet <&> Property.value
+        newLetP <- makeNewLet
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
-                floatToGlobal param innerDefExpr
-                <&> ExtractToDef
+                floatToGlobal param innerDefExpr <&> ExtractToDef
                 where
                     addRecursiveRefAsDep =
                         case ctx ^. ConvertM.scScopeInfo . ConvertM.siRecursiveRef of
                         Nothing -> id
                         Just (ConvertM.RecursiveRef defI defType) ->
                             Infer.depsGlobalTypes . Lens.at (ExprIRef.globalId defI) ?~ defType
-                    innerDefExpr = Definition.Expr newLetI innerDeps
+                    innerDefExpr = Definition.Expr newLetP innerDeps
                     innerDeps =
                         -- Outer deps, pruned:
                         ctx ^. ConvertM.scFrozenDeps . Property.pVal
@@ -245,7 +246,8 @@ makeFloatLetToOuterScope setTopLevel redex =
                         & Definition.pruneDefExprDeps
             Just outerScopeInfo ->
                 EntityId.ofBinder param <$
-                DataOps.redexWrapWithGivenParam param newLetI (outerScopeInfo ^. ConvertM.osiPos)
+                DataOps.redexWrapWithGivenParam param
+                (Property.value newLetP) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
     where
         param = redex ^. Redex.lam . V.lamParamId

@@ -30,21 +30,21 @@ type T = Transaction
 
 class Monad (M a) => ParamListPayload a where
     type M a :: * -> *
-    iref :: a -> ExprIRef.ValI (M a)
+    iref :: a -> ExprIRef.ValP (M a)
     inferPl :: Lens' a Infer.Payload
 
 instance Monad m => ParamListPayload (Input.Payload m a) where
     type M (Input.Payload m a) = m
-    iref x = x ^. Input.stored . Property.pVal
+    iref x = x ^. Input.stored
     inferPl = Input.inferred
 
-instance Monad m => ParamListPayload (Infer.Payload, ExprIRef.ValI m) where
-    type M (Infer.Payload, ExprIRef.ValI m) = m
+instance Monad m => ParamListPayload (Infer.Payload, ExprIRef.ValP m) where
+    type M (Infer.Payload, ExprIRef.ValP m) = m
     iref (_, x) = x
     inferPl = _1
 
-loadStored :: Monad m => ExprIRef.ValI m -> T m (Maybe ParamList)
-loadStored = Property.getP . assocFieldParamList
+loadStored :: Monad m => ExprIRef.ValP m -> T m (Maybe ParamList)
+loadStored = Property.getP . assocFieldParamList . Property.value
 
 mkFuncType :: Infer.Scope -> ParamList -> Infer Type
 mkFuncType scope paramList =

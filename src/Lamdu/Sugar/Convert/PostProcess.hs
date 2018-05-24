@@ -2,6 +2,7 @@ module Lamdu.Sugar.Convert.PostProcess
     ( Result(..), def, expr
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val.Annotated as Val
@@ -9,6 +10,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
 import qualified Lamdu.Sugar.Convert.Load as Load
@@ -24,13 +26,14 @@ data Result = GoodExpr | BadExpr InferErr.Error
 def :: Monad m => Debug.Monitors -> DefI m -> T m Result
 def monitors defI =
     do
-        loadedDef <- Transaction.readIRef defI
+        loadedDef <- ExprLoad.def defI <&> void
         case loadedDef ^. Definition.defBody of
             Definition.BodyBuiltin {} -> pure GoodExpr
             Definition.BodyExpr defExpr ->
                 do
-                    loaded <- Definition.expr ExprIRef.readVal defExpr
-                    checked <- Load.inferCheckDef monitors loaded (ExprIRef.globalId defI)
+                    checked <-
+                        ExprIRef.globalId defI
+                        & Load.inferCheckDef monitors defExpr
                     case checked of
                         Left err -> BadExpr err & pure
                         Right (inferredVal, inferContext) ->
@@ -40,7 +43,9 @@ def monitors defI =
                                 Infer.makeScheme inferContext inferredType
                             & Definition.defBody . Definition._BodyExpr .
                                 Definition.exprFrozenDeps .~
-                                Definition.pruneDefExprDeps loaded
+                                Definition.pruneDefExprDeps defExpr
+                            & Definition.defBody . Lens.mapped %~
+                                (^. Val.payload . Property.pVal)
                             & Transaction.writeIRef defI
                             )
                             where
@@ -50,17 +55,16 @@ expr ::
     Monad m =>
     Debug.Monitors -> MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m Result
-expr monitors mkProp =
+expr monitors prop =
     do
-        prop <- mkProp ^. Property.mkProperty
-        -- TODO: This is code duplication with the above Load.inferDef
+        defExprLoaded <- ExprLoad.defExpr prop
+        -- TODO: This is code duplication with the above Load.inferCheckDef
         -- & functions inside Load itself
-        defExpr <- Definition.expr ExprIRef.readVal (prop ^. Property.pVal)
-        inferred <- Load.inferCheckDefExpr monitors defExpr
+        inferred <- Load.inferCheckDefExpr monitors defExprLoaded
         case inferred of
             Left err -> BadExpr err & pure
             Right _ ->
                 GoodExpr <$
-                Property.pureModify prop
-                (Definition.exprFrozenDeps .~ Definition.pruneDefExprDeps defExpr)
+                Property.modP prop
+                (Definition.exprFrozenDeps .~ Definition.pruneDefExprDeps defExprLoaded)
 
