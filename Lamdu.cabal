@@ -138,6 +138,7 @@ Library
                   , Control.Monad.Unit
                   , Data.Binary.Extended
                   , Data.ByteString.Extended
+                  , Data.Cache.Fenced
                   , Data.CurAndPrev
                   , Data.Function.Decycle
                   , Data.IORef.Extended
