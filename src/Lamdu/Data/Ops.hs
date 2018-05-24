@@ -121,7 +121,7 @@ assocPublishedTagName ::
     Monad m => MkProperty' (T m) (Set T.Tag) -> T.Tag -> MkProperty' (T m) Text
 assocPublishedTagName publishedTagsProp tag =
     Anchors.assocTagNameRef tag
-    & Property.mkProperty . Lens.mapped . Property.pSet .>
+    & Property.prop . Property.pSet .>
     Lens.imapped %@~ \i -> (<* publish i)
     where
         publish newName =

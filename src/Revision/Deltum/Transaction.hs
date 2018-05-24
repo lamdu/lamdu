@@ -199,7 +199,7 @@ assocDataRefDef ::
     (Eq a, Binary a, Monad m) => a -> ByteString -> UUID -> MkProperty' (T m) a
 assocDataRefDef def str uuid =
     assocDataRef str uuid
-    & Property.mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f
+    & Property.prop %~ Property.pureCompose (fromMaybe def) f
     where
         f x
             | x == def = Nothing
