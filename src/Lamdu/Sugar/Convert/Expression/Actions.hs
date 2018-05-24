@@ -31,22 +31,26 @@ type T = Transaction
 mkExtract ::
     Monad m => Input.Payload m a -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
-    Lens.view id
-    <&> \ctx ->
-    case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
-    Nothing -> mkExtractToDef ctx exprPl <&> ExtractToDef
+    Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
+    >>= \case
+    Nothing -> mkExtractToDef exprPl <&> Lens.mapped %~ ExtractToDef
     Just outerScope ->
         mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
-        <&> ExtractToLet
+        <&> ExtractToLet & pure
 
-mkExtractToDef ::
-    Monad m => ConvertM.Context m -> Input.Payload m a -> T m EntityId
-mkExtractToDef ctx exprPl =
+mkExtractToDef :: Monad m => Input.Payload m a -> ConvertM m (T m EntityId)
+mkExtractToDef exprPl =
+    Lens.view id <&>
+    \ctx ->
     do
+        let scheme =
+                Infer.makeScheme (ctx ^. ConvertM.scInferContext)
+                (exprPl ^. Input.inferredType)
+        let deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
         newDefI <-
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
-            & DataOps.newPublicDefinitionWithPane cp
+            & DataOps.newPublicDefinitionWithPane (ctx ^. ConvertM.scCodeAnchors)
         GoodExpr <- postProcessDef (ctx ^. ConvertM.scDebugMonitors) newDefI
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
@@ -58,11 +62,6 @@ mkExtractToDef ctx exprPl =
         EntityId.ofIRef newDefI & pure
     where
         valI = exprPl ^. Input.stored . Property.pVal
-        deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
-        cp = ctx ^. ConvertM.scCodeAnchors
-        scheme =
-            Infer.makeScheme (ctx ^. ConvertM.scInferContext)
-            (exprPl ^. Input.inferredType)
 
 mkExtractToLet ::
     Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
