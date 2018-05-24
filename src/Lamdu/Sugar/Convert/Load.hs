@@ -188,6 +188,16 @@ inferDef infer monitors results defExpr defVar =
     inferDefExprWithRecursiveRef infer defExpr defVar
     & runInferResult monitors results
 
+inferCheckDef ::
+    Monad m =>
+    InferFunc (ValP m) -> Debug.Monitors ->
+    Definition.Expr (Val (ValP m)) -> V.Var ->
+    T m (Either Infer.Error (Val (Infer.Payload, ValP m), Infer.Context))
+inferCheckDef infer monitors defExpr defVar =
+    inferDefExprWithRecursiveRef infer defExpr defVar
+    >>= ParamList.loadForLambdas
+    & InferT.run monitors
+
 inferDefExprHelper ::
     Monad m =>
     InferFunc a -> Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
@@ -202,15 +212,6 @@ inferDefExpr ::
 inferDefExpr infer monitors results defExpr =
     inferDefExprHelper infer defExpr
     & runInferResult monitors results
-
-inferCheckDef ::
-    Monad m =>
-    Debug.Monitors -> Definition.Expr (Val (ValP m)) -> V.Var ->
-    T m (Either Infer.Error (Val (Infer.Payload, ValP m), Infer.Context))
-inferCheckDef monitors defExpr defVar =
-    inferDefExprWithRecursiveRef unmemoizedInfer defExpr defVar
-    >>= ParamList.loadForLambdas
-    & InferT.run monitors
 
 inferCheckDefExpr ::
     Monad m =>

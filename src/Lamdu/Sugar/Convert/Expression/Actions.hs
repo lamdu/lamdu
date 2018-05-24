@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
@@ -40,11 +41,12 @@ mkExtract exprPl =
 
 mkExtractToDef :: Monad m => Input.Payload m a -> ConvertM m (T m EntityId)
 mkExtractToDef exprPl =
-    (,)
+    (,,)
     <$> Lens.view id
     <*> ConvertM.postProcessAssert
+    <*> ConvertM.cachedFunc Cache.infer
     <&>
-    \(ctx, postProcess) ->
+    \(ctx, postProcess, infer) ->
     do
         let scheme =
                 Infer.makeScheme (ctx ^. ConvertM.scInferContext)
@@ -55,7 +57,7 @@ mkExtractToDef exprPl =
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
             & DataOps.newPublicDefinitionWithPane (ctx ^. ConvertM.scCodeAnchors)
         PostProcess.GoodExpr <-
-            PostProcess.def (ctx ^. ConvertM.scDebugMonitors) newDefI
+            PostProcess.def infer (ctx ^. ConvertM.scDebugMonitors) newDefI
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
         (exprPl ^. Input.stored . Property.pSet) getVarI

@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Vars as TV
 import qualified Lamdu.Calc.Val as V
@@ -43,15 +44,16 @@ type T = Transaction
 moveToGlobalScope ::
     Monad m => ConvertM m (V.Var -> Definition.Expr (ValP m) -> T m ())
 moveToGlobalScope =
-    (,)
+    (,,)
     <$> Lens.view id
     <*> ConvertM.postProcessAssert
+    <*> ConvertM.cachedFunc Cache.infer
     <&>
-    \(ctx, postProcess) param defExpr ->
+    \(ctx, postProcess, infer) param defExpr ->
     do
         inferRes <-
             traverse ExprLoad.expr defExpr
-            >>= (Load.inferCheckDef (ctx ^. ConvertM.scDebugMonitors) ?? param)
+            >>= (Load.inferCheckDef infer (ctx ^. ConvertM.scDebugMonitors) ?? param)
         scheme <-
             case inferRes of
             Left err -> fail ("extract to global scope failed inference: " ++ show (prettyShow err))

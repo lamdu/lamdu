@@ -5,14 +5,14 @@ module TestSugar where
 import           Control.DeepSeq (deepseq)
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import           Lamdu.Data.Db.Layout (runDbTransaction, codeAnchors, ViewM)
 import           Lamdu.Debug (noopMonitors)
 import qualified Lamdu.Eval.Results as EvalResults
+import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
-import           Lamdu.Sugar.Convert.Load (unmemoizedInfer)
 import           Lamdu.Sugar.Types
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
@@ -28,9 +28,10 @@ test =
     [testChangeParam, testReorderLets, testExtract, testInline, delParam]
 
 convertWorkArea ::
+    Cache.Functions ->
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
-convertWorkArea =
-    loadWorkArea unmemoizedInfer noopMonitors (pure EvalResults.empty) codeAnchors
+convertWorkArea cache =
+    loadWorkArea cache noopMonitors (pure EvalResults.empty) codeAnchors
     >>= \x -> deepseq x (pure x)
 
 -- | Verify that a sugar action does not result in a crash
@@ -39,8 +40,13 @@ testSugarActions ::
     [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload -> T ViewM a] ->
     IO ()
 testSugarActions program actions =
-    withDB ("test/programs/" <> program)
-    (runDbTransaction ?? runAction (void (traverse_ (convertWorkArea >>=) actions >> convertWorkArea)))
+    do
+        cache <- Cache.make <&> snd
+        withDB ("test/programs/" <> program)
+            ( runDbTransaction ??
+              runAction
+              (traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache)
+            )
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error

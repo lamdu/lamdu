@@ -8,7 +8,7 @@ import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
-import           Lamdu.Expr.IRef (DefI, ValI)
+import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Infer as Infer
@@ -23,8 +23,8 @@ type T = Transaction
 
 data Result = GoodExpr | BadExpr InferErr.Error
 
-def :: Monad m => Debug.Monitors -> DefI m -> T m Result
-def monitors defI =
+def :: Monad m => Load.InferFunc (ValP m) -> Debug.Monitors -> DefI m -> T m Result
+def infer monitors defI =
     do
         loadedDef <- ExprLoad.def defI <&> void
         case loadedDef ^. Definition.defBody of
@@ -33,7 +33,7 @@ def monitors defI =
                 do
                     checked <-
                         ExprIRef.globalId defI
-                        & Load.inferCheckDef monitors defExpr
+                        & Load.inferCheckDef infer monitors defExpr
                     case checked of
                         Left err -> BadExpr err & pure
                         Right (inferredVal, inferContext) ->

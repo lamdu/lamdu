@@ -10,6 +10,7 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -88,11 +89,11 @@ canInlineDefinition defExpr recursiveVars var entityId =
 
 convertInferDefExpr ::
     (HasCallStack, Monad m) =>
-    Load.InferFunc (ValP m) -> Debug.Monitors ->
+    Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
-convertInferDefExpr cachedInfer monitors evalRes cp defType defExpr defI =
+convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
             Load.inferDef cachedInfer monitors evalRes defExpr defVar
@@ -112,6 +113,7 @@ convertInferDefExpr cachedInfer monitors evalRes cp defType defExpr defI =
                           }
                         )
                 , _scDebugMonitors = monitors
+                , _scCacheFunctions = cache
                 , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinition = canInlineDefinition valInferred (Set.singleton defVar)
@@ -123,7 +125,8 @@ convertInferDefExpr cachedInfer monitors evalRes cp defType defExpr defI =
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
-        postProcess = PostProcess.def monitors defI
+        cachedInfer = Cache.infer cache
+        postProcess = PostProcess.def cachedInfer monitors defI
         entityId = EntityId.ofBinder defVar
         defVar = ExprIRef.globalId defI
         setDefExpr x =
@@ -136,26 +139,26 @@ convertInferDefExpr cachedInfer monitors evalRes cp defType defExpr defI =
 
 convertDefBody ::
     (HasCallStack, Monad m) =>
-    Load.InferFunc (ValP m) -> Debug.Monitors ->
+    Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
-convertDefBody cachedInfer monitors evalRes cp (Definition.Definition body defType defI) =
+convertDefBody cache monitors evalRes cp (Definition.Definition body defType defI) =
     case body of
-    Definition.BodyExpr defExpr -> convertInferDefExpr cachedInfer monitors evalRes cp defType defExpr defI
+    Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
 loadRepl ::
     (HasCallStack, Monad m) =>
-    Load.InferFunc (ValP m) -> Debug.Monitors ->
+    Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (Repl InternalName (T m) (T m) [EntityId])
-loadRepl cachedInfer monitors evalRes cp =
+loadRepl cache monitors evalRes cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
         Load.InferResult valInferred newInferContext <-
-            Load.inferDefExpr cachedInfer monitors evalRes defExpr
+            Load.inferDefExpr (Cache.infer cache) monitors evalRes defExpr
             <&> Load.assertInferSuccess
         outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
         let context =
@@ -164,6 +167,7 @@ loadRepl cachedInfer monitors evalRes cp =
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo Nothing
                 , _scDebugMonitors = monitors
+                , _scCacheFunctions = cache
                 , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinition = canInlineDefinition valInferred mempty
@@ -205,9 +209,9 @@ loadAnnotatedDef getDefI annotation =
 
 loadPanes ::
     Monad m =>
-    Load.InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     EntityId -> T m [Pane InternalName (T m) (T m) [EntityId]]
-loadPanes cachedInfer monitors evalRes cp replEntityId =
+loadPanes cache monitors evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
         paneDefs <- mapM (loadAnnotatedDef Anchors.paneDef) panes
@@ -236,7 +240,7 @@ loadPanes cachedInfer monitors evalRes cp replEntityId =
                     bodyS <-
                         def
                         <&> Anchors.paneDef
-                        & convertDefBody cachedInfer monitors evalRes cp
+                        & convertDefBody cache monitors evalRes cp
                         <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
@@ -261,12 +265,12 @@ loadPanes cachedInfer monitors evalRes cp replEntityId =
 
 loadWorkArea ::
     (HasCallStack, Monad m) =>
-    Load.InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m (WorkArea InternalName (T m) (T m) [EntityId])
-loadWorkArea cachedInfer monitors evalRes cp =
+loadWorkArea cache monitors evalRes cp =
     do
-        repl <- loadRepl cachedInfer monitors evalRes cp
-        panes <- loadPanes cachedInfer monitors evalRes cp (repl ^. replExpr . rPayload . plEntityId)
+        repl <- loadRepl cache monitors evalRes cp
+        panes <- loadPanes cache monitors evalRes cp (repl ^. replExpr . rPayload . plEntityId)
         pure WorkArea
             { _waPanes = panes
             , _waRepl = repl

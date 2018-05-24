@@ -10,17 +10,17 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Property (MkProperty')
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (ValI, ValP)
+import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import           Lamdu.Sugar.Convert.Load (InferFunc)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -72,11 +72,11 @@ getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 
 loadWorkArea ::
     (HasCallStack, Monad m) =>
-    InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
-loadWorkArea cachedInfer monitors theEvalResults cp =
-    SugarConvert.loadWorkArea cachedInfer monitors theEvalResults cp
+loadWorkArea cache monitors theEvalResults cp =
+    SugarConvert.loadWorkArea cache monitors theEvalResults cp
     >>= AddNames.addToWorkArea (getNameProp cp)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->

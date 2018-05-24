@@ -8,8 +8,10 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scPostProcessRoot, siRecursiveRef
-    , scCodeAnchors, scScopeInfo, scDebugMonitors
+    , scCodeAnchors, scScopeInfo, scDebugMonitors, scCacheFunctions
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinition
+
+    , cachedFunc
 
     , ConvertM(..), run
     , local
@@ -22,6 +24,7 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import qualified Lamdu.Calc.Val as V
@@ -97,11 +100,15 @@ data Context m = Context
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
     , _scFrozenDeps :: Property (T m) Infer.Dependencies
     , _scDebugMonitors :: Debug.Monitors
+    , _scCacheFunctions :: Cache.Functions
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     }
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
+
+cachedFunc :: Monad m => (Cache.Functions -> a) -> ConvertM m a
+cachedFunc f = Lens.view scCacheFunctions <&> f
 
 typeProtect :: Monad m => T m PostProcess.Result -> T m a -> T m (Maybe a)
 typeProtect checkOk act =

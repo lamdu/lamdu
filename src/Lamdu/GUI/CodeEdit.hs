@@ -87,7 +87,9 @@ make cp gp width =
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
-        workArea <- loadWorkArea (Cache.infer (env ^. Cache.functions)) (env ^. Debug.monitors) theEvalResults cp & transaction
+        workArea <-
+            loadWorkArea (env ^. Cache.functions) (env ^. Debug.monitors)
+            theEvalResults cp & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans
