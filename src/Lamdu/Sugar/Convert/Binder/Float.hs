@@ -78,17 +78,17 @@ isVarAlwaysApplied (V.Lam var body) =
         go _ v = all (go False) (v ^.. Val.body . Lens.traverse)
 
 convertLetToLam ::
-    Monad m => V.Var -> Redex (ValP m) -> T m (ValI m)
+    Monad m => V.Var -> Redex (ValP m) -> T m (ValP m)
 convertLetToLam var redex =
     do
-        (newParam, newValI) <-
+        (newParam, newValP) <-
             Params.convertBinderToFunction mkArg
             (BinderKindLet (redex ^. Redex.lam)) (redex ^. Redex.arg)
         let toNewParam prop =
                 V.LVar newParam & V.BLeaf &
                 ExprIRef.writeValBody (Property.value prop)
         SubExprs.onGetVars toNewParam var (redex ^. Redex.arg)
-        pure newValI
+        pure newValP
     where
         mkArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
@@ -107,7 +107,7 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 convertLetParamToRecord ::
     Monad m =>
     V.Var -> V.Lam (Val (ValP m)) -> Params.StoredLam m ->
-    ConvertM m (T m (ValI m))
+    ConvertM m (T m (ValP m))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
     do
@@ -122,14 +122,14 @@ convertLetParamToRecord var letLam storedLam =
             else pure x
         toRecordParams mkNewArg (BinderKindLet letLam) storedLam Params.NewParamAfter addAsTag
         convertVarToGetFieldParam var addAsTag (storedLam ^. Params.slLam)
-        storedLam ^. Params.slLambdaProp . Property.pVal & pure
+        storedLam ^. Params.slLambdaProp & pure
     where
         mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 addFieldToLetParamsRecord ::
     Monad m =>
     [T.Tag] -> V.Var -> V.Lam (Val (ValP m)) -> Params.StoredLam m ->
-    ConvertM m (T m (ValI m))
+    ConvertM m (T m (ValP m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
     \addParam ->
@@ -138,13 +138,13 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
         addParam Nothing mkNewArg (BinderKindLet letLam) storedLam
             ((fieldTags ++) . pure) paramTag
         convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
-        storedLam ^. Params.slLambdaProp . Property.pVal & pure
+        storedLam ^. Params.slLambdaProp & pure
     where
         mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
 
 addLetParam ::
     Monad m =>
-    V.Var -> Redex (Input.Payload m a) -> ConvertM m (T m (ValI m))
+    V.Var -> Redex (Input.Payload m a) -> ConvertM m (T m (ValP m))
 addLetParam var redex =
     case storedRedex ^. Redex.arg . Val.body of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
@@ -161,13 +161,13 @@ addLetParam var redex =
     where
         storedRedex = redex <&> (^. Input.stored)
 
-sameLet :: Redex (ValP m) -> ValI m
-sameLet redex = redex ^. Redex.arg . Val.payload & Property.value
+sameLet :: Redex (ValP m) -> ValP m
+sameLet redex = redex ^. Redex.arg . Val.payload
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
 
-processLet :: Monad m => Redex (Input.Payload m a) -> ConvertM m (T m (ValI m))
+processLet :: Monad m => Redex (Input.Payload m a) -> ConvertM m (T m (ValP m))
 processLet redex =
     do
         scopeInfo <- Lens.view ConvertM.scScopeInfo
@@ -224,7 +224,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     do
         redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored .
             Property.pVal & setTopLevel
-        newLetI <- makeNewLet
+        newLetI <- makeNewLet <&> Property.value
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$

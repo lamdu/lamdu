@@ -658,10 +658,10 @@ convertVarToCalls mkArg var =
 convertBinderToFunction ::
     Monad m =>
     T m (ValI m) -> BinderKind m -> Val (ValP m) ->
-    T m (V.Var, ValI m)
+    T m (V.Var, ValP m)
 convertBinderToFunction mkArg binderKind val =
     do
-        (newParam, newValI) <- DataOps.lambdaWrap (val ^. Val.payload)
+        (newParam, newValP) <- DataOps.lambdaWrap (val ^. Val.payload)
         case binderKind of
             BinderKindDef defI ->
                 convertVarToCalls mkArg (ExprIRef.globalId defI) val
@@ -669,7 +669,7 @@ convertBinderToFunction mkArg binderKind val =
                 convertVarToCalls mkArg
                 (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
             BinderKindLambda -> error "Lambda will never be an empty-params binder"
-        pure (newParam, newValI)
+        pure (newParam, newValP)
 
 convertEmptyParams ::
     Monad m =>

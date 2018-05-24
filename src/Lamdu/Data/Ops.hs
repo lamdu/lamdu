@@ -63,15 +63,15 @@ setToHole exprP =
         hole = V.BLeaf V.LHole
         exprI = Property.value exprP
 
-lambdaWrap :: Monad m => ValP m -> T m (V.Var, ValI m)
+lambdaWrap :: Monad m => ValP m -> T m (V.Var, ValP m)
 lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
         newExprI <-
             Property.value exprP & V.Lam newParam & V.BLam
             & ExprIRef.newValBody
-        (exprP ^. Property.pSet) newExprI
-        pure (newParam, newExprI)
+        Property.set exprP newExprI
+            <&> (,) newParam
 
 redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValP m -> T m (ValP m)
 redexWrapWithGivenParam param newValueI exprP =
