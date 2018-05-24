@@ -11,6 +11,7 @@ module Lamdu.Sugar.Convert.Load
     , makeNominalsMap
     , loadInferPrepareInput
     , readValAndAddProperties
+    , InferFunc, unmemoizedInfer
     ) where
 
 import qualified Control.Lens as Lens
@@ -34,6 +35,7 @@ import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
+import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as Infer
 import qualified Lamdu.Infer.Trans as InferT
@@ -54,15 +56,19 @@ type T = Transaction
 assertInferSuccess :: HasCallStack => Either Infer.Error a -> a
 assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
 
-infer :: Definition.Expr (Val a) -> Infer.Scope -> Infer.Infer (Val (Infer.Payload, a))
-infer defExpr scope =
+type InferFunc a =
+    Definition.Expr (Val a) -> Infer.Scope -> Infer (Val (Infer.Payload, a))
+
+unmemoizedInfer :: InferFunc a
+unmemoizedInfer defExpr scope =
     Infer.infer (defExpr ^. Definition.exprFrozenDeps) scope
     (defExpr ^. Definition.expr)
 
 inferDefExprWithRecursiveRef ::
     Monad m =>
-    Definition.Expr (Val a) -> V.Var -> InferT.M m (Val (Infer.Payload, a))
-inferDefExprWithRecursiveRef defExpr defId =
+    InferFunc a -> Definition.Expr (Val a) -> V.Var ->
+    InferT.M m (Val (Infer.Payload, a))
+inferDefExprWithRecursiveRef infer defExpr defId =
     do
         defTv <- Infer.freshInferredVar Infer.emptyScope "r"
         let scope = Infer.insertTypeOf defId defTv Infer.emptyScope
@@ -173,26 +179,28 @@ runInferResult monitors results act =
 
 inferDef ::
     (HasCallStack, Monad m) =>
-    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    InferFunc (ValP m) -> Debug.Monitors ->
+    CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) ->
     V.Var ->
     T m (Either Infer.Error (InferResult m))
-inferDef monitors results defExpr defVar =
-    inferDefExprWithRecursiveRef defExpr defVar
+inferDef infer monitors results defExpr defVar =
+    inferDefExprWithRecursiveRef infer defExpr defVar
     & runInferResult monitors results
 
 inferDefExprHelper ::
-    Monad m => Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
-inferDefExprHelper defExpr =
+    Monad m =>
+    InferFunc a -> Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
+inferDefExprHelper infer defExpr =
     infer defExpr Infer.emptyScope & InferT.liftInfer
 
 inferDefExpr ::
     (HasCallStack, Monad m) =>
-    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) ->
     T m (Either Infer.Error (InferResult m))
-inferDefExpr monitors results defExpr =
-    inferDefExprHelper defExpr
+inferDefExpr infer monitors results defExpr =
+    inferDefExprHelper infer defExpr
     & runInferResult monitors results
 
 inferCheckDef ::
@@ -200,7 +208,7 @@ inferCheckDef ::
     Debug.Monitors -> Definition.Expr (Val (ValI m)) -> V.Var ->
     T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
 inferCheckDef monitors defExpr defVar =
-    inferDefExprWithRecursiveRef defExpr defVar
+    inferDefExprWithRecursiveRef unmemoizedInfer defExpr defVar
     >>= ParamList.loadForLambdas
     & InferT.run monitors
 
@@ -209,6 +217,6 @@ inferCheckDefExpr ::
     Debug.Monitors -> Definition.Expr (Val (ValI m)) ->
     T m (Either Infer.Error (Val (Infer.Payload, ValI m), Infer.Context))
 inferCheckDefExpr monitors defExpr =
-    inferDefExprHelper defExpr
+    inferDefExprHelper unmemoizedInfer defExpr
     >>= ParamList.loadForLambdas
     & InferT.run monitors

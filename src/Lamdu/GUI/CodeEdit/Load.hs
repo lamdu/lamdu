@@ -15,11 +15,12 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (ValI)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Convert as SugarConvert
+import           Lamdu.Sugar.Convert.Load (InferFunc)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -71,11 +72,11 @@ getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 
 loadWorkArea ::
     (HasCallStack, Monad m) =>
-    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
-loadWorkArea monitors theEvalResults cp =
-    SugarConvert.loadWorkArea monitors theEvalResults cp
+loadWorkArea cachedInfer monitors theEvalResults cp =
+    SugarConvert.loadWorkArea cachedInfer monitors theEvalResults cp
     >>= AddNames.addToWorkArea (getNameProp cp)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->

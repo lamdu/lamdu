@@ -32,18 +32,18 @@ instance Show FFIName where
 data Expr valExpr = Expr
     { _expr :: valExpr
     , _exprFrozenDeps :: Dependencies
-    } deriving (Generic, Show, Functor, Foldable, Traversable)
+    } deriving (Generic, Show, Functor, Foldable, Traversable, Eq, Ord)
 
 data Body valExpr
     = BodyExpr (Expr valExpr)
     | BodyBuiltin FFIName
-    deriving (Generic, Show, Functor, Foldable, Traversable)
+    deriving (Generic, Show, Functor, Foldable, Traversable, Eq, Ord)
 
 data Definition valExpr a = Definition
     { _defBody :: Body valExpr
     , _defType :: Scheme -- TODO: typeExpr
     , _defPayload :: a
-    } deriving (Generic, Functor, Foldable, Traversable)
+    } deriving (Generic, Functor, Foldable, Traversable, Eq, Ord)
 
 instance Binary FFIName
 instance Binary valExpr => Binary (Expr valExpr)

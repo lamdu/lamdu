@@ -8,6 +8,7 @@ import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM_)
 import           Control.Monad.Trans.FastWriter (writerT)
+import qualified Data.Cache.Fenced as FencedCache
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
@@ -24,6 +25,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
+import qualified Lamdu.Cache as CachedFunctions
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
@@ -78,6 +80,7 @@ data Env = Env
     , _envMainLoop :: MainLoop.Env
     , _envAnimIdPrefix :: AnimId
     , _envDebugMonitors :: Debug.Monitors
+    , _envCachedFunctions :: CachedFunctions.Functions
     }
 Lens.makeLenses ''Env
 
@@ -100,6 +103,7 @@ instance VCConfig.HasConfig Env where config = envConfig . Config.versionControl
 instance Menu.HasConfig Env where
     config = Menu.configLens (envConfig . Config.menu) (envTheme . Theme.menu)
 instance Debug.HasMonitors Env where monitors = envDebugMonitors
+instance CachedFunctions.HasFunctions Env where functions = envCachedFunctions
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =
@@ -203,10 +207,11 @@ exportActions config evalResults executeIOProcess =
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
-    Maybe Debug.Counters -> Fonts M.Font -> Transaction.Store DbM ->
-    EvalManager.Evaluator -> Config -> Theme -> MainLoop.Env ->
-    Property IO Settings -> IO (M.Widget (MainLoop.M IO M.Update))
-makeRootWidget counters fonts db evaluator config theme mainLoopEnv settingsProp =
+    CachedFunctions.Functions -> Maybe Debug.Counters -> Fonts M.Font ->
+    Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
+    MainLoop.Env -> Property IO Settings ->
+    IO (M.Widget (MainLoop.M IO M.Update))
+makeRootWidget cachedFunctions counters fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
         monitors <-
@@ -225,6 +230,7 @@ makeRootWidget counters fonts db evaluator config theme mainLoopEnv settingsProp
                 , _envMainLoop = mainLoopEnv
                 , _envAnimIdPrefix = mempty
                 , _envDebugMonitors = monitors
+                , _envCachedFunctions = cachedFunctions
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
@@ -289,6 +295,8 @@ runEditor opts db =
             ConfigSampler.new (const refresh) (settingsVal ^. Settings.sSelectedTheme)
         mkSettingsProp <- newSettingsProp settingsVal configSampler evaluator
 
+        (cache, cachedFunctions) <- FencedCache.make CachedFunctions.decl
+
         M.withGLFW $ do
             win <-
                 createWindow
@@ -297,8 +305,9 @@ runEditor opts db =
             printGLVersion
             mainLoop stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
+                FencedCache.fence cache *>
                 mkSettingsProp
-                >>= makeRootWidget ctrs fonts db evaluator config theme env
+                >>= makeRootWidget cachedFunctions ctrs fonts db evaluator config theme env
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel

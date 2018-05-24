@@ -22,6 +22,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
@@ -71,6 +72,7 @@ class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
+    , Cache.HasFunctions env
     , Debug.HasMonitors env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
@@ -85,7 +87,7 @@ make cp gp width =
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
-        workArea <- loadWorkArea (env ^. Debug.monitors) theEvalResults cp & transaction
+        workArea <- loadWorkArea (Cache.infer (env ^. Cache.functions)) (env ^. Debug.monitors) theEvalResults cp & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans

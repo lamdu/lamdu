@@ -12,6 +12,7 @@ import           Lamdu.Debug (noopMonitors)
 import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar.Convert.Load (unmemoizedInfer)
 import           Lamdu.Sugar.Types
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
@@ -29,7 +30,7 @@ test =
 convertWorkArea ::
     T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
 convertWorkArea =
-    loadWorkArea noopMonitors (pure EvalResults.empty) codeAnchors
+    loadWorkArea unmemoizedInfer noopMonitors (pure EvalResults.empty) codeAnchors
     >>= \x -> deepseq x (pure x)
 
 -- | Verify that a sugar action does not result in a crash

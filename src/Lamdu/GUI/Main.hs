@@ -28,6 +28,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -82,6 +83,7 @@ addHelp size =
 type Ctx env =
     ( HasCallStack
     , MainLoop.HasMainLoopEnv env
+    , Cache.HasFunctions env
     , Debug.HasMonitors env
     , Style.HasStyle env
     , Hover.HasStyle env
