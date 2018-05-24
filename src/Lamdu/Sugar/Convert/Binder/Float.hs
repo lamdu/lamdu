@@ -29,7 +29,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
@@ -41,8 +40,13 @@ import           Lamdu.Prelude
 type T = Transaction
 
 moveToGlobalScope ::
-    Monad m => ConvertM.Context m -> V.Var -> Definition.Expr (ValI m) -> T m ()
-moveToGlobalScope ctx param defExpr =
+    Monad m => ConvertM m (V.Var -> Definition.Expr (ValI m) -> T m ())
+moveToGlobalScope =
+    (,)
+    <$> Lens.view id
+    <*> ConvertM.postProcess
+    <&>
+    \(ctx, postProcess) param defExpr ->
     do
         inferRes <-
             Definition.expr ExprIRef.readVal defExpr
@@ -63,8 +67,7 @@ moveToGlobalScope ctx param defExpr =
         -- Prune outer def's deps (some used only in inner) and update
         -- our type which may become generalized due to
         -- extraction/generalization of the inner type
-        PostProcess.GoodExpr <- ctx ^. ConvertM.scPostProcessRoot
-        pure ()
+        postProcess
 
 -- TODO: Remove this
 newtype NewLet m = NewLet
@@ -212,7 +215,7 @@ makeFloatLetToOuterScope ::
     Redex (Input.Payload m a) ->
     ConvertM m (T m ExtractDestination)
 makeFloatLetToOuterScope setTopLevel redex =
-    (,)
+    (,,)
     <$>
     ( redex
     & Redex.lam . V.lamResult . Val.payload . Input.stored . Property.pSet .~
@@ -220,8 +223,9 @@ makeFloatLetToOuterScope setTopLevel redex =
     & processLet
     )
     <*> Lens.view id
+    <*> moveToGlobalScope
     <&>
-    \(makeNewLet, ctx) ->
+    \(makeNewLet, ctx, floatToGlobal) ->
     do
         redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored .
             Property.pVal & setTopLevel
@@ -229,7 +233,7 @@ makeFloatLetToOuterScope setTopLevel redex =
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
-                moveToGlobalScope ctx param innerDefExpr
+                floatToGlobal param innerDefExpr
                 <&> ExtractToDef
                 where
                     addRecursiveRefAsDep =
