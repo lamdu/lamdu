@@ -62,20 +62,6 @@ unmemoizedInfer defExpr scope =
     Infer.infer (defExpr ^. Definition.exprFrozenDeps) scope
     (defExpr ^. Definition.expr)
 
-inferDefExprWithRecursiveRef ::
-    Monad m =>
-    InferFunc a -> Definition.Expr (Val a) -> V.Var ->
-    InferT.M m (Val (Infer.Payload, a))
-inferDefExprWithRecursiveRef infer defExpr defId =
-    do
-        defTv <- Infer.freshInferredVar Infer.emptyScope "r"
-        let scope = Infer.insertTypeOf defId defTv Infer.emptyScope
-        inferredVal <- infer defExpr scope
-        let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
-        unify inferredType defTv
-        Update.inferredVal inferredVal & Update.liftInfer
-    & InferT.liftInfer
-
 propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
 
@@ -165,10 +151,11 @@ Lens.makeLenses ''InferResult
 runInferResult ::
     (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    InferT.M (T m) (Val (Infer.Payload, ValP m)) ->
+    Infer (Val (Infer.Payload, ValP m)) ->
     T m (Either Infer.Error (InferResult m))
 runInferResult monitors results act =
     act
+    & InferT.liftInfer
     >>= loadInferPrepareInput results
     & InferT.run monitors
     <&> fmap toResult
@@ -182,14 +169,14 @@ inferDef ::
     Definition.Expr (Val (ValP m)) -> V.Var ->
     T m (Either Infer.Error (InferResult m))
 inferDef infer monitors results defExpr defVar =
-    inferDefExprWithRecursiveRef infer defExpr defVar
+    do
+        defTv <- Infer.freshInferredVar Infer.emptyScope "r"
+        let scope = Infer.insertTypeOf defVar defTv Infer.emptyScope
+        inferredVal <- infer defExpr scope
+        let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
+        unify inferredType defTv
+        Update.inferredVal inferredVal & Update.liftInfer
     & runInferResult monitors results
-
-inferDefExprHelper ::
-    Monad m =>
-    InferFunc a -> Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
-inferDefExprHelper infer defExpr =
-    infer defExpr Infer.emptyScope & InferT.liftInfer
 
 inferDefExpr ::
     (HasCallStack, Monad m) =>
@@ -197,5 +184,4 @@ inferDefExpr ::
     Definition.Expr (Val (ValP m)) ->
     T m (Either Infer.Error (InferResult m))
 inferDefExpr infer monitors results defExpr =
-    inferDefExprHelper infer defExpr
-    & runInferResult monitors results
+    infer defExpr Infer.emptyScope & runInferResult monitors results
