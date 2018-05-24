@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.PostProcess
-    ( Result(..), postProcessDef, postProcessExpr
+    ( Result(..), def, expr
     ) where
 
 import           Data.Property (MkProperty')
@@ -21,11 +21,11 @@ type T = Transaction
 
 data Result = GoodExpr | BadExpr InferErr.Error
 
-postProcessDef :: Monad m => Debug.Monitors -> DefI m -> T m Result
-postProcessDef monitors defI =
+def :: Monad m => Debug.Monitors -> DefI m -> T m Result
+def monitors defI =
     do
-        def <- Transaction.readIRef defI
-        case def ^. Definition.defBody of
+        loadedDef <- Transaction.readIRef defI
+        case loadedDef ^. Definition.defBody of
             Definition.BodyBuiltin {} -> pure GoodExpr
             Definition.BodyExpr defExpr ->
                 do
@@ -35,7 +35,7 @@ postProcessDef monitors defI =
                         Left err -> BadExpr err & pure
                         Right (inferredVal, inferContext) ->
                             GoodExpr <$
-                            ( def
+                            ( loadedDef
                             & Definition.defType .~
                                 Infer.makeScheme inferContext inferredType
                             & Definition.defBody . Definition._BodyExpr .
@@ -46,11 +46,11 @@ postProcessDef monitors defI =
                             where
                                 inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
 
-postProcessExpr ::
+expr ::
     Monad m =>
     Debug.Monitors -> MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m Result
-postProcessExpr monitors mkProp =
+expr monitors mkProp =
     do
         prop <- mkProp ^. Property.mkProperty
         -- TODO: This is code duplication with the above Load.inferDef

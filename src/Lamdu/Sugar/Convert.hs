@@ -122,7 +122,7 @@ convertInferDefExpr monitors evalRes cp defType defExpr defI =
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
-        postProcess = PostProcess.postProcessDef monitors defI
+        postProcess = PostProcess.def monitors defI
         entityId = EntityId.ofBinder defVar
         defVar = ExprIRef.globalId defI
         setDefExpr x =
@@ -187,7 +187,7 @@ loadRepl monitors evalRes cp =
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where
-        postProcess = PostProcess.postProcessExpr monitors prop
+        postProcess = PostProcess.expr monitors prop
         prop = Anchors.repl cp
         setFrozenDeps deps =
             prop ^. Property.mkProperty
