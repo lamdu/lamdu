@@ -22,7 +22,7 @@ import           Lamdu.Expr.IRef (ValI, ValIProperty)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
+import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
@@ -197,7 +197,7 @@ updateDefType ::
     Monad m =>
     Scheme -> Scheme -> V.Var ->
     Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
-    T m PostProcessResult ->
+    T m PostProcess.Result ->
     T m ()
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
@@ -207,14 +207,14 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
             & setDefExpr
         x <- typeCheck
         case x of
-            GoodExpr -> pure ()
-            BadExpr{} -> fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
+            PostProcess.GoodExpr -> pure ()
+            PostProcess.BadExpr{} -> fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
 
 scan ::
     Monad m =>
     EntityId -> Def.Expr (Val (ValIProperty m)) ->
     (Def.Expr (ValI m) -> T m ()) ->
-    T m PostProcessResult ->
+    T m PostProcess.Result ->
     T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ())))
 scan entityId defExpr setDefExpr typeCheck =
     defExpr ^. Def.exprFrozenDeps . Infer.depsGlobalTypes

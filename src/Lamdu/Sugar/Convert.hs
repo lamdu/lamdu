@@ -33,7 +33,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.PostProcess (postProcessDef, postProcessExpr)
+import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Convert.Tag (convertTaggedEntityWith)
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
@@ -122,7 +122,7 @@ convertInferDefExpr monitors evalRes cp defType defExpr defI =
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
     where
-        postProcess = postProcessDef monitors defI
+        postProcess = PostProcess.postProcessDef monitors defI
         entityId = EntityId.ofBinder defVar
         defVar = ExprIRef.globalId defI
         setDefExpr x =
@@ -187,7 +187,7 @@ loadRepl monitors evalRes cp =
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where
-        postProcess = postProcessExpr monitors prop
+        postProcess = PostProcess.postProcessExpr monitors prop
         prop = Anchors.repl cp
         setFrozenDeps deps =
             prop ^. Property.mkProperty

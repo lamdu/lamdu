@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.PostProcess
-    ( PostProcessResult(..), postProcessDef, postProcessExpr
+    ( Result(..), postProcessDef, postProcessExpr
     ) where
 
 import           Data.Property (MkProperty')
@@ -19,9 +19,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data PostProcessResult = GoodExpr | BadExpr InferErr.Error
+data Result = GoodExpr | BadExpr InferErr.Error
 
-postProcessDef :: Monad m => Debug.Monitors -> DefI m -> T m PostProcessResult
+postProcessDef :: Monad m => Debug.Monitors -> DefI m -> T m Result
 postProcessDef monitors defI =
     do
         def <- Transaction.readIRef defI
@@ -49,7 +49,7 @@ postProcessDef monitors defI =
 postProcessExpr ::
     Monad m =>
     Debug.Monitors -> MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m PostProcessResult
+    T m Result
 postProcessExpr monitors mkProp =
     do
         prop <- mkProp ^. Property.mkProperty

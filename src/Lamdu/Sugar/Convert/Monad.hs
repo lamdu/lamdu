@@ -32,7 +32,7 @@ import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..))
+import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -91,7 +91,7 @@ data Context m = Context
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
-      _scPostProcessRoot :: T m PostProcessResult
+      _scPostProcessRoot :: T m PostProcess.Result
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ()))
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
     , _scFrozenDeps :: Property (T m) Infer.Dependencies
@@ -102,13 +102,13 @@ data Context m = Context
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
-typeProtect :: Monad m => T m PostProcessResult -> T m a -> T m (Maybe a)
+typeProtect :: Monad m => T m PostProcess.Result -> T m a -> T m (Maybe a)
 typeProtect checkOk act =
     do
         ((result, isOk), changes) <- (,) <$> act <*> checkOk & Transaction.fork
         case isOk of
-            GoodExpr -> Just result <$ Transaction.merge changes
-            BadExpr _ -> pure Nothing
+            PostProcess.GoodExpr -> Just result <$ Transaction.merge changes
+            PostProcess.BadExpr _ -> pure Nothing
 
 typeProtectedSetToVal ::
     Monad m =>

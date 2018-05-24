@@ -16,7 +16,7 @@ import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.PostProcess (PostProcessResult(..), postProcessDef)
+import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
@@ -51,7 +51,8 @@ mkExtractToDef exprPl =
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
             & DataOps.newPublicDefinitionWithPane (ctx ^. ConvertM.scCodeAnchors)
-        GoodExpr <- postProcessDef (ctx ^. ConvertM.scDebugMonitors) newDefI
+        PostProcess.GoodExpr <-
+            PostProcess.postProcessDef (ctx ^. ConvertM.scDebugMonitors) newDefI
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
         Property.set (exprPl ^. Input.stored) getVarI
