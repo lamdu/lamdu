@@ -158,9 +158,10 @@ loadRepl cache monitors evalRes cp =
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
         Load.InferResult valInferred newInferContext <-
-            Load.inferDefExpr (Cache.infer cache) monitors evalRes defExpr
+            Load.inferDefExpr cachedInfer monitors evalRes defExpr
             <&> Load.assertInferSuccess
-        outdatedDefinitions <- OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
+        outdatedDefinitions <-
+            OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -194,7 +195,8 @@ loadRepl cache monitors evalRes cp =
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where
-        postProcess = PostProcess.expr monitors prop
+        cachedInfer = Cache.infer cache
+        postProcess = PostProcess.expr cachedInfer monitors prop
         prop = Anchors.repl cp
         setFrozenDeps deps =
             prop ^. Property.mkProperty

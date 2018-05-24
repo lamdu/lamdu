@@ -18,6 +18,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
+import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
@@ -53,12 +54,13 @@ moveToGlobalScope =
     do
         inferRes <-
             traverse ExprLoad.expr defExpr
-            >>= (Load.inferCheckDef infer (ctx ^. ConvertM.scDebugMonitors) ?? param)
+            >>= (Load.inferDef infer (ctx ^. ConvertM.scDebugMonitors)
+                    (pure EvalResults.empty) ?? param)
         scheme <-
             case inferRes of
             Left err -> fail ("extract to global scope failed inference: " ++ show (prettyShow err))
-            Right (inferredVal, inferContext) ->
-                inferredVal ^. Val.payload . _1 . Infer.plType
+            Right (Load.InferResult inferredVal inferContext) ->
+                inferredVal ^. Val.payload . Input.inferred . Infer.plType
                 & Infer.makeScheme inferContext
                 & pure
         let defExprI = defExpr <&> Property.value

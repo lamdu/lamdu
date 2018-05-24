@@ -8,11 +8,13 @@ import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
+import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Error as InferErr
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -33,10 +35,10 @@ def infer monitors defI =
                 do
                     checked <-
                         ExprIRef.globalId defI
-                        & Load.inferCheckDef infer monitors defExpr
+                        & Load.inferDef infer monitors (pure EvalResults.empty) defExpr
                     case checked of
                         Left err -> BadExpr err & pure
-                        Right (inferredVal, inferContext) ->
+                        Right (Load.InferResult inferredVal inferContext) ->
                             GoodExpr <$
                             ( loadedDef
                             & Definition.defType .~
@@ -49,18 +51,20 @@ def infer monitors defI =
                             & Transaction.writeIRef defI
                             )
                             where
-                                inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
+                                inferredType = inferredVal ^. Val.payload . Input.inferred . Infer.plType
 
 expr ::
     Monad m =>
-    Debug.Monitors -> MkProperty' (T m) (Definition.Expr (ValI m)) ->
+    Load.InferFunc (ValP m) -> Debug.Monitors ->
+    MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m Result
-expr monitors prop =
+expr infer monitors prop =
     do
         defExprLoaded <- ExprLoad.defExpr prop
         -- TODO: This is code duplication with the above Load.inferCheckDef
         -- & functions inside Load itself
-        inferred <- Load.inferCheckDefExpr monitors defExprLoaded
+        inferred <-
+            Load.inferDefExpr infer monitors (pure EvalResults.empty) defExprLoaded
         case inferred of
             Left err -> BadExpr err & pure
             Right _ ->

@@ -5,8 +5,6 @@ module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
     , InferResult(..), irVal, irCtx
     , inferDef
-    , inferCheckDef
-    , inferCheckDefExpr
     , inferDefExpr
     , makeNominalsMap
     , loadInferPrepareInput
@@ -181,22 +179,11 @@ inferDef ::
     (HasCallStack, Monad m) =>
     InferFunc (ValP m) -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Definition.Expr (Val (ValP m)) ->
-    V.Var ->
+    Definition.Expr (Val (ValP m)) -> V.Var ->
     T m (Either Infer.Error (InferResult m))
 inferDef infer monitors results defExpr defVar =
     inferDefExprWithRecursiveRef infer defExpr defVar
     & runInferResult monitors results
-
-inferCheckDef ::
-    Monad m =>
-    InferFunc (ValP m) -> Debug.Monitors ->
-    Definition.Expr (Val (ValP m)) -> V.Var ->
-    T m (Either Infer.Error (Val (Infer.Payload, ValP m), Infer.Context))
-inferCheckDef infer monitors defExpr defVar =
-    inferDefExprWithRecursiveRef infer defExpr defVar
-    >>= ParamList.loadForLambdas
-    & InferT.run monitors
 
 inferDefExprHelper ::
     Monad m =>
@@ -212,12 +199,3 @@ inferDefExpr ::
 inferDefExpr infer monitors results defExpr =
     inferDefExprHelper infer defExpr
     & runInferResult monitors results
-
-inferCheckDefExpr ::
-    Monad m =>
-    Debug.Monitors -> Definition.Expr (Val (ValP m)) ->
-    T m (Either Infer.Error (Val (Infer.Payload, ValP m), Infer.Context))
-inferCheckDefExpr monitors defExpr =
-    inferDefExprHelper unmemoizedInfer defExpr
-    >>= ParamList.loadForLambdas
-    & InferT.run monitors
