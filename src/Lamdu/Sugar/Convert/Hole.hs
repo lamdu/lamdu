@@ -369,11 +369,12 @@ getLocalScopeGetVars sugarContext par
             ) <&> fst
         mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
 
-writeConvertTypeChecked ::
+-- | Runs inside a forked transaction
+writeResult ::
     Monad m =>
-    Preconversion m a -> ConvertM.Context m -> ValIProperty m ->
-    ResultVal m a -> T m (ExpressionU m ())
-writeConvertTypeChecked preConversion sugarContext holeStored inferredVal =
+    Preconversion m a -> ValIProperty m -> ResultVal m a ->
+    T m (Val (Input.Payload m ()))
+writeResult preConversion holeStored inferredVal =
     do
         writtenExpr <-
             inferredVal
@@ -382,10 +383,7 @@ writeConvertTypeChecked preConversion sugarContext holeStored inferredVal =
             <&> ExprIRef.addProperties (Property.set holeStored)
             <&> fmap snd . Input.preparePayloads . fmap toPayload
         Property.set holeStored (writtenExpr ^. Val.payload . _1 . Property.pVal)
-        writtenExpr <&> snd
-            & preConversion
-            & ConvertM.convertSubexpression
-            & ConvertM.run sugarContext
+        writtenExpr <&> snd & preConversion & pure
     where
         intoStorePoint (inferred, (mStorePoint, a)) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
@@ -489,7 +487,9 @@ mkResult ::
 mkResult preConversion sugarContext updateDeps stored val =
     do
         updateDeps
-        writeConvertTypeChecked preConversion sugarContext stored val
+        writeResult preConversion stored val
+        <&> ConvertM.convertSubexpression
+        >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
         HoleResult
