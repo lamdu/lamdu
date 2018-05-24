@@ -5,10 +5,12 @@ module Lamdu.GUI.DefinitionEdit
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -77,6 +79,16 @@ makeBuiltinDefinition def builtin =
         animId = myId & Widget.toAnimId
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
+wholeFocused :: Widget.Size -> Widget.Focused a -> Widget.Focused a
+wholeFocused size f =
+    Widget.Focused
+    { Widget._fFocalAreas = [Rect 0 size]
+    , Widget._fEventMap = mempty
+    , Widget._fPreEvents = mempty
+    , Widget._fMEnterPoint = Nothing
+    , Widget._fLayers = f ^. Widget.fLayers
+    }
+
 make ::
     (Monad i, Monad o) =>
     EventMap (o GuiState.Update) ->
@@ -86,10 +98,6 @@ make lhsEventMap def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & ExprGuiM.im
         let defState = Property.value defStateProp
-        addDeletionDiagonal <-
-            case defState of
-            Sugar.DeletedDefinition -> Styled.addDeletionDiagonal ?? 0.02
-            Sugar.LiveDefinition -> pure id
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
@@ -97,7 +105,6 @@ make lhsEventMap def =
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
                 <&> Widget.weakerEvents lhsEventMap
-            <&> addDeletionDiagonal
         case defState of
             Sugar.LiveDefinition -> pure defGui
             Sugar.DeletedDefinition ->
@@ -105,7 +112,12 @@ make lhsEventMap def =
                     buttonGui <-
                         myId <$ Property.set defStateProp Sugar.LiveDefinition
                         & undeleteButton <&> Responsive.fromWithTextPos
-                    Responsive.vbox [defGui, buttonGui] & pure
+                    style <- Styled.deletedDef
+                    let defGuiStyled =
+                            defGui
+                            & Responsive.alignedWidget . Align.tValue .> Widget.wFocused %@~ wholeFocused
+                            & style
+                    Responsive.vbox [buttonGui, defGuiStyled] & pure
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId

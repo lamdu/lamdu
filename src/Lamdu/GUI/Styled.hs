@@ -4,7 +4,7 @@ module Lamdu.GUI.Styled
     ( infoLabel, grammarLabel, grammarText
     , addValBG, addBgColor
     , addValPadding, addValFrame
-    , addDeletionDiagonal
+    , deletedDef, deletedUse
     , actionable
     , withColor
     , nameAtBinder
@@ -109,11 +109,23 @@ addDiagonal =
     & Anim.scale sz
     & flip mappend
 
-addDeletionDiagonal ::
+deleted ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
-    m (Widget.R -> a -> a)
-addDeletionDiagonal =
-    addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor)
+    Widget.R -> m (a -> a)
+deleted width =
+    (.)
+    <$> (addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor) ?? width)
+    <*> (Lens.view (Theme.theme . Theme.disabledColor) <&> Element.tint)
+
+deletedUse ::
+    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
+    m (a -> a)
+deletedUse = deleted 0.1
+
+deletedDef ::
+    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
+    m (a -> a)
+deletedDef = deleted 0.02
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>

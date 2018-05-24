@@ -1,7 +1,7 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, UndecidableInstances #-}
 module GUI.Momentu.Widget.Instances
-    ( sizedState, stateLayers, stateLens, enterResult
+    ( sizedState, stateLayers, stateLens, enterResult, wFocused
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
@@ -54,11 +54,11 @@ instance Functor f => Element (Widget (f Update)) where
         w
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
         & Element.size *~ mult
-        & wState . _StateFocused . Lens.mapped . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
+        & wFocused . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & eventMapMaker . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
         & wState . _StateUnfocused . uMEnter . Lens._Just . Lens.argument %~ Direction.scale (1 / mult)
-        & wState . _StateFocused . Lens.mapped . fMEnterPoint . Lens._Just . Lens.argument //~ mult
+        & wFocused . fMEnterPoint . Lens._Just . Lens.argument //~ mult
         & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeftAndSize *~ mult
 
 instance Functor f => SizedElement (Widget (f Update)) where
@@ -194,8 +194,11 @@ stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 enterResult :: Lens.Setter' (Widget a) (EnterResult a)
 enterResult = wState . stateEnterResult
 
+wFocused :: Lens.IndexedSetter' Size (Widget a) (Focused a)
+wFocused = sizedState <. _StateFocused . Lens.mapped
+
 eventMapMaker :: Lens.Setter' (Widget a) (EventContext -> EventMap a)
-eventMapMaker = wState . _StateFocused . Lens.mapped . fEventMap
+eventMapMaker = wFocused . fEventMap
 
 stateLens ::
     Functor f =>

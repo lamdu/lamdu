@@ -170,8 +170,7 @@ processDefinitionWidget ::
     m (WithTextPos (Widget (f GuiState.Update)))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
-    (Styled.addDeletionDiagonal ?? 0.1)
-    <*> mkLayout
+    Styled.deletedUse <*> mkLayout
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         theme <- Lens.view Theme.theme

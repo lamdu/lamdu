@@ -12,6 +12,7 @@ module GUI.Momentu.Widget
     , HasWidget(..)
 
     , isFocused
+    , wFocused
 
     -- Construct widgets:
     , fromView
@@ -90,7 +91,7 @@ takesFocus enterFunc =
                 <&> EnterResult rect 0
                 & enterFuncAddVirtualCursor rect
         in  w
-            & wState . _StateFocused . Lens.mapped . fMEnterPoint %~
+            & wFocused . fMEnterPoint %~
                 Just . fromMaybe (enter . Direction.Point)
             & wState . _StateUnfocused . uMEnter ?~ enter
 
@@ -127,7 +128,7 @@ addPreEventToEventMap append preEvent e =
 -- BlockEvents (but still added to the event map)
 addPreEventWith :: (a -> a -> a) -> PreEvent a -> Widget a -> Widget a
 addPreEventWith append preEvent =
-    wState . _StateFocused . Lens.mapped %~ onFocused
+    wFocused %~ onFocused
     where
         onFocused f =
             f
@@ -147,7 +148,7 @@ addEventsWithContext ::
     (EventMap (f a) -> EventMap (f a) -> EventMap (f a)) ->
     (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
 addEventsWithContext append mkEvents =
-    widget . wState . _StateFocused . Lens.mapped %~ onFocused
+    widget . wFocused %~ onFocused
     where
         onFocused f =
             case f ^. fPreEvents of
