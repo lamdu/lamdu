@@ -1,8 +1,8 @@
 {-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
 module Lamdu.Opts
-    ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled
+    ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
     , Command(..), _DeleteDb, _Undo, _Editor
-    , Parsed(..), pCommand, pLamduDB, pEkgPort
+    , Parsed(..), pCommand, pLamduDB
     , WindowMode(..), _VideoModeSize, _FullScreen
     , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath, jsDebugInteractivePath
     , get
@@ -30,6 +30,7 @@ data EditorOpts = EditorOpts
     , _eoJSDebugPaths :: JSDebugPaths FilePath
     , _eoWindowTitle :: String
     , _eoSubpixelEnabled :: Bool
+    , _eoEkgPort :: Maybe Word16
     }
 
 data Command
@@ -42,7 +43,6 @@ data Command
 data Parsed = Parsed
     { _pCommand :: Command
     , _pLamduDB :: Maybe FilePath
-    , _pEkgPort :: Maybe Word16
     }
 
 Lens.makeLenses ''EditorOpts
@@ -107,6 +107,18 @@ editorOpts =
     <*> P.flag True False
         (P.long "disable-lcd-rendering"
          <> P.help "Disables LCD subpixel font rendering")
+    <*> optional
+        (P.option P.auto
+            ( P.long "with-ekg"
+            <> P.metavar "PORT"
+            <> P.help
+                ("Enable ekg monitoring of lamdu on given port"
+#ifndef WITH_EKG
+                <> " (DISABLED: Recompile with -fekg for ekg support)"
+#endif
+                )
+            )
+        )
 
 command :: P.Parser Command
 command = (Editor <$> editorOpts) <|> subcommands
@@ -128,18 +140,6 @@ parser =
         (P.option P.str
             (P.metavar "PATH" <> P.long "lamduDB" <>
              P.help "Override path to lamdu DB"))
-    <*> optional
-        (P.option P.auto
-            ( P.long "with-ekg"
-            <> P.metavar "PORT"
-            <> P.help
-                ("Enable ekg monitoring of lamdu on given port"
-#ifndef WITH_EKG
-                <> " (DISABLED: Recompile with -fekg for ekg support)"
-#endif
-                )
-            )
-        )
 
 get :: IO Parsed
 get =
