@@ -28,7 +28,7 @@ type MemoableInferFunc =
     , Infer.Context
     ) -> Either Infer.Error (Val Infer.Payload, Infer.Context)
 
-data Functions = Functions
+newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc
     }
 
