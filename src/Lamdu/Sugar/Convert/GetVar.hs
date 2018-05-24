@@ -48,7 +48,7 @@ inlineDef globalId dest =
         let gotoDef = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
         let doInline def defExpr =
                 do
-                    Property.set dest (defExpr ^. Def.expr)
+                    (dest ^. Property.pSet) (defExpr ^. Def.expr)
                     Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
                     newDefExpr <- DataOps.newHole
                     def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)

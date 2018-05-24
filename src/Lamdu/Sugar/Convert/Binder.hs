@@ -108,7 +108,7 @@ convertRedex expr redex =
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
         ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
-        float <- makeFloatLetToOuterScope (Property.set stored) redex
+        float <- makeFloatLetToOuterScope (stored ^. Property.pSet) redex
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
                 nodeActions

@@ -58,7 +58,7 @@ mkExtractToDef exprPl =
             PostProcess.def (ctx ^. ConvertM.scDebugMonitors) newDefI
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
-        Property.set (exprPl ^. Input.stored) getVarI
+        (exprPl ^. Input.stored . Property.pSet) getVarI
         Infer.depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
         postProcess
@@ -86,10 +86,10 @@ mkExtractToLet outerScope stored =
                         V.Lam newParam extractPosI & V.BLam
                         & ExprIRef.newValBody
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
-                    Property.set stored getVarI
+                    (stored ^. Property.pSet) getVarI
                     pure (newParam, lamI)
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
-            >>= Property.set outerScope
+            >>= outerScope ^. Property.pSet
         EntityId.ofBinder newParam & pure
     where
         extractPosI = Property.value outerScope

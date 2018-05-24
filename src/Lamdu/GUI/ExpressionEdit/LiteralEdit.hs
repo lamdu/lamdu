@@ -204,7 +204,7 @@ numEdit prop pl =
         curVal = prop ^. Property.pVal
         event (newText, update) =
             GuiState.updateWidgetState myId newText <> update <$
-            maybe (pure ()) (Property.set prop) (parseNum newText)
+            maybe (pure ()) (prop ^. Property.pSet) (parseNum newText)
         empty = TextEdit.EmptyStrings "0" ""
         myId = WidgetIds.fromExprPayload pl
 

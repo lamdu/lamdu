@@ -36,7 +36,7 @@ setToAppliedHole innerI destP =
     do
         newFuncI <- newHole
         resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI innerI
-        Property.set destP resI
+        (destP ^. Property.pSet) resI
         pure resI
 
 applyHoleTo :: Monad m => ValP m -> T m (ValI m)
@@ -44,7 +44,7 @@ applyHoleTo exprP =
     do
         newFuncI <- newHole
         applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
-        Property.set exprP applyI
+        (exprP ^. Property.pSet) applyI
         pure applyI
 
 newHole :: Monad m => T m (ValI m)
@@ -70,7 +70,7 @@ lambdaWrap exprP =
         newExprI <-
             Property.value exprP & V.Lam newParam & V.BLam
             & ExprIRef.newValBody
-        Property.set exprP newExprI
+        (exprP ^. Property.pSet) newExprI
         pure (newParam, newExprI)
 
 redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValP m -> T m (ValP m)
@@ -78,7 +78,7 @@ redexWrapWithGivenParam param newValueI exprP =
     do
         newLambdaI <- ExprIRef.newValBody $ mkLam $ Property.value exprP
         newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
-        Property.set exprP newApplyI
+        (exprP ^. Property.pSet) newApplyI
         Property (Property.value exprP)
             (ExprIRef.writeValBody newLambdaI . mkLam)
             & pure

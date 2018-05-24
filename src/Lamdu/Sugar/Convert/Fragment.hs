@@ -253,7 +253,7 @@ mkOptionFromFragment sugarContext exprPl val =
                     sugarContext
                     & ConvertM.scInferContext .~ inferContext
                     & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
-            let updateDeps = Property.set depsProp newDeps
+            let updateDeps = (depsProp ^. Property.pSet) newDeps
             pure
                 ( resultScore (result <&> fst)
                 , Hole.mkResult (replaceFragment topEntityId 0) newSugarContext

@@ -415,7 +415,7 @@ removeCallsToVar funcVar val =
             do
                 body <- ExprIRef.readValBody (Property.value prop)
                 case body of
-                    V.BApp (V.Apply f _) -> Property.set prop f
+                    V.BApp (V.Apply f _) -> (prop ^. Property.pSet) f
                     _ -> error "assertion: expected BApp"
 
 makeDeleteLambda :: Monad m => BinderKind m -> StoredLam m -> ConvertM m (T m ())

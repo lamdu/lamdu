@@ -22,8 +22,8 @@ Lens.makeLenses ''Property
 value :: Property m a -> a
 value = (^. pVal)
 
-set :: Property m a -> a -> m ()
-set = (^. pSet)
+set :: Functor m => Property m a -> a -> m (Property m a)
+set (Property _ write) x = Property x write <$ write x
 
 modify_ :: Monad m => Property m a -> (a -> m a) -> m ()
 modify_ (Property val setter) f = setter =<< f val
@@ -58,7 +58,7 @@ getP = fmap value . (^. mkProperty)
 setP :: Monad m => MkProperty m m a -> a -> m ()
 setP (MkProperty mkProp) val = do
     prop <- mkProp
-    set prop val
+    set prop val & void
 
 modP :: Monad m => MkProperty m m a -> (a -> a) -> m ()
 modP (MkProperty mkProp) f = do

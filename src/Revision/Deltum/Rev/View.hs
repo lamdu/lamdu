@@ -37,7 +37,7 @@ setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
     oldVersion <- Branch.curVersion oldBranch
     newVersion <- Branch.curVersion newBranch
     moveView view oldVersion newVersion
-    Property.set branchRef newBranch
+    (branchRef ^. Property.pSet) newBranch
     modifyViews oldBranchDataIRef $ List.delete view
     modifyViews newBranchDataIRef (view:)
 

@@ -35,7 +35,8 @@ make =
             where
                 setter (newText, eventRes) =
                     eventRes <$
-                    when (newText /= Property.value textRef) (Property.set textRef newText)
+                    when (newText /= Property.value textRef)
+                    (newText & textRef ^. Property.pSet)
 
 deleteKeyEventHandler :: ModKey -> EventMap a -> EventMap a
 deleteKeyEventHandler = E.deleteKey . E.KeyEvent ModKey.KeyState'Pressed

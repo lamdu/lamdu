@@ -380,9 +380,9 @@ writeResult preConversion holeStored inferredVal =
             inferredVal
             <&> intoStorePoint
             & writeExprMStored (Property.value holeStored)
-            <&> ExprIRef.addProperties (Property.set holeStored)
+            <&> ExprIRef.addProperties (holeStored ^. Property.pSet)
             <&> fmap snd . Input.preparePayloads . fmap toPayload
-        Property.set holeStored (writtenExpr ^. Val.payload . _1 . Property.pVal)
+        (holeStored ^. Property.pSet) (writtenExpr ^. Val.payload . _1 . Property.pVal)
         writtenExpr <&> snd & preConversion & pure
     where
         intoStorePoint (inferred, (mStorePoint, a)) =
