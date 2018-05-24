@@ -128,11 +128,9 @@ changeCallArgs ::
     (ValI m -> T m (ValI m)) -> Val (ValP m) -> V.Var -> T m ()
 changeCallArgs change val var  =
     do
-        SubExprs.onMatchingSubexprsWithPath changeArg (isArgOfCallTo var) val
+        SubExprs.onMatchingSubexprsWithPath (Property.modify_ ?? change)
+            (isArgOfCallTo var) val
         wrapUnappliedUsesOfVar var val
-    where
-        changeArg prop =
-            Property.value prop & change >>= Property.set prop
 
 -- | If the lam is bound to a variable, we can fix all uses of the
 --   variable. When it isn't, we may need to fix the lam itself
@@ -653,12 +651,9 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Val (ValP m) -> T m ()
 convertVarToCalls mkArg var =
-    SubExprs.onMatchingSubexprs change (ExprLens.valVar . Lens.only var)
+    SubExprs.onMatchingSubexprs (Property.modify_ ?? change) (ExprLens.valVar . Lens.only var)
     where
-        change prop =
-            mkArg
-            >>= ExprIRef.newValBody . V.BApp . V.Apply (Property.value prop)
-            >>= Property.set prop
+        change val = mkArg >>= ExprIRef.newValBody . V.BApp . V.Apply val
 
 convertBinderToFunction ::
     Monad m =>
