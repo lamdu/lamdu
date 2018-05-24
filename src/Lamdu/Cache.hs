@@ -1,14 +1,16 @@
 -- | Functions memoized with Data.Cache.Fenced
 
 module Lamdu.Cache
-    ( Functions(..), decl
+    ( Functions(..)
     , HasFunctions(..)
     , infer
+    , make, FencedCache.Cache, FencedCache.fence
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.State (StateT(..))
 import           Data.Cache.Fenced (Decl, function)
+import qualified Data.Cache.Fenced as FencedCache
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Infer as Infer
@@ -59,3 +61,6 @@ decl :: Decl Functions
 decl =
     Functions
     <$> function memoableInfer
+
+make :: IO (FencedCache.Cache, Functions)
+make = FencedCache.make decl
