@@ -130,9 +130,10 @@ start evaluator =
     >>= \case
     Started {} -> pure () -- already started
     NotStarted ->
-        Transaction.readIRef replIRef
-        >>= traverse ExprIRef.readVal
+        DbLayout.repl DbLayout.codeAnchors
+        & Load.defExprProperty
         & runViewTransactionInIO (eDb evaluator)
+        <&> Lens.mapped . Lens.mapped %~ Property.value
         >>= startBG
             (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)
