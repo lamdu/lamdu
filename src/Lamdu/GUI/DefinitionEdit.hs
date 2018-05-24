@@ -5,13 +5,10 @@ module Lamdu.GUI.DefinitionEdit
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos)
-import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -38,12 +35,11 @@ undeleteButton ::
     (Monad i, Monad o) =>
     o Widget.Id -> ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 undeleteButton undelete =
-    TextView.makeFocusableLabel "Undelete..."
-    <&> Align.tValue %~ Widget.weakerEvents eventMap
+    do
+        actionId <- Element.subAnimId ["Undelete"] <&> Widget.Id
+        Styled.actionable actionId "Undelete..." doc undelete
     where
-        eventMap =
-            E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
-            (E.Doc ["Edit", "Undelete definition"]) undelete
+        doc = E.Doc ["Edit", "Undelete definition"]
 
 makeExprDefinition ::
     (Monad i, Monad o) =>
