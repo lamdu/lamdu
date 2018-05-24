@@ -10,7 +10,7 @@ import           Lamdu.Calc.Type.Nominal (Nominal)
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
+import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Data.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
@@ -18,7 +18,7 @@ import qualified Revision.Deltum.Transaction as Transaction
 
 type T = Transaction
 
-expr :: Monad m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValIProperty m))
+expr :: Monad m => (ValI m -> T m ()) -> ValI m -> T m (Val (ValP m))
 expr writeRoot valI =
     ExprIRef.readVal valI
     <&> fmap (flip (,) ())
@@ -28,13 +28,13 @@ expr writeRoot valI =
 defExpr ::
     Monad m =>
     (ValI m -> T m ()) -> Definition.Expr (ValI m) ->
-    T m (Definition.Expr (Val (ValIProperty m)))
+    T m (Definition.Expr (Val (ValP m)))
 defExpr setExpr loaded = loaded & Definition.expr %%~ expr setExpr
 
 defExprProperty ::
     Monad m =>
     Property.MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m (Definition.Expr (Val (ValIProperty m)))
+    T m (Definition.Expr (Val (ValP m)))
 defExprProperty mkProp =
     do
         loaded <- mkProp ^. Property.mkProperty <&> Property.value
@@ -47,7 +47,7 @@ defExprProperty mkProp =
                     & Definition.expr .~ e
                     & Property.set prop
 
-def :: Monad m => DefI m -> T m (Definition (Val (ValIProperty m)) (DefI m))
+def :: Monad m => DefI m -> T m (Definition (Val (ValP m)) (DefI m))
 def defI =
     Transaction.readIRef defI
     <&> Definition.defPayload .~ defI

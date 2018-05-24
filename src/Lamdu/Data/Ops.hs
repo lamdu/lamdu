@@ -22,7 +22,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (DefI, ValIProperty, ValI)
+import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -31,7 +31,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-setToAppliedHole :: Monad m => ValI m -> ValIProperty m -> T m (ValI m)
+setToAppliedHole :: Monad m => ValI m -> ValP m -> T m (ValI m)
 setToAppliedHole innerI destP =
     do
         newFuncI <- newHole
@@ -39,7 +39,7 @@ setToAppliedHole innerI destP =
         Property.set destP resI
         pure resI
 
-applyHoleTo :: Monad m => ValIProperty m -> T m (ValI m)
+applyHoleTo :: Monad m => ValP m -> T m (ValI m)
 applyHoleTo exprP =
     do
         newFuncI <- newHole
@@ -50,20 +50,20 @@ applyHoleTo exprP =
 newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
 
-replace :: Monad m => ValIProperty m -> ValI m -> T m (ValI m)
+replace :: Monad m => ValP m -> ValI m -> T m (ValI m)
 replace exprP newExprI = newExprI <$ Property.set exprP newExprI
 
-replaceWithHole :: Monad m => ValIProperty m -> T m (ValI m)
+replaceWithHole :: Monad m => ValP m -> T m (ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: Monad m => ValIProperty m -> T m (ValI m)
+setToHole :: Monad m => ValP m -> T m (ValI m)
 setToHole exprP =
     exprI <$ ExprIRef.writeValBody exprI hole
     where
         hole = V.BLeaf V.LHole
         exprI = Property.value exprP
 
-lambdaWrap :: Monad m => ValIProperty m -> T m (V.Var, ValI m)
+lambdaWrap :: Monad m => ValP m -> T m (V.Var, ValI m)
 lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
@@ -73,7 +73,7 @@ lambdaWrap exprP =
         Property.set exprP newExprI
         pure (newParam, newExprI)
 
-redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValIProperty m -> T m (ValIProperty m)
+redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValP m -> T m (ValP m)
 redexWrapWithGivenParam param newValueI exprP =
     do
         newLambdaI <- ExprIRef.newValBody $ mkLam $ Property.value exprP
@@ -85,7 +85,7 @@ redexWrapWithGivenParam param newValueI exprP =
     where
         mkLam = V.BLam . V.Lam param
 
-redexWrap :: Monad m => ValIProperty m -> T m V.Var
+redexWrap :: Monad m => ValP m -> T m V.Var
 redexWrap exprP =
     do
         newValueI <- newHole

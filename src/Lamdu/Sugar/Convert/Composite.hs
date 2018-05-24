@@ -11,7 +11,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValBody, ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValBody, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -29,7 +29,7 @@ type T = Transaction
 
 deleteItem ::
     Monad m =>
-    ValIProperty m -> ValI m ->
+    ValP m -> ValI m ->
     ConvertM m (T m EntityId)
 deleteItem stored restI =
     ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
@@ -98,7 +98,7 @@ convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     <*> convertAddItem extendOp (Set.singleton (extendV ^. _1)) exprPl
 
 convertOpenCompositeActions ::
-    Monad m => V.Leaf -> ValIProperty m -> ConvertM m (OpenCompositeActions (T m))
+    Monad m => V.Leaf -> ValP m -> ConvertM m (OpenCompositeActions (T m))
 convertOpenCompositeActions leaf stored =
     ConvertM.typeProtectedSetToVal
     <&>
@@ -137,7 +137,7 @@ convertEmptyComposite extendOp exprPl =
 convertCompositeItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
-    ValIProperty m ->
+    ValP m ->
     EntityId -> Set T.Tag -> expr ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     (T.Tag, ValI m, ValI m) ->

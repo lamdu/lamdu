@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValIProperty)
+import           Lamdu.Expr.IRef (ValP)
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -32,14 +32,14 @@ onMatchingSubexprsWithPath action predicate =
     Lens.itraverseOf_ (ExprLens.payloadsIndexedByPath . Lens.ifiltered (\i _ -> predicate i))
     (const action)
 
-toHole :: Monad m => ValIProperty m -> T m ()
+toHole :: Monad m => ValP m -> T m ()
 toHole = void . DataOps.setToHole
 
 onGetVars ::
-    Monad m => (ValIProperty m -> T m ()) -> V.Var ->
-    Val (ValIProperty m) -> T m ()
+    Monad m => (ValP m -> T m ()) -> V.Var ->
+    Val (ValP m) -> T m ()
 onGetVars f var =
     onMatchingSubexprs f (ExprLens.valVar . Lens.only var)
 
-getVarsToHole :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
+getVarsToHole :: Monad m => V.Var -> Val (ValP m) -> T m ()
 getVarsToHole = onGetVars toHole

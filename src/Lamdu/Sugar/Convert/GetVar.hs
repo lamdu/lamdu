@@ -15,7 +15,7 @@ import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
@@ -37,7 +37,7 @@ jumpToDefI ::
     Monad m => Anchors.CodeAnchors m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
-inlineDef :: Monad m => V.Var -> ValIProperty m -> ConvertM m (T m EntityId)
+inlineDef :: Monad m => V.Var -> ValP m -> ConvertM m (T m EntityId)
 inlineDef globalId dest =
     (,)
     <$> Lens.view id

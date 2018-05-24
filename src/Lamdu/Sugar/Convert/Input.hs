@@ -15,7 +15,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.IRef (ValIProperty)
+import           Lamdu.Expr.IRef (ValP)
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
 
@@ -29,7 +29,7 @@ data EvalResultsForExpr = EvalResultsForExpr
 data Payload m a = Payload
     { _entityId :: EntityId
     , _inferred :: Infer.Payload
-    , _stored :: ValIProperty m
+    , _stored :: ValP m
     , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]

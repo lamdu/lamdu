@@ -93,7 +93,7 @@ eDb = dbMVar . eParams
 
 loadDef ::
     Evaluator -> DefI ViewM ->
-    IO (Def.Definition (Val (ExprIRef.ValIProperty ViewM)) (DefI ViewM))
+    IO (Def.Definition (Val (ExprIRef.ValP ViewM)) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
 evalActions :: Evaluator -> Eval.Actions (ValI ViewM)

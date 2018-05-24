@@ -2,7 +2,7 @@
 module Lamdu.Expr.IRef
     ( ValI(..)
     , ValBody
-    , ValIProperty
+    , ValP
     , Lam, Apply
     , newValBody, readValBody, writeValBody
     , newVar, readVal
@@ -52,7 +52,7 @@ newtype ValI m = ValI
     { unValI :: IRef m (V.Body (ValI m))
     } deriving (Eq, Ord, Show, Binary, NFData)
 
-type ValIProperty m = Property (T m) (ValI m)
+type ValP m = Property (T m) (ValI m)
 type ValBody m = V.Body (ValI m)
 type Lam m = V.Lam (ValI m)
 type Apply m = V.Apply (ValI m)
@@ -104,7 +104,7 @@ addProperties ::
     Monad m =>
     (ValI m -> T m ()) ->
     Val (ValI m, a) ->
-    Val (ValIProperty m, a)
+    Val (ValP m, a)
 addProperties setIRef (Val (iref, a) body) =
     Val (Property iref setIRef, a) (body & Lens.traversed %@~ f)
     where

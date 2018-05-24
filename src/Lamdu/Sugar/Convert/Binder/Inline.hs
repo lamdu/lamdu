@@ -8,7 +8,7 @@ import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
-import           Lamdu.Expr.IRef (ValIProperty, ValI)
+import           Lamdu.Expr.IRef (ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
@@ -68,7 +68,7 @@ cursorDest val =
     & (^. _2 . Val.payload)
 
 inlineLet ::
-    Monad m => ValIProperty m -> Redex (ValI m) -> T m EntityId
+    Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
     <&> (^? Val.body . V._BApp . V.applyFunc . Val.body . V._BLam . V.lamResult . Val.payload)

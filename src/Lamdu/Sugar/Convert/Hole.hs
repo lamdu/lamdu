@@ -41,7 +41,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (ValIProperty, ValI(..), DefI)
+import           Lamdu.Expr.IRef (ValP, ValI(..), DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
@@ -372,7 +372,7 @@ getLocalScopeGetVars sugarContext par
 -- | Runs inside a forked transaction
 writeResult ::
     Monad m =>
-    Preconversion m a -> ValIProperty m -> ResultVal m a ->
+    Preconversion m a -> ValP m -> ResultVal m a ->
     T m (Val (Input.Payload m ()))
 writeResult preConversion holeStored inferredVal =
     do
@@ -481,7 +481,7 @@ mkResultVals sugarContext scope base =
 
 mkResult ::
     Monad m =>
-    Preconversion m a -> ConvertM.Context m -> T m () -> ValIProperty m ->
+    Preconversion m a -> ConvertM.Context m -> T m () -> ValP m ->
     ResultVal m a ->
     T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
 mkResult preConversion sugarContext updateDeps stored val =

@@ -25,7 +25,7 @@ type T = Transaction
 
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
-      _pStored :: ExprIRef.ValIProperty m
+      _pStored :: ExprIRef.ValP m
     , _pUserData :: a
     } deriving (Functor, Foldable, Traversable)
 
@@ -76,7 +76,7 @@ nameWithContext param tag =
 type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
 
 replaceWith ::
-    Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m ->
+    Monad m => ExprIRef.ValP m -> ExprIRef.ValP m ->
     T m EntityId
 replaceWith parentP replacerP =
     EntityId.ofValI replacerI <$ Property.set parentP replacerI

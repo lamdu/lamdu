@@ -67,7 +67,7 @@ mkExtractToDef exprPl =
         valI = exprPl ^. Input.stored . Property.pVal
 
 mkExtractToLet ::
-    Monad m => ExprIRef.ValIProperty m -> ExprIRef.ValIProperty m -> T m EntityId
+    Monad m => ExprIRef.ValP m -> ExprIRef.ValP m -> T m EntityId
 mkExtractToLet outerScope stored =
     do
         (newParam, lamI) <-
@@ -133,7 +133,7 @@ makeActions exprPl =
 setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
-        ExprIRef.ValIProperty m ->
+        ExprIRef.ValP m ->
         Body name (T m) (T m) (Expression name (T m) (T m) (ConvertPayload m a)) ->
         Body name (T m) (T m) (Expression name (T m) (T m) (ConvertPayload m a))
     )

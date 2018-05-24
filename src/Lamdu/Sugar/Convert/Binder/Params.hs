@@ -26,7 +26,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.IRef (ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -64,8 +64,8 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: V.Lam (Val (ValIProperty m))
-    , _slLambdaProp :: ValIProperty m
+    { _slLam :: V.Lam (Val (ValP m))
+    , _slLambdaProp :: ValP m
     }
 Lens.makeLenses ''StoredLam
 
@@ -119,13 +119,13 @@ isUnappliedVar var (cur : parent : _) =
 isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
 isUnappliedVar _ _ = False
 
-wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
+wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 wrapUnappliedUsesOfVar var =
     SubExprs.onMatchingSubexprsWithPath (DataOps.applyHoleTo <&> void) (isUnappliedVar var)
 
 changeCallArgs ::
     Monad m =>
-    (ValI m -> T m (ValI m)) -> Val (ValIProperty m) -> V.Var -> T m ()
+    (ValI m -> T m (ValI m)) -> Val (ValP m) -> V.Var -> T m ()
 changeCallArgs change val var  =
     do
         SubExprs.onMatchingSubexprsWithPath changeArg (isArgOfCallTo var) val
@@ -184,11 +184,11 @@ getFieldOnVar = Val.body . V._BGetField . inGetField
         pack pl (v, t) =
             V.GetField (Val pl (V.BLeaf (V.LVar v))) t
 
-getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Val (ValIProperty m)) -> T m ()
+getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Val (ValP m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-getFieldParamsToParams :: Monad m => V.Lam (Val (ValIProperty m)) -> T.Tag -> T m ()
+getFieldParamsToParams :: Monad m => V.Lam (Val (ValP m)) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
@@ -301,7 +301,7 @@ mkParamInfo param fp =
     & Map.singleton (fpTag fp)
 
 changeGetFieldTags ::
-    Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValIProperty m) -> T m ()
+    Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValP m) -> T m ()
 changeGetFieldTags param prevTag chosenTag val =
     case val ^. Val.body of
     V.BGetField (V.GetField getVar@(Val _ (V.BLeaf (V.LVar v))) t)
@@ -404,7 +404,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 tag = fpTag fp
                 tagList = fieldParams <&> fpTag
 
-removeCallsToVar :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
+removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 removeCallsToVar funcVar val =
     do
         SubExprs.onMatchingSubexprs changeRecursion
@@ -651,7 +651,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             _ -> []
 
 convertVarToCalls ::
-    Monad m => T m (ValI m) -> V.Var -> Val (ValIProperty m) -> T m ()
+    Monad m => T m (ValI m) -> V.Var -> Val (ValP m) -> T m ()
 convertVarToCalls mkArg var =
     SubExprs.onMatchingSubexprs change (ExprLens.valVar . Lens.only var)
     where
@@ -662,7 +662,7 @@ convertVarToCalls mkArg var =
 
 convertBinderToFunction ::
     Monad m =>
-    T m (ValI m) -> BinderKind m -> Val (ValIProperty m) ->
+    T m (ValI m) -> BinderKind m -> Val (ValP m) ->
     T m (V.Var, ValI m)
 convertBinderToFunction mkArg binderKind val =
     do

@@ -14,7 +14,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, ValIProperty)
+import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
@@ -76,7 +76,7 @@ localNewExtractDestPos val =
 
 makeInline ::
     Monad m =>
-    ValIProperty m -> Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
+    ValP m -> Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after ++ before)
     | otherwise =

@@ -17,7 +17,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
@@ -83,7 +83,7 @@ isVarAlwaysApplied (V.Lam var body) =
         go _ v = all (go False) (v ^.. Val.body . Lens.traverse)
 
 convertLetToLam ::
-    Monad m => V.Var -> Redex (ValIProperty m) -> T m (NewLet m)
+    Monad m => V.Var -> Redex (ValP m) -> T m (NewLet m)
 convertLetToLam var redex =
     do
         (newParam, newValI) <-
@@ -99,7 +99,7 @@ convertLetToLam var redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> V.Lam (Val (ValIProperty m)) -> T m ()
+    V.Var -> T.Tag -> V.Lam (Val (ValP m)) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
@@ -111,7 +111,7 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m ->
+    V.Var -> V.Lam (Val (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (NewLet m))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
@@ -133,7 +133,7 @@ convertLetParamToRecord var letLam storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> V.Lam (Val (ValIProperty m)) -> Params.StoredLam m ->
+    [T.Tag] -> V.Var -> V.Lam (Val (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (NewLet m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
@@ -166,7 +166,7 @@ addLetParam var redex =
     where
         storedRedex = redex <&> (^. Input.stored)
 
-sameLet :: Redex (ValIProperty m) -> NewLet m
+sameLet :: Redex (ValP m) -> NewLet m
 sameLet redex = redex ^. Redex.arg . Val.payload & Property.value & NewLet
 
 ordNub :: Ord a => [a] -> [a]

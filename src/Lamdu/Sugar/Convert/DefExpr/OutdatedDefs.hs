@@ -18,7 +18,7 @@ import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
@@ -59,7 +59,7 @@ recursivelyFixExpr mFix =
             Just arg -> go IsHoleArg arg
             Nothing -> traverse_ (go NotHoleArg) (val ^. Val.body)
 
-changeFuncRes :: Monad m => V.Var -> Val (ValIProperty m) -> T m ()
+changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =
     recursivelyFixExpr mFix
     where
@@ -76,7 +76,7 @@ changeFuncRes usedDefVar =
         mFix _ _ = Nothing
 
 -- | Only if hole not already applied to it
-applyHoleTo :: Monad m => Val (ValIProperty m) -> T m ()
+applyHoleTo :: Monad m => Val (ValP m) -> T m ()
 applyHoleTo val
     | Lens.has argToHoleFunc val
     || Lens.has ExprLens.valHole val = pure ()
@@ -90,7 +90,7 @@ data RecordChange = RecordChange
 
 data ArgChange = ArgChange | ArgRecordChange RecordChange
 
-changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValIProperty m) -> T m ()
+changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValP m) -> T m ()
 changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
@@ -179,7 +179,7 @@ argChangeType prevArg newArg =
                 newFieldScheme = newArg & schemeType .~ newField
 
 fixDefExpr ::
-    Monad m => Scheme -> Scheme -> V.Var -> Val (ValIProperty m) -> T m ()
+    Monad m => Scheme -> Scheme -> V.Var -> Val (ValP m) -> T m ()
 fixDefExpr prevType newType usedDefVar defExpr =
     ( -- Function result changed (arg is the same).
         changeFuncRes usedDefVar defExpr <$
@@ -196,7 +196,7 @@ fixDefExpr prevType newType usedDefVar defExpr =
 updateDefType ::
     Monad m =>
     Scheme -> Scheme -> V.Var ->
-    Def.Expr (Val (ValIProperty m)) -> (Def.Expr (ValI m) -> T m ()) ->
+    Def.Expr (Val (ValP m)) -> (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcess.Result ->
     T m ()
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
@@ -212,7 +212,7 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
 
 scan ::
     Monad m =>
-    EntityId -> Def.Expr (Val (ValIProperty m)) ->
+    EntityId -> Def.Expr (Val (ValP m)) ->
     (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcess.Result ->
     T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ())))

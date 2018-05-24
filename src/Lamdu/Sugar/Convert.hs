@@ -20,7 +20,7 @@ import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Results.Process (addTypes)
-import           Lamdu.Expr.IRef (DefI, ValI, ValIProperty)
+import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
@@ -89,7 +89,7 @@ canInlineDefinition defExpr recursiveVars var entityId =
 convertInferDefExpr ::
     (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    Scheme.Scheme -> Definition.Expr (Val (ValIProperty m)) -> DefI m ->
+    Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
 convertInferDefExpr monitors evalRes cp defType defExpr defI =
     do
@@ -136,7 +136,7 @@ convertInferDefExpr monitors evalRes cp defType defExpr defI =
 convertDefBody ::
     (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    Definition.Definition (Val (ValIProperty m)) (DefI m) ->
+    Definition.Definition (Val (ValP m)) (DefI m) ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
 convertDefBody monitors evalRes cp (Definition.Definition body defType defI) =
     case body of
@@ -196,7 +196,7 @@ loadRepl monitors evalRes cp =
 loadAnnotatedDef ::
     Monad m =>
     (pl -> DefI m) ->
-    pl -> T m (Definition.Definition (Val (ValIProperty m)) pl)
+    pl -> T m (Definition.Definition (Val (ValP m)) pl)
 loadAnnotatedDef getDefI annotation =
     getDefI annotation & ExprLoad.def <&> Definition.defPayload .~ annotation
 

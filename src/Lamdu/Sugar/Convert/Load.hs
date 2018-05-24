@@ -30,7 +30,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Eval.Results.Process (addTypes)
-import           Lamdu.Expr.IRef (ValI, ValIProperty)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
@@ -78,7 +78,7 @@ propEntityId = EntityId.ofValI . Property.value
 preparePayloads ::
     Map NominalId N.Nominal ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValIProperty m) ->
+    Val (Infer.Payload, ValP m) ->
     Val (Input.Payload m ())
 preparePayloads nomsMap evalRes inferredVal =
     inferredVal <&> f & Input.preparePayloads
@@ -130,7 +130,7 @@ makeNominalsMap types =
 loadInferPrepareInput ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValIProperty m) ->
+    Val (Infer.Payload, ValP m) ->
     InferT.M (T m) (Val (Input.Payload m [EntityId]))
 loadInferPrepareInput evalRes val =
     do
@@ -145,7 +145,7 @@ loadInferPrepareInput evalRes val =
             pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 
 readValAndAddProperties ::
-    Monad m => ValIProperty m -> T m (Val (ValIProperty m))
+    Monad m => ValP m -> T m (Val (ValP m))
 readValAndAddProperties prop =
     ExprIRef.readVal (prop ^. Property.pVal)
     <&> fmap (flip (,) ())
@@ -161,7 +161,7 @@ Lens.makeLenses ''InferResult
 runInferResult ::
     (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    InferT.M (T m) (Val (Infer.Payload, ValIProperty m)) ->
+    InferT.M (T m) (Val (Infer.Payload, ValP m)) ->
     T m (Either Infer.Error (InferResult m))
 runInferResult monitors results act =
     act
@@ -174,7 +174,7 @@ runInferResult monitors results act =
 inferDef ::
     (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    Definition.Expr (Val (ValIProperty m)) ->
+    Definition.Expr (Val (ValP m)) ->
     V.Var ->
     T m (Either Infer.Error (InferResult m))
 inferDef monitors results defExpr defVar =
@@ -189,7 +189,7 @@ inferDefExprHelper defExpr =
 inferDefExpr ::
     (HasCallStack, Monad m) =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    Definition.Expr (Val (ValIProperty m)) ->
+    Definition.Expr (Val (ValP m)) ->
     T m (Either Infer.Error (InferResult m))
 inferDefExpr monitors results defExpr =
     inferDefExprHelper defExpr
