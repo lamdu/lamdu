@@ -39,14 +39,9 @@ defExprProperty ::
 defExprProperty mkProp =
     do
         loaded <- mkProp ^. Property.mkProperty <&> Property.value
-        defExpr setExpr loaded
+        defExpr (Property.modP mkProp . setExpr) loaded
     where
-        setExpr e =
-            do
-                prop <- mkProp ^. Property.mkProperty
-                prop ^. Property.pVal
-                    & Definition.expr .~ e
-                    & Property.set prop
+        setExpr e val = val & Definition.expr .~ e
 
 def :: Monad m => DefI m -> T m (Definition (Val (ValP m)) (DefI m))
 def defI =
