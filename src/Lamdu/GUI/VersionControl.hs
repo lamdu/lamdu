@@ -66,7 +66,7 @@ eventMap config actions = mconcat
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
     , E.keysEventMapMovesCursor (config ^. VersionControl.jumpToBranchesKeys)
       (E.Doc ["Branches", "Select"]) $
-      (pure . branchDelegatorId . currentBranch) actions
+      (pure . branchDelegatorId . Property.value . currentBranch) actions
     , mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap config
     , mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap config
     ]
@@ -90,8 +90,8 @@ makeBranchSelector ::
 makeBranchSelector rwtransaction rtransaction actions =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit
-        Choice.make ?? setCurrentBranch actions
-            ?? branchNameEdits ?? currentBranch actions
+        Choice.make ?? currentBranch actions
+            ?? branchNameEdits
             ?? Choice.defaultConfig "Branches"
             ?? WidgetIds.branchSelection
             <&> WithTextPos 0 -- TODO: Should come from Choice
@@ -118,7 +118,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                             (branchDelegatorId <$> deleteBranch actions branch)
                         | otherwise = mempty
                 pure (branch, Widget.weakerEvents delEventMap branchNameEdit)
-                & if branch == currentBranch actions
+                & if branch == Property.value (currentBranch actions)
                     then
                         Reader.local $
                         \env ->

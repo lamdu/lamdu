@@ -10,7 +10,6 @@ module Lamdu.GUI.StatusBar.Common
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
-import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           GUI.Momentu.Align (WithTextPos(..))
@@ -87,12 +86,9 @@ makeChoice ::
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
-        Choice.make
-            ?? Property.set prop ?? choices ?? cur
-            ?? Choice.defaultConfig headerText ?? myId
+        Choice.make ?? prop ?? choices ?? Choice.defaultConfig headerText ?? myId
             <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
     where
-        cur = Property.value prop
         myId = Widget.Id [encodeUtf8 headerText]
         mkChoice (text, val) =
             TextView.makeFocusableLabel text

@@ -5,6 +5,7 @@ module Lamdu.VersionControl
 import qualified Control.Lens as Lens
 import           Data.List.Extended (elemIndex, removeAt)
 import           Data.Maybe.Extended (unsafeUnjust)
+import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
@@ -103,8 +104,7 @@ makeActions = do
             toDb . Property.getP $ guiProp DbLayout.postGuiState
     pure Actions
         { Actions.branches = branches
-        , Actions.currentBranch = currentBranch
-        , Actions.setCurrentBranch = setCurrentBranch view
+        , Actions.currentBranch = Property currentBranch (setCurrentBranch view)
         , Actions.deleteBranch = deleteBranch view branches
         , Actions.makeBranch = makeBranch view
         , Actions.mUndo = undo <$> Version.parent curVersionData

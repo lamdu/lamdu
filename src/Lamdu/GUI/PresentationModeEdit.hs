@@ -7,7 +7,6 @@ module Lamdu.GUI.PresentationModeEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property)
-import qualified Data.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -42,11 +41,10 @@ make myId (Sugar.Params params) prop =
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
                 (TextView.style . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
-        Choice.make ?? Property.set prop ?? pairs ?? cur
+        Choice.make ?? prop ?? pairs
             ?? Choice.defaultConfig "Presentation Mode" ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where
-        cur = Property.value prop
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagVal
         mkPair presentationMode =
             TextView.makeFocusableLabel text <&> (^. Align.tValue)

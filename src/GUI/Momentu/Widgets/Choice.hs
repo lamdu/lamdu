@@ -10,6 +10,7 @@ module GUI.Momentu.Widgets.Choice
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Property (Property(..))
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -68,10 +69,10 @@ makeInner ::
     HoverFunc f -> (Widget.Id -> Bool) ->
     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
      Widget.Id -> Widget (f State.Update) -> Widget (f State.Update)) ->
-    (childId -> f ()) ->
-    [(childId, Widget (f State.Update))] -> childId -> Config -> Widget.Id ->
+    Property f childId ->
+    [(childId, Widget (f State.Update))] -> Config -> Widget.Id ->
     Widget (f State.Update)
-makeInner hover cursorOn fd choose children curChild config myId =
+makeInner hover cursorOn fd (Property curChild choose) children config myId =
     widget True
     & (if expanded then hoverAsClosed else id)
     & axis .~ maxDim
@@ -123,11 +124,11 @@ makeInner hover cursorOn fd choose children curChild config myId =
             )
 
 make ::
-    ( Eq a, MonadReader env m, Applicative f
+    ( Eq childId, MonadReader env m, Applicative f
     , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     m
-    ((a -> f ()) -> [(a, Widget (f State.Update))] -> a ->
+    (Property f childId -> [(childId, Widget (f State.Update))] ->
      Config -> Widget.Id -> Widget (f State.Update))
 make =
     do
