@@ -54,6 +54,11 @@ type T = Transaction
 assertInferSuccess :: HasCallStack => Either Infer.Error a -> a
 assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
 
+infer :: Definition.Expr (Val a) -> Infer.Scope -> Infer.Infer (Val (Infer.Payload, a))
+infer defExpr scope =
+    Infer.infer (defExpr ^. Definition.exprFrozenDeps) scope
+    (defExpr ^. Definition.expr)
+
 inferDefExprWithRecursiveRef ::
     Monad m =>
     Definition.Expr (Val a) -> V.Var -> InferT.M m (Val (Infer.Payload, a))
@@ -61,9 +66,7 @@ inferDefExprWithRecursiveRef defExpr defId =
     do
         defTv <- Infer.freshInferredVar Infer.emptyScope "r"
         let scope = Infer.insertTypeOf defId defTv Infer.emptyScope
-        inferredVal <-
-            Infer.infer (defExpr ^. Definition.exprFrozenDeps) scope
-            (defExpr ^. Definition.expr)
+        inferredVal <- infer defExpr scope
         let inferredType = inferredVal ^. Val.payload . _1 . Infer.plType
         unify inferredType defTv
         Update.inferredVal inferredVal & Update.liftInfer
@@ -181,9 +184,7 @@ inferDef monitors results defExpr defVar =
 inferDefExprHelper ::
     Monad m => Definition.Expr (Val a) -> InferT.M m (Val (Infer.Payload, a))
 inferDefExprHelper defExpr =
-    Infer.infer (defExpr ^. Definition.exprFrozenDeps)
-    Infer.emptyScope (defExpr ^. Definition.expr)
-    & InferT.liftInfer
+    infer defExpr Infer.emptyScope & InferT.liftInfer
 
 inferDefExpr ::
     (HasCallStack, Monad m) =>
