@@ -50,7 +50,7 @@ mkLetItemActions ::
     ConvertM m (LetActions InternalName (T m) (T m))
 mkLetItemActions topLevelPl redex =
     do
-        postProcess <- ConvertM.postProcess
+        postProcess <- ConvertM.postProcessAssert
         nodeActions <- makeActions topLevelPl
         pure LetActions
             { _laDelete =

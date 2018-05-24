@@ -103,7 +103,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         isTypeMatch <-
             checkTypeMatch (argI ^. Val.payload . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift
-        postProcess <- lift ConvertM.postProcess
+        postProcess <- lift ConvertM.postProcessAssert
         do
             sugarContext <- Lens.view id
             options <- mkOptions sugarContext argI (argS <&> (^. pUserData)) exprPl

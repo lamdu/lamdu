@@ -14,7 +14,7 @@ module Lamdu.Sugar.Convert.Monad
     , ConvertM(..), run
     , local
     , convertSubexpression
-    , typeProtectedSetToVal, postProcess
+    , typeProtectedSetToVal, postProcessAssert
     ) where
 
 import qualified Control.Lens as Lens
@@ -37,6 +37,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -127,8 +128,13 @@ typeProtectedSetToVal =
                     _ <- checkOk
                     pure res
 
-postProcess :: Monad m => ConvertM m (T m ())
-postProcess = Lens.view scPostProcessRoot <&> void
+postProcessAssert :: Monad m => ConvertM m (T m ())
+postProcessAssert =
+    Lens.view scPostProcessRoot
+    <&> (>>= assertSuccess)
+    where
+        assertSuccess PostProcess.GoodExpr = pure ()
+        assertSuccess (PostProcess.BadExpr err) = fail (prettyShow err)
 
 run :: Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) = runReaderT action ctx

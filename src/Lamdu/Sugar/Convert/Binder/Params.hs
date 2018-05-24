@@ -255,7 +255,7 @@ fieldParamActions ::
     ConvertM m (FuncParamActions InternalName (T m) (T m))
 fieldParamActions mPresMode binderKind tags fp storedLam =
     do
-        postProcess <- ConvertM.postProcess
+        postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let addParamAfter newTag =
                 do
@@ -318,7 +318,7 @@ setFieldParamTag ::
     Maybe (MkProperty' (T m) PresentationMode) -> BinderKind m ->
     StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m ())
 setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
-    (,) <$> fixLamUsages <*> ConvertM.postProcess
+    (,) <$> fixLamUsages <*> ConvertM.postProcessAssert
     <&> \(fixUsages, postProcess) chosenTag ->
     do
         tagsBefore ++ chosenTag : tagsAfter
@@ -357,7 +357,7 @@ convertRecordParams ::
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
         params <- mapM mkParam fieldParams
-        postProcess <- ConvertM.postProcess
+        postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let addFirst tag =
                 do
@@ -464,7 +464,7 @@ convertToRecordParams ::
     (T m (ValI m) -> BinderKind m -> StoredLam m -> NewParamPosition -> T.Tag ->
         T m ())
 convertToRecordParams =
-    (,) <$> ConvertM.postProcess <*> fixLamUsages <&>
+    (,) <$> ConvertM.postProcessAssert <*> fixLamUsages <&>
     \(postProcess, fixUsages) mkNewArg binderKind storedLam newParamPosition newParam ->
     do
         let paramVar = storedLam ^. slLam . V.lamParamId
@@ -680,7 +680,7 @@ convertEmptyParams ::
     Monad m =>
     BinderKind m -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m)
 convertEmptyParams binderKind val =
-    ConvertM.postProcess
+    ConvertM.postProcessAssert
     <&>
     \postProcess ->
     ConventionalParams

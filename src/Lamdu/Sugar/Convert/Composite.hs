@@ -118,7 +118,7 @@ convertEmptyComposite ::
 convertEmptyComposite extendOp exprPl =
     do
         actions <-
-            ConvertM.postProcess
+            ConvertM.postProcessAssert
             <&>
             \postProcess ->
             ClosedCompositeActions

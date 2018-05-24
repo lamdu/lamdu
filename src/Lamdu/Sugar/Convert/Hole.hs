@@ -498,7 +498,7 @@ mkResult preConversion sugarContext updateDeps stored val =
             do
                 Transaction.merge forkedChanges
                 -- TODO: Remove this 'run', mkResult to be wholly in ConvertM
-                ConvertM.run sugarContext ConvertM.postProcess & join
+                ConvertM.run sugarContext ConvertM.postProcessAssert & join
         }
 
 toScoredResults ::

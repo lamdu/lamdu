@@ -44,7 +44,7 @@ moveToGlobalScope ::
 moveToGlobalScope =
     (,)
     <$> Lens.view id
-    <*> ConvertM.postProcess
+    <*> ConvertM.postProcessAssert
     <&>
     \(ctx, postProcess) param defExpr ->
     do

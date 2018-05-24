@@ -39,8 +39,11 @@ jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
 inlineDef :: Monad m => V.Var -> ValIProperty m -> ConvertM m (T m EntityId)
 inlineDef globalId dest =
-    Lens.view id <&>
-    \ctx ->
+    (,)
+    <$> Lens.view id
+    <*> ConvertM.postProcessAssert
+    <&>
+    \(ctx, postProcess) ->
     do
         let gotoDef = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
         let doInline def defExpr =
@@ -52,7 +55,7 @@ inlineDef globalId dest =
                         & Def.defType .~ Scheme.any
                         & Transaction.writeIRef defI
                     setP (Anchors.assocDefinitionState defI) DeletedDefinition
-                    _ <- ctx ^. ConvertM.scPostProcessRoot
+                    postProcess
                     defExpr ^. Def.expr & EntityId.ofValI & pure
         def <- Transaction.readIRef defI
         case def ^. Def.defBody of

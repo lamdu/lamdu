@@ -40,8 +40,11 @@ mkExtract exprPl =
 
 mkExtractToDef :: Monad m => Input.Payload m a -> ConvertM m (T m EntityId)
 mkExtractToDef exprPl =
-    Lens.view id <&>
-    \ctx ->
+    (,)
+    <$> Lens.view id
+    <*> ConvertM.postProcessAssert
+    <&>
+    \(ctx, postProcess) ->
     do
         let scheme =
                 Infer.makeScheme (ctx ^. ConvertM.scInferContext)
@@ -58,8 +61,7 @@ mkExtractToDef exprPl =
         Property.set (exprPl ^. Input.stored) getVarI
         Infer.depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
-        -- Remove the extracted deps
-        ctx ^. ConvertM.scPostProcessRoot & void
+        postProcess
         EntityId.ofIRef newDefI & pure
     where
         valI = exprPl ^. Input.stored . Property.pVal
@@ -117,7 +119,7 @@ makeActions exprPl =
     do
         ext <- mkExtract exprPl
         wrapInRec <- mkWrapInRecord exprPl
-        postProcess <- ConvertM.postProcess
+        postProcess <- ConvertM.postProcessAssert
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
