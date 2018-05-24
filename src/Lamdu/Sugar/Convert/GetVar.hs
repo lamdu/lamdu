@@ -37,10 +37,23 @@ jumpToDefI ::
     Monad m => Anchors.CodeAnchors m -> DefI m -> T m EntityId
 jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newPane cp defI
 
-inlineDef ::
-    Monad m => ConvertM.Context m -> V.Var -> ValIProperty m -> T m EntityId
-inlineDef ctx globalId dest =
+inlineDef :: Monad m => V.Var -> ValIProperty m -> ConvertM m (T m EntityId)
+inlineDef globalId dest =
+    Lens.view id <&>
+    \ctx ->
     do
+        let gotoDef = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
+        let doInline def defExpr =
+                do
+                    Property.set dest (defExpr ^. Def.expr)
+                    Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
+                    newDefExpr <- DataOps.newHole
+                    def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
+                        & Def.defType .~ Scheme.any
+                        & Transaction.writeIRef defI
+                    setP (Anchors.assocDefinitionState defI) DeletedDefinition
+                    _ <- ctx ^. ConvertM.scPostProcessRoot
+                    defExpr ^. Def.expr & EntityId.ofValI & pure
         def <- Transaction.readIRef defI
         case def ^. Def.defBody of
             Def.BodyBuiltin _ ->
@@ -57,18 +70,6 @@ inlineDef ctx globalId dest =
                         else doInline def defExpr
     where
         defI = ExprIRef.defI globalId
-        gotoDef = jumpToDefI (ctx ^. ConvertM.scCodeAnchors) defI
-        doInline def defExpr =
-            do
-                Property.set dest (defExpr ^. Def.expr)
-                Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
-                newDefExpr <- DataOps.newHole
-                def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
-                    & Def.defType .~ Scheme.any
-                    & Transaction.writeIRef defI
-                setP (Anchors.assocDefinitionState defI) DeletedDefinition
-                _ <- ctx ^. ConvertM.scPostProcessRoot
-                defExpr ^. Def.expr & EntityId.ofValI & pure
 
 globalNameRef ::
     (MonadTransaction n m, Monad f) =>
@@ -101,17 +102,17 @@ convertGlobal var exprPl =
                     <&> Lens.mapped . Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
         nameRef <- globalNameRef (ctx ^. ConvertM.scCodeAnchors) defI & lift
+        inline <-
+            case defForm of
+            DefUpToDate
+                | (ctx ^. ConvertM.scInlineableDefinition) var (exprPl ^. Input.entityId) ->
+                    inlineDef var (exprPl ^. Input.stored) & lift <&> InlineVar
+            _ -> pure CannotInline
         GetBinder BinderVarRef
             { _bvNameRef = nameRef
             , _bvVar = var
             , _bvForm = GetDefinition defForm
-            , _bvInline =
-                case defForm of
-                DefUpToDate
-                    | (ctx ^. ConvertM.scInlineableDefinition) var (exprPl ^. Input.entityId) ->
-                        inlineDef ctx var (exprPl ^. Input.stored)
-                        & InlineVar
-                _ -> CannotInline
+            , _bvInline = inline
             } & pure
     where
         defI = ExprIRef.defI var
