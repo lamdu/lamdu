@@ -33,7 +33,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
-import           Lamdu.Expr.IRef (ValI)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
@@ -114,15 +114,17 @@ exportNominal nomId =
         Codec.EntityNominal tag nomId nominal & tell
         & withVisited visitedNominals nomId
 
-exportSubexpr :: Monad m => Val (ValI m) -> Export m ()
-exportSubexpr (Val lamI (V.BLam (V.Lam lamVar _))) =
+exportSubexpr :: Monad m => Val (ValP m) -> Export m ()
+exportSubexpr (Val lamP (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
         mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
         Codec.EntityLamVar mParamList tag (valIToUUID lamI) lamVar & tell
+    where
+        lamI = lamP ^. Property.pVal
 exportSubexpr _ = pure ()
 
-exportVal :: Monad m => Val (ValI m) -> Export m ()
+exportVal :: Monad m => Val (ValP m) -> Export m ()
 exportVal val =
     do
         val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
@@ -139,11 +141,12 @@ exportDef globalId =
         presentationMode <- Property.getP (Anchors.assocPresentationMode globalId) & trans
         tag <- readAssocTag globalId & trans
         exportTag tag
-        def <-
-            Load.def defI & trans
-            <&> Definition.defBody . Lens.mapped . Lens.mapped %~ Property.value
+        def <- Load.def defI & trans
         def ^. Definition.defBody & traverse_ exportVal
-        let def' = def & Definition.defBody . Lens.mapped . Lens.mapped %~ valIToUUID
+        let def' =
+                def
+                & Definition.defBody . Lens.mapped . Lens.mapped %~
+                    valIToUUID . Property.value
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
@@ -152,12 +155,9 @@ exportDef globalId =
 exportRepl :: Export ViewM ()
 exportRepl =
     do
-        repl <-
-            DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
-            >>= traverse ExprIRef.readVal
-            & trans
+        repl <- Load.defExprProperty (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
-        repl <&> Lens.mapped %~ valIToUUID & Codec.EntityRepl & tell
+        repl <&> Lens.mapped %~ valIToUUID . Property.value & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
