@@ -32,7 +32,7 @@ test =
     ]
 
 readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
-readRepl = ExprLoad.defExprProperty (DbLayout.repl DbLayout.codeAnchors)
+readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =

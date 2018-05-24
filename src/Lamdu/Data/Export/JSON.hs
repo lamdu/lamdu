@@ -155,7 +155,7 @@ exportDef globalId =
 exportRepl :: Export ViewM ()
 exportRepl =
     do
-        repl <- Load.defExprProperty (DbLayout.repl DbLayout.codeAnchors) & trans
+        repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
         repl <&> Lens.mapped %~ valIToUUID . Property.value & Codec.EntityRepl & tell
 

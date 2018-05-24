@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Lamdu.Expr.Load
-    ( def, defExprProperty, expr, nominal
+    ( def, defExpr, expr, nominal
     ) where
 
 import           Data.Property (Property(..))
@@ -26,20 +26,20 @@ expr (Property valI writeRoot) =
     <&> ExprIRef.addProperties writeRoot
     <&> fmap fst
 
-defExpr ::
+defExprH ::
     Monad m =>
     (ValI m -> T m ()) -> Definition.Expr (ValI m) ->
     T m (Definition.Expr (Val (ValP m)))
-defExpr setExpr loaded = loaded & Definition.expr %%~ expr . (`Property` setExpr)
+defExprH setExpr loaded = loaded & Definition.expr %%~ expr . (`Property` setExpr)
 
-defExprProperty ::
+defExpr ::
     Monad m =>
     Property.MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m (Definition.Expr (Val (ValP m)))
-defExprProperty mkProp =
+defExpr mkProp =
     do
         loaded <- mkProp ^. Property.mkProperty <&> Property.value
-        defExpr (Property.modP mkProp . setExpr) loaded
+        defExprH (Property.modP mkProp . setExpr) loaded
     where
         setExpr e val = val & Definition.expr .~ e
 
@@ -47,7 +47,7 @@ def :: Monad m => DefI m -> T m (Definition (Val (ValP m)) (DefI m))
 def defI =
     Transaction.readIRef defI
     <&> Definition.defPayload .~ defI
-    >>= Definition.defBody . Definition._BodyExpr %%~ defExpr setExpr
+    >>= Definition.defBody . Definition._BodyExpr %%~ defExprH setExpr
     where
         setExpr e =
             Transaction.readIRef defI

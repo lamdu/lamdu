@@ -131,7 +131,7 @@ start evaluator =
     Started {} -> pure () -- already started
     NotStarted ->
         DbLayout.repl DbLayout.codeAnchors
-        & Load.defExprProperty
+        & Load.defExpr
         & runViewTransactionInIO (eDb evaluator)
         <&> Lens.mapped . Lens.mapped %~ Property.value
         >>= startBG

@@ -152,7 +152,7 @@ loadRepl ::
     T m (Repl InternalName (T m) (T m) [EntityId])
 loadRepl cachedInfer monitors evalRes cp =
     do
-        defExpr <- ExprLoad.defExprProperty prop
+        defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
         Load.InferResult valInferred newInferContext <-
             Load.inferDefExpr cachedInfer monitors evalRes defExpr

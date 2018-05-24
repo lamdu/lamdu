@@ -105,7 +105,7 @@ readDataFile :: FilePath -> IO String
 readDataFile path = Paths.getDataFileName path >>= readFile
 
 readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
-readRepl = ExprLoad.defExprProperty (DbLayout.repl DbLayout.codeAnchors)
+readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
 exportFancy evalResults =
