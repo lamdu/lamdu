@@ -12,6 +12,7 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Foreign as F
@@ -28,8 +29,9 @@ import           Lamdu.Data.Export.JSON (jsonExportRepl)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
-import           Lamdu.Expr.IRef (ValI)
+import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Paths as Paths
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -63,14 +65,14 @@ removeReadmeMeta :: String -> String
 removeReadmeMeta =
     unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
-compile :: Monad m => Def.Expr (Val (ValI m)) -> T m String
+compile :: Monad m => Def.Expr (Val (ValP m)) -> T m String
 compile repl =
     repl <&> Lens.mapped %~ valId
     & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
     where
-        valId = Compiler.ValId . IRef.uuid . ExprIRef.unValI
+        valId = Compiler.ValId . IRef.uuid . ExprIRef.unValI . Property.value
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])
@@ -79,9 +81,9 @@ compile repl =
             , Compiler.readAssocName = lift . getP . Anchors.assocTagNameRef
             , Compiler.readGlobal =
                 \globalId ->
-                ExprIRef.defI globalId & Transaction.readIRef
-                >>= Def.defBody . traverse %%~ ExprIRef.readVal
+                ExprIRef.defI globalId & ExprLoad.def
                 <&> Def.defBody . Lens.mapped . Lens.mapped %~ valId
+                <&> void
                 & lift
             , Compiler.readGlobalType =
                 \globalId ->
@@ -102,10 +104,8 @@ formatResult (EV.Val _ b) =
 readDataFile :: FilePath -> IO String
 readDataFile path = Paths.getDataFileName path >>= readFile
 
-readRepl :: T ViewM (Def.Expr (Val (ValI ViewM)))
-readRepl =
-    DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
-    >>= traverse ExprIRef.readVal
+readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
+readRepl = ExprLoad.defExprProperty (DbLayout.repl DbLayout.codeAnchors)
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
 exportFancy evalResults =
@@ -115,7 +115,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . Val.payload)
+                . Lens.ix (repl ^. Def.expr . Val.payload . Property.pVal)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

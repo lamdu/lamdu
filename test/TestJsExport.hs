@@ -8,12 +8,11 @@ import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JS as ExportJS
-import           Lamdu.Expr.IRef (ValI)
-import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.IRef (ValP)
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Paths as Paths
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 import           System.FilePath ((</>), splitFileName)
 import qualified System.IO as IO
 import qualified System.NodeJS.Path as NodeJS
@@ -32,10 +31,8 @@ test =
     , testFieldAndParamUseSameTag
     ]
 
-readRepl :: T ViewM (Def.Expr (Val (ValI ViewM)))
-readRepl =
-    DbLayout.repl DbLayout.codeIRefs & Transaction.readIRef
-    >>= traverse ExprIRef.readVal
+readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
+readRepl = ExprLoad.defExprProperty (DbLayout.repl DbLayout.codeAnchors)
 
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
