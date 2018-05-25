@@ -179,7 +179,7 @@ makeOptions ::
     SearchMenu.ResultsContext ->
     ExprGuiM i o (Menu.OptionList (Menu.Option m o))
 makeOptions tagSelection mkPickResult ctx
-    | Text.null searchTerm = pure mempty
+    | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         do
             resultCount <-
@@ -199,9 +199,8 @@ makeOptions tagSelection mkPickResult ctx
             results <&> snd
                 & splitAt resultCount
                 & _2 %~ not . null
-                & uncurry Menu.OptionList
-                <&> makeOption
-                & Menu.olOptions %~ maybeAddNewTagOption
+                & _1 %~ maybeAddNewTagOption . map makeOption
+                & uncurry Menu.toOptionList
                 & pure
     where
         withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)

@@ -139,7 +139,7 @@ collectResults config resultsM =
             -- accumulated bad results we may have too many
             & splitAt resCount
             & _2 %~ not . null
-            & uncurry Menu.OptionList
+            & uncurry Menu.toOptionList
             & pure
     where
         resCount = config ^. Config.completionResultCount

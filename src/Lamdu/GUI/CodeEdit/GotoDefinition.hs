@@ -56,13 +56,13 @@ makeOptions ::
     m [Sugar.NameRef (Name g) o] ->
     SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
 makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
-    | Text.null searchTerm = pure mempty
+    | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         readGlobals <&> zip [(0::Int)..]
         <&> map withText
         <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
         <&> map (makeOption . snd)
-        <&> (`Menu.OptionList` False)
+        <&> Menu.FullList
     where
         withText (idx, nameRef) =
             (nameSearchTerm (nameRef ^. Sugar.nrName), (idx, nameRef))
