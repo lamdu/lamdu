@@ -95,7 +95,7 @@ searchTermEdit ::
     ( MonadReader env m, TextEdit.HasStyle env, HasState env, Menu.HasConfig env
     , Applicative f
     ) =>
-    Id -> Maybe (Widget.PreEvent (f Menu.PickResult)) ->
+    Id -> Menu.PickFirstResult f ->
     (Text -> Bool) ->
     m (WithTextPos (Widget (f State.Update)))
 searchTermEdit myId mPickFirst allowedSearchTerm =
@@ -105,14 +105,14 @@ searchTermEdit myId mPickFirst allowedSearchTerm =
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
     (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
-    Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
+    Id -> Menu.PickFirstResult f->
     m (Widget (f State.Update) -> Widget (f State.Update))
 addPickFirstResultEvent myId mPickFirst =
     do
         pickEventMap <-
             case mPickFirst of
-            Nothing -> emptyPickEventMap
-            Just pickFirst -> Menu.makePickEventMap ?? pickFirst
+            Menu.NoPickFirstResult -> emptyPickEventMap
+            Menu.PickFirstResult pickFirst -> Menu.makePickEventMap ?? pickFirst
         searchTerm <- readSearchTerm myId
         if Text.null searchTerm
             then pure (Widget.weakerEvents pickEventMap)
@@ -164,7 +164,7 @@ make ::
     , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , Applicative f
     ) =>
-    (Maybe (Widget.PreEvent (f Menu.PickResult)) ->
+    (Menu.PickFirstResult f ->
      m (WithTextPos (Widget (f State.Update)))) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Id ->

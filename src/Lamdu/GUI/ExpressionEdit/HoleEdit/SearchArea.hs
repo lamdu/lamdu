@@ -147,9 +147,7 @@ makeSearchTerm ::
     ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
     , Applicative o
     ) =>
-    Widget.Id ->
-    (Text -> Bool) ->
-    Maybe (Widget.PreEvent (o Menu.PickResult)) ->
+    Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult o ->
     m (WithTextPos (Widget (o GuiState.Update)))
 makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
     do
@@ -181,7 +179,8 @@ make mkOptions mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> makeSearchTerm searchMenuId allowedTerms Nothing <&> Responsive.fromWithTextPos
+                <*> makeSearchTerm searchMenuId allowedTerms
+                Menu.NoPickFirstResult <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure

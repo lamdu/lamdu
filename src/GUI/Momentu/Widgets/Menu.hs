@@ -9,6 +9,7 @@ module GUI.Momentu.Widgets.Menu
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), olOptions, olIsTruncated
     , PickResult(..), pickDest, pickNextEntryPoint
+    , PickFirstResult(..)
     , RenderedOption(..), rWidget, rPick
     , Option(..), oId, oRender, oSubmenuWidgets
     , optionWidgets
@@ -105,6 +106,10 @@ data PickResult = PickResult
     , _pickNextEntryPoint :: Widget.Id
     }
 Lens.makeLenses ''PickResult
+
+data PickFirstResult f
+    = NoPickFirstResult
+    | PickFirstResult (Widget.PreEvent (f PickResult))
 
 data RenderedOption f = RenderedOption
     { _rWidget :: WithTextPos (Widget (f State.Update))
@@ -289,14 +294,14 @@ make ::
     , Applicative f
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
-    m (Maybe (Widget.PreEvent (f PickResult)), Hover.Ordered (Widget (f State.Update)))
+    m (PickFirstResult f, Hover.Ordered (Widget (f State.Update)))
 make myId minWidth options =
     case options ^. olOptions of
     [] ->
         (Widget.makeFocusableView ?? noResultsId myId)
         <*> (makeNoResults <&> (^. Align.tValue))
         <&> pure
-        <&> (,) Nothing
+        <&> (,) NoPickFirstResult
     opts@(_:_) ->
         do
             submenuSymbolWidth <-
@@ -324,7 +329,7 @@ make myId minWidth options =
                 then TextView.makeLabel "..." <&> (^. Align.tValue) <&> Widget.fromView
                 else pure Element.empty
             pure
-                ( mPickFirstResult
+                ( maybe NoPickFirstResult PickFirstResult mPickFirstResult
                 , blockEvents <*>
                     ( Hover.Ordered
                         { _forward = id
@@ -400,7 +405,7 @@ makeHovered ::
     Widget.Id -> View ->
     OptionList (Option m f) ->
     m
-    ( Maybe (Widget.PreEvent (f PickResult))
+    ( PickFirstResult f
     , Placement -> Widget (f State.Update) -> Widget (f State.Update)
     )
 makeHovered myId annotation options =
