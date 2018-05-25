@@ -103,16 +103,10 @@ make ::
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
-        selected <- GuiState.isSubCursor ?? myId
-        let makeSearchTermEdit = SearchMenu.searchTermEdit myId allowSearchTerm
-        menu <-
-            if selected
-            then do
-                searchTermEventMap <-
-                    SearchMenu.searchTermEditEventMap myId allowSearchTerm
-                -- TODO: DRY with other uses of search menu
-                SearchMenu.make makeSearchTermEdit (makeOptions readGlobals)
-                    Element.empty myId ?? Menu.Below
-                    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
-            else makeSearchTermEdit Menu.NoPickFirstResult
-        StatusBar.makeStatusWidget "Goto" menu
+        searchTermEventMap <-
+            SearchMenu.searchTermEditEventMap myId allowSearchTerm
+            -- TODO: DRY with other uses of search menu
+        SearchMenu.make (SearchMenu.searchTermEdit myId allowSearchTerm)
+            (makeOptions readGlobals) Element.empty myId ?? Menu.Below
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
+            >>= StatusBar.makeStatusWidget "Goto"
