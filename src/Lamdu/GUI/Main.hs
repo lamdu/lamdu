@@ -27,6 +27,7 @@ import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (HasConfig)
@@ -97,6 +98,7 @@ type Ctx env =
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     , Menu.HasConfig env
+    , SearchMenu.HasTermStyle env
     )
 
 layout ::

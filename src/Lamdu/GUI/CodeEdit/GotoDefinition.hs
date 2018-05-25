@@ -9,7 +9,6 @@ import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -19,7 +18,6 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
-import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
@@ -100,22 +98,13 @@ make ::
     ( MonadReader env m, Applicative o
     , HasTheme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , Menu.HasConfig env, Hover.HasStyle env, GuiState.HasState env
+    , SearchMenu.HasTermStyle env
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
         selected <- GuiState.isSubCursor ?? myId
-        color <- Lens.view (Theme.theme . Theme.searchTerm . bgColorLens selected)
-        let bgColor =
-                Align.tValue %~
-                Draw.backgroundColor (Widget.toAnimId myId <> ["bg"]) color
-        let makeUnfocused =
-                (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-                <*> TextView.makeLabel "  "
-                <&> bgColor
-        let makeSearchTermEdit _pick =
-                SearchMenu.basicSearchTermEdit myId allowSearchTerm
-                <&> bgColor
+        let makeSearchTermEdit = SearchMenu.searchTermEdit myId allowSearchTerm
         menu <-
             if selected
             then do
@@ -126,8 +115,5 @@ make readGlobals =
                 SearchMenu.make makeSearchTermEdit (makeOptions readGlobals)
                     Element.empty myId ?? Menu.Below
                     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
-            else makeUnfocused
+            else makeSearchTermEdit Menu.NoPickFirstResult
         StatusBar.makeStatusWidget "Goto" menu
-    where
-        bgColorLens True = SearchMenu.activeBGColor
-        bgColorLens False = SearchMenu.inactiveBGColor

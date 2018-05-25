@@ -21,6 +21,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -77,6 +78,7 @@ make ::
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
+    , SearchMenu.HasTermStyle env
     , Element.HasAnimIdPrefix env
     , HasCallStack
     ) =>

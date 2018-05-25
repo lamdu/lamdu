@@ -21,6 +21,7 @@ import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
@@ -101,6 +102,7 @@ instance VCConfig.HasTheme Env where theme = envTheme . Theme.versionControl
 instance VCConfig.HasConfig Env where config = envConfig . Config.versionControl
 instance Menu.HasConfig Env where
     config = Menu.configLens (envConfig . Config.menu) (envTheme . Theme.menu)
+instance SearchMenu.HasTermStyle Env where termStyle = envTheme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = envDebugMonitors
 instance Cache.HasFunctions Env where functions = envCachedFunctions
 
