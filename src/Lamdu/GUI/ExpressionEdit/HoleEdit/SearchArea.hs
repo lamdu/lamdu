@@ -156,8 +156,9 @@ make mkOptions mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> SearchMenu.searchTermEdit searchMenuId allowedTerms
-                Menu.NoPickFirstResult
+                <*> ( SearchMenu.searchTermEdit searchMenuId allowedTerms Menu.NoPickFirstResult
+                        <&> (^. SearchMenu.termWidget)
+                    )
                 <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds

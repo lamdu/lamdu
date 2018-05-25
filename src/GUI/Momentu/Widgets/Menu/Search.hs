@@ -12,6 +12,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , TermStyle(..), activeBGColor, inactiveBGColor
     , HasTermStyle(..)
     , enterWithSearchTerm
+    , Term(..), termWidget
     , make
 
     -- temporary exports that will be removed when transition of HoleEdit
@@ -65,6 +66,11 @@ Lens.makeLenses ''TermStyle
 class HasTermStyle env where termStyle :: Lens' env TermStyle
 instance HasTermStyle TermStyle where termStyle = id
 
+newtype Term f = Term
+    { _termWidget :: WithTextPos (Widget (f State.Update))
+    }
+Lens.makeLenses ''Term
+
 emptyPickEventMap ::
     (MonadReader env m, Menu.HasConfig env, Applicative f) =>
     m (EventMap (f State.Update))
@@ -96,7 +102,7 @@ readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     (MonadReader env m, TextEdit.HasStyle env, HasState env, Applicative f) =>
-    Id -> (Text -> Bool) -> m (WithTextPos (Widget (f State.Update)))
+    Id -> (Text -> Bool) -> m (Term f)
 basicSearchTermEdit myId allowedSearchTerm =
     do
         searchTerm <- readSearchTerm myId
@@ -117,6 +123,7 @@ basicSearchTermEdit myId allowedSearchTerm =
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
+            <&> Term
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
@@ -135,13 +142,16 @@ addSearchTermBgColor myId =
 
 searchTermEdit ::
     ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
-    , Applicative o
+    , Applicative f
     ) =>
-    Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult o ->
-    m (WithTextPos (Widget (o State.Update)))
+    Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
-    (addPickFirstResultEvent myId mPickFirst <&> (Align.tValue %~)) <*>
-    (addSearchTermBgColor myId <*> basicSearchTermEdit myId allowedSearchTerm)
+    (addPickFirstResultEvent myId mPickFirst <&> onTermWidget) <*>
+    ( (addSearchTermBgColor myId <&> onTermWidget)
+        <*> basicSearchTermEdit myId allowedSearchTerm
+    )
+    where
+        onTermWidget = (termWidget . Align.tValue %~)
 
 
 -- Add events on search term to pick the first result.
@@ -206,8 +216,7 @@ make ::
     , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , Applicative f
     ) =>
-    (Menu.PickFirstResult f ->
-     m (WithTextPos (Widget (f State.Update)))) ->
+    (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Id ->
     m (Menu.Placement -> WithTextPos (Widget (f State.Update)))
@@ -219,8 +228,8 @@ make makeSearchTerm makeOptions annotation myId =
     do
         (mPickFirst, makeMenu) <- Menu.makeHovered myId annotation options
         makeSearchTerm mPickFirst
-            <&> \searchTermWidget placement ->
-                searchTermWidget <&> makeMenu placement
+            <&> \term placement ->
+                term ^. termWidget <&> makeMenu placement
     & Reader.local (Element.animIdPrefix .~ toAnimId myId)
     & assignCursor myId (options ^.. traverse . Menu.oId)
 

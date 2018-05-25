@@ -241,7 +241,7 @@ makeHoleSearchTerm ::
     (MonadReader env m, Monad o, HasSearchTermEnv env) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
-    m (WithTextPos (Widget (o GuiState.Update)))
+    m (SearchMenu.Term o)
 makeHoleSearchTerm tagSelection mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
@@ -253,14 +253,16 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                 makeNewTagPreEvent searchTerm tagSelection mkPickResult
                 ^.. Lens._Just
                 <&> fmap (mempty <$)
+        let addPreEvents =
+                Widget.wState . Widget._StateFocused . Lens.mapped .
+                Widget.fPreEvents %~ (Widget.PreEvents newTagPreEvents <>)
         term <-
             SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
-            <&> Align.tValue %~ Widget.weakerEvents newTagEventMap
-            <&> Align.tValue . Widget.wState . Widget._StateFocused .
-                Lens.mapped . Widget.fPreEvents %~
-                (Widget.PreEvents newTagPreEvents <>)
+            <&> SearchMenu.termWidget . Align.tValue %~
+                addPreEvents . Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (theme . Theme.tooltip)
-        if not (Text.null searchTerm) && Widget.isFocused (term ^. Align.tValue)
+        if  not (Text.null searchTerm) &&
+            Widget.isFocused (term ^. SearchMenu.termWidget . Align.tValue)
             then
                 do
                     newTagLabel <-
@@ -268,13 +270,14 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
                     let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
-                    let hoverOptions =
-                            [ anchor (term /|/ space) /|/ hNewTagLabel
-                            , hNewTagLabel /|/ anchor (space /|/ term)
-                            ] <&> (^. Align.tValue)
-                    anchor term
-                        <&> Hover.hoverInPlaceOf hoverOptions
-                        & pure
+                    let termWithHover termW =
+                            let hoverOptions =
+                                    [ anchor (termW /|/ space) /|/ hNewTagLabel
+                                    , hNewTagLabel /|/ anchor (space /|/ termW)
+                                    ] <&> (^. Align.tValue)
+                            in  anchor termW
+                                <&> Hover.hoverInPlaceOf hoverOptions
+                    term & SearchMenu.termWidget %~ termWithHover & pure
                     & Reader.local (Hover.backgroundColor .~ tooltip ^. Theme.tooltipBgColor)
                     & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
