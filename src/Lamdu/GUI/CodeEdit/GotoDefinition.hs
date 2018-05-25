@@ -34,7 +34,7 @@ myId :: Widget.Id
 myId = Widget.Id ["goto-def"]
 
 allowSearchTerm :: Text -> Bool
-allowSearchTerm = const True
+allowSearchTerm = Name.isValidText
 
 {-# NOINLINE fuzzyMaker #-}
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
