@@ -110,7 +110,6 @@ make readGlobals =
             then do
                 searchTermEventMap <-
                     SearchMenu.searchTermEditEventMap myId allowSearchTerm
-                    <&> fmap pure
                 -- TODO: DRY with other uses of search menu
                 SearchMenu.make makeSearchTermEdit (makeOptions readGlobals)
                     Element.empty myId ?? Menu.Below

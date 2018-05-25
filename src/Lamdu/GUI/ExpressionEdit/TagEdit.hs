@@ -291,7 +291,7 @@ makeTagHoleEdit ::
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeTagHoleEdit tagSelection mkPickResult holeId =
     do
-        searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm <&> fmap pure
+        searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm
         SearchMenu.make
             (const (makeHoleSearchTerm tagSelection mkPickResult holeId))
             (makeOptions tagSelection mkPickResult) Element.empty holeId

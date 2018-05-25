@@ -161,7 +161,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                 <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure
+        searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 (Hover.anchor open `Hover.emplaceAt`) . Hover.anchor

@@ -225,8 +225,8 @@ make makeSearchTerm makeOptions annotation myId =
     & assignCursor myId (options ^.. traverse . Menu.oId)
 
 searchTermEditEventMap ::
-    (MonadReader env m, HasState env) =>
-    Id -> (Text -> Bool) -> m (EventMap State.Update)
+    (MonadReader env m, HasState env, Applicative f) =>
+    Id -> (Text -> Bool) -> m (EventMap (f State.Update))
 searchTermEditEventMap myId allowedTerms =
     readSearchTerm myId
     <&>
@@ -248,5 +248,6 @@ searchTermEditEventMap myId allowedTerms =
     in
     appendCharEventMap <> deleteCharEventMap
     <&> State.updateWidgetState myId
+    <&> pure
     where
         doc subtitle = E.Doc ["Edit", "Search Term", subtitle]
