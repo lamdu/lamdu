@@ -158,13 +158,11 @@ makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
                 | isActive = Theme.holeActiveSearchTermBGColor
                 | otherwise = Theme.holeSearchTermBGColor
         theme <- Lens.view (Theme.theme . Theme.hole)
-        (SearchMenu.addPickFirstResultEvent searchMenuId mPickFirst <&> (Align.tValue %~))
-            <*> SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
+        SearchMenu.searchTermEdit searchMenuId mPickFirst allowedSearchTerm
             <&> Draw.backgroundColor
                 (Widget.toAnimId searchMenuId <> ["hover background"])
                 (theme ^. bgColor)
 
--- Has a typeView under the search term
 make ::
     (Monad i, Monad o) =>
     i [Sugar.HoleOption i o (ExpressionN i o ())] ->

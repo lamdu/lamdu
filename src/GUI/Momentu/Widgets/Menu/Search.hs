@@ -4,7 +4,7 @@ module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
-    , basicSearchTermEdit, searchTermEditEventMap, addPickFirstResultEvent
+    , basicSearchTermEdit, searchTermEditEventMap, searchTermEdit
     , enterWithSearchTerm
     , make
 
@@ -91,6 +91,37 @@ basicSearchTermEdit myId allowedSearchTerm =
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
+searchTermEdit ::
+    ( MonadReader env m, TextEdit.HasStyle env, HasState env, Menu.HasConfig env
+    , Applicative f
+    ) =>
+    Id -> Maybe (Widget.PreEvent (f Menu.PickResult)) ->
+    (Text -> Bool) ->
+    m (WithTextPos (Widget (f State.Update)))
+searchTermEdit myId mPickFirst allowedSearchTerm =
+    (addPickFirstResultEvent myId mPickFirst <&> (Align.tValue %~))
+    <*> basicSearchTermEdit myId allowedSearchTerm
+
+-- Add events on search term to pick the first result.
+addPickFirstResultEvent ::
+    (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
+    Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
+    m (Widget (f State.Update) -> Widget (f State.Update))
+addPickFirstResultEvent myId mPickFirst =
+    do
+        pickEventMap <-
+            case mPickFirst of
+            Nothing -> emptyPickEventMap
+            Just pickFirst -> Menu.makePickEventMap ?? pickFirst
+        searchTerm <- readSearchTerm myId
+        if Text.null searchTerm
+            then pure (Widget.weakerEvents pickEventMap)
+            else pure (addPre . Widget.weakerEvents pickEventMap)
+    where
+        addPre =
+            Widget.wState . Widget._StateFocused . Lens.mapped .
+            Widget.fPreEvents %~ (Widget.BlockEvents <>)
+
 assignCursor ::
     (MonadReader env m, HasState env) =>
     Id -> [Id] -> m a -> m a
@@ -150,26 +181,6 @@ make makeSearchTerm makeOptions annotation myId =
                 searchTermWidget <&> makeMenu placement
     & Reader.local (Element.animIdPrefix .~ toAnimId myId)
     & assignCursor myId (options ^.. traverse . Menu.oId)
-
--- Add events on search term to pick the first result.
-addPickFirstResultEvent ::
-    (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
-    Id -> Maybe (Widget.PreEvent (f Menu.PickResult))->
-    m (Widget (f State.Update) -> Widget (f State.Update))
-addPickFirstResultEvent myId mPickFirst =
-    do
-        pickEventMap <-
-            case mPickFirst of
-            Nothing -> emptyPickEventMap
-            Just pickFirst -> Menu.makePickEventMap ?? pickFirst
-        searchTerm <- readSearchTerm myId
-        if Text.null searchTerm
-            then pure (Widget.weakerEvents pickEventMap)
-            else pure (addPre . Widget.weakerEvents pickEventMap)
-    where
-        addPre =
-            Widget.wState . Widget._StateFocused . Lens.mapped .
-            Widget.fPreEvents %~ (Widget.BlockEvents <>)
 
 searchTermEditEventMap ::
     (MonadReader env m, HasState env) =>
