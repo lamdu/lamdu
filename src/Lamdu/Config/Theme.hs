@@ -3,13 +3,13 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
-    , Hole(..), holeResultPadding, holeSearchTermBGColor, holeActiveSearchTermBGColor
+    , Hole(..), holeResultPadding
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
     , StatusBar(..), statusBarBGColor, statusBarHSpaces
     , Theme(..)
         , fonts, baseTextSize, animationTimePeriodSec
-        , animationRemainInPeriod, help, hole, menu, name, eval, hover, tooltip
+        , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
         , textColors, topPadding, statusBar, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorBGColor
         , errorColor, successColor
@@ -29,6 +29,7 @@ import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
@@ -54,15 +55,11 @@ deriveJSON Aeson.defaultOptions
 
 Lens.makeLenses ''Help
 
-data Hole = Hole
+newtype Hole = Hole
     { _holeResultPadding :: Vector2 Double
-    , _holeSearchTermBGColor :: Draw.Color
-    , _holeActiveSearchTermBGColor :: Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_hole")
+    { Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_hole")
     }
     ''Hole
 
@@ -113,6 +110,7 @@ data Theme = Theme
     , _help :: Help
     , _hole :: Hole
     , _menu :: Menu.Style
+    , _searchTerm :: SearchMenu.TermStyle
     , _name :: Name
     , _eval :: Eval
     , _hover :: Hover.Style

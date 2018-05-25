@@ -105,7 +105,7 @@ make ::
 make readGlobals =
     do
         selected <- GuiState.isSubCursor ?? myId
-        color <- Lens.view (Theme.theme . Theme.hole . bgColorLens selected)
+        color <- Lens.view (Theme.theme . Theme.searchTerm . bgColorLens selected)
         let bgColor =
                 Align.tValue %~
                 Draw.backgroundColor (Widget.toAnimId myId <> ["bg"]) color
@@ -129,5 +129,5 @@ make readGlobals =
             else makeUnfocused
         StatusBar.makeStatusWidget "Goto" menu
     where
-        bgColorLens True = Theme.holeActiveSearchTermBGColor
-        bgColorLens False = Theme.holeSearchTermBGColor
+        bgColorLens True = SearchMenu.activeBGColor
+        bgColorLens False = SearchMenu.inactiveBGColor

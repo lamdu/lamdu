@@ -35,6 +35,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -94,6 +95,8 @@ instance HasTheme (Askable i o) where theme = aTheme
 instance ResponsiveExpr.HasStyle (Askable i o) where style = aTheme . ResponsiveExpr.style
 instance Menu.HasConfig (Askable i o) where
     config = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
+instance SearchMenu.HasTermStyle (Askable i o) where
+    termStyle = aTheme . Theme.searchTerm
 instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings

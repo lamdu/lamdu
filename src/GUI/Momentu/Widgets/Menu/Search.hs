@@ -5,6 +5,8 @@ module GUI.Momentu.Widgets.Menu.Search
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
     , basicSearchTermEdit, searchTermEditEventMap, searchTermEdit
+    , TermStyle(..), activeBGColor, inactiveBGColor
+    , HasTermStyle(..)
     , enterWithSearchTerm
     , make
 
@@ -15,9 +17,13 @@ module GUI.Momentu.Widgets.Menu.Search
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos, View)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -38,8 +44,21 @@ import           Lamdu.Prelude
 data ResultsContext = ResultsContext
     { _rSearchTerm :: Text
     , _rResultIdPrefix :: Id
-    } deriving (Eq, Show, Ord)
+    } deriving (Eq, Ord, Show)
 Lens.makeLenses ''ResultsContext
+
+data TermStyle = TermStyle
+    { _activeBGColor :: Draw.Color
+    , _inactiveBGColor :: Draw.Color
+    } deriving (Eq, Show)
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = (^?! prefixed "_")
+    } ''TermStyle
+
+Lens.makeLenses ''TermStyle
+
+class HasTermStyle env where termStyle :: Lens' env TermStyle
+instance HasTermStyle TermStyle where termStyle = id
 
 emptyPickEventMap ::
     (MonadReader env m, Menu.HasConfig env, Applicative f) =>
@@ -92,15 +111,23 @@ basicSearchTermEdit myId allowedSearchTerm =
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
 searchTermEdit ::
-    ( MonadReader env m, TextEdit.HasStyle env, HasState env, Menu.HasConfig env
-    , Applicative f
+    ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
+    , Applicative o
     ) =>
-    Id -> Menu.PickFirstResult f ->
-    (Text -> Bool) ->
-    m (WithTextPos (Widget (f State.Update)))
-searchTermEdit myId mPickFirst allowedSearchTerm =
-    (addPickFirstResultEvent myId mPickFirst <&> (Align.tValue %~))
-    <*> basicSearchTermEdit myId allowedSearchTerm
+    Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult o ->
+    m (WithTextPos (Widget (o State.Update)))
+searchTermEdit myId allowedSearchTerm mPickFirst =
+    do
+        isActive <- State.isSubCursor ?? myId
+        bgColor <-
+            Lens.view termStyle
+            <&> if isActive then _activeBGColor else _inactiveBGColor
+        (addPickFirstResultEvent myId mPickFirst <&> (Align.tValue %~))
+            <*> basicSearchTermEdit myId allowedSearchTerm
+            <&> Draw.backgroundColor bgAnimId bgColor
+    where
+        bgAnimId = Widget.toAnimId myId <> ["hover background"]
+
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::

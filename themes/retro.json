@@ -41,10 +41,12 @@
         "submenuSymbolColorUnselected": [1.0, 1.0, 1.0, 0.5],
         "submenuSymbolColorSelected": [1.0, 1.0, 1.0, 1.0]
     },
+    "searchTerm": {
+        "inactiveBGColor": [0.5, 0.5, 1.0, 1.0],
+        "activeBGColor": [0.5, 1.0, 0.5, 1.0]
+    },
     "hole": {
-        "resultPadding": [0.0, 1.0],
-        "searchTermBGColor": [0.5, 0.5, 1.0, 1.0],
-        "activeSearchTermBGColor": [0.5, 1.0, 0.5, 1.0]
+        "resultPadding": [0.0, 1.0]
     },
     "name": {
         "collisionSuffixScaleFactor": [1.0, 1.0],

@@ -13,25 +13,20 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
-import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
@@ -143,24 +138,6 @@ filterSearchTermEvents allowedTerms searchTerm
     | otherwise =
         E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
 
-makeSearchTerm ::
-    ( MonadReader env m, HasTheme env, TextEdit.HasStyle env, GuiState.HasState env, Menu.HasConfig env
-    , Applicative o
-    ) =>
-    Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult o ->
-    m (WithTextPos (Widget (o GuiState.Update)))
-makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
-    do
-        isActive <- GuiState.isSubCursor ?? searchMenuId
-        let bgColor
-                | isActive = Theme.holeActiveSearchTermBGColor
-                | otherwise = Theme.holeSearchTermBGColor
-        theme <- Lens.view (Theme.theme . Theme.hole)
-        SearchMenu.searchTermEdit searchMenuId mPickFirst allowedSearchTerm
-            <&> Draw.backgroundColor
-                (Widget.toAnimId searchMenuId <> ["hover background"])
-                (theme ^. bgColor)
-
 make ::
     (Monad i, Monad o) =>
     i [Sugar.HoleOption i o (ExpressionN i o ())] ->
@@ -179,8 +156,9 @@ make mkOptions mOptionLiteral pl allowedTerms =
             maybeAddAnnotationPl pl
             <*>
             ( fdWrap
-                <*> makeSearchTerm searchMenuId allowedTerms
-                Menu.NoPickFirstResult <&> Responsive.fromWithTextPos
+                <*> SearchMenu.searchTermEdit searchMenuId allowedTerms
+                Menu.NoPickFirstResult
+                <&> Responsive.fromWithTextPos
             )
         isActive <- HoleWidgetIds.isActive widgetIds
         searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms <&> fmap pure
@@ -202,7 +180,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> SearchMenu.make (makeSearchTerm searchMenuId allowedTerms)
+                        <*> SearchMenu.make (SearchMenu.searchTermEdit searchMenuId allowedTerms)
                             (filteredOptions options) annotation searchMenuId
                         <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
