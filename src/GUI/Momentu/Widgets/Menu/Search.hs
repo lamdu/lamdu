@@ -4,7 +4,11 @@ module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
-    , basicSearchTermEdit, searchTermEditEventMap, searchTermEdit
+
+    , basicSearchTermEdit, addPickFirstResultEvent, addSearchTermBgColor
+    , searchTermEdit
+
+    , searchTermEditEventMap
     , TermStyle(..), activeBGColor, inactiveBGColor
     , HasTermStyle(..)
     , enterWithSearchTerm
@@ -24,6 +28,7 @@ import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos, View)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -84,6 +89,11 @@ searchTermEditId = (`joinId` ["SearchTerm"])
 readSearchTerm :: (MonadReader env m, HasState env) => Id -> m Text
 readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 
+-- | Basic search term edit:
+--   * no bg color / no HasTermStyle needed --> use addSearchTermBgColor
+--     to add it
+--   * no pick of first result / no Menu.HasConfig needed --> use
+--     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     (MonadReader env m, TextEdit.HasStyle env, HasState env, Applicative f) =>
     Id -> (Text -> Bool) -> m (WithTextPos (Widget (f State.Update)))
@@ -110,6 +120,19 @@ basicSearchTermEdit myId allowedSearchTerm =
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
+addSearchTermBgColor ::
+    ( MonadReader env m, Element a, State.HasCursor env, HasTermStyle env
+    ) => Id -> m (a -> a)
+addSearchTermBgColor myId =
+    do
+        isActive <- State.isSubCursor ?? myId
+        bgColor <-
+            Lens.view termStyle
+            <&> if isActive then _activeBGColor else _inactiveBGColor
+        pure (Draw.backgroundColor bgAnimId bgColor)
+    where
+        bgAnimId = Widget.toAnimId myId <> ["hover background"]
+
 searchTermEdit ::
     ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
     , Applicative o
@@ -117,16 +140,8 @@ searchTermEdit ::
     Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult o ->
     m (WithTextPos (Widget (o State.Update)))
 searchTermEdit myId allowedSearchTerm mPickFirst =
-    do
-        isActive <- State.isSubCursor ?? myId
-        bgColor <-
-            Lens.view termStyle
-            <&> if isActive then _activeBGColor else _inactiveBGColor
-        (addPickFirstResultEvent myId mPickFirst <&> (Align.tValue %~))
-            <*> basicSearchTermEdit myId allowedSearchTerm
-            <&> Draw.backgroundColor bgAnimId bgColor
-    where
-        bgAnimId = Widget.toAnimId myId <> ["hover background"]
+    (addPickFirstResultEvent myId mPickFirst <&> (Align.tValue %~)) <*>
+    (addSearchTermBgColor myId <*> basicSearchTermEdit myId allowedSearchTerm)
 
 
 -- Add events on search term to pick the first result.
