@@ -41,7 +41,7 @@ undeleteButton undelete =
         actionId <- Element.subAnimId ["Undelete"] <&> Widget.Id
         Styled.actionable actionId "Undelete..." doc undelete
     where
-        doc = E.Doc ["Edit", "Undelete definition"]
+        doc = E.Doc ["Edit", "Definition", "Undelete"]
 
 makeExprDefinition ::
     (Monad i, Monad o) =>
@@ -49,8 +49,8 @@ makeExprDefinition ::
     Sugar.Definition (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.DefinitionExpression (Name o) i o (ExprGui.SugarExpr i o) ->
     ExprGuiM i o (ExpressionGui o)
-makeExprDefinition lhsEventMap def bodyExpr =
-    BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) lhsEventMap
+makeExprDefinition defEventMap def bodyExpr =
+    BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent) myId
     where
@@ -94,17 +94,17 @@ make ::
     EventMap (o GuiState.Update) ->
     Sugar.Definition (Name o) i o (ExprGui.SugarExpr i o) ->
     ExprGuiM i o (ExpressionGui o)
-make lhsEventMap def =
+make defEventMap def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & ExprGuiM.im
         let defState = Property.value defStateProp
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
-                makeExprDefinition lhsEventMap def bodyExpr
+                makeExprDefinition defEventMap def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
-                <&> Widget.weakerEvents lhsEventMap
+                <&> Widget.weakerEvents defEventMap
         case defState of
             Sugar.LiveDefinition -> pure defGui
             Sugar.DeletedDefinition ->

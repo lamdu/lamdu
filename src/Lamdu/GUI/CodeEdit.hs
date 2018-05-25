@@ -148,7 +148,7 @@ makePaneEdit theExportActions pane =
                   & E.keysEventMap exportKeys
                     (E.Doc ["Collaboration", "Export definition to JSON file"])
                 ] & mconcat
-            lhsEventMap =
+            defEventMap =
                 do
                     Property.setP
                         (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & Property.MkProperty)
@@ -159,7 +159,7 @@ makePaneEdit theExportActions pane =
                     (E.Doc ["Edit", "Definition", "Delete"])
             paneConfig = theConfig ^. Config.pane
             exportKeys = theConfig ^. Config.export . Config.exportKeys
-        DefinitionEdit.make lhsEventMap (pane ^. Sugar.paneDefinition)
+        DefinitionEdit.make defEventMap (pane ^. Sugar.paneDefinition)
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 

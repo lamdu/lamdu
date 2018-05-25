@@ -358,7 +358,7 @@ make ::
     Sugar.Binder (Name o) i o (ExprGui.SugarExpr i o) ->
     Widget.Id ->
     ExprGuiM i o (ExpressionGui o)
-make pMode lhsEventMap tag color binder myId =
+make pMode defEventMap tag color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
             makeParts ExprGui.UnlimitedFuncApply binder myId myId
@@ -388,16 +388,18 @@ make pMode lhsEventMap tag color binder myId =
             (pure id)
             (maybeAddNodeActions wholeBinderId nearestHoles)
             (binder ^. Sugar.bActions . Sugar.baMNodeActions)
-        let layoutWithBody hbox =
+        hbox <- Options.boxSpaced ?? Options.disambiguationNone
+        let layout =
                 hbox
-                [ hbox (defNameEdit : (mParamEdit ^.. Lens._Just) ++ [Responsive.fromTextView equals])
-                    & Widget.weakerEvents lhsEventMap
+                [ defNameEdit :
+                    (mParamEdit ^.. Lens._Just) ++
+                    [Responsive.fromTextView equals]
+                    & hbox
                 , bodyEdit
                 ]
-        parentDelegator wholeBinderId
-            <*> (Options.boxSpaced ?? Options.disambiguationNone <&> layoutWithBody)
+        parentDelegator wholeBinderId ?? layout
+            <&> Widget.weakerEvents (defEventMap <> eventMap)
             <&> addWholeBinderActions
-            <&> Widget.weakerEvents eventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     & case binder ^. Sugar.bLamId of
         Nothing -> id
