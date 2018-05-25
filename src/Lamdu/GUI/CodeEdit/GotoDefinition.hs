@@ -115,7 +115,6 @@ make readGlobals =
                 <&> bgColor
         let makeSearchTermEdit _pick =
                 SearchMenu.basicSearchTermEdit myId allowSearchTerm
-                <&> Align.tValue . Lens.mapped %~ pure
                 <&> bgColor
         menu <-
             if selected

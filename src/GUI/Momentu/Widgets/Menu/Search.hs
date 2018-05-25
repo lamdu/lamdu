@@ -66,8 +66,8 @@ readSearchTerm :: (MonadReader env m, HasState env) => Id -> m Text
 readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 
 basicSearchTermEdit ::
-    (MonadReader env m, TextEdit.HasStyle env, HasState env) =>
-    Id -> (Text -> Bool) -> m (WithTextPos (Widget State.Update))
+    (MonadReader env m, TextEdit.HasStyle env, HasState env, Applicative f) =>
+    Id -> (Text -> Bool) -> m (WithTextPos (Widget (f State.Update)))
 basicSearchTermEdit myId allowedSearchTerm =
     do
         searchTerm <- readSearchTerm myId
@@ -87,7 +87,7 @@ basicSearchTermEdit myId allowedSearchTerm =
         TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermEditId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (allowedSearchTerm . fst)
-            <&> Align.tValue . Lens.mapped %~ onEvents
+            <&> Align.tValue . Lens.mapped %~ pure . onEvents
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 

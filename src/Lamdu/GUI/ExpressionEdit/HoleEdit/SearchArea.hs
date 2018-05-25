@@ -159,9 +159,7 @@ makeSearchTerm searchMenuId allowedSearchTerm mPickFirst =
                 | otherwise = Theme.holeSearchTermBGColor
         theme <- Lens.view (Theme.theme . Theme.hole)
         (SearchMenu.addPickFirstResultEvent searchMenuId mPickFirst <&> (Align.tValue %~))
-            <*> ( SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
-                    <&> Align.tValue . Lens.mapped %~ pure
-                )
+            <*> SearchMenu.basicSearchTermEdit searchMenuId allowedSearchTerm
             <&> Draw.backgroundColor
                 (Widget.toAnimId searchMenuId <> ["hover background"])
                 (theme ^. bgColor)

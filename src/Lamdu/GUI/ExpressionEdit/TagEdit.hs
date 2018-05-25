@@ -259,7 +259,6 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                 <&> fmap (mempty <$)
         term <-
             SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
-            <&> Align.tValue . Lens.mapped %~ pure
             <&> Align.tValue %~ Widget.weakerEvents newTagEventMap
             <&> Align.tValue . Widget.wState . Widget._StateFocused .
                 Lens.mapped . Widget.fPreEvents %~
