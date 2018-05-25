@@ -257,7 +257,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                 Widget.wState . Widget._StateFocused . Lens.mapped .
                 Widget.fPreEvents %~ (Widget.PreEvents newTagPreEvents <>)
         term <-
-            SearchMenu.basicSearchTermEdit holeId allowedSearchTerm
+            SearchMenu.basicSearchTermEdit holeId (pure . allowedSearchTerm)
             <&> SearchMenu.termWidget . Align.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (theme . Theme.tooltip)
@@ -292,13 +292,10 @@ makeTagHoleEdit ::
     Widget.Id ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeTagHoleEdit tagSelection mkPickResult holeId =
-    do
-        searchTermEventMap <- SearchMenu.searchTermEditEventMap holeId allowedSearchTerm
-        SearchMenu.make
-            (const (makeHoleSearchTerm tagSelection mkPickResult holeId))
-            (makeOptions tagSelection mkPickResult) Element.empty holeId
-            ?? Menu.AnyPlace
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
+    SearchMenu.make
+    (const (makeHoleSearchTerm tagSelection mkPickResult holeId))
+    (makeOptions tagSelection mkPickResult) Element.empty holeId
+    ?? Menu.AnyPlace
 
 makeTagView ::
     ( MonadReader env m, TextView.HasStyle env

@@ -3,12 +3,10 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
     ( make
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -102,11 +100,6 @@ make ::
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
-    do
-        searchTermEventMap <-
-            SearchMenu.searchTermEditEventMap myId allowSearchTerm
-            -- TODO: DRY with other uses of search menu
-        SearchMenu.make (SearchMenu.searchTermEdit myId allowSearchTerm)
-            (makeOptions readGlobals) Element.empty myId ?? Menu.Below
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
-            >>= StatusBar.makeStatusWidget "Goto"
+    SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
+    (makeOptions readGlobals) Element.empty myId ?? Menu.Below
+    >>= StatusBar.makeStatusWidget "Goto"

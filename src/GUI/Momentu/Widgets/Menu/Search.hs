@@ -8,11 +8,14 @@ module GUI.Momentu.Widgets.Menu.Search
     , basicSearchTermEdit, addPickFirstResultEvent, addSearchTermBgColor
     , searchTermEdit
 
-    , searchTermEditEventMap
     , TermStyle(..), activeBGColor, inactiveBGColor
     , HasTermStyle(..)
     , enterWithSearchTerm
-    , Term(..), termWidget
+    , Term(..), termWidget, termEditEventMap
+
+    , TermCtx(..), tcTextEdit, tcAdHoc
+    , AllowedSearchTerm
+
     , make
 
     -- temporary exports that will be removed when transition of HoleEdit
@@ -66,10 +69,24 @@ Lens.makeLenses ''TermStyle
 class HasTermStyle env where termStyle :: Lens' env TermStyle
 instance HasTermStyle TermStyle where termStyle = id
 
-newtype Term f = Term
+data Term f = Term
     { _termWidget :: WithTextPos (Widget (f State.Update))
+    , _termEditEventMap :: EventMap (f State.Update)
     }
 Lens.makeLenses ''Term
+
+data TermCtx a = TermCtx
+    { _tcTextEdit :: a
+    , _tcAdHoc :: a
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''TermCtx
+
+instance Applicative TermCtx where
+    pure = join TermCtx
+    TermCtx f0 f1 <*> TermCtx x0 x1 = TermCtx (f0 x0) (f1 x1)
+
+-- | Whether search term is allowed in each search term context:
+type AllowedSearchTerm = Text -> TermCtx Bool
 
 emptyPickEventMap ::
     (MonadReader env m, Menu.HasConfig env, Applicative f) =>
@@ -102,7 +119,7 @@ readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     (MonadReader env m, TextEdit.HasStyle env, HasState env, Applicative f) =>
-    Id -> (Text -> Bool) -> m (Term f)
+    Id -> AllowedSearchTerm -> m (Term f)
 basicSearchTermEdit myId allowedSearchTerm =
     do
         searchTerm <- readSearchTerm myId
@@ -119,11 +136,16 @@ basicSearchTermEdit myId allowedSearchTerm =
                             (Just (resultsIdPrefix myId) ^. Lens._Unwrapped)
                         else id
                     )
-        TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermEditId myId
+        widget <-
+            TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermEditId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
-                E.filter (allowedSearchTerm . fst)
+                E.filter (_tcTextEdit . allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
-            <&> Term
+        pure Term
+            { _termWidget = widget
+            , _termEditEventMap =
+                searchTermEditEventMap myId (_tcAdHoc . allowedSearchTerm) searchTerm
+            }
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
@@ -144,7 +166,7 @@ searchTermEdit ::
     ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
     , Applicative f
     ) =>
-    Widget.Id -> (Text -> Bool) -> Menu.PickFirstResult f -> m (Term f)
+    Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
     (addPickFirstResultEvent myId mPickFirst <&> onTermWidget) <*>
     ( (addSearchTermBgColor myId <&> onTermWidget)
@@ -230,17 +252,19 @@ make makeSearchTerm makeOptions annotation myId =
         makeSearchTerm mPickFirst
             <&> \term placement ->
                 term ^. termWidget <&> makeMenu placement
+                <&> Widget.weakerEventsWithoutPreevents (term ^. termEditEventMap)
     & Reader.local (Element.animIdPrefix .~ toAnimId myId)
     & assignCursor myId (options ^.. traverse . Menu.oId)
 
 searchTermEditEventMap ::
-    (MonadReader env m, HasState env, Applicative f) =>
-    Id -> (Text -> Bool) -> m (EventMap (f State.Update))
-searchTermEditEventMap myId allowedTerms =
-    readSearchTerm myId
-    <&>
-    \searchTerm ->
-    let appendCharEventMap =
+    Applicative f =>
+    Id -> (Text -> Bool) -> Text -> EventMap (f State.Update)
+searchTermEditEventMap myId allowedTerms searchTerm =
+    appendCharEventMap <> deleteCharEventMap
+    <&> State.updateWidgetState myId
+    <&> pure
+    where
+        appendCharEventMap =
             Text.snoc searchTerm
             & E.allChars "Character" (doc "Append character")
             -- We only filter when appending last char, not when
@@ -254,9 +278,4 @@ searchTermEditEventMap myId allowedTerms =
                 Text.init searchTerm
                 & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
                     (doc "Delete backwards")
-    in
-    appendCharEventMap <> deleteCharEventMap
-    <&> State.updateWidgetState myId
-    <&> pure
-    where
         doc subtitle = E.Doc ["Edit", "Search Term", subtitle]

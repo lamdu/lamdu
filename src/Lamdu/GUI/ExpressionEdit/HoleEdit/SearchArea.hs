@@ -152,17 +152,11 @@ make mkOptions mOptionLiteral pl allowedTerms =
                 FocusDelegator.make ?? fdConfig (config ^. Config.completion)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
                 <&> (Align.tValue %~)
+        term <- SearchMenu.searchTermEdit searchMenuId allowedTermsCtx Menu.NoPickFirstResult
         closedSearchTermGui <-
-            maybeAddAnnotationPl pl
-            <*>
-            ( fdWrap
-                <*> ( SearchMenu.searchTermEdit searchMenuId allowedTerms Menu.NoPickFirstResult
-                        <&> (^. SearchMenu.termWidget)
-                    )
-                <&> Responsive.fromWithTextPos
-            )
+            maybeAddAnnotationPl pl <*>
+            (fdWrap ?? term ^. SearchMenu.termWidget <&> Responsive.fromWithTextPos)
         isActive <- HoleWidgetIds.isActive widgetIds
-        searchTermEventMap <- SearchMenu.searchTermEditEventMap searchMenuId adhocAllowedTerms
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 (Hover.anchor open `Hover.emplaceAt`) . Hover.anchor
@@ -181,29 +175,32 @@ make mkOptions mOptionLiteral pl allowedTerms =
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> SearchMenu.make (SearchMenu.searchTermEdit searchMenuId allowedTerms)
+                        <*> SearchMenu.make (SearchMenu.searchTermEdit searchMenuId allowedTermsCtx)
                             (filteredOptions options) annotation searchMenuId
-                        <&> Lens.mapped . Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> searchTermEventMap)
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
                 (if isActive then Widget.setFocused else id)
                 closedSearchTermGui
                 & Widget.weakerEvents
                   (-- Editing search term of a closed hole opens it:
-                      searchTermEventMap <&> Lens.mapped . GuiState.uCursor %~
+                      term ^. SearchMenu.termEditEventMap
+                      <&> Lens.mapped . GuiState.uCursor %~
                       mappend (Monoid.Last (Just searchMenuId))
                   )
                 & const & pure
     where
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         searchMenuId = hidOpen widgetIds
-        adhocAllowedTerms txt
-            | Text.length txt == 1 && Text.all (`elem` Chars.operator) txt =
+        allowedTermsCtx txt =
+            SearchMenu.TermCtx
+            { SearchMenu._tcTextEdit = allowedTerms txt
+            , SearchMenu._tcAdHoc =
                 -- Don't add first operator char,
                 -- we let ExprressionEdit.EventMap do that
                 -- because it knows how to work with precedence and prefix chars
-                False
-            | otherwise = allowedTerms txt
+                (Text.length txt /= 1 || Text.any (`notElem` Chars.operator) txt)
+                && allowedTerms txt
+            }
         filteredOptions opts ctx =
             ResultGroups.makeAll opts mOptionLiteral ctx
             <&> Lens.mapped %~ makeResultOption pl ctx
