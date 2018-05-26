@@ -176,6 +176,7 @@ instance NFData a => NFData (Sugar.CaseKind (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CompositeTail (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.Fragment n (T i) (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.IfThen (T o) a) where rnf = genericRnf
+instance NFData a => NFData (Sugar.InjectVal a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResStream a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf

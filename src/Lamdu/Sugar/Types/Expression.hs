@@ -25,6 +25,7 @@ module Lamdu.Sugar.Types.Expression
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
+    , InjectVal(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iMVal
     , SpecialArgs(..)
     , AnnotatedArg(..), aaTag, aaExpr
@@ -139,9 +140,14 @@ data GetField name i o expr = GetField
     , _gfTag :: Tag name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
+data InjectVal expr
+    = InjectNullary
+    | InjectVal expr
+    deriving (Functor, Foldable, Traversable, Generic)
+
 data Inject name i o expr = Inject
     { _iTag :: Tag name i o
-    , _iMVal :: Maybe expr
+    , _iMVal :: InjectVal expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data AnnotatedArg name expr = AnnotatedArg
@@ -264,4 +270,5 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''Else
+Lens.makePrisms ''InjectVal
 Lens.makePrisms ''Literal

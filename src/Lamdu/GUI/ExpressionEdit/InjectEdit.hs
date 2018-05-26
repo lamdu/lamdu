@@ -93,4 +93,7 @@ make ::
     Sugar.Inject (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
-make (Sugar.Inject tag mVal) = maybe makeNullaryInject makeInject mVal tag
+make (Sugar.Inject tag mVal) =
+    case mVal of
+    Sugar.InjectNullary -> makeNullaryInject tag
+    Sugar.InjectVal val -> makeInject val tag

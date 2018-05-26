@@ -30,23 +30,22 @@ convert (V.Inject tag injected) exprPl =
                     V.BLeaf V.LRecEmpty & ExprIRef.newValBody
                         <&> V.Inject tag <&> V.BInject
                         >>= ExprIRef.writeValBody valI
-                    typeProtect
-                <&> EntityId.ofValI
+                    typeProtect <&> EntityId.ofValI
         mInjectedS <-
             if Lens.has ExprLens.valRecEmpty injected
             then
-                pure Nothing
+                pure InjectNullary
             else
                 ConvertM.convertSubexpression injected
                 <&> rBody . _BodyHole . holeMDelete ?~ toNullary
-                <&> Just
+                <&> InjectVal
         let setTag newTag =
                 do
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
                     void typeProtect
         convertTag tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
             <&> (`Inject` mInjectedS) <&> BodyInject
-    >>= addActions [injected] exprPl
+            >>= addActions [injected] exprPl
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . Property.pVal

@@ -147,14 +147,14 @@ getSearchStringRemainder ctx holeResultConverted
 injectMVal ::
     Lens.Traversal'
     (Sugar.Expression name i o a)
-    (Maybe (Sugar.Expression name i o a))
+    (Sugar.InjectVal (Sugar.Expression name i o a))
 injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
 
 verifyInjectSuffix :: Text -> Sugar.Expression name i o a -> Bool
 verifyInjectSuffix searchTerm val =
     case suffix of
-    Just ':' | Lens.has (injectMVal . Lens._Nothing) val -> False
-    Just '.' | Lens.has (injectMVal . Lens._Just) val -> False
+    Just ':' | Lens.has (injectMVal . Sugar._InjectNullary) val -> False
+    Just '.' | Lens.has (injectMVal . Sugar._InjectVal) val -> False
     _ -> True
     where
         suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
