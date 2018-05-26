@@ -32,7 +32,6 @@ import qualified Data.Text as Text
 import           GUI.Momentu (Widget, WithTextPos, View)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -150,15 +149,15 @@ basicSearchTermEdit myId allowedSearchTerm =
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
 addSearchTermBgColor ::
-    ( MonadReader env m, Element a, State.HasCursor env, HasTermStyle env
-    ) => Id -> m (a -> a)
+    ( MonadReader env m, State.HasCursor env, HasTermStyle env, Functor f
+    ) => Id -> m (Term f -> Term f)
 addSearchTermBgColor myId =
     do
         isActive <- State.isSubCursor ?? myId
         bgColor <-
             Lens.view termStyle
             <&> if isActive then _activeBGColor else _inactiveBGColor
-        pure (Draw.backgroundColor bgAnimId bgColor)
+        termWidget %~ Draw.backgroundColor bgAnimId bgColor & pure
     where
         bgAnimId = Widget.toAnimId myId <> ["hover background"]
 
@@ -168,19 +167,15 @@ searchTermEdit ::
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
-    (addPickFirstResultEvent myId mPickFirst <&> onTermWidget) <*>
-    ( (addSearchTermBgColor myId <&> onTermWidget)
-        <*> basicSearchTermEdit myId allowedSearchTerm
-    )
-    where
-        onTermWidget = (termWidget . Align.tValue %~)
+    addPickFirstResultEvent myId mPickFirst <*>
+    (addSearchTermBgColor myId <*> basicSearchTermEdit myId allowedSearchTerm)
 
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
     (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
     Id -> Menu.PickFirstResult f->
-    m (Widget (f State.Update) -> Widget (f State.Update))
+    m (Term f -> Term f)
 addPickFirstResultEvent myId mPickFirst =
     do
         pickEventMap <-
@@ -188,9 +183,10 @@ addPickFirstResultEvent myId mPickFirst =
             Menu.NoPickFirstResult -> emptyPickEventMap
             Menu.PickFirstResult pickFirst -> Menu.makePickEventMap ?? pickFirst
         searchTerm <- readSearchTerm myId
-        if Text.null searchTerm
-            then pure (Widget.weakerEvents pickEventMap)
-            else pure (addPre . Widget.weakerEvents pickEventMap)
+        pure $ termWidget . Align.tValue %~
+            if Text.null searchTerm
+            then Widget.weakerEvents pickEventMap
+            else addPre . Widget.weakerEvents pickEventMap
     where
         addPre =
             Widget.wState . Widget._StateFocused . Lens.mapped .
