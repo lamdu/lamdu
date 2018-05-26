@@ -58,16 +58,6 @@ addInfixMarker widgetId =
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
-guiPayload :: NearestHoles -> ExprGui.Payload
-guiPayload nearestHoles = ExprGui.Payload
-    { ExprGui._plHiddenEntityIds = []
-    , ExprGui._plNearestHoles = nearestHoles
-    , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
-    , ExprGui._plNeedParens = False
-    , ExprGui._plMinOpPrec = 13 -- TODO: Export Parens.applyPrec?
-    }
-
-
 makeFunc ::
     (Monad i, Monad o) =>
     NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o () ->
@@ -80,7 +70,7 @@ makeFunc nearestHoles func =
     where
         pl =
             func ^. Sugar.afPayload
-            & Sugar.plData .~ guiPayload nearestHoles
+            & Sugar.plData .~ ExprGui.adhocPayload nearestHoles
         myId = WidgetIds.fromExprPayload pl
 
 makeInfixFunc ::

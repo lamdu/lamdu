@@ -13,6 +13,7 @@ module Lamdu.GUI.ExpressionGui
       , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
     , ExpressionN
+    , adhocPayload
     ) where
 
 import qualified Control.Lens as Lens
@@ -84,3 +85,14 @@ nextHolesBefore val =
         else id
     where
         node = SugarLens.leftMostLeaf val
+
+-- | Used to create a sugar expr payload when the original sugar
+-- expression contains a fake unit () payload (in LabeledApply and InjectNullary)
+adhocPayload :: NearestHoles -> Payload
+adhocPayload nearestHoles = Payload
+    { _plHiddenEntityIds = []
+    , _plNearestHoles = nearestHoles
+    , _plShowAnnotation = neverShowAnnotations
+    , _plNeedParens = False
+    , _plMinOpPrec = 13 -- TODO: Export Parens.applyPrec?
+    }
