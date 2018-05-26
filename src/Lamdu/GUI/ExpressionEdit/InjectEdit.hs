@@ -102,7 +102,11 @@ makeNullaryInject nullary tag pl =
             dot <- injectIndicator "."
             TagEdit.makeVariantTag nearestHoles tag <&> (/|/ dot)
                 <&> Responsive.fromWithTextPos
+                <&> Widget.weakerEvents expandNullaryVal
     where
+        expandNullaryVal =
+            GuiState.updateCursor nullaryRecEntityId & pure & const
+            & E.charGroup Nothing (E.Doc ["Edit", "Inject", "Value"]) ":"
         nullaryRecEntityId =
             nullary ^. Sugar.nullaryPayload . Sugar.plEntityId
             & WidgetIds.fromEntityId
