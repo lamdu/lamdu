@@ -25,7 +25,12 @@ type T = Transaction
 test :: Test
 test =
     testGroup "sugar-tests"
-    [testChangeParam, testReorderLets, testExtract, testInline, delParam]
+    [ testChangeParam
+    , testReorderLets
+    , testExtract
+    , testInline
+    , delParam
+    ]
 
 convertWorkArea ::
     Cache.Functions ->
