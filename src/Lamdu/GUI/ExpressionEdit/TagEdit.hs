@@ -257,7 +257,8 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                 Widget.wState . Widget._StateFocused . Lens.mapped .
                 Widget.fPreEvents %~ (Widget.PreEvents newTagPreEvents <>)
         term <-
-            SearchMenu.basicSearchTermEdit holeId (pure . allowedSearchTerm)
+            SearchMenu.addDelSearchTerm holeId
+            <*> SearchMenu.basicSearchTermEdit holeId (pure . allowedSearchTerm)
             <&> SearchMenu.termWidget . Align.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (theme . Theme.tooltip)

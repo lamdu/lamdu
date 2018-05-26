@@ -5,7 +5,10 @@ module GUI.Momentu.Widgets.Menu.Search
     , resultsIdPrefix
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
 
-    , basicSearchTermEdit, addPickFirstResultEvent, addSearchTermBgColor
+    , basicSearchTermEdit
+    , addPickFirstResultEvent
+    , addSearchTermBgColor
+    , addDelSearchTerm
     , searchTermEdit
 
     , TermStyle(..), activeBGColor, inactiveBGColor
@@ -36,6 +39,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import           GUI.Momentu.State (HasState(..))
@@ -148,6 +152,26 @@ basicSearchTermEdit myId allowedSearchTerm =
     where
         textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
+searchTermDoc :: E.Subtitle -> E.Doc
+searchTermDoc subtitle = E.Doc ["Edit", "Search Term", subtitle]
+
+addDelSearchTerm ::
+    (MonadReader env m, State.HasState env, Applicative f) =>
+    Id -> m (Term f -> Term f)
+addDelSearchTerm myId =
+    readSearchTerm myId
+    <&>
+    \searchTerm term ->
+    let delSearchTerm
+            | Text.null searchTerm = mempty
+            | otherwise =
+                enterWithSearchTerm "" myId & pure
+                & E.keyPress (toModKey (MetaKey noMods MetaKey.Key'Escape))
+                (searchTermDoc "Delete")
+    in  term
+        & termWidget . Align.tValue %~ Widget.weakerEventsWithoutPreevents delSearchTerm
+        & termEditEventMap <>~ delSearchTerm
+
 addSearchTermBgColor ::
     ( MonadReader env m, State.HasCursor env, HasTermStyle env, Functor f
     ) => Id -> m (Term f -> Term f)
@@ -167,8 +191,10 @@ searchTermEdit ::
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
-    addPickFirstResultEvent myId mPickFirst <*>
-    (addSearchTermBgColor myId <*> basicSearchTermEdit myId allowedSearchTerm)
+    basicSearchTermEdit myId allowedSearchTerm
+    & (addDelSearchTerm myId <*>)
+    & (addSearchTermBgColor myId <*>)
+    & (addPickFirstResultEvent myId mPickFirst <*>)
 
 
 -- Add events on search term to pick the first result.
@@ -262,7 +288,7 @@ searchTermEditEventMap myId allowedTerms searchTerm =
     where
         appendCharEventMap =
             Text.snoc searchTerm
-            & E.allChars "Character" (doc "Append character")
+            & E.allChars "Character" (searchTermDoc "Append character")
             -- We only filter when appending last char, not when
             -- deleting last char, because after appending deletion
             -- necessarily preserves any invariant we enforce in
@@ -273,5 +299,4 @@ searchTermEditEventMap myId allowedTerms searchTerm =
             | otherwise =
                 Text.init searchTerm
                 & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
-                    (doc "Delete backwards")
-        doc subtitle = E.Doc ["Edit", "Search Term", subtitle]
+                    (searchTermDoc "Delete backwards")

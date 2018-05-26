@@ -7,12 +7,8 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -104,15 +100,6 @@ make ::
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
-    do
-        searchTerm <- SearchMenu.readSearchTerm myId
-        let cancelSearch
-                | Text.null searchTerm = mempty
-                | otherwise =
-                    SearchMenu.enterWithSearchTerm "" myId & pure
-                    & E.keyPress (toModKey (MetaKey noMods MetaKey.Key'Escape))
-                    (E.Doc ["Navigation", "Goto Definition", "Cancel"])
-        SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
-            (makeOptions readGlobals) Element.empty myId ?? Menu.Below
-            <&> Align.tValue %~ Widget.weakerEventsWithoutPreevents cancelSearch
-            >>= StatusBar.makeStatusWidget "Goto"
+    SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
+    (makeOptions readGlobals) Element.empty myId ?? Menu.Below
+    >>= StatusBar.makeStatusWidget "Goto"
