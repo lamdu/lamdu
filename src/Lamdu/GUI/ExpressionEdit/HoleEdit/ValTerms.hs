@@ -147,7 +147,7 @@ getSearchStringRemainder ctx holeResultConverted
 injectMVal ::
     Lens.Traversal'
     (Sugar.Expression name i o a)
-    (Sugar.InjectVal (Sugar.Expression name i o a))
+    (Sugar.InjectVal name i o (Sugar.Expression name i o a))
 injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
 
 verifyInjectSuffix :: Text -> Sugar.Expression name i o a -> Bool

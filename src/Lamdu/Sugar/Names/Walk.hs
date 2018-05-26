@@ -329,6 +329,29 @@ toCase ::
     m (Case (NewName m) (IM m) o b)
 toCase expr (Case k c) = Case <$> traverse expr k <*> toComposite expr c
 
+toNullary ::
+    MonadNaming m =>
+    NullaryVal (OldName m) (IM m) o a ->
+    m (NullaryVal (NewName m) (IM m) o a)
+toNullary (NullaryVal pl closed addItem) =
+    (NullaryVal <$> toPayload pl ?? closed) <*> toTagSelection addItem
+
+toInjectVal ::
+    MonadNaming m =>
+    (a -> m b) ->
+    InjectVal (OldName m) (IM m) o a ->
+    m (InjectVal (NewName m) (IM m) o b)
+toInjectVal expr (InjectVal v) = InjectVal <$> expr v
+toInjectVal _ (InjectNullary n) = InjectNullary <$> toNullary n
+
+toInject ::
+    MonadNaming m =>
+    (a -> m b) ->
+    Inject (OldName m) (IM m) o a ->
+    m (Inject (NewName m) (IM m) o b)
+toInject expr (Inject t v) =
+    Inject <$> toTagOf Tag t <*> toInjectVal expr v
+
 toElseIfContent ::
     MonadNaming m =>
     (a -> m b) ->
@@ -363,7 +386,7 @@ toBody ::
     m (Body (NewName m) (IM m) o b)
 toBody expr = \case
     BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
-    BodyInject       x -> x & traverse expr >>= iTag toTag <&> BodyInject
+    BodyInject       x -> x & toInject expr <&> BodyInject
     BodyRecord       x -> x & toComposite expr <&> BodyRecord
     BodyCase         x -> x & toCase expr <&> BodyCase
     BodyIfElse       x -> x & toIfElse expr <&> BodyIfElse

@@ -25,6 +25,7 @@ module Lamdu.Sugar.Types.Expression
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
+    , NullaryVal(..), nullaryPayload, nullaryClosedCompositeActions, nullaryAddItem
     , InjectVal(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iMVal
     , SpecialArgs(..)
@@ -140,14 +141,21 @@ data GetField name i o expr = GetField
     , _gfTag :: Tag name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data InjectVal expr
-    = InjectNullary
+-- | The empty record (for manipulations in GUI)
+data NullaryVal name i o a = NullaryVal
+    { _nullaryPayload :: Payload name i o a
+    , _nullaryClosedCompositeActions :: ClosedCompositeActions o
+    , _nullaryAddItem :: TagSelection name i o EntityId
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data InjectVal name i o expr
+    = InjectNullary (NullaryVal name i o ())
     | InjectVal expr
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Inject name i o expr = Inject
     { _iTag :: Tag name i o
-    , _iMVal :: InjectVal expr
+    , _iMVal :: InjectVal name i o expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data AnnotatedArg name expr = AnnotatedArg
@@ -262,6 +270,7 @@ Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''LabeledApplyFunc
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Nominal
+Lens.makeLenses ''NullaryVal
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg

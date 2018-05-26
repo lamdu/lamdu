@@ -2,13 +2,11 @@ module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -25,27 +23,32 @@ convert (V.Inject tag injected) exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let typeProtect = protectedSetToVal (exprPl ^. Input.stored) valI
+        injectedS <- ConvertM.convertSubexpression injected
         let toNullary =
                 do
                     V.BLeaf V.LRecEmpty & ExprIRef.newValBody
                         <&> V.Inject tag <&> V.BInject
                         >>= ExprIRef.writeValBody valI
                     typeProtect <&> EntityId.ofValI
-        mInjectedS <-
-            if Lens.has ExprLens.valRecEmpty injected
-            then
-                pure InjectNullary
-            else
-                ConvertM.convertSubexpression injected
-                <&> rBody . _BodyHole . holeMDelete ?~ toNullary
-                <&> InjectVal
+        let val =
+                case injectedS of
+                Expression
+                    (BodyRecord
+                     (Composite []
+                      (ClosedComposite closedCompositeActions) addItem)) pl ->
+                    NullaryVal (void pl) closedCompositeActions addItem
+                    & InjectNullary
+                _ ->
+                    injectedS
+                    & rBody . _BodyHole . holeMDelete ?~ toNullary
+                    & InjectVal
         let setTag newTag =
                 do
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
                     void typeProtect
         convertTag tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
-            <&> (`Inject` mInjectedS) <&> BodyInject
-            >>= addActions [injected] exprPl
+            <&> (`Inject` val) <&> BodyInject
+            >>= addActions [] exprPl
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . Property.pVal
