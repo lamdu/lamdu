@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns #-}
 module GUI.Momentu.Widgets.TextEdit
-    ( Style(..), sCursorColor, sCursorWidth, sTextViewStyle
+    ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColor, sTextViewStyle
     , HasStyle(..)
     , EmptyStrings(..), emptyFocusedString, emptyUnfocusedString
     , make
@@ -43,6 +43,7 @@ type Cursor = Int
 data Style = Style
     { _sCursorColor :: Draw.Color
     , _sCursorWidth :: Widget.R
+    , _sEmptyStringsColor :: Draw.Color
     , _sTextViewStyle :: TextView.Style
     }
 Lens.makeLenses ''Style
@@ -66,9 +67,12 @@ defaultStyle :: TextView.Style -> Style
 defaultStyle tvStyle =
     Style
     { _sCursorColor = Draw.Color 0 1 0 1
+    , _sEmptyStringsColor = Draw.Color r g b a
     , _sCursorWidth = 4
     , _sTextViewStyle = tvStyle
     }
+    where
+        Draw.Color r g b a = tvStyle ^. TextView.color
 
 tillEndOfWord :: Text -> Text
 tillEndOfWord xs = spaces <> nonSpaces
@@ -109,10 +113,10 @@ makeInternal s str emptyStr myId =
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter
         ?~ enterFromDirection (v ^. Element.size) s str myId
     where
-        displayStr
-            | Text.null str = emptyStr
-            | otherwise = Text.take 5000 str
-        v = TextView.make (s ^. sTextViewStyle) displayStr animId
+        (displayStr, setColor)
+            | Text.null str = (emptyStr, TextView.color .~ s ^. sEmptyStringsColor)
+            | otherwise = (Text.take 5000 str, id)
+        v = TextView.make (setColor (s ^. sTextViewStyle)) displayStr animId
             & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
