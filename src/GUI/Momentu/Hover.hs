@@ -162,13 +162,15 @@ hoverBesideOptions h src =
         hoverBesideOptionsAxis o (Ordered h h) src
 
 addFrame ::
-    (MonadReader env m, HasStyle env, Element a, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, HasStyle env, SizedElement a, Element.HasAnimIdPrefix env) =>
     m (a -> a)
 addFrame =
     do
         s <- Lens.view style
         animId <- Lens.view Element.animIdPrefix
         pure $ \gui ->
+            if gui ^. Element.size == 0 then gui
+            else
             gui
             & Element.pad (s ^. bgPadding)
             & Draw.backgroundColor (animId <> ["hover bg"]) (s ^. bgColor)
@@ -176,7 +178,7 @@ addFrame =
             & Draw.backgroundColor (animId <> ["hover frame"]) (s ^. frameColor)
 
 hover ::
-    (MonadReader env m, Element a, HasStyle env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, SizedElement a, HasStyle env, Element.HasAnimIdPrefix env) =>
     m (a -> Hover a)
 hover = addFrame <&> ((Hover . Element.hoverLayers) .)
 
