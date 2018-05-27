@@ -76,10 +76,6 @@ tillEndOfWord xs = spaces <> nonSpaces
         spaces = Text.takeWhile isSpace xs
         nonSpaces = Text.dropWhile isSpace xs & Text.takeWhile (not . isSpace)
 
-makeDisplayStr :: Text -> Text -> Text
-makeDisplayStr empty ""  = empty
-makeDisplayStr _     str = Text.take 5000 str
-
 encodeCursor :: Widget.Id -> Cursor -> Widget.Id
 encodeCursor myId = Widget.joinId myId . (:[]) . Binary.encodeS
 
@@ -107,21 +103,22 @@ cursorRects s str =
 makeInternal ::
     Style -> Text -> Text -> Widget.Id ->
     WithTextPos (Widget (Text, State.Update))
-makeInternal s str displayStr myId =
+makeInternal s str emptyStr myId =
     v
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter
         ?~ enterFromDirection (v ^. Element.size) s str myId
     where
+        displayStr
+            | Text.null str = emptyStr
+            | otherwise = Text.take 5000 str
         v = TextView.make (s ^. sTextViewStyle) displayStr animId
             & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, State.Update))
 makeUnfocused empty s str =
-    makeInternal s str displayStr
-    where
-        displayStr = makeDisplayStr (empty ^. emptyUnfocusedString) str
+    makeInternal s str (empty ^. emptyUnfocusedString)
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -165,11 +162,10 @@ makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
     WithTextPos (Widget (Text, State.Update))
 makeFocused cursor empty s str myId =
-    makeInternal s str displayStr myId
+    makeInternal s str (empty ^. emptyFocusedString) myId
     & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
-        displayStr = makeDisplayStr (empty ^. emptyFocusedString) str
         cursorRect@(Rect origin size) = mkCursorRect s cursor str
         cursorFrame =
             Anim.unitSquare ["text-cursor"]
