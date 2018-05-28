@@ -194,7 +194,7 @@ makeOptions tagSelection mkPickResult ctx
                     results ^? Lens.ix 0 . Lens._1 . Fuzzy.isFuzzy
                     & maybe False not
             let maybeAddNewTagOption
-                    | nonFuzzyResults = id
+                    | nonFuzzyResults || not (allowedTagName searchTerm) = id
                     | otherwise = maybe id (:) (addNewTag tagSelection mkPickResult ctx)
             results <&> snd
                 & splitAt resultCount
@@ -231,6 +231,10 @@ makeOptions tagSelection mkPickResult ctx
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Name.isValidText
 
+-- Allowed name for tag assuming it is already a valid search term
+allowedTagName :: Text -> Bool
+allowedTagName = Lens.anyOf (Lens.ix 0) Char.isAlpha
+
 type HasSearchTermEnv env =
     ( HasTheme env, HasConfig env, GuiState.HasState env
     , TextEdit.HasStyle env, Hover.HasStyle env
@@ -245,10 +249,11 @@ makeHoleSearchTerm ::
 makeHoleSearchTerm tagSelection mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
+        let allowNewTag = allowedTagName searchTerm
         newTagEventMap <-
-            if Text.null searchTerm
-            then pure mempty
-            else makeNewTag searchTerm tagSelection mkPickResult & makePickEventMap
+            if allowNewTag
+            then makeNewTag searchTerm tagSelection mkPickResult & makePickEventMap
+            else pure mempty
         let newTagPreEvents =
                 makeNewTagPreEvent searchTerm tagSelection mkPickResult
                 ^.. Lens._Just
@@ -262,7 +267,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
             <&> SearchMenu.termWidget . Align.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (theme . Theme.tooltip)
-        if  not (Text.null searchTerm) &&
+        if  allowNewTag &&
             Widget.isFocused (term ^. SearchMenu.termWidget . Align.tValue)
             then
                 do
