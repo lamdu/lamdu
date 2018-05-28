@@ -152,7 +152,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                 FocusDelegator.make ?? fdConfig (config ^. Config.completion)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
                 <&> (Align.tValue %~)
-        term <- SearchMenu.searchTermEdit searchMenuId allowedTermsCtx Menu.NoPickFirstResult
+        term <- makeTerm Menu.NoPickFirstResult
         closedSearchTermGui <-
             maybeAddAnnotationPl pl <*>
             (fdWrap ?? term ^. SearchMenu.termWidget <&> Responsive.fromWithTextPos)
@@ -175,7 +175,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                     -- it is harder to implement, so just wrap it
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
-                        <*> SearchMenu.make (SearchMenu.searchTermEdit searchMenuId allowedTermsCtx)
+                        <*> SearchMenu.make makeTerm
                             (filteredOptions options) annotation searchMenuId
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
@@ -189,6 +189,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                   )
                 & const & pure
     where
+        makeTerm = SearchMenu.searchTermEdit searchMenuId allowedTermsCtx
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         searchMenuId = hidOpen widgetIds
         allowedTermsCtx txt =
