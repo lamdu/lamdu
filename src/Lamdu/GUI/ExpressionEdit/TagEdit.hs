@@ -378,8 +378,15 @@ makeTagEditWith onView onPickNext nearestHoles tag =
             Nothing
                 | isHole ->
                     makeTagHoleEdit (tag ^. Sugar.tagSelection) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+                    <&> Align.tValue %~ Widget.weakerEvents leaveEventMap
                     <&> (,) TagHole
                 | otherwise -> pure (SimpleView, nameView)
+                where
+                    leaveEventMap =
+                        E.keysEventMapMovesCursor
+                        (config ^. Config.completion . Config.completionCloseKeys)
+                        (E.Doc ["Navigation", "Close  hole"])
+                        (pure myId)
         pure (tagEditType, widget <&> Widget.weakerEvents jumpHolesEventMap)
     & GuiState.assignCursor myId viewId
     where
