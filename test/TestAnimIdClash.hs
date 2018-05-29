@@ -1,28 +1,53 @@
 module TestAnimIdClash (test) where
 
+import           Control.Monad.Unit (Unit(..))
+import           Data.Functor.Identity (Identity(..))
 import           Data.List (group, sort)
+import           Data.Property (MkProperty(..), Property(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (GUIState(..), HasCursor(..))
 import qualified GUI.Momentu.View as View
+import qualified GUI.Momentu.Widget as Widget
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.TypeView as TypeView
+import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import           Lamdu.GUI.ExpressionGui (adhocPayload)
+import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Name as Name
+import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+import           Test.Lamdu.Instances ()
 import qualified Test.Lamdu.GuiEnv as GuiEnv
+import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
 
 test :: Test
 test =
+    testGroup "animid-clash"
+    [ testTypeView
+    , testFragment
+    ]
+
+verifyLayers :: Element.Layers -> IO ()
+verifyLayers view =
+    case clashingIds of
+    [] -> pure ()
+    _ -> assertString ("Clashing anim ids: " <> show clashingIds)
+    where
+        animIds = view ^.. Element.layers . traverse . Anim.frameImages . traverse . Anim.iAnimId
+        clashingIds = sort animIds & group >>= tail
+
+testTypeView :: Test
+testTypeView =
     do
         env <- GuiEnv.make
-        let animIds =
-                TypeView.make typ env
-                ^.. Align.tValue . View.animFrames . Anim.frameImages . traverse . Anim.iAnimId
-        let clashingIds = sort animIds & group >>= tail
-        case clashingIds of
-            [] -> pure ()
-            _ -> assertString ("Clashing anim ids: " <> show clashingIds)
-    & testCase "typeview-animid-clash"
+        TypeView.make typ env ^. Align.tValue . View.vAnimLayers & verifyLayers
+    & testCase "typeview"
     where
         typ =
             recType "typ"
@@ -38,3 +63,54 @@ test =
             }
             & Sugar.TRecord
             & Sugar.Type entityId
+
+prop :: a -> MkProperty Identity Unit a
+prop x = Property x (const Unit) & Identity & MkProperty
+
+guiAnchors :: Anchors.GuiAnchors Identity Unit
+guiAnchors =
+    Anchors.Gui
+    { Anchors.preJumps = prop []
+    , Anchors.preGuiState = prop dummyState
+    , Anchors.postGuiState = prop dummyState
+    }
+    where
+        dummyState =
+            GUIState
+            { _sCursor = "dummy"
+            , _sWidgetStates = mempty
+            }
+
+testFragment :: Test
+testFragment =
+    do
+        env <-
+            GuiEnv.make
+            <&> cursor .~ WidgetIds.fromEntityId fragEntityId
+        let gui =
+                ExpressionEdit.make expr
+                & ExprGuiM.run ExpressionEdit.make guiAnchors env (const Unit)
+                & runIdentity
+        let widget =
+                (gui ^. Responsive.render)
+                Responsive.LayoutParams
+                { Responsive._layoutMode = Responsive.LayoutWide
+                , Responsive._layoutContext = Responsive.LayoutClear
+                } ^. Align.tValue
+        case widget ^. Widget.wState of
+            Widget.StateUnfocused{} -> fail "Expected focused widget"
+            Widget.StateFocused mk -> mk (Widget.Surrounding 0 0 0 0) ^. Widget.fLayers & verifyLayers
+        pure ()
+    & testCase "fragment"
+    where
+        expr =
+            adhocPayload NearestHoles.none <$
+            ( Sugar.BodyFragment Sugar.Fragment
+                { Sugar._fExpr = Stub.litNum 5
+                , Sugar._fAttach = Sugar.AttachTypeMismatch
+                , Sugar._fOptions = pure []
+                } & Stub.expr (Stub.numType Stub.~> Stub.numType)
+            )
+            & Sugar.rPayload . Sugar.plEntityId .~ fragEntityId
+            & Stub.addNamesToExpr
+        fragEntityId = "frag"

@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     , -- re-export for tests
-      InternalName(..), inTag, inContext
+      InternalName(..), inTag, inContext, runPasses
     ) where
 
 import qualified Control.Lens.Extended as Lens

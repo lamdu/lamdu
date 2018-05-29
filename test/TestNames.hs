@@ -8,9 +8,6 @@ import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.Functor.Identity (Identity(..))
-import           Data.Property (Property(..), MkProperty(..))
-import           Data.String (IsString(..))
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
@@ -53,7 +50,7 @@ assertNoCollisions name =
 testWorkArea ::
     (Name Unit -> IO b) -> Sugar.WorkArea InternalName Identity Unit a -> IO ()
 testWorkArea verifyName inputWorkArea =
-    addToWorkArea getNameProp inputWorkArea
+    addToWorkArea Stub.getNameProp inputWorkArea
     & runIdentity
     & getNames
     & traverse_ verifyName
@@ -64,11 +61,6 @@ getNames workArea =
     & runCollectNames
     & runWriter
     & snd
-
-getNameProp :: T.Tag -> MkProperty Identity Unit Text
-getNameProp tag =
-    Property (fromString (show tag)) (const Unit)
-    & Identity & MkProperty
 
 --- test inputs:
 

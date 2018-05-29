@@ -4,13 +4,16 @@ module Test.Lamdu.SugarStubs where
 
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
-import           Data.Functor.Identity (Identity)
-import           Data.Property (Property(Property))
+import           Data.Functor.Identity (Identity(..))
+import           Data.Property (Property(..), MkProperty(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Internal (nameWithoutContext)
 import           Lamdu.Sugar.Names.Add (InternalName(..))
+import qualified Lamdu.Sugar.Names.Add as AddNames
+import qualified Lamdu.Sugar.Names.Walk as NameWalk
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Test.Lamdu.Prelude
@@ -237,3 +240,15 @@ tagSelection =
     , Sugar._tsNewTag = const Unit
     , Sugar._tsAnon = Nothing
     }
+
+addNamesToExpr ::
+    Sugar.Expression InternalName Identity Unit a ->
+    Sugar.Expression (Name Unit) Identity Unit a
+addNamesToExpr x =
+    AddNames.runPasses getNameProp NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
+    & runIdentity
+
+getNameProp :: T.Tag -> MkProperty Identity Unit Text
+getNameProp tag =
+    Property (fromString (show tag)) (const Unit)
+    & Identity & MkProperty
