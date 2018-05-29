@@ -12,7 +12,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , addDelSearchTerm
     , searchTermEdit
 
-    , TermStyle(..), activeBGColor, inactiveBGColor, emptyStrings
+    , TermStyle(..), bgColors, emptyStrings
     , HasTermStyle(..)
     , enterWithSearchTerm
     , Term(..), termWidget, termEditEventMap
@@ -61,8 +61,7 @@ data ResultsContext = ResultsContext
 Lens.makeLenses ''ResultsContext
 
 data TermStyle = TermStyle
-    { _activeBGColor :: Draw.Color
-    , _inactiveBGColor :: Draw.Color
+    { _bgColors :: TextEdit.Modes Draw.Color
     , _emptyStrings :: TextEdit.EmptyStrings
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
@@ -182,8 +181,9 @@ addSearchTermBgColor myId =
     do
         isActive <- State.isSubCursor ?? myId
         bgColor <-
-            Lens.view termStyle
-            <&> if isActive then _activeBGColor else _inactiveBGColor
+            Lens.view
+            (termStyle . bgColors .
+                if isActive then TextEdit.focused else TextEdit.unfocused)
         termWidget %~ Draw.backgroundColor bgAnimId bgColor & pure
     where
         bgAnimId = Widget.toAnimId myId <> ["hover background"]

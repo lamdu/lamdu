@@ -71,8 +71,10 @@
         "submenuSymbolColorSelected"    : [0, 0, 0, 1.0]
     },
     "searchTerm": {
-        "inactiveBGColor"               : [0.7, 0.8, 1.0, 1.0],
-        "activeBGColor"                 : [0.8, 1.0, 0.7, 1.0]
+        "bgColors": {
+            "unfocused"               : [0.7, 0.8, 1.0, 1.0],
+            "focused"                 : [0.8, 1.0, 0.7, 1.0]
+        }
     },
     "hole": {
         "frameWidth": [3.0, 3.0],

@@ -38,8 +38,10 @@
         "submenuSymbolColorSelected": [1.0, 1.0, 1.0, 1.0]
     },
     "searchTerm": {
-        "inactiveBGColor": [0.5, 0.5, 1.0, 1.0],
-        "activeBGColor": [0.5, 1.0, 0.5, 1.0]
+        "bgColors": {
+            "unfocused": [0.5, 0.5, 1.0, 1.0],
+            "focused": [0.5, 1.0, 0.5, 1.0]
+        }
     },
     "hole": {
         "resultPadding": [0.0, 1.0],
