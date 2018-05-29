@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
+import qualified GUI.Momentu as Momentu
 import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -189,7 +190,17 @@ make mkOptions mOptionLiteral pl allowedTerms =
                   )
                 & const & pure
     where
-        makeTerm = SearchMenu.searchTermEdit searchMenuId allowedTermsCtx
+        makeTerm mPickFirst =
+            do
+                theme <- Lens.view (Theme.theme . Theme.hole)
+                let frameWidth = theme ^. Theme.holeFrameWidth
+                addFrame <-
+                    Momentu.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
+                    & Reader.local (Element.animIdPrefix .~ animId)
+                SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
+                    <&> SearchMenu.termWidget %~ addFrame . Momentu.pad (frameWidth & _2 .~ 0)
+        animId =
+            pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         searchMenuId = hidOpen widgetIds
         allowedTermsCtx txt =

@@ -51,7 +51,9 @@
         "activeBGColor": [0.5, 1.0, 0.5, 1.0]
     },
     "hole": {
-        "resultPadding": [0.0, 1.0]
+        "resultPadding": [0.0, 1.0],
+        "frameWidth": [0.0, 0.0],
+        "frameColor": [1.0, 1.0, 1.0, 1.0]
     },
     "name": {
         "collisionSuffixScaleFactor": [1.0, 1.0],
