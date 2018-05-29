@@ -92,6 +92,10 @@
         "emptyStrings": {
             "focused": "  ",
             "unfocused": "  "
+        },
+        "emptyStringsColors": {
+            "focused": [0.7, 0.7, 0.7, 1.0],
+            "unfocused": [1, 1, 1, 1]
         }
     },
     "hole": {

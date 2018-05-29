@@ -8,11 +8,12 @@ module GUI.Momentu.Widgets.Menu.Search
     , basicSearchTermEdit
     , defaultEmptyStrings
     , addPickFirstResultEvent
-    , addSearchTermBgColor
+    , addSearchTermBgColor, addSearchTermEmptyColors
+    , addSearchTermStyle
     , addDelSearchTerm
     , searchTermEdit
 
-    , TermStyle(..), bgColors, emptyStrings
+    , TermStyle(..), bgColors, emptyStrings, emptyStringsColors
     , HasTermStyle(..)
     , enterWithSearchTerm
     , Term(..), termWidget, termEditEventMap
@@ -63,6 +64,7 @@ Lens.makeLenses ''ResultsContext
 data TermStyle = TermStyle
     { _bgColors :: TextEdit.Modes Draw.Color
     , _emptyStrings :: TextEdit.EmptyStrings
+    , _emptyStringsColors :: TextEdit.Modes Draw.Color
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier = (^?! prefixed "_")
@@ -120,7 +122,7 @@ defaultEmptyStrings :: TextEdit.EmptyStrings
 defaultEmptyStrings = TextEdit.Modes "  " "  "
 
 -- | Basic search term edit:
---   * no bg color / no HasTermStyle needed --> use addSearchTermBgColor
+--   * no bg color / no HasTermStyle needed --> use addSearchTermStyle
 --     to add it
 --   * no pick of first result / no Menu.HasConfig needed --> use
 --     addPickFirstResultEvent to add it
@@ -188,6 +190,24 @@ addSearchTermBgColor myId =
     where
         bgAnimId = Widget.toAnimId myId <> ["hover background"]
 
+addSearchTermEmptyColors ::
+    ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env
+    ) =>
+    m a -> m a
+addSearchTermEmptyColors act =
+    do
+        colors <- Lens.view (termStyle . emptyStringsColors)
+        Reader.local (TextEdit.style . TextEdit.sEmptyStringsColors .~ colors) act
+
+addSearchTermStyle ::
+    ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env
+    , Functor f, State.HasCursor env
+    ) =>
+    Widget.Id -> m (Term f) -> m (Term f)
+addSearchTermStyle myId act =
+    addSearchTermBgColor myId <*> act
+    & addSearchTermEmptyColors
+
 searchTermEdit ::
     ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
     , Applicative f
@@ -197,7 +217,7 @@ searchTermEdit myId allowedSearchTerm mPickFirst =
     Lens.view (termStyle . emptyStrings)
     >>= basicSearchTermEdit myId allowedSearchTerm
     & (addDelSearchTerm myId <*>)
-    & (addSearchTermBgColor myId <*>)
+    & addSearchTermStyle myId
     & (addPickFirstResultEvent myId mPickFirst <*>)
 
 
