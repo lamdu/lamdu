@@ -86,46 +86,51 @@ addValFrame =
     <*> addValPadding
     & Reader.local (Element.animIdPrefix <>~ ["val"])
 
--- | Add a diagonal line (top-left to right-bottom). Useful as a
--- "deletion" GUI annotation
+-- | Add a diagonal line (top-left to right-bottom).
 addDiagonal ::
     (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
     m (Draw.Color -> Draw.R -> a -> a)
 addDiagonal =
     Element.subAnimId ["diagonal"] <&>
-    \animId color thickness -> Element.topLayer %@~
-    \sz ->
-    Draw.convexPoly
-    [ (0, thickness)
-    , (0, 0)
-    , (thickness, 0)
-    , (1, 1-thickness)
-    , (1, 1)
-    , (1-thickness, 1)
-    ]
-    & Draw.tint color
-    & void
-    & Anim.singletonFrame 1 (animId ++ ["diagonal"])
-    & Anim.scale sz
-    & flip mappend
+    \animId color thickness ->
+        let mkFrame sz =
+                Draw.convexPoly
+                [ (0, thickness)
+                , (0, 0)
+                , (thickness, 0)
+                , (1, 1-thickness)
+                , (1, 1)
+                , (1-thickness, 1)
+                ]
+                & Draw.tint color
+                & void
+                & Anim.singletonFrame 1 (animId ++ ["diagonal"])
+                & Anim.scale sz
+        in  Element.setLayers <. Element.layers %@~ snoc . mkFrame
+    where
+        snoc x xs = xs ++ [x]
 
-deleted ::
-    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
-    Widget.R -> m (a -> a)
-deleted width = addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor) ?? width
+deletedDiagonal ::
+    ( MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env
+    ) =>
+    Lens.Getting Widget.R Theme.Deleted Widget.R -> m (a -> a)
+deletedDiagonal widthLens =
+    do
+        width <- Lens.view (Theme.theme . Theme.deleted . widthLens)
+        addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor) ?? width
 
 deletedUse ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
     m (a -> a)
-deletedUse = deleted 0.1
+deletedUse = deletedDiagonal Theme.deletedUseDiagonalWidth
 
 deletedDef ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
     m (a -> a)
 deletedDef =
     (.)
-    <$> deleted 0.02
-    <*> (Lens.view (Theme.theme . Theme.disabledColor) <&> Element.tint)
+    <$> deletedDiagonal Theme.deletedDefDiagonalWidth
+    <*> (Lens.view (Theme.theme . Theme.deleted . Theme.deletedDefTint) <&> Element.tint)
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>

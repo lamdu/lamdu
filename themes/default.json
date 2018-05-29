@@ -25,6 +25,11 @@
         "bgColor": [0.175, 0.35, 0.3, 1.0],
         "hspaces": 5
     },
+    "deleted": {
+        "defTint": [0.5, 0.5, 0.5, 1.0],
+        "defDiagonalWidth": 0.04,
+        "useDiagonalWidth": 0.1
+    },
     "textColors": {
         "actionTextColor": [0.5, 1.0, 0.5, 1.0],
         "infoTextColor": [0.7, 0.7, 0.7, 1.0],

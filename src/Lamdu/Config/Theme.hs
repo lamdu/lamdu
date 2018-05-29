@@ -7,10 +7,11 @@ module Lamdu.Config.Theme
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
     , StatusBar(..), statusBarBGColor, statusBarHSpaces
+    , Deleted(..), deletedDefTint, deletedDefDiagonalWidth, deletedUseDiagonalWidth
     , Theme(..)
         , fonts, baseTextSize, animationTimePeriodSec
         , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
-        , textColors, topPadding, statusBar, maxEvalViewSize, versionControl
+        , textColors, topPadding, statusBar, deleted, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorBGColor
         , errorColor, successColor
         , typeIndicatorFrameWidth, letItemPadding, narrowUnderlineWidth
@@ -102,6 +103,20 @@ deriveJSON Aeson.defaultOptions
 
 Lens.makeLenses ''StatusBar
 
+data Deleted = Deleted
+    { _deletedDefTint :: Draw.Color
+    , _deletedDefDiagonalWidth :: Double
+    , _deletedUseDiagonalWidth :: Double
+    } deriving (Eq, Show)
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier
+        = (Lens.ix 0 %~ toLower)
+        . (^?! prefixed "_deleted")
+    }
+    ''Deleted
+
+Lens.makeLenses ''Deleted
+
 data Theme = Theme
     { _fonts :: Fonts FilePath
     , _baseTextSize :: FontSize
@@ -118,6 +133,7 @@ data Theme = Theme
     , _textColors :: TextColors
     , _topPadding :: Draw.R
     , _statusBar :: StatusBar
+    , _deleted :: Deleted
     , _maxEvalViewSize :: Int
     , _versionControl :: VersionControl.Theme
     , _valAnnotation :: ValAnnotation
