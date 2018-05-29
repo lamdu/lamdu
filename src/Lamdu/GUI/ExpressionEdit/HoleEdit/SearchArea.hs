@@ -196,7 +196,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                 let frameWidth = theme ^. Theme.holeFrameWidth
                 addFrame <-
                     Momentu.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
-                    & Reader.local (Element.animIdPrefix .~ animId)
+                    & Reader.local (Element.animIdPrefix .~ animId <> ["hole-frame"])
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
                     <&> SearchMenu.termWidget %~ addFrame . Momentu.pad (frameWidth & _2 .~ 0)
         animId =
