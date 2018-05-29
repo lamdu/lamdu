@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
 module GUI.Momentu.Widgets.TextEdit
-    ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColor, sTextViewStyle
+    ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
     , HasStyle(..)
     , Modes(..), focused, unfocused
     , EmptyStrings
@@ -41,26 +41,11 @@ import           Lamdu.Prelude
 
 type Cursor = Int
 
-data Style = Style
-    { _sCursorColor :: Draw.Color
-    , _sCursorWidth :: Widget.R
-    , _sEmptyStringsColor :: Draw.Color
-    , _sTextViewStyle :: TextView.Style
-    }
-Lens.makeLenses ''Style
-
-class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
-instance HasStyle Style where style = id
-
-instance TextView.HasStyle Style where style = sTextViewStyle
-
 data Modes a = Modes
     { _unfocused :: a
     , _focused :: a
     } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 Lens.makeLenses ''Modes
-
-type EmptyStrings = Modes Text
 
 instance Applicative Modes where
     pure x = Modes x x
@@ -70,11 +55,26 @@ deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier = (^?! prefixed "_")
     } ''Modes
 
+type EmptyStrings = Modes Text
+
+data Style = Style
+    { _sCursorColor :: Draw.Color
+    , _sCursorWidth :: Widget.R
+    , _sEmptyStringsColors :: Modes Draw.Color
+    , _sTextViewStyle :: TextView.Style
+    }
+Lens.makeLenses ''Style
+
+class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
+instance HasStyle Style where style = id
+
+instance TextView.HasStyle Style where style = sTextViewStyle
+
 defaultStyle :: TextView.Style -> Style
 defaultStyle tvStyle =
     Style
     { _sCursorColor = Draw.Color 0 1 0 1
-    , _sEmptyStringsColor = Draw.Color r g b a
+    , _sEmptyStringsColors = pure (Draw.Color r g b a)
     , _sCursorWidth = 4
     , _sTextViewStyle = tvStyle
     }
@@ -112,23 +112,25 @@ cursorRects s str =
         lineHeight = TextView.lineHeight s
 
 makeInternal ::
-    Style -> Text -> Text -> Widget.Id ->
-    WithTextPos (Widget (Text, State.Update))
-makeInternal s str emptyStr myId =
+    Style -> Text -> EmptyStrings ->
+    (forall a. Lens.Getting a (Modes a) a) ->
+    Widget.Id -> WithTextPos (Widget (Text, State.Update))
+makeInternal s str emptyStrings mode myId =
     v
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter
         ?~ enterFromDirection (v ^. Element.size) s str myId
     where
+        emptyColor = s ^. sEmptyStringsColors . mode
         (displayStr, setColor)
-            | Text.null str = (emptyStr, TextView.color .~ s ^. sEmptyStringsColor)
+            | Text.null str = (emptyStrings ^. mode, TextView.color .~ emptyColor)
             | otherwise = (Text.take 5000 str, id)
         v = TextView.make (setColor (s ^. sTextViewStyle)) displayStr animId
             & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, State.Update))
-makeUnfocused empty s str = makeInternal s str (empty ^. unfocused)
+makeUnfocused empty s str = makeInternal s str empty unfocused
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -172,7 +174,7 @@ makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
     WithTextPos (Widget (Text, State.Update))
 makeFocused cursor empty s str myId =
-    makeInternal s str (empty ^. focused) myId
+    makeInternal s str empty focused myId
     & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
