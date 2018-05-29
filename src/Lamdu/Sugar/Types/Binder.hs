@@ -158,7 +158,7 @@ data BinderBodyScope
     | BinderBodyScope ParamScopes
       -- ^ binder has params, use the map to get the param application
       -- scopes
-    deriving Generic
+    deriving (Generic, Eq)
 
 data Binder name i o expr = Binder
     { _bChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))

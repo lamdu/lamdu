@@ -26,12 +26,12 @@ data Collision
     = NoCollision
     | Collision CollisionSuffix
     | UnknownCollision -- we have a collision but unknown suffix (inside hole result)
-    deriving (Show, Generic)
+    deriving (Show, Generic, Eq)
 
 data TagText = TagText
     { _ttText :: Text
     , _ttCollision :: Collision
-    } deriving (Show, Generic)
+    } deriving (Show, Generic, Eq)
 
 data StoredName o = StoredName
     { _snProp :: Property o Text

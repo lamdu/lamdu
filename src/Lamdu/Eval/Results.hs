@@ -50,10 +50,11 @@ data Val pl = Val
     } deriving (Show, Functor, Foldable, Traversable)
 
 data ErrorType = LamduBug | BrokenDef | ReachedHole | RuntimeError
-    deriving (Read, Show, Generic)
+    deriving (Read, Show, Generic, Eq)
 Lens.makePrisms ''ErrorType
 
 data WhichGlobal = GlobalRepl | GlobalDef V.Var
+    deriving Eq
 Lens.makePrisms ''WhichGlobal
 
 encodeWhichGlobal :: WhichGlobal -> String
@@ -70,7 +71,7 @@ data EvalException srcId = EvalException
     { _errorType :: ErrorType
     , _errorDesc :: Text
     , _errorPosition :: Maybe (WhichGlobal, srcId)
-    }
+    } deriving Eq
 Lens.makeLenses ''EvalException
 
 instance Show srcId => Show (EvalException srcId) where
