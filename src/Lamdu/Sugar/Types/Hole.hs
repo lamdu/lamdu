@@ -50,6 +50,8 @@ type OptionLiteral i o resultExpr =
 
 data Hole i o resultExpr = Hole
     { _holeOptions :: i [HoleOption i o resultExpr]
+        -- outer "i" here is used to read index of globals
+        -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
     , _holeOptionLiteral :: OptionLiteral i o resultExpr
     , -- Changes the structure around the hole to remove the hole.
