@@ -112,10 +112,7 @@ addDiagonal =
 deleted ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
     Widget.R -> m (a -> a)
-deleted width =
-    (.)
-    <$> (addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor) ?? width)
-    <*> (Lens.view (Theme.theme . Theme.disabledColor) <&> Element.tint)
+deleted width = addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor) ?? width
 
 deletedUse ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
@@ -125,7 +122,10 @@ deletedUse = deleted 0.1
 deletedDef ::
     (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
     m (a -> a)
-deletedDef = deleted 0.02
+deletedDef =
+    (.)
+    <$> deleted 0.02
+    <*> (Lens.view (Theme.theme . Theme.disabledColor) <&> Element.tint)
 
 withColor ::
     (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
