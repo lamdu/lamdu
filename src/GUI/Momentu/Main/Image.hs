@@ -70,7 +70,7 @@ renderFPS font win fps =
     where
         white = Draw.Color 1 1 1 1
 
-glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO Next
+glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO ()
 glDraw win (Vector2 winSizeX winSizeY) image =
     do
         GL.viewport $=
@@ -81,7 +81,6 @@ glDraw win (Vector2 winSizeX winSizeY) image =
         GL.ortho 0 winSizeX winSizeY 0 (-1) 1
         Draw.clearRender image
         GLFW.swapBuffers win
-        pure NextPoll
 
 mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
@@ -110,7 +109,7 @@ mainLoop win imageHandlers =
                         Nothing -> pure mempty
                         Just font -> updateFPS fps >>= renderFPS font win
                     let draw img =
-                            glDraw win winSize (fpsImg <> img)
+                            NextPoll <$ glDraw win winSize (fpsImg <> img)
                     case eventResult of
                         ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw
