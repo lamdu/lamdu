@@ -10,6 +10,7 @@ module GUI.Momentu.Main.Animation
 
 import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
+import           Control.DeepSeq (force)
 import           Control.Exception (evaluate, onException)
 import qualified Control.Lens as Lens
 import           Control.Monad (mplus)
@@ -144,7 +145,7 @@ eventHandlerThread tvars animHandlers =
                 -- Force destFrame so that we don't get unknown computations
                 -- happening inside STM.atomically modifying the state var.
                 -- Without this we may get nested STM.atomically errors.
-                >>= evaluate
+                >>= evaluate . force
                 <&> Just
             else pure Nothing
         mappend ToAnim
