@@ -57,7 +57,11 @@ makeNamePartEditor color namePartStr setter myId =
         )
     & Reader.local (TextView.color .~ color)
     where
-        empty = TextEdit.EmptyStrings "unnamed builtin" ""
+        empty =
+            TextEdit.Modes
+            { TextEdit._unfocused = "unnamed builtin"
+            , TextEdit._focused = ""
+            }
 
 make ::
     ( MonadReader env f, HasTheme env, GuiState.HasCursor env

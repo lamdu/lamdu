@@ -96,7 +96,11 @@ makeBranchSelector rwtransaction rtransaction actions =
             ?? WidgetIds.branchSelection
             <&> WithTextPos 0 -- TODO: Should come from Choice
     where
-        empty = TextEdit.EmptyStrings "unnamed branch" ""
+        empty =
+            TextEdit.Modes
+            { TextEdit._unfocused = "unnamed branch"
+            , TextEdit._focused = ""
+            }
         makeBranchNameEdit branch =
             do
                 nameProp <-

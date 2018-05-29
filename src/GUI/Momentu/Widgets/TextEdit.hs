@@ -2,7 +2,8 @@
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColor, sTextViewStyle
     , HasStyle(..)
-    , EmptyStrings(..), emptyFocusedString, emptyUnfocusedString
+    , Modes(..), focused, unfocused
+    , EmptyStrings
     , make
     , defaultStyle
     , getCursor, encodeCursor
@@ -12,7 +13,7 @@ import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Binary.Extended as Binary
-import           Data.Char (isSpace, toLower)
+import           Data.Char (isSpace)
 import           Data.List.Extended (genericLength, minimumOn)
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
@@ -51,17 +52,23 @@ Lens.makeLenses ''Style
 class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
-data EmptyStrings = EmptyStrings
-    { _emptyUnfocusedString :: Text
-    , _emptyFocusedString :: Text
-    } deriving (Eq, Show)
-Lens.makeLenses ''EmptyStrings
+instance TextView.HasStyle Style where style = sTextViewStyle
+
+data Modes a = Modes
+    { _unfocused :: a
+    , _focused :: a
+    } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+Lens.makeLenses ''Modes
+
+type EmptyStrings = Modes Text
+
+instance Applicative Modes where
+    pure x = Modes x x
+    Modes f0 f1 <*> Modes x0 x1 = Modes (f0 x0) (f1 x1)
 
 deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_empty")
-    } ''EmptyStrings
-
-instance TextView.HasStyle Style where style = sTextViewStyle
+    { Aeson.fieldLabelModifier = (^?! prefixed "_")
+    } ''Modes
 
 defaultStyle :: TextView.Style -> Style
 defaultStyle tvStyle =
@@ -121,8 +128,7 @@ makeInternal s str emptyStr myId =
         animId = Widget.toAnimId myId
 
 makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, State.Update))
-makeUnfocused empty s str =
-    makeInternal s str (empty ^. emptyUnfocusedString)
+makeUnfocused empty s str = makeInternal s str (empty ^. unfocused)
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -166,7 +172,7 @@ makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
     WithTextPos (Widget (Text, State.Update))
 makeFocused cursor empty s str myId =
-    makeInternal s str (empty ^. emptyFocusedString) myId
+    makeInternal s str (empty ^. focused) myId
     & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where

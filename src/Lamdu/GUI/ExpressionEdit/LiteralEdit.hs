@@ -126,7 +126,7 @@ textEdit prop pl =
         withFd ?? myId ?? left /|/ text /|/ right
     & withStyle Style.text
     where
-        empty = TextEdit.EmptyStrings "" ""
+        empty = TextEdit.Modes "" ""
         myId = WidgetIds.fromExprPayload pl
 
 parseNum :: Text -> Maybe Double
@@ -205,7 +205,11 @@ numEdit prop pl =
         event (newText, update) =
             GuiState.updateWidgetState myId newText <> update <$
             maybe (pure ()) (prop ^. Property.pSet) (parseNum newText)
-        empty = TextEdit.EmptyStrings "0" ""
+        empty =
+            TextEdit.Modes
+            { TextEdit._unfocused = "0"
+            , TextEdit._focused = ""
+            }
         myId = WidgetIds.fromExprPayload pl
 
 make ::

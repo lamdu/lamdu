@@ -82,7 +82,10 @@ makeTagNameEdit nearestHoles (Name.StoredName prop tagText _tagCollision) myId =
                    (E.Doc ["Navigation", "Jump to next hole"]) .
                    pure . WidgetIds.fromEntityId)
         TextEdits.makeWordEdit
-            ?? TextEdit.EmptyStrings (tagText ^. Name.ttText) ""
+            ?? TextEdit.Modes
+                { TextEdit._unfocused = tagText ^. Name.ttText
+                , TextEdit._focused = ""
+                }
             ?? prop
             ?? tagRenameId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)

@@ -118,7 +118,7 @@ readSearchTerm :: (MonadReader env m, HasState env) => Id -> m Text
 readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 
 defaultEmptyStrings :: TextEdit.EmptyStrings
-defaultEmptyStrings = TextEdit.EmptyStrings "  " "  "
+defaultEmptyStrings = TextEdit.Modes "  " "  "
 
 -- | Basic search term edit:
 --   * no bg color / no HasTermStyle needed --> use addSearchTermBgColor
