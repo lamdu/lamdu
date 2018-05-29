@@ -65,6 +65,7 @@ Test-Suite Tests
                , Test.Lamdu.GuiEnv
                , Test.Lamdu.Instances
                , Test.Lamdu.Prelude
+               , Test.Lamdu.Sugar
                , Test.Lamdu.SugarStubs
                , Test.Lamdu.Theme
   build-depends:
