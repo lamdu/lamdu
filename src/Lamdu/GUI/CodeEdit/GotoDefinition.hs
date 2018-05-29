@@ -3,10 +3,12 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -16,6 +18,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
@@ -102,4 +105,13 @@ make ::
 make readGlobals =
     SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
     (makeOptions readGlobals) Element.empty myId ?? Menu.Below
-    >>= StatusBar.makeStatusWidget "Goto"
+    & Reader.local (Theme.theme . Theme.searchTerm %~ onTermStyle)
+    <&> \searchWidget -> StatusBar.StatusWidget
+    { StatusBar._widget = searchWidget
+    , StatusBar._globalEventMap = mempty
+    }
+    where
+        onTermStyle x =
+            x
+            & SearchMenu.emptyStrings . Lens.mapped .~ "Goto"
+            & SearchMenu.bgColors . Lens.mapped .~ Draw.Color 0 0 0 0
