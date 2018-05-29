@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (Theme(..))
@@ -51,6 +52,7 @@ type T = Transaction
 deriving instance Data Color
 deriving instance Data Hover.Style
 deriving instance Data Menu.Style
+deriving instance Data TextEdit.EmptyStrings
 deriving instance Data SearchMenu.TermStyle
 deriving instance Data ResponsiveExpr.Style
 deriving instance Data Theme

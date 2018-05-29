@@ -86,7 +86,11 @@
     },
     "searchTerm": {
         "inactiveBGColor": [0.25, 0.28, 0.5, 1.0],
-        "activeBGColor": [0.3, 0.5, 0.25, 1.0]
+        "activeBGColor": [0.3, 0.5, 0.25, 1.0],
+        "emptyStrings": {
+            "focusedString": "  ",
+            "unfocusedString": "  "
+        }
     },
     "hole": {
         "resultPadding": [1.0, 0.5],

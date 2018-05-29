@@ -6,12 +6,13 @@ module GUI.Momentu.Widgets.Menu.Search
     , ResultsContext(..), rSearchTerm, rResultIdPrefix
 
     , basicSearchTermEdit
+    , defaultEmptyStrings
     , addPickFirstResultEvent
     , addSearchTermBgColor
     , addDelSearchTerm
     , searchTermEdit
 
-    , TermStyle(..), activeBGColor, inactiveBGColor
+    , TermStyle(..), activeBGColor, inactiveBGColor, emptyStrings
     , HasTermStyle(..)
     , enterWithSearchTerm
     , Term(..), termWidget, termEditEventMap
@@ -62,6 +63,7 @@ Lens.makeLenses ''ResultsContext
 data TermStyle = TermStyle
     { _activeBGColor :: Draw.Color
     , _inactiveBGColor :: Draw.Color
+    , _emptyStrings :: TextEdit.EmptyStrings
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier = (^?! prefixed "_")
@@ -115,6 +117,9 @@ searchTermEditId = (`joinId` ["SearchTerm"])
 readSearchTerm :: (MonadReader env m, HasState env) => Id -> m Text
 readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 
+defaultEmptyStrings :: TextEdit.EmptyStrings
+defaultEmptyStrings = TextEdit.EmptyStrings "  " "  "
+
 -- | Basic search term edit:
 --   * no bg color / no HasTermStyle needed --> use addSearchTermBgColor
 --     to add it
@@ -122,8 +127,8 @@ readSearchTerm x = State.readWidgetState x <&> fromMaybe ""
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     (MonadReader env m, TextEdit.HasStyle env, HasState env, Applicative f) =>
-    Id -> AllowedSearchTerm -> m (Term f)
-basicSearchTermEdit myId allowedSearchTerm =
+    Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
+basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
     do
         searchTerm <- readSearchTerm myId
         let onEvents (newSearchTerm, eventRes)
@@ -140,7 +145,7 @@ basicSearchTermEdit myId allowedSearchTerm =
                         else id
                     )
         widget <-
-            TextEdit.make ?? textEditNoEmpty ?? searchTerm ?? searchTermEditId myId
+            TextEdit.make ?? textEditEmpty ?? searchTerm ?? searchTermEditId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (_tcTextEdit . allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
@@ -149,8 +154,6 @@ basicSearchTermEdit myId allowedSearchTerm =
             , _termEditEventMap =
                 searchTermEditEventMap myId (_tcAdHoc . allowedSearchTerm) searchTerm
             }
-    where
-        textEditNoEmpty = TextEdit.EmptyStrings "  " "  "
 
 searchTermDoc :: E.Subtitle -> E.Doc
 searchTermDoc subtitle = E.Doc ["Edit", "Search Term", subtitle]
@@ -191,7 +194,8 @@ searchTermEdit ::
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
-    basicSearchTermEdit myId allowedSearchTerm
+    Lens.view (termStyle . emptyStrings)
+    >>= basicSearchTermEdit myId allowedSearchTerm
     & (addDelSearchTerm myId <*>)
     & (addSearchTermBgColor myId <*>)
     & (addPickFirstResultEvent myId mPickFirst <*>)

@@ -9,9 +9,12 @@ module GUI.Momentu.Widgets.TextEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.Binary.Extended as Binary
-import           Data.Char (isSpace)
+import           Data.Char (isSpace, toLower)
 import           Data.List.Extended (genericLength, minimumOn)
+import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
@@ -50,8 +53,12 @@ instance HasStyle Style where style = id
 data EmptyStrings = EmptyStrings
     { _emptyUnfocusedString :: Text
     , _emptyFocusedString :: Text
-    }
+    } deriving (Eq, Show)
 Lens.makeLenses ''EmptyStrings
+
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_empty")
+    } ''EmptyStrings
 
 instance TextView.HasStyle Style where style = sTextViewStyle
 
