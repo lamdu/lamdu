@@ -79,13 +79,13 @@ type Preconversion m a = Val (Input.Payload m a) -> Val (Input.Payload m ())
 type ResultGen m = StateT Infer.Context (ListT (T m))
 
 convert :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert exprPl =
+convert holePl =
     Hole
-    <$> mkOptions holeResultProcessor exprPl
-    <*> mkLiteralOptions exprPl
+    <$> mkOptions holeResultProcessor holePl
+    <*> mkLiteralOptions holePl
     <*> pure Nothing
     <&> BodyHole
-    >>= addActions [] exprPl
+    >>= addActions [] holePl
     <&> rPayload . plActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
@@ -112,11 +112,11 @@ mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> BaseExpr ->
     HoleOption' (T m) (Expression InternalName (T m) (T m) ())
-mkOption sugarContext resultProcessor exprPl val =
+mkOption sugarContext resultProcessor holePl val =
     HoleOption
     { _hoVal = baseExpr
-    , _hoSugaredBaseExpr = sugar sugarContext exprPl baseExpr
-    , _hoResults = mkResults resultProcessor sugarContext exprPl val
+    , _hoSugaredBaseExpr = sugar sugarContext holePl baseExpr
+    , _hoResults = mkResults resultProcessor sugarContext holePl val
     }
     where
         baseExpr = getBaseExprVal val
@@ -125,11 +125,11 @@ mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
     [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
-mkHoleSuggesteds sugarContext resultProcessor exprPl =
-    exprPl ^. Input.inferred
+mkHoleSuggesteds sugarContext resultProcessor holePl =
+    holePl ^. Input.inferred
     & Suggest.value
     <&> SuggestedExpr
-    <&> mkOption sugarContext resultProcessor exprPl
+    <&> mkOption sugarContext resultProcessor holePl
 
 addWithoutDups ::
     [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
@@ -168,8 +168,8 @@ getTags :: Monad m => ConvertM.Context m -> T m [T.Tag]
 getTags = getListing Anchors.tags
 
 locals :: ConvertM.Context m -> Input.Payload f a -> [V.Var]
-locals sugarContext exprPl =
-    exprPl ^. Input.inferredScope
+locals sugarContext holePl =
+    holePl ^. Input.inferredScope
     & Infer.scopeToTypeMap
     & Map.keys
     & filter (not . isRecursiveRef)
@@ -203,7 +203,7 @@ mkOptions ::
     Monad m =>
     ResultProcessor m -> Input.Payload m a ->
     ConvertM m (T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())])
-mkOptions resultProcessor exprPl =
+mkOptions resultProcessor holePl =
     Lens.view id
     <&>
     \sugarContext ->
@@ -212,7 +212,7 @@ mkOptions resultProcessor exprPl =
         globals <- getGlobals sugarContext
         tags <- getTags sugarContext
         concat
-            [ locals sugarContext exprPl
+            [ locals sugarContext holePl
                 & concatMap (getLocalScopeGetVars sugarContext)
             , globals <&> P.var . ExprIRef.globalId
             , tags <&> (`P.inject` P.hole)
@@ -223,8 +223,8 @@ mkOptions resultProcessor exprPl =
               ]
             ]
             <&> SeedExpr
-            <&> mkOption sugarContext resultProcessor exprPl
-            & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor exprPl)
+            <&> mkOption sugarContext resultProcessor holePl
+            & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
             & pure
 
 -- TODO: Generalize into a separate module?
@@ -279,33 +279,31 @@ sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
     T m (Expression InternalName (T m) (T m) a)
-sugar sugarContext exprPl val =
+sugar sugarContext holePl val =
     val
     <&> mkPayload
     & (EntityId.randomizeExprAndParams . Random.genFromHashable)
-        (exprPl ^. Input.entityId)
+        (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
     & ConvertM.convertSubexpression
     & ConvertM.run sugarContext
     <&> Lens.mapped %~ (^. pUserData)
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
-        -- TODO: Why do we fake inference if we get a val with inferred types?
-
         -- A fake Infer payload we use to sugar the base expressions.
         -- Currently it is a function type because
         -- otherwise sugaring of lambdas crashes.
         fakeInferPayload =
             Infer.Payload
             { Infer._plType = T.TFun (T.TVar "fakeInput") (T.TVar "fakeOutput")
-            , Infer._plScope = exprPl ^. Input.inferred . Infer.plScope
+            , Infer._plScope = holePl ^. Input.inferred . Infer.plScope
             }
 
 mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->
     ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))))
-mkLiteralOptions exprPl =
+mkLiteralOptions holePl =
     Lens.view id
     <&>
     \sugarContext ->
@@ -313,7 +311,7 @@ mkLiteralOptions exprPl =
             pure
             ( HoleResultScore 0 []
             , fixedVal <&> convPl
-                & mkResult id sugarContext updateDeps (exprPl ^. Input.stored)
+                & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
             )
             where
                 typ = val ^. Val.payload
@@ -343,7 +341,7 @@ mkLiteralOptions exprPl =
                 prim = PrimVal.fromKnown v
         emptyPl = (Nothing, ())
         convPl t = (Infer.Payload t Infer.emptyScope, emptyPl)
-        inferredType = exprPl ^. Input.inferred . Infer.plType
+        inferredType = holePl ^. Input.inferred . Infer.plType
         textDep =
             mempty
             { Infer._depsNominals =
@@ -509,7 +507,7 @@ toScoredResults ::
     f ( HoleResultScore
       , T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
       )
-toScoredResults emptyPl preConversion sugarContext exprPl act =
+toScoredResults emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~ detachValIfNeeded (Nothing, emptyPl) typ
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
@@ -523,8 +521,8 @@ toScoredResults emptyPl preConversion sugarContext exprPl act =
         , mkResult preConversion newSugarContext updateDeps stored val
         )
     where
-        stored = exprPl ^. Input.stored
-        typ = exprPl ^. Input.inferred . Infer.plType
+        stored = holePl ^. Input.stored
+        typ = holePl ^. Input.inferred . Infer.plType
 
 mkResults ::
     Monad m =>
@@ -533,10 +531,10 @@ mkResults ::
     ( HoleResultScore
     , T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
     )
-mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext exprPl base =
-    mkResultVals sugarContext (exprPl ^. Input.inferred . Infer.plScope) base
+mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
+    mkResultVals sugarContext (holePl ^. Input.inferred . Infer.plScope) base
     >>= _2 %%~ postProcess
-    & toScoredResults emptyPl preConversion sugarContext exprPl
+    & toScoredResults emptyPl preConversion sugarContext holePl
 
 xorBS :: ByteString -> ByteString -> ByteString
 xorBS x y = BS.pack $ BS.zipWith xor x y
