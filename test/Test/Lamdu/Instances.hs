@@ -19,6 +19,7 @@ import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -68,6 +69,9 @@ deriving instance Data VcGuiConfig.Theme
 deriving instance Data a => Data (TextEdit.Modes a)
 deriving instance Data a => Data (Fonts a)
 deriving instance Data a => Data (Vector2 a)
+
+instance IsString Widget.Id where
+    fromString = Widget.Id . pure . fromString
 
 instance IsString EntityId where
     fromString = EntityId . fromString
