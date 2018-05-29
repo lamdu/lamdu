@@ -4,15 +4,13 @@ module Lamdu.Config.Sampler
     , Sample(..), sConfigPath, sConfig
     , sThemePath, sTheme, setTheme
     , getSample
-    , readJson -- Exposed for test
     ) where
 
 import           Control.Concurrent.Extended (ThreadId, threadDelay, forkIOUnmasked)
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Aeson.Config as AesonConfig
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
@@ -58,19 +56,12 @@ calcThemePath configPath theme =
 load :: Text -> FilePath -> IO Sample
 load themeName configPath =
     do
-        config <- readJson configPath
-        theme <- readJson themePath
+        config <- AesonConfig.load configPath
+        theme <- AesonConfig.load themePath
         pure (config, themePath, theme)
     & withMTime configPath
     where
         themePath = calcThemePath configPath themeName
-
-readJson :: Aeson.FromJSON a => FilePath -> IO a
-readJson path =
-    Aeson.eitherDecode' <$> LBS.readFile path
-    >>= either (fail . mappend msg) pure
-    where
-        msg = "Failed to parse config file contents at " ++ show path ++ ": "
 
 maybeReload :: Sample -> FilePath -> IO (Maybe Sample)
 maybeReload old newConfigPath =

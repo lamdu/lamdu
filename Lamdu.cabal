@@ -103,6 +103,7 @@ Library
                   , lamdu-calculus
                   , language-ecmascript >= 0.17 && < 0.18
                   , lens >= 4.1
+                  , lens-aeson
                   , leveldb-haskell >= 0.6
                   , List >= 0.5.1
                   , mtl >= 2.2
@@ -136,6 +137,7 @@ Library
                   , Control.Monad.Trans.FastWriter
                   , Control.Monad.Transaction
                   , Control.Monad.Unit
+                  , Data.Aeson.Config
                   , Data.Binary.Extended
                   , Data.ByteString.Extended
                   , Data.Cache.Fenced

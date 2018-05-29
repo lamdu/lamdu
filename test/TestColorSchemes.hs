@@ -1,9 +1,9 @@
 module TestColorSchemes (test) where
 
+import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
 import qualified Data.Map as Map
 import           GUI.Momentu.Draw (Color(..))
-import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Themes as Themes
 import           System.FilePath (takeFileName)
@@ -17,7 +17,7 @@ test =
 
 verifyTheme :: FilePath -> IO ()
 verifyTheme filename =
-    ConfigSampler.readJson filename >>= verify
+    load filename >>= verify
     where
         verify :: Theme -> IO ()
         verify theme

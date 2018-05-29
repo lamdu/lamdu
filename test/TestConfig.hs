@@ -1,9 +1,9 @@
 module TestConfig (test) where
 
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Config (load)
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Data.Proxy (Proxy(..), asProxyTypeOf)
 import           Lamdu.Config (Config)
@@ -24,14 +24,7 @@ verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
 verifyJson proxy jsonPath =
     do
         configPath <- Paths.getDataFileName jsonPath
-        json <-
-            LBS.readFile configPath <&> Aeson.eitherDecode >>=
-            \case
-            Left err ->
-                do
-                    assertString ("Failed to load " <> configPath <> ": " <> err)
-                    fail "Test failure"
-            Right x -> pure x
+        json <- load configPath
         case Aeson.fromJSON json <&> (`asProxyTypeOf` proxy) of
             Aeson.Error msg -> assertString ("Failed decoding " <> configPath <> " from json: " <> msg)
             Aeson.Success val

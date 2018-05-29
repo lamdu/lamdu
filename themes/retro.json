@@ -1,4 +1,5 @@
 {
+    "imports": ["default.json"],
     "animationTimePeriodSec": 0,
     "animationRemainInPeriod": 0.2,
     "fonts": {
@@ -10,20 +11,15 @@
         "literalBytes": "fonts/DejaVuSansMono.ttf"
     },
     "stdSpacing": [1.0, 0.1],
-    "baseTextSize": 16,
-    "maxEvalViewSize": 32,
     "topPadding": 1,
     "statusBar": {
         "bgColor": [0.0, 0.0, 0.0, 1.0],
         "hspaces": 2
     },
     "deleted": {
-        "defTint": [0.5, 0.5, 0.5, 1.0],
-        "defDiagonalWidth": 0.02,
-        "useDiagonalWidth": 0.1
+        "defDiagonalWidth": 0.02
     },
     "hover": {
-        "framePadding": [1, 1],
         "frameColor": [0, 0, 0, 1],
         "bgPadding": [0, 0],
         "bgColor": [0, 0.5, 0.5, 0.5]
@@ -35,12 +31,7 @@
     "help": {
         "inputDocColor": [0, 0.5, 0.5, 1.0],
         "textSize": 16,
-        "textColor": [1.0, 1.0, 1.0, 1.0],
-        "bGColor": [0, 0, 0, 0.5],
-        "tint": [1.0, 1.0, 1.0, 1.0]
-    },
-    "versionControl": {
-        "selectedBranchColor": [1.0, 1.0, 1.0, 1.0]
+        "bGColor": [0, 0, 0, 0.5]
     },
     "menu": {
         "submenuSymbolColorUnselected": [1.0, 1.0, 1.0, 0.5],
@@ -52,8 +43,7 @@
     },
     "hole": {
         "resultPadding": [0.0, 1.0],
-        "frameWidth": [0.0, 0.0],
-        "frameColor": [1.0, 1.0, 1.0, 1.0]
+        "frameWidth": [0.0, 0.0]
     },
     "name": {
         "collisionSuffixScaleFactor": [1.0, 1.0],
@@ -82,10 +72,7 @@
         "caseTagColor": [0.5, 1.0, 0.5, 1.0],
         "argTagColor": [0.5, 0.5, 0.5, 1.0]
     },
-    "narrowUnderlineWidth": 0.05,
-    "wideUnderlineWidth": 0.15,
     "eval": {
-        "staleResultTint": [0.5, 0.5, 0.5, 0.5],
         "neighborsScaleFactor": [1.0, 1.0],
         "neighborsPadding": [0, 0]
     },
@@ -105,9 +92,6 @@
     "disabledColor": [0.5, 0.5, 0.5, 0.5],
     "valAnnotation": {
         "spacing": 0.0,
-        "widthExpansionLimit": 34,
-        "shrinkAtLeast": 80,
-        "maxHeight": 20,
         "bgColor": [0.0, 0.0, 0.0, 0.5],
         "hoverBGColor": [0.5, 0.5, 0.5, 1.0]
     },
