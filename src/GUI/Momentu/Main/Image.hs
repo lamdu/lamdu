@@ -5,6 +5,7 @@
 
 module GUI.Momentu.Main.Image
     ( mainLoop, Handlers(..)
+    , PerfCounters(..)
     , windowSize
     ) where
 
@@ -21,15 +22,22 @@ import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event, Next(..), eventLoop)
 import qualified Graphics.UI.GLFW.Events as GLFWEvents
+import           System.TimeIt (timeItT)
 import           Text.Printf (printf)
 
 import           Lamdu.Prelude
+
+data PerfCounters = PerfCounters
+    { renderTime :: Double
+    , swapBuffersTime :: Double
+    }
 
 data Handlers = Handlers
     { eventHandler :: Event -> IO ()
     , update :: IO (Maybe (Draw.Image ()))
     , refresh :: IO (Draw.Image ())
     , fpsFont :: IO (Maybe Draw.Font)
+    , reportPerfCounters :: PerfCounters -> IO ()
     }
 
 data EventResult =
@@ -66,11 +74,11 @@ renderFPS font win fps =
                 Font.render font white Nothing fpsText
         winSize <- windowSize win
         let translation = winSize - (sz ^. Font.bounding)
-        (Draw.translateV translation %% img) & pure
+        pure (Draw.translateV translation %% img)
     where
         white = Draw.Color 1 1 1 1
 
-glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO ()
+glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO PerfCounters
 glDraw win (Vector2 winSizeX winSizeY) image =
     do
         GL.viewport $=
@@ -79,8 +87,12 @@ glDraw win (Vector2 winSizeX winSizeY) image =
         GL.matrixMode $= GL.Projection
         GL.loadIdentity
         GL.ortho 0 winSizeX winSizeY 0 (-1) 1
-        Draw.clearRender image
-        GLFW.swapBuffers win
+        (timedRender, ()) <- timeItT (Draw.clearRender image)
+        (timedSwapBuffers, ()) <- timeItT (GLFW.swapBuffers win)
+        pure PerfCounters
+            { renderTime = timedRender
+            , swapBuffersTime = timedSwapBuffers
+            }
 
 mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
@@ -109,7 +121,9 @@ mainLoop win imageHandlers =
                         Nothing -> pure mempty
                         Just font -> updateFPS fps >>= renderFPS font win
                     let draw img =
-                            NextPoll <$ glDraw win winSize (fpsImg <> img)
+                            NextPoll <$
+                            (glDraw win winSize (fpsImg <> img)
+                                >>= reportPerfCounters handlers)
                     case eventResult of
                         ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw

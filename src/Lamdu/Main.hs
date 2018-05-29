@@ -64,6 +64,8 @@ import qualified System.Directory as Directory
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 import           System.IO (hPutStrLn, stderr)
+import qualified System.Metrics as Metrics
+import qualified System.Metrics.Distribution as Distribution
 import qualified System.Remote.Monitoring.Shim as Ekg
 
 import           Lamdu.Prelude
@@ -304,7 +306,7 @@ runEditor opts db =
                 (opts ^. Opts.eoWindowTitle)
                 (opts ^. Opts.eoWindowMode)
             printGLVersion
-            mainLoop stateStorage subpixel win refreshScheduler configSampler $
+            mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
                 \fonts config theme env ->
                 Cache.fence cache *>
                 mkSettingsProp
@@ -362,12 +364,24 @@ makeGetFonts subpixel =
                     , curSampleFonts sample <&> _1 *~ sizeFactor
                     )
 
+makeReportPerfCounters :: Ekg.Server -> IO (MainLoop.PerfCounters -> IO ())
+makeReportPerfCounters ekg =
+    do
+        renderDist <- Metrics.createDistribution "Render time" store
+        swapDist <- Metrics.createDistribution "SwapBuffers time" store
+        pure $ \(MainLoop.PerfCounters renderTime swapBufferTime) ->
+            do
+                Distribution.add renderDist renderTime
+                Distribution.add swapDist swapBufferTime
+    where
+        store = Ekg.serverMetricStore ekg
+
 mainLoop ::
-    MainLoop.StateStorage -> Font.LCDSubPixelEnabled ->
+    Maybe Ekg.Server -> MainLoop.StateStorage -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
     IO (M.Widget (MainLoop.M IO M.Update))) -> IO ()
-mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
+mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
@@ -384,6 +398,7 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
         let mkConfigTheme =
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
+        reportPerfCounters <- traverse makeReportPerfCounters ekg
         M.mainLoopWidget win makeWidget MainLoop.Options
             { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
             , tickHandler =
@@ -411,6 +426,7 @@ mainLoop stateStorage subpixel win refreshScheduler configSampler iteration =
                     <&> \case
                         False -> Nothing
                         True -> Just (M.Color 1 1 0 0.5)
+                , reportPerfCounters = fromMaybe (const (pure ())) reportPerfCounters
                 }
             }
 

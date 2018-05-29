@@ -6,6 +6,7 @@ module GUI.Momentu.Main
     , Env(..), eWindowSize, eZoom, eState
     , HasMainLoopEnv(..)
     , DebugOptions(..), defaultDebugOptions
+    , PerfCounters(..)
     , StateStorage(..)
     , Options(..), defaultOptions
     , MainAnim.wakeUp
@@ -25,6 +26,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont)
 import qualified GUI.Momentu.Main.Animation as MainAnim
+import           GUI.Momentu.Main.Animation (PerfCounters(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
@@ -58,6 +60,7 @@ type M m = WriterT (ExecuteInMainThread m) m
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
     , virtualCursorColor :: IO (Maybe Draw.Color)
+    , reportPerfCounters :: PerfCounters -> IO ()
     }
 
 data StateStorage = StateStorage
@@ -86,6 +89,7 @@ defaultDebugOptions =
     DebugOptions
     { fpsFont = const (pure Nothing)
     , virtualCursorColor = pure Nothing
+    , reportPerfCounters = const (pure ())
     }
 
 -- TODO: If moving GUI to lib,
@@ -206,7 +210,10 @@ mainLoopWidget win mkWidgetUnmemod options =
                     Cursor.render
                         <$> (readIORef mkWidgetRef >>= (size &))
                         <&> _1 <>~ const vcursorimg
-        MainAnim.mainLoop win (fpsFont zoom) (cAnim config) $ \size -> MainAnim.Handlers
+        MainAnim.mainLoop (reportPerfCounters debug) win (fpsFont zoom)
+            (cAnim config) $
+            \size ->
+            MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
                     anyUpdate <- tickHandler

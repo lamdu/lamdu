@@ -1,7 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module GUI.Momentu.Main.Animation
-    ( mainLoop, AnimConfig(..), Handlers(..), EventResult(..)
+    ( mainLoop
+    , AnimConfig(..)
+    , Handlers(..), PerfCounters(..)
+    , EventResult(..)
     , wakeUp
     ) where
 
@@ -16,6 +19,7 @@ import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
+import           GUI.Momentu.Main.Image (PerfCounters(..))
 import qualified GUI.Momentu.Main.Image as MainImage
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
@@ -154,9 +158,9 @@ eventHandlerThread tvars animHandlers =
         when (Lens.has Lens._Just mNewFrame) wakeUp
 
 animThread ::
-    IO (Maybe Draw.Font) ->
+    (PerfCounters -> IO ()) -> IO (Maybe Draw.Font) ->
     ThreadVars -> IORef AnimState -> IO AnimConfig -> GLFW.Window -> IO ()
-animThread getFpsFont tvars animStateRef getAnimationConfig win =
+animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig win =
     MainImage.mainLoop win $ \size ->
     MainImage.Handlers
     { MainImage.eventHandler = \event -> (edReversedEvents %~ (event :)) & updateTVar
@@ -167,6 +171,7 @@ animThread getFpsFont tvars animStateRef getAnimationConfig win =
             readIORef animStateRef <&> draw
     , MainImage.update = updateFrameState size <&> fmap draw
     , MainImage.fpsFont = getFpsFont
+    , MainImage.reportPerfCounters = reportPerfCounters
     }
     where
         draw = Anim.draw . Anim.currentFrame . _asState
@@ -207,8 +212,8 @@ animThread getFpsFont tvars animStateRef getAnimationConfig win =
                 _ <- Lens._Just (writeIORef animStateRef) mNewState
                 pure mNewState
 
-mainLoop :: GLFW.Window -> IO (Maybe Draw.Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
-mainLoop win getFpsFont getAnimationConfig animHandlers =
+mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Draw.Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+mainLoop reportPerfCounters win getFpsFont getAnimationConfig animHandlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
         animStateRef <- initialAnimState >>= newIORef
@@ -225,4 +230,5 @@ mainLoop win getFpsFont getAnimationConfig animHandlers =
         eventsThread <- forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
         withForkedIO
             (eventsThread `onException` wakeUp)
-            (animThread getFpsFont tvars animStateRef getAnimationConfig win)
+            (animThread reportPerfCounters
+                getFpsFont tvars animStateRef getAnimationConfig win)
