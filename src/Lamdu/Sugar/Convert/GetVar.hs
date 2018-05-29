@@ -78,11 +78,10 @@ globalNameRef ::
     (MonadTransaction n m, Monad f) =>
     Anchors.CodeAnchors f -> DefI f -> m (NameRef InternalName (T f))
 globalNameRef cp defI =
-    Anchors.assocTag defI & getP
-    <&>
-    \tag ->
+    taggedName defI <&>
+    \name ->
     NameRef
-    { _nrName = nameWithContext defI tag
+    { _nrName = name
     , _nrGotoDefinition = jumpToDefI cp defI
     }
 

@@ -4,15 +4,17 @@ module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pStored, pUserData
     , InternalName(..), inTag, inContext
     , internalNameMatch
-    , nameWithoutContext, nameWithContext
+    , nameWithoutContext, nameWithContext, taggedName
     , ExpressionU
     , replaceWith
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (MonadTransaction, getP)
 import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -71,6 +73,9 @@ nameWithContext param tag =
     { _inContext = Just (UniqueId.toUUID param)
     , _inTag = tag
     }
+
+taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => a -> m InternalName
+taggedName x = Anchors.assocTag x & getP <&> nameWithContext x
 
 
 type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
