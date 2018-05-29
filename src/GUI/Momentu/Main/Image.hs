@@ -65,7 +65,7 @@ renderFPS font win fps =
         let Font.RenderedText sz img =
                 Font.render font white Nothing fpsText
         winSize <- windowSize win
-        let translation = winSize - (sz ^. Font.bounding) & _2 .~ 0
+        let translation = winSize - (sz ^. Font.bounding)
         (Draw.translateV translation %% img) & pure
     where
         white = Draw.Color 1 1 1 1
