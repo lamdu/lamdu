@@ -4,6 +4,7 @@ import qualified TestAnimIdClash
 import qualified TestCodec
 import qualified TestColorSchemes
 import qualified TestConfig
+import qualified TestGui
 import qualified TestJsExport
 import qualified TestJsRtsTags
 import qualified TestMomentu
@@ -30,6 +31,7 @@ main =
             , TestCodec.test
             , TestColorSchemes.test
             , TestConfig.test
+            , TestGui.test
             , TestNames.test
             , TestJsExport.test
             , TestJsRtsTags.test
