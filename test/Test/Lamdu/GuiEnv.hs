@@ -1,9 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Lamdu.GuiEnv (Env(..), make) where
+module Test.Lamdu.GuiEnv (Env(..), make, dummyAnchors) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit(..))
 import qualified Data.Aeson.Config as AesonConfig
+import           Data.Functor.Identity (Identity(..))
+import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Draw (Color(..))
@@ -15,6 +18,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config, HasConfig(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Font (fontDefault)
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings, initial)
@@ -79,4 +83,21 @@ make =
                 , TextEdit._sEmptyStringsColors = pure (Color 1 1 1 1)
                 }
             , _eAnimIdPrefix = []
+            }
+
+prop :: a -> MkProperty Identity Unit a
+prop x = Property x (const Unit) & Identity & MkProperty
+
+dummyAnchors :: Anchors.GuiAnchors Identity Unit
+dummyAnchors =
+    Anchors.Gui
+    { Anchors.preJumps = prop []
+    , Anchors.preGuiState = prop dummyState
+    , Anchors.postGuiState = prop dummyState
+    }
+    where
+        dummyState =
+            GUIState
+            { _sCursor = "dummy"
+            , _sWidgetStates = mempty
             }

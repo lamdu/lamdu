@@ -3,15 +3,13 @@ module TestAnimIdClash (test) where
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.List (group, sort)
-import           Data.Property (MkProperty(..), Property(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (GUIState(..), HasCursor(..))
+import           GUI.Momentu.State (HasCursor(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import           Lamdu.GUI.ExpressionGui (adhocPayload)
@@ -64,23 +62,6 @@ testTypeView =
             & Sugar.TRecord
             & Sugar.Type entityId
 
-prop :: a -> MkProperty Identity Unit a
-prop x = Property x (const Unit) & Identity & MkProperty
-
-guiAnchors :: Anchors.GuiAnchors Identity Unit
-guiAnchors =
-    Anchors.Gui
-    { Anchors.preJumps = prop []
-    , Anchors.preGuiState = prop dummyState
-    , Anchors.postGuiState = prop dummyState
-    }
-    where
-        dummyState =
-            GUIState
-            { _sCursor = "dummy"
-            , _sWidgetStates = mempty
-            }
-
 testFragment :: Test
 testFragment =
     do
@@ -89,7 +70,7 @@ testFragment =
             <&> cursor .~ WidgetIds.fromEntityId fragEntityId
         let gui =
                 ExpressionEdit.make expr
-                & ExprGuiM.run ExpressionEdit.make guiAnchors env (const Unit)
+                & ExprGuiM.run ExpressionEdit.make GuiEnv.dummyAnchors env (const Unit)
                 & runIdentity
         let widget =
                 (gui ^. Responsive.render)
