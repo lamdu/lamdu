@@ -5,14 +5,14 @@ module TestGui where
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
-import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (Event(..), KeyEvent(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.Widget as Widget
+import qualified Graphics.UI.GLFW as GLFW
+import           Graphics.UI.GLFW.Events (Event(..), KeyEvent(..))
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
