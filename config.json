@@ -5,7 +5,8 @@
         "virtualCursorShown": false,
         "breakpoints": {
             "inference": false,
-            "sugaring": false
+            "sugaring": false,
+            "layout": false
         }
     },
     "zoom": {

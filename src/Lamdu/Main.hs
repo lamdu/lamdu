@@ -20,6 +20,7 @@ import qualified GUI.Momentu as M
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -241,7 +242,17 @@ makeRootWidget cachedFunctions counters fonts db evaluator config theme mainLoop
                 Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
+        let measureLayout w =
+                -- Hopefully measuring the forcing of these is enough to figure out the layout -
+                -- it's where's the cursors at etc.
+                report w
+                & Widget.wState %~ report
+                & Widget.wState . Widget._StateFocused .
+                    Lens.mapped . Widget.fFocalAreas %~ fmap report . report
+                where
+                    Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
         mkWidgetWithFallback settingsProp dbToIO env
+            <&> measureLayout
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
