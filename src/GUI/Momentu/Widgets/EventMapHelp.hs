@@ -29,6 +29,8 @@ import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Font (Font)
+import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -67,7 +69,7 @@ Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eStyle . styleText
 
-defaultStyle :: Draw.Font -> Style
+defaultStyle :: Font -> Style
 defaultStyle font =
     Style
     { _styleText =
@@ -87,7 +89,7 @@ defaultConfig =
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
     }
 
-defaultEnv :: Draw.Font -> Env
+defaultEnv :: Font -> Env
 defaultEnv font =
     Env
     { _eConfig = defaultConfig
@@ -184,7 +186,7 @@ indent width = (Spacer.makeHorizontal width /|/)
 
 fontHeight :: (MonadReader env m, TextView.HasStyle env) => m R
 fontHeight =
-    Lens.view (TextView.style . TextView.styleFont) <&> Draw.fontHeight
+    Lens.view (TextView.style . TextView.styleFont) <&> Font.height
 
 makeFlatTreeView ::
     (MonadReader env m, TextView.HasStyle env) =>

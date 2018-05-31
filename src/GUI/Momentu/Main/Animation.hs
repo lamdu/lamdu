@@ -20,9 +20,9 @@ import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
+import           GUI.Momentu.Font (Font)
 import           GUI.Momentu.Main.Image (PerfCounters(..))
 import qualified GUI.Momentu.Main.Image as MainImage
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event)
 
@@ -159,7 +159,7 @@ eventHandlerThread tvars animHandlers =
         when (Lens.has Lens._Just mNewFrame) wakeUp
 
 animThread ::
-    (PerfCounters -> IO ()) -> IO (Maybe Draw.Font) ->
+    (PerfCounters -> IO ()) -> IO (Maybe Font) ->
     ThreadVars -> IORef AnimState -> IO AnimConfig -> GLFW.Window -> IO ()
 animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig win =
     MainImage.mainLoop win $ \size ->
@@ -213,7 +213,7 @@ animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig w
                 _ <- Lens._Just (writeIORef animStateRef) mNewState
                 pure mNewState
 
-mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Draw.Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
 mainLoop reportPerfCounters win getFpsFont getAnimationConfig animHandlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")

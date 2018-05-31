@@ -2,14 +2,14 @@
 -- | A font attached to its size
 
 module GUI.Momentu.Font
-    ( Underline(..), underlineColor, underlineWidth
+    ( Font(..), _Font, _FontDebug
+    , Underline(..), underlineColor, underlineWidth
     , render
     , RenderedText(..), renderedTextSize, renderedText
     , TextSize(..), bounding, advance
-    , Draw.Font
     , LCDSubPixelEnabled(..), openFont
     , height
-    , textSize
+    , textSize, textWidth
     , renderText
     ) where
 
@@ -21,6 +21,11 @@ import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
 import           Lamdu.Prelude
+
+data Font
+    = Font Draw.Font
+    | FontDebug Draw.R
+Lens.makePrisms ''Font
 
 data Underline = Underline
     { _underlineColor :: Draw.Color
@@ -51,11 +56,16 @@ data RenderedText a = RenderedText
     }
 Lens.makeLenses ''RenderedText
 
-height :: Draw.Font -> Draw.R
-height = Draw.fontHeight
+height :: Font -> Draw.R
+height (Font f) = Draw.fontHeight f
+height (FontDebug x) = x
+
+descender :: Font -> Draw.R
+descender (Font f) = Draw.fontDescender f
+descender (FontDebug x) = x * 0.75
 
 render ::
-    Draw.Font -> Draw.Color -> Maybe Underline -> Text ->
+    Font -> Draw.Color -> Maybe Underline -> Text ->
     RenderedText (Draw.Image ())
 render font color mUnderline str =
     r
@@ -69,18 +79,17 @@ render font color mUnderline str =
             , Draw.foregroundColor = color
             }
 
-drawUnderline :: Draw.Font -> Vector2 Draw.R -> Underline -> Draw.Image ()
+drawUnderline :: Font -> Vector2 Draw.R -> Underline -> Draw.Image ()
 drawUnderline font size (Underline color relativeWidth) =
     Draw.square
     & (Draw.scale (size ^. _1) width %%)
-    & (Draw.translate (0, size ^. _2 + descender + width/2) %%)
+    & (Draw.translate (0, size ^. _2 + descender font + width/2) %%)
     & Draw.tint color
     where
         width = relativeWidth * height font
-        descender = Draw.fontDescender font
 
-textWidth :: Draw.Font -> Text -> TextSize Draw.R
-textWidth font str =
+textWidth :: Font -> Text -> TextSize Draw.R
+textWidth (Font font) str =
     TextSize
     { _bounding =
       Draw.textBoundingWidth font str
@@ -91,30 +100,48 @@ textWidth font str =
     }
     where
         adv = Draw.textAdvance font str
+textWidth (FontDebug x) text =
+    TextSize
+    { _bounding = r
+    , _advance = r
+    }
+    where
+        r = x * fromIntegral (maximum (0 : (Text.lines text <&> Text.length)))
 
-textSize :: Draw.Font -> Text -> TextSize (Vector2 Draw.R)
+textSize :: Font -> Text -> TextSize (Vector2 Draw.R)
 textSize font str =
     (`Vector2` totalHeight) <$> textWidth font str
     where
         totalHeight = height font * fromIntegral numLines
         numLines = 1 + Text.count "\n" str
 
-renderText :: Draw.Font -> Draw.TextAttrs -> Text -> RenderedText (Draw.Image ())
+renderText :: Font -> Draw.TextAttrs -> Text -> RenderedText (Draw.Image ())
 renderText font textAttrs str =
     RenderedText
-    { _renderedTextSize = textSize font str
+    { _renderedTextSize = size
     , _renderedText =
-        Draw.text font str textAttrs
-        & void
-        -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
-        & (Draw.translate (0, -Draw.fontHeight font - Draw.fontDescender font) %%)
-        -- We want to reverse it so that higher y is down, and it is also
-        -- moved to 0..2
-        & (Draw.scale 1 (-1) %%)
+        case font of
+        Font f ->
+            Draw.text f str textAttrs
+            & void
+            -- Text is normally at height -0.5..1.5.  We move it to be -textHeight..0
+            & (Draw.translate (0, -Draw.fontHeight f - Draw.fontDescender f) %%)
+            -- We want to reverse it so that higher y is down, and it is also
+            -- moved to 0..2
+            & (Draw.scale 1 (-1) %%)
+        FontDebug{} -> Draw.scaleV (size ^. bounding) %% Draw.square
     }
+    where
+        size = textSize font str
 
 data LCDSubPixelEnabled = LCDSubPixelEnabled | LCDSubPixelDisabled
 
-openFont :: LCDSubPixelEnabled -> Float -> FilePath -> IO Draw.Font
-openFont LCDSubPixelEnabled = Draw.openFont
-openFont LCDSubPixelDisabled = Draw.openFontNoLCD
+openFont :: LCDSubPixelEnabled -> Float -> FilePath -> IO Font
+openFont _ size "" = FontDebug (realToFrac size) & pure
+openFont subPixel size path =
+    open size path <&> Font
+    where
+        open =
+            case subPixel of
+            LCDSubPixelEnabled -> Draw.openFont
+            LCDSubPixelDisabled -> Draw.openFontNoLCD

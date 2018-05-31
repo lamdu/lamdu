@@ -22,7 +22,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Font (RenderedText(..), renderedText, renderedTextSize, bounding, advance)
+import           GUI.Momentu.Font (Font, RenderedText(..), renderedText, renderedTextSize, bounding, advance)
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 
 data Style = Style
     { _styleColor :: Draw.Color
-    , _styleFont :: Draw.Font
+    , _styleFont :: Font
     , _styleUnderline :: Maybe Font.Underline
     }
 Lens.makeLenses ''Style
@@ -48,13 +48,13 @@ instance HasStyle Style where style = id
 underline :: HasStyle env => Lens' env (Maybe Font.Underline)
 underline = style . styleUnderline
 
-font :: HasStyle env => Lens' env Draw.Font
+font :: HasStyle env => Lens' env Font
 font = style . styleFont
 
 color :: HasStyle env => Lens' env Draw.Color
 color = style . styleColor
 
-whiteText :: Draw.Font -> Style
+whiteText :: Font -> Style
 whiteText f =
     Style
     { _styleColor = Draw.Color 1 1 1 1

@@ -14,6 +14,7 @@ import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (Size)
+import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
@@ -36,7 +37,7 @@ data Handlers = Handlers
     { eventHandler :: Event -> IO ()
     , update :: IO (Maybe (Draw.Image ()))
     , refresh :: IO (Draw.Image ())
-    , fpsFont :: IO (Maybe Draw.Font)
+    , fpsFont :: IO (Maybe Font)
     , reportPerfCounters :: PerfCounters -> IO ()
     }
 
@@ -66,7 +67,7 @@ updateFPS (FPS ref) =
         writeIORef ref curTime
         1 / realToFrac (curTime `diffUTCTime` prevTime) & pure
 
-renderFPS :: Draw.Font -> GLFW.Window -> Double -> IO (Draw.Image ())
+renderFPS :: Font -> GLFW.Window -> Double -> IO (Draw.Image ())
 renderFPS font win fps =
     do
         let fpsText = Text.pack (printf "%2.2f" fps)

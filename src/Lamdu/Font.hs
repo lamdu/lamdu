@@ -44,8 +44,11 @@ type FontSize = Float
 openFont :: Font.LCDSubPixelEnabled -> FontSize -> FilePath -> IO Font
 openFont subpixel size path =
     do
-        exists <- Directory.doesFileExist path
-        unless exists $ E.throwIO $ MissingFont $ path ++ " does not exist!"
+        unless (null path) $ -- (if not debug font)
+            do
+                exists <- Directory.doesFileExist path
+                unless exists $ E.throwIO $
+                    MissingFont $ path ++ " does not exist!"
         Font.openFont subpixel size path
 
 new :: Font.LCDSubPixelEnabled -> FilePath -> Fonts (FontSize, FilePath) -> IO (Fonts Font)

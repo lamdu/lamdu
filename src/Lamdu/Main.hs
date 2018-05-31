@@ -330,9 +330,11 @@ scheduleRefresh (RefreshScheduler ref) =
 
 prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
-    Lens.mapped %~ (dir </>)
+    Lens.mapped %~ f
     where
         dir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
+        f "" = "" -- Debug font!
+        f x = dir </> x
 
 assignFontSizes :: Theme -> Fonts FilePath -> Fonts (FontSize, FilePath)
 assignFontSizes theme fonts =
