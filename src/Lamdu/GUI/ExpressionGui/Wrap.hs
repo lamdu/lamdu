@@ -40,7 +40,7 @@ stdWrap ::
     ExprGuiM i o
     (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
 stdWrap pl =
-    maybeAddAnnotationPl pl
+    (maybeAddAnnotationPl pl <&> (Widget.widget %~))
     <<< Dotter.with pl
     <<< ExprEventMap.add ExprEventMap.defaultOptions pl
     where

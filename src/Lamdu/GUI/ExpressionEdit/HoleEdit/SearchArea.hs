@@ -155,7 +155,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                 <&> (Align.tValue %~)
         term <- makeTerm Menu.NoPickFirstResult
         closedSearchTermGui <-
-            maybeAddAnnotationPl pl <*>
+            (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             (fdWrap ?? term ^. SearchMenu.termWidget <&> Responsive.fromWithTextPos)
         isActive <- HoleWidgetIds.isActive widgetIds
         let inPlaceOfClosed open =

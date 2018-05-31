@@ -87,7 +87,8 @@ make fragment pl =
                         (Config.delKeys config <> config ^. Config.attachKeys)
                         (E.Doc ["Edit", "Attach"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
-            <*> (maybeAddAnnotationPl pl ?? fragmentExprGui <&> Responsive.render . Lens.imapped %@~ f)
+            <*> ((maybeAddAnnotationPl pl <&> (Widget.widget %~))
+                ?? fragmentExprGui <&> Responsive.render . Lens.imapped %@~ f)
             <&> Widget.widget %~ Widget.weakerEvents attachEventMap
     where
         innerId = fragment ^. Sugar.fExpr . Sugar.rPayload & WidgetIds.fromExprPayload

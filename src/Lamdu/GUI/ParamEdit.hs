@@ -117,6 +117,7 @@ make annotationOpts prevId nextId param =
             Annotation.maybeAddAnnotationWith annotationOpts
             wideAnnotationBehavior ExprGui.showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
+            <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos (iNameEdit info)
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)

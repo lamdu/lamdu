@@ -19,11 +19,10 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/))
-import           GUI.Momentu.Responsive (Responsive(..))
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -204,8 +203,8 @@ addAnnotationH ::
     WideAnnotationBehavior ->
     m
     ((Widget.R -> Widget.R) ->
-     Responsive (f GuiState.Update) ->
-     Responsive (f GuiState.Update))
+     Widget (f GuiState.Update) ->
+     Widget (f GuiState.Update))
 addAnnotationH f wideBehavior =
     do
         vspace <- annotationSpacer
@@ -215,15 +214,14 @@ addAnnotationH f wideBehavior =
                 processAnn (w ^. Element.width) annotationLayout
                 & Element.width %~ max (minWidth (w ^. Element.width))
         let onAlignedWidget minWidth w = w /-/ vspace /-/ annotation minWidth w
-        pure $ \minWidth -> Responsive.alignedWidget %~ onAlignedWidget minWidth
+        pure $ \minWidth -> onAlignedWidget minWidth
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
-    m (Responsive (f GuiState.Update) ->
-       Responsive (f GuiState.Update))
+    m (Widget (f GuiState.Update) -> Widget (f GuiState.Update))
 addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
@@ -233,8 +231,8 @@ addEvaluationResult ::
     EvalResDisplay (Name g) -> WideAnnotationBehavior ->
     ExprGuiM i o
     ((Widget.R -> Widget.R) ->
-     Responsive (f GuiState.Update) ->
-     Responsive (f GuiState.Update))
+     Widget (f GuiState.Update) ->
+     Widget (f GuiState.Update))
 addEvaluationResult mNeigh resDisp wideBehavior =
     case erdVal resDisp ^. Sugar.resBody of
     Sugar.RRecord (Sugar.ResRecord []) ->
@@ -250,7 +248,7 @@ maybeAddAnnotationPl ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i1 o1 ExprGui.Payload ->
     ExprGuiM i o
-    (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
@@ -314,7 +312,7 @@ maybeAddAnnotationWith ::
     (Monad i, Monad o) =>
     EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
     Sugar.Annotation (Name o) ->
-    ExprGuiM i o (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
     getAnnotationMode opt annotation
     >>= \case
@@ -344,7 +342,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
 maybeAddAnnotation ::
     (Monad i, Monad o) =>
     WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation (Name o) ->
-    ExprGuiM i o (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::
