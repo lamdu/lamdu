@@ -26,7 +26,6 @@ liftInner = lift . lift
 
 run :: (HasCallStack, Functor m) => Debug.Monitors -> M m a -> m (Either InferErr.Error (a, Infer.Context))
 run monitors =
-    fmap reportInferenceTime . runExceptT . (`runStateT` Infer.initialContext)
+    fmap report . runExceptT . (`runStateT` Infer.initialContext)
     where
-        Debug.Evaluator reportInferenceTime =
-            monitors ^. Debug.inference
+        Debug.Evaluator report = monitors ^. Debug.inference . Debug.mPure
