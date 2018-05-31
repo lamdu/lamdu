@@ -15,7 +15,6 @@ module GUI.Momentu.Font
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Data.Text
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%))
