@@ -418,7 +418,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
                   do
                       sample <- ConfigSampler.getSample configSampler
                       if sample ^. sConfig . Config.debug . Config.debugShowFPS
-                          then getFonts zoom sample <&> (^. Font.fontDefault) <&> Just
+                          then getFonts zoom sample <&> (^. Font.fontDebugInfo) <&> Just
                           else pure Nothing
                 , virtualCursorColor =
                     ConfigSampler.getSample configSampler

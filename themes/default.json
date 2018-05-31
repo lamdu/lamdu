@@ -68,7 +68,8 @@
         "autoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
         "binders"     : "fonts/DejaVuSans-Bold.ttf",
         "literalText" : "fonts/DejaVuSerif.ttf",
-        "literalBytes": "fonts/DejaVuSansMono.ttf"
+        "literalBytes": "fonts/DejaVuSansMono.ttf",
+        "debugInfo"   : "fonts/DejaVuSansMono.ttf"
     },
     "help": {
         "inputDocColor": [0.25, 0.5, 0.5, 1.0],

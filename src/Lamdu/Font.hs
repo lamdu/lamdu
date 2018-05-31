@@ -2,7 +2,7 @@
 module Lamdu.Font
     ( FontSize, Fonts(..)
     , Font.LCDSubPixelEnabled(..), new
-    , fontDefault, fontHelp, fontLiteralText, fontAutoName, fontLiteralBytes, fontBinders
+    , fontDefault, fontHelp, fontLiteralText, fontAutoName, fontLiteralBytes, fontBinders, fontDebugInfo
     , Font.height
     ) where
 
@@ -29,6 +29,7 @@ data Fonts a = Fonts
     , _fontLiteralBytes :: a
     , _fontAutoName :: a
     , _fontBinders :: a
+    , _fontDebugInfo :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier
