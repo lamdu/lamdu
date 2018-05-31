@@ -72,20 +72,20 @@ viewsFromConf viewConfs =
 verticalDisambigTest :: IO ()
 verticalDisambigTest =
     do
-        check Responsive.LayoutClear (Vector2 1 2)
-        check Responsive.LayoutVertical (Vector2 1.5 2)
+        check False (Vector2 1 2)
+        check True (Vector2 1.5 2)
     where
-        check ctx expect
+        check needDisamb expect
             | size == expect = pure ()
             | otherwise =
                 assertString ("unexpected size " <> show size <> ", expected " <> show expect)
             where
                 size = rendered ^. Align.tValue . Widget.wSize
                 rendered =
-                    (box ^. Responsive.render)
-                    Responsive.LayoutParams
-                    { Responsive._layoutMode = Responsive.LayoutNarrow 1.9
-                    , Responsive._layoutContext = ctx
+                    (box ^. Responsive.rNarrow)
+                    Responsive.NarrowLayoutParams
+                    { Responsive._layoutWidth = 1.9
+                    , Responsive._layoutNeedDisambiguation = needDisamb
                     }
                 box =
                     Options.box disambig [unitItem, unitItem]

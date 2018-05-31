@@ -19,8 +19,9 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive
-    ( Responsive(..), LayoutParams(..), LayoutMode(..), LayoutDisambiguationContext(..)
-    , render, vbox, fromView, vertLayoutMaybeDisambiguate
+    ( Responsive(..)
+    , rWide, rWideDisambig, rNarrow
+    , layoutWidth , vbox, fromView, vertLayoutMaybeDisambiguate
     )
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
@@ -30,37 +31,51 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
 
+data WideLayouts a = WideLayouts
+    { _lWide :: WithTextPos (Widget a)
+    , _lWideDisambig :: WithTextPos (Widget a)
+    } deriving Functor
+Lens.makeLenses ''WideLayouts
+
 data WideLayoutOption t a = WideLayoutOption
     { _wContexts ::
-        Lens.AnIndexedTraversal LayoutDisambiguationContext
+        Lens.ATraversal
         (t (Responsive a)) (t (WithTextPos (Widget a)))
-        (Responsive a) (WithTextPos (Widget a))
-    , _wLayout ::
-        LayoutDisambiguationContext ->
-        t (WithTextPos (Widget a)) ->
-        WithTextPos (Widget a)
+        (Responsive a) (WideLayouts a)
+    , _wLayout :: t (WithTextPos (Widget a)) -> WideLayouts a
     }
 Lens.makeLenses ''WideLayoutOption
 
 tryWideLayout :: WideLayoutOption t a -> t (Responsive a) -> Responsive a -> Responsive a
 tryWideLayout layoutOption elements fallback =
-    Responsive r
+    Responsive
+    { _rWide = wide
+    , _rWideDisambig = res ^. lWideDisambig
+    , _rNarrow =
+        \layoutParams ->
+        if wide ^. Align.tValue . Widget.wSize . _1 <= layoutParams ^. layoutWidth
+        then wide
+        else (fallback ^. rNarrow) layoutParams
+    }
     where
-        r layoutParams@(LayoutParams mode context) =
-            case mode of
-            LayoutWide -> wide
-            LayoutNarrow limit
-                | wide ^. Align.tValue . Widget.wSize . _1 <= limit -> wide
-                | otherwise -> (fallback ^. render) layoutParams
-            where
-                wide = (layoutOption ^. wLayout) context renderedElements
-        renderedElements = elements & Lens.cloneIndexedTraversal (layoutOption ^. wContexts) %@~ renderElement
-        renderElement context element =
-            (element ^. render)
-            LayoutParams
-            { _layoutMode = LayoutWide
-            , _layoutContext = context
+        wide = res ^. lWide
+        res = (layoutOption ^. wLayout) renderedElements
+        renderedElements =
+            elements & Lens.cloneTraversal (layoutOption ^. wContexts) %~ takeWide
+        takeWide element =
+            WideLayouts
+            { _lWide = element ^. rWide
+            , _lWideDisambig = element ^. rWideDisambig
             }
+
+type HorizDisambiguator a = WithTextPos (Widget a) -> WithTextPos (Widget a)
+
+makeWideLayouts :: HorizDisambiguator a -> WithTextPos (Widget a) -> WideLayouts a
+makeWideLayouts disamb w =
+    WideLayouts
+    { _lWide = w
+    , _lWideDisambig = disamb w
+    }
 
 hbox ::
     Functor f =>
@@ -69,35 +84,34 @@ hbox ::
     WideLayoutOption [] (f State.Update)
 hbox disamb spacer =
     WideLayoutOption
-    { _wContexts = Lens.reindexed (const LayoutHorizontal) Lens.traversed
-    , _wLayout = layout
+    { _wContexts =
+        -- TODO: Better way to do this?
+        traverse <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (^. lWideDisambig)
+    , _wLayout = makeWideLayouts disamb . Glue.hbox . spacer
     }
-    where
-        layout c = mDisamb c . Glue.hbox . spacer
-        mDisamb LayoutHorizontal = disamb
-        mDisamb _ = id
 
 table ::
     (Traversable t0, Traversable t1, Functor f) =>
     WideLayoutOption (Compose t0 t1) (f State.Update)
 table =
     WideLayoutOption
-    { _wContexts = Lens.reindexed (const LayoutClear) Lens.traversed
-    , _wLayout = const layout
+    { _wContexts =
+        -- TODO: Better way to do this?
+        traverse <&> Lens.mapped . Lens.mapped . Lens.mapped %~ (^. lWide)
+    , _wLayout =
+        \(Compose elems) ->
+        let (alignments, gridWidget) = elems <&> Lens.mapped %~ toAligned & Grid.make
+        in
+        makeWideLayouts id
+        WithTextPos
+        { _textTop =
+            gridWidget ^. Element.height
+            * alignments ^?! traverse . traverse . Align.alignmentRatio . _2
+        , _tValue = gridWidget
+        }
     }
     where
-        layout (Compose elems) =
-            WithTextPos
-            { _textTop =
-                gridWidget ^. Element.height
-                * alignments ^?! traverse . traverse . Align.alignmentRatio . _2
-            , _tValue = gridWidget
-            }
-            where
-                (alignments, gridWidget) = elems <&> Lens.mapped %~ toAligned & Grid.make
         toAligned (WithTextPos y w) = Aligned (Vector2 0 (y / w ^. Element.height)) w
-
-type HorizDisambiguator a = WithTextPos (Widget a) -> WithTextPos (Widget a)
 
 data Disambiguators a = Disambiguators
     { _disambHoriz :: HorizDisambiguator a

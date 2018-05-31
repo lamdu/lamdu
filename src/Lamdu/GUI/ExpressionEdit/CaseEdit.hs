@@ -190,8 +190,8 @@ makeAddAltRow addAlt myId =
             , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
             }
 
-separationBar :: TextColors -> Widget.R -> Anim.AnimId -> View
-separationBar theme width animId =
+separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View
+separationBar theme animId width =
     View.unitSquare (animId <> ["tailsep"])
     & Element.tint (theme ^. TextColors.caseTailColor)
     & Element.scale (Vector2 width 10)
@@ -205,25 +205,15 @@ makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
+        config <- Lens.view Config.config
         restExpr <-
             Styled.addValPadding
             <*> ExprGuiM.makeSubexpression rest
-        config <- Lens.view Config.config
-        pure $ altsGui & Responsive.render . Lens.imapped %@~
-            \layoutMode alts ->
-            let restLayout =
-                    layoutMode & restExpr ^. Responsive.render
-                    <&> Widget.weakerEvents (openCaseEventMap config actions)
-                minWidth = restLayout ^. Element.width
-                targetWidth = alts ^. Element.width
-            in
-            alts
-            /-/
-            separationBar (theme ^. Theme.textColors) (max minWidth targetWidth) animId
-            /-/
-            vspace
-            /-/
-            restLayout
+            <&> Widget.weakerEvents (openCaseEventMap config actions)
+        Responsive.vboxWithSeparator False
+            (separationBar (theme ^. Theme.textColors) animId <&> (/-/ vspace))
+            altsGui restExpr
+            & pure
 
 openCaseEventMap ::
     Monad o =>

@@ -56,12 +56,7 @@ removeUnwanted =
     & E.deleteKeys
 
 applyResultLayout :: Responsive a -> WithTextPos (Widget a)
-applyResultLayout fGui =
-    (fGui ^. Responsive.render)
-    Responsive.LayoutParams
-    { Responsive._layoutMode = Responsive.LayoutWide
-    , Responsive._layoutContext = Responsive.LayoutClear
-    }
+applyResultLayout = (^. Responsive.rWide)
 
 makeWidget ::
     (Monad i, Functor o) =>

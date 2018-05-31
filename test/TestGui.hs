@@ -52,11 +52,7 @@ test =
                 & ExpressionEdit.make
                 & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
             let mkFocused =
-                    (gui ^. Responsive.render)
-                    Responsive.LayoutParams
-                    { Responsive._layoutMode = Responsive.LayoutWide
-                    , Responsive._layoutContext = Responsive.LayoutClear
-                    } ^?! Align.tValue . Widget.wState . Widget._StateFocused
+                    gui ^?! Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
             let eventMap =
                     (mkFocused (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap)
                     Widget.EventContext

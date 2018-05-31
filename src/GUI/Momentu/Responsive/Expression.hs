@@ -69,8 +69,8 @@ indent =
     do
         bWidth <- totalBarWidth
         let reduceWidth =
-                Responsive.render . Lens.argument .
-                Responsive.layoutMode . Responsive.modeWidths
+                Responsive.rNarrow . Lens.argument .
+                Responsive.layoutWidth
                 -~ bWidth
         makeBar <- indentBar
         let f myId w = makeBar (w ^. Element.height) myId /|/ w

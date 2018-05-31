@@ -72,12 +72,7 @@ testFragment =
                 ExpressionEdit.make expr
                 & ExprGuiM.run ExpressionEdit.make GuiEnv.dummyAnchors env (const Unit)
                 & runIdentity
-        let widget =
-                (gui ^. Responsive.render)
-                Responsive.LayoutParams
-                { Responsive._layoutMode = Responsive.LayoutWide
-                , Responsive._layoutContext = Responsive.LayoutClear
-                } ^. Align.tValue
+        let widget = gui ^. Responsive.rWide . Align.tValue
         case widget ^. Widget.wState of
             Widget.StateUnfocused{} -> fail "Expected focused widget"
             Widget.StateFocused mk -> mk (Widget.Surrounding 0 0 0 0) ^. Widget.fLayers & verifyLayers

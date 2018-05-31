@@ -120,10 +120,11 @@ make cp gp width =
             <&> (,) gotoDefinition
     where
         render gui =
-            Responsive.LayoutParams
-            { _layoutMode = Responsive.LayoutNarrow width
-            , _layoutContext = Responsive.LayoutClear
-            } & gui ^. Responsive.render
+            (gui ^. Responsive.rNarrow)
+            Responsive.NarrowLayoutParams
+            { _layoutWidth = width
+            , _layoutNeedDisambiguation = False
+            }
 
 makePaneEdit ::
     Monad m =>

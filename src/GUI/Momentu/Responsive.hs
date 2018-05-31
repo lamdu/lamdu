@@ -22,35 +22,36 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances, FlexibleContexts #-}
 
 module GUI.Momentu.Responsive
-    ( Responsive(..), render
+    ( Responsive(..), rWide, rWideDisambig, rNarrow
 
     -- * Layout params
-    , LayoutParams(..), layoutMode, layoutContext
-    , LayoutMode(..), _LayoutNarrow, _LayoutWide
-    , LayoutDisambiguationContext(..)
+    , NarrowLayoutParams(..), layoutWidth, layoutNeedDisambiguation
 
     -- * Lenses
-    , alignedWidget, modeWidths
+    , alignedWidget
 
     -- * Leaf generation
     , fromAlignedWidget, fromWithTextPos, fromWidget, fromView, fromTextView, empty
 
     -- * Combinators
-    , vbox, vboxSpaced
+    , vbox, vboxSpaced, vboxWithSeparator
     , vertLayoutMaybeDisambiguate
 
+    , VerticalLayout(..), vContexts, vLayout
+    , verticalLayout
     , TaggedItem(..), tagPre, taggedItem, tagPost
     , taggedList
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Functor.Compose (Compose(..))
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), Orientation(..))
+import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), (/-/), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
@@ -60,64 +61,75 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
 
-data LayoutMode
-    = LayoutNarrow Widget.R -- ^ limited by the contained width field
-    | LayoutWide -- ^ no limit on width
-Lens.makePrisms ''LayoutMode
-
-modeWidths :: Lens.Traversal' LayoutMode Widget.R
-modeWidths _ LayoutWide = pure LayoutWide
-modeWidths f (LayoutNarrow limit) = f limit <&> LayoutNarrow
-
--- The relevant context for knowing whether parenthesis/indentation is needed
-data LayoutDisambiguationContext
-    = LayoutClear
-    | LayoutHorizontal
-    | LayoutVertical
-
-data LayoutParams = LayoutParams
-    { _layoutMode :: LayoutMode
-    , _layoutContext :: LayoutDisambiguationContext
+data NarrowLayoutParams = NarrowLayoutParams
+    { _layoutWidth :: Widget.R
+    , _layoutNeedDisambiguation :: Bool
     }
-Lens.makeLenses ''LayoutParams
+Lens.makeLenses ''NarrowLayoutParams
 
-newtype Responsive a = Responsive
-    { _render :: LayoutParams -> WithTextPos (Widget a)
+data Responsive a = Responsive
+    { _rWide :: WithTextPos (Widget a)
+    , _rWideDisambig :: WithTextPos (Widget a)
+    , _rNarrow :: NarrowLayoutParams -> WithTextPos (Widget a)
     } deriving Functor
 Lens.makeLenses ''Responsive
 
-adjustWidth :: SizedElement v => Orientation -> v -> Responsive a -> Responsive a
-adjustWidth Vertical _ = id
-adjustWidth Horizontal v =
-    render . Lens.argument . layoutMode . modeWidths -~ v ^. Element.size . _1
+adjustNarrowLayoutParams :: SizedElement v => Orientation -> v -> NarrowLayoutParams -> NarrowLayoutParams
+adjustNarrowLayoutParams Vertical _ = layoutNeedDisambiguation .~ True
+adjustNarrowLayoutParams Horizontal v = layoutWidth -~ v ^. Element.size . _1
 
 instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
          , SizedElement b
          ) => Glue (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
     glue orientation l v =
-        l
-        & adjustWidth orientation v
-        & render . Lens.mapped %~ (glue orientation ?? v)
+        Responsive
+        { _rWide = glue orientation wide v
+        , _rWideDisambig = glue orientation wide v
+        , _rNarrow =
+            l ^. rNarrow
+            & Lens.argument %~ adjustNarrowLayoutParams orientation v
+            <&> (glue orientation ?? v)
+        }
+        where
+            wide =
+                case orientation of
+                Horizontal -> l ^. rWideDisambig
+                Vertical -> l ^. rWide
 
 instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
          , SizedElement a
          ) => Glue (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
     glue orientation v l =
-        l
-        & adjustWidth orientation v
-        & render . Lens.mapped %~ glue orientation v
+        Responsive
+        { _rWide = glue orientation v wide
+        , _rWideDisambig = glue orientation v wide
+        , _rNarrow =
+            l ^. rNarrow
+            & Lens.argument %~ adjustNarrowLayoutParams orientation v
+            <&> glue orientation v
+        }
+        where
+            wide =
+                case orientation of
+                Horizontal -> l ^. rWideDisambig
+                Vertical -> l ^. rWide
 
 instance (Functor f, a ~ f State.Update) => Element (Responsive a) where
     setLayers = Widget.widget . Element.setLayers
     hoverLayers = Widget.widget %~ Element.hoverLayers
-    empty = Responsive (const Element.empty)
+    empty = Responsive Element.empty Element.empty (const Element.empty)
     scale = error "Responsive: scale not Implemented"
     assymetricPad topLeft bottomRight w =
-        w
-        & render . Lens.argument . layoutMode . modeWidths -~ topLeft ^. _1 + bottomRight ^. _1
-        & render . Lens.mapped %~ Element.assymetricPad topLeft bottomRight
+        Responsive
+        { _rWide = w ^. rWide & Element.assymetricPad topLeft bottomRight
+        , _rWideDisambig = w ^. rWideDisambig & Element.assymetricPad topLeft bottomRight
+        , _rNarrow =
+            w ^. rNarrow
+            & Lens.argument . layoutWidth -~ topLeft ^. _1 + bottomRight ^. _1
+            <&> Element.assymetricPad topLeft bottomRight
+        }
 
 instance Widget.HasWidget Responsive where widget = alignedWidget . Align.tValue
 
@@ -125,19 +137,21 @@ alignedWidget ::
     Lens.Setter
     (Responsive a) (Responsive b)
     (WithTextPos (Widget a)) (WithTextPos (Widget b))
-alignedWidget = render . Lens.mapped
+alignedWidget f (Responsive w wd n) =
+    Responsive
+    <$> f w
+    <*> f wd
+    <*> Lens.mapped f n
 
 -- | Lifts a Widget into a 'Responsive'
 fromAlignedWidget ::
     Functor f =>
     Aligned (Widget (f State.Update)) -> Responsive (f State.Update)
 fromAlignedWidget (Aligned a w) =
-    WithTextPos (a ^. _2 * w ^. Element.height) w
-    & const
-    & Responsive
+    WithTextPos (a ^. _2 * w ^. Element.height) w & fromWithTextPos
 
 fromWithTextPos :: WithTextPos (Widget a) -> Responsive a
-fromWithTextPos = Responsive . const
+fromWithTextPos x = Responsive x x (const x)
 
 -- | Lifts a Widget into a 'Responsive' with an alignment point at the top left
 fromWidget :: Functor f => Widget (f State.Update) -> Responsive (f State.Update)
@@ -155,15 +169,50 @@ fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 empty :: Functor f => Responsive (f State.Update)
 empty = fromView Element.empty
 
+data VerticalLayout t a = VerticalLayout
+    { _vContexts ::
+        -- The width in the index is the width to remove from the child
+        Lens.AnIndexedTraversal NarrowLayoutParams
+        (t (Responsive a)) (t (WithTextPos (Widget a)))
+        (Responsive a) (WithTextPos (Widget a))
+    , _vLayout :: t (WithTextPos (Widget a)) -> WithTextPos (Widget a)
+    }
+Lens.makeLenses ''VerticalLayout
+
+verticalLayout :: Functor t => VerticalLayout t a -> t (Responsive a) -> Responsive a
+verticalLayout vert items =
+    Responsive
+    { _rWide = wide
+    , _rWideDisambig = wide
+    , _rNarrow =
+        \layoutParams ->
+        let onItem params item =
+                (item ^. rNarrow)
+                NarrowLayoutParams
+                { _layoutNeedDisambiguation = params ^. layoutNeedDisambiguation
+                , _layoutWidth = layoutParams ^. layoutWidth - params ^. layoutWidth
+                }
+        in
+        (vert ^. vLayout) (items & Lens.cloneIndexedTraversal (vert ^. vContexts) %@~ onItem)
+    }
+    where
+        wide = (vert ^. vLayout) (items <&> (^. rWide))
+
 -- | Vertical box with the alignment point from the top widget
 vbox ::
     Functor f =>
     [Responsive (f State.Update)] -> Responsive (f State.Update)
-vbox guis =
-    Responsive $
-    \layoutParams ->
-    guis ^.. traverse . render ?? (layoutParams & layoutContext .~ LayoutVertical)
-    & Glue.vbox
+vbox =
+    verticalLayout VerticalLayout
+    { _vContexts = Lens.reindexed (const idx) Lens.traversed
+    , _vLayout = Glue.vbox
+    }
+    where
+        idx =
+            NarrowLayoutParams
+            { _layoutWidth = 0
+            , _layoutNeedDisambiguation = True
+            }
 
 vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
@@ -173,6 +222,30 @@ vboxSpaced =
     <&> fromView
     <&> List.intersperse
     <&> Lens.mapped %~ vbox
+
+vboxWithSeparator ::
+    Functor f =>
+    Bool -> (Widget.R -> View) ->
+    Responsive (f State.Update) -> Responsive (f State.Update) ->
+    Responsive (f State.Update)
+vboxWithSeparator needDisamb makeSeparator top bottom =
+    Vector2 top bottom
+    & verticalLayout VerticalLayout
+    { _vContexts = Lens.reindexed (const idx) Lens.traversed
+    , _vLayout =
+        \(Vector2 t b) ->
+        t
+        /-/
+        makeSeparator (max (t ^. Element.width) (b ^. Element.width))
+        /-/
+        b
+    }
+    where
+        idx =
+            NarrowLayoutParams
+            { _layoutWidth = 0
+            , _layoutNeedDisambiguation = needDisamb
+            }
 
 data TaggedItem a = TaggedItem
     { _tagPre :: WithTextPos (Widget a)
@@ -186,29 +259,36 @@ taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
     m ([TaggedItem (f State.Update)] -> Responsive (f State.Update))
 taggedList =
-    Spacer.stdVSpace <&>
+    Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0
+    <&>
     \vspace items ->
-    Responsive $
-    \layoutParams ->
     let preWidth = items ^.. traverse . tagPre . Element.width & maximum
         postWidth = items ^.. traverse . tagPost . Element.width & maximum
-        itemLayoutParams =
-            layoutParams
-            & layoutMode . modeWidths -~ preWidth + postWidth
-            & layoutContext .~ LayoutVertical
-        renderItem (TaggedItem pre item post) =
+        renderItem ((pre, post), item) =
             ( Element.assymetricPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
-                /|/ (item ^. render) itemLayoutParams
+                /|/ item
             , post
             )
-        renderedItems = items <&> renderItem
-        itemWidth = renderedItems ^.. traverse . _1 . Element.width & maximum
-        renderRow (item, post) =
-            item /|/ Element.assymetricPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
+        renderItems xs =
+            xs <&> renderRow & List.intersperse vspace & Glue.vbox
+            where
+                renderRow (item, post) =
+                    item /|/
+                    Element.assymetricPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
+                itemWidth = xs ^.. traverse . _1 . Element.width & maximum
+        idx =
+            NarrowLayoutParams
+            { _layoutWidth = preWidth + postWidth
+            , _layoutNeedDisambiguation = False
+            }
     in
-    renderedItems <&> renderRow
-    & List.intersperse (Widget.fromView vspace & WithTextPos 0)
-    & Glue.vbox
+    items <&> prepItem & Compose
+    & verticalLayout VerticalLayout
+    { _vContexts = Lens.reindexed (const idx) Lens.traversed
+    , _vLayout = renderItems . map renderItem . getCompose
+    }
+    where
+        prepItem (TaggedItem pre x post) = ((pre, post), x)
 
 -- | Apply a given vertical disambiguator (such as indentation) when necessary,
 -- according to the layout context.
@@ -217,8 +297,8 @@ taggedList =
 vertLayoutMaybeDisambiguate ::
     (Responsive a -> Responsive a) -> Responsive a -> Responsive a
 vertLayoutMaybeDisambiguate disamb vert =
-    Responsive $
+    vert & rNarrow .~
     \layoutParams ->
-    case layoutParams ^. layoutContext of
-    LayoutVertical -> (disamb vert ^. render) layoutParams
-    _ -> (vert ^. render) layoutParams
+    if layoutParams ^. layoutNeedDisambiguation
+    then (disamb vert ^. rNarrow) layoutParams
+    else (vert ^. rNarrow) layoutParams

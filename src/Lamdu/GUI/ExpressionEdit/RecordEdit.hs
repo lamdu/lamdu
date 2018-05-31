@@ -208,8 +208,8 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
             , Responsive._tagPost = Element.empty
             }
 
-separationBar :: TextColors -> Widget.R -> Anim.AnimId -> View
-separationBar theme width animId =
+separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View
+separationBar theme animId width =
     View.unitSquare (animId <> ["tailsep"])
     & Element.tint (theme ^. TextColors.recordTailColor)
     & Element.scale (Vector2 width 10)
@@ -222,27 +222,18 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
-        restExpr <- Styled.addValPadding <*> ExprGuiM.makeSubexpression rest
         config <- Lens.view Config.config
         let restEventMap =
                 close <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+        restExpr <-
+            Styled.addValPadding <*> ExprGuiM.makeSubexpression rest
+            <&> Widget.weakerEvents restEventMap
         animId <- Lens.view Element.animIdPrefix
-        let layout layoutMode fields =
-                fields
-                /-/
-                separationBar (theme ^. Theme.textColors) (max minWidth targetWidth) animId
-                /-/
-                vspace
-                /-/
-                restW
-                where
-                    restW =
-                        (restExpr ^. Responsive.render) layoutMode
-                        <&> Widget.weakerEvents restEventMap
-                    minWidth = restW ^. Element.width
-                    targetWidth = fields ^. Element.width
-        fieldsGui & Responsive.render . Lens.imapped %@~ layout & pure
+        Responsive.vboxWithSeparator False
+            (separationBar (theme ^. Theme.textColors) animId <&> (/-/ vspace))
+            fieldsGui restExpr
+            & pure
 
 openRecordEventMap ::
     (MonadReader env m, HasConfig env, Functor o) =>

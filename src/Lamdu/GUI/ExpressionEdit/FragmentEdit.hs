@@ -2,16 +2,19 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
     ( make
     ) where
 
+import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as Momentu
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Rect (Rect(..))
-import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
@@ -30,6 +33,19 @@ import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+-- TODO: Consider parameterizing `Responsive` such that this just becomes `liftA3`.
+-- Which means:
+--   Responsive a ==> Responsive (WithTextPos (Widget a))
+responsiveLiftA3 ::
+    (WithTextPos (Widget a) -> WithTextPos (Widget a) -> WithTextPos (Widget a) -> WithTextPos (Widget a)) ->
+    Responsive a -> Responsive a -> Responsive a -> Responsive a
+responsiveLiftA3 f x y z =
+    Responsive
+    { _rWide = f (x ^. rWide) (y ^. rWide) (z ^. rWide)
+    , _rWideDisambig = f (x ^. rWideDisambig) (y ^. rWideDisambig) (z ^. rWideDisambig)
+    , _rNarrow = liftA3 f (x ^. rNarrow) (y ^. rNarrow) (z ^. rNarrow)
+    }
 
 make ::
     (Monad i, Monad o) =>
@@ -52,26 +68,28 @@ make fragment pl =
         searchAreaGui <-
             SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
         isHoleResult <- ExprGuiM.isHoleResult
-        let f layoutMode fragmentExpr
+        let mkSearchArea
+                | isHoleResult = const Element.empty
+                | otherwise = searchAreaGui
+        let searchAreaAbove = mkSearchArea Menu.Above
+        let searchAreaBelow = mkSearchArea Menu.Below
+        addAnnotation <- maybeAddAnnotationPl pl <&> (Align.tValue %~)
+        let f fragmentExpr above below
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =
                     fragmentExpr & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                 | otherwise =
-                    fragmentExpr
+                    addAnnotation fragmentExpr
                     where
                         options =
-                            [ hoverFragmentExpr /-/ (searchArea Menu.Below <&> hover)
-                            , (searchArea Menu.Above <&> hover) /-/ hoverFragmentExpr
+                            [ hoverFragmentExpr /-/ (below <&> hover)
+                            , (above <&> hover) /-/ hoverFragmentExpr
                             ]
                             <&> (^. Align.tValue)
                         hoverFragmentExpr =
-                            render fragmentExprGui
+                            fragmentExpr
                             & Align.tValue %~ setFocalArea
                             & Align.tValue %~ Hover.anchor
-                        searchArea p
-                            | isHoleResult = Element.empty
-                            | otherwise = render (searchAreaGui p)
-                        render x = (x ^. Responsive.render) layoutMode
                         setFocalArea w
                             | isSelected =
                                 w
@@ -87,8 +105,7 @@ make fragment pl =
                         (Config.delKeys config <> config ^. Config.attachKeys)
                         (E.Doc ["Edit", "Attach"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
-            <*> ((maybeAddAnnotationPl pl <&> (Widget.widget %~))
-                ?? fragmentExprGui <&> Responsive.render . Lens.imapped %@~ f)
+            ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents attachEventMap
     where
         innerId = fragment ^. Sugar.fExpr . Sugar.rPayload & WidgetIds.fromExprPayload
