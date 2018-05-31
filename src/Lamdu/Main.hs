@@ -117,7 +117,7 @@ defaultFontPath sample =
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
 
-main :: IO ()
+main :: HasCallStack => IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
@@ -210,6 +210,7 @@ exportActions config evalResults executeIOProcess =
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
+    HasCallStack =>
     Cache.Functions -> Maybe Debug.Counters -> Fonts M.Font ->
     Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
     MainLoop.Env -> Property IO Settings ->
@@ -281,7 +282,7 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.jsDebugPaths = opts ^. Opts.eoJSDebugPaths
     }
 
-runEditor :: Opts.EditorOpts -> Transaction.Store DbM -> IO ()
+runEditor :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 runEditor opts db =
     withMVarProtection db $ \dbMVar ->
     do
@@ -433,6 +434,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
             }
 
 mkWidgetWithFallback ::
+    HasCallStack =>
     Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> IO (M.Widget (MainLoop.M IO M.Update))
