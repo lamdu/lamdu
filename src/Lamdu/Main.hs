@@ -4,6 +4,7 @@ module Main
     ) where
 
 import           Control.Concurrent.MVar
+import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM_)
@@ -246,11 +247,10 @@ makeRootWidget cachedFunctions counters fonts db evaluator config theme mainLoop
                 -- Hopefully measuring the forcing of these is enough to figure out the layout -
                 -- it's where's the cursors at etc.
                 report w
-                & Widget.wState %~ report
-                & Widget.wState . Widget._StateFocused .
-                    Lens.mapped . Widget.fFocalAreas %~ fmap report . report
+                & Widget.wState . Widget._StateFocused . Lens.mapped %~ f
                 where
                     Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
+                    f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
         mkWidgetWithFallback settingsProp dbToIO env
             <&> measureLayout
 

@@ -36,7 +36,7 @@ Flag ekg
 Executable lamdu
   main-is: src/Lamdu/Main.hs
   extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
-  build-depends: Lamdu, base, directory, ekg-core, filepath, lens, OpenGL
+  build-depends: Lamdu, base, directory, ekg-core, filepath, lens, OpenGL, deepseq
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
   if flag(ekg)
