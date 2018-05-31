@@ -52,7 +52,10 @@ taskNames =
     }
 
 unsafeGetCPUTime :: Monad m => m Integer
-unsafeGetCPUTime = pure getCPUTime <&> unsafePerformIO
+unsafeGetCPUTime =
+    p <&> unsafePerformIO
+    where
+        p = pure getCPUTime
 
 unsafeTimeIt :: Monad m => m a -> m (Double, a)
 unsafeTimeIt action =
