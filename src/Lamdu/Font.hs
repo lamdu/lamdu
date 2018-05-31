@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Font
     ( FontSize, Fonts(..)
-    , LCDSubPixelEnabled(..), new
+    , Font.LCDSubPixelEnabled(..), new
     , fontDefault, fontHelp, fontLiteralText, fontAutoName, fontLiteralBytes, fontBinders
     , Font.height
     ) where
@@ -40,20 +40,14 @@ Lens.makeLenses ''Fonts
 
 type FontSize = Float
 
-data LCDSubPixelEnabled = LCDSubPixelEnabled | LCDSubPixelDisabled
-
-load :: LCDSubPixelEnabled -> Float -> FilePath -> IO Font
-load LCDSubPixelEnabled = Font.openFont
-load LCDSubPixelDisabled = Font.openFontNoLCD
-
-openFont :: LCDSubPixelEnabled -> FontSize -> FilePath -> IO Font
+openFont :: Font.LCDSubPixelEnabled -> FontSize -> FilePath -> IO Font
 openFont subpixel size path =
     do
         exists <- Directory.doesFileExist path
         unless exists $ E.throwIO $ MissingFont $ path ++ " does not exist!"
-        load subpixel size path
+        Font.openFont subpixel size path
 
-new :: LCDSubPixelEnabled -> FilePath -> Fonts (FontSize, FilePath) -> IO (Fonts Font)
+new :: Font.LCDSubPixelEnabled -> FilePath -> Fonts (FontSize, FilePath) -> IO (Fonts Font)
 new subpixel fallbackFontPath =
     traverse openEach
     where

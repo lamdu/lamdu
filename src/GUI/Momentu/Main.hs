@@ -24,7 +24,7 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Font (Font, openFont)
+import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Animation (PerfCounters(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -97,7 +97,7 @@ defaultDebugOptions =
 defaultOptions :: FilePath -> IO Options
 defaultOptions helpFontPath =
     do
-        loadHelpFont <- memoIO $ \size -> openFont size helpFontPath
+        loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
         -- so an empty value might be fitting.
         stateStorage_ <- iorefStateStorage (Widget.Id [])

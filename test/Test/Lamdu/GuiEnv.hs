@@ -11,7 +11,7 @@ import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Draw (Color(..))
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
-import           GUI.Momentu.Font (openFont)
+import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -58,7 +58,7 @@ make =
         testTheme <- TestTheme.load
         font <-
             testTheme ^. fonts . fontDefault & Paths.getDataFileName
-            >>= openFont (testTheme ^. baseTextSize)
+            >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)
         pure Env
             { _eTheme = testTheme
             , _eConfig = testConfig

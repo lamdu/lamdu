@@ -6,7 +6,8 @@ module GUI.Momentu.Font
     , render
     , RenderedText(..), renderedTextSize, renderedText
     , TextSize(..), bounding, advance
-    , Draw.Font, Draw.openFont, Draw.openFontNoLCD
+    , Draw.Font
+    , LCDSubPixelEnabled(..), openFont
     , height
     , textSize
     , renderText
@@ -112,3 +113,9 @@ renderText font textAttrs str =
         -- moved to 0..2
         & (Draw.scale 1 (-1) %%)
     }
+
+data LCDSubPixelEnabled = LCDSubPixelEnabled | LCDSubPixelDisabled
+
+openFont :: LCDSubPixelEnabled -> Float -> FilePath -> IO Draw.Font
+openFont LCDSubPixelEnabled = Draw.openFont
+openFont LCDSubPixelDisabled = Draw.openFontNoLCD
