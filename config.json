@@ -4,7 +4,8 @@
         "showFPS": false,
         "virtualCursorShown": false,
         "breakpoints": {
-            "inference": false
+            "inference": false,
+            "sugaring": false
         }
     },
     "zoom": {

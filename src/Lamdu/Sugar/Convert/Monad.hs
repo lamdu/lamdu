@@ -143,8 +143,11 @@ postProcessAssert =
         assertSuccess PostProcess.GoodExpr = pure ()
         assertSuccess (PostProcess.BadExpr err) = fail (prettyShow err)
 
-run :: Context m -> ConvertM m a -> T m a
-run ctx (ConvertM action) = runReaderT action ctx
+run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> T m a
+run ctx (ConvertM action) =
+    runReaderT action ctx & report
+    where
+        Debug.EvaluatorM report = ctx ^. scDebugMonitors . Debug.sugaring . Debug.mAction
 
 local :: (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act

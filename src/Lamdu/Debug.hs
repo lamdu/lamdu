@@ -47,6 +47,7 @@ taskNames :: Tasks Text
 taskNames =
     Tasks
     { _inference = "Inference"
+    , _sugaring = "Sugaring"
     }
 
 unsafeGetCPUTime :: Monad m => m Integer
