@@ -6,7 +6,6 @@ module Lamdu.Sugar.Types.Expression
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
     , Payload(..), plEntityId, plAnnotation, plActions, plData
-    , Payload'
     , Expression(..), rBody, rPayload
     -- record:
     , CompositeItem(..), ciDelete, ciTag, ciExpr
@@ -60,8 +59,6 @@ data Payload name i o a = Payload
     } deriving (Functor, Foldable, Traversable, Generic)
 instance Show a => Show (Payload name i o a) where
     show (Payload _ann _actions _entityId data_) = show data_
-
-type Payload' name m = Payload name m m
 
 data Expression name i o a = Expression
     { _rBody :: Body name i o (Expression name i o a)
