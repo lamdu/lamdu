@@ -295,36 +295,33 @@ newEvaluator refresh dbMVar opts =
 
 runEditor :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 runEditor opts db =
-    withMVarProtection db $ \dbMVar ->
     do
         refreshScheduler <- newRefreshScheduler
         let refresh = scheduleRefresh refreshScheduler
-
-        -- Load config as early as possible, before we open any windows/etc
-        evaluator <- newEvaluator refresh dbMVar opts
         ekg <- traverse Ekg.start (opts ^. Opts.eoEkgPort)
         monitors <-
             traverse Debug.makeCounters ekg
             >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
-
-        let settingsVal = Settings.initial
         configSampler <-
-            ConfigSampler.new (const refresh) (settingsVal ^. Settings.sSelectedTheme)
-        mkSettingsProp <- newSettingsProp settingsVal configSampler evaluator
-
+            ConfigSampler.new (const refresh) (Settings.initial ^. Settings.sSelectedTheme)
         (cache, cachedFunctions) <- Cache.make
-
-        M.withGLFW $ do
-            win <-
-                createWindow
-                (opts ^. Opts.eoWindowTitle)
-                (opts ^. Opts.eoWindowMode)
-            printGLVersion
-            mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
-                \fonts config theme env ->
-                Cache.fence cache *>
-                mkSettingsProp
-                >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
+        withMVarProtection db $
+            \dbMVar ->
+            do
+                -- Load config as early as possible, before we open any windows/etc
+                evaluator <- newEvaluator refresh dbMVar opts
+                mkSettingsProp <- newSettingsProp Settings.initial configSampler evaluator
+                M.withGLFW $ do
+                    win <-
+                        createWindow
+                        (opts ^. Opts.eoWindowTitle)
+                        (opts ^. Opts.eoWindowMode)
+                    printGLVersion
+                    mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
+                        \fonts config theme env ->
+                        Cache.fence cache *>
+                        mkSettingsProp
+                        >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
