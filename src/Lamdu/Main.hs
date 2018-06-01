@@ -213,16 +213,13 @@ exportActions config evalResults executeIOProcess =
 
 makeRootWidget ::
     HasCallStack =>
-    Cache.Functions -> Maybe Debug.Counters -> Fonts M.Font ->
+    Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
     Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
     MainLoop.Env -> Property IO Settings ->
     IO (M.Widget (MainLoop.M IO M.Update))
-makeRootWidget cachedFunctions counters fonts db evaluator config theme mainLoopEnv settingsProp =
+makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
-        monitors <-
-            Debug.makeMonitors (config ^. Config.debug . Config.breakpoints)
-            counters
         let env = Env
                 { _envEvalRes = evalResults
                 , _envExportActions =
@@ -254,6 +251,8 @@ makeRootWidget cachedFunctions counters fonts db evaluator config theme mainLoop
                     f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
         mkWidgetWithFallback settingsProp dbToIO env
             <&> measureLayout
+    where
+        monitors = Debug.addBreakPoints (config ^. Config.debug . Config.breakpoints) perfMonitors
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -304,7 +303,9 @@ runEditor opts db =
         -- Load config as early as possible, before we open any windows/etc
         evaluator <- newEvaluator refresh dbMVar opts
         ekg <- traverse Ekg.start (opts ^. Opts.eoEkgPort)
-        ctrs <- traverse Debug.makeCounters ekg
+        monitors <-
+            traverse Debug.makeCounters ekg
+            >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
 
         let settingsVal = Settings.initial
         configSampler <-
@@ -323,7 +324,7 @@ runEditor opts db =
                 \fonts config theme env ->
                 Cache.fence cache *>
                 mkSettingsProp
-                >>= makeRootWidget cachedFunctions ctrs fonts db evaluator config theme env
+                >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
     where
         stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel

@@ -6,7 +6,7 @@ module Lamdu.Debug
     , Monitor(..), mPure, mAction
     , Evaluator(..), EvaluatorM(..)
     , makeCounters
-    , makeMonitors
+    , makeMonitors, addBreakPoints
     , noopMonitors
     ) where
 
@@ -113,14 +113,9 @@ noopMonitors =
     , _mAction = EvaluatorM id
     }
 
-makeMonitors :: Tasks Bool -> Maybe Counters -> IO Monitors
-makeMonitors breakpoints mCounters =
-    do
-        countersEval <-
-            case mCounters of
-            Nothing -> pure noopMonitors
-            Just counters -> traverse counterMonitor counters
-        composeMonitor
-            <$> (makeBreakpoint <$> taskNames <*> breakpoints)
-            <*> countersEval
-            & pure
+makeMonitors :: Counters -> IO Monitors
+makeMonitors = traverse counterMonitor
+
+addBreakPoints :: Tasks Bool -> Monitors -> Monitors
+addBreakPoints breakpoints =
+    (composeMonitor <$> (makeBreakpoint <$> taskNames <*> breakpoints) <*>)
