@@ -235,12 +235,11 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme main
                 , _envDebugMonitors = monitors
                 , _envCachedFunctions = cachedFunctions
                 }
-        let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
                 Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
-                _ -> DbLayout.runDbTransaction (Transaction.onStoreM reportDb db) action
+                _ -> DbLayout.runDbTransaction db action
         let measureLayout w =
                 -- Hopefully measuring the forcing of these is enough to figure out the layout -
                 -- it's where's the cursors at etc.
@@ -294,7 +293,7 @@ newEvaluator refresh dbMVar opts =
     }
 
 runEditor :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
-runEditor opts db =
+runEditor opts rawDb =
     do
         refreshScheduler <- newRefreshScheduler
         let refresh = scheduleRefresh refreshScheduler
@@ -305,6 +304,9 @@ runEditor opts db =
         configSampler <-
             ConfigSampler.new (const refresh) (Settings.initial ^. Settings.sSelectedTheme)
         (cache, cachedFunctions) <- Cache.make
+        let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
+        let db = Transaction.onStoreM reportDb rawDb
+        let stateStorage = stateStorageInIRef db DbLayout.guiState
         withMVarProtection db $
             \dbMVar ->
             do
@@ -323,7 +325,6 @@ runEditor opts db =
                         mkSettingsProp
                         >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
     where
-        stateStorage = stateStorageInIRef db DbLayout.guiState
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled
