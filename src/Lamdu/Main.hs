@@ -238,11 +238,12 @@ makeRootWidget cachedFunctions counters fonts db evaluator config theme mainLoop
                 , _envDebugMonitors = monitors
                 , _envCachedFunctions = cachedFunctions
                 }
+        let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
                 Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
-                _ -> DbLayout.runDbTransaction db action
+                _ -> DbLayout.runDbTransaction (Transaction.onStoreM reportDb db) action
         let measureLayout w =
                 -- Hopefully measuring the forcing of these is enough to figure out the layout -
                 -- it's where's the cursors at etc.

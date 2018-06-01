@@ -6,7 +6,8 @@
         "breakpoints": {
             "inference": false,
             "sugaring": false,
-            "layout": false
+            "layout": false,
+            "database": false
         }
     },
     "zoom": {
