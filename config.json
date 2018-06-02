@@ -7,7 +7,8 @@
             "inference": false,
             "sugaring": false,
             "layout": false,
-            "database": false
+            "database": false,
+            "naming": false
         }
     },
     "zoom": {

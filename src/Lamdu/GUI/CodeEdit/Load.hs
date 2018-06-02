@@ -77,7 +77,7 @@ loadWorkArea ::
     T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
 loadWorkArea cache monitors theEvalResults cp =
     SugarConvert.loadWorkArea cache monitors theEvalResults cp
-    >>= AddNames.addToWorkArea (getNameProp cp)
+    >>= report . AddNames.addToWorkArea (getNameProp cp)
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
     Sugar.WorkArea
@@ -86,3 +86,5 @@ loadWorkArea cache monitors theEvalResults cp =
     , _waGlobals = _waGlobals
     }
     & SugarLens.workAreaExpressions %~ postProcessExpr
+    where
+        Debug.EvaluatorM report = monitors ^. Debug.naming . Debug.mAction

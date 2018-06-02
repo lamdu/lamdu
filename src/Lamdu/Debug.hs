@@ -50,6 +50,7 @@ taskNames =
     , _sugaring = "Sugaring"
     , _layout = "Layout"
     , _database = "Database"
+    , _naming = "Naming"
     }
 
 unsafeGetCPUTime :: Monad m => m Integer
