@@ -1,7 +1,8 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes #-}
 
 module Lamdu.Sugar.Convert.Composite
     ( convertEmpty, BodyPrism, convert
+    , ExtendVal(..), extendTag, extendValI, extendRest
     ) where
 
 import qualified Control.Lens as Lens
@@ -55,22 +56,29 @@ convertAddItem extendOp existingTags pl =
     where
         stored = pl ^. Input.stored
 
+data ExtendVal m rest = ExtendVal
+    { _extendTag :: T.Tag
+    , _extendValI :: ValI m
+    , _extendRest :: rest
+    }
+Lens.makeLenses ''ExtendVal
+
 convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     expr ->
     Input.Payload m a ->
-    (T.Tag, ValI m, Input.Payload m a) ->
+    ExtendVal m (Input.Payload m a) ->
     Composite InternalName (T m) (T m) expr ->
     ConvertM m (Composite InternalName (T m) (T m) expr)
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
             convertItem cons (exprPl ^. Input.stored)
-            (extendV ^. _3 . Input.entityId) (Set.fromList restTags) valS
-            (extendV & _3 %~ (^. Input.stored . Property.pVal))
-        addItem <- convertAddItem extendOp (Set.fromList (extendV ^. _1 : restTags)) exprPl
+            (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
+            (extendV & extendRest %~ (^. Input.stored . Property.pVal))
+        addItem <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         restC
             & cAddItem .~ addItem
             & cItems %~ (itemS :)
@@ -85,17 +93,17 @@ convertOneItemOpenComposite ::
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     expr -> expr ->
     Input.Payload m a ->
-    (T.Tag, ValI m, Input.Payload m a) ->
+    ExtendVal m (Input.Payload m a) ->
     ConvertM m (Composite InternalName (T m) (T m) expr)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
-            (exprPl ^. Input.stored) (extendV ^. _3 . Input.entityId) mempty valS
-            (extendV & _3 %~ (^. Input.stored . Property.pVal))
+            (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
+            (extendV & extendRest %~ (^. Input.stored . Property.pVal))
             <&> (:[])
         )
-    <*> (convertOpenCompositeActions leaf (extendV ^. _3 . Input.stored) <&> (`OpenComposite` restS))
-    <*> convertAddItem extendOp (Set.singleton (extendV ^. _1)) exprPl
+    <*> (convertOpenCompositeActions leaf (extendV ^. extendRest . Input.stored) <&> (`OpenComposite` restS))
+    <*> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
 
 convertOpenCompositeActions ::
     Monad m => V.Leaf -> ValP m -> ConvertM m (OpenCompositeActions (T m))
@@ -140,9 +148,9 @@ convertItem ::
     ValP m ->
     EntityId -> Set T.Tag -> expr ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
-    (T.Tag, ValI m, ValI m) ->
+    ExtendVal m (ValI m) ->
     ConvertM m (CompositeItem InternalName (T m) (T m) expr)
-convertItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
+convertItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -158,6 +166,8 @@ convertItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
             , _ciExpr = exprS
             , _ciDelete = delItem
             }
+    where
+        ExtendVal tag exprI restI = extendVal
 
 type BodyPrism m a =
     Lens.Prism'
@@ -170,7 +180,7 @@ convert ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m a ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
-    (T.Tag, ValI m, Input.Payload m a) -> ConvertM m (ExpressionU m a)
+    ExtendVal m (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
     do
         (modifyEntityId, rest) <-

@@ -52,10 +52,11 @@ convert caseV exprPl =
     do
         V.Case tag valS restS <- traverse ConvertM.convertSubexpression caseV
         let caseP =
-                ( tag
-                , caseV ^. V.caseMatch . Val.payload . plValI
-                , caseV ^. V.caseMismatch . Val.payload
-                )
+                Composite.ExtendVal
+                { Composite._extendTag = tag
+                , Composite._extendValI = caseV ^. V.caseMatch . Val.payload . plValI
+                , Composite._extendRest = caseV ^. V.caseMismatch . Val.payload
+                }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
     where

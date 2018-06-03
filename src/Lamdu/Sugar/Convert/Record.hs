@@ -36,10 +36,11 @@ convertExtend recExtend exprPl =
     do
         V.RecExtend tag valS restS <- traverse ConvertM.convertSubexpression recExtend
         let recP =
-                ( tag
-                , recExtend ^. V.recFieldVal . Val.payload . plValI
-                , recExtend ^. V.recRest . Val.payload
-                )
+                Composite.ExtendVal
+                { Composite._extendTag = tag
+                , Composite._extendValI = recExtend ^. V.recFieldVal . Val.payload . plValI
+                , Composite._extendRest = recExtend ^. V.recRest . Val.payload
+                }
         Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where
         mkRecExtend t v r = V.RecExtend t v r & V.BRecExtend
