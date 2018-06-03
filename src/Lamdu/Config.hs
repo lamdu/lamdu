@@ -126,7 +126,7 @@ data Config = Config
     , _delBackwardKeys :: [MetaKey]
     , _actionKeys :: [MetaKey]
     , _replaceParentKeys :: [MetaKey]
-    , _attachKeys :: [MetaKey]
+    , _healKeys :: [MetaKey]
     , _detachKeys :: [MetaKey]
     , _parenDetachKeys :: [MetaKey]
 

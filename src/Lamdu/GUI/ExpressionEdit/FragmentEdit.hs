@@ -96,17 +96,17 @@ make fragment pl =
                                 & Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .~
                                     [Rect 0 (w ^. Widget.wSize)]
                             | otherwise = w
-        let attachEventMap =
-                case fragment ^. Sugar.fAttach of
-                Sugar.AttachTypeMismatch -> mempty
-                Sugar.AttachAction attach ->
-                    attach <&> WidgetIds.fromEntityId
+        let healEventMap =
+                case fragment ^. Sugar.fHeal of
+                Sugar.TypeMismatch -> mempty
+                Sugar.HealAction heal ->
+                    heal <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
-                        (Config.delKeys config <> config ^. Config.attachKeys)
-                        (E.Doc ["Edit", "Attach"])
+                        (Config.delKeys config <> config ^. Config.healKeys)
+                        (E.Doc ["Edit", "Heal"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
-            <&> Widget.widget %~ Widget.weakerEvents attachEventMap
+            <&> Widget.widget %~ Widget.weakerEvents healEventMap
     where
         innerId = fragment ^. Sugar.fExpr . Sugar.rPayload & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
@@ -121,9 +121,9 @@ makeFragmentExprEdit fragment =
         theme <- Lens.view Theme.theme
         let frameColor =
                 theme ^.
-                case fragment ^. Sugar.fAttach of
-                Sugar.AttachAction {} -> Theme.successColor
-                Sugar.AttachTypeMismatch {} -> Theme.errorColor
+                case fragment ^. Sugar.fHeal of
+                Sugar.HealAction {} -> Theme.successColor
+                Sugar.TypeMismatch {} -> Theme.errorColor
         let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
         fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
         Momentu.addInnerFrame

@@ -307,7 +307,7 @@ toFragment expr Fragment{..} =
         newExpr <- expr _fExpr
         pure Fragment
             { _fExpr = newExpr
-            , _fAttach = _fAttach
+            , _fHeal = _fHeal
             , _fOptions = _fOptions <&> Lens.mapped %~ SugarLens.holeOptionTransformExprs (run . toExpression)
             }
 

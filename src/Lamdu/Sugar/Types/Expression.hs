@@ -32,8 +32,8 @@ module Lamdu.Sugar.Types.Expression
     , RelayedArg(..), raValue, raId, raActions
     , LabeledApplyFunc(..), afVar, afPayload
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
-    , Fragment(..), fExpr, fAttach, fOptions
-    , Attach(..), _AttachAction, _AttachTypeMismatch
+    , Fragment(..), fExpr, fHeal, fOptions
+    , Heal(..), _HealAction, _TypeMismatch
     , Lambda(..), lamBinder, lamMode
     , V.Apply(..), V.applyFunc, V.applyArg
     ) where
@@ -188,16 +188,16 @@ data Lambda name i o expr = Lambda
     , _lamBinder :: Binder name i o expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Attach o
-    = AttachAction (o EntityId)
-    | AttachTypeMismatch
+data Heal o
+    = HealAction (o EntityId)
+    | TypeMismatch
     deriving Generic
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment name i o expr = Fragment
     { _fExpr :: expr
-    , _fAttach :: Attach o
+    , _fHeal :: Heal o
     , _fOptions :: i [HoleOption i o (Expression name i o ())]
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -271,10 +271,10 @@ Lens.makeLenses ''NullaryVal
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg
-Lens.makePrisms ''Attach
 Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''Else
+Lens.makePrisms ''Heal
 Lens.makePrisms ''InjectVal
 Lens.makePrisms ''Literal

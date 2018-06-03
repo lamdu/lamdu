@@ -159,12 +159,12 @@ setChildReplaceParentActions =
     BodyLam lam | Lens.has (lamBinder . bBody . bbContent . _BinderLet) lam -> body
     _ ->
         body
-        & Lens.filtered (not . Lens.has (_BodyFragment . fAttach . _AttachTypeMismatch)) .
+        & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) .
             traverse . rPayload %~ join setToExpr
         <&> fixFragmentReplaceParent
-        -- Replace-parent of fragment expr without "attach" available -
+        -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        <&> rBody . _BodyFragment . Lens.filtered (Lens.has (fAttach . _AttachTypeMismatch)) .
+        <&> rBody . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
             fExpr . rPayload %~ join setToExpr
 
 subexprPayloads ::

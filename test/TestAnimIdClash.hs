@@ -83,7 +83,7 @@ testFragment =
             adhocPayload NearestHoles.none <$
             ( Sugar.BodyFragment Sugar.Fragment
                 { Sugar._fExpr = Stub.litNum 5
-                , Sugar._fAttach = Sugar.AttachTypeMismatch
+                , Sugar._fHeal = Sugar.TypeMismatch
                 , Sugar._fOptions = pure []
                 } & Stub.expr (Stub.numType Stub.~> Stub.numType)
             )

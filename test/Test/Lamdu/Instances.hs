@@ -170,11 +170,11 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.VariantType n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.WorkArea n Unit Unit a)
 deriving instance Eq (Name Unit)
 deriving instance Eq (Name.StoredName Unit)
-deriving instance Eq (Sugar.Attach Unit)
 deriving instance Eq (Sugar.BinderVarInline Unit)
 deriving instance Eq (Sugar.ClosedCompositeActions Unit)
 deriving instance Eq (Sugar.DetachAction Unit)
 deriving instance Eq (Sugar.EvalException Unit)
+deriving instance Eq (Sugar.Heal Unit)
 deriving instance Eq (Sugar.Literal (Property Unit))
 deriving instance Eq (Sugar.NullParamActions Unit)
 deriving instance Eq (Sugar.OpenCompositeActions Unit)
@@ -252,13 +252,13 @@ instance NFData (Name (T o)) where rnf = genericRnf
 instance NFData (Name.StoredName (T o)) where rnf = genericRnf
 instance NFData (Sugar.AddFirstParam n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.AddNextParam n (T i) (T o)) where rnf = genericRnf
-instance NFData (Sugar.Attach (Transaction o)) where rnf = genericRnf
 instance NFData (Sugar.BinderActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.BinderVarInline (T o)) where rnf = genericRnf
 instance NFData (Sugar.ClosedCompositeActions (T o)) where rnf = genericRnf
 instance NFData (Sugar.DetachAction (T o)) where rnf = genericRnf
 instance NFData (Sugar.EvalException (T o)) where rnf = genericRnf
 instance NFData (Sugar.FuncParamActions n (T i) (T o)) where rnf = genericRnf
+instance NFData (Sugar.Heal (Transaction o)) where rnf = genericRnf
 instance NFData (Sugar.Hole (T i) (T o) a) where rnf = genericRnf
 instance NFData (Sugar.LetActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Literal (Property (T o))) where rnf = genericRnf

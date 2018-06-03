@@ -113,14 +113,14 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                       & rPayload . plActions . detach .~ FragmentExprAlready storedEntityId
                       & rPayload . plActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
-                , _fAttach =
+                , _fHeal =
                       if isTypeMatch
                       then DataOps.replace stored
                            (argI ^. Val.payload . Input.stored . Property.pVal)
                            <* postProcess
                            <&> EntityId.ofValI
-                           & AttachAction
-                      else AttachTypeMismatch
+                           & HealAction
+                      else TypeMismatch
                 , _fOptions = options
                 } & pure
             >>= addActions [funcI, argI] exprPl
