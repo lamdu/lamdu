@@ -64,12 +64,11 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             & maybe (pure mempty) ExprEventMap.jumpHolesEventMap
         let responsiveLabel text =
                 Styled.grammarLabel text <&> Responsive.fromTextView
-        let headerLabel text =
-                (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
-                <*> Styled.grammarLabel text
-                <&> Responsive.fromWithTextPos
-                <&> Widget.weakerEvents labelJumpHoleEventMap
-        caseLabel <- headerLabel "case"
+        caseLabel <-
+            (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
+            <*> Styled.grammarLabel "case"
+            <&> Responsive.fromWithTextPos
+            <&> Widget.weakerEvents labelJumpHoleEventMap
         ofLabel <- responsiveLabel "of"
         (mActiveTag, header) <-
             case mArg of
@@ -93,16 +92,12 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         ?? [caseLabel, argEdit, ofLabel]
                         <&> (,) mTag
         altsGui <-
-            do
-                altsGui <-
-                    makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal))
-                    alts addAlt altsId
-                case caseTail of
-                    Sugar.ClosedComposite actions ->
-                        Widget.weakerEvents (closedCaseEventMap config actions) altsGui
-                        & pure
-                    Sugar.OpenComposite actions rest ->
-                        makeOpenCase actions rest (Widget.toAnimId myId) altsGui
+            makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts addAlt altsId
+            >>= case caseTail of
+            Sugar.ClosedComposite actions ->
+                pure . Widget.weakerEvents (closedCaseEventMap config actions)
+            Sugar.OpenComposite actions rest ->
+                makeOpenCase actions rest (Widget.toAnimId myId)
         let addAltEventMap =
                 addAltId altsId
                 & pure
