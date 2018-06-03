@@ -24,6 +24,7 @@ test =
     , testExtract
     , testInline
     , delParam
+    , testOpenCase
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -138,3 +139,11 @@ delParam =
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
         afterDel = waRepl . replExpr . rBody . _BodyLiteral . _LiteralNum
+
+testOpenCase :: Test
+testOpenCase =
+    testCase "open-case" $
+    testProgram "open-lambda-case.json" $ \cache ->
+    -- This is meant to just let convertWorkArea validation check that
+    -- entity ids are OK
+    void $ convertWorkArea cache
