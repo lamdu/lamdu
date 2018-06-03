@@ -4,7 +4,6 @@ module TestSugar where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
-import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import           Lamdu.GUI.ExpressionGui as ExprGui
@@ -33,10 +32,8 @@ testSugarActions ::
     [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload -> T ViewM a] ->
     IO ()
 testSugarActions program actions =
-    do
-        cache <- Cache.make <&> snd
-        testProgram program
-            (traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache)
+    testProgram program $ \cache ->
+    traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error

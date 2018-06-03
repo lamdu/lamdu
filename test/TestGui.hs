@@ -13,7 +13,6 @@ import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event(..), KeyEvent(..))
-import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -34,45 +33,45 @@ type T = Transaction
 -- https://trello.com/c/KFLJPNmO/375-operator-precedence-crosses-lambda-boundaries-add-test
 test :: Test
 test =
+    testCase "apply-operator" $
+    GuiEnv.make >>=
+    \baseEnv ->
+    testProgram "simple-lambda.json" $
+    \cache ->
     do
-        cache <- Cache.make <&> snd
-        baseEnv <- GuiEnv.make
-        do
-            workArea <- convertWorkArea cache
-            let holeId =
-                    workArea ^?! Sugar.waRepl . Sugar.replExpr .
-                    Sugar.rBody . Sugar._BodyLam . Sugar.lamBinder .
-                    Sugar.bBody . Sugar.bbContent . Sugar._BinderExpr .
-                    Sugar.rPayload . Sugar.plEntityId
-                    & HoleWidgetIds.make
-                    & HoleWidgetIds.hidClosed
-            let env = baseEnv & cursor .~ holeId
-            gui <-
-                workArea ^. Sugar.waRepl . Sugar.replExpr
-                & ExpressionEdit.make
-                & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
-            let mkFocused =
-                    gui ^?! Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
-            let eventMap =
-                    (mkFocused (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap)
-                    Widget.EventContext
-                    { Widget._eVirtualCursor = VirtualCursor (Rect 0 0)
-                    , Widget._ePrevTextRemainder = ""
-                    }
-            let eventKey =
-                    EventKey KeyEvent
-                    { keKey = GLFW.Key'7
-                    , keScanCode = 0 -- dummy
-                    , keModKeys = GLFW.ModifierKeys True False False False
-                    , keState = GLFW.KeyState'Pressed
-                    , keChar = Just '&'
-                    }
-            _ <- runIdentity (E.lookup (Identity Nothing) eventKey eventMap) ^?! Lens._Just
-            workArea' <- convertWorkArea cache
-            unless (workAreaEq workArea workArea') (fail "bad operator precedence")
-            pure ()
-            & testProgram "simple-lambda.json"
-    & testCase "apply-operator"
+        workArea <- convertWorkArea cache
+        let holeId =
+                workArea ^?! Sugar.waRepl . Sugar.replExpr .
+                Sugar.rBody . Sugar._BodyLam . Sugar.lamBinder .
+                Sugar.bBody . Sugar.bbContent . Sugar._BinderExpr .
+                Sugar.rPayload . Sugar.plEntityId
+                & HoleWidgetIds.make
+                & HoleWidgetIds.hidClosed
+        let env = baseEnv & cursor .~ holeId
+        gui <-
+            workArea ^. Sugar.waRepl . Sugar.replExpr
+            & ExpressionEdit.make
+            & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
+        let mkFocused =
+                gui ^?! Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
+        let eventMap =
+                (mkFocused (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap)
+                Widget.EventContext
+                { Widget._eVirtualCursor = VirtualCursor (Rect 0 0)
+                , Widget._ePrevTextRemainder = ""
+                }
+        let eventKey =
+                EventKey KeyEvent
+                { keKey = GLFW.Key'7
+                , keScanCode = 0 -- dummy
+                , keModKeys = GLFW.ModifierKeys True False False False
+                , keState = GLFW.KeyState'Pressed
+                , keChar = Just '&'
+                }
+        _ <- runIdentity (E.lookup (Identity Nothing) eventKey eventMap) ^?! Lens._Just
+        workArea' <- convertWorkArea cache
+        unless (workAreaEq workArea workArea') (fail "bad operator precedence")
+        pure ()
 
 workAreaEq ::
     forall a m.

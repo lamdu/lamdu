@@ -24,7 +24,9 @@ convertWorkArea cache =
     loadWorkArea cache noopMonitors (pure EvalResults.empty) codeAnchors
     >>= \x -> deepseq x (pure x)
 
-testProgram :: FilePath -> T ViewM a -> IO a
+testProgram :: FilePath -> (Cache.Functions -> T ViewM a) -> IO a
 testProgram program action =
-    withDB ("test/programs/" <> program)
-    (runDbTransaction ?? runAction action)
+    do
+        cache <- Cache.make <&> snd
+        withDB ("test/programs/" <> program)
+            (runDbTransaction ?? runAction (action cache))
