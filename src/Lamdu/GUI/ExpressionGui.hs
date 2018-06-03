@@ -70,7 +70,7 @@ data Payload = Payload
     , _plShowAnnotation :: ShowAnnotation
     , _plNeedParens :: Bool
     , _plMinOpPrec :: Int
-    } deriving (Generic, Eq)
+    } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
 
 type ExpressionN i o a = Sugar.Expression (Name o) i o a
