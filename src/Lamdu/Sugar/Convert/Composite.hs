@@ -182,23 +182,20 @@ convert ::
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     ExtendVal m (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
-    do
-        (modifyEntityId, rest) <-
-            case restS ^? rBody . prism of
-            Just r ->
-                convertExtend cons op valS exprPl extendV r
-                <&> (,) (const (restS ^. rPayload . plEntityId))
-            _ ->
-                convertOneItemOpenComposite empty cons op valS restS exprPl extendV
-                <&> (,) id
-        prism # rest
-            -- Sugar Composites use their tail as an entity id, unlike
-            -- other sugar constructs.
-            -- All the extend entity ids are "hidden", the vals are
-            -- directly sugared separately, so using addActions to add
-            -- the hidden payloads is complex. No subexprs given will
-            -- add no hidden payloads. Then we add the extend only to
-            -- pUserData as the hidden payload
-            & addActions [] exprPl
-            <&> rPayload . plEntityId %~ modifyEntityId
-            <&> rPayload . plData . pUserData <>~ exprPl ^. Input.userData
+    case restS ^? rBody . prism of
+    Just r ->
+        convertExtend cons op valS exprPl extendV r
+        <&> (prism #)
+        -- Closed sugar Composites use their tail as an entity id,
+        -- unlike other sugar constructs.  All the extend entity ids
+        -- are "hidden", the vals are directly sugared separately, so
+        -- using addActions to add the hidden payloads is complex. No
+        -- subexprs given will add no hidden payloads. Then we add the
+        -- extend only to pUserData as the hidden payload
+        >>= addActions [] exprPl
+        <&> rPayload . plEntityId .~ restS ^. rPayload . plEntityId
+        <&> rPayload . plData . pUserData <>~ exprPl ^. Input.userData
+    Nothing ->
+        convertOneItemOpenComposite empty cons op valS restS exprPl extendV
+        <&> (prism #)
+        >>= addActions [] exprPl
