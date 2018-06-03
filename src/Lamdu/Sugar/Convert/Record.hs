@@ -9,7 +9,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertComposite)
+import qualified Lamdu.Sugar.Convert.Composite as Composite
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -25,7 +25,7 @@ plValI = Input.stored . Property.pVal
 convertEmpty ::
     (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertEmpty pl =
-    convertEmptyComposite DataOps.recExtend pl
+    Composite.convertEmpty DataOps.recExtend pl
     <&> BodyRecord
     >>= addActions [] pl
 
@@ -40,6 +40,6 @@ convertExtend recExtend exprPl =
                 , recExtend ^. V.recFieldVal . Val.payload . plValI
                 , recExtend ^. V.recRest . Val.payload
                 )
-        convertComposite DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
+        Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where
         mkRecExtend t v r = V.RecExtend t v r & V.BRecExtend

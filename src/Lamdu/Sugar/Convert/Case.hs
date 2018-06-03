@@ -13,7 +13,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Composite (convertEmptyComposite, convertComposite)
+import qualified Lamdu.Sugar.Convert.Composite as Composite
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -34,7 +34,7 @@ plValI = Input.stored . Property.pVal
 
 convertAbsurd :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd pl =
-    convertEmptyComposite DataOps.case_ pl
+    Composite.convertEmpty DataOps.case_ pl
     <&> Case LambdaCase
     <&> BodyCase
     >>= addActions [] pl
@@ -56,7 +56,7 @@ convert caseV exprPl =
                 , caseV ^. V.caseMatch . Val.payload . plValI
                 , caseV ^. V.caseMismatch . Val.payload
                 )
-        convertComposite DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
+        Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
     where
         mkCase t v r = V.Case t v r & V.BCase

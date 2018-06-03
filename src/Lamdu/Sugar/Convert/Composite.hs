@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Lamdu.Sugar.Convert.Composite
-    ( convertEmptyComposite, BodyPrism, convertComposite
+    ( convertEmpty, BodyPrism, convert
     ) where
 
 import qualified Control.Lens as Lens
@@ -55,7 +55,7 @@ convertAddItem extendOp existingTags pl =
     where
         stored = pl ^. Input.stored
 
-convertCompositeExtend ::
+convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
@@ -64,10 +64,10 @@ convertCompositeExtend ::
     (T.Tag, ValI m, Input.Payload m a) ->
     Composite InternalName (T m) (T m) expr ->
     ConvertM m (Composite InternalName (T m) (T m) expr)
-convertCompositeExtend cons extendOp valS exprPl extendV restC =
+convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
-            convertCompositeItem cons (exprPl ^. Input.stored)
+            convertItem cons (exprPl ^. Input.stored)
             (extendV ^. _3 . Input.entityId) (Set.fromList restTags) valS
             (extendV & _3 %~ (^. Input.stored . Property.pVal))
         addItem <- convertAddItem extendOp (Set.fromList (extendV ^. _1 : restTags)) exprPl
@@ -89,7 +89,7 @@ convertOneItemOpenComposite ::
     ConvertM m (Composite InternalName (T m) (T m) expr)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
-    <$> ( convertCompositeItem cons
+    <$> ( convertItem cons
             (exprPl ^. Input.stored) (extendV ^. _3 . Input.entityId) mempty valS
             (extendV & _3 %~ (^. Input.stored . Property.pVal))
             <&> (:[])
@@ -110,12 +110,12 @@ convertOpenCompositeActions leaf stored =
         <&> EntityId.ofValI
     }
 
-convertEmptyComposite ::
+convertEmpty ::
     Monad m =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Input.Payload m a ->
     ConvertM m (Composite InternalName (T m) (T m) expr)
-convertEmptyComposite extendOp exprPl =
+convertEmpty extendOp exprPl =
     do
         actions <-
             ConvertM.postProcessAssert
@@ -134,7 +134,7 @@ convertEmptyComposite extendOp exprPl =
             , _cAddItem = addItem
             }
 
-convertCompositeItem ::
+convertItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     ValP m ->
@@ -142,7 +142,7 @@ convertCompositeItem ::
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     (T.Tag, ValI m, ValI m) ->
     ConvertM m (CompositeItem InternalName (T m) (T m) expr)
-convertCompositeItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
+convertItem cons stored inst forbiddenTags exprS (tag, exprI, restI) =
     do
         delItem <- deleteItem stored restI
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -164,19 +164,19 @@ type BodyPrism m a =
     (Body InternalName (T m) (T m) (ExpressionU m a))
     (Composite InternalName (T m) (T m) (ExpressionU m a))
 
-convertComposite ::
+convert ::
     (Monad m, Monoid a) =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m a ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     (T.Tag, ValI m, Input.Payload m a) -> ConvertM m (ExpressionU m a)
-convertComposite op empty cons prism valS restS exprPl extendV =
+convert op empty cons prism valS restS exprPl extendV =
     do
         (modifyEntityId, rest) <-
             case restS ^? rBody . prism of
             Just r ->
-                convertCompositeExtend cons op valS exprPl extendV r
+                convertExtend cons op valS exprPl extendV r
                 <&> (,) (const (restS ^. rPayload . plEntityId))
             _ ->
                 convertOneItemOpenComposite empty cons op valS restS exprPl extendV
