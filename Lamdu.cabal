@@ -363,6 +363,7 @@ Library
                   , Lamdu.Sugar.Types.Expression
                   , Lamdu.Sugar.Types.GetVar
                   , Lamdu.Sugar.Types.Hole
+                  , Lamdu.Sugar.Types.Parts
                   , Lamdu.Sugar.Types.Tag
                   , Lamdu.Sugar.Types.Type
                   , Lamdu.Themes
