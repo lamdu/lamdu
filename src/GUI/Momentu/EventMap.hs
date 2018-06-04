@@ -16,7 +16,7 @@ module GUI.Momentu.EventMap
     , filterChars, filter, mapMaybe
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
@@ -177,8 +177,8 @@ mapMaybe p (EventMap m dropHandlers charGroups mAllChars) =
     EventMap
     (m & Map.mapMaybe (dhHandler %%~ f))
     (dropHandlers <&> dropDocHandler %~ t)
-    (charGroups <&> cgDocHandler . dhHandler %~ Map.mapMaybe p
-        & Prelude.filter (Lens.has (cgDocHandler . dhHandler . traverse)))
+    ((charGroups <&> cgDocHandler . dhHandler %~ Map.mapMaybe p)
+        ^.. traverse . Lens.filteredBy (cgDocHandler . dhHandler . traverse))
     (mAllChars <&> chDocHandler %~ t)
     where
         t = dhHandler . Lens.mapped %~ (>>= p)

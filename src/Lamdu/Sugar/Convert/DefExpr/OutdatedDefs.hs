@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ) where
 
 import           Control.Applicative ((<|>))
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -40,7 +40,7 @@ data IsHoleArg = IsHoleArg | NotHoleArg deriving Eq
 argToHoleFunc :: Lens.Traversal' (Val a) (Val a)
 argToHoleFunc =
     ExprLens.valApply .
-    Lens.filtered (Lens.has (V.applyFunc . ExprLens.valHole)) .
+    Lens.filteredBy (V.applyFunc . ExprLens.valHole) .
     V.applyArg
 
 recursivelyFixExpr ::

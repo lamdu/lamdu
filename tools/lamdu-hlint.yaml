@@ -3,9 +3,11 @@
     enabled: true
     imports:
     - package base
+    - package lens
     rules:
     - hint: {lhs: return, rhs: pure}
     - hint: {lhs: a `mappend` b, rhs: a <> b}
+    - hint: {lhs: Control.Lens.filtered (Control.Lens.has a), rhs: filteredBy a}
 
 - group:
     name: generalise-for-conciseness

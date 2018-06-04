@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Cache as Cache
@@ -149,11 +149,6 @@ setChildReplaceParentActions =
                 stored
                 (srcPl ^. plData . pStored . Property.pVal)
                 <&> EntityId.ofValI)
-        fixFragmentReplaceParent child =
-            -- Replace-parent with fragment sets directly to fragment expression
-            case child ^. rBody of
-            BodyFragment fragment -> child & rPayload %~ setToExpr (fragment ^. fExpr . rPayload)
-            _ -> child
     in
     case body of
     BodyLam lam | Lens.has (lamBinder . bBody . bbContent . _BinderLet) lam -> body
@@ -161,7 +156,8 @@ setChildReplaceParentActions =
         body
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) .
             traverse . rPayload %~ join setToExpr
-        <&> fixFragmentReplaceParent
+        -- Replace-parent with fragment sets directly to fragment expression
+        <&> Lens.filteredBy (rBody . _BodyFragment . fExpr . rPayload) <. rPayload %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
         <&> rBody . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
