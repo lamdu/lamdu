@@ -57,6 +57,9 @@ unsafeGetCPUTime :: Monad m => m Integer
 unsafeGetCPUTime =
     p <&> unsafePerformIO
     where
+        -- This must be separately done from unsafePerformIO so ghc
+        -- sees unsafePerformIO applied to an unknown action and
+        -- doesn't run it just once
         p = pure getCPUTime
 
 unsafeTimeIt :: Monad m => m a -> m (Double, a)
