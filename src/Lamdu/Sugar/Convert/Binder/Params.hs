@@ -195,30 +195,28 @@ getFieldParamsToParams (V.Lam param lamBody) tag =
 
 fixCallArgRemoveField :: Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallArgRemoveField tag argI =
-    do
-        body <- ExprIRef.readValBody argI
-        case body of
-            V.BRecExtend (V.RecExtend t v restI)
-                | t == tag -> pure restI
-                | otherwise ->
-                    do
-                        newRestI <- fixCallArgRemoveField tag restI
-                        when (newRestI /= restI) $
-                            ExprIRef.writeValBody argI $
-                            V.BRecExtend $ V.RecExtend t v newRestI
-                        pure argI
-            _ -> pure argI
+    ExprIRef.readValBody argI
+    >>= \case
+    V.BRecExtend (V.RecExtend t v restI)
+        | t == tag -> pure restI
+        | otherwise ->
+            do
+                newRestI <- fixCallArgRemoveField tag restI
+                when (newRestI /= restI) $
+                    ExprIRef.writeValBody argI $
+                    V.BRecExtend $ V.RecExtend t v newRestI
+                pure argI
+    _ -> pure argI
 
 fixCallToSingleArg ::
     Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallToSingleArg tag argI =
-    do
-        body <- ExprIRef.readValBody argI
-        case body of
-            V.BRecExtend (V.RecExtend t v restI)
-                | t == tag -> pure v
-                | otherwise -> fixCallToSingleArg tag restI
-            _ -> pure argI
+    ExprIRef.readValBody argI
+    >>= \case
+    V.BRecExtend (V.RecExtend t v restI)
+        | t == tag -> pure v
+        | otherwise -> fixCallToSingleArg tag restI
+    _ -> pure argI
 
 delFieldParamAndFixCalls ::
     Monad m =>
@@ -412,11 +410,10 @@ removeCallsToVar funcVar val =
         wrapUnappliedUsesOfVar funcVar val
     where
         changeRecursion prop =
-            do
-                body <- ExprIRef.readValBody (Property.value prop)
-                case body of
-                    V.BApp (V.Apply f _) -> (prop ^. Property.pSet) f
-                    _ -> error "assertion: expected BApp"
+            ExprIRef.readValBody (Property.value prop)
+            >>= \case
+            V.BApp (V.Apply f _) -> (prop ^. Property.pSet) f
+            _ -> error "assertion: expected BApp"
 
 makeDeleteLambda :: Monad m => BinderKind m -> StoredLam m -> ConvertM m (T m ())
 makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
