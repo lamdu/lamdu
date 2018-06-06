@@ -82,7 +82,7 @@ emptyRec ::
 emptyRec nearestHoles (Sugar.NullaryVal pl closedActions addItem) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & (`Sugar.Expression` pl')
+    & Sugar.Expression pl'
     where
         pl' = pl <&> \() -> ExprGui.adhocPayload nearestHoles
 

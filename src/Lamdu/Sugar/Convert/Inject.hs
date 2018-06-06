@@ -32,10 +32,10 @@ convert (V.Inject tag injected) exprPl =
                     typeProtect <&> EntityId.ofValI
         let val =
                 case injectedS of
-                Expression
+                Expression pl
                     (BodyRecord
                      (Composite []
-                      (ClosedComposite closedCompositeActions) addItem)) pl ->
+                      (ClosedComposite closedCompositeActions) addItem)) ->
                     NullaryVal (void pl) closedCompositeActions addItem
                     & InjectNullary
                 _ ->

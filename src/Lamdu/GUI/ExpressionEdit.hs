@@ -32,7 +32,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 make :: (Monad i, Monad o) => ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
-make (Sugar.Expression body pl) =
+make (Sugar.Expression pl body) =
     makeEditor body pl & assignCursor
     where
         exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds

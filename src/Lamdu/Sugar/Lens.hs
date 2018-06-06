@@ -23,10 +23,10 @@ subExprPayloads ::
     (Expression name i o a)
     (Expression name i o b)
     (Payload name i o a) (Payload name i o b)
-subExprPayloads f val@(Expression body pl) =
+subExprPayloads f val@(Expression pl body) =
     Expression
-    <$> (Lens.traversed .> subExprPayloads) f body
-    <*> Lens.indexed f (void val) pl
+    <$> Lens.indexed f (void val) pl
+    <*> (Lens.traversed .> subExprPayloads) f body
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal
@@ -37,10 +37,10 @@ payloadsIndexedByPath ::
 payloadsIndexedByPath f =
     go []
     where
-        go path val@(Expression body pl) =
+        go path val@(Expression pl body) =
             Expression
-            <$> Lens.traversed (go newPath) body
-            <*> Lens.indexed f newPath pl
+            <$> Lens.indexed f newPath pl
+            <*> Lens.traversed (go newPath) body
             where
                 newPath = void val : path
 

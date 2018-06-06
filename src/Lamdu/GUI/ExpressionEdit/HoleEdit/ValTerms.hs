@@ -90,7 +90,7 @@ bodyNames =
     b -> NamesGet.fromBody b >>= ofName
 
 expr :: Monad i => ExpressionN i o a -> [Text]
-expr (Sugar.Expression body _) =
+expr (Sugar.Expression _ body) =
     bodyShape body <>
     bodyNames body <>
     case body of

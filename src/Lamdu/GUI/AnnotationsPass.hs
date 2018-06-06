@@ -34,7 +34,7 @@ topLevelAnn = rPayload . plData . _1
 markAnnotationsToDisplay ::
     Expression name i o a ->
     Expression name i o (T.ShowAnnotation, a)
-markAnnotationsToDisplay (Expression oldBody pl) =
+markAnnotationsToDisplay (Expression pl oldBody) =
     case newBody of
     BodyPlaceHolder -> set T.neverShowAnnotations
     BodyLiteral LiteralNum {} -> set T.neverShowAnnotations
@@ -59,7 +59,7 @@ markAnnotationsToDisplay (Expression oldBody pl) =
                 else binder ^. bbContent . SugarLens.binderContentExpr .
                         topLevelAnn . T.showInEvalMode
             )
-        & Expression (newBodyWith dontShowEval)
+        & (`Expression` newBodyWith dontShowEval)
     BodyInject _ -> set dontShowEval
     BodyGetVar (GetParamsRecord _) -> set T.showAnnotationWhenVerbose
     BodyGetField _ -> set T.showAnnotationWhenVerbose
@@ -67,23 +67,23 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         app
         & applyFunc . nonHoleAnn .~ T.neverShowAnnotations
         & BodySimpleApply
-        & (`Expression` defPl)
+        & Expression defPl
     BodyLabeledApply _ -> set T.showAnnotationWhenVerbose
     BodyIfElse i ->
         i
         & iIfThen . itThen %~ onCaseAlt
         & iElse %~ onElse
         & BodyIfElse
-        & (`Expression` defPl)
+        & Expression defPl
     BodyHole hole ->
         hole
         & BodyHole
-        & (`Expression` plWith forceShowType)
+        & Expression (plWith forceShowType)
     BodyFragment fragment ->
         fragment
         & fExpr . nonHoleAnn .~ forceShowTypeOrEval
         & BodyFragment
-        & (`Expression` plWith forceShowType)
+        & Expression (plWith forceShowType)
     BodyCase cas ->
         cas
         -- cKind contains the scrutinee which is not always
@@ -92,12 +92,12 @@ markAnnotationsToDisplay (Expression oldBody pl) =
         & cKind . Lens.mapped . nonHoleAnn .~ T.neverShowAnnotations
         & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
         & BodyCase
-        & (`Expression` defPl)
+        & Expression defPl
     where
         newBodyWith f = newBody <&> nonHoleAnn .~ f
         plWith ann = pl & plData %~ (,) ann
         defPl = plWith T.showAnnotationWhenVerbose
-        set ann = Expression newBody (plWith ann)
+        set ann = Expression (plWith ann) newBody
         newBody = oldBody <&> markAnnotationsToDisplay
         nonHoleAnn = Lens.filtered (Lens.nullOf (rBody . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =

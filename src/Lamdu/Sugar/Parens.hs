@@ -168,8 +168,8 @@ loop ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Int -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-loop minOpPrecFromParent parentPrec (Expression body pl) =
-    Expression finalBody (pl & plData %~ res)
+loop minOpPrecFromParent parentPrec (Expression pl body) =
+    Expression (pl & plData %~ res) finalBody
     where
         f expr minOpPrecOverride override newParentPrec =
             loop (fromMaybe minOpPrecFromParent minOpPrecOverride)

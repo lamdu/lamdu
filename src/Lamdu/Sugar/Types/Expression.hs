@@ -45,8 +45,8 @@ import           Lamdu.Sugar.Types.Type
 import           Lamdu.Prelude
 
 data Expression name i o a = Expression
-    { _rBody :: Body name i o (Expression name i o a)
-    , _rPayload :: Payload name i o a
+    { _rPayload :: Payload name i o a
+    , _rBody :: Body name i o (Expression name i o a)
     } deriving (Functor, Foldable, Traversable, Generic)
 
 {- Composites start -}

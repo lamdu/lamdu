@@ -261,7 +261,7 @@ markLightParams ::
     Monad m =>
     Set InternalName -> Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
-markLightParams paramNames (Expression body pl) =
+markLightParams paramNames (Expression pl body) =
     case body of
     BodyGetVar (GetParam n)
         | Set.member (n ^. pNameRef . nrName) paramNames ->
@@ -270,7 +270,7 @@ markLightParams paramNames (Expression body pl) =
             & GetParam & BodyGetVar
     BodyFragment w -> w <&> markLightParams paramNames & BodyFragment
     _ -> body <&> markLightParams paramNames
-    & (`Expression` pl)
+    & Expression pl
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::

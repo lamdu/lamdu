@@ -423,10 +423,10 @@ toExpression ::
     MonadNaming m =>
     Expression (OldName m) (IM m) o a ->
     m (Expression (NewName m) (IM m) o a)
-toExpression (Expression body pl) =
+toExpression (Expression pl body) =
     Expression
-    <$> toBody toExpression body
-    <*> toPayload pl
+    <$> toPayload pl
+    <*> toBody toExpression body
 
 withParamInfo ::
     MonadNaming m =>
