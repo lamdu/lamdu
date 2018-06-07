@@ -198,13 +198,19 @@ toBinderBody ::
     m (BinderBody (NewName m) (IM m) o b)
 toBinderBody expr = bbContent %%~ toBinderContent expr
 
+toAddFirstParam ::
+    MonadNaming m =>
+    AddFirstParam (OldName m) (IM m) o ->
+    m (AddFirstParam (NewName m) (IM m) o)
+toAddFirstParam = _PrependParam toTagSelection
+
 toBinderActions ::
     MonadNaming m =>
     BinderActions (OldName m) (IM m) o ->
     m (BinderActions (NewName m) (IM m) o)
 toBinderActions BinderActions{..} =
     BinderActions
-    <$> _PrependParam toTagSelection _baAddFirstParam
+    <$> toAddFirstParam _baAddFirstParam
     <*> Lens._Just toNodeActions _baMNodeActions
 
 toBinder ::
