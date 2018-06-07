@@ -41,6 +41,12 @@ data BinderContent name i o expr
     | BinderExpr expr
     deriving (Functor, Foldable, Traversable, Generic)
 
+-- An expression with 0 or more let items,
+-- Appear in a:
+-- * Function: "\x -> [[THIS]]"
+-- * ToNom: "«X [[THIS]]"
+-- * Definition or let item value: "x = [[THIS]]"
+-- * Let-item/redex: "let x = y in [[THIS]]"
 data BinderBody name i o expr = BinderBody
     { _bbAddOuterLet :: o EntityId
     , _bbContent :: BinderContent name i o expr
