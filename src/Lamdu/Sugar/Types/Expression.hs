@@ -26,7 +26,7 @@ module Lamdu.Sugar.Types.Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
-    , Lambda(..), lamBinder, lamMode
+    , Lambda(..), lamFunc, lamMode
     , V.Apply(..), V.applyFunc, V.applyArg
     ) where
 
@@ -136,7 +136,7 @@ data Nominal name expr = Nominal
 
 data Lambda name i o expr = Lambda
     { _lamMode :: BinderMode
-    , _lamBinder :: Binder name i o expr
+    , _lamFunc :: Function name i o expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
 -- | An expression marked for transformation.

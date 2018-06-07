@@ -9,9 +9,13 @@ module Lamdu.Sugar.Types.Binder
     , BinderParamScopeId(..), bParamScopeId
     , BinderBody(..), bbAddOuterLet, bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
-    , Binder(..)
-        , bChosenScopeProp, bParams, bBody
-        , bLamId, bActions, bBodyScopes
+    , Function(..)
+        , fChosenScopeProp, fParams, fBody
+        , fAddFirstParam, fBodyScopes
+    , Assignment(..), aBody, aNodeActions
+    , AssignFunction(..), afFunction, afLamId
+    , AssignPlain(..), apAddFirstParam, apBody
+    , AssignmentBody(..), _BodyFunction, _BodyPlain
     ) where
 
 import qualified Control.Lens as Lens
@@ -26,7 +30,7 @@ import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Prelude
 
 data Let name i o expr = Let
-    { _lValue :: Binder name i o expr -- "let foo = [[bar]] in x"
+    { _lValue :: Assignment name i o expr -- "let foo = [[bar]] in x"
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation name
@@ -52,17 +56,40 @@ data BinderBody name i o expr = BinderBody
     , _bbContent :: BinderContent name i o expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Binder name i o expr = Binder
-    { _bChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
-    , _bParams :: BinderParams name i o
-    , _bLamId :: Maybe EntityId
-    , _bBody :: BinderBody name i o expr
-    , _bActions :: BinderActions name i o
-    , -- The scope inside a lambda (if exists)
-      _bBodyScopes :: BinderBodyScope
+data Function name i o expr = Function
+    { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
+    , _fParams :: BinderParams name i o
+    , _fBody :: BinderBody name i o expr
+    , _fAddFirstParam :: AddFirstParam name i o
+    , -- The scope inside a lambda
+      _fBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable, Generic)
 
-Lens.makeLenses ''Binder
+data AssignFunction name i o expr = AssignFunction
+    { _afLamId :: EntityId
+    , _afFunction :: Function name i o expr
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data AssignPlain name i o expr = AssignPlain
+    { _apAddFirstParam :: AddFirstParam name i o
+    , _apBody :: BinderBody name i o expr
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data AssignmentBody name i o expr
+    = BodyFunction (AssignFunction name i o expr)
+    | BodyPlain (AssignPlain name i o expr)
+    deriving (Functor, Foldable, Traversable, Generic)
+
+data Assignment name i o expr = Assignment
+    { _aBody :: AssignmentBody name i o expr
+    , _aNodeActions :: NodeActions name i o
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+Lens.makeLenses ''AssignFunction
+Lens.makeLenses ''Assignment
+Lens.makeLenses ''AssignPlain
 Lens.makeLenses ''BinderBody
+Lens.makeLenses ''Function
 Lens.makeLenses ''Let
+Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent

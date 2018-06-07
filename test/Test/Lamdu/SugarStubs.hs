@@ -114,7 +114,7 @@ mkTag var tag =
 
 def ::
     Sugar.Type InternalName -> UUID -> T.Tag ->
-    Sugar.Binder InternalName Identity Unit expr ->
+    Sugar.Assignment InternalName Identity Unit expr ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
@@ -161,28 +161,33 @@ mkFuncParam (paramVar, paramTag, paramType) =
         }
     }
 
-binderExpr ::
+funcExpr ::
     [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
-    Sugar.Binder InternalName Identity Unit Expr
-binderExpr params body =
-    Sugar.Binder
-    { Sugar._bChosenScopeProp = prop Nothing & pure
-    , Sugar._bLamId =
-        case params of
-        [] -> Nothing
-        _:_ -> Just "dummy"
-    , Sugar._bBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
-    , Sugar._bActions =
-        Sugar.BinderActions
-        { Sugar._baAddFirstParam = Sugar.PrependParam tagSelection
-        , Sugar._baMNodeActions = Just nodeActions
-        }
-    , Sugar._bParams = params <&> mkFuncParam & Sugar.Params
-    , Sugar._bBody =
+    Sugar.Function InternalName Identity Unit Expr
+funcExpr params body =
+    Sugar.Function
+    { Sugar._fChosenScopeProp = prop Nothing & pure
+    , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
+    , Sugar._fAddFirstParam = Sugar.PrependParam tagSelection
+    , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
+    , Sugar._fBody =
         Sugar.BinderBody
         { Sugar._bbAddOuterLet = Unit
         , Sugar._bbContent = Sugar.BinderExpr body
         }
+    }
+
+binderExpr ::
+    [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
+    Sugar.Assignment InternalName Identity Unit Expr
+binderExpr params body =
+    Sugar.Assignment
+    { Sugar._aBody =
+        Sugar.BodyFunction Sugar.AssignFunction
+        { Sugar._afLamId = "dummy"
+        , Sugar._afFunction = funcExpr params body
+        }
+    , Sugar._aNodeActions = nodeActions
     }
 
 expr ::

@@ -50,7 +50,7 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: BinderParams InternalName (T m) (T m)
+    , _cpParams :: Maybe (BinderParams InternalName (T m) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (T m) (T m)
     , cpScopes :: BinderBodyScope
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
@@ -369,7 +369,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
-            , _cpParams = Params params
+            , _cpParams = Params params & Just
             , _cpAddFirstParam = PrependParam addFirstSelection
             , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamPl
             , cpMLamParam = Just (entityId, param)
@@ -571,7 +571,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
         pure ConventionalParams
             { cpTags = mempty
             , _cpParamInfos = Map.empty
-            , _cpParams = funcParam
+            , _cpParams = Just funcParam
             , _cpAddFirstParam =
                 if oldParam == Anchors.anonTag
                 then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam)
@@ -678,7 +678,7 @@ convertEmptyParams binderKind val =
     ConventionalParams
     { cpTags = mempty
     , _cpParamInfos = Map.empty
-    , _cpParams = BinderWithoutParams
+    , _cpParams = Nothing
     , _cpAddFirstParam =
         do
             (newParam, _) <-
@@ -708,6 +708,6 @@ convertParams binderKind defVar expr =
             f convParams =
                 (mPresMode convParams, convParams, lambda ^. V.lamResult)
             mPresMode convParams =
-                presMode <$ convParams ^? cpParams . _Params . Lens.ix 1
+                presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
             presMode = Anchors.assocPresentationMode defVar
     _ -> convertEmptyParams binderKind expr <&> \x -> (Nothing, x, expr)

@@ -102,7 +102,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         nonHoleAnn = Lens.filtered (Lens.nullOf (rBody . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
-            & rBody . _BodyLam . lamBinder . bBody . bbContent .
+            & rBody . _BodyLam . lamFunc . fBody . bbContent .
               SugarLens.binderContentExpr . nonHoleAnn .~ T.neverShowAnnotations
             & topLevelAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse

@@ -48,7 +48,7 @@ testChangeParam =
             workArea ^?! waRepl . replExpr .
             rBody . _BodySimpleApply . V.applyFunc .
             rBody . _BodySimpleApply . V.applyArg .
-            rBody . _BodyLam . lamBinder . bParams . _Params . Lens.ix 0 .
+            rBody . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piTag . tagSelection . tsNewTag
 
 -- | Test for issue #373
@@ -66,10 +66,10 @@ testReorderLets =
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             waRepl . replExpr .
-            rBody . _BodyLam . lamBinder . bBody .
+            rBody . _BodyLam . lamFunc . fBody .
             bbContent . _BinderLet . lBody .
             bbContent . _BinderLet . lValue .
-            bActions . baMNodeActions . Lens._Just . extract
+            aNodeActions . extract
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
@@ -80,7 +80,7 @@ testExtract =
     where
         action =
             waRepl . replExpr .
-            rBody . _BodyLam . lamBinder . bBody .
+            rBody . _BodyLam . lamFunc . fBody .
             bbContent . _BinderLet . lActions . laNodeActions . extract
 
 -- Test for issue #402
@@ -103,7 +103,7 @@ testInline =
             where
                 letItem =
                     workArea ^?! waRepl . replExpr .
-                    rBody . _BodyLam . lamBinder . bBody .
+                    rBody . _BodyLam . lamFunc . fBody .
                     bbContent . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
@@ -113,7 +113,7 @@ testInline =
             | otherwise = fail "Expected inline result"
         afterInline =
             waRepl . replExpr .
-            rBody . _BodyLam . lamBinder . bBody .
+            rBody . _BodyLam . lamFunc . fBody .
             bbContent . _BinderExpr .
             rBody . _BodyLiteral . _LiteralNum
 
@@ -133,7 +133,7 @@ delParam =
     where
         action =
             waRepl . replExpr .
-            rBody . _BodyLam . lamBinder . bParams . _Params . Lens.ix 0 .
+            rBody . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()

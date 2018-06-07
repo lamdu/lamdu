@@ -80,7 +80,7 @@ mkExtractToLet outerScope stored =
                 DataOps.newIdentityLambda
             else
                 -- Give some subexpr in binder body a name (replace
-                -- binder body with "(\x -> binderBody) stored", and
+                -- binder body with "(\x -> assignmentBody) stored", and
                 -- stored becomes "x")
                 do
                     newParam <- ExprIRef.newVar
@@ -151,7 +151,7 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     case body of
-    BodyLam lam | Lens.has (lamBinder . bBody . bbContent . _BinderLet) lam -> body
+    BodyLam lam | Lens.has (lamFunc . fBody . bbContent . _BinderLet) lam -> body
     _ ->
         body
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) .

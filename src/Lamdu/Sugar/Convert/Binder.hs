@@ -19,7 +19,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams, cpAddFirstParam)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -120,7 +120,7 @@ convertRedex expr redex =
                     )
         pure Let
             { _lEntityId = EntityId.ofBinder param
-            , _lValue = value & bActions . baMNodeActions . Lens._Just %~ fixValueNodeActions
+            , _lValue = value & aNodeActions %~ fixValueNodeActions
             , _lActions = actions
             , _lName = tag
             , _lAnnotation = ann
@@ -171,27 +171,37 @@ makeBinder ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
-    ConvertM m (Binder InternalName (T m) (T m) (ExpressionU m a))
+    ConvertM m (Assignment InternalName (T m) (T m) (ExpressionU m a))
 makeBinder chosenScopeProp params funcBody pl =
     do
-        binderBody <- convertBinderBody funcBody
+        assignmentBody <- convertBinderBody funcBody
         nodeActions <- makeActions pl
         let mRemoveSetToHole
-                | Lens.has (cpParams . _BinderWithoutParams) params
-                && Lens.has (bbContent . _BinderExpr . rBody . _BodyHole) binderBody =
+                | Lens.has (cpParams . Lens._Nothing) params
+                && Lens.has (bbContent . _BinderExpr . rBody . _BodyHole) assignmentBody =
                     mSetToHole .~ Nothing
                 | otherwise = id
-        pure Binder
-            { _bParams = _cpParams params
-            , _bChosenScopeProp = chosenScopeProp ^. Property.mkProperty
-            , _bLamId = cpMLamParam params ^? Lens._Just . _1
-            , _bBody = binderBody
-            , _bBodyScopes = cpScopes params
-            , _bActions =
-                BinderActions
-                { _baAddFirstParam = _cpAddFirstParam params
-                , _baMNodeActions = Just (mRemoveSetToHole nodeActions)
-                }
+        pure Assignment
+            { _aNodeActions = mRemoveSetToHole nodeActions
+            , _aBody =
+                case params ^. cpParams of
+                Nothing ->
+                    BodyPlain AssignPlain
+                    { _apAddFirstParam = params ^. cpAddFirstParam
+                    , _apBody = assignmentBody
+                    }
+                Just xs ->
+                    BodyFunction AssignFunction
+                    { _afLamId = cpMLamParam params ^?! Lens._Just . _1
+                    , _afFunction =
+                        Function
+                        { _fParams = xs
+                        , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty
+                        , _fBody = assignmentBody
+                        , _fBodyScopes = cpScopes params
+                        , _fAddFirstParam = params ^. cpAddFirstParam
+                        }
+                    }
             }
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
@@ -199,8 +209,8 @@ makeBinder chosenScopeProp params funcBody pl =
             ctx
             & ConvertM.siTagParamInfos <>~ _cpParamInfos params
             & ConvertM.siNullParams <>~
-            case _cpParams params of
-            NullParam {} -> Set.fromList (cpMLamParam params ^.. Lens._Just . _2)
+            case params ^. cpParams of
+            Just NullParam{} -> Set.fromList (cpMLamParam params ^.. Lens._Just . _2)
             _ -> Set.empty
 
 convertLam ::
@@ -210,20 +220,21 @@ convertLam ::
 convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
-        binder <-
+        func <-
             makeBinder
             (lam ^. V.lamParamId & Anchors.assocScopeRef)
             convParams (lam ^. V.lamResult) exprPl
-            <&> bActions . baMNodeActions .~ Nothing
+            -- TODO: Instead of partiality split makeBinder
+            <&> (^?! aBody . _BodyFunction . afFunction)
         let paramNames =
-                binder ^.. bParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
+                func ^.. fParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
                 & Set.fromList
         let lambda
-                | useNormalLambda paramNames binder =
-                    Lambda NormalBinder binder
+                | useNormalLambda paramNames func =
+                    Lambda NormalBinder func
                 | otherwise =
-                    binder
-                    & bBody . Lens.traverse %~ markLightParams paramNames
+                    func
+                    & fBody . Lens.traverse %~ markLightParams paramNames
                     & Lambda LightLambda
         BodyLam lambda
             & addActions lam exprPl
@@ -231,29 +242,29 @@ convertLam lam exprPl =
 
 useNormalLambda ::
     Set InternalName ->
-    Binder InternalName i0 o0 (Expression InternalName i1 o1 a) -> Bool
-useNormalLambda paramNames binder
+    Function InternalName i0 o0 (Expression InternalName i1 o1 a) -> Bool
+useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        any (binder &)
-        [ Lens.has (bBody . bbContent . _BinderLet)
-        , Lens.has (bBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
+        any (func &)
+        [ Lens.has (fBody . bbContent . _BinderLet)
+        , Lens.has (fBody . Lens.traverse . SugarLens.payloadsOf forbiddenLightLamSubExprs)
         , not . allParamsUsed paramNames
         ]
     where
         forbiddenLightLamSubExprs :: Lens.Traversal' (Body name i o a) ()
         forbiddenLightLamSubExprs =
             Lens.failing SugarLens.bodyUnfinished
-            (_BodyLam . lamBinder . bParams . _Params . Lens.united)
+            (_BodyLam . lamFunc . fParams . _Params . Lens.united)
 
 allParamsUsed ::
     Set InternalName ->
-    Binder InternalName i o (Expression InternalName i1 o1 a) -> Bool
-allParamsUsed paramNames binder =
+    Function InternalName i o (Expression InternalName i1 o1 a) -> Bool
+allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            binder ^.. Lens.traverse . SugarLens.subExprPayloads . Lens.asIndex .
+            func ^.. Lens.traverse . SugarLens.subExprPayloads . Lens.asIndex .
             rBody . _BodyGetVar . _GetParam . pNameRef . nrName
             & Set.fromList
 
@@ -278,7 +289,7 @@ convertBinder ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Binder InternalName (T m) (T m) (ExpressionU m a)
+    , Assignment InternalName (T m) (T m) (ExpressionU m a)
     )
 convertBinder binderKind defVar expr =
     do
@@ -293,7 +304,7 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Binder InternalName (T m) (T m) (ExpressionU m a)
+    , Assignment InternalName (T m) (T m) (ExpressionU m a)
     )
 convertDefinitionBinder defI =
     convertBinder (BinderKindDef defI) (ExprIRef.globalId defI)

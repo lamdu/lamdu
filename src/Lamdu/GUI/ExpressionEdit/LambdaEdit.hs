@@ -117,7 +117,6 @@ mkLightLambda params myId =
     where
         paramIds =
             case params of
-            Sugar.BinderWithoutParams -> []
             Sugar.NullParam{} -> []
             Sugar.Params ps -> ps <&> (^. Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
 
@@ -129,7 +128,7 @@ make ::
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            BinderEdit.makeParts funcApplyLimit binder (WidgetIds.fromEntityId bodyId) myId
+            BinderEdit.makeFunctionParts funcApplyLimit func (WidgetIds.fromEntityId bodyId) myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & pure
@@ -148,6 +147,6 @@ make lam pl =
             | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
         funcApplyLimit = pl ^. Sugar.plData . ExprGui.plShowAnnotation . ExprGui.funcApplyLimit
-        params = binder ^. Sugar.bParams
-        binder = lam ^. Sugar.lamBinder
-        bodyId = binder ^. Sugar.bBody . Sugar.bbContent . SugarLens.binderContentEntityId
+        params = func ^. Sugar.fParams
+        func = lam ^. Sugar.lamFunc
+        bodyId = func ^. Sugar.fBody . Sugar.bbContent . SugarLens.binderContentEntityId

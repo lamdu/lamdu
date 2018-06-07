@@ -4,6 +4,8 @@ module Lamdu.Sugar.Lens
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
     , defSchemes
+    , assignmentBody, binderFormBody
+    , assignmentAddFirstParam, binderFormAddFirstParam
     , binderFuncParamActions
     , binderContentExpr
     , binderContentEntityId
@@ -105,7 +107,6 @@ defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::
     Lens.Traversal' (BinderParams name i o) (FuncParamActions name i o)
-binderFuncParamActions _ BinderWithoutParams = pure BinderWithoutParams
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
@@ -152,3 +153,27 @@ holeTransformExprs onExpr hole =
     , _holeOptionLiteral =
         hole ^. holeOptionLiteral <&> Lens.mapped . Lens._2 %~ (>>= holeResultConverted onExpr)
     }
+
+binderFormBody ::
+    Lens
+    (AssignmentBody name i o a)
+    (AssignmentBody name i o b)
+    (BinderBody name i o a)
+    (BinderBody name i o b)
+binderFormBody f (BodyFunction x) = (afFunction . fBody) f x <&> BodyFunction
+binderFormBody f (BodyPlain x) = apBody f x <&> BodyPlain
+
+assignmentBody ::
+    Lens
+    (Assignment name i o a)
+    (Assignment name i o b)
+    (BinderBody name i o a)
+    (BinderBody name i o b)
+assignmentBody = aBody . binderFormBody
+
+binderFormAddFirstParam :: Lens' (AssignmentBody name i o a) (AddFirstParam name i o)
+binderFormAddFirstParam f (BodyFunction x) = (afFunction . fAddFirstParam) f x <&> BodyFunction
+binderFormAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
+
+assignmentAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
+assignmentAddFirstParam = aBody . binderFormAddFirstParam

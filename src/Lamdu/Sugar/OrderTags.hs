@@ -53,7 +53,7 @@ orderCase :: Monad m => Order m (Sugar.Case name (T m) o a)
 orderCase = Sugar.cBody %%~ orderRecord
 
 orderLam :: Monad m => Order m (Sugar.Lambda name (T m) o a)
-orderLam = Sugar.lamBinder orderBinder
+orderLam = Sugar.lamFunc orderFunction
 
 orderBody :: Monad m => Order m (Sugar.Body name (T m) o a)
 orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
@@ -83,11 +83,14 @@ orderExpr e =
     >>= Sugar.rBody %%~ orderBody
     >>= Sugar.rBody . Lens.traversed %%~ orderExpr
 
-orderBinder :: Monad m => Order m (Sugar.Binder name (T m) o a)
-orderBinder =
-    -- The ordering for binder params already occurs at the Binder's conversion,
+orderFunction :: Monad m => Order m (Sugar.Function name (T m) o a)
+orderFunction =
+    -- The ordering for binder params already occurs at the Assignment's conversion,
     -- because it needs to be consistent with the presentation mode.
     pure
+
+orderBinder :: Monad m => Order m (Sugar.Assignment name (T m) o a)
+orderBinder = (Sugar.aBody . Sugar._BodyFunction . Sugar.afFunction) orderFunction
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Expression name (T m) o a))

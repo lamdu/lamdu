@@ -94,9 +94,9 @@ addToExpr e =
 
 addToBinder ::
     Monad m =>
-    Sugar.Binder InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
-    T m (Sugar.Binder InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
-addToBinder = Sugar.bBody %%~ addToBinderBody
+    Sugar.Assignment InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
+    T m (Sugar.Assignment InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
+addToBinder = SugarLens.assignmentBody %%~ addToBinderBody
 
 addToBinderBody ::
     Monad m =>

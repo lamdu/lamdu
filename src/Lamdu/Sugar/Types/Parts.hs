@@ -11,8 +11,7 @@ module Lamdu.Sugar.Types.Parts
       ExtractDestination(..)
     , LetActions(..), laDelete, laNodeActions
     , -- Binders
-      BinderParams(..), _BinderWithoutParams, _NullParam, _Params
-    , BinderActions(..), baAddFirstParam, baMNodeActions
+      BinderParams(..), _NullParam, _Params
     , BinderBodyScope(..)
     , FuncParam(..), fpInfo, fpAnnotation
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
@@ -113,15 +112,8 @@ data AddFirstParam name i o
       NeedToPickTagToAddFirst EntityId
     deriving Generic
 
-data BinderActions name i o = BinderActions
-    { _baAddFirstParam :: AddFirstParam name i o
-    , _baMNodeActions :: Maybe (NodeActions name i o)
-    } deriving Generic
-
 data BinderParams name i o
-    = -- a definition or let-item without parameters
-      BinderWithoutParams
-    | -- null param represents a lambda whose parameter's type is inferred
+    = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
       NullParam (FuncParam name (NullParamActions o))
@@ -185,7 +177,6 @@ data Heal o
     deriving Generic
 
 Lens.makeLenses ''Annotation
-Lens.makeLenses ''BinderActions
 Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''FuncParam

@@ -81,7 +81,7 @@ workArea396 =
         lamExpr =
             Sugar.BodyLam Sugar.Lambda
             { Sugar._lamMode = Sugar.NormalBinder
-            , Sugar._lamBinder = Stub.binderExpr [("lamVar", "num", Stub.numType)] leafExpr
+            , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num", Stub.numType)] leafExpr
             } & Stub.expr lamType
 
 workAreaGlobals :: IO ()

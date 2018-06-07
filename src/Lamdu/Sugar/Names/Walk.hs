@@ -204,29 +204,48 @@ toAddFirstParam ::
     m (AddFirstParam (NewName m) (IM m) o)
 toAddFirstParam = _PrependParam toTagSelection
 
-toBinderActions ::
+toFunction ::
     MonadNaming m =>
-    BinderActions (OldName m) (IM m) o ->
-    m (BinderActions (NewName m) (IM m) o)
-toBinderActions BinderActions{..} =
-    BinderActions
-    <$> toAddFirstParam _baAddFirstParam
-    <*> Lens._Just toNodeActions _baMNodeActions
+    (a -> m b) ->
+    Function (OldName m) (IM m) o a ->
+    m (Function (NewName m) (IM m) o b)
+toFunction expr Function{..} =
+    (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
+    <$> unCPS (withBinderParams _fParams) (toBinderBody expr _fBody)
+    <*> toAddFirstParam _fAddFirstParam
+
+toBinderPlain ::
+    MonadNaming m =>
+    (a -> m b) ->
+    AssignPlain (OldName m) (IM m) o a ->
+    m (AssignPlain (NewName m) (IM m) o b)
+toBinderPlain expr AssignPlain{..} =
+    (\_apBody _apAddFirstParam -> AssignPlain{..})
+    <$> toBinderBody expr _apBody
+    <*> toAddFirstParam _apAddFirstParam
+
+toBinderForm ::
+    MonadNaming m =>
+    (a -> m b) ->
+    AssignmentBody (OldName m) (IM m) o a ->
+    m (AssignmentBody (NewName m) (IM m) o b)
+toBinderForm expr (BodyPlain x) = toBinderPlain expr x <&> BodyPlain
+toBinderForm expr (BodyFunction x) = afFunction (toFunction expr) x <&> BodyFunction
 
 toBinder ::
     MonadNaming m => (a -> m b) ->
-    Binder (OldName m) (IM m) o a ->
-    m (Binder (NewName m) (IM m) o b)
-toBinder expr Binder{..} =
-    (\(_bParams, _bBody) _bActions -> Binder{..})
-    <$> unCPS (withBinderParams _bParams) (toBinderBody expr _bBody)
-    <*> toBinderActions _bActions
+    Assignment (OldName m) (IM m) o a ->
+    m (Assignment (NewName m) (IM m) o b)
+toBinder expr Assignment{..} =
+    (\_aBody _aNodeActions -> Assignment{..})
+    <$> toBinderForm expr _aBody
+    <*> toNodeActions _aNodeActions
 
 toLam ::
     MonadNaming m => (a -> m b) ->
     Lambda (OldName m) (IM m) o a ->
     m (Lambda (NewName m) (IM m) o b)
-toLam = lamBinder . toBinder
+toLam = lamFunc . toFunction
 
 toTagInfoOf ::
     MonadNaming m => NameType -> TagInfo (OldName m) -> m (TagInfo (NewName m))
@@ -458,7 +477,6 @@ withBinderParams ::
     MonadNaming m =>
     BinderParams (OldName m) (IM m) o ->
     CPS m (BinderParams (NewName m) (IM m) o)
-withBinderParams BinderWithoutParams = pure BinderWithoutParams
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 

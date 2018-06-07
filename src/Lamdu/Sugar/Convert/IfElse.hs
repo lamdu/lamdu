@@ -38,18 +38,18 @@ convertIfElse setToVal caseBody =
         convIfElse cond altTrue altFalse =
             case mAltFalseBinder of
             Just binder ->
-                case binder ^? bBody . bbContent . _BinderExpr of
+                case binder ^? fBody . bbContent . _BinderExpr of
                 Just altFalseBinderExpr ->
                     case altFalseBinderExpr ^. rBody of
                     BodyIfElse innerIfElse ->
                         ElseIf ElseIfContent
                         { _eiScopes =
-                            case binder ^. bBodyScopes of
+                            case binder ^. fBodyScopes of
                             SameAsParentScope -> error "lambda body should have scopes"
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
                         , _eiEntityId = altFalseBinderExpr ^. rPayload . plEntityId
                         , _eiContent = innerIfElse
-                        , _eiCondAddLet = binder ^. bBody . bbAddOuterLet
+                        , _eiCondAddLet = binder ^. fBody . bbAddOuterLet
                         , _eiNodeActions = altFalseBinderExpr ^. rPayload . plActions
                         }
                         & makeRes
@@ -61,17 +61,17 @@ convertIfElse setToVal caseBody =
             Nothing -> simpleIfElse
             & Just
             where
-                mAltFalseBinder = altFalse ^? ciExpr . rBody . _BodyLam . lamBinder
+                mAltFalseBinder = altFalse ^? ciExpr . rBody . _BodyLam . lamFunc
                 simpleIfElse =
                     altFalse ^. ciExpr
                     & rBody . _BodyHole . holeMDelete ?~ elseDel
-                    & rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
+                    & rBody . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
                         . rBody . _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
                     & makeRes
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . rBody . _BodyLam . lamBinder . bBody . bbContent . _BinderExpr
+                    alt ^? ciExpr . rBody . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
                     & (^. rPayload . plData . pStored . Property.pVal)
                 makeRes els =

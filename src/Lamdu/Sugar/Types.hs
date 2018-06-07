@@ -33,7 +33,7 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o expr = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Binder name i o expr
+    , _deContent :: Assignment name i o expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data DefinitionBuiltin name o = DefinitionBuiltin
