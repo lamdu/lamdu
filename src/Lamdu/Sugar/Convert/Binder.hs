@@ -167,12 +167,12 @@ convertBinderBody expr =
     , _bbContent = content
     }
 
-makeBinder ::
+makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m (Assignment InternalName (T m) (T m) (ExpressionU m a))
-makeBinder chosenScopeProp params funcBody pl =
+makeAssignment chosenScopeProp params funcBody pl =
     do
         assignmentBody <- convertBinderBody funcBody
         nodeActions <- makeActions pl
@@ -221,10 +221,10 @@ convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
         func <-
-            makeBinder
+            makeAssignment
             (lam ^. V.lamParamId & Anchors.assocScopeRef)
             convParams (lam ^. V.lamResult) exprPl
-            -- TODO: Instead of partiality split makeBinder
+            -- TODO: Instead of partiality split makeAssignment
             <&> (^?! aBody . _BodyFunction . afFunction)
         let paramNames =
                 func ^.. fParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
@@ -295,7 +295,7 @@ convertBinder binderKind defVar expr =
     do
         (mPresentationModeProp, convParams, funcBody) <-
             convertParams binderKind defVar expr
-        makeBinder (Anchors.assocScopeRef defVar) convParams
+        makeAssignment (Anchors.assocScopeRef defVar) convParams
             funcBody (expr ^. Val.payload)
             <&> (,) mPresentationModeProp
 
