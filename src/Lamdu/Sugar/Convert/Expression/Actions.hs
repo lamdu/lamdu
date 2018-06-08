@@ -209,7 +209,7 @@ addActions ::
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS
     where
-        childPayloads = bodyS ^.. Lens.folded . annotation
+        childPayloads = bodyS ^.. bodyChildren . annotation
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =

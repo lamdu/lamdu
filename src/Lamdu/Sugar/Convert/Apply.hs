@@ -124,7 +124,7 @@ convertLabeled subexprs funcS argS exprPl =
                 }
         let userPayload =
                 subexprPayloads subexprs
-                (funcS ^. annotation : bod ^.. Lens.folded . annotation)
+                (funcS ^. annotation : bod ^.. bodyChildren . annotation)
                 & mconcat
         addActionsWith userPayload exprPl bod & lift
 

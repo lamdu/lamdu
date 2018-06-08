@@ -47,7 +47,10 @@ import           Lamdu.Prelude
 data Expression name i o a = Expression
     { _annotation :: Payload name i o a
     , _body :: Body name i o (Expression name i o a)
-    } deriving (Functor, Foldable, Generic)
+    } deriving (Functor, Generic)
+instance Foldable (Expression name i o) where
+    foldMap f (Expression a x) =
+        f (a ^. plData) <> foldMap (foldMap f) (x ^.. bodyChildren)
 instance Traversable (Expression name i o) where
     traverse f (Expression a x) =
         Expression
@@ -98,7 +101,7 @@ data Body name i o expr
     | BodyFromNom (Nominal name expr)
     | BodyFragment (Fragment name i o expr)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
-    deriving (Functor, Foldable, Generic)
+    deriving (Functor, Generic)
 
 bodyChildren ::
     Applicative f =>
