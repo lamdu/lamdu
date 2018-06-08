@@ -19,12 +19,13 @@ type T = Transaction
 test :: Test
 test =
     testGroup "sugar-tests"
-    [ testChangeParam
-    , testReorderLets
+    [ delParam
+    , testChangeParam
     , testExtract
+    , testLightLambda
     , testInline
-    , delParam
     , testOpenCase
+    , testReorderLets
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -146,3 +147,16 @@ testOpenCase =
     -- entity ids are OK
     testProgram "open-lambda-case.json" (void . convertWorkArea)
     & testCase "open-case"
+
+testLightLambda :: Test
+testLightLambda =
+    testSugarActions "fold.json" [verify]
+    & testCase "light-lambda"
+    where
+        verify workArea
+            | Lens.has expected workArea = pure ()
+            | otherwise = fail "Expected light lambda sugar!"
+        expected =
+            waRepl . replExpr .
+            rBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
+            rBody . _BodyLam . lamMode . _LightLambda
