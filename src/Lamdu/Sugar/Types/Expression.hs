@@ -191,4 +191,3 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectVal
-Lens.makePrisms ''Literal
