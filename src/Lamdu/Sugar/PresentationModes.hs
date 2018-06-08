@@ -90,7 +90,7 @@ addToExpr ::
 addToExpr e =
     e
     & Sugar.body %%~ addToBody
-    >>= Sugar.body . Lens.traversed %%~ addToExpr
+    >>= Sugar.body . Sugar.bodyChildren %%~ addToExpr
 
 addToBinder ::
     Monad m =>

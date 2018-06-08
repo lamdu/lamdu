@@ -28,7 +28,7 @@ subExprPayloads ::
 subExprPayloads f val@(Expression pl x) =
     Expression
     <$> Lens.indexed f (void val) pl
-    <*> (Lens.traversed .> subExprPayloads) f x
+    <*> (bodyChildren .> subExprPayloads) f x
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal
@@ -42,7 +42,7 @@ payloadsIndexedByPath f =
         go path val@(Expression pl x) =
             Expression
             <$> Lens.indexed f newPath pl
-            <*> Lens.traversed (go newPath) x
+            <*> bodyChildren (go newPath) x
             where
                 newPath = void val : path
 
@@ -123,7 +123,7 @@ binderContentEntityId f (BinderLet l) =
 
 leftMostLeaf :: Expression name i o a -> Expression name i o a
 leftMostLeaf val =
-    case val ^.. body . Lens.traversed of
+    case val ^.. body . bodyChildren of
     [] -> val
     (x:_) -> leftMostLeaf x
 

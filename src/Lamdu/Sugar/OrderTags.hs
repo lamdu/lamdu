@@ -81,7 +81,7 @@ orderExpr e =
     e
     & Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
     >>= Sugar.body %%~ orderBody
-    >>= Sugar.body . Lens.traversed %%~ orderExpr
+    >>= Sugar.body . Sugar.bodyChildren %%~ orderExpr
 
 orderFunction :: Monad m => Order m (Sugar.Function name (T m) o a)
 orderFunction =

@@ -5,6 +5,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
+    , bodyChildren
     , Expression(..), body, annotation
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
@@ -46,7 +47,12 @@ import           Lamdu.Prelude
 data Expression name i o a = Expression
     { _annotation :: Payload name i o a
     , _body :: Body name i o (Expression name i o a)
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Generic)
+instance Traversable (Expression name i o) where
+    traverse f (Expression a x) =
+        Expression
+        <$> plData f a
+        <*> (bodyChildren . traverse) f x
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo name
@@ -92,7 +98,29 @@ data Body name i o expr
     | BodyFromNom (Nominal name expr)
     | BodyFragment (Fragment name i o expr)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
-    deriving (Functor, Foldable, Traversable, Generic)
+    deriving (Functor, Foldable, Generic)
+
+bodyChildren ::
+    Applicative f =>
+    (a -> f b) ->
+    Body name i o a -> f (Body name i o b)
+bodyChildren f =
+    \case
+    BodyPlaceHolder -> pure BodyPlaceHolder
+    BodyLiteral x -> BodyLiteral x & pure
+    BodyGetVar  x -> BodyGetVar  x & pure
+    BodyHole    x -> BodyHole    x & pure
+    BodyLam          x -> traverse f x <&> BodyLam
+    BodySimpleApply  x -> traverse f x <&> BodySimpleApply
+    BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
+    BodyRecord       x -> traverse f x <&> BodyRecord
+    BodyGetField     x -> traverse f x <&> BodyGetField
+    BodyCase         x -> traverse f x <&> BodyCase
+    BodyIfElse       x -> traverse f x <&> BodyIfElse
+    BodyInject       x -> traverse f x <&> BodyInject
+    BodyFromNom      x -> traverse f x <&> BodyFromNom
+    BodyFragment     x -> traverse f x <&> BodyFragment
+    BodyToNom        x -> (traverse . traverse) f x <&> BodyToNom
 
 instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
     show (LabeledApply func specialArgs _annArgs _relayedArgs) =
