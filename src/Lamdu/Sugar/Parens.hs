@@ -186,7 +186,9 @@ loop minOpPrecFromParent parentPrec (Expression pl bod) =
                 check lCheck parentBefore || check rCheck parentAfter
         finalBody =
             newBody
-            ?? if haveParens
-                 then Precedence 0 0
-                 else parentPrec
-        (classifier, newBody) = precedenceOf (bod <&> f)
+            & bodyChildren %~
+                ( $ if haveParens
+                    then Precedence 0 0
+                    else parentPrec
+                )
+        (classifier, newBody) = precedenceOf (bod & bodyChildren %~ f)

@@ -94,11 +94,11 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         & BodyCase
         & Expression defPl
     where
-        newBodyWith f = newBody <&> nonHoleAnn .~ f
+        newBodyWith f = newBody & bodyChildren %~ nonHoleAnn .~ f
         plWith ann = pl & plData %~ (,) ann
         defPl = plWith T.showAnnotationWhenVerbose
         set ann = Expression (plWith ann) newBody
-        newBody = oldBody <&> markAnnotationsToDisplay
+        newBody = oldBody & bodyChildren %~ markAnnotationsToDisplay
         nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
