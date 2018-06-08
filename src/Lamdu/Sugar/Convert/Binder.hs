@@ -167,44 +167,26 @@ convertBinderBody expr =
     , _bbContent = content
     }
 
-makeAssignment ::
+makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
-    ConvertM m (Assignment InternalName (T m) (T m) (ExpressionU m a))
-makeAssignment chosenScopeProp params funcBody pl =
-    do
-        assignmentBody <- convertBinderBody funcBody
-        nodeActions <- makeActions pl
-        let mRemoveSetToHole
-                | Lens.has (cpParams . Lens._Nothing) params
-                && Lens.has (bbContent . _BinderExpr . rBody . _BodyHole) assignmentBody =
-                    mSetToHole .~ Nothing
-                | otherwise = id
-        pure Assignment
-            { _aNodeActions = mRemoveSetToHole nodeActions
-            , _aBody =
-                case params ^. cpParams of
-                Nothing ->
-                    BodyPlain AssignPlain
-                    { _apAddFirstParam = params ^. cpAddFirstParam
-                    , _apBody = assignmentBody
-                    }
-                Just xs ->
-                    BodyFunction AssignFunction
-                    { _afLamId = cpMLamParam params ^?! Lens._Just . _1
-                    , _afFunction =
-                        Function
-                        { _fParams = xs
-                        , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty
-                        , _fBody = assignmentBody
-                        , _fBodyScopes = cpScopes params
-                        , _fAddFirstParam = params ^. cpAddFirstParam
-                        }
-                    }
-            }
+    ConventionalParams m -> Val (Input.Payload m a) ->
+    ConvertM m (Function InternalName (T m) (T m) (ExpressionU m a))
+makeFunction chosenScopeProp params funcBody =
+    convertBinderBody funcBody
+    <&> mkRes
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
+        mkRes assignmentBody =
+            Function
+            { _fParams =
+                -- TODO: avoid partiality here
+                params ^?! cpParams . Lens._Just
+            , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty
+            , _fBody = assignmentBody
+            , _fBodyScopes = cpScopes params
+            , _fAddFirstParam = params ^. cpAddFirstParam
+            }
         addParams ctx =
             ctx
             & ConvertM.siTagParamInfos <>~ _cpParamInfos params
@@ -212,6 +194,33 @@ makeAssignment chosenScopeProp params funcBody pl =
             case params ^. cpParams of
             Just NullParam{} -> Set.fromList (cpMLamParam params ^.. Lens._Just . _2)
             _ -> Set.empty
+
+makeAssignment ::
+    (Monad m, Monoid a) =>
+    MkProperty' (T m) (Maybe BinderParamScopeId) ->
+    ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
+    ConvertM m (Assignment InternalName (T m) (T m) (ExpressionU m a))
+makeAssignment chosenScopeProp params funcBody pl =
+    do
+        body <-
+            case params ^. cpParams of
+            Nothing ->
+                convertBinderBody funcBody
+                <&> AssignPlain (params ^. cpAddFirstParam)
+                <&> BodyPlain
+            Just{} ->
+                makeFunction chosenScopeProp params funcBody
+                <&> AssignFunction (cpMLamParam params ^?! Lens._Just . _1)
+                <&> BodyFunction
+        nodeActions <- makeActions pl
+        let mRemoveSetToHole
+                | Lens.has (_BodyPlain . apBody . bbContent . _BinderExpr . rBody . _BodyHole) body =
+                    mSetToHole .~ Nothing
+                | otherwise = id
+        pure Assignment
+            { _aNodeActions = mRemoveSetToHole nodeActions
+            , _aBody = body
+            }
 
 convertLam ::
     (Monad m, Monoid a) =>
@@ -221,11 +230,9 @@ convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
         func <-
-            makeAssignment
+            makeFunction
             (lam ^. V.lamParamId & Anchors.assocScopeRef)
-            convParams (lam ^. V.lamResult) exprPl
-            -- TODO: Instead of partiality split makeAssignment
-            <&> (^?! aBody . _BodyFunction . afFunction)
+            convParams (lam ^. V.lamResult)
         let paramNames =
                 func ^.. fParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
                 & Set.fromList
