@@ -359,7 +359,6 @@ Library
                   , Lamdu.Sugar.OrderTags
                   , Lamdu.Sugar.PresentationModes
                   , Lamdu.Sugar.Types
-                  , Lamdu.Sugar.Types.Binder
                   , Lamdu.Sugar.Types.Eval
                   , Lamdu.Sugar.Types.Expression
                   , Lamdu.Sugar.Types.GetVar

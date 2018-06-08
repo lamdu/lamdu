@@ -20,14 +20,12 @@ module Lamdu.Sugar.Types.Simple
     , GetField(..), gfRecord, gfTag
     , InjectVal(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iMVal
-    , SpecialArgs(..)
     , V.Apply(..), V.applyFunc, V.applyArg
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
-import           Lamdu.Sugar.Types.Binder
 import           Lamdu.Sugar.Types.Eval (ChildScopes)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
