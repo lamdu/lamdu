@@ -8,6 +8,7 @@
     - hint: {lhs: return, rhs: pure}
     - hint: {lhs: a `mappend` b, rhs: a <> b}
     - hint: {lhs: Control.Lens.filtered (Control.Lens.has a), rhs: filteredBy a}
+    - hint: {lhs: \x -> a $ b x, rhs: a . b}
 
 - group:
     name: generalise-for-conciseness

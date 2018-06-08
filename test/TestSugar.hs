@@ -142,8 +142,7 @@ delParam =
 
 testOpenCase :: Test
 testOpenCase =
-    testCase "open-case" $
-    testProgram "open-lambda-case.json" $ \cache ->
     -- This is meant to just let convertWorkArea validation check that
     -- entity ids are OK
-    void $ convertWorkArea cache
+    testProgram "open-lambda-case.json" (void . convertWorkArea)
+    & testCase "open-case"
