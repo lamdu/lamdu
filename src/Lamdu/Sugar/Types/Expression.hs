@@ -173,7 +173,6 @@ instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
         unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
 Lens.makeLenses ''AnnotatedArg
-Lens.makeLenses ''Body
 Lens.makeLenses ''Case
 Lens.makeLenses ''CaseArg
 Lens.makeLenses ''Composite
