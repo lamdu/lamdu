@@ -11,6 +11,7 @@ import qualified TestMomentu
 import qualified TestNames
 import qualified TestNix
 import qualified TestPrecedence
+import qualified TestReadme
 import qualified TestStdlib
 import qualified TestSugar
 import qualified TestValUtils
@@ -22,18 +23,19 @@ main =
     defaultMainWithOpts tests mempty
     where
         tests =
-            [ TestSugar.test
-            , TestPrecedence.test
-            , TestStdlib.test
-            , TestNix.test
-            , TestMomentu.test
-            , TestAnimIdClash.test
+            [ TestAnimIdClash.test
             , TestCodec.test
             , TestColorSchemes.test
             , TestConfig.test
             , TestGui.test
-            , TestNames.test
             , TestJsExport.test
             , TestJsRtsTags.test
+            , TestMomentu.test
+            , TestNames.test
+            , TestNix.test
+            , TestPrecedence.test
+            , TestReadme.test
+            , TestStdlib.test
+            , TestSugar.test
             , TestValUtils.test
             ]
