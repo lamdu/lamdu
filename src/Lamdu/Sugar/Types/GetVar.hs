@@ -7,7 +7,7 @@ module Lamdu.Sugar.Types.GetVar
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , BinderVarRef(..), bvNameRef, bvForm, bvVar, bvInline
-    , BinderMode(..)
+    , BinderMode(..), _NormalBinder, _LightLambda
     , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
     , ParamsRecordVarRef(..), prvFieldNames
     ) where
@@ -83,6 +83,7 @@ Lens.makeLenses ''DefinitionOutdatedType
 Lens.makeLenses ''NameRef
 Lens.makeLenses ''ParamRef
 Lens.makeLenses ''ParamsRecordVarRef
+Lens.makePrisms ''BinderMode
 Lens.makePrisms ''BinderVarForm
 Lens.makePrisms ''BinderVarInline
 Lens.makePrisms ''DefinitionForm
