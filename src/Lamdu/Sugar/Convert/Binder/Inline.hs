@@ -27,8 +27,8 @@ redexes (Val _ (V.BApp (V.Apply (Val _ (V.BLam lam)) arg))) =
 redexes v = ([], v)
 
 wrapWithRedexes :: [(V.Var, Val (Maybe a))] -> Val (Maybe a) -> Val (Maybe a)
-wrapWithRedexes rs body =
-    foldr wrapWithRedex body rs
+wrapWithRedexes rs x =
+    foldr wrapWithRedex x rs
     where
         wrapWithRedex (v, val) b =
             V.Apply (Val Nothing (V.BLam (V.Lam v b))) val
@@ -36,8 +36,8 @@ wrapWithRedexes rs body =
             & Val Nothing
 
 inlineLetH :: V.Var -> Val (Maybe a) -> Val (Maybe a) -> Val (Maybe a)
-inlineLetH var arg body =
-    go body & uncurry wrapWithRedexes
+inlineLetH var arg bod =
+    go bod & uncurry wrapWithRedexes
     where
         go (Val stored b) =
             case (b, arg ^. Val.body) of

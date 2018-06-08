@@ -25,10 +25,10 @@ subExprPayloads ::
     (Expression name i o a)
     (Expression name i o b)
     (Payload name i o a) (Payload name i o b)
-subExprPayloads f val@(Expression pl body) =
+subExprPayloads f val@(Expression pl x) =
     Expression
     <$> Lens.indexed f (void val) pl
-    <*> (Lens.traversed .> subExprPayloads) f body
+    <*> (Lens.traversed .> subExprPayloads) f x
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal
@@ -39,10 +39,10 @@ payloadsIndexedByPath ::
 payloadsIndexedByPath f =
     go []
     where
-        go path val@(Expression pl body) =
+        go path val@(Expression pl x) =
             Expression
             <$> Lens.indexed f newPath pl
-            <*> Lens.traversed (go newPath) body
+            <*> Lens.traversed (go newPath) x
             where
                 newPath = void val : path
 
@@ -52,10 +52,10 @@ payloadsOf ::
     (Expression name i o ())
     (Expression name i o b)
     (Payload name i o b)
-payloadsOf body =
+payloadsOf x =
     subExprPayloads . Lens.ifiltered predicate
     where
-        predicate idx _ = Lens.has (rBody . body) idx
+        predicate idx _ = Lens.has (body . x) idx
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
@@ -84,7 +84,7 @@ subExprsOf ::
 subExprsOf f =
     payloadsIndexedByPath . Lens.ifiltered predicate
     where
-        predicate (_:parent:_) _ = Lens.has (rBody . f) parent
+        predicate (_:parent:_) _ = Lens.has (body . f) parent
         predicate _ _ = False
 
 fragmentExprs ::
@@ -123,7 +123,7 @@ binderContentEntityId f (BinderLet l) =
 
 leftMostLeaf :: Expression name i o a -> Expression name i o a
 leftMostLeaf val =
-    case val ^.. rBody . Lens.traversed of
+    case val ^.. body . Lens.traversed of
     [] -> val
     (x:_) -> leftMostLeaf x
 

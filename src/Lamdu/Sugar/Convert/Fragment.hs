@@ -63,7 +63,7 @@ mkOptions sugarContext argI argS exprPl =
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
-            [ P.app P.hole P.hole | Lens.nullOf (rBody . _BodyLam) argS ]
+            [ P.app P.hole P.hole | Lens.nullOf (body . _BodyLam) argS ]
             <&> Hole.SeedExpr
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
@@ -178,26 +178,26 @@ fragmentVar :: V.Var
 fragmentVar = "HOLE FRAGMENT EXPR"
 
 replaceFragment :: EntityId -> Int -> Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
-replaceFragment parentEntityId idxInParent (Val pl body) =
+replaceFragment parentEntityId idxInParent (Val pl bod) =
     case pl ^. Input.userData of
     IsFragment ->
         V.LVar fragmentVar & V.BLeaf
         & Val (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId)
     NotFragment ->
-        body & Lens.traversed %@~ replaceFragment (pl ^. Input.entityId)
+        bod & Lens.traversed %@~ replaceFragment (pl ^. Input.entityId)
         & Val (void pl)
 
 emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 emplaceInHoles replaceHole =
     map fst . filter snd . (`runStateT` False) . go
     where
-        go oldVal@(Val x body) =
+        go oldVal@(Val x bod) =
             do
                 alreadyReplaced <- State.get
                 if alreadyReplaced
                     then pure (pure oldVal)
                     else
-                        case body of
+                        case bod of
                         V.BLeaf V.LHole ->
                             join $ lift
                                 [ replace x
@@ -209,7 +209,7 @@ emplaceInHoles replaceHole =
                                     <&> fmap (Val x . V.BApp . (`V.Apply` arg))
                                 , pure (pure oldVal)
                                 ]
-                        _ -> traverse go body <&> fmap (Val x) . sequenceA
+                        _ -> traverse go bod <&> fmap (Val x) . sequenceA
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::

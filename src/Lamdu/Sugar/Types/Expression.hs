@@ -5,7 +5,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
-    , Expression(..), rBody, rPayload
+    , Expression(..), body, rPayload
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
@@ -45,7 +45,7 @@ import           Lamdu.Prelude
 
 data Expression name i o a = Expression
     { _rPayload :: Payload name i o a
-    , _rBody :: Body name i o (Expression name i o a)
+    , _body :: Body name i o (Expression name i o a)
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data AnnotatedArg name expr = AnnotatedArg

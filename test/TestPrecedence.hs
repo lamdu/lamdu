@@ -14,7 +14,7 @@ infixArgs ::
     ( Sugar.Expression name i o a
     , Sugar.Expression name i o a
     )
-infixArgs = Sugar.rBody . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
+infixArgs = Sugar.body . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
 
 test :: Test
 test =

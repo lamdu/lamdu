@@ -40,7 +40,7 @@ convert (V.Inject tag injected) exprPl =
                     & InjectNullary
                 _ ->
                     injectedS
-                    & rBody . _BodyHole . holeMDelete ?~ toNullary
+                    & body . _BodyHole . holeMDelete ?~ toNullary
                     & InjectVal
         let setTag newTag =
                 do

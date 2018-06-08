@@ -41,8 +41,8 @@ type T = Transaction
 lamParamToHole ::
     Monad m =>
     V.Lam (Val (Input.Payload m a)) -> T m ()
-lamParamToHole (V.Lam param body) =
-    SubExprs.getVarsToHole param (body <&> (^. Input.stored))
+lamParamToHole (V.Lam param x) =
+    SubExprs.getVarsToHole param (x <&> (^. Input.stored))
 
 mkLetItemActions ::
     Monad m =>
@@ -103,7 +103,7 @@ convertRedex expr redex =
             mkLetItemActions (expr ^. Val.payload) redex
             & localNewExtractDestPos expr
         letBody <-
-            convertBinderBody body
+            convertBinderBody bod
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
@@ -140,7 +140,7 @@ convertRedex expr redex =
             redex ^. Redex.lam
             <&> Lens.mapped %~ (^. Input.stored)
             & BinderKindLet
-        V.Lam param body = redex ^. Redex.lam
+        V.Lam param bod = redex ^. Redex.lam
 
 makeBinderContent ::
     (Monad m, Monoid a) =>
@@ -202,7 +202,7 @@ makeAssignment ::
     ConvertM m (Assignment InternalName (T m) (T m) (ExpressionU m a))
 makeAssignment chosenScopeProp params funcBody pl =
     do
-        body <-
+        bod <-
             case params ^. cpParams of
             Nothing ->
                 convertBinderBody funcBody
@@ -214,12 +214,12 @@ makeAssignment chosenScopeProp params funcBody pl =
                 <&> BodyFunction
         nodeActions <- makeActions pl
         let mRemoveSetToHole
-                | Lens.has (_BodyPlain . apBody . bbContent . _BinderExpr . rBody . _BodyHole) body =
+                | Lens.has (_BodyPlain . apBody . bbContent . _BinderExpr . body . _BodyHole) bod =
                     mSetToHole .~ Nothing
                 | otherwise = id
         pure Assignment
             { _aNodeActions = mRemoveSetToHole nodeActions
-            , _aBody = body
+            , _aBody = bod
             }
 
 convertLam ::
@@ -245,7 +245,7 @@ convertLam lam exprPl =
                     & Lambda LightLambda
         BodyLam lambda
             & addActions lam exprPl
-            <&> rBody . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
+            <&> body . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda ::
     Set InternalName ->
@@ -272,22 +272,22 @@ allParamsUsed paramNames func =
     where
         usedParams =
             func ^.. Lens.traverse . SugarLens.subExprPayloads . Lens.asIndex .
-            rBody . _BodyGetVar . _GetParam . pNameRef . nrName
+            body . _BodyGetVar . _GetParam . pNameRef . nrName
             & Set.fromList
 
 markLightParams ::
     Monad m =>
     Set InternalName -> Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
-markLightParams paramNames (Expression pl body) =
-    case body of
+markLightParams paramNames (Expression pl bod) =
+    case bod of
     BodyGetVar (GetParam n)
         | Set.member (n ^. pNameRef . nrName) paramNames ->
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
     BodyFragment w -> w <&> markLightParams paramNames & BodyFragment
-    _ -> body <&> markLightParams paramNames
+    _ -> bod <&> markLightParams paramNames
     & Expression pl
 
 -- Let-item or definition (form of <name> [params] = <body>)

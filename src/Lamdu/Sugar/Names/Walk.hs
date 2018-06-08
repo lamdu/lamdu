@@ -147,8 +147,8 @@ toResRecord = recordFields . traverse . _1 %%~ toTagInfoOf Tag
 toResBody ::
     MonadNaming m =>
     (a -> m b) -> ResBody (OldName m) a -> m (ResBody (NewName m) b)
-toResBody f body =
-    case body of
+toResBody f =
+    \case
     RFunc    x -> RFunc x & pure
     RError   x -> RError x & pure
     RBytes   x -> RBytes x & pure
@@ -160,7 +160,7 @@ toResBody f body =
     RTable   x -> (rtHeaders . traverse) (toTagInfoOf Tag) x <&> RTable
     RRecord  x -> toResRecord x <&> RRecord
     RInject  x -> riTag (toTagInfoOf Tag) x <&> RInject
-    >>= traverse f
+    <&> (>>= traverse f)
 
 toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
 toResVal = resBody (toResBody toResVal)
@@ -448,10 +448,10 @@ toExpression ::
     MonadNaming m =>
     Expression (OldName m) (IM m) o a ->
     m (Expression (NewName m) (IM m) o a)
-toExpression (Expression pl body) =
+toExpression (Expression pl x) =
     Expression
     <$> toPayload pl
-    <*> toBody toExpression body
+    <*> toBody toExpression x
 
 withParamInfo ::
     MonadNaming m =>

@@ -182,7 +182,7 @@ convert ::
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     ExtendVal m (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
-    case restS ^? rBody . prism of
+    case restS ^? body . prism of
     Just r ->
         convertExtend cons op valS exprPl extendV r
         <&> (prism #)

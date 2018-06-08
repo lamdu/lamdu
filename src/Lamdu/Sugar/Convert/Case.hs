@@ -42,7 +42,7 @@ convertAbsurd pl =
 _CaseThatIsLambdaCase :: Lens.Prism' (Case name i o expr) (Composite name i o expr)
 _CaseThatIsLambdaCase =
     Lens.prism' (Case LambdaCase) $ \case
-    Case LambdaCase body -> Just body
+    Case LambdaCase x -> Just x
     _ -> Nothing
 
 convert ::
@@ -69,7 +69,7 @@ convertAppliedCase ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
     do
-        caseB <- funcS ^? rBody . _BodyCase & maybeToMPlus
+        caseB <- funcS ^? body . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setTo = protectedSetToVal (exprPl ^. Input.stored)
@@ -91,6 +91,6 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
-    case argS ^. rBody of
-    BodyFromNom nom | Lens.nullOf (nVal . rBody . SugarLens.bodyUnfinished) nom -> nom ^. nVal
+    case argS ^. body of
+    BodyFromNom nom | Lens.nullOf (nVal . body . SugarLens.bodyUnfinished) nom -> nom ^. nVal
     _ -> argS

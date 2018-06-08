@@ -54,11 +54,11 @@ addToLabeledApply a =
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
         mkInfixArg arg other =
             arg
-            & Sugar.rBody . Sugar._BodyHole . Sugar.holeMDelete .~
+            & Sugar.body . Sugar._BodyHole . Sugar.holeMDelete .~
                 other ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
         processArg arg =
             do
-                getVar <- arg ^? Sugar.aaExpr . Sugar.rBody . Sugar._BodyGetVar
+                getVar <- arg ^? Sugar.aaExpr . Sugar.body . Sugar._BodyGetVar
                 name <-
                     case getVar of
                     Sugar.GetParam x -> x ^. Sugar.pNameRef . Sugar.nrName & Just
@@ -89,8 +89,8 @@ addToExpr ::
     T m (Sugar.Expression InternalName (T m) (T m) pl)
 addToExpr e =
     e
-    & Sugar.rBody %%~ addToBody
-    >>= Sugar.rBody . Lens.traversed %%~ addToExpr
+    & Sugar.body %%~ addToBody
+    >>= Sugar.body . Lens.traversed %%~ addToExpr
 
 addToBinder ::
     Monad m =>

@@ -44,7 +44,7 @@ convert app@(V.Apply funcI argI) exprPl =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure
-                    ( if Lens.has (rBody . _BodyHole) argS
+                    ( if Lens.has (body . _BodyHole) argS
                       then
                           let dst = argI ^. Val.payload . Input.stored . Property.pVal
                               deleteAction =
@@ -87,11 +87,11 @@ convertLabeled ::
 convertLabeled subexprs funcS argS exprPl =
     do
         -- Make sure it's a not a param, get the var
-        sBinderVar <- funcS ^? rBody . _BodyGetVar . _GetBinder & maybeToMPlus
+        sBinderVar <- funcS ^? body . _BodyGetVar . _GetBinder & maybeToMPlus
         -- Make sure it is not a "let" but a "def" (recursive or external)
         _ <- sBinderVar ^? bvForm . _GetDefinition & maybeToMPlus
         -- Make sure the argument is a record
-        record <- argS ^? rBody . _BodyRecord & maybeToMPlus
+        record <- argS ^? body . _BodyRecord & maybeToMPlus
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
@@ -112,7 +112,7 @@ convertLabeled subexprs funcS argS exprPl =
         let args = record ^. cItems <&> getArg
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
-        let body =
+        let bod =
                 BodyLabeledApply LabeledApply
                 { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. rPayload))
                 , _aSpecialArgs = Verbose
@@ -124,9 +124,9 @@ convertLabeled subexprs funcS argS exprPl =
                 }
         let userPayload =
                 subexprPayloads subexprs
-                (funcS ^. rPayload : body ^.. Lens.folded . rPayload)
+                (funcS ^. rPayload : bod ^.. Lens.folded . rPayload)
                 & mconcat
-        addActionsWith userPayload exprPl body & lift
+        addActionsWith userPayload exprPl bod & lift
 
 convertPrefix ::
     (Monad m, Foldable f, Monoid a) =>
@@ -142,5 +142,5 @@ convertPrefix subexprs funcS argS applyPl =
                 <&> EntityId.ofValI
         BodySimpleApply Apply
             { _applyFunc = funcS
-            , _applyArg = argS & rBody . _BodyHole . holeMDelete ?~ del
+            , _applyArg = argS & body . _BodyHole . holeMDelete ?~ del
             } & addActions subexprs applyPl

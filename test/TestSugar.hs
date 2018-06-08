@@ -47,9 +47,9 @@ testChangeParam =
         action workArea =
             "new" &
             workArea ^?! waRepl . replExpr .
-            rBody . _BodySimpleApply . V.applyFunc .
-            rBody . _BodySimpleApply . V.applyArg .
-            rBody . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
+            body . _BodySimpleApply . V.applyFunc .
+            body . _BodySimpleApply . V.applyArg .
+            body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piTag . tagSelection . tsNewTag
 
 -- | Test for issue #373
@@ -67,7 +67,7 @@ testReorderLets =
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             waRepl . replExpr .
-            rBody . _BodyLam . lamFunc . fBody .
+            body . _BodyLam . lamFunc . fBody .
             bbContent . _BinderLet . lBody .
             bbContent . _BinderLet . lValue .
             aNodeActions . extract
@@ -81,7 +81,7 @@ testExtract =
     where
         action =
             waRepl . replExpr .
-            rBody . _BodyLam . lamFunc . fBody .
+            body . _BodyLam . lamFunc . fBody .
             bbContent . _BinderLet . lActions . laNodeActions . extract
 
 -- Test for issue #402
@@ -94,29 +94,29 @@ testInline =
         inline workArea =
             do
                 Just yOption <-
-                    letItem ^. lBody . bbContent . _BinderExpr . rBody . _BodyHole . holeOptions
+                    letItem ^. lBody . bbContent . _BinderExpr . body . _BodyHole . holeOptions
                     >>= findM isY
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
-                _ <- result ^?! holeResultConverted . rBody . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                _ <- result ^?! holeResultConverted . body . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
                 letItem =
                     workArea ^?! waRepl . replExpr .
-                    rBody . _BodyLam . lamFunc . fBody .
+                    body . _BodyLam . lamFunc . fBody .
                     bbContent . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
-                    <&> Lens.has (rBody . _BodyGetVar . _GetBinder . bvForm . _GetLet)
+                    <&> Lens.has (body . _BodyGetVar . _GetBinder . bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
             waRepl . replExpr .
-            rBody . _BodyLam . lamFunc . fBody .
+            body . _BodyLam . lamFunc . fBody .
             bbContent . _BinderExpr .
-            rBody . _BodyLiteral . _LiteralNum
+            body . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
@@ -134,12 +134,12 @@ delParam =
     where
         action =
             waRepl . replExpr .
-            rBody . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
+            body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
-        afterDel = waRepl . replExpr . rBody . _BodyLiteral . _LiteralNum
+        afterDel = waRepl . replExpr . body . _BodyLiteral . _LiteralNum
 
 testOpenCase :: Test
 testOpenCase =
@@ -158,5 +158,5 @@ testLightLambda =
             | otherwise = fail "Expected light lambda sugar!"
         expected =
             waRepl . replExpr .
-            rBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
-            rBody . _BodyLam . lamMode . _LightLambda
+            body . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
+            body . _BodyLam . lamMode . _LightLambda

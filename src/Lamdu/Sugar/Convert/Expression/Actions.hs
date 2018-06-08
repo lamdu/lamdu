@@ -142,7 +142,7 @@ setChildReplaceParentActions ::
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
     <&>
-    \protectedSetToVal stored body ->
+    \protectedSetToVal stored bod ->
     let setToExpr srcPl =
             plActions . mReplaceParent ?~
             (protectedSetToVal
@@ -150,17 +150,17 @@ setChildReplaceParentActions =
                 (srcPl ^. plData . pStored . Property.pVal)
                 <&> EntityId.ofValI)
     in
-    case body of
-    BodyLam lam | Lens.has (lamFunc . fBody . bbContent . _BinderLet) lam -> body
+    case bod of
+    BodyLam lam | Lens.has (lamFunc . fBody . bbContent . _BinderLet) lam -> bod
     _ ->
-        body
+        bod
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) .
             traverse . rPayload %~ join setToExpr
         -- Replace-parent with fragment sets directly to fragment expression
-        <&> Lens.filteredBy (rBody . _BodyFragment . fExpr . rPayload) <. rPayload %@~ setToExpr
+        <&> Lens.filteredBy (body . _BodyFragment . fExpr . rPayload) <. rPayload %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        <&> rBody . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
+        <&> body . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
             fExpr . rPayload %~ join setToExpr
 
 subexprPayloads ::
@@ -187,7 +187,7 @@ addActionsWith userData exprPl bodyS =
         ann <- makeAnnotation exprPl
         addReplaceParents <- setChildReplaceParentActions
         pure Expression
-            { _rBody = addReplaceParents (exprPl ^. Input.stored) bodyS
+            { _body = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _rPayload =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId

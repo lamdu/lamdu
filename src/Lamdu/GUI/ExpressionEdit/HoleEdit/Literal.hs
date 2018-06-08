@@ -36,7 +36,7 @@ makeLiteral io optionLiteral lit =
                 mkResult
             & io
         result ^. Sugar.holeResultPick
-        case result ^? Sugar.holeResultConverted . Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr of
+        case result ^? Sugar.holeResultConverted . Sugar.body . Sugar._BodyFragment . Sugar.fExpr of
             Just arg -> arg
             _ -> result ^. Sugar.holeResultConverted
             ^. Sugar.rPayload . Sugar.plEntityId

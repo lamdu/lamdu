@@ -42,7 +42,7 @@ test =
         workArea <- convertWorkArea cache
         let holeId =
                 workArea ^?! Sugar.waRepl . Sugar.replExpr .
-                Sugar.rBody . Sugar._BodyLam . Sugar.lamFunc .
+                Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
                 Sugar.fBody . Sugar.bbContent . Sugar._BinderExpr .
                 Sugar.rPayload . Sugar.plEntityId
                 & HoleWidgetIds.make

@@ -76,8 +76,8 @@ moveToGlobalScope =
         postProcess
 
 isVarAlwaysApplied :: V.Lam (Val a) -> Bool
-isVarAlwaysApplied (V.Lam var body) =
-    go False body
+isVarAlwaysApplied (V.Lam var x) =
+    go False x
     where
         go isApplied (Val _ (V.BLeaf (V.LVar v))) | v == var = isApplied
         go _ (Val _ (V.BApp (V.Apply f a))) = go True f && go False a

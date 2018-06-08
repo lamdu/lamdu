@@ -141,14 +141,14 @@ getSearchStringRemainder ctx holeResultConverted
     | otherwise = ""
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
-        fragmentExpr = Sugar.rBody . Sugar._BodyFragment . Sugar.fExpr
-        isA x = any (`Lens.has` holeResultConverted) [Sugar.rBody . x, fragmentExpr . Sugar.rBody . x]
+        fragmentExpr = Sugar.body . Sugar._BodyFragment . Sugar.fExpr
+        isA x = any (`Lens.has` holeResultConverted) [Sugar.body . x, fragmentExpr . Sugar.body . x]
 
 injectMVal ::
     Lens.Traversal'
     (Sugar.Expression name i o a)
     (Sugar.InjectVal name i o (Sugar.Expression name i o a))
-injectMVal = Sugar.rBody . Sugar._BodyInject . Sugar.iMVal
+injectMVal = Sugar.body . Sugar._BodyInject . Sugar.iMVal
 
 verifyInjectSuffix :: Text -> Sugar.Expression name i o a -> Bool
 verifyInjectSuffix searchTerm val =

@@ -583,8 +583,8 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
         storedLam = mkStoredLam lam lamExprPl
 
 isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
-isParamAlwaysUsedWithGetField (V.Lam param body) =
-    go False body
+isParamAlwaysUsedWithGetField (V.Lam param bod) =
+    go False bod
     where
         go isGetFieldChild val =
             case val ^. Val.body of

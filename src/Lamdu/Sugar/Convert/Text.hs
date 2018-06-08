@@ -27,10 +27,10 @@ text ::
     (Monad m, Monoid a) =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-text n@(V.Nom tid (Val litPl body)) toNomPl =
+text n@(V.Nom tid (Val litPl bod)) toNomPl =
     do
         guard $ tid == Builtins.textTid
-        lit <- body ^? ExprLens.valBodyLiteral & maybeToMPlus
+        lit <- bod ^? ExprLens.valBodyLiteral & maybeToMPlus
         txt <-
             case PrimVal.toKnown lit of
             PrimVal.Bytes utf8Bytes ->

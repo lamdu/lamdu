@@ -99,10 +99,10 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         defPl = plWith T.showAnnotationWhenVerbose
         set ann = Expression (plWith ann) newBody
         newBody = oldBody <&> markAnnotationsToDisplay
-        nonHoleAnn = Lens.filtered (Lens.nullOf (rBody . SugarLens.bodyUnfinished)) . topLevelAnn
+        nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
-            & rBody . _BodyLam . lamFunc . fBody . bbContent .
+            & body . _BodyLam . lamFunc . fBody . bbContent .
               SugarLens.binderContentExpr . nonHoleAnn .~ T.neverShowAnnotations
             & topLevelAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse

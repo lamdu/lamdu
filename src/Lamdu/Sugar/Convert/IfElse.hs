@@ -23,7 +23,7 @@ convertIfElse ::
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
-        case arg ^. rBody of
+        case arg ^. body of
             BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
             _ | arg ^? rPayload . plAnnotation . aInferredType . tBody . _TInst . _1 . tidTId == Just boolTid -> tryIfElse arg
             _ -> Nothing
@@ -40,7 +40,7 @@ convertIfElse setToVal caseBody =
             Just binder ->
                 case binder ^? fBody . bbContent . _BinderExpr of
                 Just altFalseBinderExpr ->
-                    case altFalseBinderExpr ^. rBody of
+                    case altFalseBinderExpr ^. body of
                     BodyIfElse innerIfElse ->
                         ElseIf ElseIfContent
                         { _eiScopes =
@@ -61,17 +61,17 @@ convertIfElse setToVal caseBody =
             Nothing -> simpleIfElse
             & Just
             where
-                mAltFalseBinder = altFalse ^? ciExpr . rBody . _BodyLam . lamFunc
+                mAltFalseBinder = altFalse ^? ciExpr . body . _BodyLam . lamFunc
                 simpleIfElse =
                     altFalse ^. ciExpr
-                    & rBody . _BodyHole . holeMDelete ?~ elseDel
-                    & rBody . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
-                        . rBody . _BodyHole . holeMDelete ?~ elseDel
+                    & body . _BodyHole . holeMDelete ?~ elseDel
+                    & body . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
+                        . body . _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
                     & makeRes
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . rBody . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
+                    alt ^? ciExpr . body . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
                     & (^. rPayload . plData . pStored . Property.pVal)
                 makeRes els =

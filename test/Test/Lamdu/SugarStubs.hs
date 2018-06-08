@@ -196,7 +196,7 @@ expr ::
     (Sugar.Expression name Identity Unit ()) ->
     Sugar.Expression name Identity Unit ()
 expr typ body =
-    Sugar.Expression { Sugar._rBody = body, Sugar._rPayload = mkPayload typ }
+    Sugar.Expression { Sugar._body = body, Sugar._rPayload = mkPayload typ }
 
 numType :: Sugar.Type InternalName
 numType =

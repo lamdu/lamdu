@@ -169,7 +169,7 @@ loop ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Int -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-loop minOpPrecFromParent parentPrec (Expression pl body) =
+loop minOpPrecFromParent parentPrec (Expression pl bod) =
     Expression (pl & plData %~ res) finalBody
     where
         f expr minOpPrecOverride override newParentPrec =
@@ -189,4 +189,4 @@ loop minOpPrecFromParent parentPrec (Expression pl body) =
             ?? if haveParens
                  then Precedence 0 0
                  else parentPrec
-        (classifier, newBody) = precedenceOf (body <&> f)
+        (classifier, newBody) = precedenceOf (bod <&> f)

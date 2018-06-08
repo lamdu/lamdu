@@ -143,8 +143,8 @@ convertDefBody ::
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
-convertDefBody cache monitors evalRes cp (Definition.Definition body defType defI) =
-    case body of
+convertDefBody cache monitors evalRes cp (Definition.Definition bod defType defI) =
+    case bod of
     Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
