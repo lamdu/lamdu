@@ -189,7 +189,7 @@ loadRepl cache monitors evalRes cp =
             <&> Lens.mapped %~ (^. pUserData)
             >>= PresentationModes.addToExpr
             >>= OrderTags.orderExpr
-        let replEntityId = expr ^. rPayload . plEntityId
+        let replEntityId = expr ^. annotation . plEntityId
         pure Repl
             { _replExpr = expr
             , _replResult = ConvertEval.completion cp replEntityId completion
@@ -206,8 +206,8 @@ loadAnnotatedDef ::
     Monad m =>
     (pl -> DefI m) ->
     pl -> T m (Definition.Definition (Val (ValP m)) pl)
-loadAnnotatedDef getDefI annotation =
-    getDefI annotation & ExprLoad.def <&> Definition.defPayload .~ annotation
+loadAnnotatedDef getDefI x =
+    getDefI x & ExprLoad.def <&> Definition.defPayload .~ x
 
 loadPanes ::
     Monad m =>
@@ -272,7 +272,7 @@ loadWorkArea ::
 loadWorkArea cache monitors evalRes cp =
     do
         repl <- loadRepl cache monitors evalRes cp
-        panes <- loadPanes cache monitors evalRes cp (repl ^. replExpr . rPayload . plEntityId)
+        panes <- loadPanes cache monitors evalRes cp (repl ^. replExpr . annotation . plEntityId)
         pure WorkArea
             { _waPanes = panes
             , _waRepl = repl

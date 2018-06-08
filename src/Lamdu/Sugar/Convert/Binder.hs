@@ -129,7 +129,7 @@ convertRedex expr redex =
                 letBody
                 & bbContent .
                     Lens.failing
-                    (_BinderExpr . rPayload . plActions)
+                    (_BinderExpr . annotation . plActions)
                     (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
                     (letBody ^. bbContent . SugarLens.binderContentEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
@@ -245,7 +245,7 @@ convertLam lam exprPl =
                     & Lambda LightLambda
         BodyLam lambda
             & addActions lam exprPl
-            <&> body . Lens.mapped . rPayload . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
+            <&> body . Lens.mapped . annotation . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda ::
     Set InternalName ->

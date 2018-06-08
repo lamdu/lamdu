@@ -65,7 +65,7 @@ extractEventMap ::
     Sugar.Expression name (T m) (T m) a -> [MetaKey] ->
     EventMap (T m GuiState.Update)
 extractEventMap replExpr keys =
-    replExpr ^. Sugar.rPayload . Sugar.plActions . Sugar.extract
+    replExpr ^. Sugar.annotation . Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor
     & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
 
@@ -194,7 +194,7 @@ make exportRepl (Sugar.Repl replExpr replResult) =
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
-            (resultWidget exportRepl (replExpr ^. Sugar.rPayload) <$> curPrevTag <&> fmap) <*> replResult
+            (resultWidget exportRepl (replExpr ^. Sugar.annotation) <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
@@ -214,4 +214,4 @@ make exportRepl (Sugar.Repl replExpr replResult) =
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
-        replExprId = replExpr ^. Sugar.rPayload . Sugar.plEntityId & WidgetIds.fromEntityId
+        replExprId = replExpr ^. Sugar.annotation . Sugar.plEntityId & WidgetIds.fromEntityId

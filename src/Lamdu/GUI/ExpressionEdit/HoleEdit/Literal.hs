@@ -39,7 +39,7 @@ makeLiteral io optionLiteral lit =
         case result ^? Sugar.holeResultConverted . Sugar.body . Sugar._BodyFragment . Sugar.fExpr of
             Just arg -> arg
             _ -> result ^. Sugar.holeResultConverted
-            ^. Sugar.rPayload . Sugar.plEntityId
+            ^. Sugar.annotation . Sugar.plEntityId
             & WidgetIds.fromEntityId
             & WidgetIds.literalEditOf
             & pure

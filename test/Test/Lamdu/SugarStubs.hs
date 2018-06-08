@@ -69,7 +69,7 @@ infix2Apply resTyp varRef lTag rTag l r =
     & Sugar.BodyLabeledApply
     & expr resTyp
     where
-        exprType = Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType
+        exprType = Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType
         funcType = params ~> resTyp
         params = fieldParams [(lTag, lType), (rTag, rType)]
         lType = l ^. exprType
@@ -196,7 +196,7 @@ expr ::
     (Sugar.Expression name Identity Unit ()) ->
     Sugar.Expression name Identity Unit ()
 expr typ body =
-    Sugar.Expression { Sugar._body = body, Sugar._rPayload = mkPayload typ }
+    Sugar.Expression { Sugar._body = body, Sugar._annotation = mkPayload typ }
 
 numType :: Sugar.Type InternalName
 numType =

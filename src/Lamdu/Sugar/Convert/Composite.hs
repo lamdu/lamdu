@@ -193,8 +193,8 @@ convert op empty cons prism valS restS exprPl extendV =
         -- subexprs given will add no hidden payloads. Then we add the
         -- extend only to pUserData as the hidden payload
         >>= addActions [] exprPl
-        <&> rPayload . plEntityId .~ restS ^. rPayload . plEntityId
-        <&> rPayload . plData . pUserData <>~ exprPl ^. Input.userData
+        <&> annotation . plEntityId .~ restS ^. annotation . plEntityId
+        <&> annotation . plData . pUserData <>~ exprPl ^. Input.userData
     Nothing ->
         convertOneItemOpenComposite empty cons op valS restS exprPl extendV
         <&> (prism #)

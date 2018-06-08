@@ -55,7 +55,7 @@ addToLabeledApply a =
         mkInfixArg arg other =
             arg
             & Sugar.body . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+                other ^. Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent
         processArg arg =
             do
                 getVar <- arg ^? Sugar.aaExpr . Sugar.body . Sugar._BodyGetVar
@@ -67,8 +67,8 @@ addToLabeledApply a =
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Sugar.RelayedArg
                     { Sugar._raValue = getVar
-                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plEntityId
-                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.rPayload . Sugar.plActions
+                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.annotation . Sugar.plEntityId
+                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . Sugar.plActions
                     } & Just
             & fromMaybe (Left arg)
 

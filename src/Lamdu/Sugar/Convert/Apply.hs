@@ -51,7 +51,7 @@ convert app@(V.Apply funcI argI) exprPl =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & rPayload . plActions . mSetToHole ?~ deleteAction
+                              & annotation . plActions . mSetToHole ?~ deleteAction
                       else funcS
                     , argS
                     )
@@ -114,7 +114,7 @@ convertLabeled subexprs funcS argS exprPl =
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         let bod =
                 BodyLabeledApply LabeledApply
-                { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. rPayload))
+                { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. annotation))
                 , _aSpecialArgs = Verbose
                 , _aAnnotatedArgs = args
                 , _aRelayedArgs =
@@ -124,7 +124,7 @@ convertLabeled subexprs funcS argS exprPl =
                 }
         let userPayload =
                 subexprPayloads subexprs
-                (funcS ^. rPayload : bod ^.. Lens.folded . rPayload)
+                (funcS ^. annotation : bod ^.. Lens.folded . annotation)
                 & mconcat
         addActionsWith userPayload exprPl bod & lift
 
@@ -138,7 +138,7 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. rPayload . plData . pStored & Property.value)
+                (funcS ^. annotation . plData . pStored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply Apply
             { _applyFunc = funcS

@@ -160,7 +160,7 @@ makeSubexpression expr =
     & advanceDepth (pure . Responsive.fromTextView)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
-        animId = expr ^. Sugar.rPayload & WidgetIds.fromExprPayload & toAnimId
+        animId = expr ^. Sugar.annotation & WidgetIds.fromExprPayload & toAnimId
 
 isHoleResult :: MonadReader (Askable i o) m => m Bool
 isHoleResult = Lens.view aIsHoleResult

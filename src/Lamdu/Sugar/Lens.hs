@@ -117,7 +117,7 @@ binderContentExpr f (BinderExpr e) = f e <&> BinderExpr
 binderContentEntityId ::
     Lens' (BinderContent name i o (Expression name i o a)) EntityId
 binderContentEntityId f (BinderExpr e) =
-    e & rPayload . plEntityId %%~ f <&> BinderExpr
+    e & annotation . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 

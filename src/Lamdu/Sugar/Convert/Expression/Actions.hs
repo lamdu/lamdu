@@ -155,13 +155,13 @@ setChildReplaceParentActions =
     _ ->
         bod
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) .
-            traverse . rPayload %~ join setToExpr
+            traverse . annotation %~ join setToExpr
         -- Replace-parent with fragment sets directly to fragment expression
-        <&> Lens.filteredBy (body . _BodyFragment . fExpr . rPayload) <. rPayload %@~ setToExpr
+        <&> Lens.filteredBy (body . _BodyFragment . fExpr . annotation) <. annotation %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
         <&> body . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
-            fExpr . rPayload %~ join setToExpr
+            fExpr . annotation %~ join setToExpr
 
 subexprPayloads ::
     Foldable f =>
@@ -188,7 +188,7 @@ addActionsWith userData exprPl bodyS =
         addReplaceParents <- setChildReplaceParentActions
         pure Expression
             { _body = addReplaceParents (exprPl ^. Input.stored) bodyS
-            , _rPayload =
+            , _annotation =
                 Payload
                 { _plEntityId = exprPl ^. Input.entityId
                 , _plAnnotation = ann
@@ -209,7 +209,7 @@ addActions ::
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS
     where
-        childPayloads = bodyS ^.. Lens.folded . rPayload
+        childPayloads = bodyS ^.. Lens.folded . annotation
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =

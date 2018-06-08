@@ -20,7 +20,7 @@ test :: Test
 test =
     do
         (minOpPrec, needsParens, ()) <-
-            expr ^?! infixArgs . _2 . Sugar.rPayload . Sugar.plData
+            expr ^?! infixArgs . _2 . Sugar.annotation . Sugar.plData
             & pure
         assertEqual "Plus in mul need no paren?!" Parens.NeedsParens needsParens
         assertEqual "Parens minOpPrec is not 0?!" 0 minOpPrec

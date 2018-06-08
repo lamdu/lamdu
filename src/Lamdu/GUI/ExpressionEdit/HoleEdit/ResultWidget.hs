@@ -100,7 +100,7 @@ make mNextEntry ctx resultId holeResult =
     }
     where
         holeResultId =
-            holeResultConverted ^. Sugar.rPayload . Sugar.plEntityId
+            holeResultConverted ^. Sugar.annotation . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResult ^?

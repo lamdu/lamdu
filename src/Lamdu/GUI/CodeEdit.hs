@@ -108,7 +108,7 @@ make cp gp width =
             eventMap <-
                 panesEventMap theExportActions cp gp
                 (workArea ^.
-                 Sugar.waRepl . Sugar.replExpr . Sugar.rPayload .
+                 Sugar.waRepl . Sugar.replExpr . Sugar.annotation .
                  Sugar.plAnnotation . Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])

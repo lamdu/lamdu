@@ -31,7 +31,7 @@ import           Lamdu.Prelude
 
 mReplaceParent ::
     Lens.Traversal' (Sugar.Expression name i o a) (o Sugar.EntityId)
-mReplaceParent = Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
+mReplaceParent = Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
     (Monad i, Monad o) =>

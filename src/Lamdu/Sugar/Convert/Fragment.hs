@@ -110,8 +110,8 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             BodyFragment Fragment
                 { _fExpr =
                       argS
-                      & rPayload . plActions . detach .~ FragmentExprAlready storedEntityId
-                      & rPayload . plActions . mSetToHole ?~
+                      & annotation . plActions . detach .~ FragmentExprAlready storedEntityId
+                      & annotation . plActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                       if isTypeMatch
@@ -125,7 +125,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-            <&> rPayload . plActions . detach .~ FragmentAlready storedEntityId
+            <&> annotation . plActions . detach .~ FragmentAlready storedEntityId
     where
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI

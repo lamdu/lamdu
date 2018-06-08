@@ -87,6 +87,6 @@ testFragment =
                 , Sugar._fOptions = pure []
                 } & Stub.expr (Stub.numType Stub.~> Stub.numType)
             )
-            & Sugar.rPayload . Sugar.plEntityId .~ fragEntityId
+            & Sugar.annotation . Sugar.plEntityId .~ fragEntityId
             & Stub.addNamesToExpr
         fragEntityId = "frag"

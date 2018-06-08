@@ -79,7 +79,7 @@ orderBody x@Sugar.BodyPlaceHolder{} = pure x
 orderExpr :: Monad m => Order m (Sugar.Expression name (T m) o a)
 orderExpr e =
     e
-    & Sugar.rPayload . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
+    & Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
     >>= Sugar.body %%~ orderBody
     >>= Sugar.body . Lens.traversed %%~ orderExpr
 

@@ -44,7 +44,7 @@ test =
                 workArea ^?! Sugar.waRepl . Sugar.replExpr .
                 Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
                 Sugar.fBody . Sugar.bbContent . Sugar._BinderExpr .
-                Sugar.rPayload . Sugar.plEntityId
+                Sugar.annotation . Sugar.plEntityId
                 & HoleWidgetIds.make
                 & HoleWidgetIds.hidClosed
         let env = baseEnv & cursor .~ holeId

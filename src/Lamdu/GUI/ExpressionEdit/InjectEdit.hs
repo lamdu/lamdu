@@ -74,7 +74,7 @@ makeInject val tag pl =
     where
         nearestHoles = ExprGui.nextHolesBefore val
         delDoc = E.Doc ["Edit", "Delete"]
-        mReplaceParent = val ^. Sugar.rPayload . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
     NearestHoles -> Sugar.NullaryVal name i o () ->

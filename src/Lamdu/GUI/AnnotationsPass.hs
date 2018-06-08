@@ -29,7 +29,7 @@ forceShowTypeOrEval =
     & T.showInTypeMode .~ True
 
 topLevelAnn :: Lens' (Expression name i o (T.ShowAnnotation, a)) T.ShowAnnotation
-topLevelAnn = rPayload . plData . _1
+topLevelAnn = annotation . plData . _1
 
 markAnnotationsToDisplay ::
     Expression name i o a ->
