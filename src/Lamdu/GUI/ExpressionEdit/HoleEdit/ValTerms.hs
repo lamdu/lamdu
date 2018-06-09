@@ -82,7 +82,7 @@ bodyShape = \case
     Sugar.BodyFragment {} -> []
     Sugar.BodyPlaceHolder {} -> []
 
-bodyNames :: Monad i => Sugar.Body (Name o) i o expr -> [Text]
+bodyNames :: Monad i => Sugar.Body (Name o) i o a -> [Text]
 bodyNames =
     \case
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []

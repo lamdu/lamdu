@@ -52,7 +52,7 @@ placeHolder pl =
 
 makeEditor ::
     (Monad i, Monad o) =>
-    Sugar.Body (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Body (Name o) i o ExprGui.Payload ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeEditor body pl =

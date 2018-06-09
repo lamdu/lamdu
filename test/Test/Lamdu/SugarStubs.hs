@@ -236,8 +236,7 @@ binderExpr params body =
 
 expr ::
     Sugar.Type name ->
-    Sugar.Body name Identity Unit
-    (Sugar.Expression name Identity Unit ()) ->
+    Sugar.Body name Identity Unit () ->
     Sugar.Expression name Identity Unit ()
 expr typ body =
     Sugar.Expression { Sugar._body = body, Sugar._annotation = mkPayload typ }

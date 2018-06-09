@@ -37,5 +37,16 @@ cpsTellName name = CPS $ \k -> (,) <$> tellName name <*> k
 fromExpression :: Monad i => Expression name i o a -> [name]
 fromExpression = snd . runCollect . Walk.toExpression
 
-fromBody :: Monad i => Body name i o expr -> [name]
-fromBody = snd . runCollect . Walk.toBody pure
+fromBody :: Monad i => Body name i o a -> [name]
+fromBody =
+    snd . runCollect . Walk.toBody (pure . mkPlaceholder)
+    where
+        mkPlaceholder expr =
+            Expression
+            { _body = BodyPlaceHolder
+            , _annotation =
+                (expr ^. annotation)
+                { _plAnnotation = error "HACK"
+                , _plActions = error "HACK"
+                }
+            }

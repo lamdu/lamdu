@@ -406,9 +406,9 @@ toIfElse expr (IfElse ifThen els_) =
     <*> toElse expr els_
 
 toBody ::
-    MonadNaming m => (a -> m b) ->
-    Body (OldName m) (IM m) o a ->
-    m (Body (NewName m) (IM m) o b)
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
+    Body (OldName m) (IM m) o a -> m (Body (NewName m) (IM m) o b)
 toBody expr = \case
     BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
     BodyInject       x -> x & toInject expr <&> BodyInject

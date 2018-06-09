@@ -47,7 +47,7 @@ payloadsIndexedByPath f =
                 newPath = void val : path
 
 payloadsOf ::
-    Lens.Fold (Body name i o (Expression name i o ())) a ->
+    Lens.Fold (Body name i o ()) a ->
     Lens.IndexedTraversal'
     (Expression name i o ())
     (Expression name i o b)
@@ -76,7 +76,7 @@ unfinishedExprPayloads ::
 unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 subExprsOf ::
-    Lens.Traversal' (Body name i o (Expression name i o ())) b ->
+    Lens.Traversal' (Body name i o ()) b ->
     Lens.IndexedTraversal'
     [Expression name i o ()]
     (Expression name i o a)

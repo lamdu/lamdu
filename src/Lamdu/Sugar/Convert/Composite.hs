@@ -171,7 +171,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Body InternalName (T m) (T m) (ExpressionU m a))
+    (Body InternalName (T m) (T m) (ConvertPayload m a))
     (Composite InternalName (T m) (T m) (ExpressionU m a))
 
 convert ::
