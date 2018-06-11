@@ -45,5 +45,4 @@ test =
             <&> tail
             <&> Lens.mapped %~ fromString . takeWhile (/= '\'')
         traverse_ verifyRtsTag rtsTags
-        pure ()
     & testCase "js-rts-tags"
