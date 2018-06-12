@@ -5,6 +5,7 @@ module Lamdu.Sugar.Parens
     , add, addWith
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..))
 import           Lamdu.Sugar.Types
@@ -115,24 +116,18 @@ precedenceOf =
     BodyFragment x          -> mkUnambiguous BodyFragment x
     BodyRecord x           -> mkUnambiguous BodyRecord x
     BodyCase x             -> mkUnambiguous BodyCase x
-    BodyLam x              ->
-        ( ParenIf Never (IfGreaterOrEqual 1)
-        , x & lamFunc . fBody %~ fmap unambiguousContext & BodyLam
-        )
+    BodyLam x              -> leftSymbol Lens.mapped 1 BodyLam x
     BodyFromNom x          -> rightSymbol 1 BodyFromNom x
-    BodyToNom x            ->
-        ( ParenIf Never (IfGreaterOrEqual 1)
-        , x <&> fmap unambiguousContext & BodyToNom
-        )
-    BodyInject x           -> leftSymbol 1 BodyInject x
+    BodyToNom x            -> leftSymbol (Lens.mapped . Lens.mapped) 1 BodyToNom x
+    BodyInject x           -> leftSymbol Lens.mapped 1 BodyInject x
     BodyGetField x         -> rightSymbol 14 BodyGetField x
     BodySimpleApply x      -> precedenceOfPrefixApply x
     BodyLabeledApply x     -> precedenceOfLabeledApply x & _2 %~ BodyLabeledApply
     BodyIfElse x           -> precedenceOfIfElse x & _2 %~ BodyIfElse
     where
-        leftSymbol prec cons x =
+        leftSymbol lens prec cons x =
             ( ParenIf Never (IfGreaterOrEqual prec)
-            , cons (x ?? Just 0 ?? Precedence (Just 0) Nothing)
+            , cons (x & lens %~ \expr -> expr (Just 0) (Precedence (Just 0) Nothing))
             )
         rightSymbol prec cons x =
             ( ParenIf (IfGreaterOrEqual prec) Never
