@@ -48,11 +48,14 @@ assignmentBodyFirstLine minOpPrecOverride override =
             }
         f (BinderExpr expr) = expr minOpPrecOverride override & BinderExpr
 
+unambiguousContext :: (Maybe Prec -> Precedence (Maybe Prec) -> a) -> a
+unambiguousContext x = x (Just 0) unambiguous
+
 mkUnambiguous ::
     Functor sugar =>
     (sugar a -> b) ->
     sugar (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) -> (Classifier, b)
-mkUnambiguous cons x = (NeverParen, cons (x ?? Just 0 ?? unambiguous))
+mkUnambiguous cons x = (NeverParen, cons (x <&> unambiguousContext))
 
 precedenceOfIfElse ::
     IfElse name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
@@ -65,7 +68,7 @@ precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
             (then_ (Just 0) (Precedence (Just 0) Nothing)) -- then appears in end of first line
             del
         )
-        (else_ ?? Just 0 ?? unambiguous)
+        (else_ <&> unambiguousContext)
     )
 
 precedenceOfLabeledApply ::
@@ -100,10 +103,10 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
             , _aRelayedArgs = relayedArgs
             }
         )
-    _ -> (NeverParen, apply ?? Just 0 ?? unambiguous)
+    _ -> (NeverParen, apply <&> unambiguousContext)
     where
         notBoxed = null annotatedArgs && null relayedArgs
-        newAnnotatedArgs = annotatedArgs <&> (?? Just 0) <&> (?? unambiguous)
+        newAnnotatedArgs = annotatedArgs <&> fmap unambiguousContext
 
 precedenceOfPrefixApply ::
     Apply (Maybe MinOpPrec -> Precedence (Maybe Prec) -> expr) ->
