@@ -87,7 +87,8 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
             <&> annotation . plEntityId .~ funcS ^. annotation . plEntityId
-            <&> annotation . plData . pUserData <>~ funcS ^. annotation . plData . pUserData
+            <&> annotation . plData . pUserData <>~
+                (exprPl ^. Input.userData <> funcS ^. annotation . plData . pUserData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
