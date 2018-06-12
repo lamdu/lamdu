@@ -6,7 +6,7 @@ branches:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y zlib1g-dev libglew-dev libleveldb-dev libglfw-dev
+  - sudo apt-get install -y zlib1g-dev libglew-dev libleveldb-dev
   - sudo apt-get install -y libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
   - nvm install 7
   - mkdir -p ~/.local/bin
