@@ -26,9 +26,9 @@ subExprPayloads ::
     (Expression name i o b)
     (Payload name i o a) (Payload name i o b)
 subExprPayloads f val@(Expression pl x) =
-    Expression
-    <$> Lens.indexed f (void val) pl
-    <*> (bodyChildren .> subExprPayloads) f x
+    flip Expression
+    <$> (bodyChildren .> subExprPayloads) f x
+    <*> Lens.indexed f (void val) pl
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal
