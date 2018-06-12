@@ -33,6 +33,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
@@ -236,7 +237,10 @@ allowedSearchTerm = Name.isValidText
 
 -- Allowed name for tag assuming it is already a valid search term
 allowedTagName :: Text -> Bool
-allowedTagName = Lens.anyOf (Lens.ix 0) Char.isAlpha
+allowedTagName =
+    Lens.anyOf (Lens.ix 0) f
+    where
+        f x = Char.isAlpha x || elem x Chars.operator
 
 type HasSearchTermEnv env =
     ( HasTheme env, HasConfig env, GuiState.HasState env
