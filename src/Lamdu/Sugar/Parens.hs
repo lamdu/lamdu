@@ -7,7 +7,6 @@ module Lamdu.Sugar.Parens
 
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..))
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -31,22 +30,6 @@ unambiguous :: Precedence (Maybe Prec)
 unambiguous = Precedence (Just 0) (Just 0)
 
 type MinOpPrec = Prec
-
--- First "line" gets specified precedence override.
--- Rest of "lines" get 0/0 (unambiguous) override
-assignmentBodyFirstLine ::
-    Maybe MinOpPrec -> Precedence (Maybe Prec) ->
-    BinderBody name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
-    BinderBody name i o a
-assignmentBodyFirstLine minOpPrecOverride override =
-    bbContent %~ f
-    where
-        f (BinderLet let_) =
-            BinderLet let_
-            { _lValue = _lValue let_ & SugarLens.assignmentBody %~ assignmentBodyFirstLine minOpPrecOverride override
-            , _lBody = _lBody let_ <&> (\expr -> expr (Just 0) unambiguous)
-            }
-        f (BinderExpr expr) = expr minOpPrecOverride override & BinderExpr
 
 unambiguousContext :: (Maybe Prec -> Precedence (Maybe Prec) -> a) -> a
 unambiguousContext x = x (Just 0) unambiguous
@@ -134,13 +117,12 @@ precedenceOf =
     BodyCase x             -> mkUnambiguous BodyCase x
     BodyLam x              ->
         ( ParenIf Never (IfGreaterOrEqual 1)
-        , x & lamFunc . fBody %~
-          assignmentBodyFirstLine (Just 0) (Precedence (Just 1) Nothing) & BodyLam
+        , x & lamFunc . fBody %~ fmap unambiguousContext & BodyLam
         )
     BodyFromNom x          -> rightSymbol 1 BodyFromNom x
     BodyToNom x            ->
         ( ParenIf Never (IfGreaterOrEqual 1)
-        , x <&> assignmentBodyFirstLine (Just 0) (Precedence (Just 1) Nothing) & BodyToNom
+        , x <&> fmap unambiguousContext & BodyToNom
         )
     BodyInject x           -> leftSymbol 1 BodyInject x
     BodyGetField x         -> rightSymbol 14 BodyGetField x
