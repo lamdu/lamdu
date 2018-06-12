@@ -33,13 +33,12 @@ addWith ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
-simpleInfix :: LabeledApply name i o expr -> Maybe (expr, expr)
-simpleInfix apply =
-    case apply ^. aSpecialArgs of
-    Infix l r
-        | null (apply ^. aAnnotatedArgs)
-        && null (apply ^. aRelayedArgs) -> Just (l, r)
-    _ -> Nothing
+simpleInfix ::
+    LabeledApply name i o a ->
+    Maybe ((a, a), (b, b) -> LabeledApply name i o b)
+simpleInfix (LabeledApply func (Infix l r) [] []) =
+    Just ((l, r), \(l', r') -> LabeledApply func (Infix l' r') [] [])
+simpleInfix _ = Nothing
 
 loop ::
     HasPrecedence name =>
@@ -70,19 +69,13 @@ loop minOpPrec parentPrec (Expression pl body_) =
             V.Apply f a = x
             needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
     BodyLabeledApply x ->
-        -- TODO: Use prism -- so we don't have to put ugly empty lists below
         case simpleInfix x of
         Nothing -> mkUnambiguous BodyLabeledApply x
-        Just (l, r) ->
-            BodyLabeledApply LabeledApply
-            { _aFunc = func
-            , _aSpecialArgs =
-                Infix
-                (loop 0 (childPrec (after .~ prec) needParens) l)
-                (loop (prec+1) (childPrec (before .~ prec) needParens) r)
-            , _aAnnotatedArgs = []
-            , _aRelayedArgs = []
-            } & result needParens
+        Just ((l, r), mk) ->
+            mk
+            ( loop 0 (childPrec (after .~ prec) needParens) l
+            , loop (prec+1) (childPrec (before .~ prec) needParens) r
+            ) & BodyLabeledApply & result needParens
             where
                 func = x ^. aFunc
                 prec = func ^. afVar . bvNameRef . nrName & precedence
