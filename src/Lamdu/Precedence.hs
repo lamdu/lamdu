@@ -19,6 +19,8 @@ instance Applicative Precedence where
 
 type Prec = Int
 
+-- For the rest of the precedence integer values, see Lamdu.Sugar.Parens
+
 -- Lower precedences are reserved for grammars
 minNamePrec :: Prec
 minNamePrec = 2

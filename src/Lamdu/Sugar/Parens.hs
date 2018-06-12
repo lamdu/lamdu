@@ -6,7 +6,7 @@ module Lamdu.Sugar.Parens
     ) where
 
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Precedence (Precedence(..), HasPrecedence(..))
+import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
@@ -16,9 +16,9 @@ import           Lamdu.Prelude
 data NeedsParens = NeedsParens | NoNeedForParens
     deriving (Eq, Show)
 
-data PrecCheck = Never | IfGreater !Int | IfGreaterOrEqual !Int
+data PrecCheck = Never | IfGreater !Prec | IfGreaterOrEqual !Prec
 
-check :: PrecCheck -> Int -> Bool
+check :: PrecCheck -> Prec -> Bool
 check Never = const False
 check (IfGreater x) = (> x)
 check (IfGreaterOrEqual x) = (>= x)
@@ -27,16 +27,16 @@ data Classifier
     = NeverParen
     | ParenIf PrecCheck PrecCheck
 
-unambiguous :: Precedence (Maybe Int)
+unambiguous :: Precedence (Maybe Prec)
 unambiguous = Precedence (Just 0) (Just 0)
 
-type MinOpPrec = Int
+type MinOpPrec = Prec
 
 -- First "line" gets specified precedence override.
 -- Rest of "lines" get 0/0 (unambiguous) override
 assignmentBodyFirstLine ::
-    Maybe MinOpPrec -> Precedence (Maybe Int) ->
-    BinderBody name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    Maybe MinOpPrec -> Precedence (Maybe Prec) ->
+    BinderBody name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
     BinderBody name i o a
 assignmentBodyFirstLine minOpPrecOverride override =
     bbContent %~ f
@@ -51,11 +51,11 @@ assignmentBodyFirstLine minOpPrecOverride override =
 mkUnambiguous ::
     Functor sugar =>
     (sugar a -> b) ->
-    sugar (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) -> (Classifier, b)
+    sugar (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) -> (Classifier, b)
 mkUnambiguous cons x = (NeverParen, cons (x ?? Just 0 ?? unambiguous))
 
 precedenceOfIfElse ::
-    IfElse name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    IfElse name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
     (Classifier, IfElse name i o a)
 precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
     ( ParenIf Never (IfGreater 1)
@@ -70,7 +70,7 @@ precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
 
 precedenceOfLabeledApply ::
     HasPrecedence name =>
-    LabeledApply name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    LabeledApply name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
     (Classifier, LabeledApply name i o a)
 precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
     case specialArgs of
@@ -106,7 +106,7 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
         newAnnotatedArgs = annotatedArgs <&> (?? Just 0) <&> (?? unambiguous)
 
 precedenceOfPrefixApply ::
-    Apply (Maybe MinOpPrec -> Precedence (Maybe Int) -> expr) ->
+    Apply (Maybe MinOpPrec -> Precedence (Maybe Prec) -> expr) ->
     (Classifier, Body name i o expr)
 precedenceOfPrefixApply (V.Apply f arg) =
     ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
@@ -118,7 +118,7 @@ precedenceOfPrefixApply (V.Apply f arg) =
 
 precedenceOf ::
     HasPrecedence name =>
-    Body name i o (Maybe MinOpPrec -> Precedence (Maybe Int) -> a) ->
+    Body name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
     (Classifier, Body name i o a)
 precedenceOf =
     \case
@@ -161,13 +161,13 @@ add = addWith 0
 
 addWith ::
     HasPrecedence name =>
-    Int -> Expression name i o a ->
+    Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 loop ::
     HasPrecedence name =>
-    MinOpPrec -> Precedence Int -> Expression name i o a ->
+    MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
 loop minOpPrecFromParent parentPrec (Expression pl bod) =
     Expression (pl & plData %~ res) finalBody
