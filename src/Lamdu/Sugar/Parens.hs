@@ -116,22 +116,22 @@ precedenceOf =
     BodyFragment x          -> mkUnambiguous BodyFragment x
     BodyRecord x           -> mkUnambiguous BodyRecord x
     BodyCase x             -> mkUnambiguous BodyCase x
-    BodyLam x              -> leftSymbol Lens.mapped 1 BodyLam x
-    BodyFromNom x          -> rightSymbol 1 BodyFromNom x
-    BodyToNom x            -> leftSymbol (Lens.mapped . Lens.mapped) 1 BodyToNom x
-    BodyInject x           -> leftSymbol Lens.mapped 1 BodyInject x
-    BodyGetField x         -> rightSymbol 14 BodyGetField x
+    BodyLam x              -> leftSymbol Lens.mapped 0 BodyLam x
+    BodyFromNom x          -> rightSymbol 0 BodyFromNom x
+    BodyToNom x            -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
+    BodyInject x           -> leftSymbol Lens.mapped 0 BodyInject x
+    BodyGetField x         -> rightSymbol 13 BodyGetField x
     BodySimpleApply x      -> precedenceOfPrefixApply x
     BodyLabeledApply x     -> precedenceOfLabeledApply x & _2 %~ BodyLabeledApply
     BodyIfElse x           -> precedenceOfIfElse x & _2 %~ BodyIfElse
     where
         leftSymbol lens prec cons x =
-            ( ParenIf Never (IfGreaterOrEqual prec)
-            , cons (x & lens %~ \expr -> expr (Just 0) (Precedence (Just 0) Nothing))
+            ( ParenIf Never (IfGreater prec)
+            , cons (x & lens %~ \expr -> expr (Just prec) (Precedence (Just prec) Nothing))
             )
         rightSymbol prec cons x =
-            ( ParenIf (IfGreaterOrEqual prec) Never
-            , cons (x ?? Just 0 ?? Precedence Nothing (Just 0))
+            ( ParenIf (IfGreater prec) Never
+            , cons (x ?? Just prec ?? Precedence Nothing (Just prec))
             )
 
 add ::
