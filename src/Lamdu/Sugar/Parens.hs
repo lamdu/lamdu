@@ -7,7 +7,8 @@ module Lamdu.Sugar.Parens
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..))
+import           Lamdu.Precedence
+    ( Prec, Precedence(..), HasPrecedence(..), before, after )
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -16,129 +17,10 @@ import           Lamdu.Prelude
 data NeedsParens = NeedsParens | NoNeedForParens
     deriving (Eq, Show)
 
-data PrecCheck = Never | IfGreater !Prec | IfGreaterOrEqual !Prec
-
-data Override a = Override a | KeepParent
-
-check :: PrecCheck -> Prec -> Bool
-check Never = const False
-check (IfGreater x) = (> x)
-check (IfGreaterOrEqual x) = (>= x)
-
-data Classifier
-    = NeverParen
-    | ParenIf PrecCheck PrecCheck
-
-unambiguous :: Precedence (Override Prec)
-unambiguous = Precedence (Override 0) (Override 0)
+unambiguous :: Precedence Prec
+unambiguous = Precedence 0 0
 
 type MinOpPrec = Prec
-
-unambiguousContext :: a -> (Override Prec, Precedence (Override Prec), a)
-unambiguousContext x = (Override 0, unambiguous, x)
-
-mkUnambiguous ::
-    Functor sugar =>
-    (sugar (Override MinOpPrec, Precedence (Override Prec), a) -> b) ->
-    sugar a -> (Classifier, b)
-mkUnambiguous cons x = (NeverParen, cons (x <&> unambiguousContext))
-
-precedenceOfIfElse ::
-    IfElse name i o a ->
-    (Classifier, IfElse name i o (Override Prec, Precedence (Override Prec), a))
-precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
-    ( ParenIf Never (IfGreater 1)
-    , IfElse
-        (IfThen
-            (Override 0, unambiguous, if_)
-            (Override 0, Precedence (Override 0) KeepParent, then_) -- then appears in end of first line
-            del
-        )
-        (else_ <&> unambiguousContext)
-    )
-
-precedenceOfLabeledApply ::
-    HasPrecedence name =>
-    LabeledApply name i o a ->
-    (Classifier, LabeledApply name i o (Override Prec, Precedence (Override Prec), a))
-precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
-    case specialArgs of
-    Infix l r ->
-        ( ParenIf (IfGreaterOrEqual prec) (IfGreater prec)
-        , LabeledApply
-            { _aFunc = func
-            , _aSpecialArgs =
-              Infix
-              (Override 0, Precedence KeepParent (Override prec), l)
-              (Override appendOpPrec, Precedence (Override prec) KeepParent, r)
-            , _aAnnotatedArgs = newAnnotatedArgs
-            , _aRelayedArgs = relayedArgs
-            }
-        )
-        where
-            appendOpPrec
-                | notBoxed = prec+1
-                | otherwise = 0
-            prec = func ^. afVar . bvNameRef . nrName & precedence
-    Object arg | notBoxed ->
-        ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
-        , LabeledApply
-            { _aFunc = func
-            , _aSpecialArgs = Object (Override 13, Precedence (Override 13) KeepParent, arg)
-            , _aAnnotatedArgs = newAnnotatedArgs
-            , _aRelayedArgs = relayedArgs
-            }
-        )
-    _ -> (NeverParen, apply <&> unambiguousContext)
-    where
-        notBoxed = null annotatedArgs && null relayedArgs
-        newAnnotatedArgs = annotatedArgs <&> fmap unambiguousContext
-
-precedenceOfPrefixApply ::
-    Apply expr ->
-    (Classifier, Body name i o (Override MinOpPrec, Precedence (Override Prec), expr))
-precedenceOfPrefixApply (V.Apply f arg) =
-    ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
-    , V.Apply
-        (Override 0, Precedence KeepParent (Override 13), f)
-        (Override 13, Precedence (Override 13) KeepParent, arg)
-        & BodySimpleApply
-    )
-
-precedenceOf ::
-    HasPrecedence name =>
-    Body name i o a ->
-    (Classifier, Body name i o (Override MinOpPrec, Precedence (Override Prec), a))
-precedenceOf =
-    \case
-    BodyPlaceHolder        -> (NeverParen, BodyPlaceHolder)
-    BodyLiteral x          -> (NeverParen, BodyLiteral x)
-    BodyGetVar x           -> (NeverParen, BodyGetVar x)
-    BodyHole x             -> (NeverParen, BodyHole x)
-    BodyFragment x         -> mkUnambiguous BodyFragment x
-    BodyRecord x           -> mkUnambiguous BodyRecord x
-    BodyCase x             -> mkUnambiguous BodyCase x
-    BodyLam x              -> leftSymbol Lens.mapped 0 BodyLam x
-    BodyFromNom x          -> rightSymbol 0 BodyFromNom x
-    BodyToNom x            -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
-    BodyInject x           -> leftSymbol Lens.mapped 0 BodyInject x
-    BodyGetField x         -> rightSymbol 13 BodyGetField x
-    BodySimpleApply x      -> precedenceOfPrefixApply x
-    BodyLabeledApply x     -> precedenceOfLabeledApply x & _2 %~ BodyLabeledApply
-    BodyIfElse x           -> precedenceOfIfElse x & _2 %~ BodyIfElse
-    where
-        leftSymbol lens prec cons x =
-            ( ParenIf Never (IfGreater prec)
-            , x
-                & lens %~ (,,) (Override prec) (Precedence (Override prec) KeepParent)
-                & cons
-            )
-        rightSymbol prec cons x =
-            ( ParenIf (IfGreater prec) Never
-            , x
-                <&> (,,) (Override prec) (Precedence KeepParent (Override prec))
-                & cons
-            )
 
 add ::
     HasPrecedence name =>
@@ -151,35 +33,78 @@ addWith ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
-fromOverride :: a -> Override a -> a
-fromOverride parent KeepParent = parent
-fromOverride _ (Override x) = x
+simpleInfix :: LabeledApply name i o expr -> Maybe (expr, expr)
+simpleInfix apply =
+    case apply ^. aSpecialArgs of
+    Infix l r
+        | null (apply ^. aAnnotatedArgs)
+        && null (apply ^. aRelayedArgs) -> Just (l, r)
+    _ -> Nothing
 
 loop ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-loop minOpPrecFromParent parentPrec (Expression pl bod) =
-    Expression (pl & plData %~ res) finalBody
+loop minOpPrec parentPrec (Expression pl body_) =
+    case body_ of
+    BodyPlaceHolder        -> result False BodyPlaceHolder
+    BodyLiteral x          -> result False (BodyLiteral x)
+    BodyGetVar x           -> result False (BodyGetVar x)
+    BodyHole x             -> result False (BodyHole x)
+    BodyFragment x         -> mkUnambiguous BodyFragment x
+    BodyRecord x           -> mkUnambiguous BodyRecord x
+    BodyCase x             -> mkUnambiguous BodyCase x
+    BodyLam x              -> leftSymbol Lens.mapped 0 BodyLam x
+    BodyToNom x            -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
+    BodyInject x           -> leftSymbol Lens.mapped 0 BodyInject x
+    BodyFromNom x          -> rightSymbol Lens.mapped 0 BodyFromNom x
+    BodyGetField x         -> rightSymbol Lens.mapped 13 BodyGetField x
+    BodySimpleApply x      ->
+        BodySimpleApply V.Apply
+        { V._applyFunc =
+            loop 0 (childPrec (after .~ 13) needParens) f
+        , V._applyArg =
+            loop 13 (childPrec (before .~ 13) needParens) a
+        } & result needParens
+        where
+            V.Apply f a = x
+            needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
+    BodyLabeledApply x ->
+        -- TODO: Use prism -- so we don't have to put ugly empty lists below
+        case simpleInfix x of
+        Nothing -> mkUnambiguous BodyLabeledApply x
+        Just (l, r) ->
+            BodyLabeledApply LabeledApply
+            { _aFunc = func
+            , _aSpecialArgs =
+                Infix
+                (loop 0 (childPrec (after .~ prec) needParens) l)
+                (loop (prec+1) (childPrec (before .~ prec) needParens) r)
+            , _aAnnotatedArgs = []
+            , _aRelayedArgs = []
+            } & result needParens
+            where
+                func = x ^. aFunc
+                prec = func ^. afVar . bvNameRef . nrName & precedence
+                needParens =
+                    parentPrec ^. before >= prec || parentPrec ^. after > prec
+    BodyIfElse x ->
+        x <&> loop 0 unambiguous
+        & BodyIfElse
+        & result needParens
+        where
+            needParens = parentPrec ^. after > 1
     where
-        f (minOpPrecOverride, override, expr) newParentPrec =
-            loop (fromOverride minOpPrecFromParent minOpPrecOverride)
-            (fromOverride <$> newParentPrec <*> override) expr
-        Precedence parentBefore parentAfter = parentPrec
-        res
-            | haveParens = (,,) 0 NeedsParens
-            | otherwise = (,,) minOpPrecFromParent NoNeedForParens
-        haveParens =
-            case classifier of
-            NeverParen -> False
-            ParenIf lCheck rCheck ->
-                check lCheck parentBefore || check rCheck parentAfter
-        finalBody =
-            newBody
-            & bodyChildren %~ f
-            & bodyChildren %~
-                ( $ if haveParens
-                    then Precedence 0 0
-                    else parentPrec
-                )
-        (classifier, newBody) = precedenceOf bod
+        result True = pl <&> (,,) 0 NeedsParens & Expression
+        result False = pl <&> (,,) minOpPrec NoNeedForParens & Expression
+        mkUnambiguous cons x =
+            x <&> loop 0 unambiguous & cons & result False
+        childPrec _ True = pure 0
+        childPrec modify False = modify parentPrec
+        leftSymbol = sideSymbol before after
+        rightSymbol = sideSymbol after before
+        sideSymbol overrideSide checkSide lens prec cons x =
+            x & lens %~ loop prec (childPrec (overrideSide .~ prec) needParens) & cons
+            & result needParens
+            where
+                needParens = parentPrec ^. checkSide > prec

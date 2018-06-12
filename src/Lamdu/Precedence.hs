@@ -1,5 +1,6 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Precedence
-    ( Precedence(..)
+    ( Precedence(..), before, after
     , HasPrecedence(..)
     , Prec, minNamePrec, maxNamePrec
     ) where
@@ -10,12 +11,14 @@ import qualified Data.Map as Map
 import           Lamdu.Prelude
 
 data Precedence a = Precedence
-    { before :: a
-    , after  :: a
+    { _before :: a
+    , _after  :: a
     } deriving (Show, Functor)
 instance Applicative Precedence where
     pure = join Precedence
     Precedence af bf <*> Precedence ax bx = Precedence (af ax) (bf bx)
+
+Lens.makeLenses ''Precedence
 
 type Prec = Int
 
