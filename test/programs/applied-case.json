@@ -1,0 +1,20 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "repl": {
+            "val": {
+                "applyFunc": {
+                    "id": "8e169998-cefc-bf69-520f-34184d948c4c",
+                    "absurd": {}
+                },
+                "applyArg": {
+                    "hole": {},
+                    "id": "2a7190d2-5fa8-da40-b313-6d7eb0a3c4c8"
+                },
+                "id": "42c1ab3b-b52c-bbc2-57f6-3a4e74b14b98"
+            }
+        }
+    }
+]
