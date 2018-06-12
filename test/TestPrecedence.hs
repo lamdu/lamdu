@@ -1,9 +1,10 @@
 -- | Test precedences
-module TestPrecedence (test) where
+module TestPrecedence where
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Test.Lamdu.SugarStubs (($$), ($.))
 import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
@@ -20,7 +21,20 @@ test :: Test
 test =
     testGroup "precedence"
     [ testMinOpPrecInfix
+    , testGetFieldOfApply
     ]
+
+testGetFieldOfApply :: Test
+testGetFieldOfApply =
+    expr ^?!
+    Sugar.body . Sugar._BodyGetField . Sugar.gfRecord . Sugar.annotation .
+    Sugar.plData . _2
+    & assertEqual "get field should disambiguate compound expression"
+        Parens.NeedsParens
+    & testCase "get-field-of-apply"
+    where
+        expr = (Stub.identity recType $$ Stub.hole recType) $. "a" & Parens.add
+        recType = Stub.record [("a", Stub.numType)]
 
 testMinOpPrecInfix :: Test
 testMinOpPrecInfix =
