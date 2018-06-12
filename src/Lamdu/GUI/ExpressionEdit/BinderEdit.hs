@@ -205,7 +205,7 @@ makeScopeNavEdit func myId curCursor =
             >>= \case
             Evaluation ->
                 (Widget.makeFocusableWidget ?? myId)
-                <*> ( mapM (uncurry (makeScopeNavArrow setScope)) scopes
+                <*> ( traverse (uncurry (makeScopeNavArrow setScope)) scopes
                         <&> Glue.hbox <&> (^. Align.tValue)
                     )
                 <&> Widget.weakerEvents

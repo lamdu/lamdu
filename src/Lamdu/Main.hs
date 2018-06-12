@@ -134,7 +134,7 @@ main =
             Opts.Editor opts -> withDB (runEditor opts)
     `E.catch` \e@E.SomeException{} -> do
     hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
-    whoCreated e >>= mapM_ (hPutStrLn stderr)
+    whoCreated e >>= traverse_ (hPutStrLn stderr)
 
 deleteDB :: FilePath -> IO ()
 deleteDB lamduDir =

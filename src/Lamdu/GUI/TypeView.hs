@@ -147,7 +147,7 @@ makeTInst parentPrecedence tid typeParams =
                 <&> afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
-                mapM makeTypeParam params
+                traverse makeTypeParam params
                 <&> gridViewTopLeftAlign
                 <&> Align.toWithTextPos
                 >>= (Styled.addValPadding ??)

@@ -75,7 +75,7 @@ makeTable ::
     Sugar.ResTable (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
-        header <- mapM makeTagView headers
+        header <- traverse makeTagView headers
         rows <- take (tableCutoff-1) valss & traverse . traverse %%~ makeInner
         s <- Spacer.stdHSpace
         let table =

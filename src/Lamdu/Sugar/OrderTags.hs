@@ -20,7 +20,7 @@ type Order m x = x -> T m x
 
 orderByTag :: Monad m => (a -> Sugar.TagInfo name) -> Order m [a]
 orderByTag toTag =
-    fmap (map fst . sortOn snd) . mapM loadOrder
+    fmap (map fst . sortOn snd) . traverse loadOrder
     where
         loadOrder x =
             toTag x ^. Sugar.tagVal

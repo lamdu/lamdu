@@ -132,7 +132,7 @@ eventHandlerThread tvars animHandlers =
         userEventTime <- getCurrentTime
         let handlers = animHandlers (ed ^. edWinSize)
         eventResults <-
-            mapM (eventHandler handlers) $ reverse (ed ^. edReversedEvents)
+            traverse (eventHandler handlers) $ reverse (ed ^. edReversedEvents)
         tickResult <-
             if ed ^. edHaveTicks
             then tickHandler handlers

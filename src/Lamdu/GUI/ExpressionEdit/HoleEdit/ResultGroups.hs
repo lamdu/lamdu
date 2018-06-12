@@ -232,7 +232,7 @@ makeLiteralGroups searchTerm optionLiteral =
 
 unicodeAlts :: Text -> [Text]
 unicodeAlts haystack =
-    mapM alts (Text.unpack haystack)
+    traverse alts (Text.unpack haystack)
     <&> concat
     <&> Text.pack
     where

@@ -164,7 +164,7 @@ mkRelayedArgs ::
     ExprGuiM i o (ExpressionGui o)
 mkRelayedArgs nearestHoles args =
     do
-        argEdits <- mapM makeArgEdit args
+        argEdits <- traverse makeArgEdit args
         collapsed <- Styled.grammarLabel "➾" <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where

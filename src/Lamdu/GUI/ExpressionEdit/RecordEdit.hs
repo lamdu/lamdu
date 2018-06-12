@@ -114,7 +114,7 @@ make (Sugar.Composite fields recordTail addField) pl =
                 closedRecordEventMap actions
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
-        fieldGuis <- mapM makeFieldRow fields
+        fieldGuis <- traverse makeFieldRow fields
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField

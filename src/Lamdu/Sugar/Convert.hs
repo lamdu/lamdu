@@ -216,7 +216,7 @@ loadPanes ::
 loadPanes cache monitors evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
-        paneDefs <- mapM (loadAnnotatedDef Anchors.paneDef) panes
+        paneDefs <- traverse (loadAnnotatedDef Anchors.paneDef) panes
         let mkDelPane i =
                 entityId <$ setPanes newPanes
                 where

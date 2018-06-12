@@ -264,7 +264,7 @@ importOne (Codec.EntitySchemaVersion _) =
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
     if ver == 5
-    then mapM_ importOne entities
+    then traverse_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail
 

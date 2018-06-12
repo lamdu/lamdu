@@ -231,8 +231,8 @@ mkOptions resultProcessor holePl =
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
 loadDeps vars noms =
     Infer.Deps
-    <$> (mapM loadVar vars <&> Map.fromList)
-    <*> (mapM loadNom noms <&> Map.fromList)
+    <$> (traverse loadVar vars <&> Map.fromList)
+    <*> (traverse loadNom noms <&> Map.fromList)
     where
         loadVar globalId =
             ExprIRef.defI globalId & Transaction.readIRef

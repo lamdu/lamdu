@@ -10,6 +10,7 @@ import           Control.Exception (bracket_)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (unless)
+import           Data.Foldable (traverse_)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Stack (currentCallStack)
 import qualified Graphics.UI.GLFW as GLFW
@@ -25,7 +26,7 @@ printErrors err msg =
     do
         put $ unwords ["GLFW error:", show err, msg]
         put "From: "
-        currentCallStack >>= mapM_ (put . ("  "++))
+        currentCallStack >>= traverse_ (put . ("  "++))
         hFlush stderr
     where
         put = hPutStrLn stderr

@@ -86,7 +86,7 @@ setParamList ::
     MkProperty' (T m) (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList mPresMode paramListProp newParamList =
     do
-        zip newParamList [0..] & mapM_ (uncurry setParamOrder)
+        zip newParamList [0..] & traverse_ (uncurry setParamOrder)
         Just newParamList & setP paramListProp
         case mPresMode of
             Nothing -> pure ()
@@ -352,7 +352,7 @@ convertRecordParams ::
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
-        params <- mapM mkParam fieldParams
+        params <- traverse mkParam fieldParams
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let addFirst tag =

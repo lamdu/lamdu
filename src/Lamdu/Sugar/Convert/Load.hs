@@ -103,10 +103,10 @@ preparePayloads nomsMap evalRes inferredVal =
 
 makeNominalsMap :: Monad m => [T.Type] -> T m (Map NominalId N.Nominal)
 makeNominalsMap types =
-    mapM_ loadForType types
+    traverse_ loadForType types
     & (`State.execStateT` mempty)
     where
-        loadForType typ = typ ^.. ExprLens.typeTIds & mapM_ loadForTid
+        loadForType typ = typ ^.. ExprLens.typeTIds & traverse_ loadForTid
         loadForTid tid =
             do
                 loaded <- State.get

@@ -18,7 +18,7 @@ mapStore :: RandomGen g => Store (State (Map Key Value, g))
 mapStore = Store
     { storeNewKey = Lens.zoom _2 $ state random
     , storeLookup = sLookup
-    , storeAtomicWrite = mapM_ sWrite
+    , storeAtomicWrite = traverse_ sWrite
     }
     where
         sLookup key = Lens.use (_1 . Lens.at key)
