@@ -18,14 +18,18 @@ infixArgs = Sugar.body . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._I
 
 test :: Test
 test =
+    testGroup "precedence"
+    [ testMinOpPrecInfix
+    ]
+
+testMinOpPrecInfix :: Test
+testMinOpPrecInfix =
     do
-        (minOpPrec, needsParens, ()) <-
-            expr ^?! infixArgs . _2 . Sugar.annotation . Sugar.plData
-            & pure
         assertEqual "Plus in mul need no paren?!" Parens.NeedsParens needsParens
         assertEqual "Parens minOpPrec is not 0?!" 0 minOpPrec
-        pure ()
-        & testCase "Test minOpPrec inside parenthesis"
+        & testCase "min-op-prec-infix"
     where
+        (minOpPrec, needsParens, ()) =
+            expr ^?! infixArgs . _2 . Sugar.annotation . Sugar.plData
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.add
         i = Stub.litNum
