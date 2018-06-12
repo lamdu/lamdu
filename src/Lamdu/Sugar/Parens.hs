@@ -18,6 +18,8 @@ data NeedsParens = NeedsParens | NoNeedForParens
 
 data PrecCheck = Never | IfGreater !Prec | IfGreaterOrEqual !Prec
 
+data Override a = Override a | KeepParent
+
 check :: PrecCheck -> Prec -> Bool
 check Never = const False
 check (IfGreater x) = (> x)
@@ -27,29 +29,29 @@ data Classifier
     = NeverParen
     | ParenIf PrecCheck PrecCheck
 
-unambiguous :: Precedence (Maybe Prec)
-unambiguous = Precedence (Just 0) (Just 0)
+unambiguous :: Precedence (Override Prec)
+unambiguous = Precedence (Override 0) (Override 0)
 
 type MinOpPrec = Prec
 
-unambiguousContext :: (Maybe Prec -> Precedence (Maybe Prec) -> a) -> a
-unambiguousContext x = x (Just 0) unambiguous
+unambiguousContext :: (Override Prec -> Precedence (Override Prec) -> a) -> a
+unambiguousContext x = x (Override 0) unambiguous
 
 mkUnambiguous ::
     Functor sugar =>
     (sugar a -> b) ->
-    sugar (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) -> (Classifier, b)
+    sugar (Override MinOpPrec -> Precedence (Override Prec) -> a) -> (Classifier, b)
 mkUnambiguous cons x = (NeverParen, cons (x <&> unambiguousContext))
 
 precedenceOfIfElse ::
-    IfElse name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
+    IfElse name i o (Override MinOpPrec -> Precedence (Override Prec) -> a) ->
     (Classifier, IfElse name i o a)
 precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
     ( ParenIf Never (IfGreater 1)
     , IfElse
         (IfThen
-            (if_ (Just 0) unambiguous)
-            (then_ (Just 0) (Precedence (Just 0) Nothing)) -- then appears in end of first line
+            (if_ (Override 0) unambiguous)
+            (then_ (Override 0) (Precedence (Override 0) KeepParent)) -- then appears in end of first line
             del
         )
         (else_ <&> unambiguousContext)
@@ -57,7 +59,7 @@ precedenceOfIfElse (IfElse (IfThen if_ then_ del) else_) =
 
 precedenceOfLabeledApply ::
     HasPrecedence name =>
-    LabeledApply name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
+    LabeledApply name i o (Override MinOpPrec -> Precedence (Override Prec) -> a) ->
     (Classifier, LabeledApply name i o a)
 precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs relayedArgs) =
     case specialArgs of
@@ -67,8 +69,8 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
             { _aFunc = func
             , _aSpecialArgs =
               Infix
-              (l (Just 0) (Precedence Nothing (Just prec)))
-              (r (Just appendOpPrec) (Precedence (Just prec) Nothing))
+              (l (Override 0) (Precedence KeepParent (Override prec)))
+              (r (Override appendOpPrec) (Precedence (Override prec) KeepParent))
             , _aAnnotatedArgs = newAnnotatedArgs
             , _aRelayedArgs = relayedArgs
             }
@@ -82,7 +84,7 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
         ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
         , LabeledApply
             { _aFunc = func
-            , _aSpecialArgs = Object (arg (Just 13) (Precedence (Just 13) Nothing))
+            , _aSpecialArgs = Object (arg (Override 13) (Precedence (Override 13) KeepParent))
             , _aAnnotatedArgs = newAnnotatedArgs
             , _aRelayedArgs = relayedArgs
             }
@@ -93,19 +95,19 @@ precedenceOfLabeledApply apply@(LabeledApply func specialArgs annotatedArgs rela
         newAnnotatedArgs = annotatedArgs <&> fmap unambiguousContext
 
 precedenceOfPrefixApply ::
-    Apply (Maybe MinOpPrec -> Precedence (Maybe Prec) -> expr) ->
+    Apply (Override MinOpPrec -> Precedence (Override Prec) -> expr) ->
     (Classifier, Body name i o expr)
 precedenceOfPrefixApply (V.Apply f arg) =
     ( ParenIf (IfGreater 13) (IfGreaterOrEqual 13)
     , V.Apply
-        (f (Just 0) (Precedence Nothing (Just 13)))
-        (arg (Just 13) (Precedence (Just 13) Nothing))
+        (f (Override 0) (Precedence KeepParent (Override 13)))
+        (arg (Override 13) (Precedence (Override 13) KeepParent))
         & BodySimpleApply
     )
 
 precedenceOf ::
     HasPrecedence name =>
-    Body name i o (Maybe MinOpPrec -> Precedence (Maybe Prec) -> a) ->
+    Body name i o (Override MinOpPrec -> Precedence (Override Prec) -> a) ->
     (Classifier, Body name i o a)
 precedenceOf =
     \case
@@ -127,11 +129,11 @@ precedenceOf =
     where
         leftSymbol lens prec cons x =
             ( ParenIf Never (IfGreater prec)
-            , cons (x & lens %~ \expr -> expr (Just prec) (Precedence (Just prec) Nothing))
+            , cons (x & lens %~ \expr -> expr (Override prec) (Precedence (Override prec) KeepParent))
             )
         rightSymbol prec cons x =
             ( ParenIf (IfGreater prec) Never
-            , cons (x ?? Just prec ?? Precedence Nothing (Just prec))
+            , cons (x ?? Override prec ?? Precedence KeepParent (Override prec))
             )
 
 add ::
@@ -145,6 +147,10 @@ addWith ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
+fromOverride :: a -> Override a -> a
+fromOverride parent KeepParent = parent
+fromOverride _ (Override x) = x
+
 loop ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
@@ -153,8 +159,8 @@ loop minOpPrecFromParent parentPrec (Expression pl bod) =
     Expression (pl & plData %~ res) finalBody
     where
         f expr minOpPrecOverride override newParentPrec =
-            loop (fromMaybe minOpPrecFromParent minOpPrecOverride)
-            (fromMaybe <$> newParentPrec <*> override) expr
+            loop (fromOverride minOpPrecFromParent minOpPrecOverride)
+            (fromOverride <$> newParentPrec <*> override) expr
         Precedence parentBefore parentAfter = parentPrec
         res
             | haveParens = (,,) 0 NeedsParens
