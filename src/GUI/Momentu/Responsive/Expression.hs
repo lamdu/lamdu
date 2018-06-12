@@ -6,6 +6,7 @@ module GUI.Momentu.Responsive.Expression
     ( Style(..), indentBarWidth, indentBarGap, indentBarColor
     , HasStyle(..)
     , disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb, indent
+    , addParens
     ) where
 
 import qualified Control.Lens as Lens

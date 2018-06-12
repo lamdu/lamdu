@@ -119,8 +119,8 @@ verticalRowRender =
 renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    ) => f ([Row (ExpressionGui o)] -> ExpressionGui o)
-renderRows =
+    ) => Maybe AnimId -> f ([Row (ExpressionGui o)] -> ExpressionGui o)
+renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
         -- TODO: better way to make space between rows in grid??
@@ -129,11 +129,13 @@ renderRows =
             prepareRows [x, y] = [prep2 x, spaceAbove (prep2 y)]
             prepareRows (x:xs) = x : (xs <&> spaceAbove)
         vert <- verticalRowRender
+        addParens <- maybe (pure id) (ResponsiveExpr.addParens ??) mParensId
         vbox <- Responsive.vboxSpaced
         pure $
             \rows ->
             vbox (rows <&> vert)
             & Options.tryWideLayout Options.table (Compose (prepareRows rows))
+            & Responsive.rWideDisambig %~ addParens
     where
         -- When there's only "if" and "else", we want to merge the predicate with the keyword
         -- because there are no several predicates to be aligned
@@ -149,7 +151,7 @@ make ::
     ExprGuiM i o (ExpressionGui o)
 make ifElse pl =
     stdWrapParentExpr pl
-    <*> ( renderRows
+    <*> ( renderRows (ExprGui.mParensId pl)
             <*>
             ( (:)
                 <$> makeIf
