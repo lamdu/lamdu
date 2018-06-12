@@ -194,7 +194,8 @@ convert op empty cons prism valS restS exprPl extendV =
         -- extend only to pUserData as the hidden payload
         >>= addActions [] exprPl
         <&> annotation . plEntityId .~ restS ^. annotation . plEntityId
-        <&> annotation . plData . pUserData <>~ exprPl ^. Input.userData
+        <&> annotation . plData . pUserData <>~
+            (exprPl ^. Input.userData <> restS ^. annotation . plData . pUserData)
     Nothing ->
         convertOneItemOpenComposite empty cons op valS restS exprPl extendV
         <&> (prism #)
