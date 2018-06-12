@@ -33,12 +33,12 @@ addWith ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
-simpleInfix ::
+checkBareInfix ::
     LabeledApply name i o a ->
     Maybe ((a, a), (b, b) -> LabeledApply name i o b)
-simpleInfix (LabeledApply func (Infix l r) [] []) =
+checkBareInfix (LabeledApply func (Infix l r) [] []) =
     Just ((l, r), \(l', r') -> LabeledApply func (Infix l' r') [] [])
-simpleInfix _ = Nothing
+checkBareInfix _ = Nothing
 
 loop ::
     HasPrecedence name =>
@@ -46,47 +46,21 @@ loop ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 loop minOpPrec parentPrec (Expression pl body_) =
     case body_ of
-    BodyPlaceHolder        -> result False BodyPlaceHolder
-    BodyLiteral x          -> result False (BodyLiteral x)
-    BodyGetVar x           -> result False (BodyGetVar x)
-    BodyHole x             -> result False (BodyHole x)
-    BodyFragment x         -> mkUnambiguous BodyFragment x
-    BodyRecord x           -> mkUnambiguous BodyRecord x
-    BodyCase x             -> mkUnambiguous BodyCase x
-    BodyLam x              -> leftSymbol Lens.mapped 0 BodyLam x
-    BodyToNom x            -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
-    BodyInject x           -> leftSymbol Lens.mapped 0 BodyInject x
-    BodyFromNom x          -> rightSymbol Lens.mapped 0 BodyFromNom x
-    BodyGetField x         -> rightSymbol Lens.mapped 13 BodyGetField x
-    BodySimpleApply x      ->
-        BodySimpleApply V.Apply
-        { V._applyFunc =
-            loop 0 (childPrec (after .~ 13) needParens) f
-        , V._applyArg =
-            loop 13 (childPrec (before .~ 13) needParens) a
-        } & result needParens
-        where
-            V.Apply f a = x
-            needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
-    BodyLabeledApply x ->
-        case simpleInfix x of
-        Nothing -> mkUnambiguous BodyLabeledApply x
-        Just ((l, r), mk) ->
-            mk
-            ( loop 0 (childPrec (after .~ prec) needParens) l
-            , loop (prec+1) (childPrec (before .~ prec) needParens) r
-            ) & BodyLabeledApply & result needParens
-            where
-                func = x ^. aFunc
-                prec = func ^. afVar . bvNameRef . nrName & precedence
-                needParens =
-                    parentPrec ^. before >= prec || parentPrec ^. after > prec
-    BodyIfElse x ->
-        x <&> loop 0 unambiguous
-        & BodyIfElse
-        & result needParens
-        where
-            needParens = parentPrec ^. after > 1
+    BodyPlaceHolder    -> result False BodyPlaceHolder
+    BodyLiteral      x -> result False (BodyLiteral x)
+    BodyGetVar       x -> result False (BodyGetVar x)
+    BodyHole         x -> result False (BodyHole x)
+    BodyFragment     x -> mkUnambiguous BodyFragment x
+    BodyRecord       x -> mkUnambiguous BodyRecord x
+    BodyCase         x -> mkUnambiguous BodyCase x
+    BodyLam          x -> leftSymbol Lens.mapped 0 BodyLam x
+    BodyToNom        x -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
+    BodyInject       x -> leftSymbol Lens.mapped 0 BodyInject x
+    BodyFromNom      x -> rightSymbol Lens.mapped 0 BodyFromNom x
+    BodyGetField     x -> rightSymbol Lens.mapped 13 BodyGetField x
+    BodySimpleApply  x -> simpleApply x
+    BodyLabeledApply x -> labeledApply x
+    BodyIfElse       x -> ifElse x
     where
         result True = pl <&> (,,) 0 NeedsParens & Expression
         result False = pl <&> (,,) minOpPrec NoNeedForParens & Expression
@@ -101,3 +75,31 @@ loop minOpPrec parentPrec (Expression pl body_) =
             & result needParens
             where
                 needParens = parentPrec ^. checkSide > prec
+        simpleApply (V.Apply f a) =
+            BodySimpleApply V.Apply
+            { V._applyFunc =
+                loop 0 (childPrec (after .~ 13) needParens) f
+            , V._applyArg =
+                loop 13 (childPrec (before .~ 13) needParens) a
+            } & result needParens
+            where
+                needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
+        labeledApply x =
+            case checkBareInfix x of
+            Nothing -> mkUnambiguous BodyLabeledApply x
+            Just (args, mk) -> simpleInfix (x ^. aFunc) args mk
+        simpleInfix func (l, r) mk =
+            mk
+            ( loop 0 (childPrec (after .~ prec) needParens) l
+            , loop (prec+1) (childPrec (before .~ prec) needParens) r
+            ) & BodyLabeledApply & result needParens
+            where
+                prec = func ^. afVar . bvNameRef . nrName & precedence
+                needParens =
+                    parentPrec ^. before >= prec || parentPrec ^. after > prec
+        ifElse x =
+            x <&> loop 0 unambiguous
+            & BodyIfElse
+            & result needParens
+            where
+                needParens = parentPrec ^. after > 1
