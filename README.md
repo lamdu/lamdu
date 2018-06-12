@@ -55,7 +55,7 @@ requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1
 
 ```shell
 sudo apt-get update -qq
-sudo apt-get install git zlib1g-dev libglew-dev libleveldb-dev libglfw-dev -yq
+sudo apt-get install git zlib1g-dev libglew-dev libleveldb-dev -yq
 sudo apt-get install libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
