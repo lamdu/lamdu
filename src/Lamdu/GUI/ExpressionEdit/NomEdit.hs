@@ -74,7 +74,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                 (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
         stdWrapParentExpr pl
-            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? mParenInfo)
+            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*>
                     ( sequence
                     [
@@ -93,9 +93,5 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                     )
                 )
     where
-        mParenInfo
-            | pl ^. Sugar.plData . ExprGui.plNeedParens =
-                Widget.toAnimId myId & Just
-            | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
         nameId = Widget.joinId myId ["name"]

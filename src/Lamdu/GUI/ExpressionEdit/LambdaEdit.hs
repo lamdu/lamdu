@@ -135,16 +135,12 @@ make lam pl =
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
         stdWrapParentExpr pl
-            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
+            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                         <&> (: [bodyEdit]))
                 )
             <&> Widget.weakerEvents eventMap
     where
-        animId = Widget.toAnimId myId
-        mParensId
-            | pl ^. Sugar.plData . ExprGui.plNeedParens = Just animId
-            | otherwise = Nothing
         myId = WidgetIds.fromExprPayload pl
         funcApplyLimit = pl ^. Sugar.plData . ExprGui.plShowAnnotation . ExprGui.funcApplyLimit
         params = func ^. Sugar.fParams

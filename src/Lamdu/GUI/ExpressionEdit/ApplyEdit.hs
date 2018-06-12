@@ -134,7 +134,7 @@ makeLabeled ::
     ExprGuiM i o (ExpressionGui o)
 makeLabeled apply pl =
     stdWrapParentExpr pl
-    <*> ( makeFuncRow mParensId apply
+    <*> ( makeFuncRow (ExprGui.mParensId pl) apply
             (pl ^. Sugar.plData . ExprGui.plNearestHoles)
             >>= addBox
         )
@@ -142,11 +142,6 @@ makeLabeled apply pl =
         addBox
             | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGui.plNearestHoles)
             | otherwise = pure
-        mParensId
-            | needParens = Just (Widget.toAnimId myId)
-            | otherwise = Nothing
-        needParens = pl ^. Sugar.plData . ExprGui.plNeedParens
-        myId = WidgetIds.fromExprPayload pl
 
 makeArgRow ::
     (Monad i, Monad o) =>
@@ -213,14 +208,9 @@ makeSimple ::
     ExprGuiM i o (ExpressionGui o)
 makeSimple (Sugar.Apply func arg) pl =
     stdWrapParentExpr pl
-    <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
+    <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> sequenceA
             [ ExprGuiM.makeSubexpression func
             , ExprGuiM.makeSubexpression arg
             ]
         )
-    where
-        mParensId
-            | pl ^. Sugar.plData . ExprGui.plNeedParens = Just (Widget.toAnimId myId)
-            | otherwise = Nothing
-        myId = WidgetIds.fromExprPayload pl

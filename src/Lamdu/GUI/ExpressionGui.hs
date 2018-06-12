@@ -14,11 +14,15 @@ module Lamdu.GUI.ExpressionGui
     , nextHolesBefore
     , ExpressionN
     , adhocPayload
+    , mParensId
     ) where
 
 import qualified Control.Lens as Lens
+import           GUI.Momentu.Animation (AnimId)
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
+import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -96,3 +100,10 @@ adhocPayload nearestHoles = Payload
     , _plNeedParens = False
     , _plMinOpPrec = 13 -- TODO: Export Parens.applyPrec?
     }
+
+-- | Just myId or Nothing depending on whether parens are needed
+mParensId :: Sugar.Payload name i o Payload -> Maybe AnimId
+mParensId pl
+    | pl ^. Sugar.plData . plNeedParens =
+          WidgetIds.fromExprPayload pl & WidgetId.toAnimId & Just
+    | otherwise = Nothing
