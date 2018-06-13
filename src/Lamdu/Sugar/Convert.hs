@@ -40,7 +40,6 @@ import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.OrderTags as OrderTags
-import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -187,7 +186,6 @@ loadRepl cache monitors evalRes cp =
             ConvertM.convertSubexpression valInferred
             & ConvertM.run context
             <&> Lens.mapped %~ (^. pUserData)
-            >>= PresentationModes.addToExpr
             >>= OrderTags.orderExpr
         let replEntityId = expr ^. annotation . plEntityId
         pure Repl
@@ -248,7 +246,7 @@ loadPanes cache monitors evalRes cp replEntityId =
                     let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar
                     defS <-
-                        PresentationModes.addToDef Definition
+                        OrderTags.orderDef Definition
                         { _drEntityId = EntityId.ofIRef defI
                         , _drName = tag
                         , _drBody = bodyS
@@ -256,7 +254,6 @@ loadPanes cache monitors evalRes cp replEntityId =
                             Anchors.assocDefinitionState defI ^. Property.mkProperty
                         , _drDefI = defVar
                         }
-                        >>= OrderTags.orderDef
                     pure Pane
                         { _paneDefinition = defS
                         , _paneClose = mkDelPane i

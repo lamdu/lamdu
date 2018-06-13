@@ -1,14 +1,12 @@
 module Lamdu.Sugar.PresentationModes
-    ( addToDef, addToExpr
+    ( addToLabeledApply
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -71,60 +69,3 @@ addToLabeledApply a =
                     , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . Sugar.plActions
                     } & Just
             & fromMaybe (Left arg)
-
-addToBody ::
-    Monad m =>
-    Sugar.Body InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a) ->
-    T m (Sugar.Body InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a))
-addToBody (Sugar.BodyLabeledApply a) = addToLabeledApply a <&> Sugar.BodyLabeledApply
-addToBody (Sugar.BodyHole h) = SugarLens.holeTransformExprs addToExpr h & Sugar.BodyHole & pure
-addToBody (Sugar.BodyFragment w) =
-    w
-    & Sugar.fOptions . Lens.mapped . Lens.mapped %~ SugarLens.holeOptionTransformExprs addToExpr
-    & Sugar.BodyFragment & pure
-addToBody b = pure b
-
-addToExpr ::
-    Monad m => Sugar.Expression InternalName (T m) (T m) pl ->
-    T m (Sugar.Expression InternalName (T m) (T m) pl)
-addToExpr e =
-    e
-    & Sugar.body %%~ addToBody
-    >>= Sugar.body . Sugar.bodyChildren %%~ addToExpr
-
-addToBinder ::
-    Monad m =>
-    Sugar.Assignment InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
-    T m (Sugar.Assignment InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
-addToBinder = SugarLens.assignmentBody %%~ addToBinderBody
-
-addToBinderBody ::
-    Monad m =>
-    Sugar.BinderBody InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
-    T m (Sugar.BinderBody InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
-addToBinderBody = Sugar.bbContent %%~ addToBinderContent
-
-addToBinderContent ::
-    Monad m =>
-    Sugar.BinderContent InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
-    T m (Sugar.BinderContent InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
-addToBinderContent (Sugar.BinderExpr e) = addToExpr e <&> Sugar.BinderExpr
-addToBinderContent (Sugar.BinderLet l) = addToLet l <&> Sugar.BinderLet
-
-addToLet ::
-    Monad m =>
-    Sugar.Let InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl) ->
-    T m (Sugar.Let InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) pl))
-addToLet letItem =
-    letItem
-    & Sugar.lValue %%~ addToBinder
-    >>= Sugar.lBody %%~ addToBinderBody
-
-addToDef ::
-    Monad m =>
-    Sugar.Definition InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a) ->
-    T m (Sugar.Definition InternalName (T m) (T m) (Sugar.Expression InternalName (T m) (T m) a))
-addToDef def =
-    def
-    & Sugar.drBody . Sugar._DefinitionBodyExpression .
-      Sugar.deContent %%~ addToBinder

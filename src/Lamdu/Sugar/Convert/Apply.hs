@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Control.Monad.Transaction (transaction)
 import           Data.List.Extended (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
@@ -27,6 +28,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -112,16 +114,18 @@ convertLabeled subexprs funcS argS exprPl =
         let args = record ^. cItems <&> getArg
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
-        let bod =
-                BodyLabeledApply LabeledApply
-                { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. annotation))
-                , _aSpecialArgs = Verbose
-                , _aAnnotatedArgs = args
-                , _aRelayedArgs =
-                    -- Hidden args must be determined along with the special args.
-                    -- One never wants to hide an infix operator's args.
-                    []
-                }
+        bod <-
+            PresentationModes.addToLabeledApply
+            LabeledApply
+            { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. annotation))
+            , _aSpecialArgs = Verbose
+            , _aAnnotatedArgs = args
+            , _aRelayedArgs =
+                -- Hidden args must be determined along with the special args.
+                -- One never wants to hide an infix operator's args.
+                []
+            } <&> BodyLabeledApply
+            & transaction
         let userPayload =
                 subexprPayloads subexprs
                 (funcS ^. annotation : bod ^.. bodyChildren . annotation)
