@@ -61,9 +61,9 @@ data LabeledApply name i o expr = LabeledApply
     , _aRelayedArgs :: [RelayedArg name i o]
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Lambda name i o expr = Lambda
+data Lambda name i o a = Lambda
     { _lamMode :: BinderMode
-    , _lamFunc :: Function name i o expr
+    , _lamFunc :: Function name i o (Expression name i o a)
     } deriving (Functor, Foldable, Traversable, Generic)
 
 -- | An expression marked for transformation.
@@ -78,7 +78,7 @@ instance Show expr => Show (Fragment name i o expr) where
     show (Fragment expr _ _) = "(Fragment " ++ show expr ++ ")"
 
 data Body name i o a
-    = BodyLam (Lambda name i o (Expression name i o a))
+    = BodyLam (Lambda name i o a)
     | BodySimpleApply (V.Apply (Expression name i o a))
     | BodyLabeledApply (LabeledApply name i o (Expression name i o a))
     | BodyHole (Hole i o (Expression name i o ()))
@@ -94,28 +94,6 @@ data Body name i o a
     | BodyFragment (Fragment name i o (Expression name i o a))
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable, Generic)
-
-bodyChildren ::
-    Applicative f =>
-    (Expression name i o a -> f (Expression name i o b)) ->
-    Body name i o a -> f (Body name i o b)
-bodyChildren f =
-    \case
-    BodyPlaceHolder -> pure BodyPlaceHolder
-    BodyLiteral x -> BodyLiteral x & pure
-    BodyGetVar  x -> BodyGetVar  x & pure
-    BodyHole    x -> BodyHole    x & pure
-    BodyLam          x -> traverse f x <&> BodyLam
-    BodySimpleApply  x -> traverse f x <&> BodySimpleApply
-    BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
-    BodyRecord       x -> traverse f x <&> BodyRecord
-    BodyGetField     x -> traverse f x <&> BodyGetField
-    BodyCase         x -> traverse f x <&> BodyCase
-    BodyIfElse       x -> traverse f x <&> BodyIfElse
-    BodyInject       x -> traverse f x <&> BodyInject
-    BodyFromNom      x -> traverse f x <&> BodyFromNom
-    BodyFragment     x -> traverse f x <&> BodyFragment
-    BodyToNom        x -> (traverse . traverse) f x <&> BodyToNom
 
 instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
     show (LabeledApply func specialArgs _annArgs _relayedArgs) =
@@ -191,3 +169,25 @@ Lens.makeLenses ''Let
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''Body
+
+bodyChildren ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    Body name i o a -> f (Body name i o b)
+bodyChildren f =
+    \case
+    BodyPlaceHolder -> pure BodyPlaceHolder
+    BodyLiteral x -> BodyLiteral x & pure
+    BodyGetVar  x -> BodyGetVar  x & pure
+    BodyHole    x -> BodyHole    x & pure
+    BodyLam          x -> (lamFunc . traverse) f x <&> BodyLam
+    BodySimpleApply  x -> traverse f x <&> BodySimpleApply
+    BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
+    BodyRecord       x -> traverse f x <&> BodyRecord
+    BodyGetField     x -> traverse f x <&> BodyGetField
+    BodyCase         x -> traverse f x <&> BodyCase
+    BodyIfElse       x -> traverse f x <&> BodyIfElse
+    BodyInject       x -> traverse f x <&> BodyInject
+    BodyFromNom      x -> traverse f x <&> BodyFromNom
+    BodyFragment     x -> traverse f x <&> BodyFragment
+    BodyToNom        x -> (traverse . traverse) f x <&> BodyToNom

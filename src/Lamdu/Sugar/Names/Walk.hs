@@ -242,7 +242,8 @@ toBinder expr Assignment{..} =
     <*> toNodeActions _aNodeActions
 
 toLam ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Lambda (OldName m) (IM m) o a ->
     m (Lambda (NewName m) (IM m) o b)
 toLam = lamFunc . toFunction

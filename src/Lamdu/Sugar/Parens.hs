@@ -54,7 +54,7 @@ loop minOpPrec parentPrec (Expression pl body_) =
     BodyFragment     x -> mkUnambiguous BodyFragment x
     BodyRecord       x -> mkUnambiguous BodyRecord x
     BodyCase         x -> mkUnambiguous BodyCase x
-    BodyLam          x -> leftSymbol Lens.mapped 0 BodyLam x
+    BodyLam          x -> leftSymbol (lamFunc . Lens.mapped) 0 BodyLam x
     BodyToNom        x -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
     BodyInject       x -> leftSymbol Lens.mapped 0 BodyInject x
     BodyFromNom      x -> rightSymbol Lens.mapped 0 BodyFromNom x
