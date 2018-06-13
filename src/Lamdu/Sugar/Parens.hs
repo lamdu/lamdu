@@ -33,12 +33,13 @@ addWith ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
-checkBareInfix ::
-    LabeledApply name i o a ->
-    Maybe ((a, a), (b, b) -> LabeledApply name i o b)
-checkBareInfix (LabeledApply func (Infix l r) [] []) =
-    Just ((l, r), \(l', r') -> LabeledApply func (Infix l' r') [] [])
-checkBareInfix _ = Nothing
+bareInfix :: Lens.Prism' (LabeledApply name i o a) (a, LabeledApplyFunc name i o (), a)
+bareInfix =
+    Lens.prism toLabeledApply fromLabeledApply
+    where
+        toLabeledApply (l, f, r) = LabeledApply f (Infix l r) [] []
+        fromLabeledApply (LabeledApply f (Infix l r) [] []) = Right (l, f, r)
+        fromLabeledApply a = Left a
 
 loop ::
     HasPrecedence name =>
@@ -85,12 +86,13 @@ loop minOpPrec parentPrec (Expression pl body_) =
             where
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
         labeledApply x =
-            case checkBareInfix x of
+            case x ^? bareInfix of
             Nothing -> mkUnambiguous BodyLabeledApply x
-            Just (args, mk) -> simpleInfix (x ^. aFunc) args mk
-        simpleInfix func (l, r) mk =
-            mk
+            Just b -> simpleInfix b
+        simpleInfix (l, func, r) =
+            bareInfix #
             ( loop 0 (childPrec (after .~ prec) needParens) l
+            , func
             , loop (prec+1) (childPrec (before .~ prec) needParens) r
             ) & BodyLabeledApply & result needParens
             where
