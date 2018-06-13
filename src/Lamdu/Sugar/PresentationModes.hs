@@ -1,5 +1,5 @@
 module Lamdu.Sugar.PresentationModes
-    ( addToLabeledApply
+    ( makeLabeledApply
     ) where
 
 import           Data.Either (partitionEithers)
@@ -14,39 +14,39 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-addToLabeledApply ::
+makeLabeledApply ::
     Monad m =>
-    Sugar.LabeledApply InternalName i o (Sugar.Expression InternalName i o a) ->
+    Sugar.LabeledApplyFunc InternalName i o () ->
+    [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName i o a)] ->
     T m (Sugar.LabeledApply InternalName i o (Sugar.Expression InternalName i o a))
-addToLabeledApply a =
-    case a ^. Sugar.aSpecialArgs of
-    Sugar.Verbose ->
-        a ^. Sugar.aFunc . Sugar.afVar . Sugar.bvVar
-        & Anchors.assocPresentationMode & Property.getP
-        <&> \presentationMode ->
-        let (specialArgs, otherArgs) =
-                case traverse argExpr presentationMode of
-                Just (Sugar.Infix (l, la) (r, ra)) ->
-                    ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
-                    , argsMap
-                        & Map.delete l
-                        & Map.delete r
-                        & Map.elems
-                    )
-                Just (Sugar.Object (o, oa)) ->
-                    ( Sugar.Object oa
-                    , Map.delete o argsMap & Map.elems
-                    )
-                _ -> (Sugar.Verbose, a ^. Sugar.aAnnotatedArgs)
-            (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
-        in  a
-            & Sugar.aSpecialArgs .~ specialArgs
-            & Sugar.aAnnotatedArgs .~ annotatedArgs
-            & Sugar.aRelayedArgs .~ relayedArgs
-    _ -> pure a
+makeLabeledApply func args =
+    func ^. Sugar.afVar . Sugar.bvVar
+    & Anchors.assocPresentationMode & Property.getP
+    <&> \presentationMode ->
+    let (specialArgs, otherArgs) =
+            case traverse argExpr presentationMode of
+            Just (Sugar.Infix (l, la) (r, ra)) ->
+                ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
+                , argsMap
+                    & Map.delete l
+                    & Map.delete r
+                    & Map.elems
+                )
+            Just (Sugar.Object (o, oa)) ->
+                ( Sugar.Object oa
+                , Map.delete o argsMap & Map.elems
+                )
+            _ -> (Sugar.Verbose, args)
+        (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
+    in  Sugar.LabeledApply
+        { Sugar._aFunc = func
+        , Sugar._aSpecialArgs = specialArgs
+        , Sugar._aAnnotatedArgs = annotatedArgs
+        , Sugar._aRelayedArgs = relayedArgs
+        }
     where
         argsMap =
-            a ^. Sugar.aAnnotatedArgs
+            args
             <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x))
             & Map.fromList
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t

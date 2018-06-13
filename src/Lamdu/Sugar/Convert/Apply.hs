@@ -115,17 +115,9 @@ convertLabeled subexprs funcS argS exprPl =
         let tags = args ^.. Lens.traversed . aaTag . tagVal
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         bod <-
-            PresentationModes.addToLabeledApply
-            LabeledApply
-            { _aFunc = LabeledApplyFunc sBinderVar (void (funcS ^. annotation))
-            , _aSpecialArgs = Verbose
-            , _aAnnotatedArgs = args
-            , _aRelayedArgs =
-                -- Hidden args must be determined along with the special args.
-                -- One never wants to hide an infix operator's args.
-                []
-            } <&> BodyLabeledApply
-            & transaction
+            PresentationModes.makeLabeledApply
+            (LabeledApplyFunc sBinderVar (void (funcS ^. annotation))) args
+            <&> BodyLabeledApply & transaction
         let userPayload =
                 subexprPayloads subexprs
                 (funcS ^. annotation : bod ^.. bodyChildren . annotation)
