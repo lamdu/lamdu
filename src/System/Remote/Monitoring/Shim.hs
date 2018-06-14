@@ -1,6 +1,6 @@
 -- | Shim for Ekg's System.Remote.Monitoring that supports
 -- compile-flag to seemlessly disable ekg support
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, EmptyDataDecls #-}
 module System.Remote.Monitoring.Shim
     ( Server, serverMetricStore
     , start
