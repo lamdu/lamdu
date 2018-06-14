@@ -1,5 +1,5 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferred, stored, evalResults, userData

@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts, RecordWildCards #-}
+{-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
     , Command(..), _DeleteDb, _Undo, _Editor

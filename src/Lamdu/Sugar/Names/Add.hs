@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, NoMonomorphismRestriction #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell, NoMonomorphismRestriction #-}
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     , -- re-export for tests

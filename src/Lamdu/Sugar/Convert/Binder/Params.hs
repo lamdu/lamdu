@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards, PatternGuards #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
