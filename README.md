@@ -12,7 +12,7 @@ See the [Main Page](http://lamdu.org/)
 ### [NodeJS](https://nodejs.org/en/) & Build Time
 
 To drastically speed up Lamdu's installation under any OS, you can install
-`nodejs >= 6.2.1`<sup>1</sup> beforehand, such that `node` is in your `$PATH`.
+an appropriate version of NodeJS beforehand, such that `node` is in your `$PATH`. The version has to be at least 6.2.1 but below 8.0.0 (due to the removal of tail call optimization from node at version 8) <sup>1</sup>.
 
 Enter `node -v` into terminal. If NodeJS is installed (and in your `$PATH`),
 this will print your current version. If it isn't, you'll get an error.
