@@ -38,8 +38,8 @@ add ::
       (f (Sugar.Expression name i o b))
       (Sugar.Expression name i o a)
       (Sugar.Expression name i o b)) ->
-    f (Sugar.Expression name i o (NearestHoles -> r)) ->
-    f (Sugar.Expression name i o r)
+    f (Sugar.Expression name i o c) ->
+    f (Sugar.Expression name i o (c, NearestHoles))
 add exprs s =
     s
     & exprs . Lens.mapped %~ toNearestHoles
@@ -48,7 +48,7 @@ add exprs s =
     & passAll (Lens.backwards (exprs . SugarLens.subExprPayloads))
     & exprs . Lens.mapped %~ snd
     where
-        toNearestHoles f prevHole nextHole = f (NearestHoles prevHole nextHole)
+        toNearestHoles x prevHole nextHole = (x, NearestHoles prevHole nextHole)
 
 type M = State (Maybe Sugar.EntityId)
 

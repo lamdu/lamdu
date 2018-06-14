@@ -5,7 +5,6 @@ module Lamdu.GUI.CodeEdit.Load
     ( loadWorkArea
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
@@ -48,10 +47,7 @@ traverseAddNearestHoles ::
     Traversable t =>
     t (Sugar.Expression name i o a) ->
     t (Sugar.Expression name i o (a, NearestHoles))
-traverseAddNearestHoles binder =
-    binder
-    <&> Lens.mapped %~ (,)
-    & NearestHoles.add traverse
+traverseAddNearestHoles = NearestHoles.add traverse
 
 exprAddNearestHoles ::
     Sugar.Expression name i o a ->
