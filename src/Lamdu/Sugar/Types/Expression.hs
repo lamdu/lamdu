@@ -62,7 +62,7 @@ data LabeledApply name i o expr = LabeledApply
 
 data Lambda name i o a = Lambda
     { _lamMode :: BinderMode
-    , _lamFunc :: Function name i o (Expression name i o a)
+    , _lamFunc :: Function name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 -- | An expression marked for transformation.
@@ -88,7 +88,7 @@ data Body name i o a
     | BodyIfElse (IfElse name i o (Expression name i o a))
     | BodyInject (Inject name i o (Expression name i o a))
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (BinderBody name i o (Expression name i o a)))
+    | BodyToNom (Nominal name (BinderBody name i o a))
     | BodyFromNom (Nominal name (Expression name i o a))
     | BodyFragment (Fragment name i o (Expression name i o a))
     | BodyPlaceHolder -- Used for hole results, shown as "★"
@@ -98,20 +98,20 @@ instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
     show (LabeledApply func specialArgs _annArgs _relayedArgs) =
         unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
-data Let name i o expr = Let
-    { _lValue :: Assignment name i o expr -- "let foo = [[bar]] in x"
+data Let name i o a = Let
+    { _lValue :: Assignment name i o a -- "let foo = [[bar]] in x"
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lAnnotation :: Annotation name
     , _lName :: Tag name i o -- let [[foo]] = bar in x
     , _lActions :: LetActions name i o
     , _lBodyScope :: ChildScopes
-    , _lBody :: BinderBody name i o expr -- "let foo = bar in [[x]]"
+    , _lBody :: BinderBody name i o a -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data BinderContent name i o expr
-    = BinderLet (Let name i o expr)
-    | BinderExpr expr
+data BinderContent name i o a
+    = BinderLet (Let name i o a)
+    | BinderExpr (Expression name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
 -- An expression with 0 or more let items,
@@ -120,37 +120,37 @@ data BinderContent name i o expr
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-data BinderBody name i o expr = BinderBody
+data BinderBody name i o a = BinderBody
     { _bbAddOuterLet :: o EntityId
-    , _bbContent :: BinderContent name i o expr
+    , _bbContent :: BinderContent name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Function name i o expr = Function
+data Function name i o a = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: BinderBody name i o expr
+    , _fBody :: BinderBody name i o a
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data AssignFunction name i o expr = AssignFunction
+data AssignFunction name i o a = AssignFunction
     { _afLamId :: EntityId
-    , _afFunction :: Function name i o expr
+    , _afFunction :: Function name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data AssignPlain name i o expr = AssignPlain
+data AssignPlain name i o a = AssignPlain
     { _apAddFirstParam :: AddFirstParam name i o
-    , _apBody :: BinderBody name i o expr
+    , _apBody :: BinderBody name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data AssignmentBody name i o expr
-    = BodyFunction (AssignFunction name i o expr)
-    | BodyPlain (AssignPlain name i o expr)
+data AssignmentBody name i o a
+    = BodyFunction (AssignFunction name i o a)
+    | BodyPlain (AssignPlain name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data Assignment name i o expr = Assignment
-    { _aBody :: AssignmentBody name i o expr
+data Assignment name i o a = Assignment
+    { _aBody :: AssignmentBody name i o a
     , _aNodeActions :: NodeActions name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 

@@ -118,7 +118,7 @@ readFunctionChosenScope func = func ^. Sugar.fChosenScopeProp <&> Property.value
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Function (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Function (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
@@ -280,16 +280,16 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             & Annotation.WithNeighbouringEvalAnnotations
 
 binderContentNearestHoles ::
-    Sugar.BinderContent name i o (ExprGui.SugarExpr i o) -> NearestHoles
+    Sugar.BinderContent name i o ExprGui.Payload -> NearestHoles
 binderContentNearestHoles body =
-    body ^? Lens.traverse
+    body ^? SugarLens.binderContentExprs
     & fromMaybe (error "We have at least a body expression inside the binder")
     & ExprGui.nextHolesBefore
 
 makeFunctionParts ::
     (Monad i, Monad o) =>
     ExprGui.FuncApplyLimit ->
-    Sugar.Function (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Function (Name o) i o ExprGui.Payload ->
     Widget.Id -> Widget.Id ->
     ExprGuiM i o (Parts o)
 makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
@@ -331,7 +331,7 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
 
 makePlainParts ::
     (Monad i, Monad o) =>
-    Sugar.AssignPlain (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.AssignPlain (Name o) i o ExprGui.Payload ->
     Widget.Id -> Widget.Id ->
     ExprGuiM i o (Parts o)
 makePlainParts binder delVarBackwardsId myId =
@@ -348,7 +348,7 @@ makePlainParts binder delVarBackwardsId myId =
 makeParts ::
     (Monad i, Monad o) =>
     ExprGui.FuncApplyLimit ->
-    Sugar.Assignment (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Assignment (Name o) i o ExprGui.Payload ->
     Widget.Id -> Widget.Id ->
     ExprGuiM i o (Parts o)
 makeParts funcApplyLimit binder =
@@ -381,7 +381,7 @@ make ::
     Maybe (i (Property o Meta.PresentationMode)) ->
     EventMap (o GuiState.Update) ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    Sugar.Assignment (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Assignment (Name o) i o ExprGui.Payload ->
     Widget.Id ->
     ExprGuiM i o (ExpressionGui o)
 make pMode defEventMap tag color binder myId =
@@ -443,7 +443,7 @@ make pMode defEventMap tag color binder myId =
 
 makeLetEdit ::
     (Monad i, Monad o) =>
-    Sugar.Let (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Let (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeLetEdit item =
     do
@@ -506,7 +506,7 @@ addLetEventMap addLet =
 
 makeBinderBodyEdit ::
     (Monad i, Monad o) =>
-    Sugar.BinderBody (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.BinderBody (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
     do
@@ -515,7 +515,7 @@ makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
 
 makeBinderContentEdit ::
     (Monad i, Monad o) =>
-    Sugar.BinderContent (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.BinderContent (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeBinderContentEdit (Sugar.BinderExpr assignmentBody) =
     ExprGuiM.makeSubexpression assignmentBody

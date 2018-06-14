@@ -36,7 +36,7 @@ mReplaceParent = Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent . Len
 makeToNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o)
-    (Sugar.BinderBody (Name o) i o (ExprGui.SugarExpr i o)) ->
+    (Sugar.BinderBody (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeToNom nom pl =

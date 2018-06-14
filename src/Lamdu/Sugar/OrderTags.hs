@@ -93,12 +93,12 @@ orderBinder :: Monad m => Order m (Sugar.Assignment name (T m) o a)
 orderBinder = (Sugar.aBody . Sugar._BodyFunction . Sugar.afFunction) orderFunction
 
 orderDef ::
-    Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Expression name (T m) o a))
+    Monad m => Order m (Sugar.Definition name (T m) o a)
 orderDef def =
     def
     & SugarLens.defSchemes . Sugar.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
-        %%~ (orderBinder >=> Lens.traversed %%~ orderExpr)
+        %%~ (orderBinder >=> SugarLens.assignmentExprs %%~ orderExpr)
 
 {-# INLINE orderedFlatComposite #-}
 orderedFlatComposite ::

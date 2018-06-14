@@ -172,7 +172,8 @@ toAnnotation (Annotation typ evalRes) =
     <*> (traverse . traverse . traverse) toResVal evalRes
 
 toLet ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Let (OldName m) (IM m) o a ->
     m (Let (NewName m) (IM m) o b)
 toLet expr Let{..} =
@@ -186,14 +187,16 @@ toLet expr Let{..} =
         pure Let{..}
 
 toBinderContent ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     BinderContent (OldName m) (IM m) o a ->
     m (BinderContent (NewName m) (IM m) o b)
 toBinderContent expr (BinderLet l) = toLet expr l <&> BinderLet
 toBinderContent expr (BinderExpr e) = expr e <&> BinderExpr
 
 toBinderBody ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     BinderBody (OldName m) (IM m) o a ->
     m (BinderBody (NewName m) (IM m) o b)
 toBinderBody expr = bbContent %%~ toBinderContent expr
@@ -206,7 +209,7 @@ toAddFirstParam = _PrependParam toTagSelection
 
 toFunction ::
     MonadNaming m =>
-    (a -> m b) ->
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Function (OldName m) (IM m) o a ->
     m (Function (NewName m) (IM m) o b)
 toFunction expr Function{..} =
@@ -216,7 +219,7 @@ toFunction expr Function{..} =
 
 toBinderPlain ::
     MonadNaming m =>
-    (a -> m b) ->
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     AssignPlain (OldName m) (IM m) o a ->
     m (AssignPlain (NewName m) (IM m) o b)
 toBinderPlain expr AssignPlain{..} =
@@ -226,14 +229,15 @@ toBinderPlain expr AssignPlain{..} =
 
 toBinderForm ::
     MonadNaming m =>
-    (a -> m b) ->
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     AssignmentBody (OldName m) (IM m) o a ->
     m (AssignmentBody (NewName m) (IM m) o b)
 toBinderForm expr (BodyPlain x) = toBinderPlain expr x <&> BodyPlain
 toBinderForm expr (BodyFunction x) = afFunction (toFunction expr) x <&> BodyFunction
 
 toBinder ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Assignment (OldName m) (IM m) o a ->
     m (Assignment (NewName m) (IM m) o b)
 toBinder expr Assignment{..} =
@@ -482,7 +486,8 @@ withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
 toDefExpr ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     DefinitionExpression (OldName m) (IM m) o a ->
     m (DefinitionExpression (NewName m) (IM m) o b)
 toDefExpr f (DefinitionExpression typ presMode content) =
@@ -492,7 +497,8 @@ toDefExpr f (DefinitionExpression typ presMode content) =
     <*> toBinder f content
 
 toDefinitionBody ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     DefinitionBody (OldName m) (IM m) o a ->
     m (DefinitionBody (NewName m) (IM m) o b)
 toDefinitionBody _ (DefinitionBodyBuiltin bi) =
@@ -501,7 +507,8 @@ toDefinitionBody f (DefinitionBodyExpression expr) =
     toDefExpr f expr <&> DefinitionBodyExpression
 
 toDef ::
-    MonadNaming m => (a -> m b) ->
+    MonadNaming m =>
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Definition (OldName m) (IM m) o a ->
     m (Definition (NewName m) (IM m) o b)
 toDef f Definition{..} =

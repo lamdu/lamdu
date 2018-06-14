@@ -130,9 +130,7 @@ plus = arithmeticInfix2 "+"
 mul :: Infix2
 mul = arithmeticInfix2 "*"
 
-pane ::
-    Sugar.Definition name i Unit (Sugar.Expression name i Unit a) ->
-    Sugar.Pane name i Unit a
+pane :: Sugar.Definition name i Unit a -> Sugar.Pane name i Unit a
 pane body =
     Sugar.Pane
     { Sugar._paneDefinition = body
@@ -207,7 +205,7 @@ mkFuncParam (paramVar, paramTag, paramType) =
 
 funcExpr ::
     [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
-    Sugar.Function InternalName Identity Unit Expr
+    Sugar.Function InternalName Identity Unit ()
 funcExpr params body =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
@@ -223,7 +221,7 @@ funcExpr params body =
 
 binderExpr ::
     [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
-    Sugar.Assignment InternalName Identity Unit Expr
+    Sugar.Assignment InternalName Identity Unit ()
 binderExpr params body =
     Sugar.Assignment
     { Sugar._aBody =

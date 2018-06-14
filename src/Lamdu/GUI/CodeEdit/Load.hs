@@ -6,7 +6,6 @@ module Lamdu.GUI.CodeEdit.Load
     ) where
 
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Functor.Identity (Identity(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Property (MkProperty')
 import qualified Lamdu.Cache as Cache
@@ -43,19 +42,15 @@ toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) 
     (needParens == AddParens.NeedsParens)
     minOpPrec
 
-traverseAddNearestHoles ::
-    Traversable t =>
-    t (Sugar.Expression name i o a) ->
-    t (Sugar.Expression name i o (a, NearestHoles))
-traverseAddNearestHoles = NearestHoles.add traverse
+definitionAddNearestHoles ::
+    Sugar.Definition name i o a ->
+    Sugar.Definition name i o (a, NearestHoles)
+definitionAddNearestHoles = NearestHoles.add SugarLens.definitionExprs
 
 exprAddNearestHoles ::
     Sugar.Expression name i o a ->
     Sugar.Expression name i o (a, NearestHoles)
-exprAddNearestHoles expr =
-    Identity expr
-    & traverseAddNearestHoles
-    & runIdentity
+exprAddNearestHoles = NearestHoles.add id
 
 postProcessExpr ::
     Sugar.Expression (Name n) i o ([Sugar.EntityId], NearestHoles) ->
@@ -77,7 +72,7 @@ loadWorkArea cache monitors theEvalResults cp =
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
     Sugar.WorkArea
-    { _waPanes = _waPanes <&> Sugar.paneDefinition %~ traverseAddNearestHoles
+    { _waPanes = _waPanes <&> Sugar.paneDefinition %~ definitionAddNearestHoles
     , _waRepl = _waRepl & Sugar.replExpr %~ exprAddNearestHoles
     , _waGlobals = _waGlobals
     }

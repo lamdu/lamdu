@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes #-}
 module Lamdu.Sugar.Lens
     ( bodyChildren
+    , binderBodyExprs, binderContentExprs, funcExprs, assignmentExprs
     , subExprPayloads, payloadsIndexedByPath
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
@@ -11,7 +12,7 @@ module Lamdu.Sugar.Lens
     , binderContentResultExpr
     , binderContentEntityId
     , leftMostLeaf
-    , workAreaExpressions
+    , workAreaExpressions, definitionExprs
     , holeTransformExprs, holeOptionTransformExprs
     ) where
 
@@ -19,6 +20,47 @@ import qualified Control.Lens as Lens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
+
+assignmentBodyExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    AssignmentBody name i o a -> f (AssignmentBody name i o b)
+assignmentBodyExprs f (BodyFunction x) = (afFunction . funcExprs) f x <&> BodyFunction
+assignmentBodyExprs f (BodyPlain x) = (apBody . binderBodyExprs) f x <&> BodyPlain
+
+assignmentExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    Assignment name i o a -> f (Assignment name i o b)
+assignmentExprs = aBody . assignmentBodyExprs
+
+letExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    Let name i o a -> f (Let name i o b)
+letExprs f x =
+    (\val bod -> x{_lValue=val, _lBody=bod})
+    <$> assignmentExprs f (x ^. lValue)
+    <*> binderBodyExprs f (x ^. lBody)
+
+binderContentExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    BinderContent name i o a -> f (BinderContent name i o b)
+binderContentExprs f (BinderExpr x) = f x <&> BinderExpr
+binderContentExprs f (BinderLet x) = letExprs f x <&> BinderLet
+
+binderBodyExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    BinderBody name i o a -> f (BinderBody name i o b)
+binderBodyExprs = bbContent . binderContentExprs
+
+funcExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    Function name i o a -> f (Function name i o b)
+funcExprs = fBody . binderBodyExprs
 
 bodyChildren ::
     Applicative f =>
@@ -30,7 +72,7 @@ bodyChildren f =
     BodyLiteral x -> BodyLiteral x & pure
     BodyGetVar  x -> BodyGetVar  x & pure
     BodyHole    x -> BodyHole    x & pure
-    BodyLam          x -> (lamFunc . traverse) f x <&> BodyLam
+    BodyLam          x -> (lamFunc . funcExprs) f x <&> BodyLam
     BodySimpleApply  x -> traverse f x <&> BodySimpleApply
     BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
     BodyRecord       x -> traverse f x <&> BodyRecord
@@ -40,7 +82,7 @@ bodyChildren f =
     BodyInject       x -> traverse f x <&> BodyInject
     BodyFromNom      x -> traverse f x <&> BodyFromNom
     BodyFragment     x -> traverse f x <&> BodyFragment
-    BodyToNom        x -> (traverse . traverse) f x <&> BodyToNom
+    BodyToNom        x -> (traverse . binderBodyExprs) f x <&> BodyToNom
 
 subExprPayloads ::
     Lens.IndexedTraversal
@@ -133,12 +175,12 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderContentResultExpr :: Lens' (BinderContent name i o a) a
+binderContentResultExpr :: Lens' (BinderContent name i o a) (Expression name i o a)
 binderContentResultExpr f (BinderLet l) = l & lBody . bbContent . binderContentResultExpr %%~ f <&> BinderLet
 binderContentResultExpr f (BinderExpr e) = f e <&> BinderExpr
 
 binderContentEntityId ::
-    Lens' (BinderContent name i o (Expression name i o a)) EntityId
+    Lens' (BinderContent name i o a) EntityId
 binderContentEntityId f (BinderExpr e) =
     e & annotation . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
@@ -150,13 +192,19 @@ leftMostLeaf val =
     [] -> val
     (x:_) -> leftMostLeaf x
 
+definitionExprs ::
+    Lens.Traversal
+    (Definition name i o a) (Definition name i o b)
+    (Expression name i o a) (Expression name i o b)
+definitionExprs = drBody . _DefinitionBodyExpression . deContent . aBody . assignmentBodyExprs
+
 workAreaExpressions ::
     Lens.Traversal
     (WorkArea name i o a) (WorkArea name i o b)
     (Expression name i o a) (Expression name i o b)
 workAreaExpressions f (WorkArea panes repl globals) =
     WorkArea
-    <$> (traverse . paneDefinition . traverse) f panes
+    <$> (traverse . paneDefinition . definitionExprs) f panes
     <*> replExpr f repl
     ?? globals
 

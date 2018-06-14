@@ -30,10 +30,10 @@ import           Lamdu.Sugar.Types.Type as Exported
 
 import           Lamdu.Prelude
 
-data DefinitionExpression name i o expr = DefinitionExpression
+data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Assignment name i o expr
+    , _deContent :: Assignment name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data DefinitionBuiltin name o = DefinitionBuiltin
@@ -42,21 +42,21 @@ data DefinitionBuiltin name o = DefinitionBuiltin
     , _biType :: Scheme name
     } deriving Generic
 
-data DefinitionBody name i o expr
-    = DefinitionBodyExpression (DefinitionExpression name i o expr)
+data DefinitionBody name i o a
+    = DefinitionBodyExpression (DefinitionExpression name i o a)
     | DefinitionBodyBuiltin (DefinitionBuiltin name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data Definition name i o expr = Definition
+data Definition name i o a = Definition
     { _drName :: Tag name i o
     , _drDefI :: V.Var
     , _drDefinitionState :: i (Property o Meta.DefinitionState)
     , _drEntityId :: EntityId
-    , _drBody :: DefinitionBody name i o expr
+    , _drBody :: DefinitionBody name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane name i o a = Pane
-    { _paneDefinition :: Definition name i o (Expression name i o a)
+    { _paneDefinition :: Definition name i o a
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())

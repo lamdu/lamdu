@@ -51,7 +51,7 @@ type T = Transaction
 convertDefIBuiltin ::
     (MonadTransaction n m, Monad f) =>
     Scheme.Scheme -> Definition.FFIName -> DefI f ->
-    m (DefinitionBody InternalName i (T f) (ExpressionU f [EntityId]))
+    m (DefinitionBody InternalName i (T f) a)
 convertDefIBuiltin scheme name defI =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
     <&> \typeS ->
@@ -91,7 +91,7 @@ convertInferDefExpr ::
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
-    T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
+    T m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
 convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
@@ -141,7 +141,7 @@ convertDefBody ::
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
-    T m (DefinitionBody InternalName (T m) (T m) (ExpressionU m [EntityId]))
+    T m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
 convertDefBody cache monitors evalRes cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
@@ -241,7 +241,7 @@ loadPanes cache monitors evalRes cp replEntityId =
                         def
                         <&> Anchors.paneDef
                         & convertDefBody cache monitors evalRes cp
-                        <&> Lens.mapped . Lens.mapped %~ (^. pUserData)
+                        <&> Lens.mapped %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar

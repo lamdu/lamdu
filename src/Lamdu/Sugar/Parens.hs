@@ -7,8 +7,8 @@ module Lamdu.Sugar.Parens
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
-import           Lamdu.Precedence
-    ( Prec, Precedence(..), HasPrecedence(..), before, after )
+import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -54,8 +54,8 @@ loop minOpPrec parentPrec (Expression pl body_) =
     BodyFragment     x -> mkUnambiguous BodyFragment x
     BodyRecord       x -> mkUnambiguous BodyRecord x
     BodyCase         x -> mkUnambiguous BodyCase x
-    BodyLam          x -> leftSymbol (lamFunc . Lens.mapped) 0 BodyLam x
-    BodyToNom        x -> leftSymbol (Lens.mapped . Lens.mapped) 0 BodyToNom x
+    BodyLam          x -> leftSymbol (lamFunc . SugarLens.funcExprs) 0 BodyLam x
+    BodyToNom        x -> leftSymbol (Lens.mapped . SugarLens.binderBodyExprs) 0 BodyToNom x
     BodyInject       x -> leftSymbol Lens.mapped 0 BodyInject x
     BodyFromNom      x -> rightSymbol Lens.mapped 0 BodyFromNom x
     BodyGetField     x -> rightSymbol Lens.mapped 13 BodyGetField x
