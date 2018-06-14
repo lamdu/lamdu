@@ -56,7 +56,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         & plData . _1 . T.showInEvalMode .~
             ( if tid ^. tidTId == Builtins.textTid
                 then T.EvalModeShowEval
-                else binder ^. bbContent . SugarLens.binderContentExpr .
+                else binder ^. bbContent . SugarLens.binderContentResultExpr .
                         topLevelAnn . T.showInEvalMode
             )
         & (`Expression` newBodyWith dontShowEval)
@@ -103,7 +103,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         onCaseAlt a =
             a
             & body . _BodyLam . lamFunc . fBody . bbContent .
-              SugarLens.binderContentExpr . nonHoleAnn .~ T.neverShowAnnotations
+              SugarLens.binderContentResultExpr . nonHoleAnn .~ T.neverShowAnnotations
             & topLevelAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =

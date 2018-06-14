@@ -95,7 +95,7 @@ expr (Sugar.Expression _ body) =
     bodyNames body <>
     case body of
     Sugar.BodyToNom (Sugar.Nominal _ binder) ->
-        expr (binder ^. Sugar.bbContent . SugarLens.binderContentExpr)
+        expr (binder ^. Sugar.bbContent . SugarLens.binderContentResultExpr)
     Sugar.BodyFromNom (Sugar.Nominal _ val) -> expr val
     _ -> []
 

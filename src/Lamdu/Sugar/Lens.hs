@@ -8,7 +8,7 @@ module Lamdu.Sugar.Lens
     , assignmentBody, binderFormBody
     , assignmentAddFirstParam, binderFormAddFirstParam
     , binderFuncParamActions
-    , binderContentExpr
+    , binderContentResultExpr
     , binderContentEntityId
     , leftMostLeaf
     , workAreaExpressions
@@ -133,9 +133,9 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderContentExpr :: Lens' (BinderContent name i o a) a
-binderContentExpr f (BinderLet l) = l & lBody . bbContent . binderContentExpr %%~ f <&> BinderLet
-binderContentExpr f (BinderExpr e) = f e <&> BinderExpr
+binderContentResultExpr :: Lens' (BinderContent name i o a) a
+binderContentResultExpr f (BinderLet l) = l & lBody . bbContent . binderContentResultExpr %%~ f <&> BinderLet
+binderContentResultExpr f (BinderExpr e) = f e <&> BinderExpr
 
 binderContentEntityId ::
     Lens' (BinderContent name i o (Expression name i o a)) EntityId
