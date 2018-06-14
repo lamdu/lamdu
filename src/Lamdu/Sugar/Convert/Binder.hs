@@ -23,7 +23,7 @@ import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), conv
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeAnnotation, makeActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -107,7 +107,6 @@ convertRedex expr redex =
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
-        ann <- redex ^. Redex.arg . Val.payload & makeAnnotation
         float <- makeFloatLetToOuterScope (stored ^. Property.pSet) redex
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
@@ -123,7 +122,6 @@ convertRedex expr redex =
             , _lValue = value & aNodeActions %~ fixValueNodeActions
             , _lActions = actions
             , _lName = tag
-            , _lAnnotation = ann
             , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody =
                 letBody

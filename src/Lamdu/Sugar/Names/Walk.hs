@@ -179,12 +179,19 @@ toLet ::
 toLet expr Let{..} =
     do
         (_lName, _lBody) <-
-            unCPS (withTag TaggedVar (isFunctionType (_lAnnotation ^. aInferredType)) _lName)
+            unCPS (withTag TaggedVar varInfo _lName)
             (toBinderBody expr _lBody)
-        _lAnnotation <- toAnnotation _lAnnotation
         _lValue <- toBinder expr _lValue
         _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
+    where
+        varInfo =
+            case _lValue ^. aBody of
+            BodyFunction{} -> NameGen.Function
+            BodyPlain p ->
+                p ^. apBody . bbContent . SugarLens.binderContentResultExpr
+                . annotation . plAnnotation . aInferredType
+                & isFunctionType
 
 toBinderContent ::
     MonadNaming m =>
