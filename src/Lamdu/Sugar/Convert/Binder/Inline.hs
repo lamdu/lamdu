@@ -1,4 +1,4 @@
-
+{-# LANGUAGE TupleSections #-}
 module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
@@ -78,7 +78,7 @@ inlineLet topLevelProp redex =
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamParamId)
         (redex ^. Redex.arg <&> Just)
-    <&> Lens.mapped %~ flip (,) ()
+    <&> Lens.mapped %~ (, ())
     >>= ExprIRef.writeValWithStoredSubexpressions
     <&> (^. Val.payload . _1)
     >>= Property.set topLevelProp

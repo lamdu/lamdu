@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell, NoMonomorphismRestriction #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell, NoMonomorphismRestriction, TupleSections #-}
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     , -- re-export for tests
@@ -417,7 +417,7 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
             case kName of
             P1StoredName aName text ->
                 storedName tagsBelow aName text
-                <&> flip (,) (env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
+                <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
                 where
                     isClash = Clash.infoOf aName
                     tag = aName ^. Annotated.tag

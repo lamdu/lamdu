@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
@@ -127,7 +127,7 @@ valueConversionNoSplit nominals empty src =
         do
             arg <-
                 valueNoSplit (Payload argType srcScope)
-                <&> Lens.traversed %~ flip (,) empty
+                <&> Lens.traversed %~ (, empty)
             let applied = V.Apply src arg & V.BApp & mkRes resType
             if Lens.has (ExprLens.valLeafs . V._LHole) arg
                 then
@@ -144,7 +144,7 @@ valueConversionNoSplit nominals empty src =
                     (either (error "Infer.freshInferredVar shouldn't fail") pure)
                 & lift
             suggestCaseWith composite (Payload dstType srcScope)
-                <&> Lens.traversed %~ flip (,) empty
+                <&> Lens.traversed %~ (, empty)
                 <&> (`V.Apply` src) <&> V.BApp <&> mkRes dstType
     _ -> mzero
     where
@@ -209,7 +209,7 @@ suggestCaseWith variantType resultPl@(Payload resultType scope) =
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
 fillHoles empty (Val pl (V.BLeaf V.LHole)) =
-    valueNoSplit (pl ^. _1) emptyOptions <&> flip (,) empty & Val.payload . _2 .~ (pl ^. _2)
+    valueNoSplit (pl ^. _1) emptyOptions <&> (, empty) & Val.payload . _2 .~ (pl ^. _2)
 fillHoles empty (Val pl (V.BApp (V.Apply func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles empty arg & V.Apply func & V.BApp & Val pl

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TupleSections #-}
 -- | A StateT-based RWST
 
 module Control.Monad.Trans.FastRWS
@@ -66,7 +66,7 @@ instance (Monoid w, Monad m) => MonadWriter.MonadWriter w (RWST r w s m) where
         (res, s1, w0 <> f w1)
 
 instance MonadTrans (RWST r w s) where
-    lift act = RWST $ \_ w s -> act <&> (\res -> (res, s, w))
+    lift act = RWST $ \_ w s -> act <&> (, s, w)
 
 type RWS r w s = RWST r w s Identity
 

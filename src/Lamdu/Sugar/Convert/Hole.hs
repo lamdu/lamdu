@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification, TupleSections #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -469,7 +469,7 @@ mkResultVals sugarContext scope base =
     SuggestedExpr sugg ->
         (,)
         <$> mapStateT exceptTtoListT (loadTheNewDeps sugg)
-        ?? (sugg & Lens.traversed %~ flip (,) (Nothing, ()))
+        ?? (sugg & Lens.traversed %~ (, (Nothing, ())))
     where
         transaction = lift . lift
         emptyPl = (Nothing, ())

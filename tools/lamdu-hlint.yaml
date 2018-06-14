@@ -11,6 +11,7 @@
     - hint: {lhs: a `mappend` b, rhs: a <> b}
     - hint: {lhs: Control.Lens.filtered (Control.Lens.has a), rhs: filteredBy a}
     - hint: {lhs: \x -> a $ b x, rhs: a . b}
+    - ignore: {name: Use tuple-section}
 
 - group:
     name: generalise-for-conciseness

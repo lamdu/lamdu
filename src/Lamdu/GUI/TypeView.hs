@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, FlexibleContexts, MultiParamTypeClasses, TemplateHaskell, TupleSections #-}
 module Lamdu.GUI.TypeView
     ( make, makeScheme
     ) where
@@ -190,7 +190,7 @@ makeVariantField ::
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
-    makeTagView tag <&> flip (,) Element.empty
+    makeTagView tag <&> (, Element.empty)
     -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 

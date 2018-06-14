@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, TupleSections #-}
 module Control.Lens.Extended
     ( module Control.Lens
     , singletonAt, tagged, filteredBy
@@ -11,7 +11,7 @@ import           Prelude
 {-# INLINE tagged #-}
 tagged :: Prism' tag () -> Prism' (a, tag) a
 tagged p =
-    prism (flip (,) (p # ()))
+    prism (, (p # ()))
     ( \(a, tag1) ->
       case matching p tag1 of
       Left tag2 -> Left (a, tag2)

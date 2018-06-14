@@ -333,7 +333,7 @@ newtype RefreshScheduler = RefreshScheduler (IORef Bool)
 newRefreshScheduler :: IO RefreshScheduler
 newRefreshScheduler = newIORef False <&> RefreshScheduler
 isRefreshScheduled :: RefreshScheduler -> IO Bool
-isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref $ \r -> (False, r)
+isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref ((,) False)
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) =
     do

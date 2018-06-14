@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, TupleSections #-}
 module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
@@ -22,7 +22,7 @@ type T = Transaction
 expr :: Monad m => ValP m -> T m (Val (ValP m))
 expr (Property valI writeRoot) =
     ExprIRef.readVal valI
-    <&> fmap (flip (,) ())
+    <&> fmap (, ())
     <&> ExprIRef.addProperties writeRoot
     <&> fmap fst
 

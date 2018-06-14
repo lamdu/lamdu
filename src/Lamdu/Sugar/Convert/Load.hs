@@ -1,6 +1,6 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections #-}
 module Lamdu.Sugar.Convert.Load
     ( assertInferSuccess
     , InferResult(..), irVal, irCtx
@@ -138,7 +138,7 @@ readValAndAddProperties ::
     Monad m => ValP m -> T m (Val (ValP m))
 readValAndAddProperties prop =
     ExprIRef.readVal (prop ^. Property.pVal)
-    <&> fmap (flip (,) ())
+    <&> fmap (, ())
     <&> ExprIRef.addProperties (prop ^. Property.pSet)
     <&> fmap fst
 

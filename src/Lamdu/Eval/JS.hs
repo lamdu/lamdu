@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( Evaluator
@@ -278,7 +278,7 @@ processEvent fromUUID resultsRef actions obj =
                     in  oldEvalResults
                         & ER.erCache .~ newCache
                         & postProcess res
-                        & flip (,) ()
+                        & (, ())
                 actions ^. aReportUpdatesAvailable
         Just event = obj .? "event"
 

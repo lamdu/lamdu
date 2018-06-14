@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
@@ -710,4 +710,4 @@ convertParams binderKind defVar expr =
             mPresMode convParams =
                 presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
             presMode = Anchors.assocPresentationMode defVar
-    _ -> convertEmptyParams binderKind expr <&> \x -> (Nothing, x, expr)
+    _ -> convertEmptyParams binderKind expr <&> (Nothing, , expr)

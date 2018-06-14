@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new
@@ -203,8 +203,8 @@ setCancelTimer evaluator =
             runAfter 5000000 $ -- 5 seconds
             do
                 atomicModifyIORef (ePrevResultsRef evaluator)
-                    (flip (,) () . const EvalResults.empty)
+                    ((, ()) . const EvalResults.empty)
                 resultsUpdated (eParams evaluator)
         atomicModifyIORef (eCancelTimerRef evaluator)
-            (\x -> (Just newCancelTimer, x))
+            (Just newCancelTimer,)
             >>= Lens.traverseOf_ Lens._Just killThread
