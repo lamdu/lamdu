@@ -245,7 +245,7 @@ convertLam lam exprPl =
                     & Lambda LightLambda
         BodyLam lambda
             & addActions lam exprPl
-            <&> body . bodyChildren . annotation . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
+            <&> body . SugarLens.bodyChildren . annotation . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda ::
     Set InternalName ->
@@ -287,7 +287,7 @@ markLightParams paramNames (Expression pl bod) =
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
     BodyFragment w -> w <&> markLightParams paramNames & BodyFragment
-    _ -> bod & bodyChildren %~ markLightParams paramNames
+    _ -> bod & SugarLens.bodyChildren %~ markLightParams paramNames
     & Expression pl
 
 -- Let-item or definition (form of <name> [params] = <body>)

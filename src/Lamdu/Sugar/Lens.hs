@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes #-}
 module Lamdu.Sugar.Lens
-    ( subExprPayloads, payloadsIndexedByPath
+    ( bodyChildren
+    , subExprPayloads, payloadsIndexedByPath
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
     , defSchemes
@@ -18,6 +19,28 @@ import qualified Control.Lens as Lens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
+
+bodyChildren ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    Body name i o a -> f (Body name i o b)
+bodyChildren f =
+    \case
+    BodyPlaceHolder -> pure BodyPlaceHolder
+    BodyLiteral x -> BodyLiteral x & pure
+    BodyGetVar  x -> BodyGetVar  x & pure
+    BodyHole    x -> BodyHole    x & pure
+    BodyLam          x -> (lamFunc . traverse) f x <&> BodyLam
+    BodySimpleApply  x -> traverse f x <&> BodySimpleApply
+    BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
+    BodyRecord       x -> traverse f x <&> BodyRecord
+    BodyGetField     x -> traverse f x <&> BodyGetField
+    BodyCase         x -> traverse f x <&> BodyCase
+    BodyIfElse       x -> traverse f x <&> BodyIfElse
+    BodyInject       x -> traverse f x <&> BodyInject
+    BodyFromNom      x -> traverse f x <&> BodyFromNom
+    BodyFragment     x -> traverse f x <&> BodyFragment
+    BodyToNom        x -> (traverse . traverse) f x <&> BodyToNom
 
 subExprPayloads ::
     Lens.IndexedTraversal

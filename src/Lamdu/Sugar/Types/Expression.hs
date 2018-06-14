@@ -5,7 +5,6 @@ module Lamdu.Sugar.Types.Expression
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
-    , bodyChildren
     , Expression(..), body, annotation
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
@@ -169,25 +168,3 @@ Lens.makeLenses ''Let
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''Body
-
-bodyChildren ::
-    Applicative f =>
-    (Expression name i o a -> f (Expression name i o b)) ->
-    Body name i o a -> f (Body name i o b)
-bodyChildren f =
-    \case
-    BodyPlaceHolder -> pure BodyPlaceHolder
-    BodyLiteral x -> BodyLiteral x & pure
-    BodyGetVar  x -> BodyGetVar  x & pure
-    BodyHole    x -> BodyHole    x & pure
-    BodyLam          x -> (lamFunc . traverse) f x <&> BodyLam
-    BodySimpleApply  x -> traverse f x <&> BodySimpleApply
-    BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
-    BodyRecord       x -> traverse f x <&> BodyRecord
-    BodyGetField     x -> traverse f x <&> BodyGetField
-    BodyCase         x -> traverse f x <&> BodyCase
-    BodyIfElse       x -> traverse f x <&> BodyIfElse
-    BodyInject       x -> traverse f x <&> BodyInject
-    BodyFromNom      x -> traverse f x <&> BodyFromNom
-    BodyFragment     x -> traverse f x <&> BodyFragment
-    BodyToNom        x -> (traverse . traverse) f x <&> BodyToNom

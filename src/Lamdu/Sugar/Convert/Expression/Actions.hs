@@ -22,6 +22,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.Lens (bodyChildren)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
