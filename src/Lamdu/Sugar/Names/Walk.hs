@@ -487,43 +487,40 @@ withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Par
 
 toDefExpr ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     DefinitionExpression (OldName m) (IM m) o a ->
-    m (DefinitionExpression (NewName m) (IM m) o b)
-toDefExpr f (DefinitionExpression typ presMode content) =
+    m (DefinitionExpression (NewName m) (IM m) o a)
+toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
     <*> pure presMode
-    <*> toBinder f content
+    <*> toBinder toExpression content
 
 toDefinitionBody ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     DefinitionBody (OldName m) (IM m) o a ->
-    m (DefinitionBody (NewName m) (IM m) o b)
-toDefinitionBody _ (DefinitionBodyBuiltin bi) =
+    m (DefinitionBody (NewName m) (IM m) o a)
+toDefinitionBody (DefinitionBodyBuiltin bi) =
     bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
-toDefinitionBody f (DefinitionBodyExpression expr) =
-    toDefExpr f expr <&> DefinitionBodyExpression
+toDefinitionBody (DefinitionBodyExpression expr) =
+    toDefExpr expr <&> DefinitionBodyExpression
 
 toDef ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Definition (OldName m) (IM m) o a ->
-    m (Definition (NewName m) (IM m) o b)
-toDef f Definition{..} =
+    m (Definition (NewName m) (IM m) o a)
+toDef Definition{..} =
     do
         -- NOTE: A global def binding is not considered a binder, as
         -- it exists everywhere, not just inside the binding
         _drName <- toTagOf GlobalDef _drName
-        _drBody <- toDefinitionBody f _drBody
+        _drBody <- toDefinitionBody _drBody
         pure Definition{..}
 
 toPane ::
     MonadNaming m =>
     Pane (OldName m) (IM m) o a ->
     m (Pane (NewName m) (IM m) o a)
-toPane = paneDefinition (toDef toExpression)
+toPane = paneDefinition toDef
 
 toRepl ::
     MonadNaming m =>
