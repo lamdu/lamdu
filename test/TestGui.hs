@@ -71,7 +71,6 @@ test =
         _ <- runIdentity (E.lookup (Identity Nothing) eventKey eventMap) ^?! Lens._Just
         workArea' <- convertWorkArea cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
-        pure ()
 
 workAreaEq ::
     forall a m.
