@@ -77,7 +77,7 @@ make fragment pl =
         let f fragmentExpr above below
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =
-                    fragmentExpr & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
+                    addAnnotation fragmentExpr & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
                 | otherwise =
                     addAnnotation fragmentExpr
                     where
