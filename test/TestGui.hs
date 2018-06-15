@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
@@ -17,6 +18,7 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -29,10 +31,41 @@ import           Test.Lamdu.Prelude
 
 type T = Transaction
 
--- | Test for issue #375
--- https://trello.com/c/KFLJPNmO/375-operator-precedence-crosses-lambda-boundaries-add-test
 test :: Test
 test =
+    testGroup "gui-tests"
+    [ testOpPrec
+    , testFragmentSize
+    ]
+
+-- | Test for issue #410
+-- https://trello.com/c/00mxkLRG/410-navigating-to-fragment-affects-layout
+testFragmentSize :: Test
+testFragmentSize =
+    testCase "fragment-size" $
+    GuiEnv.make >>=
+    \baseEnv ->
+    testProgram "simple-fragment.json" $
+    \cache ->
+    do
+        workArea <- convertWorkArea cache
+        let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
+        let makeWithEnv env =
+                ExpressionEdit.make repl
+                & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
+        guiCursorOnFrag <-
+            baseEnv
+            & cursor .~ WidgetIds.fromExprPayload (workArea ^. Sugar.waRepl . Sugar.replExpr . Sugar.annotation)
+            & makeWithEnv
+        guiCursorElseWhere <- makeWithEnv baseEnv
+        unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (fail "fragment size inconsistent")
+    where
+        sz = Responsive.rWide . Align.tValue . Element.size
+
+-- | Test for issue #375
+-- https://trello.com/c/KFLJPNmO/375-operator-precedence-crosses-lambda-boundaries-add-test
+testOpPrec :: Test
+testOpPrec =
     testCase "apply-operator" $
     GuiEnv.make >>=
     \baseEnv ->

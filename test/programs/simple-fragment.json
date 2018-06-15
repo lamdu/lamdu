@@ -1,0 +1,78 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "tagOrder": 2,
+        "tag": "a56145270ce6b3bebd1dd012b7394867",
+        "name": "id"
+    },
+    {
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "lamId": "6b0dae3b-248b-459d-b5be-132b853c77e9",
+        "lamVar": "d852a0789d16442590005ba054341671",
+        "lamFieldParams": null
+    },
+    {
+        "tag": "a56145270ce6b3bebd1dd012b7394867",
+        "defPresentationMode": "Verbose",
+        "def": "2dc884effd4c41b1b24e4c83fd81ede6",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "typeVar": "6131"
+                },
+                "funcResult": {
+                    "typeVar": "6131"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "6131"
+                ]
+            }
+        },
+        "val": {
+            "lamVar": "d852a0789d16442590005ba054341671",
+            "id": "6b0dae3b-248b-459d-b5be-132b853c77e9",
+            "lamBody": {
+                "var": "d852a0789d16442590005ba054341671",
+                "id": "5312c144-b799-4d4b-96fd-13e92a89fba0"
+            }
+        }
+    },
+    {
+        "repl": {
+            "frozenDeps": {
+                "defTypes": {
+                    "2dc884effd4c41b1b24e4c83fd81ede6": {
+                        "schemeType": {
+                            "funcParam": {
+                                "typeVar": "6131"
+                            },
+                            "funcResult": {
+                                "typeVar": "6131"
+                            }
+                        },
+                        "schemeBinders": {
+                            "typeVars": [
+                                "6131"
+                            ]
+                        }
+                    }
+                }
+            },
+            "val": {
+                "applyFunc": {
+                    "hole": {},
+                    "id": "e3f6452f-62a5-43dc-a78a-a4f5640cb898"
+                },
+                "applyArg": {
+                    "var": "2dc884effd4c41b1b24e4c83fd81ede6",
+                    "id": "46724f0a-6bcf-6606-6da7-a5262682496a"
+                },
+                "id": "0ca47240-1a43-4091-adcf-68a6c57fe5d7"
+            }
+        }
+    }
+]
