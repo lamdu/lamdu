@@ -325,8 +325,8 @@ toLabeledApply expr app@LabeledApply{..} =
 
 toHole ::
     MonadNaming m =>
-    Hole (IM m) o (Expression (OldName m) (IM m) o ()) ->
-    m (Hole (IM m) o (Expression (NewName m) (IM m) o ()))
+    Hole (OldName m) (IM m) o ->
+    m (Hole (NewName m) (IM m) o)
 toHole hole =
     opRun
     <&>
@@ -335,7 +335,7 @@ toHole hole =
 
 toFragment ::
     MonadNaming m =>
-    (a -> m b) ->
+    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Fragment (OldName m) (IM m) o a ->
     m (Fragment (NewName m) (IM m) o b)
 toFragment expr Fragment{..} =

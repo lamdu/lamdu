@@ -74,46 +74,43 @@ data Lambda name i o a = Lambda
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
-data Fragment name i o expr = Fragment
-    { _fExpr :: expr
+data Fragment name i o a = Fragment
+    { _fExpr :: Expression name i o a
     , _fHeal :: Heal o
-    , _fOptions :: i [HoleOption i o (Expression name i o ())]
+    , _fOptions :: i [HoleOption name i o]
     } deriving (Functor, Foldable, Traversable, Generic)
 
-instance Show expr => Show (Fragment name i o expr) where
-    show (Fragment expr _ _) = "(Fragment " ++ show expr ++ ")"
-
-data HoleResult o resultExpr = HoleResult
-    { _holeResultConverted :: resultExpr
+data HoleResult name i o = HoleResult
+    { _holeResultConverted :: Expression name i o ()
     , _holeResultPick :: o ()
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
-data HoleOption i o resultExpr = HoleOption
+data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i resultExpr
+    , _hoSugaredBaseExpr :: i (Expression name i o ())
     , -- A group in the hole results based on this option
-      _hoResults :: ListT i (HoleResultScore, i (HoleResult o resultExpr))
-    } deriving (Functor, Generic)
+      _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
+    } deriving Generic
 
-type OptionLiteral i o resultExpr =
-    Literal Identity -> i (HoleResultScore, i (HoleResult o resultExpr))
+type OptionLiteral name i o =
+    Literal Identity -> i (HoleResultScore, i (HoleResult name i o))
 
-data Hole i o resultExpr = Hole
-    { _holeOptions :: i [HoleOption i o resultExpr]
+data Hole name i o = Hole
+    { _holeOptions :: i [HoleOption name i o]
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
-    , _holeOptionLiteral :: OptionLiteral i o resultExpr
+    , _holeOptionLiteral :: OptionLiteral name i o
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (o EntityId)
-    } deriving (Functor, Generic)
+    } deriving Generic
 
 data Body name i o a
     = BodyLam (Lambda name i o a)
     | BodySimpleApply (V.Apply (Expression name i o a))
     | BodyLabeledApply (LabeledApply name i o (Expression name i o a))
-    | BodyHole (Hole i o (Expression name i o ()))
+    | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o (Expression name i o a))
     | BodyGetField (GetField name i o (Expression name i o a))
@@ -123,7 +120,7 @@ data Body name i o a
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal name (BinderBody name i o a))
     | BodyFromNom (Nominal name (Expression name i o a))
-    | BodyFragment (Fragment name i o (Expression name i o a))
+    | BodyFragment (Fragment name i o a)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable, Generic)
 

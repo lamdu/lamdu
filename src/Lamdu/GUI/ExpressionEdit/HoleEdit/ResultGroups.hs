@@ -25,7 +25,6 @@ import           Lamdu.Formatting (Format(..))
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
-import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -40,7 +39,7 @@ data Group i o = Group
     , _groupResults ::
         ListT i
         ( Sugar.HoleResultScore
-        , i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
+        , i (Sugar.HoleResult (Name o) i o)
         )
     }
 Lens.makeLenses ''Group
@@ -49,7 +48,7 @@ data Result i o = Result
     { _rScore :: Sugar.HoleResultScore
     , -- Warning: This action should be ran at most once!
       -- Running it more than once will cause inconsistencies.
-      rHoleResult :: i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
+      rHoleResult :: i (Sugar.HoleResult (Name o) i o)
         -- TODO: Unit monad instead of i o for Expression above?
     , rId :: WidgetId.Id
     }
@@ -69,7 +68,7 @@ Lens.makeLenses ''ResultGroup
 mResultGroupOf ::
     WidgetId.Id ->
     [ ( Sugar.HoleResultScore
-      , i (Sugar.HoleResult o (Sugar.Expression (Name o) i o ()))
+      , i (Sugar.HoleResult (Name o) i o)
       )
     ] ->
     Maybe (ResultGroup i o)
@@ -157,8 +156,8 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     Monad i =>
-    [Sugar.HoleOption i o1 (ExpressionN i o1 ())] ->
-    Maybe (Sugar.OptionLiteral i o1 (ExpressionN i o1 ())) ->
+    [Sugar.HoleOption (Name o1) i o1] ->
+    Maybe (Sugar.OptionLiteral (Name o1) i o1) ->
     SearchMenu.ResultsContext ->
     ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
 makeAll options mOptionLiteral ctx =
@@ -187,7 +186,7 @@ mkGroupId option =
 
 mkGroup ::
     Monad i =>
-    Sugar.HoleOption i o (ExpressionN i o ()) ->
+    Sugar.HoleOption (Name o) i o ->
     i (Group i o)
 mkGroup option =
     option ^. Sugar.hoSugaredBaseExpr
@@ -203,7 +202,7 @@ tryBuildLiteral ::
     (Format a, Monad i) =>
     Text ->
     (Identity a -> Sugar.Literal Identity) ->
-    Sugar.OptionLiteral i o (ExpressionN i o ()) ->
+    Sugar.OptionLiteral (Name o) i o ->
     Text ->
     Maybe (i (Group i o))
 tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
@@ -223,7 +222,7 @@ tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
 makeLiteralGroups ::
     Monad i =>
     Text ->
-    Sugar.OptionLiteral i o (ExpressionN i o ()) ->
+    Sugar.OptionLiteral (Name o) i o ->
     [i (Group i o)]
 makeLiteralGroups searchTerm optionLiteral =
     [ tryBuildLiteral "Num"   Sugar.LiteralNum   optionLiteral searchTerm

@@ -142,8 +142,8 @@ filterSearchTermEvents allowedTerms searchTerm
 
 make ::
     (Monad i, Monad o) =>
-    i [Sugar.HoleOption i o (ExpressionN i o ())] ->
-    Maybe (Sugar.OptionLiteral i o (ExpressionN i o ())) ->
+    i [Sugar.HoleOption (Name o) i o] ->
+    Maybe (Sugar.OptionLiteral (Name o) i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
     ExprGuiM i o (Menu.Placement -> ExpressionGui o)

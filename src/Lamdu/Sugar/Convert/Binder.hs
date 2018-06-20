@@ -280,7 +280,7 @@ markLightParams paramNames (Expression pl bod) =
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
-    BodyFragment w -> w <&> markLightParams paramNames & BodyFragment
+    BodyFragment w -> w & fExpr %~ markLightParams paramNames & BodyFragment
     _ -> bod & SugarLens.bodyChildren %~ markLightParams paramNames
     & Expression pl
 

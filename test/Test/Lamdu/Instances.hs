@@ -179,15 +179,14 @@ deriving instance Eq (Sugar.ClosedCompositeActions Unit)
 deriving instance Eq (Sugar.DetachAction Unit)
 deriving instance Eq (Sugar.EvalException Unit)
 deriving instance Eq (Sugar.Heal Unit)
+deriving instance Eq (Sugar.Hole n Unit Unit)
+deriving instance Eq (Sugar.HoleOption n Unit Unit)
 deriving instance Eq (Sugar.Literal (Property Unit))
 deriving instance Eq (Sugar.NullParamActions Unit)
 deriving instance Eq (Sugar.OpenCompositeActions Unit)
 deriving instance Eq a => Eq (Sugar.CaseArg Unit a)
 deriving instance Eq a => Eq (Sugar.CaseKind Unit a)
 deriving instance Eq a => Eq (Sugar.CompositeTail Unit a)
-deriving instance Eq a => Eq (Sugar.Hole Unit Unit a)
-deriving instance Eq a => Eq (Sugar.HoleOption Unit Unit a)
-deriving instance Eq a => Eq (Sugar.HoleResult Unit a)
 deriving instance Eq a => Eq (Sugar.IfThen Unit a)
 deriving instance Eq a => Eq (Sugar.ResStream a)
 deriving instance Eq a => Eq (Sugar.ResTree a)
@@ -202,6 +201,7 @@ deriving instance Eq n => Eq (Sugar.DefinitionForm n Unit)
 deriving instance Eq n => Eq (Sugar.EvalCompletionResult n Unit)
 deriving instance Eq n => Eq (Sugar.FuncParamActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.GetVar n Unit)
+deriving instance Eq n => Eq (Sugar.HoleResult n Unit Unit)
 deriving instance Eq n => Eq (Sugar.LetActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.NameRef n Unit)
 deriving instance Eq n => Eq (Sugar.NodeActions n Unit Unit)
@@ -234,6 +234,7 @@ instance (NFData a, NFData n) => NFData (Sugar.DefinitionOutdatedType n a) where
 instance (NFData a, NFData n) => NFData (Sugar.Else n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ElseIfContent n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Expression n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.Fragment n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.FuncParam n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Function n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.GetField n (T i) (T o) a) where rnf = genericRnf
@@ -265,7 +266,7 @@ instance NFData (Sugar.DetachAction (T o)) where rnf = genericRnf
 instance NFData (Sugar.EvalException (T o)) where rnf = genericRnf
 instance NFData (Sugar.FuncParamActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Heal (Transaction o)) where rnf = genericRnf
-instance NFData (Sugar.Hole (T i) (T o) a) where rnf = genericRnf
+instance NFData (Sugar.Hole n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.LetActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Literal (Property (T o))) where rnf = genericRnf
 instance NFData (Sugar.NodeActions n (T i) (T o)) where rnf = genericRnf
@@ -277,7 +278,6 @@ instance NFData a => NFData (Property f a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseArg (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseKind (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CompositeTail (T o) a) where rnf = genericRnf
-instance NFData a => NFData (Sugar.Fragment n (T i) (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.IfThen (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResStream a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf

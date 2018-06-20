@@ -51,9 +51,9 @@ loop minOpPrec parentPrec (Expression pl body_) =
     BodyLiteral      x -> result False (BodyLiteral x)
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyHole         x -> result False (BodyHole x)
-    BodyFragment     x -> mkUnambiguous BodyFragment x
-    BodyRecord       x -> mkUnambiguous BodyRecord x
-    BodyCase         x -> mkUnambiguous BodyCase x
+    BodyFragment     x -> mkUnambiguous fExpr BodyFragment x
+    BodyRecord       x -> mkUnambiguous Lens.mapped BodyRecord x
+    BodyCase         x -> mkUnambiguous Lens.mapped BodyCase x
     BodyLam          x -> leftSymbol (lamFunc . SugarLens.funcExprs) 0 BodyLam x
     BodyToNom        x -> leftSymbol (Lens.mapped . SugarLens.binderBodyExprs) 0 BodyToNom x
     BodyInject       x -> leftSymbol Lens.mapped 0 BodyInject x
@@ -65,8 +65,8 @@ loop minOpPrec parentPrec (Expression pl body_) =
     where
         result True = pl <&> (,,) 0 NeedsParens & Expression
         result False = pl <&> (,,) minOpPrec NoNeedForParens & Expression
-        mkUnambiguous cons x =
-            x <&> loop 0 unambiguous & cons & result False
+        mkUnambiguous l cons x =
+            x & l %~ loop 0 unambiguous & cons & result False
         childPrec _ True = pure 0
         childPrec modify False = modify parentPrec
         leftSymbol = sideSymbol before after
@@ -87,7 +87,7 @@ loop minOpPrec parentPrec (Expression pl body_) =
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
         labeledApply x =
             case x ^? bareInfix of
-            Nothing -> mkUnambiguous BodyLabeledApply x
+            Nothing -> mkUnambiguous Lens.mapped BodyLabeledApply x
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #

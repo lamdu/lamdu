@@ -81,7 +81,7 @@ bodyChildren f =
     BodyIfElse       x -> traverse f x <&> BodyIfElse
     BodyInject       x -> traverse f x <&> BodyInject
     BodyFromNom      x -> traverse f x <&> BodyFromNom
-    BodyFragment     x -> traverse f x <&> BodyFragment
+    BodyFragment     x -> fExpr f x <&> BodyFragment
     BodyToNom        x -> (traverse . binderBodyExprs) f x <&> BodyToNom
 
 subExprPayloads ::
@@ -209,7 +209,9 @@ workAreaExpressions f (WorkArea panes repl globals) =
     ?? globals
 
 holeOptionTransformExprs ::
-    Monad i => (a -> i b) -> HoleOption i o a -> HoleOption i o b
+    Monad i =>
+    (Expression n0 i o () -> i (Expression n1 i o ())) ->
+    HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
     { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr
@@ -217,7 +219,9 @@ holeOptionTransformExprs onExpr option =
     }
 
 holeTransformExprs ::
-    Monad i => (a -> i b) -> Hole i o a -> Hole i o b
+    Monad i =>
+    (Expression n0 i o () -> i (Expression n1 i o ())) ->
+    Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr hole =
     hole
     { _holeOptions = hole ^. holeOptions <&> traverse %~ holeOptionTransformExprs onExpr

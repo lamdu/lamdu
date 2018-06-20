@@ -111,7 +111,7 @@ holeResultProcessor =
 mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> BaseExpr ->
-    HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())
+    HoleOption InternalName (T m) (T m)
 mkOption sugarContext resultProcessor holePl val =
     HoleOption
     { _hoVal = baseExpr
@@ -124,7 +124,7 @@ mkOption sugarContext resultProcessor holePl val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
-    [HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())]
+    [HoleOption InternalName (T m) (T m)]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferred
     & Suggest.value
@@ -202,7 +202,7 @@ mkNominalOptions nominals =
 mkOptions ::
     Monad m =>
     ResultProcessor m -> Input.Payload m a ->
-    ConvertM m (T m [HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())])
+    ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions resultProcessor holePl =
     Lens.view id
     <&>
@@ -302,7 +302,7 @@ sugar sugarContext holePl val =
 mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->
-    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))))
+    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult InternalName (T m) (T m))))
 mkLiteralOptions holePl =
     Lens.view id
     <&>
@@ -481,7 +481,7 @@ mkResult ::
     Monad m =>
     Preconversion m a -> ConvertM.Context m -> T m () -> ValP m ->
     ResultVal m a ->
-    T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
+    T m (HoleResult InternalName (T m) (T m))
 mkResult preConversion sugarContext updateDeps stored val =
     do
         updateDeps
@@ -505,7 +505,7 @@ toScoredResults ::
     StateT Infer.Context f
     (Infer.Dependencies, ResultVal m a) ->
     f ( HoleResultScore
-      , T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
+      , T m (HoleResult InternalName (T m) (T m))
       )
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
@@ -529,7 +529,7 @@ mkResults ::
     ResultProcessor m -> ConvertM.Context m -> Input.Payload m dummy -> BaseExpr ->
     ListT (T m)
     ( HoleResultScore
-    , T m (HoleResult (T m) (Expression InternalName (T m) (T m) ()))
+    , T m (HoleResult InternalName (T m) (T m))
     )
 mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
     mkResultVals sugarContext (holePl ^. Input.inferred . Infer.plScope) base

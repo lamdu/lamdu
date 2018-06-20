@@ -22,7 +22,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -49,8 +49,7 @@ responsiveLiftA3 f x y z =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Fragment (Name o) i o
-    (ExpressionN i o ExprGui.Payload) ->
+    Sugar.Fragment (Name o) i o ExprGui.Payload ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 make fragment pl =
@@ -113,8 +112,7 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Sugar.Fragment (Name o) i o
-    (ExpressionN i o ExprGui.Payload) ->
+    Sugar.Fragment (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeFragmentExprEdit fragment =
     do
