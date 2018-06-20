@@ -63,7 +63,7 @@ loadWorkArea cache monitors theEvalResults cp =
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
     Sugar.WorkArea
     { _waPanes = _waPanes <&> Sugar.paneDefinition %~ NearestHoles.add SugarLens.definitionExprs
-    , _waRepl = _waRepl & Sugar.replExpr %~ NearestHoles.add id
+    , _waRepl = _waRepl & Sugar.replExpr %~ NearestHoles.add SugarLens.binderBodyExprs
     , _waGlobals = _waGlobals
     }
     & SugarLens.workAreaExpressions %~ postProcessExpr

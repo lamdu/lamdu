@@ -16,6 +16,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event(..), KeyEvent(..))
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -51,11 +52,11 @@ testFragmentSize =
         workArea <- convertWorkArea cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let makeWithEnv env =
-                ExpressionEdit.make repl
+                makeBinderBodyEdit repl
                 & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
         guiCursorOnFrag <-
             baseEnv
-            & cursor .~ WidgetIds.fromExprPayload (workArea ^. Sugar.waRepl . Sugar.replExpr . Sugar.annotation)
+            & cursor .~ WidgetIds.fromExprPayload (workArea ^?! Sugar.waRepl . Sugar.replExpr . Sugar.bbContent . Sugar._BinderExpr . Sugar.annotation)
             & makeWithEnv
         guiCursorElseWhere <- makeWithEnv baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (fail "fragment size inconsistent")
@@ -75,6 +76,7 @@ testOpPrec =
         workArea <- convertWorkArea cache
         let holeId =
                 workArea ^?! Sugar.waRepl . Sugar.replExpr .
+                Sugar.bbContent . Sugar._BinderExpr .
                 Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
                 Sugar.fBody . Sugar.bbContent . Sugar._BinderExpr .
                 Sugar.annotation . Sugar.plEntityId
@@ -83,7 +85,7 @@ testOpPrec =
         let env = baseEnv & cursor .~ holeId
         gui <-
             workArea ^. Sugar.waRepl . Sugar.replExpr
-            & ExpressionEdit.make
+            & makeBinderBodyEdit
             & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
         let mkFocused =
                 gui ^?! Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused

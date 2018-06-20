@@ -52,6 +52,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -108,8 +109,8 @@ make cp gp width =
             eventMap <-
                 panesEventMap theExportActions cp gp
                 (workArea ^.
-                 Sugar.waRepl . Sugar.replExpr . Sugar.annotation .
-                 Sugar.plAnnotation . Sugar.aInferredType)
+                 Sugar.waRepl . Sugar.replExpr . Sugar.bbContent . SugarLens.binderContentResultExpr .
+                 Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)

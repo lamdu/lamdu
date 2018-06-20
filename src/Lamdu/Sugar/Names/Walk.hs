@@ -532,8 +532,8 @@ toPane = paneDefinition toDef
 toRepl ::
     MonadNaming m =>
     Repl (OldName m) (IM m) o a -> m (Repl (NewName m) (IM m) o a)
-toRepl (Repl expr res) =
-    Repl <$> toExpression expr <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
+toRepl (Repl bod res) =
+    Repl <$> toBinderBody toExpression bod <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 
 toWorkArea ::
     MonadNaming m =>

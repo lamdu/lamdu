@@ -25,6 +25,7 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
+import           Lamdu.Sugar.Convert.Binder (convertBinderBody)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
@@ -39,6 +40,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTaggedEntityWith)
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.OrderTags as OrderTags
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -183,11 +185,11 @@ loadRepl cache monitors evalRes cp =
                 <&> (^. ER.erCompleted)
                 <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
-            ConvertM.convertSubexpression valInferred
+            convertBinderBody valInferred
             & ConvertM.run context
             <&> Lens.mapped %~ (^. pUserData)
-            >>= OrderTags.orderExpr
-        let replEntityId = expr ^. annotation . plEntityId
+            >>= SugarLens.binderBodyExprs OrderTags.orderExpr
+        let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl
             { _replExpr = expr
             , _replResult = ConvertEval.completion cp replEntityId completion
@@ -269,7 +271,9 @@ loadWorkArea ::
 loadWorkArea cache monitors evalRes cp =
     do
         repl <- loadRepl cache monitors evalRes cp
-        panes <- loadPanes cache monitors evalRes cp (repl ^. replExpr . annotation . plEntityId)
+        panes <-
+            loadPanes cache monitors evalRes cp
+            (repl ^. replExpr . bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId)
         pure WorkArea
             { _waPanes = panes
             , _waRepl = repl

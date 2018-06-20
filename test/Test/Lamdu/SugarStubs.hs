@@ -180,7 +180,11 @@ def typ var tag body =
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
 repl x =
     Sugar.Repl
-    { Sugar._replExpr = x
+    { Sugar._replExpr =
+        Sugar.BinderBody
+        { Sugar._bbContent = Sugar.BinderExpr x
+        , Sugar._bbAddOuterLet = error "not implemented"
+        }
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
 

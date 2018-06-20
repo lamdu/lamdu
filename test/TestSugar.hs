@@ -55,7 +55,7 @@ testChangeParam =
     where
         action workArea =
             "new" &
-            workArea ^?! waRepl . replExpr .
+            workArea ^?! waRepl . replExpr . bbContent . _BinderExpr .
             body . _BodySimpleApply . V.applyFunc .
             body . _BodySimpleApply . V.applyArg .
             body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
@@ -75,7 +75,7 @@ testReorderLets =
             testSugarActions program [(^?! extractSecondLetItemInLambda)]
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
-            waRepl . replExpr .
+            waRepl . replExpr . bbContent . _BinderExpr .
             body . _BodyLam . lamFunc . fBody .
             bbContent . _BinderLet . lBody .
             bbContent . _BinderLet . lValue .
@@ -89,7 +89,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            waRepl . replExpr .
+            waRepl . replExpr . bbContent . _BinderExpr .
             body . _BodyLam . lamFunc . fBody .
             bbContent . _BinderLet . lActions . laNodeActions . extract
 
@@ -112,7 +112,8 @@ testInline =
                 pure ()
             where
                 letItem =
-                    workArea ^?! waRepl . replExpr .
+                    workArea ^?!
+                    waRepl . replExpr . bbContent . _BinderExpr .
                     body . _BodyLam . lamFunc . fBody .
                     bbContent . _BinderLet
                 isY option =
@@ -122,7 +123,7 @@ testInline =
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
-            waRepl . replExpr .
+            waRepl . replExpr . bbContent . _BinderExpr .
             body . _BodyLam . lamFunc . fBody .
             bbContent . _BinderExpr .
             body . _BodyLiteral . _LiteralNum
@@ -142,13 +143,15 @@ delParam =
     & testCase "del-param"
     where
         action =
-            waRepl . replExpr .
+            waRepl . replExpr . bbContent . _BinderExpr .
             body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
-        afterDel = waRepl . replExpr . body . _BodyLiteral . _LiteralNum
+        afterDel =
+            waRepl . replExpr . bbContent . _BinderExpr .
+            body . _BodyLiteral . _LiteralNum
 
 testLightLambda :: Test
 testLightLambda =
@@ -159,6 +162,6 @@ testLightLambda =
             | Lens.has expected workArea = pure ()
             | otherwise = fail "Expected light lambda sugar!"
         expected =
-            waRepl . replExpr .
+            waRepl . replExpr . bbContent . _BinderExpr .
             body . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             body . _BodyLam . lamMode . _LightLambda

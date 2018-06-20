@@ -31,15 +31,16 @@ import           Lamdu.Config (Config, HasConfig(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -208,12 +209,12 @@ make exportRepl (Sugar.Repl replExpr replResult) =
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
-            , ExprGuiM.makeSubexpression replExpr
+            , makeBinderBodyEdit replExpr
                 <&> Lens.mapped %~ IOTrans.liftTrans
             ]
             <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExprPl)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
-        replExprPl = replExpr ^. Sugar.annotation
+        replExprPl = replExpr ^. Sugar.bbContent . SugarLens.binderContentResultExpr . Sugar.annotation
         replExprId = WidgetIds.fromExprPayload replExprPl

@@ -205,7 +205,7 @@ workAreaExpressions ::
 workAreaExpressions f (WorkArea panes repl globals) =
     WorkArea
     <$> (traverse . paneDefinition . definitionExprs) f panes
-    <*> replExpr f repl
+    <*> (replExpr . binderBodyExprs) f repl
     ?? globals
 
 holeOptionTransformExprs ::
