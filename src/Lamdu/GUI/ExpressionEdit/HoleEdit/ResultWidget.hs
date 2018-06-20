@@ -103,8 +103,7 @@ make mNextEntry ctx resultId holeResult =
             holeResultConverted ^. Sugar.annotation . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
-            holeResult ^?
-            Sugar.holeResultConverted . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
+            holeResultConverted ^? SugarLens.unfinishedExprPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of
