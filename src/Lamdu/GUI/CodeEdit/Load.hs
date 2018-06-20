@@ -42,16 +42,6 @@ toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) 
     (needParens == AddParens.NeedsParens)
     minOpPrec
 
-definitionAddNearestHoles ::
-    Sugar.Definition name i o a ->
-    Sugar.Definition name i o (a, NearestHoles)
-definitionAddNearestHoles = NearestHoles.add SugarLens.definitionExprs
-
-exprAddNearestHoles ::
-    Sugar.Expression name i o a ->
-    Sugar.Expression name i o (a, NearestHoles)
-exprAddNearestHoles = NearestHoles.add id
-
 postProcessExpr ::
     Sugar.Expression (Name n) i o ([Sugar.EntityId], NearestHoles) ->
     Sugar.Expression (Name n) i o ExprGui.Payload
@@ -72,8 +62,8 @@ loadWorkArea cache monitors theEvalResults cp =
     <&>
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
     Sugar.WorkArea
-    { _waPanes = _waPanes <&> Sugar.paneDefinition %~ definitionAddNearestHoles
-    , _waRepl = _waRepl & Sugar.replExpr %~ exprAddNearestHoles
+    { _waPanes = _waPanes <&> Sugar.paneDefinition %~ NearestHoles.add SugarLens.definitionExprs
+    , _waRepl = _waRepl & Sugar.replExpr %~ NearestHoles.add id
     , _waGlobals = _waGlobals
     }
     & SugarLens.workAreaExpressions %~ postProcessExpr
