@@ -62,7 +62,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 makeBinderNameEdit ::
-    (Monad i, Monad o) =>
+    (Monad i, Applicative o) =>
     Widget.Id -> Sugar.AddFirstParam (Name o) i o ->
     EventMap (o GuiState.Update) ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
@@ -133,7 +133,7 @@ mkChosenScopeCursor func =
                 <&> (>>= scopeCursor mChosenScope)
 
 makeScopeEventMap ::
-    Monad o =>
+    Functor o =>
     [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
     EventMap (o GuiState.Update)
 makeScopeEventMap prevKey nextKey cursor setter =
@@ -147,7 +147,7 @@ makeScopeEventMap prevKey nextKey cursor setter =
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
-blockEventMap :: Monad m => EventMap (m GuiState.Update)
+blockEventMap :: Applicative m => EventMap (m GuiState.Update)
 blockEventMap =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
@@ -187,7 +187,7 @@ makeScopeNavArrow setScope arrowText mScopeId =
                 validate _ _ = res (pure mempty)
 
 makeScopeNavEdit ::
-    (Monad i, Monad o) =>
+    (Monad i, Applicative o) =>
     Sugar.Function name i o expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM i o
     ( EventMap (o GuiState.Update)

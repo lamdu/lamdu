@@ -26,14 +26,14 @@ import           Lamdu.Prelude
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 
 make ::
-    ( Monad m, MonadReader env n, HasTheme env
+    ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
     , Hover.HasStyle env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->
-    Property m Sugar.PresentationMode ->
-    n (Widget (m GuiState.Update))
+    Property f Sugar.PresentationMode ->
+    m (Widget (f GuiState.Update))
 make myId (Sugar.Params params) prop =
     do
         theme <- Lens.view Theme.theme

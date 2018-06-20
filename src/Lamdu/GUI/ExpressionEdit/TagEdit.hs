@@ -121,14 +121,14 @@ makePickEventMap action =
         mkDoc x = E.Doc ["Edit", "Tag", x]
 
 makeNewTag ::
-    Monad o =>
+    Functor o =>
     Text -> Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> b) -> o b
 makeNewTag searchTerm tagSelection mkPickResult =
     (tagSelection ^. Sugar.tsNewTag) searchTerm <&> uncurry mkPickResult
 
 makeNewTagPreEvent ::
-    Monad o =>
+    Functor o =>
     Text -> Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> r) -> Maybe (Widget.PreEvent (o r))
 makeNewTagPreEvent searchTerm tagSelection mkPickResult
@@ -141,7 +141,7 @@ makeNewTagPreEvent searchTerm tagSelection mkPickResult
         }
 
 addNewTag ::
-    ( Monad o, MonadReader env f, GuiState.HasCursor env, HasTheme env
+    ( Applicative o, MonadReader env f, GuiState.HasCursor env, HasTheme env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
@@ -172,7 +172,7 @@ fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
-    ( Monad i, Monad o, MonadReader env m
+    ( Monad i, Applicative o, MonadReader env m
     , GuiState.HasCursor env, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
@@ -247,7 +247,7 @@ type HasSearchTermEnv env =
     )
 
 makeHoleSearchTerm ::
-    (MonadReader env m, Monad o, HasSearchTermEnv env) =>
+    (MonadReader env m, Applicative o, HasSearchTermEnv env) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
     m (SearchMenu.Term o)
@@ -298,7 +298,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
         anchor = fmap Hover.anchor
 
 makeTagHoleEdit ::
-    (Monad i, Monad o) =>
+    (Monad i, Applicative o) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
@@ -339,7 +339,7 @@ data TagEditType
     deriving (Eq)
 
 makeTagEditWith ::
-    ( Monad i, Monad o, MonadReader env n
+    ( Monad i, Applicative o, MonadReader env n
     , GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
     ) =>
@@ -430,7 +430,7 @@ addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
 
 makeLHSTag ::
-    (Monad i, Monad o) =>
+    (Monad i, Applicative o) =>
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
     Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
@@ -480,7 +480,7 @@ makeArgTag name tagInstance =
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
 makeBinderTagEdit ::
-    (Monad i, Monad o) =>
+    (Monad i, Applicative o) =>
     Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeBinderTagEdit color tag =
