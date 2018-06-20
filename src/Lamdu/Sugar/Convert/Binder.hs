@@ -140,11 +140,11 @@ convertRedex expr redex =
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
-makeBinderContent ::
+convertBinderContent ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (BinderContent InternalName (T m) (T m) (ConvertPayload m a))
-makeBinderContent expr =
+convertBinderContent expr =
     case Redex.check expr of
     Nothing ->
         ConvertM.convertSubexpression expr & localNewExtractDestPos expr
@@ -156,7 +156,7 @@ convertBinderBody ::
     Val (Input.Payload m a) ->
     ConvertM m (BinderBody InternalName (T m) (T m) (ConvertPayload m a))
 convertBinderBody expr =
-    makeBinderContent expr
+    convertBinderContent expr
     <&>
     \content ->
     BinderBody
