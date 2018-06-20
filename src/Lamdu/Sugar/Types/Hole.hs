@@ -2,11 +2,8 @@
 
 module Lamdu.Sugar.Types.Hole
     ( HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , HoleOption'
-    , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , OptionLiteral
     , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
-    , HoleResultScore(..), hrsNumFragments, hrsScore
     , HoleResult(..)
         , holeResultConverted
         , holeResultPick
@@ -17,13 +14,9 @@ import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.Parts (Literal, HoleResultScore)
 
 import           Lamdu.Prelude
-
-data HoleResultScore = HoleResultScore
-    { _hrsNumFragments :: !Int
-    , _hrsScore :: ![Int]
-    } deriving (Eq, Ord, Generic)
 
 data HoleResult o resultExpr = HoleResult
     { _holeResultConverted :: resultExpr
@@ -36,14 +29,6 @@ data HoleOption i o resultExpr = HoleOption
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult o resultExpr))
     } deriving (Functor, Generic)
-
-type HoleOption' m = HoleOption m m
-
-data Literal f
-    = LiteralNum (f Double)
-    | LiteralBytes (f ByteString)
-    | LiteralText (f Text)
-    deriving Generic
 
 type OptionLiteral i o resultExpr =
     Literal Identity -> i (HoleResultScore, i (HoleResult o resultExpr))
@@ -62,5 +47,3 @@ data Hole i o resultExpr = Hole
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
-Lens.makeLenses ''HoleResultScore
-Lens.makePrisms ''Literal

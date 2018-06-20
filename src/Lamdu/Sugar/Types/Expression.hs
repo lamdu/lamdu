@@ -36,7 +36,7 @@ import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderMode)
-import           Lamdu.Sugar.Types.Hole (Hole, HoleOption, Literal)
+import           Lamdu.Sugar.Types.Hole (Hole, HoleOption)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Simple
 import           Lamdu.Sugar.Types.Tag

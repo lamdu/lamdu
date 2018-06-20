@@ -111,7 +111,7 @@ holeResultProcessor =
 mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> BaseExpr ->
-    HoleOption' (T m) (Expression InternalName (T m) (T m) ())
+    HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())
 mkOption sugarContext resultProcessor holePl val =
     HoleOption
     { _hoVal = baseExpr
@@ -124,7 +124,7 @@ mkOption sugarContext resultProcessor holePl val =
 mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
-    [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
+    [HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferred
     & Suggest.value
@@ -202,7 +202,7 @@ mkNominalOptions nominals =
 mkOptions ::
     Monad m =>
     ResultProcessor m -> Input.Payload m a ->
-    ConvertM m (T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())])
+    ConvertM m (T m [HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())])
 mkOptions resultProcessor holePl =
     Lens.view id
     <&>

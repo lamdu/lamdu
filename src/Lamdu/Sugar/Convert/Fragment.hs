@@ -55,7 +55,7 @@ mkOptions ::
     Val (Input.Payload m a) ->
     Expression name i o a ->
     Input.Payload m a ->
-    ConvertM m (T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())])
+    ConvertM m (T m [HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())])
 mkOptions sugarContext argI argS exprPl =
     Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
     <&> (<> pure fragmentOptions)
@@ -74,7 +74,7 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Input.Payload m a ->
-    T m [HoleOption' (T m) (Expression InternalName (T m) (T m) ())]
+    T m [HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     Suggest.valueConversion Load.nominal Nothing (argI <&> onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
@@ -235,7 +235,7 @@ mkOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a ->
     Val (T.Type, Maybe (Input.Payload m a)) ->
-    HoleOption' (T m) (Expression InternalName (T m) (T m) ())
+    HoleOption (T m) (T m) (Expression InternalName (T m) (T m) ())
 mkOptionFromFragment sugarContext exprPl val =
     HoleOption
     { _hoVal = baseExpr

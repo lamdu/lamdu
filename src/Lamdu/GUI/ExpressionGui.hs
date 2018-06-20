@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
-    , SugarExpr, SugarExpr'
+    , SugarExpr
     , Payload(..)
         , plHiddenEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
         , plMinOpPrec
@@ -79,7 +79,6 @@ Lens.makeLenses ''Payload
 
 type ExpressionN i o a = Sugar.Expression (Name o) i o a
 type SugarExpr i o = ExpressionN i o Payload
-type SugarExpr' m = SugarExpr m m
 
 nextHolesBefore :: Sugar.Expression name i o Payload -> NearestHoles
 nextHolesBefore val =

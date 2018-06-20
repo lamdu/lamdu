@@ -2,7 +2,9 @@
 -- These don't contain more expressions in them.
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Parts
-    ( -- Annotations
+    ( Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
+    , HoleResultScore(..), hrsNumFragments, hrsScore
+    , -- Annotations
       Annotation(..), aInferredType, aMEvaluationResult
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
@@ -176,12 +178,25 @@ data Heal o
     | TypeMismatch
     deriving Generic
 
+data Literal f
+    = LiteralNum (f Double)
+    | LiteralBytes (f ByteString)
+    | LiteralText (f Text)
+    deriving Generic
+
+data HoleResultScore = HoleResultScore
+    { _hrsNumFragments :: !Int
+    , _hrsScore :: ![Int]
+    } deriving (Eq, Ord, Generic)
+
 Lens.makeLenses ''Annotation
 Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''FuncParam
+Lens.makeLenses ''HoleResultScore
 Lens.makeLenses ''LabeledApplyFunc
 Lens.makeLenses ''LetActions
+Lens.makePrisms ''Literal
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''NullaryVal

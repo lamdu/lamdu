@@ -10,7 +10,7 @@ import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
-import           Lamdu.Sugar.Types.Hole (HoleResultScore(..))
+import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
 
 import           Lamdu.Prelude
 
