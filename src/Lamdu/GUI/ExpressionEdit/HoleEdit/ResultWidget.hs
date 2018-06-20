@@ -82,9 +82,10 @@ make ::
     Maybe Widget.Id ->
     SearchMenu.ResultsContext ->
     Widget.Id ->
-    Sugar.HoleResult o (Sugar.Expression (Name o) i o ExprGui.Payload) ->
+    o () ->
+    Sugar.Expression (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Menu.RenderedOption o)
-make mNextEntry ctx resultId holeResult =
+make mNextEntry ctx resultId pick holeResultConverted =
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     <&>
@@ -93,7 +94,7 @@ make mNextEntry ctx resultId holeResult =
     { Menu._rPick =
         Widget.PreEvent
         { Widget._pDesc = "Pick"
-        , Widget._pAction = pickResult <$ holeResult ^. Sugar.holeResultPick
+        , Widget._pAction = pickResult <$ pick
         , Widget._pTextRemainder = getSearchStringRemainder ctx holeResultConverted
         }
     , Menu._rWidget = widget
@@ -117,4 +118,3 @@ make mNextEntry ctx resultId holeResult =
                 { Menu._pickDest = innerEntryPoint
                 , Menu._pickNextEntryPoint = innerEntryPoint
                 }
-        holeResultConverted = holeResult ^. Sugar.holeResultConverted

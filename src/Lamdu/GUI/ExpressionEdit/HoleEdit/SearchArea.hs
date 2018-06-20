@@ -64,12 +64,13 @@ makeRenderedResult ::
     Result i o ->
     ExprGuiM i o (Menu.RenderedOption o)
 makeRenderedResult pl ctx result =
-    -- Warning: rHoleResult should be ran at most once!
-    -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
-    rHoleResult result
-    & ExprGuiM.im
-    <&> Lens.mapped %~ postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
-    >>= ResultWidget.make mNextEntry ctx (rId result)
+    do
+        -- Warning: rHoleResult should be ran at most once!
+        -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
+        res <- rHoleResult result & ExprGuiM.im
+        res ^. Sugar.holeResultConverted
+            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+            & ResultWidget.make mNextEntry ctx (rId result) (res ^. Sugar.holeResultPick)
     where
         mNextEntry =
             pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next
