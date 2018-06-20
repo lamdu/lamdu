@@ -125,9 +125,7 @@ makeNewTag ::
     Text -> Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> b) -> o b
 makeNewTag searchTerm tagSelection mkPickResult =
-    do
-        (tagInstance, selectResult) <- searchTerm & tagSelection ^. Sugar.tsNewTag
-        mkPickResult tagInstance selectResult & pure
+    (tagSelection ^. Sugar.tsNewTag) searchTerm <&> uncurry mkPickResult
 
 makeNewTagPreEvent ::
     Monad o =>
