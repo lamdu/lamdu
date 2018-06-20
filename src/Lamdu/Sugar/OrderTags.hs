@@ -91,8 +91,8 @@ orderFunction =
     -- because it needs to be consistent with the presentation mode.
     pure
 
-orderBinder :: Monad m => Order m (Sugar.Assignment name (T m) o a)
-orderBinder = (Sugar.aBody . Sugar._BodyFunction . Sugar.afFunction) orderFunction
+orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o a)
+orderAssignment = (Sugar.aBody . Sugar._BodyFunction . Sugar.afFunction) orderFunction
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) o a)
@@ -100,7 +100,7 @@ orderDef def =
     def
     & SugarLens.defSchemes . Sugar.schemeType %%~ orderType
     >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
-        %%~ (orderBinder >=> SugarLens.assignmentExprs %%~ orderExpr)
+        %%~ (orderAssignment >=> SugarLens.assignmentExprs %%~ orderExpr)
 
 {-# INLINE orderedFlatComposite #-}
 orderedFlatComposite ::
