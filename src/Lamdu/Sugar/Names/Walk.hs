@@ -331,7 +331,7 @@ toHole hole =
     opRun
     <&>
     \run ->
-    SugarLens.holeTransformExprs (run . toExpression) hole
+    SugarLens.holeTransformExprs (run . toBinderContent toExpression) hole
 
 toFragment ::
     MonadNaming m =>
@@ -345,7 +345,7 @@ toFragment expr Fragment{..} =
         pure Fragment
             { _fExpr = newExpr
             , _fHeal = _fHeal
-            , _fOptions = _fOptions <&> Lens.mapped %~ SugarLens.holeOptionTransformExprs (run . toExpression)
+            , _fOptions = _fOptions <&> Lens.mapped %~ SugarLens.holeOptionTransformExprs (run . toBinderContent toExpression)
             }
 
 toComposite ::

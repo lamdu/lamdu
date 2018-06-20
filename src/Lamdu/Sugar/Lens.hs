@@ -210,7 +210,7 @@ workAreaExpressions f (WorkArea panes repl globals) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Expression n0 i o () -> i (Expression n1 i o ())) ->
+    (BinderContent n0 i o () -> i (BinderContent n1 i o ())) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -220,7 +220,7 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Expression n0 i o () -> i (Expression n1 i o ())) ->
+    (BinderContent n0 i o () -> i (BinderContent n1 i o ())) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr hole =
     hole

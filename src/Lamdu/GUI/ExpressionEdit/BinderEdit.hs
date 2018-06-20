@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns, FlexibleContexts, NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
-    , makeBinderBodyEdit
+    , makeBinderBodyEdit, makeBinderContentEdit
     , addLetEventMap
     , Parts(..), makeParts, makeFunctionParts
     ) where

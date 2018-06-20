@@ -59,7 +59,7 @@ fdConfig config = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    (Monad i, Functor o) =>
+    (Monad i, Monad o) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result i o ->
     ExprGuiM i o (Menu.RenderedOption o)
@@ -69,7 +69,7 @@ makeRenderedResult pl ctx result =
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & ExprGuiM.im
         res ^. Sugar.holeResultConverted
-            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+            & SugarLens.binderContentExprs %~ postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ResultWidget.make mNextEntry ctx (rId result) (res ^. Sugar.holeResultPick)
     where
         mNextEntry =
@@ -97,7 +97,7 @@ postProcessSugar minOpPrec expr =
             }
 
 makeResultOption ::
-    (Monad i, Functor o) =>
+    (Monad i, Monad o) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     ResultGroup i o -> Menu.Option (ExprGuiM i o) o
 makeResultOption pl ctx results =

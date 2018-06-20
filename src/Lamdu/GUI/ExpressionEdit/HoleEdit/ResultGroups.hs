@@ -29,6 +29,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -193,7 +194,7 @@ mkGroup option =
     <&>
     \sugaredBaseExpr ->
     Group
-    { _groupSearchTerms = sugaredBaseExpr & ValTerms.expr
+    { _groupSearchTerms = ValTerms.binderContent sugaredBaseExpr
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }
@@ -262,4 +263,4 @@ holeMatches searchTerm groups =
         searchText = ValTerms.definitePart searchTerm
         searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
         isHoleResultOK =
-            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted)
+            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . SugarLens.binderContentResultExpr)

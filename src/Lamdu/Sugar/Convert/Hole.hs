@@ -51,6 +51,7 @@ import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
+import           Lamdu.Sugar.Convert.Binder (convertBinderContent)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
@@ -220,6 +221,7 @@ mkOptions resultProcessor holePl =
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
               , P.absurd
+              , P.abs "NewLambda" P.hole P.$$ P.hole
               ]
             ]
             <&> SeedExpr
@@ -278,14 +280,14 @@ prepareUnstoredPayloads val =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (Expression InternalName (T m) (T m) a)
+    T m (BinderContent InternalName (T m) (T m) a)
 sugar sugarContext holePl val =
     val
     <&> mkPayload
     & (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
-    & ConvertM.convertSubexpression
+    & convertBinderContent
     & ConvertM.run sugarContext
     <&> Lens.mapped %~ (^. pUserData)
     where
@@ -486,7 +488,7 @@ mkResult preConversion sugarContext updateDeps stored val =
     do
         updateDeps
         writeResult preConversion stored val
-        <&> ConvertM.convertSubexpression
+        <&> convertBinderContent
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->

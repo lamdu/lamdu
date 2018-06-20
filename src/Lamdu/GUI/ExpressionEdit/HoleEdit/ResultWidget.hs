@@ -22,6 +22,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderContentEdit)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -59,9 +60,9 @@ applyResultLayout :: Responsive a -> WithTextPos (Widget a)
 applyResultLayout = (^. Responsive.rWide)
 
 makeWidget ::
-    (Monad i, Functor o) =>
+    (Monad i, Monad o) =>
     Widget.Id ->
-    Sugar.Expression (Name o) i o ExprGui.Payload ->
+    Sugar.BinderContent (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeWidget resultId holeResultConverted =
     do
@@ -69,7 +70,7 @@ makeWidget resultId holeResultConverted =
         theme <- Lens.view (Theme.theme . Theme.hole)
         stdSpacing <- Spacer.getSpaceSize
         let padding = theme ^. Theme.holeResultPadding & (* stdSpacing)
-        ExprGuiM.makeSubexpression holeResultConverted
+        makeBinderContentEdit holeResultConverted
             <&> Widget.enterResultCursor .~ resultId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
@@ -78,12 +79,12 @@ makeWidget resultId holeResultConverted =
             & ExprGuiM.withLocalIsHoleResult
 
 make ::
-    (Monad i, Functor o) =>
+    (Monad i, Monad o) =>
     Maybe Widget.Id ->
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Sugar.Expression (Name o) i o ExprGui.Payload ->
+    Sugar.BinderContent (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Menu.RenderedOption o)
 make mNextEntry ctx resultId pick holeResultConverted =
     makeWidget resultId holeResultConverted
@@ -95,16 +96,16 @@ make mNextEntry ctx resultId pick holeResultConverted =
         Widget.PreEvent
         { Widget._pDesc = "Pick"
         , Widget._pAction = pickResult <$ pick
-        , Widget._pTextRemainder = getSearchStringRemainder ctx holeResultConverted
+        , Widget._pTextRemainder = getSearchStringRemainder ctx (holeResultConverted ^. SugarLens.binderContentResultExpr)
         }
     , Menu._rWidget = widget
     }
     where
         holeResultId =
-            holeResultConverted ^. Sugar.annotation . Sugar.plEntityId
+            holeResultConverted ^. SugarLens.binderContentResultExpr . Sugar.annotation . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
-            holeResultConverted ^? SugarLens.unfinishedExprPayloads . Sugar.plEntityId
+            holeResultConverted ^? SugarLens.binderContentExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of

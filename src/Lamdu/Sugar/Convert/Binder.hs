@@ -1,6 +1,7 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
-    ( convertDefinitionBinder, convertLam, convertBinderBody
+    ( convertDefinitionBinder, convertLam
+    , convertBinderBody, convertBinderContent
     ) where
 
 import qualified Control.Lens as Lens

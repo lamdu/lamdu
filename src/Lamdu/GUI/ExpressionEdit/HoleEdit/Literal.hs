@@ -12,6 +12,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -36,9 +37,9 @@ makeLiteral io optionLiteral lit =
                 mkResult
             & io
         result ^. Sugar.holeResultPick
-        case result ^? Sugar.holeResultConverted . Sugar.body . Sugar._BodyFragment . Sugar.fExpr of
+        case result ^? Sugar.holeResultConverted . Sugar._BinderExpr . Sugar.body . Sugar._BodyFragment . Sugar.fExpr of
             Just arg -> arg
-            _ -> result ^. Sugar.holeResultConverted
+            _ -> result ^. Sugar.holeResultConverted . SugarLens.binderContentResultExpr
             ^. Sugar.annotation . Sugar.plEntityId
             & WidgetIds.fromEntityId
             & WidgetIds.literalEditOf

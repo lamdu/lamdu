@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     ( expr
+    , binderContent
     , allowedSearchTermCommon
     , allowedFragmentSearchTerm
     , getSearchStringRemainder
@@ -87,6 +88,10 @@ bodyNames =
     Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b >>= ofName
+
+binderContent :: Monad i => Sugar.BinderContent (Name o) i o a -> [Text]
+binderContent Sugar.BinderLet{} = ["let"]
+binderContent (Sugar.BinderExpr x) = expr x
 
 expr :: Monad i => Sugar.Expression (Name o) i o a -> [Text]
 expr (Sugar.Expression _ body) =

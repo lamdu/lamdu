@@ -108,7 +108,7 @@ testInline =
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
-                _ <- result ^?! holeResultConverted . body . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                _ <- result ^?! holeResultConverted . _BinderExpr . body . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
                 letItem =
@@ -117,7 +117,7 @@ testInline =
                     bbContent . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
-                    <&> Lens.has (body . _BodyGetVar . _GetBinder . bvForm . _GetLet)
+                    <&> Lens.has (_BinderExpr . body . _BodyGetVar . _GetBinder . bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
