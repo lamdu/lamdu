@@ -26,17 +26,24 @@ module Lamdu.Sugar.Types.Expression
     , AssignFunction(..), afFunction, afLamId
     , AssignPlain(..), apAddFirstParam, apBody
     , AssignmentBody(..), _BodyFunction, _BodyPlain
+    -- Holes
+    , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
+    , OptionLiteral
+    , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
+    , HoleResult(..), holeResultConverted, holeResultPick
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.ListT (ListT)
+import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
+import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderMode)
-import           Lamdu.Sugar.Types.Hole (Hole, HoleOption)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Simple
 import           Lamdu.Sugar.Types.Tag
@@ -75,6 +82,32 @@ data Fragment name i o expr = Fragment
 
 instance Show expr => Show (Fragment name i o expr) where
     show (Fragment expr _ _) = "(Fragment " ++ show expr ++ ")"
+
+data HoleResult o resultExpr = HoleResult
+    { _holeResultConverted :: resultExpr
+    , _holeResultPick :: o ()
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data HoleOption i o resultExpr = HoleOption
+    { _hoVal :: Val ()
+    , _hoSugaredBaseExpr :: i resultExpr
+    , -- A group in the hole results based on this option
+      _hoResults :: ListT i (HoleResultScore, i (HoleResult o resultExpr))
+    } deriving (Functor, Generic)
+
+type OptionLiteral i o resultExpr =
+    Literal Identity -> i (HoleResultScore, i (HoleResult o resultExpr))
+
+data Hole i o resultExpr = Hole
+    { _holeOptions :: i [HoleOption i o resultExpr]
+        -- outer "i" here is used to read index of globals
+        -- inner "i" is used to type-check/sugar every val in the option
+      -- TODO: Lifter from i to o?
+    , _holeOptionLiteral :: OptionLiteral i o resultExpr
+    , -- Changes the structure around the hole to remove the hole.
+      -- For example (f _) becomes (f) or (2 + _) becomes 2
+      _holeMDelete :: Maybe (o EntityId)
+    } deriving (Functor, Generic)
 
 data Body name i o a
     = BodyLam (Lambda name i o a)
@@ -161,6 +194,9 @@ Lens.makeLenses ''BinderBody
 Lens.makeLenses ''Expression
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
+Lens.makeLenses ''Hole
+Lens.makeLenses ''HoleOption
+Lens.makeLenses ''HoleResult
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
