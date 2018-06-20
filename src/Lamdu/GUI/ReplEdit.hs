@@ -62,20 +62,21 @@ data ExportRepl m = ExportRepl
 
 extractEventMap ::
     Functor m =>
-    Sugar.Expression name (T m) (T m) a -> [MetaKey] ->
+    Sugar.Payload name i (T m) a -> [MetaKey] ->
     EventMap (T m GuiState.Update)
-extractEventMap replExpr keys =
-    replExpr ^. Sugar.annotation . Sugar.plActions . Sugar.extract
+extractEventMap pl keys =
+    pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor
     & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
 
 replEventMap ::
     Monad m =>
     Config -> ExportRepl m ->
-    Sugar.Expression name (T m) (T m) a -> EventMap (IOTrans m GuiState.Update)
-replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExpr =
+    Sugar.Payload name i (T m) a ->
+    EventMap (IOTrans m GuiState.Update)
+replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
     mconcat
-    [ extractEventMap replExpr (theConfig ^. Config.extractKeys)
+    [ extractEventMap replExprPl (theConfig ^. Config.extractKeys)
         <&> IOTrans.liftTrans
     , E.keysEventMap (exportConfig ^. Config.exportKeys)
       (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
@@ -194,7 +195,7 @@ make exportRepl (Sugar.Repl replExpr replResult) =
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
-            (resultWidget exportRepl (replExpr ^. Sugar.annotation) <$> curPrevTag <&> fmap) <*> replResult
+            (resultWidget exportRepl replExprPl <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
@@ -203,15 +204,16 @@ make exportRepl (Sugar.Repl replExpr replResult) =
             sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
               <*> TextView.makeLabel "⋙"
-              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExpr buttonExtractKeys)
+              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExprPl buttonExtractKeys)
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
             , ExprGuiM.makeSubexpression replExpr
                 <&> Lens.mapped %~ IOTrans.liftTrans
             ]
-            <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExpr)
+            <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExprPl)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
-        replExprId = replExpr ^. Sugar.annotation . Sugar.plEntityId & WidgetIds.fromEntityId
+        replExprPl = replExpr ^. Sugar.annotation
+        replExprId = WidgetIds.fromExprPayload replExprPl
