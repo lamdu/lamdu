@@ -12,7 +12,6 @@ module Lamdu.GUI.ExpressionGui
       , showAnnotationWhenVerbose
       , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
-    , ExpressionN
     , adhocPayload
     , mParensId
     ) where
@@ -77,8 +76,7 @@ data Payload = Payload
     } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
 
-type ExpressionN i o a = Sugar.Expression (Name o) i o a
-type SugarExpr i o = ExpressionN i o Payload
+type SugarExpr i o = Sugar.Expression (Name o) i o Payload
 
 nextHolesBefore :: Sugar.Expression name i o Payload -> NearestHoles
 nextHolesBefore val =

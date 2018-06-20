@@ -17,7 +17,6 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionGui (ExpressionN)
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -89,7 +88,7 @@ bodyNames =
     Sugar.BodyLam {} -> []
     b -> NamesGet.fromBody b >>= ofName
 
-expr :: Monad i => ExpressionN i o a -> [Text]
+expr :: Monad i => Sugar.Expression (Name o) i o a -> [Text]
 expr (Sugar.Expression _ body) =
     bodyShape body <>
     bodyNames body <>

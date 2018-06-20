@@ -34,7 +34,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui, ExpressionN)
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
@@ -77,7 +77,9 @@ makeRenderedResult pl ctx result =
             <&> WidgetIds.fromEntityId
 
 postProcessSugar ::
-    Int -> ExpressionN i o () -> ExpressionN i o ExprGui.Payload
+    Int ->
+    Sugar.Expression (Name o) i o () ->
+    Sugar.Expression (Name o) i o ExprGui.Payload
 postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
