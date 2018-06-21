@@ -19,6 +19,7 @@ import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (workAreaExpressions, subExprPayloads)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
@@ -41,8 +42,8 @@ allEntityIds workArea =
     pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
     <> workArea ^..
-        workAreaExpressions . subExprPayloads . Lens.asIndex . body .
-        adhocBodyPayloads . plEntityId
+        workAreaExpressions . subExprPayloads . Lens.asIndex .
+        SugarLens._OfExpr . body . adhocBodyPayloads . plEntityId
     & Set.fromList
     where
         pls = workArea ^.. workAreaExpressions . subExprPayloads

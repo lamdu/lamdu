@@ -277,7 +277,7 @@ allParamsUsed paramNames func =
     where
         usedParams =
             func ^.. SugarLens.funcExprs . SugarLens.subExprPayloads . Lens.asIndex .
-            body . _BodyGetVar . _GetParam . pNameRef . nrName
+            SugarLens._OfExpr . body . _BodyGetVar . _GetParam . pNameRef . nrName
             & Set.fromList
 
 markLightParams ::

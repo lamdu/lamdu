@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, RecordWildCards #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, RecordWildCards, TemplateHaskell #-}
 module Lamdu.Sugar.Lens
-    ( bodyChildren
+    ( PayloadOf(..), _OfExpr
+    , bodyChildren, overBodyChildren
     , binderExprs, binderContentExprs, funcExprs, assignmentExprs
     , labeledApplyExprs
     , subExprPayloads, payloadsIndexedByPath
@@ -21,6 +22,10 @@ import qualified Control.Lens as Lens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
+
+newtype PayloadOf name i o
+    = OfExpr (Expression name i o ())
+Lens.makePrisms ''PayloadOf
 
 assignmentBodyExprs ::
     Applicative f =>
@@ -94,20 +99,25 @@ bodyChildren f =
     BodyFragment     x -> fExpr f x <&> BodyFragment
     BodyToNom        x -> (traverse . binderExprs) f x <&> BodyToNom
 
+overBodyChildren ::
+    (Expression name i o a -> Expression name i o b) ->
+    Body name i o a -> Body name i o b
+overBodyChildren = (bodyChildren %~)
+
 subExprPayloads ::
     Lens.IndexedTraversal
-    (Expression name i o ())
+    (PayloadOf name i o)
     (Expression name i o a)
     (Expression name i o b)
     a b
 subExprPayloads f val@(Expression pl x) =
     flip Expression
     <$> (bodyChildren .> subExprPayloads) f x
-    <*> Lens.indexed f (void val) pl
+    <*> Lens.indexed f (OfExpr (void val)) pl
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal
-    [Expression name i o ()]
+    [PayloadOf name i o]
     (Expression name i o a)
     (Expression name i o b)
     a b
@@ -119,18 +129,15 @@ payloadsIndexedByPath f =
             <$> Lens.indexed f newPath pl
             <*> bodyChildren (go newPath) x
             where
-                newPath = void val : path
+                newPath = OfExpr (void val) : path
 
 payloadsOf ::
     Lens.Fold (Body name i o ()) a ->
-    Lens.IndexedTraversal'
-    (Expression name i o ())
-    (Expression name i o b)
-    b
+    Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o b) b
 payloadsOf x =
     subExprPayloads . Lens.ifiltered predicate
     where
-        predicate idx _ = Lens.has (body . x) idx
+        predicate idx _ = Lens.has (_OfExpr . body . x) idx
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
@@ -144,29 +151,20 @@ bodyUnfinished =
     & Lens.failing (_BodyLabeledApply . aFunc . afVar . binderVarRefUnfinished)
 
 unfinishedExprPayloads ::
-    Lens.IndexedTraversal'
-    (Expression name i o ())
-    (Expression name i o a)
-    a
+    Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a
 unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 subExprsOf ::
     Lens.Traversal' (Body name i o ()) b ->
-    Lens.IndexedTraversal'
-    [Expression name i o ()]
-    (Expression name i o a)
-    a
+    Lens.IndexedTraversal' [PayloadOf name i o] (Expression name i o a) a
 subExprsOf f =
     payloadsIndexedByPath . Lens.ifiltered predicate
     where
-        predicate (_:parent:_) _ = Lens.has (body . f) parent
+        predicate (_:parent:_) _ = Lens.has (_OfExpr . body . f) parent
         predicate _ _ = False
 
 fragmentExprs ::
-    Lens.IndexedTraversal'
-    [Expression name i o ()]
-    (Expression name i o a)
-    a
+    Lens.IndexedTraversal' [PayloadOf name i o] (Expression name i o a) a
 fragmentExprs = subExprsOf _BodyFragment
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name i o expr) (Scheme name)
