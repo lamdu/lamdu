@@ -65,22 +65,24 @@ updateCursor c = mempty { _uCursor = Just c & Monoid.Last }
 fullUpdate :: GUIState -> Update
 fullUpdate (GUIState c s) = Update (Monoid.Last (Just c)) s mempty
 
-update :: Update -> GUIState -> GUIState
+update :: HasState env => Update -> env -> env
 update u s =
     case u ^. uCursor . Lens._Wrapped of
     Nothing -> s
     Just c ->
         s
-        & sCursor .~ c
-        & sWidgetStates %~ Map.filterWithKey f
+        & state . sCursor .~ c
+        & state . sWidgetStates %~ Map.filterWithKey f
         where
             f k _v = Id.subId k c & Lens.has Lens._Just
-    & sWidgetStates %~ mappend (u ^. uWidgetStateUpdates)
+    & state . sWidgetStates %~ mappend (u ^. uWidgetStateUpdates)
 
 class HasCursor env where
     cursor :: Lens' env Id
     default cursor :: HasState env => Lens' env Id
     cursor = state . sCursor
+
+instance HasCursor GUIState where cursor = sCursor
 
 subId :: (MonadReader env m, HasCursor env) => m (Id -> Maybe AnimId)
 subId = Lens.view cursor <&> flip Id.subId
@@ -114,6 +116,8 @@ assignCursorPrefix srcFolder dest =
 -- That would put more restrictions on the root widget monad.
 class HasCursor env => HasState env where
     state :: Lens' env GUIState
+
+instance HasState GUIState where state = id
 
 readWidgetState ::
     (HasState env, MonadReader env m, Binary a) =>

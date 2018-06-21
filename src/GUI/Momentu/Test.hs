@@ -61,8 +61,10 @@ applyUpdate act env =
     do
         (update, Main.ExecuteInMainThread inMainThread) <- runWriterT act
         inMainThread
-        let newEnv = env & Main.eState %~ State.update update
-        pure (newEnv, update ^. State.uVirtualCursor . Lens._Wrapped)
+        pure
+            ( State.update update env
+            , update ^. State.uVirtualCursor . Lens._Wrapped
+            )
 
 mainLoop ::
     forall m.
