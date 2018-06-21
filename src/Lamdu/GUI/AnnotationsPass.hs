@@ -98,11 +98,15 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         & BodyCase
         & Expression defPl
     where
-        newBodyWith f = newBody & SugarLens.bodyChildren %~ nonHoleAnn .~ f
+        newBodyWith f =
+            newBody & SugarLens.overBodyChildren (afPayload . plData . _1 .~ f) (nonHoleAnn .~ f)
         plWith ann = pl & plData %~ (,) ann
         defPl = plWith T.showAnnotationWhenVerbose
         set ann = Expression (plWith ann) newBody
-        newBody = oldBody & SugarLens.bodyChildren %~ markAnnotationsToDisplay
+        newBody =
+            oldBody & SugarLens.overBodyChildren
+            (afPayload . plData %~ (,) T.neverShowAnnotations)
+            markAnnotationsToDisplay
         nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a

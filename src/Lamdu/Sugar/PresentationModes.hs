@@ -16,7 +16,7 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Sugar.LabeledApplyFunc InternalName o (Sugar.Payload InternalName i o ()) ->
+    Sugar.LabeledApplyFunc InternalName o (Sugar.Payload InternalName i o a) ->
     [Sugar.AnnotatedArg InternalName
         (Sugar.Expression InternalName i o (Sugar.Payload InternalName i o a))] ->
     T m

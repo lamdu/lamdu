@@ -30,8 +30,6 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 adhocBodyPayloads :: Lens.Traversal' (Body name i o expr) (Sugar.Payload name i o ())
-adhocBodyPayloads f (BodyLabeledApply x) =
-    x & aFunc . afPayload %%~ f <&> BodyLabeledApply
 adhocBodyPayloads f (BodyInject x) =
     x & iMVal . _InjectNullary . nullaryPayload %%~ f <&> BodyInject
 adhocBodyPayloads _ x = pure x

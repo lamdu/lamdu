@@ -28,7 +28,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (bodyChildren)
+import           Lamdu.Sugar.Lens (bodyChildPayloads)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 
@@ -117,11 +117,10 @@ convertLabeled subexprs funcS argS exprPl =
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         bod <-
             PresentationModes.makeLabeledApply
-            (LabeledApplyFunc sBinderVar (void (funcS ^. annotation))) args
+            (LabeledApplyFunc sBinderVar (funcS ^. annotation)) args
             <&> BodyLabeledApply & transaction
         let userPayload =
-                subexprPayloads subexprs
-                (funcS ^. annotation : bod ^.. bodyChildren . annotation)
+                subexprPayloads subexprs (bod ^.. bodyChildPayloads)
                 & mconcat
         addActionsWith userPayload exprPl bod & lift
 

@@ -22,7 +22,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (bodyChildren)
+import           Lamdu.Sugar.Lens (bodyChildren, overBodyChildren, bodyChildPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -155,13 +155,13 @@ setChildReplaceParentActions =
     BodyLam lam | Lens.has (lamFunc . fBody . bbContent . _BinderLet) lam -> bod
     _ ->
         bod
-        & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) .
-            bodyChildren . annotation %~ join setToExpr
+        & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) %~
+            overBodyChildren (afPayload %~ join setToExpr) (annotation %~ join setToExpr)
         -- Replace-parent with fragment sets directly to fragment expression
-        & bodyChildren . Lens.filteredBy (body . _BodyFragment . fExpr . annotation) <. annotation %@~ setToExpr
+        & bodyChildren pure . Lens.filteredBy (body . _BodyFragment . fExpr . annotation) <. annotation %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        & bodyChildren . body . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
+        & bodyChildren pure . body . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
             fExpr . annotation %~ join setToExpr
 
 subexprPayloads ::
@@ -212,7 +212,7 @@ addActions ::
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS
     where
-        childPayloads = bodyS ^.. bodyChildren . annotation
+        childPayloads = bodyS ^.. bodyChildPayloads
 
 makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
 makeAnnotation payload =
