@@ -20,6 +20,7 @@ import           Lamdu.Config (Config, HasConfig(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Font (fontDefault)
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings, initial)
 import           Lamdu.Style (HasStyle(..), Style)
@@ -64,7 +65,7 @@ make =
             , _eConfig = testConfig
             , _eState =
                 GUIState
-                { _sCursor = "dummy"
+                { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
             , _eSettings = initial

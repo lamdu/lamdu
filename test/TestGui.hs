@@ -11,8 +11,8 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
-import           GUI.Momentu.State (HasState)
+import           GUI.Momentu.State (HasState, HasCursor(..), VirtualCursor(..))
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified Graphics.UI.GLFW as GLFW
@@ -32,6 +32,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
@@ -65,9 +66,14 @@ makeReplGui ::
 makeReplGui cache env =
     do
         workArea <- convertWorkArea cache
+        let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
+        let replExprId =
+                repl ^. Sugar.bbContent . SugarLens.binderContentResultExpr
+                . Sugar.annotation
+                & WidgetIds.fromExprPayload
         gui <-
-            workArea ^. Sugar.waRepl . Sugar.replExpr
-            & makeBinderBodyEdit
+            makeBinderBodyEdit repl
+            & GuiState.assignCursor WidgetIds.replId replExprId
             & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
         unless (Lens.has wideFocused gui) (fail "Red cursor!")
         pure gui
@@ -76,7 +82,7 @@ applyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    Cache.Functions -> env -> Event -> T ViewM ()
+    Cache.Functions -> env -> Event -> T ViewM GuiState.Update
 applyEvent cache env event =
     do
         gui <- makeReplGui cache env
@@ -86,8 +92,7 @@ applyEvent cache env event =
                 { Widget._eVirtualCursor = VirtualCursor (Rect 0 0)
                 , Widget._ePrevTextRemainder = ""
                 }
-        _ <- runIdentity (E.lookup (Identity Nothing) event eventMap) ^?! Lens._Just
-        pure ()
+        runIdentity (E.lookup (Identity Nothing) event eventMap) ^?! Lens._Just
 
 fromWorkArea ::
     Cache.Functions ->
@@ -96,6 +101,7 @@ fromWorkArea ::
     T ViewM a
 fromWorkArea cache path =
     convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
+
 
 -- | Test for issue #410
 -- https://trello.com/c/00mxkLRG/410-navigating-to-fragment-affects-layout
@@ -135,7 +141,7 @@ testOpPrec =
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache
-        EventKey KeyEvent
+        _ <- EventKey KeyEvent
             { keKey = GLFW.Key'7
             , keScanCode = 0 -- dummy
             , keModKeys = GLFW.ModifierKeys True False False False
