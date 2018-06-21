@@ -86,14 +86,11 @@ expr (Expression _ body_) =
         ofName (tid ^. tidName)
         ++ expr (binder ^. bbContent . SugarLens.binderContentResultExpr)
     BodyFromNom (Nominal tid _) ->
-        ofName (tid ^. tidName)
-        ++ if tid ^. tidTId == Builtins.boolTid
-            then
-                -- The hole's "extra" apply-form results will be an
-                -- IfElse, but we give val terms only to the base expr
-                -- which looks like this:
-                ["if"]
-            else []
+        ofName (tid ^. tidName) <>
+        -- The hole's "extra" apply-form results will be an
+        -- IfElse, but we give val terms only to the base expr
+        -- which looks like this:
+        ["if" | tid ^. tidTId == Builtins.boolTid]
     BodyHole {} -> []
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
