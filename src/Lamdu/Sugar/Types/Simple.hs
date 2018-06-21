@@ -18,8 +18,6 @@ module Lamdu.Sugar.Types.Simple
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
-    , InjectVal(..), _InjectVal, _InjectNullary
-    , Inject(..), iTag, iMVal
     , V.Apply(..), V.applyFunc, V.applyArg
     ) where
 
@@ -91,16 +89,6 @@ data GetField name i o expr = GetField
     , _gfTag :: Tag name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data InjectVal name i o expr
-    = InjectNullary (NullaryVal name i o (Payload name i o ()))
-    | InjectVal expr
-    deriving (Functor, Foldable, Traversable, Generic)
-
-data Inject name i o expr = Inject
-    { _iTag :: Tag name i o
-    , _iMVal :: InjectVal name i o expr
-    } deriving (Functor, Foldable, Traversable, Generic)
-
 data Nominal name expr = Nominal
     { _nTId :: TId name
     , _nVal :: expr
@@ -114,8 +102,6 @@ Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''GetField
 Lens.makeLenses ''IfElse
 Lens.makeLenses ''IfThen
-Lens.makeLenses ''Inject
 Lens.makeLenses ''Nominal
 Lens.makePrisms ''CaseKind
 Lens.makePrisms ''Else
-Lens.makePrisms ''InjectVal

@@ -10,6 +10,8 @@ module Lamdu.Sugar.Types.Expression
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
     , Lambda(..), lamFunc, lamMode
+    , InjectVal(..), _InjectVal, _InjectNullary
+    , Inject(..), iTag, iMVal
     -- Binders
     , Let(..)
         , lEntityId, lValue, lName, lUsages
@@ -65,6 +67,16 @@ data LabeledApply name i o a = LabeledApply
     , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
     , _aAnnotatedArgs :: [AnnotatedArg name (Expression name i o a)]
     , _aRelayedArgs :: [RelayedArg name i o]
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data InjectVal name i o expr
+    = InjectNullary (NullaryVal name i o (Payload name i o ()))
+    | InjectVal expr
+    deriving (Functor, Foldable, Traversable, Generic)
+
+data Inject name i o expr = Inject
+    { _iTag :: Tag name i o
+    , _iMVal :: InjectVal name i o expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Lambda name i o a = Lambda
@@ -190,6 +202,8 @@ Lens.makeLenses ''Function
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
+Lens.makeLenses ''Inject
+Lens.makePrisms ''InjectVal
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
