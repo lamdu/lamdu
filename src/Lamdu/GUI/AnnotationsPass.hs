@@ -28,12 +28,16 @@ forceShowTypeOrEval =
     & T.showInEvalMode .~ T.EvalModeShowEval
     & T.showInTypeMode .~ True
 
-topLevelAnn :: Lens' (Expression name i o (T.ShowAnnotation, a)) T.ShowAnnotation
+-- TODO: Don't care about Payload wrapper
+
+topLevelAnn ::
+    Lens' (Expression name i o (Payload name i o (T.ShowAnnotation, a)))
+    T.ShowAnnotation
 topLevelAnn = annotation . plData . _1
 
 markAnnotationsToDisplay ::
-    Expression name i o a ->
-    Expression name i o (T.ShowAnnotation, a)
+    Expression name i o (Payload name i o a) ->
+    Expression name i o (Payload name i o (T.ShowAnnotation, a))
 markAnnotationsToDisplay (Expression pl oldBody) =
     case newBody of
     BodyPlaceHolder -> set T.neverShowAnnotations

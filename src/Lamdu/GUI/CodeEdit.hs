@@ -130,7 +130,8 @@ make cp gp width =
 makePaneEdit ::
     Monad m =>
     ExportActions m ->
-    Sugar.Pane (Name (T m)) (T m) (T m) ExprGui.Payload ->
+    Sugar.Pane (Name (T m)) (T m) (T m)
+    (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
     ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
 makePaneEdit theExportActions pane =
     do

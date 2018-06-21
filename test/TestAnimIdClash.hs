@@ -80,7 +80,6 @@ testFragment =
     & testCase "fragment"
     where
         expr =
-            adhocPayload NearestHoles.none <$
             ( Sugar.BodyFragment Sugar.Fragment
                 { Sugar._fExpr = Stub.litNum 5
                 , Sugar._fHeal = Sugar.TypeMismatch
@@ -89,4 +88,5 @@ testFragment =
             )
             & Sugar.annotation . Sugar.plEntityId .~ fragEntityId
             & Stub.addNamesToExpr
+            <&> Sugar.plData .~ adhocPayload NearestHoles.none
         fragEntityId = "frag"

@@ -51,7 +51,7 @@ import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Prelude
 
 data Expression name i o a = Expression
-    { _annotation :: Payload name i o a
+    { _annotation :: a
     , _body :: Body name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -81,13 +81,13 @@ data Fragment name i o a = Fragment
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: BinderContent name i o ()
+    { _holeResultConverted :: BinderContent name i o (Payload name i o ())
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i (BinderContent name i o ())
+    , _hoSugaredBaseExpr :: i (BinderContent name i o (Payload name i o ()))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic

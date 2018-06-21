@@ -280,7 +280,8 @@ prepareUnstoredPayloads val =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (BinderContent InternalName (T m) (T m) a)
+    T m (BinderContent InternalName (T m) (T m)
+            (Payload InternalName (T m) (T m) a))
 sugar sugarContext holePl val =
     val
     <&> mkPayload
@@ -289,7 +290,7 @@ sugar sugarContext holePl val =
     & prepareUnstoredPayloads
     & convertBinderContent
     & ConvertM.run sugarContext
-    <&> Lens.mapped %~ (^. pUserData)
+    <&> Lens.mapped . plData %~ (^. pUserData)
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
         -- A fake Infer payload we use to sugar the base expressions.
@@ -493,7 +494,7 @@ mkResult preConversion sugarContext updateDeps stored val =
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
         HoleResult
-        { _holeResultConverted = fConverted <&> (^. pUserData)
+        { _holeResultConverted = fConverted <&> plData %~ (^. pUserData)
         , _holeResultPick =
             do
                 Transaction.merge forkedChanges

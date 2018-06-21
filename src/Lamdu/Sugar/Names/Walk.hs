@@ -172,7 +172,9 @@ toAnnotation (Annotation typ evalRes) =
     <*> (traverse . traverse . traverse) toResVal evalRes
 
 toLet ::
-    MonadNaming m => Let (OldName m) (IM m) o a -> m (Let (NewName m) (IM m) o a)
+    MonadNaming m =>
+    Let (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Let (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toLet Let{..} =
     do
         (_lName, _lBody) <-
@@ -191,15 +193,15 @@ toLet Let{..} =
 
 toBinderContent ::
     MonadNaming m =>
-    BinderContent (OldName m) (IM m) o a ->
-    m (BinderContent (NewName m) (IM m) o a)
+    BinderContent (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (BinderContent (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinderContent (BinderLet l) = toLet l <&> BinderLet
 toBinderContent (BinderExpr e) = toExpression e <&> BinderExpr
 
 toBinderBody ::
     MonadNaming m =>
-    BinderBody (OldName m) (IM m) o a ->
-    m (BinderBody (NewName m) (IM m) o a)
+    BinderBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (BinderBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinderBody = bbContent toBinderContent
 
 toAddFirstParam ::
@@ -210,8 +212,8 @@ toAddFirstParam = _PrependParam toTagSelection
 
 toFunction ::
     MonadNaming m =>
-    Function (OldName m) (IM m) o a ->
-    m (Function (NewName m) (IM m) o a)
+    Function (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Function (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toFunction Function{..} =
     (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
     <$> unCPS (withBinderParams _fParams) (toBinderBody _fBody)
@@ -219,8 +221,8 @@ toFunction Function{..} =
 
 toBinderPlain ::
     MonadNaming m =>
-    AssignPlain (OldName m) (IM m) o a ->
-    m (AssignPlain (NewName m) (IM m) o a)
+    AssignPlain (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (AssignPlain (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinderPlain AssignPlain{..} =
     (\_apBody _apAddFirstParam -> AssignPlain{..})
     <$> toBinderBody _apBody
@@ -228,15 +230,15 @@ toBinderPlain AssignPlain{..} =
 
 toBinderForm ::
     MonadNaming m =>
-    AssignmentBody (OldName m) (IM m) o a ->
-    m (AssignmentBody (NewName m) (IM m) o a)
+    AssignmentBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (AssignmentBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinderForm (BodyPlain x) = toBinderPlain x <&> BodyPlain
 toBinderForm (BodyFunction x) = afFunction toFunction x <&> BodyFunction
 
 toBinder ::
     MonadNaming m =>
-    Assignment (OldName m) (IM m) o a ->
-    m (Assignment (NewName m) (IM m) o a)
+    Assignment (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Assignment (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinder Assignment{..} =
     (\_aBody _aNodeActions -> Assignment{..})
     <$> toBinderForm _aBody
@@ -244,8 +246,8 @@ toBinder Assignment{..} =
 
 toLam ::
     MonadNaming m =>
-    Lambda (OldName m) (IM m) o a ->
-    m (Lambda (NewName m) (IM m) o a)
+    Lambda (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Lambda (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toLam = lamFunc toFunction
 
 toTagInfoOf ::
@@ -324,8 +326,8 @@ toHole hole =
 
 toFragment ::
     MonadNaming m =>
-    Fragment (OldName m) (IM m) o a ->
-    m (Fragment (NewName m) (IM m) o a)
+    Fragment (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Fragment (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toFragment Fragment{..} =
     do
         run <- opRun
@@ -411,7 +413,8 @@ toIfElse expr (IfElse ifThen els_) =
 
 toBody ::
     MonadNaming m =>
-    Body (OldName m) (IM m) o a -> m (Body (NewName m) (IM m) o a)
+    Body (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Body (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBody =
     \case
     BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField
@@ -450,8 +453,8 @@ toPayload Payload{..} =
 
 toExpression ::
     MonadNaming m =>
-    Expression (OldName m) (IM m) o a ->
-    m (Expression (NewName m) (IM m) o a)
+    Expression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Expression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toExpression (Expression pl x) =
     Expression
     <$> toPayload pl
@@ -486,8 +489,8 @@ withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Par
 
 toDefExpr ::
     MonadNaming m =>
-    DefinitionExpression (OldName m) (IM m) o a ->
-    m (DefinitionExpression (NewName m) (IM m) o a)
+    DefinitionExpression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (DefinitionExpression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
@@ -496,8 +499,8 @@ toDefExpr (DefinitionExpression typ presMode content) =
 
 toDefinitionBody ::
     MonadNaming m =>
-    DefinitionBody (OldName m) (IM m) o a ->
-    m (DefinitionBody (NewName m) (IM m) o a)
+    DefinitionBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (DefinitionBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
     bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
 toDefinitionBody (DefinitionBodyExpression expr) =
@@ -505,8 +508,8 @@ toDefinitionBody (DefinitionBodyExpression expr) =
 
 toDef ::
     MonadNaming m =>
-    Definition (OldName m) (IM m) o a ->
-    m (Definition (NewName m) (IM m) o a)
+    Definition (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Definition (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toDef Definition{..} =
     do
         -- NOTE: A global def binding is not considered a binder, as
@@ -517,20 +520,21 @@ toDef Definition{..} =
 
 toPane ::
     MonadNaming m =>
-    Pane (OldName m) (IM m) o a ->
-    m (Pane (NewName m) (IM m) o a)
+    Pane (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Pane (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toPane = paneDefinition toDef
 
 toRepl ::
     MonadNaming m =>
-    Repl (OldName m) (IM m) o a -> m (Repl (NewName m) (IM m) o a)
+    Repl (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toRepl (Repl bod res) =
     Repl <$> toBinderBody bod <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 
 toWorkArea ::
     MonadNaming m =>
-    WorkArea (OldName m) (IM m) o a ->
-    m (WorkArea (NewName m) (IM m) o a)
+    WorkArea (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (WorkArea (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
     do
         run <- opRun

@@ -53,7 +53,7 @@ mkOptions ::
     Monad m =>
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
-    Expression name i o a ->
+    Expression name i o (Payload name i o a) ->
     Input.Payload m a ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions sugarContext argI argS exprPl =
@@ -106,7 +106,9 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         postProcess <- lift ConvertM.postProcessAssert
         do
             sugarContext <- Lens.view id
-            options <- mkOptions sugarContext argI (argS <&> (^. pUserData)) exprPl
+            options <-
+                mkOptions sugarContext argI
+                (argS <&> plData %~ (^. pUserData)) exprPl
             BodyFragment Fragment
                 { _fExpr =
                       argS
@@ -177,7 +179,8 @@ markNotFragment val = val <&> _2 . _2 .~ NotFragment
 fragmentVar :: V.Var
 fragmentVar = "HOLE FRAGMENT EXPR"
 
-replaceFragment :: EntityId -> Int -> Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
+replaceFragment ::
+    EntityId -> Int -> Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
 replaceFragment parentEntityId idxInParent (Val pl bod) =
     case pl ^. Input.userData of
     IsFragment ->

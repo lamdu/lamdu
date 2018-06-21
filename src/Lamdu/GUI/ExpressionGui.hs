@@ -76,9 +76,12 @@ data Payload = Payload
     } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
 
-type SugarExpr i o = Sugar.Expression (Name o) i o Payload
+type SugarExpr i o =
+    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o Payload)
 
-nextHolesBefore :: Sugar.Expression name i o Payload -> NearestHoles
+nextHolesBefore ::
+    Sugar.Expression name0 i0 o0 (Sugar.Payload name1 i1 o1 Payload) ->
+    NearestHoles
 nextHolesBefore val =
     node ^. Sugar.annotation . Sugar.plData . plNearestHoles
     & if Lens.has (Sugar.body . SugarLens.bodyUnfinished) node

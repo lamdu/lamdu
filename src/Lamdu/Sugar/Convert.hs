@@ -93,7 +93,9 @@ convertInferDefExpr ::
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
-    T m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
+    T m
+    (DefinitionBody InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m [EntityId])))
 convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
@@ -143,7 +145,9 @@ convertDefBody ::
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
-    T m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
+    T m
+    (DefinitionBody InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m [EntityId])))
 convertDefBody cache monitors evalRes cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
@@ -153,7 +157,9 @@ loadRepl ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (Repl InternalName (T m) (T m) [EntityId])
+    T m
+    (Repl InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) [EntityId]))
 loadRepl cache monitors evalRes cp =
     do
         defExpr <- ExprLoad.defExpr prop
@@ -187,7 +193,7 @@ loadRepl cache monitors evalRes cp =
         expr <-
             convertBinderBody valInferred
             & ConvertM.run context
-            <&> Lens.mapped %~ (^. pUserData)
+            <&> Lens.mapped . plData %~ (^. pUserData)
             >>= SugarLens.binderBodyExprs OrderTags.orderExpr
         let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl
@@ -211,8 +217,11 @@ loadAnnotatedDef getDefI x =
 
 loadPanes ::
     Monad m =>
-    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    EntityId -> T m [Pane InternalName (T m) (T m) [EntityId]]
+    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Anchors.CodeAnchors m -> EntityId ->
+    T m
+    [Pane InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) [EntityId])]
 loadPanes cache monitors evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
@@ -243,7 +252,7 @@ loadPanes cache monitors evalRes cp replEntityId =
                         def
                         <&> Anchors.paneDef
                         & convertDefBody cache monitors evalRes cp
-                        <&> Lens.mapped %~ (^. pUserData)
+                        <&> Lens.mapped . plData %~ (^. pUserData)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar
@@ -266,8 +275,11 @@ loadPanes cache monitors evalRes cp replEntityId =
 
 loadWorkArea ::
     (HasCallStack, Monad m) =>
-    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    T m (WorkArea InternalName (T m) (T m) [EntityId])
+    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Anchors.CodeAnchors m ->
+    T m
+    (WorkArea InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) [EntityId]))
 loadWorkArea cache monitors evalRes cp =
     do
         repl <- loadRepl cache monitors evalRes cp
@@ -275,8 +287,8 @@ loadWorkArea cache monitors evalRes cp =
             loadPanes cache monitors evalRes cp
             (repl ^. replExpr . bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId)
         pure WorkArea
-            { _waPanes = panes
-            , _waRepl = repl
+            { _waRepl = repl
+            , _waPanes = panes
             , _waGlobals =
                 Anchors.globals cp & Property.getP <&> Set.toList
                 >>= traverse (ConvertGetVar.globalNameRef cp)

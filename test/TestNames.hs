@@ -48,14 +48,18 @@ assertNoCollisions name =
         ] & assertString
 
 testWorkArea ::
-    (Name Unit -> IO b) -> Sugar.WorkArea InternalName Identity Unit a -> IO ()
+    (Name Unit -> IO b) ->
+    Sugar.WorkArea InternalName Identity Unit
+    (Sugar.Payload InternalName Identity Unit a) ->
+    IO ()
 testWorkArea verifyName inputWorkArea =
     addToWorkArea Stub.getNameProp inputWorkArea
     & runIdentity
     & getNames
     & traverse_ verifyName
 
-getNames :: Sugar.WorkArea name Identity o a -> [name]
+getNames ::
+    Sugar.WorkArea name Identity o (Sugar.Payload name Identity o a) -> [name]
 getNames workArea =
     Walk.toWorkArea workArea
     & runCollectNames

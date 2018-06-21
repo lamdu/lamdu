@@ -114,8 +114,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
 makeAltRow ::
     (Monad i, Monad o) =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name o) i o
-    (Sugar.Expression (Name o) i o ExprGui.Payload) ->
+    Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
     ExprGuiM i o (Responsive.TaggedItem (o GuiState.Update))
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
@@ -144,8 +143,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
 makeAltsWidget ::
     (Monad i, Monad o) =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name o) i o
-     (Sugar.Expression (Name o) i o ExprGui.Payload)] ->
+    [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
     Sugar.TagSelection (Name o) i o Sugar.EntityId ->
     Widget.Id ->
     ExprGuiM i o (ExpressionGui o)

@@ -37,7 +37,9 @@ nameRef = (`Sugar.NameRef` Unit)
 prop :: a -> Property Unit a
 prop x = Property x (const Unit)
 
-type Expr = Sugar.Expression InternalName Identity Unit ()
+type Expr =
+    Sugar.Expression InternalName Identity Unit
+    (Sugar.Payload InternalName Identity Unit ())
 
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr numType
@@ -90,7 +92,10 @@ hole typ =
     , Sugar._holeMDelete = Nothing
     } & expr typ
 
-typeBody :: Lens' (Sugar.Expression name i o a) (Sugar.TBody name (Sugar.Type name))
+typeBody ::
+    Lens'
+    (Sugar.Expression name i o (Sugar.Payload name Identity Unit a))
+    (Sugar.TBody name (Sugar.Type name))
 typeBody = Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType . Sugar.tBody
 
 ($$) :: Expr -> Expr -> Expr
@@ -209,7 +214,8 @@ mkFuncParam (paramVar, paramTag, paramType) =
 
 funcExpr ::
     [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
-    Sugar.Function InternalName Identity Unit ()
+    Sugar.Function InternalName Identity Unit
+    (Sugar.Payload InternalName Identity Unit ())
 funcExpr params body =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
@@ -225,7 +231,8 @@ funcExpr params body =
 
 binderExpr ::
     [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
-    Sugar.Assignment InternalName Identity Unit ()
+    Sugar.Assignment InternalName Identity Unit
+    (Sugar.Payload InternalName Identity Unit ())
 binderExpr params body =
     Sugar.Assignment
     { Sugar._aBody =
@@ -238,8 +245,8 @@ binderExpr params body =
 
 expr ::
     Sugar.Type name ->
-    Sugar.Body name Identity Unit () ->
-    Sugar.Expression name Identity Unit ()
+    Sugar.Body name Identity Unit (Sugar.Payload name Identity Unit ()) ->
+    Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr typ body =
     Sugar.Expression { Sugar._body = body, Sugar._annotation = mkPayload typ }
 
@@ -292,8 +299,10 @@ tagSelection =
     }
 
 addNamesToExpr ::
-    Sugar.Expression InternalName Identity Unit a ->
-    Sugar.Expression (Name Unit) Identity Unit a
+    Sugar.Expression InternalName Identity Unit
+    (Sugar.Payload InternalName Identity Unit a) ->
+    Sugar.Expression (Name Unit) Identity Unit
+    (Sugar.Payload (Name Unit) Identity Unit a)
 addNamesToExpr x =
     AddNames.runPasses getNameProp NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
     & runIdentity

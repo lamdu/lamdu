@@ -99,7 +99,8 @@ applyEvent cache env event =
 fromWorkArea ::
     Cache.Functions ->
     Lens.ATraversal'
-    (Sugar.WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) a ->
+    (Sugar.WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
+        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)) a ->
     T ViewM a
 fromWorkArea cache path =
     convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
@@ -185,10 +186,15 @@ testOpPrec =
 workAreaEq ::
     forall a m.
     Eq a =>
-    Sugar.WorkArea (Name (T m)) (T m) (T m) a ->
-    Sugar.WorkArea (Name (T m)) (T m) (T m) a ->
+    Sugar.WorkArea (Name (T m)) (T m) (T m)
+    (Sugar.Payload (Name (T m)) (T m) (T m) a) ->
+    Sugar.WorkArea (Name (T m)) (T m) (T m)
+    (Sugar.Payload (Name (T m)) (T m) (T m) a) ->
     Bool
 workAreaEq x y =
     x' == unsafeCoerce y
     where
-        x' = unsafeCoerce x :: Sugar.WorkArea (Name Unit) Unit Unit a
+        x' =
+            unsafeCoerce x ::
+                Sugar.WorkArea (Name Unit) Unit Unit
+                (Sugar.Payload (Name Unit) Unit Unit a)

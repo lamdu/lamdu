@@ -43,10 +43,14 @@ toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) 
     minOpPrec
 
 postProcessExpr ::
-    Sugar.Expression (Name n) i o ([Sugar.EntityId], NearestHoles) ->
-    Sugar.Expression (Name n) i o ExprGui.Payload
-postProcessExpr =
-    fmap toExprGuiMPayload . AddParens.add . AnnotationsPass.markAnnotationsToDisplay
+    Sugar.Expression (Name n) i o
+    (Sugar.Payload (Name n) i o ([Sugar.EntityId], NearestHoles)) ->
+    Sugar.Expression (Name n) i o
+    (Sugar.Payload (Name n) i o ExprGui.Payload)
+postProcessExpr expr =
+    AnnotationsPass.markAnnotationsToDisplay expr
+    & AddParens.add
+    <&> Sugar.plData %~ toExprGuiMPayload
 
 getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Text
 getNameProp = DataOps.assocPublishedTagName . Anchors.tags
@@ -55,7 +59,9 @@ loadWorkArea ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
-    T m (Sugar.WorkArea (Name (T m)) (T m) (T m) ExprGui.Payload)
+    T m
+    (Sugar.WorkArea (Name (T m)) (T m) (T m)
+        (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
 loadWorkArea cache monitors theEvalResults cp =
     SugarConvert.loadWorkArea cache monitors theEvalResults cp
     >>= report . AddNames.addToWorkArea (getNameProp cp)
@@ -63,10 +69,10 @@ loadWorkArea cache monitors theEvalResults cp =
     \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
     Sugar.WorkArea
     { _waPanes =
-            _waPanes
-            <&> Sugar.paneDefinition %~ NearestHoles.add SugarLens.definitionExprs
+        _waPanes
+        <&> Sugar.paneDefinition %~ NearestHoles.add SugarLens.definitionExprs
     , _waRepl =
-            _waRepl & Sugar.replExpr %~ NearestHoles.add SugarLens.binderBodyExprs
+        _waRepl & Sugar.replExpr %~ NearestHoles.add SugarLens.binderBodyExprs
     , _waGlobals = _waGlobals
     }
     & SugarLens.workAreaExpressions %~ postProcessExpr

@@ -89,7 +89,7 @@ subExprPayloads ::
     (Expression name i o ())
     (Expression name i o a)
     (Expression name i o b)
-    (Payload name i o a) (Payload name i o b)
+    a b
 subExprPayloads f val@(Expression pl x) =
     flip Expression
     <$> (bodyChildren .> subExprPayloads) f x
@@ -100,7 +100,7 @@ payloadsIndexedByPath ::
     [Expression name i o ()]
     (Expression name i o a)
     (Expression name i o b)
-    (Payload name i o a) (Payload name i o b)
+    a b
 payloadsIndexedByPath f =
     go []
     where
@@ -116,7 +116,7 @@ payloadsOf ::
     Lens.IndexedTraversal'
     (Expression name i o ())
     (Expression name i o b)
-    (Payload name i o b)
+    b
 payloadsOf x =
     subExprPayloads . Lens.ifiltered predicate
     where
@@ -137,7 +137,7 @@ unfinishedExprPayloads ::
     Lens.IndexedTraversal'
     (Expression name i o ())
     (Expression name i o a)
-    (Payload name i o a)
+    a
 unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 subExprsOf ::
@@ -145,7 +145,7 @@ subExprsOf ::
     Lens.IndexedTraversal'
     [Expression name i o ()]
     (Expression name i o a)
-    (Payload name i o a)
+    a
 subExprsOf f =
     payloadsIndexedByPath . Lens.ifiltered predicate
     where
@@ -156,7 +156,7 @@ fragmentExprs ::
     Lens.IndexedTraversal'
     [Expression name i o ()]
     (Expression name i o a)
-    (Payload name i o a)
+    a
 fragmentExprs = subExprsOf _BodyFragment
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name i o expr) (Scheme name)
@@ -180,7 +180,7 @@ binderContentResultExpr f (BinderLet l) = l & lBody . bbContent . binderContentR
 binderContentResultExpr f (BinderExpr e) = f e <&> BinderExpr
 
 binderContentEntityId ::
-    Lens' (BinderContent name i o a) EntityId
+    Lens' (BinderContent name i o (Payload name i o a)) EntityId
 binderContentEntityId f (BinderExpr e) =
     e & annotation . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
@@ -210,7 +210,8 @@ workAreaExpressions f (WorkArea panes repl globals) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (BinderContent n0 i o () -> i (BinderContent n1 i o ())) ->
+    (BinderContent n0 i o (Payload n0 i o ()) ->
+     i (BinderContent n1 i o (Payload n1 i o ()))) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -220,7 +221,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (BinderContent n0 i o () -> i (BinderContent n1 i o ())) ->
+    (BinderContent n0 i o (Payload n0 i o ()) ->
+        i (BinderContent n1 i o (Payload n1 i o ()))) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr hole =
     hole

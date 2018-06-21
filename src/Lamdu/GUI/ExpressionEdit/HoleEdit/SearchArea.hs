@@ -69,8 +69,10 @@ makeRenderedResult pl ctx result =
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & ExprGuiM.im
         res ^. Sugar.holeResultConverted
-            & SugarLens.binderContentExprs %~ postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
-            & ResultWidget.make mNextEntry ctx (rId result) (res ^. Sugar.holeResultPick)
+            & SugarLens.binderContentExprs %~
+                postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+            & ResultWidget.make mNextEntry ctx (rId result)
+                (res ^. Sugar.holeResultPick)
     where
         mNextEntry =
             pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next
@@ -78,12 +80,12 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     Int ->
-    Sugar.Expression (Name o) i o () ->
-    Sugar.Expression (Name o) i o ExprGui.Payload
+    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ()) ->
+    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload)
 postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
-    <&> pl
+    <&> Sugar.plData %~ pl
     & SugarLens.fragmentExprs . Sugar.plData . ExprGui.plShowAnnotation
     .~ ExprGui.alwaysShowAnnotations
     where

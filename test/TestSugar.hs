@@ -8,7 +8,7 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
-import           Lamdu.Sugar.Types
+import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           System.FilePath (takeBaseName)
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
@@ -40,7 +40,9 @@ simpleConvertTest progName =
 -- | Verify that a sugar action does not result in a crash
 testSugarActions ::
     FilePath ->
-    [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload -> T ViewM a] ->
+    [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
+        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) ->
+        T ViewM a] ->
     IO ()
 testSugarActions program actions =
     testProgram program $ \cache ->

@@ -137,8 +137,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValP m ->
-        Body name (T m) (T m) (ConvertPayload m a) ->
-        Body name (T m) (T m) (ConvertPayload m a)
+        Body name (T m) (T m) (Payload name1 (T m) (T m) (ConvertPayload m a)) ->
+        Body name (T m) (T m) (Payload name1 (T m) (T m) (ConvertPayload m a))
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -180,7 +180,8 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m a ->
-    Body InternalName (T m) (T m) (ConvertPayload m a) ->
+    Body InternalName (T m) (T m)
+    (Payload InternalName (T m) (T m) (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -205,7 +206,8 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
     f (Val (Input.Payload m a)) -> Input.Payload m a ->
-    Body InternalName (T m) (T m) (ConvertPayload m a) ->
+    Body InternalName (T m) (T m)
+    (Payload InternalName (T m) (T m) (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS

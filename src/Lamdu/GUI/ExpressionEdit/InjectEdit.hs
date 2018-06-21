@@ -73,7 +73,7 @@ makeInject val tag pl =
 
 emptyRec ::
     NearestHoles -> Sugar.NullaryVal name i o () ->
-    Sugar.Expression name i o ExprGui.Payload
+    Sugar.Expression name i o (Sugar.Payload name i o ExprGui.Payload)
 emptyRec nearestHoles (Sugar.NullaryVal pl closedActions addItem) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord

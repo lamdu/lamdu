@@ -22,15 +22,18 @@ unambiguous = Precedence 0 0
 
 type MinOpPrec = Prec
 
+-- TODO: We probably don't care about the Sugar.Payload, can use "a" directly
+
 add ::
     HasPrecedence name =>
-    Expression name i o a -> Expression name i o (MinOpPrec, NeedsParens, a)
+    Expression name i o (Payload name i o a) ->
+    Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
 add = addWith 0
 
 addWith ::
     HasPrecedence name =>
-    Prec -> Expression name i o a ->
-    Expression name i o (MinOpPrec, NeedsParens, a)
+    Prec -> Expression name i o (Payload name i o a) ->
+    Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 bareInfix :: Lens.Prism' (LabeledApply name i o a) (a, LabeledApplyFunc name i o (), a)
@@ -43,8 +46,8 @@ bareInfix =
 
 loop ::
     HasPrecedence name =>
-    MinOpPrec -> Precedence Prec -> Expression name i o a ->
-    Expression name i o (MinOpPrec, NeedsParens, a)
+    MinOpPrec -> Precedence Prec -> Expression name i o (Payload name i o a) ->
+    Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
 loop minOpPrec parentPrec (Expression pl body_) =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder

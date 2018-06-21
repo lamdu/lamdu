@@ -30,13 +30,16 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 mReplaceParent ::
-    Lens.Traversal' (Sugar.Expression name i o a) (o Sugar.EntityId)
+    Lens.Traversal'
+    (Sugar.Expression name i o (Sugar.Payload name i o a))
+    (o Sugar.EntityId)
 mReplaceParent = Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o)
-    (Sugar.BinderBody (Name o) i o ExprGui.Payload) ->
+    (Sugar.BinderBody (Name o) i o
+        (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeToNom nom pl =

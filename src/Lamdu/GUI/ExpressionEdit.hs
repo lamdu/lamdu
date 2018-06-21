@@ -31,7 +31,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-make :: (Monad i, Monad o) => ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
+make ::
+    (Monad i, Monad o) =>
+    ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
 make (Sugar.Expression pl body) =
     makeEditor body pl & assignCursor
     where
@@ -52,7 +54,7 @@ placeHolder pl =
 
 makeEditor ::
     (Monad i, Monad o) =>
-    Sugar.Body (Name o) i o ExprGui.Payload ->
+    Sugar.Body (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeEditor body pl =

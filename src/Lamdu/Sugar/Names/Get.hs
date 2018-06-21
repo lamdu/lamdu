@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
+-- TODO: Move to test (not used in Lamdu code)
 module Lamdu.Sugar.Names.Get
     ( fromExpression
     ) where
@@ -34,5 +35,6 @@ cpsTellName name = CPS $ \k -> (,) <$> tellName name <*> k
 
 -- | Returns all the *foldable* names in the given expression
 -- (excluding names hidden behind transactions)
-fromExpression :: Monad i => Expression name i o a -> [name]
+fromExpression ::
+    Monad i => Expression name i o (Payload name i o a) -> [name]
 fromExpression = snd . runCollect . Walk.toExpression

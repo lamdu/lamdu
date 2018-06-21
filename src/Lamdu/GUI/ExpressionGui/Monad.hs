@@ -151,7 +151,7 @@ instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
 
 makeSubexpression ::
     Monad i =>
-    Sugar.Expression (Name o) i o ExprGui.Payload ->
+    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Responsive.Responsive (o GuiState.Update))
 makeSubexpression expr =
     do

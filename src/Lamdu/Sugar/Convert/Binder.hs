@@ -93,7 +93,9 @@ convertRedex ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
-    ConvertM m (Let InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m
+    (Let InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
 convertRedex expr redex =
     do
         tag <- convertTaggedEntity param
@@ -144,7 +146,9 @@ convertRedex expr redex =
 convertBinderContent ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderContent InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m
+    (BinderContent InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
 convertBinderContent expr =
     case Redex.check expr of
     Nothing ->
@@ -155,7 +159,9 @@ convertBinderContent expr =
 convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderBody InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m
+    (BinderBody InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
 convertBinderBody expr =
     convertBinderContent expr
     <&>
@@ -170,7 +176,9 @@ makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
-    ConvertM m (Function InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m
+    (Function InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
 makeFunction chosenScopeProp params funcBody =
     convertBinderBody funcBody
     <&> mkRes
@@ -198,7 +206,9 @@ makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
-    ConvertM m (Assignment InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m
+    (Assignment InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
 makeAssignment chosenScopeProp params funcBody pl =
     do
         bod <-
@@ -291,7 +301,8 @@ convertBinder ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Assignment InternalName (T m) (T m) (ConvertPayload m a)
+    , Assignment InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a))
     )
 convertBinder binderKind defVar expr =
     do
@@ -306,7 +317,8 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Assignment InternalName (T m) (T m) (ConvertPayload m a)
+    , Assignment InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) (ConvertPayload m a))
     )
 convertDefinitionBinder defI =
     convertBinder (BinderKindDef defI) (ExprIRef.globalId defI)

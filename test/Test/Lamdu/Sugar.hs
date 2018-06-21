@@ -35,7 +35,8 @@ adhocBodyPayloads f (BodyInject x) =
     x & iMVal . _InjectNullary . nullaryPayload %%~ f <&> BodyInject
 adhocBodyPayloads _ x = pure x
 
-allEntityIds :: WorkArea name i o ExprGui.Payload -> Set EntityId
+allEntityIds ::
+    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Set EntityId
 allEntityIds workArea =
     pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
@@ -46,7 +47,8 @@ allEntityIds workArea =
     where
         pls = workArea ^.. workAreaExpressions . subExprPayloads
 
-validateHiddenEntityIds :: WorkArea name i o ExprGui.Payload -> Either String ()
+validateHiddenEntityIds ::
+    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Either String ()
 validateHiddenEntityIds workArea
     | Set.null hiddenAndExplicit = Right ()
     | otherwise =
@@ -85,8 +87,11 @@ workAreaLowLevelLoad =
 
 validate ::
     NFData name =>
-    WorkArea name (T fa) (T fb) ExprGui.Payload ->
-    T ViewM (WorkArea name (T fa) (T fb) ExprGui.Payload)
+    WorkArea name (T fa) (T fb)
+    (Sugar.Payload name (T fa) (T fb) ExprGui.Payload) ->
+    T ViewM
+    (WorkArea name (T fa) (T fb)
+        (Sugar.Payload name (T fa) (T fb) ExprGui.Payload))
 validate workArea =
     do
         wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
@@ -100,7 +105,9 @@ validate workArea =
 
 convertWorkArea ::
     Cache.Functions ->
-    T ViewM (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)
+    T ViewM
+    (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
+        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
 convertWorkArea cache =
     loadWorkArea cache noopMonitors (pure EvalResults.empty) codeAnchors
     >>= validate

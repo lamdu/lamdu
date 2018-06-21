@@ -171,7 +171,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Body InternalName (T m) (T m) (ConvertPayload m a))
+    (Body InternalName (T m) (T m) (Payload InternalName (T m) (T m) (ConvertPayload m a)))
     (Composite InternalName (T m) (T m) (ExpressionU m a))
 
 convert ::
@@ -180,7 +180,8 @@ convert ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m a ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
-    ExtendVal m (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+    ExtendVal m (Input.Payload m a) ->
+    ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
     case restS ^? body . prism of
     Just r ->

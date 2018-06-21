@@ -49,7 +49,7 @@ responsiveLiftA3 f x y z =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Fragment (Name o) i o ExprGui.Payload ->
+    Sugar.Fragment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 make fragment pl =
@@ -112,7 +112,7 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Sugar.Fragment (Name o) i o ExprGui.Payload ->
+    Sugar.Fragment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
 makeFragmentExprEdit fragment =
     do

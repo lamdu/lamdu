@@ -52,16 +52,17 @@ orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
 orderCase :: Monad m => Order m (Sugar.Case name (T m) o a)
 orderCase = Sugar.cBody %%~ orderRecord
 
-orderLam :: Monad m => Order m (Sugar.Lambda name (T m) o a)
+orderLam :: Monad m => Order m (Sugar.Lambda name (T m) o (Sugar.Payload name i o a))
 orderLam = Sugar.lamFunc orderFunction
 
-orderBody :: Monad m => Order m (Sugar.Body name (T m) o a)
+orderBody :: Monad m => Order m (Sugar.Body name (T m) o (Sugar.Payload name i o a))
 orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) =
-    SugarLens.holeTransformExprs (SugarLens.binderContentExprs orderExpr) a & Sugar.BodyHole & pure
+    SugarLens.holeTransformExprs (SugarLens.binderContentExprs orderExpr) a
+    & Sugar.BodyHole & pure
 orderBody (Sugar.BodyFragment a) =
     a
     & Sugar.fOptions . Lens.mapped . Lens.mapped %~
@@ -78,7 +79,8 @@ orderBody x@Sugar.BodyToNom{} = pure x
 orderBody x@Sugar.BodyFromNom{} = pure x
 orderBody x@Sugar.BodyPlaceHolder{} = pure x
 
-orderExpr :: Monad m => Order m (Sugar.Expression name (T m) o a)
+orderExpr ::
+    Monad m => Order m (Sugar.Expression name (T m) o (Sugar.Payload name i o a))
 orderExpr e =
     e
     & Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
@@ -91,11 +93,11 @@ orderFunction =
     -- because it needs to be consistent with the presentation mode.
     pure
 
-orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o a)
+orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o (Sugar.Payload name i o a))
 orderAssignment = (Sugar.aBody . Sugar._BodyFunction . Sugar.afFunction) orderFunction
 
 orderDef ::
-    Monad m => Order m (Sugar.Definition name (T m) o a)
+    Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))
 orderDef def =
     def
     & SugarLens.defSchemes . Sugar.schemeType %%~ orderType

@@ -449,8 +449,8 @@ runPasses getNameProp f0 f1 f2 =
 addToWorkArea ::
     Monad i =>
     (T.Tag -> MkProperty i o Text) ->
-    WorkArea InternalName i o a ->
-    i (WorkArea (Name o) i o a)
+    WorkArea InternalName i o (Payload InternalName i o a) ->
+    i (WorkArea (Name o) i o (Payload (Name o) i o a))
 addToWorkArea getNameProp =
     runPasses getNameProp f f f
     where

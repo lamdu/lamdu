@@ -46,8 +46,9 @@ undeleteButton undelete =
 makeExprDefinition ::
     (Monad i, Monad o) =>
     EventMap (o GuiState.Update) ->
-    Sugar.Definition (Name o) i o ExprGui.Payload ->
-    Sugar.DefinitionExpression (Name o) i o ExprGui.Payload ->
+    Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.DefinitionExpression (Name o) i o
+    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
 makeExprDefinition defEventMap def bodyExpr =
     BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
@@ -59,7 +60,7 @@ makeExprDefinition defEventMap def bodyExpr =
 
 makeBuiltinDefinition ::
     (Monad i, Monad o) =>
-    Sugar.Definition (Name o) i o ExprGui.Payload ->
+    Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionBuiltin (Name g) o ->
     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
 makeBuiltinDefinition def builtin =
@@ -92,7 +93,7 @@ wholeFocused size f =
 make ::
     (Monad i, Monad o) =>
     EventMap (o GuiState.Update) ->
-    Sugar.Definition (Name o) i o ExprGui.Payload ->
+    Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
 make defEventMap def =
     do

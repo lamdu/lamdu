@@ -189,7 +189,8 @@ resultWidget _ pl tag (Sugar.EvalError err) =
 make ::
     Monad m =>
     ExportRepl m ->
-    Sugar.Repl (Name (T m)) (T m) (T m) ExprGui.Payload ->
+    Sugar.Repl (Name (T m)) (T m) (T m)
+    (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
     ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
 make exportRepl (Sugar.Repl replExpr replResult) =
     do

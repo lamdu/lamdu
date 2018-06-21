@@ -14,12 +14,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+-- TODO: Remove the superfluous Payload wrapper here
 markStoredHoles ::
-    Sugar.Expression name i o a ->
-    Sugar.Expression name i o (Bool, a)
+    Sugar.Expression name i o (Sugar.Payload name i o a) ->
+    Sugar.Expression name i o (Sugar.Payload name i o (Bool, a))
 markStoredHoles expr =
     expr
-    <&> (,) False
+    <&> Sugar.plData %~ (,) False
     & SugarLens.unfinishedExprPayloads . Sugar.plData . _1 .~ True
 
 data NearestHoles = NearestHoles
@@ -34,19 +35,19 @@ none = NearestHoles Nothing Nothing
 add ::
     (forall a b.
       Lens.Traversal
-      (f a)
-      (f b)
-      (Sugar.Expression name i o a)
-      (Sugar.Expression name i o b)) ->
-    f c ->
-    f (c, NearestHoles)
+      (f (Sugar.Payload name i o a))
+      (f (Sugar.Payload name i o b))
+      (Sugar.Expression name i o (Sugar.Payload name i o a))
+      (Sugar.Expression name i o (Sugar.Payload name i o b))) ->
+    f (Sugar.Payload name i o c) ->
+    f (Sugar.Payload name i o (c, NearestHoles))
 add exprs s =
     s
-    & exprs . Lens.mapped %~ toNearestHoles
+    & exprs . Lens.mapped . Sugar.plData %~ toNearestHoles
     & exprs %~ markStoredHoles
     & passAll (exprs . SugarLens.subExprPayloads)
     & passAll (Lens.backwards (exprs . SugarLens.subExprPayloads))
-    & exprs . Lens.mapped %~ snd
+    & exprs . Lens.mapped . Sugar.plData %~ snd
     where
         toNearestHoles x prevHole nextHole = (x, NearestHoles prevHole nextHole)
 
