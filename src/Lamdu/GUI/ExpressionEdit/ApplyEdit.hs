@@ -60,27 +60,23 @@ addInfixMarker widgetId =
 
 makeFunc ::
     (Monad i, Monad o) =>
-    NearestHoles ->
-    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o a) ->
+    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
-makeFunc nearestHoles func =
+makeFunc func =
     stdWrap pl <*>
     ( GetVarEdit.makeGetBinder (func ^. Sugar.afVar) myId
         <&> Responsive.fromWithTextPos
     )
     where
-        pl =
-            func ^. Sugar.afPayload
-            & Sugar.plData .~ ExprGui.adhocPayload nearestHoles
+        pl = func ^. Sugar.afPayload
         myId = WidgetIds.fromExprPayload pl
 
 makeInfixFunc ::
     (Monad i, Monad o) =>
-    NearestHoles ->
-    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o a) ->
+    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
-makeInfixFunc nearestHoles func =
-    makeFunc nearestHoles func <&> mAddMarker
+makeInfixFunc func =
+    makeFunc func <&> mAddMarker
     where
         nameText =
             Name.visible (func ^. Sugar.afVar . Sugar.bvNameRef . Sugar.nrName)
@@ -99,21 +95,14 @@ makeFuncRow ::
     (Monad i, Monad o) =>
     Maybe AnimId ->
     Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    NearestHoles ->
     ExprGuiM i o (ExpressionGui o)
-makeFuncRow mParensId apply applyNearestHoles =
+makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
-    Sugar.Verbose ->
-        makeFunc nextHoles func
-        where
-            nextHoles =
-                case apply ^. Sugar.aAnnotatedArgs of
-                [] -> applyNearestHoles -- all args are relayed args
-                (x:_) -> x ^. Sugar.aaExpr & ExprGui.nextHolesBefore
+    Sugar.Verbose -> makeFunc func
     Sugar.Object arg ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ makeFunc (ExprGui.nextHolesBefore arg) func
+        [ makeFunc func
         , ExprGuiM.makeSubexpression arg
         ]
     Sugar.Infix l r ->
@@ -122,7 +111,7 @@ makeFuncRow mParensId apply applyNearestHoles =
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpression l
-            , makeInfixFunc (ExprGui.nextHolesBefore r) func
+            , makeInfixFunc func
             ]
         , ExprGuiM.makeSubexpression r
         ]
@@ -136,10 +125,7 @@ makeLabeled ::
     ExprGuiM i o (ExpressionGui o)
 makeLabeled apply pl =
     stdWrapParentExpr pl
-    <*> ( makeFuncRow (ExprGui.mParensId pl) apply
-            (pl ^. Sugar.plData . ExprGui.plNearestHoles)
-            >>= addBox
-        )
+    <*> (makeFuncRow (ExprGui.mParensId pl) apply >>= addBox)
     where
         addBox
             | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGui.plNearestHoles)

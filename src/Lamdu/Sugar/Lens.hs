@@ -75,11 +75,23 @@ labeledApplyChildren ::
     (Expression name i o a -> f (Expression name i o b)) ->
     LabeledApply name i o a -> f (LabeledApply name i o b)
 labeledApplyChildren l e (LabeledApply func special annotated relayed) =
-    LabeledApply
-    <$> l func
-    <*> traverse e special
+    uncurry LabeledApply
+    <$> funcAndSpecial
     <*> (traverse . traverse) e annotated
     <*> pure relayed
+    where
+        funcAndSpecial =
+            case special of
+            Infix left right ->
+                -- Correct order in infix is operator in the middle.
+                (\l0 f0 r0 -> (f0, Infix l0 r0))
+                <$> e left
+                <*> l func
+                <*> e right
+            _ ->
+                (,)
+                <$> l func
+                <*> traverse e special
 
 bodyChildren ::
     Applicative f =>
