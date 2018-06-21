@@ -596,7 +596,7 @@ makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params 
     Sugar.Params ps ->
         ps
         & traverse . Sugar.fpInfo %%~ onFpInfo
-        >>= fromParamList lhsId rhsId
+        >>= fromParamList delVarBackwardsId rhsId
         where
             onFpInfo x =
                 TagEdit.makeParamTag (x ^. Sugar.piTag)
