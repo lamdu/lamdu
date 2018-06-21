@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
 module Lamdu.Sugar.Names.Get
-    ( fromExpression, fromBody
+    ( fromExpression
     ) where
 
 import           Control.Monad.Trans.State (State, runState)
@@ -36,17 +36,3 @@ cpsTellName name = CPS $ \k -> (,) <$> tellName name <*> k
 -- (excluding names hidden behind transactions)
 fromExpression :: Monad i => Expression name i o a -> [name]
 fromExpression = snd . runCollect . Walk.toExpression
-
-fromBody :: Monad i => Body name i o a -> [name]
-fromBody =
-    snd . runCollect . Walk.toBody (pure . mkPlaceholder)
-    where
-        mkPlaceholder expr =
-            Expression
-            { _body = BodyPlaceHolder
-            , _annotation =
-                (expr ^. annotation)
-                { _plAnnotation = error "HACK"
-                , _plActions = error "HACK"
-                }
-            }

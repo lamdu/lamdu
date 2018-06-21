@@ -21,8 +21,7 @@ import           Lamdu.Formatting (Format(..))
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
-import qualified Lamdu.Sugar.Names.Get as NamesGet
-import qualified Lamdu.Sugar.Types as Sugar
+import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
@@ -45,63 +44,63 @@ ofName (Name.Stored storedName) =
 formatProp :: Format a => Property m a -> Text
 formatProp i = i ^. Property.pVal & format
 
-formatLiteral :: Sugar.Literal (Property m) -> Text
-formatLiteral (Sugar.LiteralNum i) = formatProp i
-formatLiteral (Sugar.LiteralText i) = formatProp i
-formatLiteral (Sugar.LiteralBytes i) = formatProp i
+formatLiteral :: Literal (Property m) -> Text
+formatLiteral (LiteralNum i) = formatProp i
+formatLiteral (LiteralText i) = formatProp i
+formatLiteral (LiteralBytes i) = formatProp i
 
-bodyShape :: Sugar.Body (Name o) i o expr -> [Text]
-bodyShape = \case
-    Sugar.BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
-    Sugar.BodySimpleApply {} -> ["Apply"]
-    Sugar.BodyLabeledApply {} -> ["Apply"]
-    Sugar.BodyRecord {} -> ["{}", "()", "[]"]
-    Sugar.BodyGetField gf -> ofName (gf ^. Sugar.gfTag . Sugar.tagInfo . Sugar.tagName) <&> ("." <>)
-    Sugar.BodyCase cas ->
+expr :: Monad i => Expression (Name o) i o a -> [Text]
+expr (Expression _ body_) =
+    case body_ of
+    BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
+    BodySimpleApply x -> "apply" : foldMap expr x
+    BodyLabeledApply x ->
+        "apply"
+        : ofName (x ^. aFunc . afVar . bvNameRef . nrName)
+        ++ (x ^.. aAnnotatedArgs . Lens.folded . aaTag . tagName >>= ofName)
+    BodyRecord {} ->
+        -- We don't allow completing a record by typing one of its
+        -- field names/vals
+        ["{}", "()", "[]"]
+    BodyGetField gf ->
+        ofName (gf ^. gfTag . tagInfo . tagName) <&> ("." <>)
+    BodyCase cas ->
         ["case", "of"] ++
         case cas of
-            Sugar.Case Sugar.LambdaCase (Sugar.Composite [] Sugar.ClosedComposite{} _) -> ["absurd"]
+            Case LambdaCase (Composite [] ClosedComposite{} _) -> ["absurd"]
             _ -> []
-    Sugar.BodyIfElse {} -> ["if", ":"]
+    BodyIfElse {} -> ["if", ":"]
     -- An inject "base expr" can have various things in its val filled
     -- in, so the result group based on it may have both nullary
     -- inject (".") and value inject (":"). Thus, an inject must match
     -- both.
     -- So these terms are used to filter the whole group, and then
     -- isExactMatch (see below) is used to filter each entry.
-    Sugar.BodyInject (Sugar.Inject tag _) ->
-        (<>) <$> ofName (tag ^. Sugar.tagInfo . Sugar.tagName) <*> [":", "."]
-    Sugar.BodyLiteral i -> [formatLiteral i]
-    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> ["Params"]
-    Sugar.BodyGetVar {} -> []
-    Sugar.BodyToNom {} -> []
-    Sugar.BodyFromNom nom
-        | nom ^. Sugar.nTId . Sugar.tidTId == Builtins.boolTid -> ["if"]
-        | otherwise -> []
-    Sugar.BodyHole {} -> []
-    Sugar.BodyFragment {} -> []
-    Sugar.BodyPlaceHolder {} -> []
+    BodyInject (Inject tag _) ->
+        (<>) <$> ofName (tag ^. tagInfo . tagName) <*> [":", "."]
+    BodyLiteral i -> [formatLiteral i]
+    BodyGetVar GetParamsRecord {} -> ["Params"]
+    BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
+    BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
+    BodyToNom (Nominal tid binder) ->
+        ofName (tid ^. tidName)
+        ++ expr (binder ^. bbContent . SugarLens.binderContentResultExpr)
+    BodyFromNom (Nominal tid _) ->
+        ofName (tid ^. tidName)
+        ++ if tid ^. tidTId == Builtins.boolTid
+            then
+                -- The hole's "extra" apply-form results will be an
+                -- IfElse, but we give val terms only to the base expr
+                -- which looks like this:
+                ["if"]
+            else []
+    BodyHole {} -> []
+    BodyFragment {} -> []
+    BodyPlaceHolder {} -> []
 
-bodyNames :: Monad i => Sugar.Body (Name o) i o a -> [Text]
-bodyNames =
-    \case
-    Sugar.BodyGetVar Sugar.GetParamsRecord {} -> []
-    Sugar.BodyLam {} -> []
-    b -> NamesGet.fromBody b >>= ofName
-
-binderContent :: Monad i => Sugar.BinderContent (Name o) i o a -> [Text]
-binderContent Sugar.BinderLet{} = ["let"]
-binderContent (Sugar.BinderExpr x) = expr x
-
-expr :: Monad i => Sugar.Expression (Name o) i o a -> [Text]
-expr (Sugar.Expression _ body) =
-    bodyShape body <>
-    bodyNames body <>
-    case body of
-    Sugar.BodyToNom (Sugar.Nominal _ binder) ->
-        expr (binder ^. Sugar.bbContent . SugarLens.binderContentResultExpr)
-    Sugar.BodyFromNom (Sugar.Nominal _ val) -> expr val
-    _ -> []
+binderContent :: Monad i => BinderContent (Name o) i o a -> [Text]
+binderContent BinderLet{} = ["let"]
+binderContent (BinderExpr x) = expr x
 
 type Suffix = Char
 
@@ -131,9 +130,9 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Sugar.Expression name i o a -> Text
-getSearchStringRemainder ctx holeResultConverted
-    | isA Sugar._BodyInject = ""
+    SearchMenu.ResultsContext -> Expression name i o a -> Text
+getSearchStringRemainder ctx holeResult
+    | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
       -- should NOT have a remainder, but do. We might want to correct
       -- that.  However, this does not cause any bug because search
@@ -145,20 +144,20 @@ getSearchStringRemainder ctx holeResultConverted
     | otherwise = ""
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
-        fragmentExpr = Sugar.body . Sugar._BodyFragment . Sugar.fExpr
-        isA x = any (`Lens.has` holeResultConverted) [Sugar.body . x, fragmentExpr . Sugar.body . x]
+        fragmentExpr = body . _BodyFragment . fExpr
+        isA x = any (`Lens.has` holeResult) [body . x, fragmentExpr . body . x]
 
 injectMVal ::
     Lens.Traversal'
-    (Sugar.Expression name i o a)
-    (Sugar.InjectVal name i o (Sugar.Expression name i o a))
-injectMVal = Sugar.body . Sugar._BodyInject . Sugar.iMVal
+    (Expression name i o a)
+    (InjectVal name i o (Expression name i o a))
+injectMVal = body . _BodyInject . iMVal
 
-verifyInjectSuffix :: Text -> Sugar.Expression name i o a -> Bool
+verifyInjectSuffix :: Text -> Expression name i o a -> Bool
 verifyInjectSuffix searchTerm val =
     case suffix of
-    Just ':' | Lens.has (injectMVal . Sugar._InjectNullary) val -> False
-    Just '.' | Lens.has (injectMVal . Sugar._InjectVal) val -> False
+    Just ':' | Lens.has (injectMVal . _InjectNullary) val -> False
+    Just '.' | Lens.has (injectMVal . _InjectVal) val -> False
     _ -> True
     where
         suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
