@@ -18,7 +18,9 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convert :: (Monad m, Monoid a) => V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+convert ::
+    (Monad m, Monoid a) =>
+    V.Inject (Val (Input.Payload m a)) -> Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert (V.Inject tag injected) exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -36,7 +38,7 @@ convert (V.Inject tag injected) exprPl =
                     (BodyRecord
                      (Composite []
                       (ClosedComposite closedCompositeActions) addItem)) ->
-                    NullaryVal (void pl) closedCompositeActions addItem
+                    NullaryVal pl closedCompositeActions addItem
                     & InjectNullary
                 _ ->
                     injectedS

@@ -52,7 +52,7 @@ loop minOpPrec parentPrec (Expression pl body_) =
     BodyCase         x -> mkUnambiguous Lens.mapped BodyCase x
     BodyLam          x -> leftSymbol (lamFunc . SugarLens.funcExprs) 0 BodyLam x
     BodyToNom        x -> leftSymbol (Lens.mapped . SugarLens.binderExprs) 0 BodyToNom x
-    BodyInject       x -> leftSymbol (iMVal . _InjectVal) 0 BodyInject x
+    BodyInject       x -> inject x
     BodyFromNom      x -> rightSymbol Lens.mapped 0 BodyFromNom x
     BodyGetField     x -> rightSymbol Lens.mapped 13 BodyGetField x
     BodySimpleApply  x -> simpleApply x
@@ -72,6 +72,17 @@ loop minOpPrec parentPrec (Expression pl body_) =
             & result needParens
             where
                 needParens = parentPrec ^. checkSide > prec
+        inject (Inject t v) =
+            case v of
+            InjectNullary x -> x <&> plData %~ (,,) (maxNamePrec + 1) NoNeedForParens & InjectNullary
+            InjectVal x -> loop 0 (childPrec (before .~ 0) needParens) x & InjectVal
+            & Inject t & BodyInject
+            & result needParens
+            where
+                needParens =
+                    case v of
+                    InjectNullary{} -> False
+                    InjectVal{} -> parentPrec ^. after > 0
         simpleApply (V.Apply f a) =
             BodySimpleApply V.Apply
             { V._applyFunc =

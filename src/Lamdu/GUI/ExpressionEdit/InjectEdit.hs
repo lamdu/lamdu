@@ -25,7 +25,6 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -71,26 +70,22 @@ makeInject val tag pl =
         delDoc = E.Doc ["Edit", "Delete"]
         mReplaceParent = val ^. Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent
 
-emptyRec ::
-    NearestHoles -> Sugar.NullaryVal name i o (Sugar.Payload name i o ()) ->
-    Sugar.Expression name i o (Sugar.Payload name i o ExprGui.Payload)
-emptyRec nearestHoles (Sugar.NullaryVal pl closedActions addItem) =
+emptyRec :: Sugar.NullaryVal name i o a -> Sugar.Expression name i o a
+emptyRec (Sugar.NullaryVal pl closedActions addItem) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & Sugar.Expression pl'
-    where
-        pl' = pl <&> \() -> ExprGui.adhocPayload nearestHoles
+    & Sugar.Expression pl
 
 makeNullaryInject ::
     (Monad i, Monad o) =>
-    Sugar.NullaryVal (Name o) i o (Sugar.Payload (Name o) i o ()) ->
+    Sugar.NullaryVal (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
     >>= \case
-    True -> makeInject (emptyRec (pl ^. Sugar.plData . ExprGui.plNearestHoles) nullary) tag pl
+    True -> makeInject (emptyRec nullary) tag pl
     False ->
         stdWrapParentExpr pl <*>
         do

@@ -19,7 +19,6 @@ import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (workAreaExpressions, subExprPayloads)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
@@ -29,19 +28,11 @@ import           Test.Lamdu.Prelude
 
 type T = Transaction
 
-adhocBodyPayloads :: Lens.Traversal' (Body name i o expr) (Sugar.Payload name i o ())
-adhocBodyPayloads f (BodyInject x) =
-    x & iMVal . _InjectNullary . nullaryPayload %%~ f <&> BodyInject
-adhocBodyPayloads _ x = pure x
-
 allEntityIds ::
     WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Set EntityId
 allEntityIds workArea =
     pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
-    <> workArea ^..
-        workAreaExpressions . subExprPayloads . Lens.asIndex .
-        SugarLens._OfExpr . body . adhocBodyPayloads . plEntityId
     & Set.fromList
     where
         pls = workArea ^.. workAreaExpressions . subExprPayloads
