@@ -9,18 +9,29 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Rect (Rect(..))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
+import           GUI.Momentu.State (HasState)
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event(..), KeyEvent(..))
+import qualified Lamdu.Cache as Cache
+import           Lamdu.Config (HasConfig)
+import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.ExpressionGui (ExpressionGui)
+import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import           Lamdu.Settings (HasSettings)
+import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
@@ -39,6 +50,53 @@ test =
     , testFragmentSize
     ]
 
+replExpr ::
+    Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Expression name i o a)
+replExpr = Sugar.waRepl . Sugar.replExpr . Sugar.bbContent . Sugar._BinderExpr
+
+wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
+wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
+
+makeReplGui ::
+    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    , HasSettings env, HasStyle env
+    ) =>
+    Cache.Functions -> env -> T ViewM (ExpressionGui (T ViewM))
+makeReplGui cache env =
+    do
+        workArea <- convertWorkArea cache
+        gui <-
+            workArea ^. Sugar.waRepl . Sugar.replExpr
+            & makeBinderBodyEdit
+            & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
+        unless (Lens.has wideFocused gui) (fail "Red cursor!")
+        pure gui
+
+applyEvent ::
+    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    , HasSettings env, HasStyle env
+    ) =>
+    Cache.Functions -> env -> Event -> T ViewM ()
+applyEvent cache env event =
+    do
+        gui <- makeReplGui cache env
+        let eventMap =
+                ((gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap)
+                Widget.EventContext
+                { Widget._eVirtualCursor = VirtualCursor (Rect 0 0)
+                , Widget._ePrevTextRemainder = ""
+                }
+        _ <- runIdentity (E.lookup (Identity Nothing) event eventMap) ^?! Lens._Just
+        pure ()
+
+fromWorkArea ::
+    Cache.Functions ->
+    Lens.ATraversal'
+    (Sugar.WorkArea (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) a ->
+    T ViewM a
+fromWorkArea cache path =
+    convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
+
 -- | Test for issue #410
 -- https://trello.com/c/00mxkLRG/410-navigating-to-fragment-affects-layout
 testFragmentSize :: Test
@@ -49,16 +107,12 @@ testFragmentSize =
     testProgram "simple-fragment.json" $
     \cache ->
     do
-        workArea <- convertWorkArea cache
-        let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
-        let makeWithEnv env =
-                makeBinderBodyEdit repl
-                & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
+        frag <- fromWorkArea cache (replExpr . Sugar.annotation)
         guiCursorOnFrag <-
             baseEnv
-            & cursor .~ WidgetIds.fromExprPayload (workArea ^?! Sugar.waRepl . Sugar.replExpr . Sugar.bbContent . Sugar._BinderExpr . Sugar.annotation)
-            & makeWithEnv
-        guiCursorElseWhere <- makeWithEnv baseEnv
+            & cursor .~ WidgetIds.fromExprPayload frag
+            & makeReplGui cache
+        guiCursorElseWhere <- makeReplGui cache baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (fail "fragment size inconsistent")
     where
         sz = Responsive.rWide . Align.tValue . Element.size
@@ -73,37 +127,21 @@ testOpPrec =
     testProgram "simple-lambda.json" $
     \cache ->
     do
+        holeId <-
+            fromWorkArea cache
+            (replExpr . Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
+             Sugar.fBody . Sugar.bbContent . Sugar._BinderExpr .
+             Sugar.annotation . Sugar.plEntityId)
+            <&> HoleWidgetIds.make
+            <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache
-        let holeId =
-                workArea ^?! Sugar.waRepl . Sugar.replExpr .
-                Sugar.bbContent . Sugar._BinderExpr .
-                Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
-                Sugar.fBody . Sugar.bbContent . Sugar._BinderExpr .
-                Sugar.annotation . Sugar.plEntityId
-                & HoleWidgetIds.make
-                & HoleWidgetIds.hidClosed
-        let env = baseEnv & cursor .~ holeId
-        gui <-
-            workArea ^. Sugar.waRepl . Sugar.replExpr
-            & makeBinderBodyEdit
-            & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
-        let mkFocused =
-                gui ^?! Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
-        let eventMap =
-                (mkFocused (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap)
-                Widget.EventContext
-                { Widget._eVirtualCursor = VirtualCursor (Rect 0 0)
-                , Widget._ePrevTextRemainder = ""
-                }
-        let eventKey =
-                EventKey KeyEvent
-                { keKey = GLFW.Key'7
-                , keScanCode = 0 -- dummy
-                , keModKeys = GLFW.ModifierKeys True False False False
-                , keState = GLFW.KeyState'Pressed
-                , keChar = Just '&'
-                }
-        _ <- runIdentity (E.lookup (Identity Nothing) eventKey eventMap) ^?! Lens._Just
+        EventKey KeyEvent
+            { keKey = GLFW.Key'7
+            , keScanCode = 0 -- dummy
+            , keModKeys = GLFW.ModifierKeys True False False False
+            , keState = GLFW.KeyState'Pressed
+            , keChar = Just '&'
+            } & applyEvent cache (baseEnv & cursor .~ holeId)
         workArea' <- convertWorkArea cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
