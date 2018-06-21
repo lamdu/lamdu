@@ -92,7 +92,7 @@ data GetField name i o expr = GetField
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data InjectVal name i o expr
-    = InjectNullary (NullaryVal name i o ())
+    = InjectNullary (NullaryVal name i o (Payload name i o ()))
     | InjectVal expr
     deriving (Functor, Foldable, Traversable, Generic)
 

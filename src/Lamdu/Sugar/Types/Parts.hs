@@ -154,7 +154,7 @@ data CompositeTail o expr
 
 -- | The empty record (for manipulations in GUI)
 data NullaryVal name i o a = NullaryVal
-    { _nullaryPayload :: Payload name i o a
+    { _nullaryPayload :: a
     , _nullaryClosedCompositeActions :: ClosedCompositeActions o
     , _nullaryAddItem :: TagSelection name i o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)

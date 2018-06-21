@@ -246,7 +246,6 @@ instance (NFData a, NFData n) => NFData (Sugar.LabeledApplyFunc n (T o) a) where
 instance (NFData a, NFData n) => NFData (Sugar.Lambda n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Let n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Nominal n a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.NullaryVal n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Pane n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Payload n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Repl n (T i) (T o) a) where rnf = genericRnf
@@ -279,6 +278,7 @@ instance NFData a => NFData (Sugar.CaseArg (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseKind (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CompositeTail (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.IfThen (T o) a) where rnf = genericRnf
+instance NFData a => NFData (Sugar.NullaryVal n (T i) (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResStream a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf

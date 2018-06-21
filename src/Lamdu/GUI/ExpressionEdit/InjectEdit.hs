@@ -72,7 +72,7 @@ makeInject val tag pl =
         mReplaceParent = val ^. Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
-    NearestHoles -> Sugar.NullaryVal name i o () ->
+    NearestHoles -> Sugar.NullaryVal name i o (Sugar.Payload name i o ()) ->
     Sugar.Expression name i o (Sugar.Payload name i o ExprGui.Payload)
 emptyRec nearestHoles (Sugar.NullaryVal pl closedActions addItem) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
@@ -83,7 +83,7 @@ emptyRec nearestHoles (Sugar.NullaryVal pl closedActions addItem) =
 
 makeNullaryInject ::
     (Monad i, Monad o) =>
-    Sugar.NullaryVal (Name o) i o () ->
+    Sugar.NullaryVal (Name o) i o (Sugar.Payload (Name o) i o ()) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)

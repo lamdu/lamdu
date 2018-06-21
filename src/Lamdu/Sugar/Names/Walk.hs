@@ -370,8 +370,8 @@ toCase expr (Case k c) = Case <$> traverse expr k <*> toComposite expr c
 
 toNullary ::
     MonadNaming m =>
-    NullaryVal (OldName m) (IM m) o a ->
-    m (NullaryVal (NewName m) (IM m) o a)
+    NullaryVal (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (NullaryVal (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toNullary (NullaryVal pl closed addItem) =
     (NullaryVal <$> toPayload pl ?? closed) <*> toTagSelection addItem
 
