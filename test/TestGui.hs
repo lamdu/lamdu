@@ -49,6 +49,7 @@ test =
     testGroup "gui-tests"
     [ testOpPrec
     , testFragmentSize
+    , testLambdaDelete
     ]
 
 replExpr ::
@@ -82,7 +83,7 @@ applyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    Cache.Functions -> env -> Event -> T ViewM GuiState.Update
+    Cache.Functions -> env -> Event -> T ViewM env
 applyEvent cache env event =
     do
         gui <- makeReplGui cache env
@@ -93,6 +94,7 @@ applyEvent cache env event =
                 , Widget._ePrevTextRemainder = ""
                 }
         runIdentity (E.lookup (Identity Nothing) event eventMap) ^?! Lens._Just
+            <&> (`GuiState.update` env)
 
 fromWorkArea ::
     Cache.Functions ->
@@ -102,6 +104,35 @@ fromWorkArea ::
 fromWorkArea cache path =
     convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
 
+-- | Test for issue #411
+-- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
+testLambdaDelete :: Test
+testLambdaDelete =
+    testCase "delete-lambda" $
+    GuiEnv.make >>=
+    \baseEnv ->
+    testProgram "simple-lambda.json" $
+    \cache ->
+    do
+        paramCursor <-
+            fromWorkArea cache
+            (replExpr . Sugar.body. Sugar._BodyLam . Sugar.lamFunc .
+             Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
+             Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
+            <&> WidgetIds.fromEntityId
+        let delEvent =
+                EventKey KeyEvent
+                { keKey = GLFW.Key'Backspace
+                , keScanCode = 0 -- dummy
+                , keModKeys = mempty
+                , keState = GLFW.KeyState'Pressed
+                , keChar = Nothing
+                }
+        env0 <- applyEvent cache (baseEnv & cursor .~ paramCursor) delEvent
+        -- One delete replaces the param tag, next delete deletes param
+        env1 <- applyEvent cache env0 delEvent
+        _ <- makeReplGui cache env1
+        pure ()
 
 -- | Test for issue #410
 -- https://trello.com/c/00mxkLRG/410-navigating-to-fragment-affects-layout
