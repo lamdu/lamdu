@@ -144,10 +144,7 @@ getSearchStringRemainder ctx holeResult
         fragmentExpr = body . _BodyFragment . fExpr
         isA x = any (`Lens.has` holeResult) [body . x, fragmentExpr . body . x]
 
-injectMVal ::
-    Lens.Traversal'
-    (Expression name i o a)
-    (InjectVal name i o (Expression name i o a))
+injectMVal :: Lens.Traversal' (Expression name i o a) (InjectVal name i o a)
 injectMVal = body . _BodyInject . iMVal
 
 verifyInjectSuffix :: Text -> Expression name i o a -> Bool

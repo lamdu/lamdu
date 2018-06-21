@@ -111,7 +111,7 @@ bodyChildren l f =
     BodyGetField     x -> traverse f x <&> BodyGetField
     BodyCase         x -> traverse f x <&> BodyCase
     BodyIfElse       x -> traverse f x <&> BodyIfElse
-    BodyInject       x -> traverse f x <&> BodyInject
+    BodyInject       x -> (iMVal . _InjectVal) f x <&> BodyInject
     BodyFromNom      x -> traverse f x <&> BodyFromNom
     BodyFragment     x -> fExpr f x <&> BodyFragment
     BodyToNom        x -> (traverse . binderExprs) f x <&> BodyToNom

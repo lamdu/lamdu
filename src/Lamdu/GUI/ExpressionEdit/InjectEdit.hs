@@ -109,7 +109,7 @@ makeNullaryInject nullary tag pl =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Inject (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.Inject (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 make (Sugar.Inject tag mVal) =

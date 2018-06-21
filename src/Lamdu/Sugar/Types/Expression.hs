@@ -69,14 +69,14 @@ data LabeledApply name i o a = LabeledApply
     , _aRelayedArgs :: [RelayedArg name i o]
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data InjectVal name i o expr
+data InjectVal name i o a
     = InjectNullary (NullaryVal name i o (Payload name i o ()))
-    | InjectVal expr
+    | InjectVal (Expression name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data Inject name i o expr = Inject
+data Inject name i o a = Inject
     { _iTag :: Tag name i o
-    , _iMVal :: InjectVal name i o expr
+    , _iMVal :: InjectVal name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Lambda name i o a = Lambda
@@ -128,7 +128,7 @@ data Body name i o a
     | BodyGetField (GetField name i o (Expression name i o a))
     | BodyCase (Case name i o (Expression name i o a))
     | BodyIfElse (IfElse name i o (Expression name i o a))
-    | BodyInject (Inject name i o (Expression name i o a))
+    | BodyInject (Inject name i o a)
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal name (Binder name i o a))
     | BodyFromNom (Nominal name (Expression name i o a))

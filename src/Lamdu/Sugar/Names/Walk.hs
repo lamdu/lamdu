@@ -377,19 +377,17 @@ toNullary (NullaryVal pl closed addItem) =
 
 toInjectVal ::
     MonadNaming m =>
-    (a -> m b) ->
-    InjectVal (OldName m) (IM m) o a ->
-    m (InjectVal (NewName m) (IM m) o b)
-toInjectVal expr (InjectVal v) = InjectVal <$> expr v
-toInjectVal _ (InjectNullary n) = InjectNullary <$> toNullary n
+    InjectVal (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (InjectVal (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toInjectVal (InjectVal v) = toExpression v <&> InjectVal
+toInjectVal (InjectNullary n) = toNullary n <&> InjectNullary
 
 toInject ::
     MonadNaming m =>
-    (a -> m b) ->
-    Inject (OldName m) (IM m) o a ->
-    m (Inject (NewName m) (IM m) o b)
-toInject expr (Inject t v) =
-    Inject <$> toTagOf Tag t <*> toInjectVal expr v
+    Inject (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Inject (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toInject (Inject t v) =
+    Inject <$> toTagOf Tag t <*> toInjectVal v
 
 toElseIfContent ::
     MonadNaming m =>
@@ -426,7 +424,7 @@ toBody ::
 toBody =
     \case
     BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField
-    BodyInject       x -> x & toInject toExpression <&> BodyInject
+    BodyInject       x -> x & toInject <&> BodyInject
     BodyRecord       x -> x & toComposite toExpression <&> BodyRecord
     BodyCase         x -> x & toCase toExpression <&> BodyCase
     BodyIfElse       x -> x & toIfElse toExpression <&> BodyIfElse
