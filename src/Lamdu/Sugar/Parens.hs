@@ -38,7 +38,10 @@ addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 bareInfix ::
     Lens.Prism' (LabeledApply name i o a)
-    (Expression name i o a, LabeledApplyFunc name i o (), Expression name i o a)
+    ( Expression name i o a
+    , LabeledApplyFunc name o (Payload name i o ())
+    , Expression name i o a
+    )
 bareInfix =
     Lens.prism toLabeledApply fromLabeledApply
     where

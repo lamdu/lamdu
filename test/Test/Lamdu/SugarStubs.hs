@@ -55,7 +55,7 @@ defRef var tag =
 
 labeledApplyFunc ::
     Sugar.Type name -> Sugar.BinderVarRef name Unit ->
-    Sugar.LabeledApplyFunc name Identity Unit ()
+    Sugar.LabeledApplyFunc name Unit (Sugar.Payload name Identity Unit ())
 labeledApplyFunc typ varRef =
     Sugar.LabeledApplyFunc
     { Sugar._afVar = varRef

@@ -60,7 +60,8 @@ addInfixMarker widgetId =
 
 makeFunc ::
     (Monad i, Monad o) =>
-    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o () ->
+    NearestHoles ->
+    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o ()) ->
     ExprGuiM i o (ExpressionGui o)
 makeFunc nearestHoles func =
     stdWrap pl <*>
@@ -75,7 +76,8 @@ makeFunc nearestHoles func =
 
 makeInfixFunc ::
     (Monad i, Monad o) =>
-    NearestHoles -> Sugar.LabeledApplyFunc (Name o) i o () ->
+    NearestHoles ->
+    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o ()) ->
     ExprGuiM i o (ExpressionGui o)
 makeInfixFunc nearestHoles func =
     makeFunc nearestHoles func <&> mAddMarker

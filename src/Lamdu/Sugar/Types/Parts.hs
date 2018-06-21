@@ -165,12 +165,12 @@ data RelayedArg name i o = RelayedArg
     , _raActions :: NodeActions name i o
     } deriving Generic
 
-data LabeledApplyFunc name i o a = LabeledApplyFunc
+data LabeledApplyFunc name o a = LabeledApplyFunc
     { _afVar :: BinderVarRef name o
-    , _afPayload :: Payload name i o a
+    , _afPayload :: a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-instance (Show name, Show a) => Show (LabeledApplyFunc name i o a) where
+instance (Show name, Show a) => Show (LabeledApplyFunc name o a) where
     show (LabeledApplyFunc func pl) = concat [show func, "{", show pl, "}"]
 
 data Heal o

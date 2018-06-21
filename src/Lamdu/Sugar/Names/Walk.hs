@@ -294,8 +294,8 @@ toRelayedArg RelayedArg{..} =
 toLabeledApplyFunc ::
     MonadNaming m =>
     Maybe Disambiguator ->
-    LabeledApplyFunc (OldName m) (IM m) o a ->
-    m (LabeledApplyFunc (NewName m) (IM m) o a)
+    LabeledApplyFunc (OldName m) o (Payload (OldName m) (IM m) o a) ->
+    m (LabeledApplyFunc (NewName m) o (Payload (NewName m) (IM m) o a))
 toLabeledApplyFunc disambiguator (LabeledApplyFunc func pl) =
     LabeledApplyFunc
     <$> toBinderVarRef disambiguator func

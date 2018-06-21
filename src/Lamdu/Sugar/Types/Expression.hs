@@ -61,7 +61,7 @@ data AnnotatedArg name expr = AnnotatedArg
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data LabeledApply name i o a = LabeledApply
-    { _aFunc :: LabeledApplyFunc name i o ()
+    { _aFunc :: LabeledApplyFunc name o (Payload name i o ())
     , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
     , _aAnnotatedArgs :: [AnnotatedArg name (Expression name i o a)]
     , _aRelayedArgs :: [RelayedArg name i o]
