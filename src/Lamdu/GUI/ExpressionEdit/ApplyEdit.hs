@@ -96,7 +96,7 @@ isBoxed apply =
 makeFuncRow ::
     (Monad i, Monad o) =>
     Maybe AnimId ->
-    Sugar.LabeledApply (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     NearestHoles ->
     ExprGuiM i o (ExpressionGui o)
 makeFuncRow mParensId apply applyNearestHoles =
@@ -129,7 +129,7 @@ makeFuncRow mParensId apply applyNearestHoles =
 
 makeLabeled ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApply (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
 makeLabeled apply pl =
@@ -181,7 +181,7 @@ mkRelayedArgs nearestHoles args =
 
 mkBoxed ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApply (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     NearestHoles ->
     ExpressionGui o ->
     ExprGuiM i o (ExpressionGui o)

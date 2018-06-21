@@ -60,10 +60,10 @@ data AnnotatedArg name expr = AnnotatedArg
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data LabeledApply name i o expr = LabeledApply
+data LabeledApply name i o a = LabeledApply
     { _aFunc :: LabeledApplyFunc name i o ()
-    , _aSpecialArgs :: Meta.SpecialArgs expr
-    , _aAnnotatedArgs :: [AnnotatedArg name expr]
+    , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
+    , _aAnnotatedArgs :: [AnnotatedArg name (Expression name i o a)]
     , _aRelayedArgs :: [RelayedArg name i o]
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -109,7 +109,7 @@ data Hole name i o = Hole
 data Body name i o a
     = BodyLam (Lambda name i o a)
     | BodySimpleApply (V.Apply (Expression name i o a))
-    | BodyLabeledApply (LabeledApply name i o (Expression name i o a))
+    | BodyLabeledApply (LabeledApply name i o a)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o (Expression name i o a))
@@ -123,10 +123,6 @@ data Body name i o a
     | BodyFragment (Fragment name i o a)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable, Generic)
-
-instance (Show name, Show expr) => Show (LabeledApply name i o expr) where
-    show (LabeledApply func specialArgs _annArgs _relayedArgs) =
-        unwords ["LabeledApply of", show func, "with", show specialArgs, "..."]
 
 data Let name i o a = Let
     { _lValue :: Assignment name i o a -- "let foo = [[bar]] in x"

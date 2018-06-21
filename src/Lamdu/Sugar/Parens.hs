@@ -36,7 +36,9 @@ addWith ::
     Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
-bareInfix :: Lens.Prism' (LabeledApply name i o a) (a, LabeledApplyFunc name i o (), a)
+bareInfix ::
+    Lens.Prism' (LabeledApply name i o a)
+    (Expression name i o a, LabeledApplyFunc name i o (), Expression name i o a)
 bareInfix =
     Lens.prism toLabeledApply fromLabeledApply
     where
@@ -90,7 +92,7 @@ loop minOpPrec parentPrec (Expression pl body_) =
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
         labeledApply x =
             case x ^? bareInfix of
-            Nothing -> mkUnambiguous Lens.mapped BodyLabeledApply x
+            Nothing -> mkUnambiguous SugarLens.labeledApplyExprs BodyLabeledApply x
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #

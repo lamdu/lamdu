@@ -301,18 +301,26 @@ toLabeledApplyFunc disambiguator (LabeledApplyFunc func pl) =
     <$> toBinderVarRef disambiguator func
     <*> toPayload pl
 
-toLabeledApply ::
+toAnnotatedArg ::
     MonadNaming m =>
     (a -> m b) ->
-    LabeledApply (OldName m) (IM m) o a ->
-    m (LabeledApply (NewName m) (IM m) o b)
-toLabeledApply expr app@LabeledApply{..} =
+    AnnotatedArg (OldName m) a ->
+    m (AnnotatedArg (NewName m) b)
+toAnnotatedArg expr (AnnotatedArg tag e) =
+    AnnotatedArg
+    <$> toTagInfoOf Tag tag
+    <*> expr e
+
+toLabeledApply ::
+    MonadNaming m =>
+    LabeledApply (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (LabeledApply (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toLabeledApply app@LabeledApply{..} =
     LabeledApply
     <$> toLabeledApplyFunc (Just (funcSignature app)) _aFunc
-    <*> pure _aSpecialArgs
-    <*> (traverse . aaTag) (toTagInfoOf Tag) _aAnnotatedArgs
+    <*> traverse toExpression _aSpecialArgs
+    <*> traverse (toAnnotatedArg toExpression) _aAnnotatedArgs
     <*> traverse toRelayedArg _aRelayedArgs
-    >>= traverse expr
 
 toHole ::
     MonadNaming m =>
@@ -423,7 +431,7 @@ toBody =
     BodyCase         x -> x & toCase toExpression <&> BodyCase
     BodyIfElse       x -> x & toIfElse toExpression <&> BodyIfElse
     BodySimpleApply  x -> x & traverse toExpression <&> BodySimpleApply
-    BodyLabeledApply x -> x & toLabeledApply toExpression <&> BodyLabeledApply
+    BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom
     BodyToNom        x -> x & traverse toBinderBody >>= nTId toTId <&> BodyToNom

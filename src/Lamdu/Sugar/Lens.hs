@@ -1,7 +1,8 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Lens
     ( bodyChildren
     , binderBodyExprs, binderContentExprs, funcExprs, assignmentExprs
+    , labeledApplyExprs
     , subExprPayloads, payloadsIndexedByPath
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
@@ -62,6 +63,15 @@ funcExprs ::
     Function name i o a -> f (Function name i o b)
 funcExprs = fBody . binderBodyExprs
 
+labeledApplyExprs ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    LabeledApply name i o a -> f (LabeledApply name i o b)
+labeledApplyExprs f LabeledApply {..} =
+    (\_aSpecialArgs _aAnnotatedArgs -> LabeledApply {..})
+    <$> traverse f _aSpecialArgs
+    <*> (traverse . traverse) f _aAnnotatedArgs
+
 bodyChildren ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
@@ -74,7 +84,7 @@ bodyChildren f =
     BodyHole    x -> BodyHole    x & pure
     BodyLam          x -> (lamFunc . funcExprs) f x <&> BodyLam
     BodySimpleApply  x -> traverse f x <&> BodySimpleApply
-    BodyLabeledApply x -> traverse f x <&> BodyLabeledApply
+    BodyLabeledApply x -> labeledApplyExprs f x <&> BodyLabeledApply
     BodyRecord       x -> traverse f x <&> BodyRecord
     BodyGetField     x -> traverse f x <&> BodyGetField
     BodyCase         x -> traverse f x <&> BodyCase
