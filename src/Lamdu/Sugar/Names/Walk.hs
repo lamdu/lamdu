@@ -172,16 +172,12 @@ toAnnotation (Annotation typ evalRes) =
     <*> (traverse . traverse . traverse) toResVal evalRes
 
 toLet ::
-    MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
-    Let (OldName m) (IM m) o a ->
-    m (Let (NewName m) (IM m) o b)
-toLet expr Let{..} =
+    MonadNaming m => Let (OldName m) (IM m) o a -> m (Let (NewName m) (IM m) o a)
+toLet Let{..} =
     do
         (_lName, _lBody) <-
-            unCPS (withTag TaggedVar varInfo _lName)
-            (toBinderBody expr _lBody)
-        _lValue <- toBinder expr _lValue
+            unCPS (withTag TaggedVar varInfo _lName) (toBinderBody _lBody)
+        _lValue <- toBinder _lValue
         _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
     where
@@ -195,18 +191,16 @@ toLet expr Let{..} =
 
 toBinderContent ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     BinderContent (OldName m) (IM m) o a ->
-    m (BinderContent (NewName m) (IM m) o b)
-toBinderContent expr (BinderLet l) = toLet expr l <&> BinderLet
-toBinderContent expr (BinderExpr e) = expr e <&> BinderExpr
+    m (BinderContent (NewName m) (IM m) o a)
+toBinderContent (BinderLet l) = toLet l <&> BinderLet
+toBinderContent (BinderExpr e) = toExpression e <&> BinderExpr
 
 toBinderBody ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     BinderBody (OldName m) (IM m) o a ->
-    m (BinderBody (NewName m) (IM m) o b)
-toBinderBody expr = bbContent %%~ toBinderContent expr
+    m (BinderBody (NewName m) (IM m) o a)
+toBinderBody = bbContent toBinderContent
 
 toAddFirstParam ::
     MonadNaming m =>
@@ -216,48 +210,43 @@ toAddFirstParam = _PrependParam toTagSelection
 
 toFunction ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Function (OldName m) (IM m) o a ->
-    m (Function (NewName m) (IM m) o b)
-toFunction expr Function{..} =
+    m (Function (NewName m) (IM m) o a)
+toFunction Function{..} =
     (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
-    <$> unCPS (withBinderParams _fParams) (toBinderBody expr _fBody)
+    <$> unCPS (withBinderParams _fParams) (toBinderBody _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
 toBinderPlain ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     AssignPlain (OldName m) (IM m) o a ->
-    m (AssignPlain (NewName m) (IM m) o b)
-toBinderPlain expr AssignPlain{..} =
+    m (AssignPlain (NewName m) (IM m) o a)
+toBinderPlain AssignPlain{..} =
     (\_apBody _apAddFirstParam -> AssignPlain{..})
-    <$> toBinderBody expr _apBody
+    <$> toBinderBody _apBody
     <*> toAddFirstParam _apAddFirstParam
 
 toBinderForm ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     AssignmentBody (OldName m) (IM m) o a ->
-    m (AssignmentBody (NewName m) (IM m) o b)
-toBinderForm expr (BodyPlain x) = toBinderPlain expr x <&> BodyPlain
-toBinderForm expr (BodyFunction x) = afFunction (toFunction expr) x <&> BodyFunction
+    m (AssignmentBody (NewName m) (IM m) o a)
+toBinderForm (BodyPlain x) = toBinderPlain x <&> BodyPlain
+toBinderForm (BodyFunction x) = afFunction toFunction x <&> BodyFunction
 
 toBinder ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Assignment (OldName m) (IM m) o a ->
-    m (Assignment (NewName m) (IM m) o b)
-toBinder expr Assignment{..} =
+    m (Assignment (NewName m) (IM m) o a)
+toBinder Assignment{..} =
     (\_aBody _aNodeActions -> Assignment{..})
-    <$> toBinderForm expr _aBody
+    <$> toBinderForm _aBody
     <*> toNodeActions _aNodeActions
 
 toLam ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Lambda (OldName m) (IM m) o a ->
-    m (Lambda (NewName m) (IM m) o b)
-toLam = lamFunc . toFunction
+    m (Lambda (NewName m) (IM m) o a)
+toLam = lamFunc toFunction
 
 toTagInfoOf ::
     MonadNaming m => NameType -> TagInfo (OldName m) -> m (TagInfo (NewName m))
@@ -331,21 +320,24 @@ toHole hole =
     opRun
     <&>
     \run ->
-    SugarLens.holeTransformExprs (run . toBinderContent toExpression) hole
+    SugarLens.holeTransformExprs (run . toBinderContent) hole
 
 toFragment ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
     Fragment (OldName m) (IM m) o a ->
-    m (Fragment (NewName m) (IM m) o b)
-toFragment expr Fragment{..} =
+    m (Fragment (NewName m) (IM m) o a)
+toFragment Fragment{..} =
     do
         run <- opRun
-        newExpr <- expr _fExpr
+        newExpr <- toExpression _fExpr
         pure Fragment
             { _fExpr = newExpr
             , _fHeal = _fHeal
-            , _fOptions = _fOptions <&> Lens.mapped %~ SugarLens.holeOptionTransformExprs (run . toBinderContent toExpression)
+            , _fOptions =
+                 _fOptions
+                 <&> Lens.mapped %~
+                     SugarLens.holeOptionTransformExprs
+                     (run . toBinderContent)
             }
 
 toComposite ::
@@ -419,23 +411,23 @@ toIfElse expr (IfElse ifThen els_) =
 
 toBody ::
     MonadNaming m =>
-    (Expression (OldName m) (IM m) o a -> m (Expression (NewName m) (IM m) o b)) ->
-    Body (OldName m) (IM m) o a -> m (Body (NewName m) (IM m) o b)
-toBody expr = \case
-    BodyGetField     x -> x & traverse expr >>= gfTag toTag <&> BodyGetField
-    BodyInject       x -> x & toInject expr <&> BodyInject
-    BodyRecord       x -> x & toComposite expr <&> BodyRecord
-    BodyCase         x -> x & toCase expr <&> BodyCase
-    BodyIfElse       x -> x & toIfElse expr <&> BodyIfElse
-    BodySimpleApply  x -> x & traverse expr <&> BodySimpleApply
-    BodyLabeledApply x -> x & toLabeledApply expr <&> BodyLabeledApply
+    Body (OldName m) (IM m) o a -> m (Body (NewName m) (IM m) o a)
+toBody =
+    \case
+    BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField
+    BodyInject       x -> x & toInject toExpression <&> BodyInject
+    BodyRecord       x -> x & toComposite toExpression <&> BodyRecord
+    BodyCase         x -> x & toCase toExpression <&> BodyCase
+    BodyIfElse       x -> x & toIfElse toExpression <&> BodyIfElse
+    BodySimpleApply  x -> x & traverse toExpression <&> BodySimpleApply
+    BodyLabeledApply x -> x & toLabeledApply toExpression <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
-    BodyFromNom      x -> x & traverse expr >>= nTId toTId <&> BodyFromNom
-    BodyToNom        x -> x & traverse (toBinderBody expr) >>= nTId toTId <&> BodyToNom
+    BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom
+    BodyToNom        x -> x & traverse toBinderBody >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
-    BodyLam          x -> x & toLam expr <&> BodyLam
-    BodyFragment     x -> x & toFragment expr <&> BodyFragment
+    BodyLam          x -> x & toLam <&> BodyLam
+    BodyFragment     x -> x & toFragment <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
     where
         toTag = toTagOf Tag
@@ -463,7 +455,7 @@ toExpression ::
 toExpression (Expression pl x) =
     Expression
     <$> toPayload pl
-    <*> toBody toExpression x
+    <*> toBody x
 
 withParamInfo ::
     MonadNaming m =>
@@ -500,7 +492,7 @@ toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
     <*> pure presMode
-    <*> toBinder toExpression content
+    <*> toBinder content
 
 toDefinitionBody ::
     MonadNaming m =>
@@ -533,7 +525,7 @@ toRepl ::
     MonadNaming m =>
     Repl (OldName m) (IM m) o a -> m (Repl (NewName m) (IM m) o a)
 toRepl (Repl bod res) =
-    Repl <$> toBinderBody toExpression bod <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
+    Repl <$> toBinderBody bod <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 
 toWorkArea ::
     MonadNaming m =>
