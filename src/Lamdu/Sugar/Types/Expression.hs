@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types.Expression
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
-    , BinderBody(..), bbAddOuterLet, bbContent
+    , Binder(..), bbAddOuterLet, bbContent
     , BinderContent(..), _BinderLet, _BinderExpr
     , Function(..)
         , fChosenScopeProp, fParams, fBody
@@ -118,7 +118,7 @@ data Body name i o a
     | BodyIfElse (IfElse name i o (Expression name i o a))
     | BodyInject (Inject name i o (Expression name i o a))
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (BinderBody name i o a))
+    | BodyToNom (Nominal name (Binder name i o a))
     | BodyFromNom (Nominal name (Expression name i o a))
     | BodyFragment (Fragment name i o a)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
@@ -131,7 +131,7 @@ data Let name i o a = Let
     , _lName :: Tag name i o -- let [[foo]] = bar in x
     , _lActions :: LetActions name i o
     , _lBodyScope :: ChildScopes
-    , _lBody :: BinderBody name i o a -- "let foo = bar in [[x]]"
+    , _lBody :: Binder name i o a -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data BinderContent name i o a
@@ -145,7 +145,7 @@ data BinderContent name i o a
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-data BinderBody name i o a = BinderBody
+data Binder name i o a = Binder
     { _bbAddOuterLet :: o EntityId
     , _bbContent :: BinderContent name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
@@ -153,7 +153,7 @@ data BinderBody name i o a = BinderBody
 data Function name i o a = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: BinderBody name i o a
+    , _fBody :: Binder name i o a
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope
@@ -166,7 +166,7 @@ data AssignFunction name i o a = AssignFunction
 
 data AssignPlain name i o a = AssignPlain
     { _apAddFirstParam :: AddFirstParam name i o
-    , _apBody :: BinderBody name i o a
+    , _apBody :: Binder name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data AssignmentBody name i o a
@@ -183,7 +183,7 @@ Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignFunction
 Lens.makeLenses ''Assignment
 Lens.makeLenses ''AssignPlain
-Lens.makeLenses ''BinderBody
+Lens.makeLenses ''Binder
 Lens.makeLenses ''Expression
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function

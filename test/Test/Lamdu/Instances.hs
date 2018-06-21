@@ -135,7 +135,7 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.AssignFunction n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Assignment n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.AssignmentBody n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.AssignPlain n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.BinderBody n Unit Unit a)
+deriving instance (Eq a, Eq n) => Eq (Sugar.Binder n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.BinderContent n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Body n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Case n Unit Unit a)
@@ -220,7 +220,7 @@ instance (NFData a, NFData n) => NFData (Sugar.AssignFunction n (T i) (T o) a) w
 instance (NFData a, NFData n) => NFData (Sugar.Assignment n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.AssignmentBody n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.AssignPlain n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.BinderBody n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.Binder n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.BinderContent n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Body n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Case n (T i) (T o) a) where rnf = genericRnf

@@ -194,7 +194,7 @@ loadRepl cache monitors evalRes cp =
             convertBinderBody valInferred
             & ConvertM.run context
             <&> Lens.mapped . plData %~ (^. pUserData)
-            >>= SugarLens.binderBodyExprs OrderTags.orderExpr
+            >>= SugarLens.binderExprs OrderTags.orderExpr
         let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl
             { _replExpr = expr

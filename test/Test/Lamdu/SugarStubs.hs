@@ -186,7 +186,7 @@ repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
 repl x =
     Sugar.Repl
     { Sugar._replExpr =
-        Sugar.BinderBody
+        Sugar.Binder
         { Sugar._bbContent = Sugar.BinderExpr x
         , Sugar._bbAddOuterLet = error "not implemented"
         }
@@ -223,7 +223,7 @@ funcExpr params body =
     , Sugar._fAddFirstParam = Sugar.PrependParam tagSelection
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._fBody =
-        Sugar.BinderBody
+        Sugar.Binder
         { Sugar._bbAddOuterLet = Unit
         , Sugar._bbContent = Sugar.BinderExpr body
         }

@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes, RecordWildCards #-}
 module Lamdu.Sugar.Lens
     ( bodyChildren
-    , binderBodyExprs, binderContentExprs, funcExprs, assignmentExprs
+    , binderExprs, binderContentExprs, funcExprs, assignmentExprs
     , labeledApplyExprs
     , subExprPayloads, payloadsIndexedByPath
     , payloadsOf
@@ -27,7 +27,7 @@ assignmentBodyExprs ::
     (Expression name i o a -> f (Expression name i o b)) ->
     AssignmentBody name i o a -> f (AssignmentBody name i o b)
 assignmentBodyExprs f (BodyFunction x) = (afFunction . funcExprs) f x <&> BodyFunction
-assignmentBodyExprs f (BodyPlain x) = (apBody . binderBodyExprs) f x <&> BodyPlain
+assignmentBodyExprs f (BodyPlain x) = (apBody . binderExprs) f x <&> BodyPlain
 
 assignmentExprs ::
     Applicative f =>
@@ -42,7 +42,7 @@ letExprs ::
 letExprs f x =
     (\val bod -> x{_lValue=val, _lBody=bod})
     <$> assignmentExprs f (x ^. lValue)
-    <*> binderBodyExprs f (x ^. lBody)
+    <*> binderExprs f (x ^. lBody)
 
 binderContentExprs ::
     Applicative f =>
@@ -51,17 +51,17 @@ binderContentExprs ::
 binderContentExprs f (BinderExpr x) = f x <&> BinderExpr
 binderContentExprs f (BinderLet x) = letExprs f x <&> BinderLet
 
-binderBodyExprs ::
+binderExprs ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
-    BinderBody name i o a -> f (BinderBody name i o b)
-binderBodyExprs = bbContent . binderContentExprs
+    Binder name i o a -> f (Binder name i o b)
+binderExprs = bbContent . binderContentExprs
 
 funcExprs ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
     Function name i o a -> f (Function name i o b)
-funcExprs = fBody . binderBodyExprs
+funcExprs = fBody . binderExprs
 
 labeledApplyExprs ::
     Applicative f =>
@@ -92,7 +92,7 @@ bodyChildren f =
     BodyInject       x -> traverse f x <&> BodyInject
     BodyFromNom      x -> traverse f x <&> BodyFromNom
     BodyFragment     x -> fExpr f x <&> BodyFragment
-    BodyToNom        x -> (traverse . binderBodyExprs) f x <&> BodyToNom
+    BodyToNom        x -> (traverse . binderExprs) f x <&> BodyToNom
 
 subExprPayloads ::
     Lens.IndexedTraversal
@@ -215,7 +215,7 @@ workAreaExpressions ::
 workAreaExpressions f (WorkArea panes repl globals) =
     WorkArea
     <$> (traverse . paneDefinition . definitionExprs) f panes
-    <*> (replExpr . binderBodyExprs) f repl
+    <*> (replExpr . binderExprs) f repl
     ?? globals
 
 holeOptionTransformExprs ::
@@ -245,8 +245,8 @@ binderFormBody ::
     Lens
     (AssignmentBody name i o a)
     (AssignmentBody name i o b)
-    (BinderBody name i o a)
-    (BinderBody name i o b)
+    (Binder name i o a)
+    (Binder name i o b)
 binderFormBody f (BodyFunction x) = (afFunction . fBody) f x <&> BodyFunction
 binderFormBody f (BodyPlain x) = apBody f x <&> BodyPlain
 
@@ -254,8 +254,8 @@ assignmentBody ::
     Lens
     (Assignment name i o a)
     (Assignment name i o b)
-    (BinderBody name i o a)
-    (BinderBody name i o b)
+    (Binder name i o a)
+    (Binder name i o b)
 assignmentBody = aBody . binderFormBody
 
 binderFormAddFirstParam :: Lens' (AssignmentBody name i o a) (AddFirstParam name i o)

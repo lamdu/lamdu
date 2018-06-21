@@ -160,13 +160,13 @@ convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m
-    (BinderBody InternalName (T m) (T m)
+    (Binder InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) (ConvertPayload m a)))
 convertBinderBody expr =
     convertBinderContent expr
     <&>
     \content ->
-    BinderBody
+    Binder
     { _bbAddOuterLet =
         expr ^. Val.payload . Input.stored & DataOps.redexWrap <&> EntityId.ofBinder
     , _bbContent = content
@@ -262,7 +262,7 @@ useNormalLambda paramNames func
     | otherwise =
         any (func &)
         [ Lens.has (fBody . bbContent . _BinderLet)
-        , Lens.has (fBody . SugarLens.binderBodyExprs . SugarLens.payloadsOf forbiddenLightLamSubExprs)
+        , Lens.has (fBody . SugarLens.binderExprs . SugarLens.payloadsOf forbiddenLightLamSubExprs)
         , not . allParamsUsed paramNames
         ]
     where

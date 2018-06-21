@@ -200,8 +200,8 @@ toBinderContent (BinderExpr e) = toExpression e <&> BinderExpr
 
 toBinderBody ::
     MonadNaming m =>
-    BinderBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (BinderBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Binder (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Binder (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinderBody = bbContent toBinderContent
 
 toAddFirstParam ::

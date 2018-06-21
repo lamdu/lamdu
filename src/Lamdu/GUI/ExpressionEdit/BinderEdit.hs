@@ -510,10 +510,10 @@ addLetEventMap addLet =
 
 makeBinderBodyEdit ::
     (Monad i, Monad o) =>
-    Sugar.BinderBody (Name o) i o
+    Sugar.Binder (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
-makeBinderBodyEdit (Sugar.BinderBody addOuterLet content) =
+makeBinderBodyEdit (Sugar.Binder addOuterLet content) =
     do
         newLetEventMap <- addLetEventMap addOuterLet
         makeBinderContentEdit content <&> Widget.weakerEvents newLetEventMap
