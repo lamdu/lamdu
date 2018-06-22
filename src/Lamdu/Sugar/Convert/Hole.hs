@@ -87,7 +87,7 @@ convert holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> annotation . plActions . mSetToHole .~ Nothing
+    <&> annotation . pSugar . plActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
 
@@ -290,7 +290,7 @@ sugar sugarContext holePl val =
     & prepareUnstoredPayloads
     & convertBinderContent
     & ConvertM.run sugarContext
-    <&> Lens.mapped . plData %~ (^. pUserData)
+    <&> Lens.mapped %~ (^. pSugar)
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
         -- A fake Infer payload we use to sugar the base expressions.
@@ -494,7 +494,7 @@ mkResult preConversion sugarContext updateDeps stored val =
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
         HoleResult
-        { _holeResultConverted = fConverted <&> plData %~ (^. pUserData)
+        { _holeResultConverted = fConverted <&> (^. pSugar)
         , _holeResultPick =
             do
                 Transaction.merge forkedChanges

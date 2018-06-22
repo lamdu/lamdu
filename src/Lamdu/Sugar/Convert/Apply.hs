@@ -54,7 +54,7 @@ convert app@(V.Apply funcI argI) exprPl =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & annotation . plActions . mSetToHole ?~ deleteAction
+                              & annotation . pSugar . plActions . mSetToHole ?~ deleteAction
                       else funcS
                     , argS
                     )
@@ -134,7 +134,7 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. annotation . plData . pStored & Property.value)
+                (funcS ^. annotation . pStored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply Apply
             { _applyFunc = funcS

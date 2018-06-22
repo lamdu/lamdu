@@ -29,9 +29,7 @@ type T = Transaction
 convert ::
     (Monoid a, Monad m) =>
     Scheme.Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
-    ConvertM m
-    (DefinitionBody InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    ConvertM m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m a))
 convert defType defExpr defI =
     do
         (presMode, content) <-

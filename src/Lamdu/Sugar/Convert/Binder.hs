@@ -88,14 +88,20 @@ makeInline stored redex useId
         uses = redex ^. Redex.paramRefs
         (before, after) = break (== useId) uses
 
+-- Differs from SugarLens version by Payload type
+-- TODO: cleanup
+binderContentEntityId ::
+    Lens' (BinderContent name i o (ConvertPayload m a)) EntityId
+binderContentEntityId f (BinderExpr e) =
+    e & annotation . pSugar . plEntityId %%~ f <&> BinderExpr
+binderContentEntityId f (BinderLet l) =
+    l & lEntityId %%~ f <&> BinderLet
 
 convertRedex ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     Redex (Input.Payload m a) ->
-    ConvertM m
-    (Let InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    ConvertM m (Let InternalName (T m) (T m) (ConvertPayload m a))
 convertRedex expr redex =
     do
         tag <- convertTaggedEntity param
@@ -130,9 +136,9 @@ convertRedex expr redex =
                 letBody
                 & bbContent .
                     Lens.failing
-                    (_BinderExpr . annotation . plActions)
+                    (_BinderExpr . annotation . pSugar . plActions)
                     (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
-                    (letBody ^. bbContent . SugarLens.binderContentEntityId <$ actions ^. laDelete)
+                    (letBody ^. bbContent . binderContentEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
@@ -146,9 +152,7 @@ convertRedex expr redex =
 convertBinderContent ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m
-    (BinderContent InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    ConvertM m (BinderContent InternalName (T m) (T m) (ConvertPayload m a))
 convertBinderContent expr =
     case Redex.check expr of
     Nothing ->
@@ -159,9 +163,7 @@ convertBinderContent expr =
 convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m
-    (Binder InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    ConvertM m (Binder InternalName (T m) (T m) (ConvertPayload m a))
 convertBinderBody expr =
     convertBinderContent expr
     <&>
@@ -176,9 +178,7 @@ makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
-    ConvertM m
-    (Function InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    ConvertM m (Function InternalName (T m) (T m) (ConvertPayload m a))
 makeFunction chosenScopeProp params funcBody =
     convertBinderBody funcBody
     <&> mkRes
@@ -206,9 +206,7 @@ makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
-    ConvertM m
-    (Assignment InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    ConvertM m (Assignment InternalName (T m) (T m) (ConvertPayload m a))
 makeAssignment chosenScopeProp params funcBody pl =
     do
         bod <-
@@ -254,7 +252,8 @@ convertLam lam exprPl =
                     & Lambda LightLambda
         BodyLam lambda
             & addActions lam exprPl
-            <&> body . SugarLens.bodyChildPayloads . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
+            <&> body . SugarLens.bodyChildPayloads .
+                pSugar . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda :: Set InternalName -> Function InternalName i o a -> Bool
 useNormalLambda paramNames func
@@ -301,8 +300,7 @@ convertBinder ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Assignment InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a))
+    , Assignment InternalName (T m) (T m) (ConvertPayload m a)
     )
 convertBinder binderKind defVar expr =
     do
@@ -317,8 +315,7 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Assignment InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m a))
+    , Assignment InternalName (T m) (T m) (ConvertPayload m a)
     )
 convertDefinitionBinder defI =
     convertBinder (BinderKindDef defI) (ExprIRef.globalId defI)

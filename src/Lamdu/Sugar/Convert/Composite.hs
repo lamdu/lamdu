@@ -171,7 +171,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Body InternalName (T m) (T m) (Payload InternalName (T m) (T m) (ConvertPayload m a)))
+    (Body InternalName (T m) (T m) (ConvertPayload m a))
     (Composite InternalName (T m) (T m) (ExpressionU m a))
 
 convert ::
@@ -194,9 +194,9 @@ convert op empty cons prism valS restS exprPl extendV =
         -- subexprs given will add no hidden payloads. Then we add the
         -- extend only to pUserData as the hidden payload
         >>= addActions [] exprPl
-        <&> annotation . plEntityId .~ restS ^. annotation . plEntityId
-        <&> annotation . plData . pUserData <>~
-            (exprPl ^. Input.userData <> restS ^. annotation . plData . pUserData)
+        <&> annotation . pSugar . plEntityId .~ restS ^. annotation . pSugar . plEntityId
+        <&> annotation . pSugar . plData <>~
+            (exprPl ^. Input.userData <> restS ^. annotation . pSugar . plData)
     Nothing ->
         convertOneItemOpenComposite empty cons op valS restS exprPl extendV
         <&> (prism #)

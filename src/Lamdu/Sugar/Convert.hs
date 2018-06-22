@@ -93,9 +93,7 @@ convertInferDefExpr ::
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
-    T m
-    (DefinitionBody InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m [EntityId])))
+    T m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
 convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
@@ -146,8 +144,7 @@ convertDefBody ::
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m
-    (DefinitionBody InternalName (T m) (T m)
-        (Payload InternalName (T m) (T m) (ConvertPayload m [EntityId])))
+    (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
 convertDefBody cache monitors evalRes cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
@@ -193,7 +190,7 @@ loadRepl cache monitors evalRes cp =
         expr <-
             convertBinderBody valInferred
             & ConvertM.run context
-            <&> Lens.mapped . plData %~ (^. pUserData)
+            <&> Lens.mapped %~ (^. pSugar)
             >>= SugarLens.binderExprs OrderTags.orderExpr
         let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl
@@ -252,7 +249,7 @@ loadPanes cache monitors evalRes cp replEntityId =
                         def
                         <&> Anchors.paneDef
                         & convertDefBody cache monitors evalRes cp
-                        <&> Lens.mapped . plData %~ (^. pUserData)
+                        <&> Lens.mapped %~ (^. pSugar)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar

@@ -16,11 +16,9 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Sugar.LabeledApplyFunc InternalName o (Sugar.Payload InternalName i o a) ->
-    [Sugar.AnnotatedArg InternalName
-        (Sugar.Expression InternalName i o (Sugar.Payload InternalName i o a))] ->
-    T m
-    (Sugar.LabeledApply InternalName i o (Sugar.Payload InternalName i o a))
+    Sugar.LabeledApplyFunc InternalName (T m) (ConvertPayload m a) ->
+    [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
+    T m (Sugar.LabeledApply InternalName (T m) (T m) (ConvertPayload m a))
 makeLabeledApply func args =
     func ^. Sugar.afVar . Sugar.bvVar
     & Anchors.assocPresentationMode & Property.getP
@@ -55,7 +53,7 @@ makeLabeledApply func args =
         mkInfixArg arg other =
             arg
             & Sugar.body . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent
+                other ^. Sugar.annotation . pSugar . Sugar.plActions . Sugar.mReplaceParent
         processArg arg =
             do
                 getVar <- arg ^? Sugar.aaExpr . Sugar.body . Sugar._BodyGetVar
@@ -67,7 +65,7 @@ makeLabeledApply func args =
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Sugar.RelayedArg
                     { Sugar._raValue = getVar
-                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.annotation . Sugar.plEntityId
-                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . Sugar.plActions
+                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.annotation . pSugar . Sugar.plEntityId
+                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . pSugar . Sugar.plActions
                     } & Just
             & fromMaybe (Left arg)

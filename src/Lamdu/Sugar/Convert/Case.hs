@@ -79,16 +79,16 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
                     CaseArg
                     { _caVal = simplifyCaseArg argS
                     , _caToLambdaCase =
-                        setTo (funcS ^. annotation . plData . pStored . Property.pVal)
+                        setTo (funcS ^. annotation . pStored . Property.pVal)
                         <&> EntityId.ofValI
                     }
         convertIfElse setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
-            <&> annotation . plEntityId .~ funcS ^. annotation . plEntityId
-            <&> annotation . plData . pUserData <>~
-                (exprPl ^. Input.userData <> funcS ^. annotation . plData . pUserData)
+            <&> annotation . pSugar . plEntityId .~ funcS ^. annotation . pSugar . plEntityId
+            <&> annotation . pSugar . plData <>~
+                (exprPl ^. Input.userData <> funcS ^. annotation . pSugar . plData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =

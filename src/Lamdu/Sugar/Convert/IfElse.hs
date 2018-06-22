@@ -25,7 +25,7 @@ convertIfElse setToVal caseBody =
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. body of
             BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
-            _ | arg ^? annotation . plAnnotation . aInferredType . tBody . _TInst . _1 . tidTId == Just boolTid -> tryIfElse arg
+            _ | arg ^? annotation . pSugar . plAnnotation . aInferredType . tBody . _TInst . _1 . tidTId == Just boolTid -> tryIfElse arg
             _ -> Nothing
     where
         tryIfElse cond =
@@ -47,10 +47,10 @@ convertIfElse setToVal caseBody =
                             case binder ^. fBodyScopes of
                             SameAsParentScope -> error "lambda body should have scopes"
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
-                        , _eiEntityId = altFalseBinderExpr ^. annotation . plEntityId
+                        , _eiEntityId = altFalseBinderExpr ^. annotation . pSugar . plEntityId
                         , _eiContent = innerIfElse
                         , _eiCondAddLet = binder ^. fBody . bbAddOuterLet
-                        , _eiNodeActions = altFalseBinderExpr ^. annotation . plActions
+                        , _eiNodeActions = altFalseBinderExpr ^. annotation . pSugar . plActions
                         }
                         & makeRes
                         where
@@ -73,7 +73,7 @@ convertIfElse setToVal caseBody =
                 delTarget alt =
                     alt ^? ciExpr . body . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
-                    & (^. annotation . plData . pStored . Property.pVal)
+                    & (^. annotation . pStored . Property.pVal)
                 makeRes els =
                     IfElse
                     { _iIfThen =

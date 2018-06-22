@@ -108,12 +108,12 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             sugarContext <- Lens.view id
             options <-
                 mkOptions sugarContext argI
-                (argS <&> plData %~ (^. pUserData)) exprPl
+                (argS <&> (^. pSugar)) exprPl
             BodyFragment Fragment
                 { _fExpr =
                       argS
-                      & annotation . plActions . detach .~ FragmentExprAlready storedEntityId
-                      & annotation . plActions . mSetToHole ?~
+                      & annotation . pSugar . plActions . detach .~ FragmentExprAlready storedEntityId
+                      & annotation . pSugar . plActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                       if isTypeMatch
@@ -127,7 +127,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-            <&> annotation . plActions . detach .~ FragmentAlready storedEntityId
+            <&> annotation . pSugar . plActions . detach .~ FragmentAlready storedEntityId
     where
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI

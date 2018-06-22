@@ -137,18 +137,18 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValP m ->
-        Body name (T m) (T m) (Payload name1 (T m) (T m) (ConvertPayload m a)) ->
-        Body name (T m) (T m) (Payload name1 (T m) (T m) (ConvertPayload m a))
+        Body name (T m) (T m) (ConvertPayload m a) ->
+        Body name (T m) (T m) (ConvertPayload m a)
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
     <&>
     \protectedSetToVal stored bod ->
     let setToExpr srcPl =
-            plActions . mReplaceParent ?~
+            pSugar . plActions . mReplaceParent ?~
             (protectedSetToVal
                 stored
-                (srcPl ^. plData . pStored . Property.pVal)
+                (srcPl ^. pStored . Property.pVal)
                 <&> EntityId.ofValI)
     in
     case bod of
@@ -169,13 +169,13 @@ setChildReplaceParentActions =
 
 subexprPayloads ::
     Foldable f =>
-    f (Val (Input.Payload m a)) -> [Payload name i o (ConvertPayload m a)] -> [a]
+    f (Val (Input.Payload m a)) -> [ConvertPayload m a] -> [a]
 subexprPayloads subexprs cullPoints =
     subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded . Input.userData
     where
         -- | The direct child exprs of the sugar expr
         cullSet =
-            cullPoints ^.. Lens.folded . plData . pStored . Property.pVal
+            cullPoints ^.. Lens.folded . pStored . Property.pVal
             <&> EntityId.ofValI
             & Set.fromList
         toCull pl = (pl ^. Input.entityId) `Set.member` cullSet
@@ -183,8 +183,7 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m a ->
-    Body InternalName (T m) (T m)
-    (Payload InternalName (T m) (T m) (ConvertPayload m a)) ->
+    Body InternalName (T m) (T m) (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -194,14 +193,14 @@ addActionsWith userData exprPl bodyS =
         pure Expression
             { _body = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _annotation =
-                Payload
-                { _plEntityId = exprPl ^. Input.entityId
-                , _plAnnotation = ann
-                , _plActions = actions
-                , _plData =
-                    ConvertPayload
-                    { _pStored = exprPl ^. Input.stored
-                    , _pUserData = userData
+                ConvertPayload
+                { _pStored = exprPl ^. Input.stored
+                , _pSugar =
+                    Payload
+                    { _plEntityId = exprPl ^. Input.entityId
+                    , _plAnnotation = ann
+                    , _plActions = actions
+                    , _plData = userData
                     }
                 }
             }
@@ -209,8 +208,7 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
     f (Val (Input.Payload m a)) -> Input.Payload m a ->
-    Body InternalName (T m) (T m)
-    (Payload InternalName (T m) (T m) (ConvertPayload m a)) ->
+    Body InternalName (T m) (T m) (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS
