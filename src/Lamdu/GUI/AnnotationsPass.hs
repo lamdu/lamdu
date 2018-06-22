@@ -14,11 +14,7 @@ dontShowEval :: T.ShowAnnotation
 dontShowEval = T.showAnnotationWhenVerbose & T.showInEvalMode .~ False
 
 forceShowTypeOrEval :: T.ShowAnnotation
-forceShowTypeOrEval =
-    T.showAnnotationWhenVerbose
-    & T.showExpanded .~ True
-    & T.showInEvalMode .~ True
-    & T.showInTypeMode .~ True
+forceShowTypeOrEval = T.showAnnotationWhenVerbose & T.showExpanded .~ True
 
 topLevelAnn ::
     Lens' (Expression name i o (T.ShowAnnotation, a))
