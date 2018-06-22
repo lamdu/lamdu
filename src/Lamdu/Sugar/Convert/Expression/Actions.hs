@@ -13,6 +13,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Sugar.Annotations as Ann
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -208,28 +209,47 @@ addActions subexprs exprPl bodyS =
     where
         childPayloads = bodyS ^.. bodyChildPayloads
 
-makeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Annotation InternalName)
-makeAnnotation payload =
+makeTypeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Type InternalName)
+makeTypeAnnotation payload =
     convertType (EntityId.ofTypeOf entityId) typ
-    <&> \typS ->
-    Annotation
-    { _aInferredType = typS
-    , _aMEvaluationResult =
-        payload ^. Input.evalResults <&> (^. Input.eResults)
-        & ConvertEval.results (EntityId.ofEvalOf entityId)
-    }
     where
         entityId = payload ^. Input.entityId
         typ = payload ^. Input.inferredType
 
-convertPayload :: Monad m => ConvertPayload m a -> ConvertM m (Payload InternalName (T m) (T m) a)
-convertPayload pl =
-    makeAnnotation (pl ^. pInput)
+makeAnnotation ::
+    Monad m =>
+    Input.AnnotationMode -> Ann.ShowAnnotation -> Input.Payload m a ->
+    ConvertM m (Annotation InternalName)
+makeAnnotation Input.None showAnn pl
+    | showAnn ^. Ann.showExpanded = makeTypeAnnotation pl <&> AnnotationType
+    | otherwise = pure AnnotationNone
+makeAnnotation Input.Types showAnn pl
+    | showAnn ^. Ann.showInTypeMode = makeTypeAnnotation pl <&> AnnotationType
+    | otherwise = pure AnnotationNone
+makeAnnotation Input.Evaluation showAnn pl
+    | showAnn ^. Ann.showInEvalMode =
+        guard (showAnn ^. Ann.showExpanded)
+        & Lens._Just (const (makeTypeAnnotation pl))
+        <&>
+        ValAnnotation
+        ( pl ^. Input.evalResults <&> (^. Input.eResults)
+            & ConvertEval.results (EntityId.ofEvalOf (pl ^. Input.entityId))
+        )
+        <&> AnnotationVal
+    | otherwise = pure AnnotationNone
+
+convertPayload ::
+    Monad m =>
+    Input.AnnotationMode -> (Ann.ShowAnnotation, ConvertPayload m a) ->
+    ConvertM m (Payload InternalName (T m) (T m) a)
+convertPayload mode (showAnn, pl) =
+    makeAnnotation mode showAnn (pl ^. pInput)
     <&>
     \ann ->
     Payload
     { _plAnnotation = ann
     , _plActions = pl ^. pActions
+    , _plNeverShrinkAnnotation = showAnn ^. Ann.showExpanded
     , _plEntityId = pl ^. pInput . Input.entityId
     , _plData = pl ^. pInput . Input.userData
     }

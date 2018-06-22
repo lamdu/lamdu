@@ -84,7 +84,7 @@ testFragment =
                 { Sugar._fExpr = Stub.litNum 5
                 , Sugar._fHeal = Sugar.TypeMismatch
                 , Sugar._fOptions = pure []
-                } & Stub.expr (Stub.numType Stub.~> Stub.numType)
+                } & Stub.expr
             )
             & Sugar.annotation . Sugar.plEntityId .~ fragEntityId
             & Stub.addNamesToExpr

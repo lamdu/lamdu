@@ -81,13 +81,13 @@ workArea396 =
     } & testWorkArea assertNoCollisions
     where
         lamType = Stub.numType ~> Stub.numType
-        leafExpr = Stub.expr Stub.numType Sugar.BodyPlaceHolder
+        leafExpr = Stub.expr Sugar.BodyPlaceHolder
         lamExpr =
             Sugar.BodyLam Sugar.Lambda
             { Sugar._lamMode = Sugar.NormalBinder
             , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
             , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num", Stub.numType)] leafExpr
-            } & Stub.expr lamType
+            } & Stub.expr
 
 workAreaGlobals :: IO ()
 workAreaGlobals =
@@ -112,4 +112,4 @@ workAreaGlobals =
                 , show textCollision, show tagCollision
                 ] & assertString
         trivialBinder = Stub.binderExpr [] trivialExpr
-        trivialExpr = Stub.expr Stub.numType Sugar.BodyPlaceHolder
+        trivialExpr = Stub.expr Sugar.BodyPlaceHolder

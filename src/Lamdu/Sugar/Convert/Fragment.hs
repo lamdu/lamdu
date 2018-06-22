@@ -24,6 +24,7 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
+import           Lamdu.Sugar.Annotations (neverShowAnnotations)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
@@ -107,7 +108,8 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         do
             sugarContext <- Lens.view id
             options <-
-                traverse convertPayload argS
+                argS <&> (,) neverShowAnnotations
+                & traverse (convertPayload Input.None)
                 >>= (mkOptions sugarContext argI ?? exprPl)
             BodyFragment Fragment
                 { _fExpr =

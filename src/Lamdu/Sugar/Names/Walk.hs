@@ -158,11 +158,16 @@ toResBody f =
 toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
 toResVal = resBody (toResBody toResVal)
 
+toValAnnotation :: MonadNaming m => ValAnnotation (OldName m) -> m (ValAnnotation (NewName m))
+toValAnnotation (ValAnnotation evalRes typ) =
+    ValAnnotation
+    <$> (traverse . traverse . traverse) toResVal evalRes
+    <*> Lens._Just toType typ
+
 toAnnotation :: MonadNaming m => Annotation (OldName m) -> m (Annotation (NewName m))
-toAnnotation (Annotation typ evalRes) =
-    Annotation
-    <$> toType typ
-    <*> (traverse . traverse . traverse) toResVal evalRes
+toAnnotation AnnotationNone = pure AnnotationNone
+toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
+toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
 
 toLet ::
     MonadNaming m =>
@@ -466,7 +471,7 @@ withFuncParam ::
     CPS m (FuncParam (NewName m) b)
 withFuncParam f (FuncParam ann varInfo info) =
     FuncParam
-    <$> liftCPS (toAnnotation ann)
+    <$> liftCPS (toValAnnotation ann)
     <*> pure varInfo
     <*> f varInfo info
 

@@ -17,6 +17,7 @@ import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (workAreaExpressions, subExprPayloads)
 import           Lamdu.Sugar.Types as Sugar
@@ -99,7 +100,7 @@ convertWorkArea ::
     (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
 convertWorkArea cache =
-    loadWorkArea cache noopMonitors (pure EvalResults.empty) codeAnchors
+    loadWorkArea cache noopMonitors Input.None (pure EvalResults.empty) codeAnchors
     >>= validate
 
 testProgram :: FilePath -> (Cache.Functions -> T ViewM a) -> IO a

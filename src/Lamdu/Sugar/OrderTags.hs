@@ -83,7 +83,7 @@ orderExpr ::
     Monad m => Order m (Sugar.Expression name (T m) o (Sugar.Payload name i o a))
 orderExpr e =
     e
-    & Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType %%~ orderType
+    & Sugar.annotation . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
     >>= Sugar.body %%~ orderBody
     >>= Sugar.body . SugarLens.bodyChildren pure pure %%~ orderExpr
 

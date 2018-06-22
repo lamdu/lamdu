@@ -170,7 +170,7 @@ resultWidget ::
 resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
-        if isExecutableType (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
+        if Lens.anyOf (Sugar.plAnnotation . SugarLens.annotationTypes) isExecutableType pl
             then
                 do
                     actionKeys <- Lens.view (Config.config . Config.actionKeys)

@@ -25,6 +25,7 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
+import           Lamdu.Sugar.Annotations (markAnnotationsToDisplay)
 import           Lamdu.Sugar.Convert.Binder (convertBinderBody)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
@@ -93,10 +94,10 @@ canInlineDefinition defExpr recursiveVars var entityId =
 convertInferDefExpr ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
-convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
+convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
             Load.inferDef cachedInfer monitors evalRes defExpr defVar
@@ -126,7 +127,9 @@ convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            >>= traverse convertPayload
+            <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentExprs %~
+                markAnnotationsToDisplay
+            >>= traverse (convertPayload annMode)
             & ConvertM.run context
     where
         cachedInfer = Cache.infer cache
@@ -144,23 +147,23 @@ convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
 convertDefBody ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m
     (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
-convertDefBody cache monitors evalRes cp (Definition.Definition bod defType defI) =
+convertDefBody cache monitors annMode evalRes cp (Definition.Definition bod defType defI) =
     case bod of
-    Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
+    Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
 loadRepl ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
-    CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m
     (Repl InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
-loadRepl cache monitors evalRes cp =
+loadRepl cache monitors annMode evalRes cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
@@ -192,7 +195,8 @@ loadRepl cache monitors evalRes cp =
                 <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
             convertBinderBody valInferred
-            >>= traverse convertPayload
+            <&> SugarLens.binderExprs %~ markAnnotationsToDisplay
+            >>= traverse (convertPayload annMode)
             & ConvertM.run context
             >>= SugarLens.binderExprs OrderTags.orderExpr
         let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
@@ -218,12 +222,13 @@ loadAnnotatedDef getDefI x =
 
 loadPanes ::
     Monad m =>
-    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Cache.Functions -> Debug.Monitors ->
+    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m -> EntityId ->
     T m
     [Pane InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId])]
-loadPanes cache monitors evalRes cp replEntityId =
+loadPanes cache monitors annMode evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
         paneDefs <- traverse (loadAnnotatedDef Anchors.paneDef) panes
@@ -252,7 +257,7 @@ loadPanes cache monitors evalRes cp replEntityId =
                     bodyS <-
                         def
                         <&> Anchors.paneDef
-                        & convertDefBody cache monitors evalRes cp
+                        & convertDefBody cache monitors annMode evalRes cp
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar
@@ -275,16 +280,17 @@ loadPanes cache monitors evalRes cp replEntityId =
 
 loadWorkArea ::
     (HasCallStack, Monad m) =>
-    Cache.Functions -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Cache.Functions -> Debug.Monitors ->
+    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m
     (WorkArea InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
-loadWorkArea cache monitors evalRes cp =
+loadWorkArea cache monitors annMode evalRes cp =
     do
-        repl <- loadRepl cache monitors evalRes cp
+        repl <- loadRepl cache monitors annMode evalRes cp
         panes <-
-            loadPanes cache monitors evalRes cp
+            loadPanes cache monitors annMode evalRes cp
             (repl ^. replExpr . bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId)
         pure WorkArea
             { _waRepl = repl

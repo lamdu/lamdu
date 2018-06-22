@@ -131,7 +131,7 @@ makeInferredTypeAnnotation ::
     Sugar.Payload (Name g) i o a0 -> m View
 makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
-    <*> TypeView.make (pl ^. Sugar.plAnnotation . Sugar.aInferredType)
+    <*> TypeView.make (pl ^?! Sugar.plAnnotation . SugarLens.annotationTypes)
     <&> (^. Align.tValue)
     & Reader.local (Element.animIdPrefix .~ animId)
     where

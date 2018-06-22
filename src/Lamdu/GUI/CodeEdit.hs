@@ -51,6 +51,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
+import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -89,9 +90,10 @@ make cp gp width =
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
+        annMode <- Lens.view (Settings.settings . Settings.sAnnotationMode)
         workArea <-
             loadWorkArea (env ^. Cache.functions) (env ^. Debug.monitors)
-            theEvalResults cp & transaction
+            annMode theEvalResults cp & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans

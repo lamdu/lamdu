@@ -51,6 +51,7 @@ import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
+import           Lamdu.Sugar.Annotations (neverShowAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinderContent)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
@@ -289,7 +290,8 @@ sugar sugarContext holePl val =
         (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
     & convertBinderContent
-    >>= traverse convertPayload
+    <&> Lens.mapped %~ (,) neverShowAnnotations
+    >>= traverse (convertPayload Input.None)
     & ConvertM.run sugarContext
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
@@ -489,7 +491,7 @@ mkResult preConversion sugarContext updateDeps stored val =
     do
         updateDeps
         writeResult preConversion stored val
-        <&> (convertBinderContent >=> traverse convertPayload)
+        <&> (convertBinderContent >=> traverse (convertPayload Input.None) . fmap ((,) neverShowAnnotations))
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->

@@ -1,8 +1,8 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts, TupleSections #-}
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
-    , EvalAnnotationOptions(..), maybeAddAnnotationWith
+    , EvalAnnotationOptions(..), maybeAddAnnotationWith, maybeAddValAnnotationWith
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , evaluationResult
     , addAnnotationBackground -- used for open holes
@@ -38,9 +38,6 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
-import qualified Lamdu.Settings as Settings
-import           Lamdu.Sugar.Annotations (ShowAnnotation(..), showExpanded)
-import qualified Lamdu.Sugar.Convert.Input as AnnotationMode
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -252,11 +249,10 @@ maybeAddAnnotationPl ::
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
-            if showAnnotation ^. showExpanded
+            if pl ^. Sugar.plNeverShrinkAnnotation
             then pure KeepWideTypeAnnotation
             else isExprSelected <&> wideAnnotationBehaviorFromSelected
         maybeAddAnnotation wideAnnotationBehavior
-            showAnnotation
             (pl ^. Sugar.plAnnotation)
             & Reader.local (Element.animIdPrefix .~ animId)
     where
@@ -267,39 +263,30 @@ maybeAddAnnotationPl pl =
                 isOnDotter <- GuiState.isSubCursor ?? WidgetIds.dotterId myId
                 pure (isOnExpr && not isOnDotter)
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-        showAnnotation = pl ^. Sugar.plData . ExprGui.plShowAnnotation
 
 evaluationResult ::
     Monad i =>
     Sugar.Payload name i o ExprGui.Payload ->
     ExprGuiM i o (Maybe (Sugar.ResVal name))
 evaluationResult pl =
-    ExprGuiM.readMScopeId
-    <&> valOfScope (pl ^. Sugar.plAnnotation)
-    <&> Lens.mapped %~ erdVal
+    ExprGuiM.readMScopeId <&>
+    \scopeId ->
+    (pl ^? Sugar.plAnnotation . Sugar._AnnotationVal . Sugar.annotationVal)
+    >>= (`valOfScope` scopeId)
+    <&> erdVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
     | WithNeighbouringEvalAnnotations (NeighborVals (Maybe Sugar.BinderParamScopeId))
 
-data AnnotationMode name
-    = AnnotationModeNone
-    | AnnotationModeTypes
-    | AnnotationModeEvaluation
-        (Maybe (NeighborVals (Maybe (EvalResDisplay name)))) (EvalResDisplay name)
-
 getAnnotationMode ::
     Monad i =>
-    EvalAnnotationOptions -> Sugar.Annotation name ->
-    ExprGuiM i o (AnnotationMode name)
+    EvalAnnotationOptions -> Sugar.EvaluationScopes name ->
+    ExprGuiM i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
 getAnnotationMode opt annotation =
-    Lens.view (Settings.settings . Settings.sAnnotationMode)
-    >>= \case
-    AnnotationMode.None -> pure AnnotationModeNone
-    AnnotationMode.Types -> pure AnnotationModeTypes
-    AnnotationMode.Evaluation ->
-        ExprGuiM.readMScopeId <&> valOfScope annotation
-        <&> maybe AnnotationModeNone (AnnotationModeEvaluation neighbourVals)
+    ExprGuiM.readMScopeId
+    <&> valOfScope annotation
+    <&> Lens.mapped %~ (, neighbourVals)
     where
         neighbourVals =
             case opt of
@@ -310,46 +297,48 @@ getAnnotationMode opt annotation =
 
 maybeAddAnnotationWith ::
     (Monad i, Monad o) =>
-    EvalAnnotationOptions -> WideAnnotationBehavior -> ShowAnnotation ->
+    EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.Annotation (Name o) ->
     ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
-maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
-    getAnnotationMode opt annotation
-    >>= \case
-    AnnotationModeNone
-        | _showExpanded showAnnotation -> withType
-        | otherwise -> noAnnotation
-    AnnotationModeEvaluation n v
-        | _showInEvalMode showAnnotation -> withVal n v
-        | otherwise -> noAnnotation
-    AnnotationModeTypes
-        | _showInTypeMode showAnnotation -> withType
-        | otherwise -> noAnnotation
-    where
-        noAnnotation = pure id
-        -- concise mode and eval mode with no result
-        inferredType = annotation ^. Sugar.aInferredType
-        withType = addInferredType inferredType wideAnnotationBehavior
-        withVal mNeighborVals scopeAndVal =
-            do
-                typeView <- TypeView.make inferredType <&> (^. Align.tValue)
-                process <- processAnnotationGui wideAnnotationBehavior
-                addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior
-                    <&> \add -> add $ \width -> process width typeView ^. Element.width
+maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
+    case annotation of
+    Sugar.AnnotationNone -> pure id
+    Sugar.AnnotationType typ -> addInferredType typ wideAnnotationBehavior
+    Sugar.AnnotationVal ann -> maybeAddValAnnotationWith opt wideAnnotationBehavior ann
+
+maybeAddValAnnotationWith ::
+    (Monad i, Monad o) =>
+    EvalAnnotationOptions -> WideAnnotationBehavior ->
+    Sugar.ValAnnotation (Name o) ->
+    ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
+maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
+    getAnnotationMode opt (ann ^. Sugar.annotationVal)
+    >>=
+    \case
+    Nothing -> maybe (pure id) (addInferredType ?? wideAnnotationBehavior) (ann ^. Sugar.annotationType)
+    Just (scopeAndVal, mNeighborVals) ->
+        do
+            typeView <-
+                case ann ^. Sugar.annotationType of
+                Just typ -> TypeView.make typ <&> (^. Align.tValue)
+                Nothing -> pure Element.empty
+            process <- processAnnotationGui wideAnnotationBehavior
+            addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior
+                <&> \add -> add $ \width -> process width typeView ^. Element.width
 
 maybeAddAnnotation ::
     (Monad i, Monad o) =>
-    WideAnnotationBehavior -> ShowAnnotation -> Sugar.Annotation (Name o) ->
+    WideAnnotationBehavior -> Sugar.Annotation (Name o) ->
     ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::
-    Sugar.Annotation name -> CurAndPrev (Maybe Sugar.ScopeId) ->
+    Sugar.EvaluationScopes name -> CurAndPrev (Maybe Sugar.ScopeId) ->
     Maybe (EvalResDisplay name)
 valOfScope annotation mScopeIds =
     go
     <$> curPrevTag
-    <*> annotation ^. Sugar.aMEvaluationResult
+    <*> annotation
     <*> mScopeIds
     & fallbackToPrev
     where
@@ -358,5 +347,5 @@ valOfScope annotation mScopeIds =
             ann ^? Lens._Just . Lens.ix scopeId <&> EvalResDisplay tag
 
 valOfScopePreferCur ::
-    Sugar.Annotation name -> Sugar.ScopeId -> Maybe (EvalResDisplay name)
+    Sugar.EvaluationScopes name -> Sugar.ScopeId -> Maybe (EvalResDisplay name)
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just

@@ -25,7 +25,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
-import           Lamdu.Sugar.Annotations (showAnnotationWhenVerbose)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -114,8 +113,8 @@ make annotationOpts prevId nextId param =
             GuiState.isSubCursor ?? myId
             <&> Annotation.wideAnnotationBehaviorFromSelected
         paramEdit <-
-            Annotation.maybeAddAnnotationWith annotationOpts
-            wideAnnotationBehavior showAnnotationWhenVerbose
+            Annotation.maybeAddValAnnotationWith annotationOpts
+            wideAnnotationBehavior
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos (iNameEdit info)

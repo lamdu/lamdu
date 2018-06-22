@@ -15,7 +15,7 @@ import           Lamdu.Prelude
 
 data ShowAnnotation = ShowAnnotation
     { -- showExpanded means we:
-      -- A) Show even in concise-mode & eval-mode without val
+      -- A) Show type even in concise-mode
       -- B) Do not shrink the annotation to fit
       _showExpanded :: Bool
     , _showInTypeMode :: Bool

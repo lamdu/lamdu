@@ -2,7 +2,6 @@
 
 module Test.Lamdu.SugarStubs where
 
-import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Functor.Identity (Identity(..))
@@ -24,13 +23,6 @@ infixr 1 ~>
 (~>) :: Sugar.Type name -> Sugar.Type name -> Sugar.Type name
 param ~> res = Sugar.TFun param res & Sugar.Type "dummy"
 
-record :: [(T.Tag, Sugar.Type InternalName)] -> Sugar.Type InternalName
-record fields =
-    Sugar.CompositeFields
-    { Sugar._compositeFields = fields <&> _1 %~ tagInfo Nothing
-    , Sugar._compositeExtension = Nothing
-    } & Sugar.TRecord & Sugar.Type "dummy"
-
 nameRef :: name -> Sugar.NameRef name Unit
 nameRef = (`Sugar.NameRef` Unit)
 
@@ -42,7 +34,7 @@ type Expr =
     (Sugar.Payload InternalName Identity Unit ())
 
 litNum :: Double -> Expr
-litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr numType
+litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr
 
 defRef :: String -> T.Tag -> Sugar.BinderVarRef InternalName Unit
 defRef var tag =
@@ -54,56 +46,40 @@ defRef var tag =
     }
 
 labeledApplyFunc ::
-    Sugar.Type name -> Sugar.BinderVarRef name Unit ->
+    Sugar.BinderVarRef name Unit ->
     Sugar.LabeledApplyFunc name Unit (Sugar.Payload name Identity Unit ())
-labeledApplyFunc typ varRef =
+labeledApplyFunc varRef =
     Sugar.LabeledApplyFunc
     { Sugar._afVar = varRef
-    , Sugar._afPayload = mkPayload typ
+    , Sugar._afPayload = payload
     }
 
 type Infix2 = Expr -> Expr -> Expr
 
 infix2Apply ::
-    Sugar.Type InternalName ->
     Sugar.BinderVarRef InternalName Unit ->
-    T.Tag -> T.Tag -> Infix2
-infix2Apply resTyp varRef lTag rTag l r =
-    Sugar.LabeledApply (labeledApplyFunc funcType varRef) (Sugar.Infix l r) [] []
+    Infix2
+infix2Apply varRef l r =
+    Sugar.LabeledApply (labeledApplyFunc varRef) (Sugar.Infix l r) [] []
     & Sugar.BodyLabeledApply
-    & expr resTyp
-    where
-        exprType = Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType
-        funcType = params ~> resTyp
-        params = record [(lTag, lType), (rTag, rType)]
-        lType = l ^. exprType
-        rType = r ^. exprType
+    & expr
 
 arithmeticInfix2 :: String -> Infix2
-arithmeticInfix2 op =
-    infix2Apply numType (defRef (fromString op) (fromString op))
-    "infixl" "infixr"
+arithmeticInfix2 op = infix2Apply (defRef (fromString op) (fromString op))
 
-hole :: Sugar.Type InternalName -> Expr
-hole typ =
+hole :: Expr
+hole =
     Sugar.BodyHole Sugar.Hole
     { Sugar._holeOptions = mempty
     , Sugar._holeOptionLiteral = error "TODO: option literal"
     , Sugar._holeMDelete = Nothing
-    } & expr typ
-
-typeBody ::
-    Lens'
-    (Sugar.Expression name i o (Sugar.Payload name Identity Unit a))
-    (Sugar.TBody name (Sugar.Type name))
-typeBody = Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType . Sugar.tBody
+    } & expr
 
 ($$) :: Expr -> Expr -> Expr
 func $$ arg =
     V.Apply func arg
     & Sugar.BodySimpleApply
     & expr
-        (func ^?! typeBody . Sugar._TFun . _2)
 
 ($.) :: Expr -> T.Tag -> Expr
 r $. tag =
@@ -112,22 +88,14 @@ r $. tag =
     , Sugar._gfTag = mkTag Nothing tag
     }
     & Sugar.BodyGetField
-    & expr typ
-    where
-        typ =
-            r ^?! typeBody . Sugar._TRecord . Sugar.compositeFields .
-            traverse . Lens.filteredBy (_1 . Sugar.tagVal . Lens.only tag) . _2
+    & expr
 
-identity :: Sugar.Type InternalName -> Expr
-identity typ =
+identity :: Expr
+identity =
     defRef "id" "id"
     & Sugar.GetBinder
     & Sugar.BodyGetVar
-    & expr idTyp
-    where
-        idTyp =
-            Sugar.TFun typ typ
-            & Sugar.Type "idType"
+    & expr
 
 plus :: Infix2
 plus = arithmeticInfix2 "+"
@@ -199,7 +167,11 @@ mkFuncParam ::
     Sugar.FuncParam name (Sugar.ParamInfo InternalName Identity Unit)
 mkFuncParam (paramVar, paramTag, paramType) =
     Sugar.FuncParam
-    { Sugar._fpAnnotation = annotation paramType
+    { Sugar._fpAnnotation =
+        Sugar.ValAnnotation
+        { Sugar._annotationType = Just paramType
+        , Sugar._annotationVal = mempty
+        }
     , Sugar._fpInfo =
         Sugar.ParamInfo
         { Sugar._piTag = mkTag (Just paramVar) paramTag
@@ -246,11 +218,10 @@ binderExpr params body =
     }
 
 expr ::
-    Sugar.Type name ->
     Sugar.Body name Identity Unit (Sugar.Payload name Identity Unit ()) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
-expr typ body =
-    Sugar.Expression { Sugar._body = body, Sugar._annotation = mkPayload typ }
+expr body =
+    Sugar.Expression { Sugar._body = body, Sugar._annotation = payload }
 
 numType :: Sugar.Type InternalName
 numType =
@@ -259,20 +230,14 @@ numType =
     , Sugar._tBody = Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     }
 
-mkPayload :: Sugar.Type name -> Sugar.Payload name Identity Unit ()
-mkPayload typ =
+payload :: Sugar.Payload name Identity Unit ()
+payload =
     Sugar.Payload
-    { Sugar._plAnnotation = annotation typ
+    { Sugar._plAnnotation = Sugar.AnnotationNone
+    , Sugar._plNeverShrinkAnnotation = False
     , Sugar._plEntityId = "dummy"
     , Sugar._plActions = nodeActions
     , Sugar._plData = ()
-    }
-
-annotation :: Sugar.Type name -> Sugar.Annotation name
-annotation typ =
-    Sugar.Annotation
-    { Sugar._aInferredType = typ
-    , Sugar._aMEvaluationResult = CurAndPrev Nothing Nothing
     }
 
 nodeActions :: Sugar.NodeActions name Identity Unit

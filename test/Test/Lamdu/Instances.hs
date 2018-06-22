@@ -215,6 +215,7 @@ deriving instance Eq n => Eq (Sugar.Tag n Unit Unit)
 deriving instance Eq n => Eq (Sugar.TagOption n Unit a)
 deriving instance Eq n => Eq (Sugar.TagSelection n Unit Unit a)
 deriving instance Eq n => Eq (Sugar.Type n)
+deriving instance Eq n => Eq (Sugar.ValAnnotation n)
 
 instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.AssignFunction n (T i) (T o) a) where rnf = genericRnf
@@ -308,6 +309,7 @@ instance NFData n => NFData (Sugar.Tag n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.TagInfo n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.TId n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Type n) where rnf = genericRnf
+instance NFData n => NFData (Sugar.ValAnnotation n) where rnf = genericRnf
 instance NFData Name.Collision
 instance NFData Name.TagText
 instance NFData NearestHoles

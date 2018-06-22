@@ -16,6 +16,7 @@ module Lamdu.Sugar.Lens
     , leftMostLeaf
     , workAreaExpressions, definitionExprs
     , holeTransformExprs, holeOptionTransformExprs
+    , annotationTypes
     ) where
 
 import qualified Control.Lens as Lens
@@ -333,3 +334,8 @@ binderFormAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 
 assignmentAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
 assignmentAddFirstParam = aBody . binderFormAddFirstParam
+
+annotationTypes :: Lens.Traversal' (Annotation name) (Type name)
+annotationTypes _ AnnotationNone = pure AnnotationNone
+annotationTypes f (AnnotationType x) = f x <&> AnnotationType
+annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal

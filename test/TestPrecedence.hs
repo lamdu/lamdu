@@ -32,8 +32,7 @@ testGetFieldOfApply =
         Parens.NeedsParens
     & testCase "get-field-of-apply"
     where
-        expr = (Stub.identity recType $$ Stub.hole recType) $. "a" & Parens.add
-        recType = Stub.record [("a", Stub.numType)]
+        expr = (Stub.identity $$ Stub.hole) $. "a" & Parens.add
 
 testMinOpPrecInfix :: Test
 testMinOpPrecInfix =

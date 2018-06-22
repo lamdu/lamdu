@@ -7,7 +7,8 @@ module Lamdu.Sugar.Types.Parts
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , HoleResultScore(..), hrsNumFragments, hrsScore
     , -- Annotations
-      Annotation(..), aInferredType, aMEvaluationResult
+      Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
+    , ValAnnotation(..), annotationVal, annotationType
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, extract, mReplaceParent, wrapInRecord
@@ -24,7 +25,7 @@ module Lamdu.Sugar.Types.Parts
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
-      Payload(..), plEntityId, plAnnotation, plActions, plData
+      Payload(..), plEntityId, plAnnotation, plNeverShrinkAnnotation, plActions, plData
     , ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
@@ -47,10 +48,18 @@ import           Lamdu.Prelude
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Show, Generic)
 
-data Annotation name = Annotation
-    { _aInferredType :: Type name
-    , _aMEvaluationResult :: EvaluationScopes name
+-- Value annotations may also have types as fallbacks in scopes where no value was calculated
+data ValAnnotation name =
+    ValAnnotation
+    { _annotationVal :: EvaluationScopes name
+    , _annotationType :: Maybe (Type name)
     } deriving (Show, Generic)
+
+data Annotation name
+    = AnnotationType (Type name)
+    | AnnotationVal (ValAnnotation name)
+    | AnnotationNone
+    deriving (Show, Generic)
 
 data AddNextParam name i o
     = AddNext (TagSelection name i o ())
@@ -81,7 +90,7 @@ instance Show name => Show (ParamInfo name i o) where
     show (ParamInfo tag _) = show tag
 
 data FuncParam name info = FuncParam
-    { _fpAnnotation :: Annotation name
+    { _fpAnnotation :: ValAnnotation name
     , _fpVarInfo :: VarInfo
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable, Generic)
@@ -139,12 +148,13 @@ data VarInfo = VarNormal | VarFunction | VarAction
 
 data Payload name i o a = Payload
     { _plAnnotation :: Annotation name
+    , _plNeverShrinkAnnotation :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable, Generic)
 instance Show a => Show (Payload name i o a) where
-    show (Payload _ann _actions _entityId data_) = show data_
+    show (Payload _ann _ _actions _entityId data_) = show data_
 
 newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
@@ -196,7 +206,6 @@ data HoleResultScore = HoleResultScore
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord, Generic)
 
-Lens.makeLenses ''Annotation
 Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
@@ -210,8 +219,10 @@ Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''ParamInfo
 Lens.makeLenses ''Payload
 Lens.makeLenses ''RelayedArg
+Lens.makeLenses ''ValAnnotation
 Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''AddNextParam
+Lens.makePrisms ''Annotation
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''DetachAction
