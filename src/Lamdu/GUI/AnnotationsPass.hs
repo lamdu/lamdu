@@ -11,14 +11,13 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 dontShowEval :: T.ShowAnnotation
-dontShowEval =
-    T.showAnnotationWhenVerbose & T.showInEvalMode .~ T.EvalModeShowNothing
+dontShowEval = T.showAnnotationWhenVerbose & T.showInEvalMode .~ False
 
 forceShowTypeOrEval :: T.ShowAnnotation
 forceShowTypeOrEval =
     T.showAnnotationWhenVerbose
     & T.showExpanded .~ True
-    & T.showInEvalMode .~ T.EvalModeShowEval
+    & T.showInEvalMode .~ True
     & T.showInTypeMode .~ True
 
 topLevelAnn ::
@@ -49,10 +48,9 @@ markAnnotationsToDisplay (Expression pl oldBody) =
     BodyToNom (Nominal tid binder) ->
         defPl
         & _1 . T.showInEvalMode .~
-            ( if tid ^. tidTId == Builtins.textTid
-                then T.EvalModeShowEval
-                else binder ^. bbContent . SugarLens.binderContentResultExpr .
-                        topLevelAnn . T.showInEvalMode
+            ( tid ^. tidTId == Builtins.textTid
+                || binder ^. bbContent . SugarLens.binderContentResultExpr .
+                    topLevelAnn . T.showInEvalMode
             )
         & (`Expression` newBodyWith dontShowEval)
     BodyInject _ -> set dontShowEval

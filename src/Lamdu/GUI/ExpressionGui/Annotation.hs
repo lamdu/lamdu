@@ -32,7 +32,7 @@ import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.EvalView as EvalView
-import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..), EvalModeShow(..))
+import           Lamdu.GUI.ExpressionGui (ShowAnnotation(..))
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -319,10 +319,9 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
     AnnotationModeNone
         | _showExpanded showAnnotation -> withType
         | otherwise -> noAnnotation
-    AnnotationModeEvaluation n v ->
-        case _showInEvalMode showAnnotation of
-        EvalModeShowNothing -> noAnnotation
-        EvalModeShowEval -> withVal n v
+    AnnotationModeEvaluation n v
+        | _showInEvalMode showAnnotation -> withVal n v
+        | otherwise -> noAnnotation
     AnnotationModeTypes
         | _showInTypeMode showAnnotation -> withType
         | otherwise -> noAnnotation

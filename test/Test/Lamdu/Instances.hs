@@ -284,7 +284,6 @@ instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf
 instance NFData Def.FFIName where rnf = genericRnf
 instance NFData EntityId where rnf = genericRnf
-instance NFData ExprGui.EvalModeShow
 instance NFData ExprGui.FuncApplyLimit
 instance NFData ExprGui.Payload
 instance NFData ExprGui.ShowAnnotation

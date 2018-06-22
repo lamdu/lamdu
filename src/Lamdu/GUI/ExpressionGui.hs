@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionGui
     , Payload(..)
         , plHiddenEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
         , plMinOpPrec
-    , EvalModeShow(..)
     , FuncApplyLimit(..)
     , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
       , funcApplyLimit
@@ -32,9 +31,6 @@ import           Lamdu.Prelude
 
 type ExpressionGui m = Responsive (m GuiState.Update)
 
-data EvalModeShow = EvalModeShowNothing | EvalModeShowEval
-    deriving (Eq, Ord, Show, Generic)
-
 -- This is only relevant for function subexprs, and means their
 -- parameter can only ever get one scope per parent scope id, meaning
 -- we may avoid showing their scope nav altogether.
@@ -47,7 +43,7 @@ data ShowAnnotation = ShowAnnotation
       -- B) Do not shrink the annotation to fit
       _showExpanded :: Bool
     , _showInTypeMode :: Bool
-    , _showInEvalMode :: EvalModeShow
+    , _showInEvalMode :: Bool
     , _funcApplyLimit :: FuncApplyLimit
     } deriving (Eq, Ord, Show, Generic)
 Lens.makeLenses ''ShowAnnotation
@@ -56,15 +52,15 @@ showAnnotationWhenVerbose :: ShowAnnotation
 showAnnotationWhenVerbose = ShowAnnotation
     { _showExpanded = False
     , _showInTypeMode = True
-    , _showInEvalMode = EvalModeShowEval
+    , _showInEvalMode = True
     , _funcApplyLimit = UnlimitedFuncApply
     }
 
 neverShowAnnotations :: ShowAnnotation
-neverShowAnnotations = ShowAnnotation False False EvalModeShowNothing UnlimitedFuncApply
+neverShowAnnotations = ShowAnnotation False False False UnlimitedFuncApply
 
 alwaysShowAnnotations :: ShowAnnotation
-alwaysShowAnnotations = ShowAnnotation True True EvalModeShowEval UnlimitedFuncApply
+alwaysShowAnnotations = ShowAnnotation True True True UnlimitedFuncApply
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
