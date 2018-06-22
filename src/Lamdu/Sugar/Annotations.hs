@@ -1,8 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Annotations
-    ( FuncApplyLimit(..)
-    , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode , funcApplyLimit
+    ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode , funcApplyLimit
     , markAnnotationsToDisplay
     , neverShowAnnotations, alwaysShowAnnotations, showAnnotationWhenVerbose
     ) where
@@ -13,12 +12,6 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
-
--- This is only relevant for function subexprs, and means their
--- parameter can only ever get one scope per parent scope id, meaning
--- we may avoid showing their scope nav altogether.
-data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
-    deriving (Eq, Ord, Show, Generic)
 
 data ShowAnnotation = ShowAnnotation
     { -- showExpanded means we:

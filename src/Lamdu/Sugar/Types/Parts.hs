@@ -2,7 +2,8 @@
 -- These don't contain more expressions in them.
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Parts
-    ( Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
+    ( FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
+    , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , HoleResultScore(..), hrsNumFragments, hrsScore
     , -- Annotations
       Annotation(..), aInferredType, aMEvaluationResult
@@ -40,6 +41,12 @@ import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
+
+-- This is only relevant for function subexprs, and means their
+-- parameter can only ever get one scope per parent scope id, meaning
+-- we may avoid showing their scope nav altogether.
+data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
+    deriving (Eq, Ord, Show, Generic)
 
 data Annotation name = Annotation
     { _aInferredType :: Type name
@@ -191,15 +198,14 @@ data HoleResultScore = HoleResultScore
 
 Lens.makeLenses ''Annotation
 Lens.makeLenses ''ClosedCompositeActions
-Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''FuncParam
+Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''HoleResultScore
 Lens.makeLenses ''LabeledApplyFunc
 Lens.makeLenses ''LetActions
-Lens.makePrisms ''Literal
 Lens.makeLenses ''NodeActions
-Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''NullaryVal
+Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''ParamInfo
 Lens.makeLenses ''Payload
@@ -209,4 +215,6 @@ Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''DetachAction
+Lens.makePrisms ''FuncApplyLimit
 Lens.makePrisms ''Heal
+Lens.makePrisms ''Literal
