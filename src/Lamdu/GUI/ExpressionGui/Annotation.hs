@@ -322,7 +322,6 @@ maybeAddAnnotationWith opt wideAnnotationBehavior showAnnotation annotation =
     AnnotationModeEvaluation n v ->
         case _showInEvalMode showAnnotation of
         EvalModeShowNothing -> noAnnotation
-        EvalModeShowType -> withType
         EvalModeShowEval -> withVal n v
     AnnotationModeTypes
         | _showInTypeMode showAnnotation -> withType

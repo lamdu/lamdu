@@ -14,13 +14,6 @@ dontShowEval :: T.ShowAnnotation
 dontShowEval =
     T.showAnnotationWhenVerbose & T.showInEvalMode .~ T.EvalModeShowNothing
 
-forceShowType :: T.ShowAnnotation
-forceShowType =
-    T.showAnnotationWhenVerbose
-    & T.showExpanded .~ True
-    & T.showInEvalMode .~ T.EvalModeShowType
-    & T.showInTypeMode .~ True
-
 forceShowTypeOrEval :: T.ShowAnnotation
 forceShowTypeOrEval =
     T.showAnnotationWhenVerbose
@@ -80,12 +73,12 @@ markAnnotationsToDisplay (Expression pl oldBody) =
     BodyHole hole ->
         hole
         & BodyHole
-        & Expression (plWith forceShowType)
+        & Expression (plWith forceShowTypeOrEval)
     BodyFragment fragment ->
         fragment
         & fExpr . nonHoleAnn .~ forceShowTypeOrEval
         & BodyFragment
-        & Expression (plWith forceShowType)
+        & Expression (plWith forceShowTypeOrEval)
     BodyCase cas ->
         cas
         -- cKind contains the scrutinee which is not always

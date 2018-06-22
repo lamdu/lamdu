@@ -32,7 +32,7 @@ import           Lamdu.Prelude
 
 type ExpressionGui m = Responsive (m GuiState.Update)
 
-data EvalModeShow = EvalModeShowNothing | EvalModeShowType | EvalModeShowEval
+data EvalModeShow = EvalModeShowNothing | EvalModeShowEval
     deriving (Eq, Ord, Show, Generic)
 
 -- This is only relevant for function subexprs, and means their
