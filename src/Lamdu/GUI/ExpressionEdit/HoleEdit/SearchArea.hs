@@ -43,6 +43,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar.Annotations (alwaysShowAnnotations, neverShowAnnotations)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -87,13 +88,13 @@ postProcessSugar minOpPrec expr =
     & AddParens.addWith minOpPrec
     <&> pl
     & SugarLens.fragmentExprs . Sugar.plData . ExprGui.plShowAnnotation
-    .~ ExprGui.alwaysShowAnnotations
+    .~ alwaysShowAnnotations
     where
         pl (x, needParens, sugarPl) =
             ExprGui.Payload
             { ExprGui._plHiddenEntityIds = []
             , ExprGui._plNearestHoles = NearestHoles.none
-            , ExprGui._plShowAnnotation = ExprGui.neverShowAnnotations
+            , ExprGui._plShowAnnotation = neverShowAnnotations
             , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
             , ExprGui._plMinOpPrec = x
             }

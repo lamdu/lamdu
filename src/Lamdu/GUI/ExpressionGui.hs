@@ -5,11 +5,6 @@ module Lamdu.GUI.ExpressionGui
     , Payload(..)
         , plHiddenEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
         , plMinOpPrec
-    , FuncApplyLimit(..)
-    , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
-      , funcApplyLimit
-      , showAnnotationWhenVerbose
-      , neverShowAnnotations, alwaysShowAnnotations
     , nextHolesBefore
     , adhocPayload
     , mParensId
@@ -22,6 +17,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar.Annotations (ShowAnnotation, neverShowAnnotations)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -30,37 +26,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 type ExpressionGui m = Responsive (m GuiState.Update)
-
--- This is only relevant for function subexprs, and means their
--- parameter can only ever get one scope per parent scope id, meaning
--- we may avoid showing their scope nav altogether.
-data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
-    deriving (Eq, Ord, Show, Generic)
-
-data ShowAnnotation = ShowAnnotation
-    { -- showExpanded means we:
-      -- A) Show even in concise-mode & eval-mode without val
-      -- B) Do not shrink the annotation to fit
-      _showExpanded :: Bool
-    , _showInTypeMode :: Bool
-    , _showInEvalMode :: Bool
-    , _funcApplyLimit :: FuncApplyLimit
-    } deriving (Eq, Ord, Show, Generic)
-Lens.makeLenses ''ShowAnnotation
-
-showAnnotationWhenVerbose :: ShowAnnotation
-showAnnotationWhenVerbose = ShowAnnotation
-    { _showExpanded = False
-    , _showInTypeMode = True
-    , _showInEvalMode = True
-    , _funcApplyLimit = UnlimitedFuncApply
-    }
-
-neverShowAnnotations :: ShowAnnotation
-neverShowAnnotations = ShowAnnotation False False False UnlimitedFuncApply
-
-alwaysShowAnnotations :: ShowAnnotation
-alwaysShowAnnotations = ShowAnnotation True True True UnlimitedFuncApply
 
 -- GUI input payload on sugar exprs
 data Payload = Payload

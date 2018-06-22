@@ -17,6 +17,7 @@ import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar.Annotations (ShowAnnotation)
 import qualified Lamdu.Sugar.Annotations as AnnotationsPass
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -33,7 +34,7 @@ type T = Transaction
 
 toExprGuiMPayload ::
     ( AddParens.MinOpPrec, AddParens.NeedsParens
-    , ( ExprGui.ShowAnnotation
+    , ( ShowAnnotation
       , Sugar.Payload name i o ([Sugar.EntityId], NearestHoles)
       )
     ) -> Sugar.Payload name i o ExprGui.Payload

@@ -38,6 +38,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Precedence (HasPrecedence(..))
+import           Lamdu.Sugar.Annotations (FuncApplyLimit, ShowAnnotation)
 import           Lamdu.Sugar.Internal (InternalName(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
@@ -284,9 +285,9 @@ instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf
 instance NFData Def.FFIName where rnf = genericRnf
 instance NFData EntityId where rnf = genericRnf
-instance NFData ExprGui.FuncApplyLimit
 instance NFData ExprGui.Payload
-instance NFData ExprGui.ShowAnnotation
+instance NFData FuncApplyLimit
+instance NFData ShowAnnotation
 instance NFData n => NFData (Sugar.Annotation n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderParams n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderVarForm n (T o)) where rnf = genericRnf

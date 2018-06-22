@@ -1,63 +1,99 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Lamdu.Sugar.Annotations
-    ( markAnnotationsToDisplay
+    ( FuncApplyLimit(..)
+    , ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode , funcApplyLimit
+    , markAnnotationsToDisplay
+    , neverShowAnnotations, alwaysShowAnnotations, showAnnotationWhenVerbose
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.GUI.ExpressionGui as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-dontShowEval :: T.ShowAnnotation
-dontShowEval = T.showAnnotationWhenVerbose & T.showInEvalMode .~ False
+-- This is only relevant for function subexprs, and means their
+-- parameter can only ever get one scope per parent scope id, meaning
+-- we may avoid showing their scope nav altogether.
+data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
+    deriving (Eq, Ord, Show, Generic)
 
-forceShowTypeOrEval :: T.ShowAnnotation
-forceShowTypeOrEval = T.showAnnotationWhenVerbose & T.showExpanded .~ True
+data ShowAnnotation = ShowAnnotation
+    { -- showExpanded means we:
+      -- A) Show even in concise-mode & eval-mode without val
+      -- B) Do not shrink the annotation to fit
+      _showExpanded :: Bool
+    , _showInTypeMode :: Bool
+    , _showInEvalMode :: Bool
+    , _funcApplyLimit :: FuncApplyLimit
+    } deriving (Eq, Ord, Show, Generic)
+Lens.makeLenses ''ShowAnnotation
+
+showAnnotationWhenVerbose :: ShowAnnotation
+showAnnotationWhenVerbose =
+    ShowAnnotation
+    { _showExpanded = False
+    , _showInTypeMode = True
+    , _showInEvalMode = True
+    , _funcApplyLimit = UnlimitedFuncApply
+    }
+
+neverShowAnnotations :: ShowAnnotation
+neverShowAnnotations = ShowAnnotation False False False UnlimitedFuncApply
+
+alwaysShowAnnotations :: ShowAnnotation
+alwaysShowAnnotations = ShowAnnotation True True True UnlimitedFuncApply
+
+dontShowEval :: ShowAnnotation
+dontShowEval = showAnnotationWhenVerbose & showInEvalMode .~ False
+
+forceShowTypeOrEval :: ShowAnnotation
+forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
 
 topLevelAnn ::
-    Lens' (Expression name i o (T.ShowAnnotation, a))
-    T.ShowAnnotation
+    Lens' (Expression name i o (ShowAnnotation, a))
+    ShowAnnotation
 topLevelAnn = annotation . _1
 
 markAnnotationsToDisplay ::
     Expression name i o a ->
-    Expression name i o (T.ShowAnnotation, a)
+    Expression name i o (ShowAnnotation, a)
 markAnnotationsToDisplay (Expression pl oldBody) =
     case newBody of
-    BodyPlaceHolder -> set T.neverShowAnnotations
-    BodyLiteral LiteralNum {} -> set T.neverShowAnnotations
-    BodyLiteral LiteralText {} -> set T.neverShowAnnotations
+    BodyPlaceHolder -> set neverShowAnnotations
+    BodyLiteral LiteralNum {} -> set neverShowAnnotations
+    BodyLiteral LiteralText {} -> set neverShowAnnotations
     BodyLiteral LiteralBytes {} -> set dontShowEval
-    BodyRecord _ -> set T.neverShowAnnotations
-    BodyLam _ -> set T.neverShowAnnotations
+    BodyRecord _ -> set neverShowAnnotations
+    BodyLam _ -> set neverShowAnnotations
     BodyGetVar (GetParam ParamRef { _pBinderMode = LightLambda }) ->
-        set T.showAnnotationWhenVerbose
+        set showAnnotationWhenVerbose
     BodyGetVar (GetParam ParamRef { _pBinderMode = NormalBinder }) ->
-        set T.neverShowAnnotations
+        set neverShowAnnotations
     BodyGetVar (GetBinder BinderVarRef { _bvForm = GetDefinition _ }) ->
-        set T.showAnnotationWhenVerbose
+        set showAnnotationWhenVerbose
     BodyGetVar (GetBinder BinderVarRef { _bvForm = GetLet }) ->
-        set T.neverShowAnnotations
+        set neverShowAnnotations
     BodyFromNom _ -> set dontShowEval
     BodyToNom (Nominal tid binder) ->
         defPl
-        & _1 . T.showInEvalMode .~
+        & _1 . showInEvalMode .~
             ( tid ^. tidTId == Builtins.textTid
                 || binder ^. bbContent . SugarLens.binderContentResultExpr .
-                    topLevelAnn . T.showInEvalMode
+                    topLevelAnn . showInEvalMode
             )
         & (`Expression` newBodyWith dontShowEval)
     BodyInject _ -> set dontShowEval
-    BodyGetVar (GetParamsRecord _) -> set T.showAnnotationWhenVerbose
-    BodyGetField _ -> set T.showAnnotationWhenVerbose
+    BodyGetVar (GetParamsRecord _) -> set showAnnotationWhenVerbose
+    BodyGetField _ -> set showAnnotationWhenVerbose
     BodySimpleApply app ->
         app
-        & applyFunc . nonHoleAnn .~ T.neverShowAnnotations
+        & applyFunc . nonHoleAnn .~ neverShowAnnotations
         & BodySimpleApply
         & Expression defPl
-    BodyLabeledApply _ -> set T.showAnnotationWhenVerbose
+    BodyLabeledApply _ -> set showAnnotationWhenVerbose
     BodyIfElse i ->
         i
         & iIfThen . itThen %~ onCaseAlt
@@ -78,7 +114,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         -- cKind contains the scrutinee which is not always
         -- visible (for case alts that aren't lambdas), so
         -- maybe we do want to show the annotation
-        & cKind . Lens.mapped . nonHoleAnn .~ T.neverShowAnnotations
+        & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
         & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
         & BodyCase
         & Expression defPl
@@ -90,20 +126,20 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             (nonHoleAnn .~ f)
             newBody
         plWith ann = (ann, pl)
-        defPl = plWith T.showAnnotationWhenVerbose
+        defPl = plWith showAnnotationWhenVerbose
         set ann = Expression (plWith ann) newBody
         newBody =
             SugarLens.overBodyChildren
-            (nullaryPayload %~ (,) T.neverShowAnnotations)
-            (afPayload %~ (,) T.neverShowAnnotations)
+            (nullaryPayload %~ (,) neverShowAnnotations)
+            (afPayload %~ (,) neverShowAnnotations)
             markAnnotationsToDisplay
             oldBody
         nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
             & body . _BodyLam . lamFunc . fBody . bbContent .
-              SugarLens.binderContentResultExpr . nonHoleAnn .~ T.neverShowAnnotations
-            & topLevelAnn . T.funcApplyLimit .~ T.AtMostOneFuncApply
+              SugarLens.binderContentResultExpr . nonHoleAnn .~ neverShowAnnotations
+            & topLevelAnn . funcApplyLimit .~ AtMostOneFuncApply
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =
             elseIf

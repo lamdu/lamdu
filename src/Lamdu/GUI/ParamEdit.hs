@@ -20,12 +20,12 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
-import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar.Annotations (showAnnotationWhenVerbose)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -115,7 +115,7 @@ make annotationOpts prevId nextId param =
             <&> Annotation.wideAnnotationBehaviorFromSelected
         paramEdit <-
             Annotation.maybeAddAnnotationWith annotationOpts
-            wideAnnotationBehavior ExprGui.showAnnotationWhenVerbose
+            wideAnnotationBehavior showAnnotationWhenVerbose
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos (iNameEdit info)

@@ -55,6 +55,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
+import           Lamdu.Sugar.Annotations (FuncApplyLimit(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -289,7 +290,7 @@ binderContentNearestHoles body =
 
 makeFunctionParts ::
     (Monad i, Monad o) =>
-    ExprGui.FuncApplyLimit ->
+    FuncApplyLimit ->
     Sugar.Function (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Widget.Id -> Widget.Id ->
     ExprGuiM i o (Parts o)
@@ -299,7 +300,7 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
         let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . sBinderScope
         (scopeEventMap, mScopeNavEdit) <-
             do
-                guard (funcApplyLimit == ExprGui.UnlimitedFuncApply)
+                guard (funcApplyLimit == UnlimitedFuncApply)
                 scope <- fallbackToPrev mScopeCursor
                 guard $
                     Lens.nullOf (Sugar.fParams . Sugar._NullParam) func ||
@@ -349,7 +350,7 @@ makePlainParts binder delVarBackwardsId myId =
 
 makeParts ::
     (Monad i, Monad o) =>
-    ExprGui.FuncApplyLimit ->
+    FuncApplyLimit ->
     Sugar.Assignment (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Widget.Id -> Widget.Id ->
@@ -391,7 +392,7 @@ make ::
 make pMode defEventMap tag color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            makeParts ExprGui.UnlimitedFuncApply binder myId myId
+            makeParts UnlimitedFuncApply binder myId myId
         rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
             case binder ^. Sugar.aBody of
