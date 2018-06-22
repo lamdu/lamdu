@@ -4,8 +4,10 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
 import           Lamdu.Expr.IRef (ValI)
+import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -26,7 +28,8 @@ convertIfElse setToVal caseBody =
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. body of
             BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
-            _ | arg ^? annotation . pSugar . plAnnotation . aInferredType . tBody . _TInst . _1 . tidTId == Just boolTid -> tryIfElse arg
+            _ | arg ^? annotation . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
+                tryIfElse arg
             _ -> Nothing
     where
         tryIfElse cond =
