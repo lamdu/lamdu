@@ -15,9 +15,9 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
-import qualified Lamdu.GUI.AnnotationsPass as AnnotationsPass
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Annotations as AnnotationsPass
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames

@@ -249,7 +249,6 @@ Library
                   , Lamdu.Font
                   , Lamdu.Formatting
                   , Lamdu.Fuzzy
-                  , Lamdu.GUI.AnnotationsPass
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.AnnotationMode
                   , Lamdu.GUI.CodeEdit.GotoDefinition
@@ -308,6 +307,7 @@ Library
                   , Lamdu.Prelude
                   , Lamdu.Settings
                   , Lamdu.Style
+                  , Lamdu.Sugar.Annotations
                   , Lamdu.Sugar.Convert
                   , Lamdu.Sugar.Convert.Apply
                   , Lamdu.Sugar.Convert.Binder

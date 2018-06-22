@@ -1,4 +1,4 @@
-module Lamdu.GUI.AnnotationsPass
+module Lamdu.Sugar.Annotations
     ( markAnnotationsToDisplay
     ) where
 
