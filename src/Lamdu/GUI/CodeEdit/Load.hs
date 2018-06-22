@@ -34,10 +34,12 @@ type T = Transaction
 toExprGuiMPayload ::
     ( AddParens.MinOpPrec, AddParens.NeedsParens
     , ( ExprGui.ShowAnnotation
-      , ([Sugar.EntityId], NearestHoles)
+      , Sugar.Payload name i o ([Sugar.EntityId], NearestHoles)
       )
-    ) -> ExprGui.Payload
-toExprGuiMPayload (minOpPrec, needParens, (showAnn, (entityIds, nearestHoles))) =
+    ) -> Sugar.Payload name i o ExprGui.Payload
+toExprGuiMPayload (minOpPrec, needParens, (showAnn, pl)) =
+    pl <&>
+    \(entityIds, nearestHoles) ->
     ExprGui.Payload entityIds nearestHoles showAnn
     (needParens == AddParens.NeedsParens)
     minOpPrec
@@ -50,7 +52,7 @@ postProcessExpr ::
 postProcessExpr expr =
     AnnotationsPass.markAnnotationsToDisplay expr
     & AddParens.add
-    <&> Sugar.plData %~ toExprGuiMPayload
+    <&> toExprGuiMPayload
 
 getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Text
 getNameProp = DataOps.assocPublishedTagName . Anchors.tags

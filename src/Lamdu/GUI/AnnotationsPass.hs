@@ -28,16 +28,14 @@ forceShowTypeOrEval =
     & T.showInEvalMode .~ T.EvalModeShowEval
     & T.showInTypeMode .~ True
 
--- TODO: Don't care about Payload wrapper
-
 topLevelAnn ::
-    Lens' (Expression name i o (Payload name i o (T.ShowAnnotation, a)))
+    Lens' (Expression name i o (T.ShowAnnotation, a))
     T.ShowAnnotation
-topLevelAnn = annotation . plData . _1
+topLevelAnn = annotation . _1
 
 markAnnotationsToDisplay ::
-    Expression name i o (Payload name i o a) ->
-    Expression name i o (Payload name i o (T.ShowAnnotation, a))
+    Expression name i o a ->
+    Expression name i o (T.ShowAnnotation, a)
 markAnnotationsToDisplay (Expression pl oldBody) =
     case newBody of
     BodyPlaceHolder -> set T.neverShowAnnotations
@@ -57,7 +55,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
     BodyFromNom _ -> set dontShowEval
     BodyToNom (Nominal tid binder) ->
         defPl
-        & plData . _1 . T.showInEvalMode .~
+        & _1 . T.showInEvalMode .~
             ( if tid ^. tidTId == Builtins.textTid
                 then T.EvalModeShowEval
                 else binder ^. bbContent . SugarLens.binderContentResultExpr .
@@ -100,17 +98,17 @@ markAnnotationsToDisplay (Expression pl oldBody) =
     where
         newBodyWith f =
             SugarLens.overBodyChildren
-            (nullaryPayload . plData . _1 .~ f)
-            (afPayload . plData . _1 .~ f)
+            (nullaryPayload . _1 .~ f)
+            (afPayload . _1 .~ f)
             (nonHoleAnn .~ f)
             newBody
-        plWith ann = pl & plData %~ (,) ann
+        plWith ann = (ann, pl)
         defPl = plWith T.showAnnotationWhenVerbose
         set ann = Expression (plWith ann) newBody
         newBody =
             SugarLens.overBodyChildren
-            (nullaryPayload . plData %~ (,) T.neverShowAnnotations)
-            (afPayload . plData %~ (,) T.neverShowAnnotations)
+            (nullaryPayload %~ (,) T.neverShowAnnotations)
+            (afPayload %~ (,) T.neverShowAnnotations)
             markAnnotationsToDisplay
             oldBody
         nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn

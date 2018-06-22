@@ -85,11 +85,11 @@ postProcessSugar ::
 postProcessSugar minOpPrec expr =
     expr
     & AddParens.addWith minOpPrec
-    <&> Sugar.plData %~ pl
+    <&> pl
     & SugarLens.fragmentExprs . Sugar.plData . ExprGui.plShowAnnotation
     .~ ExprGui.alwaysShowAnnotations
     where
-        pl (x, needParens, ()) =
+        pl (x, needParens, sugarPl) =
             ExprGui.Payload
             { ExprGui._plHiddenEntityIds = []
             , ExprGui._plNearestHoles = NearestHoles.none
@@ -97,6 +97,7 @@ postProcessSugar minOpPrec expr =
             , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
             , ExprGui._plMinOpPrec = x
             }
+            <$ sugarPl
 
 makeResultOption ::
     (Monad i, Monad o) =>

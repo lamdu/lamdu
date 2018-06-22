@@ -23,24 +23,22 @@ unambiguous = Precedence 0 0
 
 type MinOpPrec = Prec
 
--- TODO: We probably don't care about the Sugar.Payload, can use "a" directly
-
 add ::
     HasPrecedence name =>
-    Expression name i o (Payload name i o a) ->
-    Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
+    Expression name i o a ->
+    Expression name i o (MinOpPrec, NeedsParens, a)
 add = addWith 0
 
 addWith ::
     HasPrecedence name =>
-    Prec -> Expression name i o (Payload name i o a) ->
-    Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
+    Prec -> Expression name i o a ->
+    Expression name i o (MinOpPrec, NeedsParens, a)
 addWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 loop ::
     HasPrecedence name =>
-    MinOpPrec -> Precedence Prec -> Expression name i o (Payload name i o a) ->
-    Expression name i o (Payload name i o (MinOpPrec, NeedsParens, a))
+    MinOpPrec -> Precedence Prec -> Expression name i o a ->
+    Expression name i o (MinOpPrec, NeedsParens, a)
 loop minOpPrec parentPrec (Expression pl body_) =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
@@ -59,8 +57,8 @@ loop minOpPrec parentPrec (Expression pl body_) =
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
     where
-        result True = pl <&> (,,) 0 NeedsParens & Expression
-        result False = pl <&> (,,) minOpPrec NoNeedForParens & Expression
+        result True = Expression (0, NeedsParens, pl)
+        result False = Expression (minOpPrec, NoNeedForParens, pl)
         mkUnambiguous l cons x =
             x & l %~ loop 0 unambiguous & cons & result False
         childPrec _ True = pure 0
@@ -74,7 +72,7 @@ loop minOpPrec parentPrec (Expression pl body_) =
                 needParens = parentPrec ^. checkSide > prec
         inject (Inject t v) =
             case v of
-            InjectNullary x -> x <&> plData %~ (,,) (maxNamePrec + 1) NoNeedForParens & InjectNullary
+            InjectNullary x -> x <&> (,,) (maxNamePrec + 1) NoNeedForParens & InjectNullary
             InjectVal x -> loop 0 (childPrec (before .~ 0) needParens) x & InjectVal
             & Inject t & BodyInject
             & result needParens
@@ -94,7 +92,7 @@ loop minOpPrec parentPrec (Expression pl body_) =
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
         labeledApply (LabeledApply func special ann relayed) =
             LabeledApply
-            (func <&> plData %~ (,,) (maxNamePrec + 1) NoNeedForParens) s a relayed
+            (func <&> (,,) (maxNamePrec + 1) NoNeedForParens) s a relayed
             & BodyLabeledApply & result needParens
             where
                 (s, a) =

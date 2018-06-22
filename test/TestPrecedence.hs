@@ -27,8 +27,7 @@ test =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    Sugar.body . Sugar._BodyGetField . Sugar.gfRecord . Sugar.annotation .
-    Sugar.plData . _2
+    Sugar.body . Sugar._BodyGetField . Sugar.gfRecord . Sugar.annotation . _2
     & assertEqual "get field should disambiguate compound expression"
         Parens.NeedsParens
     & testCase "get-field-of-apply"
@@ -43,7 +42,6 @@ testMinOpPrecInfix =
         assertEqual "Parens minOpPrec is not 0?!" 0 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (minOpPrec, needsParens, ()) =
-            expr ^?! infixArgs . _2 . Sugar.annotation . Sugar.plData
+        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . Sugar.annotation
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.add
         i = Stub.litNum
