@@ -51,10 +51,10 @@ convertIfElse setToVal caseBody =
                             case binder ^. fBodyScopes of
                             SameAsParentScope -> error "lambda body should have scopes"
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
-                        , _eiEntityId = altFalseBinderExpr ^. annotation . pSugar . plEntityId
+                        , _eiEntityId = altFalseBinderExpr ^. annotation . pInput . Input.entityId
                         , _eiContent = innerIfElse
                         , _eiCondAddLet = binder ^. fBody . bbAddOuterLet
-                        , _eiNodeActions = altFalseBinderExpr ^. annotation . pSugar . plActions
+                        , _eiNodeActions = altFalseBinderExpr ^. annotation . pActions
                         }
                         & makeRes
                         where

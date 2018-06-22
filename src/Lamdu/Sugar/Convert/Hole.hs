@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Hole
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (filterM)
+import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
 import           Control.Monad.Trans.State (StateT(..), mapStateT, evalState, state)
@@ -52,7 +52,7 @@ import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Convert.Binder (convertBinderContent)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -87,7 +87,7 @@ convert holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> annotation . pSugar . plActions . mSetToHole .~ Nothing
+    <&> annotation . pActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
 
@@ -289,8 +289,8 @@ sugar sugarContext holePl val =
         (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
     & convertBinderContent
+    >>= traverse convertPayload
     & ConvertM.run sugarContext
-    <&> Lens.mapped %~ (^. pSugar)
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
         -- A fake Infer payload we use to sugar the base expressions.
@@ -489,12 +489,12 @@ mkResult preConversion sugarContext updateDeps stored val =
     do
         updateDeps
         writeResult preConversion stored val
-        <&> convertBinderContent
+        <&> (convertBinderContent >=> traverse convertPayload)
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
         HoleResult
-        { _holeResultConverted = fConverted <&> (^. pSugar)
+        { _holeResultConverted = fConverted
         , _holeResultPick =
             do
                 Transaction.merge forkedChanges

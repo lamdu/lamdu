@@ -24,7 +24,7 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
@@ -107,13 +107,13 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         do
             sugarContext <- Lens.view id
             options <-
-                mkOptions sugarContext argI
-                (argS <&> (^. pSugar)) exprPl
+                traverse convertPayload argS
+                >>= (mkOptions sugarContext argI ?? exprPl)
             BodyFragment Fragment
                 { _fExpr =
                       argS
-                      & annotation . pSugar . plActions . detach .~ FragmentExprAlready storedEntityId
-                      & annotation . pSugar . plActions . mSetToHole ?~
+                      & annotation . pActions . detach .~ FragmentExprAlready storedEntityId
+                      & annotation . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                       if isTypeMatch
@@ -127,7 +127,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-            <&> annotation . pSugar . plActions . detach .~ FragmentAlready storedEntityId
+            <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
     where
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI

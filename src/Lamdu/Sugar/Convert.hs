@@ -30,6 +30,7 @@ import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
+import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
@@ -93,7 +94,7 @@ convertInferDefExpr ::
     Cache.Functions -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
-    T m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
+    T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
@@ -124,6 +125,7 @@ convertInferDefExpr cache monitors evalRes cp defType defExpr defI =
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
+            >>= traverse convertPayload
             & ConvertM.run context
     where
         cachedInfer = Cache.infer cache
@@ -144,7 +146,7 @@ convertDefBody ::
     CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m
-    (DefinitionBody InternalName (T m) (T m) (ConvertPayload m [EntityId]))
+    (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertDefBody cache monitors evalRes cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors evalRes cp defType defExpr defI
@@ -189,8 +191,8 @@ loadRepl cache monitors evalRes cp =
                 <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
             convertBinderBody valInferred
+            >>= traverse convertPayload
             & ConvertM.run context
-            <&> Lens.mapped %~ (^. pSugar)
             >>= SugarLens.binderExprs OrderTags.orderExpr
         let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl
@@ -249,7 +251,6 @@ loadPanes cache monitors evalRes cp replEntityId =
                         def
                         <&> Anchors.paneDef
                         & convertDefBody cache monitors evalRes cp
-                        <&> Lens.mapped %~ (^. pSugar)
                     let defI = def ^. Definition.defPayload & Anchors.paneDef
                     let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar

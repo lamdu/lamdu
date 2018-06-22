@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions
+    ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions, convertPayload
     ) where
 
 import qualified Control.Lens.Extended as Lens
@@ -145,7 +145,7 @@ setChildReplaceParentActions =
     <&>
     \protectedSetToVal stored bod ->
     let setToExpr srcPl =
-            pSugar . plActions . mReplaceParent ?~
+            pActions . mReplaceParent ?~
             (protectedSetToVal
                 stored
                 (srcPl ^. pInput . Input.stored . Property.pVal)
@@ -182,26 +182,19 @@ subexprPayloads subexprs cullPoints =
 
 addActionsWith ::
     Monad m =>
-    a -> Input.Payload m a ->
+    a -> Input.Payload m b ->
     Body InternalName (T m) (T m) (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
         actions <- makeActions exprPl
-        ann <- makeAnnotation exprPl
         addReplaceParents <- setChildReplaceParentActions
         pure Expression
             { _body = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _annotation =
                 ConvertPayload
-                { _pInput = exprPl
-                , _pSugar =
-                    Payload
-                    { _plEntityId = exprPl ^. Input.entityId
-                    , _plAnnotation = ann
-                    , _plActions = actions
-                    , _plData = userData
-                    }
+                { _pInput = exprPl & Input.userData .~ userData
+                , _pActions = actions
                 }
             }
 
@@ -228,3 +221,15 @@ makeAnnotation payload =
     where
         entityId = payload ^. Input.entityId
         typ = payload ^. Input.inferredType
+
+convertPayload :: Monad m => ConvertPayload m a -> ConvertM m (Payload InternalName (T m) (T m) a)
+convertPayload pl =
+    makeAnnotation (pl ^. pInput)
+    <&>
+    \ann ->
+    Payload
+    { _plAnnotation = ann
+    , _plActions = pl ^. pActions
+    , _plEntityId = pl ^. pInput . Input.entityId
+    , _plData = pl ^. pInput . Input.userData
+    }

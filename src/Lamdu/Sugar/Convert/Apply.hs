@@ -54,7 +54,7 @@ convert app@(V.Apply funcI argI) exprPl =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & annotation . pSugar . plActions . mSetToHole ?~ deleteAction
+                              & annotation . pActions . mSetToHole ?~ deleteAction
                       else funcS
                     , argS
                     )

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Internal
-    ( ConvertPayload(..), pInput, pSugar
+    ( ConvertPayload(..), pInput, pActions
     , InternalName(..), inTag, inContext
     , internalNameMatch
     , nameWithoutContext, nameWithContext, taggedName
@@ -29,7 +29,7 @@ type T = Transaction
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
       _pInput :: Input.Payload m a
-    , _pSugar :: Payload InternalName (T m) (T m) a
+    , _pActions :: NodeActions InternalName (T m) (T m)
     } deriving (Functor, Foldable, Traversable)
 
 -- | Tags have internal names.

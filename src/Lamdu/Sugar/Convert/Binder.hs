@@ -93,7 +93,7 @@ makeInline stored redex useId
 binderContentEntityId ::
     Lens' (BinderContent name i o (ConvertPayload m a)) EntityId
 binderContentEntityId f (BinderExpr e) =
-    e & annotation . pSugar . plEntityId %%~ f <&> BinderExpr
+    e & annotation . pInput . Input.entityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
@@ -136,7 +136,7 @@ convertRedex expr redex =
                 letBody
                 & bbContent .
                     Lens.failing
-                    (_BinderExpr . annotation . pSugar . plActions)
+                    (_BinderExpr . annotation . pActions)
                     (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
                     (letBody ^. bbContent . binderContentEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
@@ -253,7 +253,7 @@ convertLam lam exprPl =
         BodyLam lambda
             & addActions lam exprPl
             <&> body . SugarLens.bodyChildPayloads .
-                pSugar . plActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
+                pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda :: Set InternalName -> Function InternalName i o a -> Bool
 useNormalLambda paramNames func

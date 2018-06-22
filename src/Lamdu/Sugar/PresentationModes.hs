@@ -6,6 +6,7 @@ import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -53,7 +54,7 @@ makeLabeledApply func args =
         mkInfixArg arg other =
             arg
             & Sugar.body . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. Sugar.annotation . pSugar . Sugar.plActions . Sugar.mReplaceParent
+                other ^. Sugar.annotation . pActions . Sugar.mReplaceParent
         processArg arg =
             do
                 getVar <- arg ^? Sugar.aaExpr . Sugar.body . Sugar._BodyGetVar
@@ -65,7 +66,7 @@ makeLabeledApply func args =
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Sugar.RelayedArg
                     { Sugar._raValue = getVar
-                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.annotation . pSugar . Sugar.plEntityId
-                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . pSugar . Sugar.plActions
+                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.annotation . pInput . Input.entityId
+                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . pActions
                     } & Just
             & fromMaybe (Left arg)

@@ -86,9 +86,9 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
-            <&> annotation . pSugar . plEntityId .~ funcS ^. annotation . pSugar . plEntityId
-            <&> annotation . pSugar . plData <>~
-                (exprPl ^. Input.userData <> funcS ^. annotation . pSugar . plData)
+            <&> annotation . pInput . Input.entityId .~ funcS ^. annotation . pInput . Input.entityId
+            <&> annotation . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> funcS ^. annotation . pInput . Input.userData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
