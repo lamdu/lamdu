@@ -134,7 +134,7 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. annotation . pStored & Property.value)
+                (funcS ^. annotation . pInput . Input.stored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply Apply
             { _applyFunc = funcS

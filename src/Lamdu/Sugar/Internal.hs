@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Internal
-    ( ConvertPayload(..), pStored, pSugar
+    ( ConvertPayload(..), pInput, pSugar
     , InternalName(..), inTag, inContext
     , internalNameMatch
     , nameWithoutContext, nameWithContext, taggedName
@@ -17,6 +17,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -27,7 +28,7 @@ type T = Transaction
 
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
-      _pStored :: ExprIRef.ValP m
+      _pInput :: Input.Payload m a
     , _pSugar :: Payload InternalName (T m) (T m) a
     } deriving (Functor, Foldable, Traversable)
 

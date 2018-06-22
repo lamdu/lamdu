@@ -6,6 +6,7 @@ import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import           Lamdu.Data.Anchors (bParamScopeId)
 import           Lamdu.Expr.IRef (ValI)
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -73,7 +74,7 @@ convertIfElse setToVal caseBody =
                 delTarget alt =
                     alt ^? ciExpr . body . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
-                    & (^. annotation . pStored . Property.pVal)
+                    & (^. annotation . pInput . Input.stored . Property.pVal)
                 makeRes els =
                     IfElse
                     { _iIfThen =

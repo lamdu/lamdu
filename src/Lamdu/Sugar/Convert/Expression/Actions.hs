@@ -148,7 +148,7 @@ setChildReplaceParentActions =
             pSugar . plActions . mReplaceParent ?~
             (protectedSetToVal
                 stored
-                (srcPl ^. pStored . Property.pVal)
+                (srcPl ^. pInput . Input.stored . Property.pVal)
                 <&> EntityId.ofValI)
     in
     case bod of
@@ -175,7 +175,7 @@ subexprPayloads subexprs cullPoints =
     where
         -- | The direct child exprs of the sugar expr
         cullSet =
-            cullPoints ^.. Lens.folded . pStored . Property.pVal
+            cullPoints ^.. Lens.folded . pInput . Input.stored . Property.pVal
             <&> EntityId.ofValI
             & Set.fromList
         toCull pl = (pl ^. Input.entityId) `Set.member` cullSet
@@ -194,7 +194,7 @@ addActionsWith userData exprPl bodyS =
             { _body = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _annotation =
                 ConvertPayload
-                { _pStored = exprPl ^. Input.stored
+                { _pInput = exprPl
                 , _pSugar =
                     Payload
                     { _plEntityId = exprPl ^. Input.entityId
