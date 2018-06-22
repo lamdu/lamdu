@@ -46,11 +46,14 @@ _CaseThatIsLambdaCase =
     _ -> Nothing
 
 convert ::
-    (Monad m, Monoid a) => V.Case (Val (Input.Payload m a)) ->
-    Input.Payload m a -> ConvertM m (ExpressionU m a)
+    (Monad m, Monoid a) =>
+    V.Case (Val (Input.Payload m a)) -> Input.Payload m a ->
+    ConvertM m (ExpressionU m a)
 convert caseV exprPl =
     do
-        V.Case tag valS restS <- traverse ConvertM.convertSubexpression caseV
+        V.Case tag valS restS <-
+            traverse ConvertM.convertSubexpression caseV
+            <&> V.caseMatch . body . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag

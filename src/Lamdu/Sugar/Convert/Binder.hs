@@ -245,11 +245,11 @@ convertLam lam exprPl =
                 & Set.fromList
         let lambda
                 | useNormalLambda paramNames func =
-                    Lambda NormalBinder func
+                    Lambda NormalBinder UnlimitedFuncApply func
                 | otherwise =
                     func
                     & SugarLens.funcExprs %~ markLightParams paramNames
-                    & Lambda LightLambda
+                    & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions lam exprPl
             <&> body . SugarLens.bodyChildPayloads .

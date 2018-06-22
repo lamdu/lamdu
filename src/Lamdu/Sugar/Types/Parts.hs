@@ -42,9 +42,7 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
--- This is only relevant for function subexprs, and means their
--- parameter can only ever get one scope per parent scope id, meaning
--- we may avoid showing their scope nav altogether.
+-- Can a lambda be called more than once? (Used for scope selector presentations)
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Show, Generic)
 

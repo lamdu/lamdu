@@ -9,7 +9,7 @@ module Lamdu.Sugar.Types.Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
-    , Lambda(..), lamFunc, lamMode
+    , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , InjectVal(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iMVal
     -- Binders
@@ -81,6 +81,7 @@ data Inject name i o a = Inject
 
 data Lambda name i o a = Lambda
     { _lamMode :: BinderMode
+    , _lamApplyLimit :: FuncApplyLimit
     , _lamFunc :: Function name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 

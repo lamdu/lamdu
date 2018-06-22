@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Annotations
-    ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode , funcApplyLimit
+    ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
     , markAnnotationsToDisplay
     , neverShowAnnotations, alwaysShowAnnotations, showAnnotationWhenVerbose
     ) where
@@ -20,7 +20,6 @@ data ShowAnnotation = ShowAnnotation
       _showExpanded :: Bool
     , _showInTypeMode :: Bool
     , _showInEvalMode :: Bool
-    , _funcApplyLimit :: FuncApplyLimit
     } deriving (Eq, Ord, Show, Generic)
 Lens.makeLenses ''ShowAnnotation
 
@@ -30,14 +29,13 @@ showAnnotationWhenVerbose =
     { _showExpanded = False
     , _showInTypeMode = True
     , _showInEvalMode = True
-    , _funcApplyLimit = UnlimitedFuncApply
     }
 
 neverShowAnnotations :: ShowAnnotation
-neverShowAnnotations = ShowAnnotation False False False UnlimitedFuncApply
+neverShowAnnotations = ShowAnnotation False False False
 
 alwaysShowAnnotations :: ShowAnnotation
-alwaysShowAnnotations = ShowAnnotation True True True UnlimitedFuncApply
+alwaysShowAnnotations = ShowAnnotation True True True
 
 dontShowEval :: ShowAnnotation
 dontShowEval = showAnnotationWhenVerbose & showInEvalMode .~ False
@@ -132,7 +130,6 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             a
             & body . _BodyLam . lamFunc . fBody . bbContent .
               SugarLens.binderContentResultExpr . nonHoleAnn .~ neverShowAnnotations
-            & topLevelAnn . funcApplyLimit .~ AtMostOneFuncApply
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =
             elseIf

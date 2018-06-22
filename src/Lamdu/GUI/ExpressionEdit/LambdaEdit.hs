@@ -31,7 +31,6 @@ import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Sugar.Annotations as Annotations
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -129,7 +128,8 @@ make ::
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            BinderEdit.makeFunctionParts funcApplyLimit func (WidgetIds.fromEntityId bodyId) myId
+            BinderEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
+            func (WidgetIds.fromEntityId bodyId) myId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & pure
@@ -143,7 +143,6 @@ make lam pl =
             <&> Widget.weakerEvents eventMap
     where
         myId = WidgetIds.fromExprPayload pl
-        funcApplyLimit = pl ^. Sugar.plData . ExprGui.plShowAnnotation . Annotations.funcApplyLimit
         params = func ^. Sugar.fParams
         func = lam ^. Sugar.lamFunc
         bodyId = func ^. Sugar.fBody . Sugar.bbContent . SugarLens.binderContentEntityId
