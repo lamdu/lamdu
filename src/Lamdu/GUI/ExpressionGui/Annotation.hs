@@ -30,7 +30,6 @@ import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
-import qualified Lamdu.GUI.CodeEdit.AnnotationMode as AnnotationMode
 import qualified Lamdu.GUI.EvalView as EvalView
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -41,6 +40,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Sugar.Annotations (ShowAnnotation(..), showExpanded)
+import qualified Lamdu.Sugar.Convert.Input as AnnotationMode
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude

@@ -45,7 +45,6 @@ import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Font (FontSize, Fonts(..))
 import qualified Lamdu.Font as Font
-import           Lamdu.GUI.CodeEdit.AnnotationMode (AnnotationMode(..))
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Main as GUIMain
@@ -56,6 +55,7 @@ import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (FontInfo(..))
 import qualified Lamdu.Style as Style
+import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
