@@ -113,7 +113,7 @@ make annotationOpts prevId nextId param =
             GuiState.isSubCursor ?? myId
             <&> Annotation.wideAnnotationBehaviorFromSelected
         paramEdit <-
-            Annotation.maybeAddValAnnotationWith annotationOpts
+            Annotation.maybeAddAnnotationWith annotationOpts
             wideAnnotationBehavior
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)

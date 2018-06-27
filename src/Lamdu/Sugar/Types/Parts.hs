@@ -90,7 +90,7 @@ instance Show name => Show (ParamInfo name i o) where
     show (ParamInfo tag _) = show tag
 
 data FuncParam name info = FuncParam
-    { _fpAnnotation :: ValAnnotation name
+    { _fpAnnotation :: Annotation name
     , _fpVarInfo :: VarInfo
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable, Generic)

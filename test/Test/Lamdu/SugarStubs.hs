@@ -163,15 +163,11 @@ repl x =
     }
 
 mkFuncParam ::
-    (UUID, T.Tag, Sugar.Type name) ->
+    (UUID, T.Tag) ->
     Sugar.FuncParam name (Sugar.ParamInfo InternalName Identity Unit)
-mkFuncParam (paramVar, paramTag, paramType) =
+mkFuncParam (paramVar, paramTag) =
     Sugar.FuncParam
-    { Sugar._fpAnnotation =
-        Sugar.ValAnnotation
-        { Sugar._annotationType = Just paramType
-        , Sugar._annotationVal = mempty
-        }
+    { Sugar._fpAnnotation = Sugar.AnnotationNone
     , Sugar._fpInfo =
         Sugar.ParamInfo
         { Sugar._piTag = mkTag (Just paramVar) paramTag
@@ -187,7 +183,7 @@ mkFuncParam (paramVar, paramTag, paramType) =
     }
 
 funcExpr ::
-    [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
+    [(UUID, T.Tag)] -> Expr ->
     Sugar.Function InternalName Identity Unit
     (Sugar.Payload InternalName Identity Unit ())
 funcExpr params body =
@@ -204,7 +200,7 @@ funcExpr params body =
     }
 
 binderExpr ::
-    [(UUID, T.Tag, Sugar.Type InternalName)] -> Expr ->
+    [(UUID, T.Tag)] -> Expr ->
     Sugar.Assignment InternalName Identity Unit
     (Sugar.Payload InternalName Identity Unit ())
 binderExpr params body =

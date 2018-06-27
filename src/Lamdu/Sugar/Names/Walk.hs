@@ -471,7 +471,7 @@ withFuncParam ::
     CPS m (FuncParam (NewName m) b)
 withFuncParam f (FuncParam ann varInfo info) =
     FuncParam
-    <$> liftCPS (toValAnnotation ann)
+    <$> liftCPS (toAnnotation ann)
     <*> pure varInfo
     <*> f varInfo info
 

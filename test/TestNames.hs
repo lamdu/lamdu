@@ -73,7 +73,7 @@ workArea396 =
     Sugar.WorkArea
     { Sugar._waRepl = Stub.repl lamExpr
     , Sugar._waPanes =
-        [ Stub.binderExpr [("paneVar", "num", Stub.numType)] leafExpr
+        [ Stub.binderExpr [("paneVar", "num")] leafExpr
             & Stub.def lamType "def" "def"
             & Stub.pane
         ]
@@ -86,7 +86,7 @@ workArea396 =
             Sugar.BodyLam Sugar.Lambda
             { Sugar._lamMode = Sugar.NormalBinder
             , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
-            , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num", Stub.numType)] leafExpr
+            , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num")] leafExpr
             } & Stub.expr
 
 workAreaGlobals :: IO ()
