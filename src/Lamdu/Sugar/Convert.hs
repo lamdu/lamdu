@@ -91,6 +91,15 @@ canInlineDefinition defExpr recursiveVars var entityId =
     where
         f pl v = v == var && entityId `notElem` pl ^. Input.userData
 
+trimParamAnnotation :: Input.AnnotationMode -> Annotation name -> Annotation name
+trimParamAnnotation Input.None _ = AnnotationNone
+trimParamAnnotation Input.Evaluation (AnnotationVal x) =
+    x & annotationType .~ Nothing & AnnotationVal
+trimParamAnnotation Input.Evaluation _ = AnnotationNone
+trimParamAnnotation Input.Types (AnnotationVal x) =
+    maybe AnnotationNone AnnotationType (x ^. annotationType)
+trimParamAnnotation Input.Types x = x
+
 convertInferDefExpr ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
@@ -131,6 +140,8 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
                 markAnnotationsToDisplay
             >>= traverse (convertPayload annMode)
             & ConvertM.run context
+            <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentSubExprParams .
+                SugarLens.binderParamsAnnotations %~ trimParamAnnotation annMode
     where
         cachedInfer = Cache.infer cache
         postProcess = PostProcess.def cachedInfer monitors defI
@@ -198,6 +209,8 @@ loadRepl cache monitors annMode evalRes cp =
             <&> SugarLens.binderExprs %~ markAnnotationsToDisplay
             >>= traverse (convertPayload annMode)
             & ConvertM.run context
+            <&> SugarLens.binderSubExprParams . SugarLens.binderParamsAnnotations %~
+                trimParamAnnotation annMode
             >>= SugarLens.binderExprs OrderTags.orderExpr
         let replEntityId = expr ^. bContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl

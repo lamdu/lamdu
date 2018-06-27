@@ -17,6 +17,8 @@ module Lamdu.Sugar.Lens
     , workAreaExpressions, definitionExprs
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
+    , assignmentSubExprParams, binderSubExprParams
+    , binderParamsAnnotations
     ) where
 
 import qualified Control.Lens as Lens
@@ -339,3 +341,35 @@ annotationTypes :: Lens.Traversal' (Annotation name) (Type name)
 annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal
+
+binderParamsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name)
+binderParamsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
+binderParamsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
+
+funcSubExprParams :: Lens.Traversal' (Function name i o a) (BinderParams name i o)
+funcSubExprParams f x =
+    (\p b -> x{_fParams = p, _fBody = b})
+    <$> f (x ^. fParams)
+    <*> binderSubExprParams f (x ^. fBody)
+
+bodySubExprParams :: Lens.Traversal' (Body name i o a) (BinderParams name i o)
+bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
+bodySubExprParams f x = bodyChildren pure pure ((body . bodySubExprParams) f) x
+
+binderContentSubExprParams :: Lens.Traversal' (BinderContent name i o a) (BinderParams name i o)
+binderContentSubExprParams f (BinderExpr x) =
+    (body . bodySubExprParams) f x <&> BinderExpr
+binderContentSubExprParams f (BinderLet x) =
+    (\v b -> BinderLet x{_lValue = v, _lBody = b})
+    <$> assignmentSubExprParams f (x ^. lValue)
+    <*> binderSubExprParams f (x ^. lBody)
+
+binderSubExprParams :: Lens.Traversal' (Binder name i o a) (BinderParams name i o)
+binderSubExprParams = bContent . binderContentSubExprParams
+
+assignmentBodySubExprParams :: Lens.Traversal' (AssignmentBody name i o a) (BinderParams name i o)
+assignmentBodySubExprParams f (BodyPlain x) = (apBody . binderSubExprParams) f x <&> BodyPlain
+assignmentBodySubExprParams f (BodyFunction x) = (afFunction . funcSubExprParams) f x <&> BodyFunction
+
+assignmentSubExprParams :: Lens.Traversal' (Assignment name i o a) (BinderParams name i o)
+assignmentSubExprParams = aBody . assignmentBodySubExprParams
