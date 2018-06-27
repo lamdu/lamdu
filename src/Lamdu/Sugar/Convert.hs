@@ -26,6 +26,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Sugar.Convert.Binder (convertBinderBody)
+import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
@@ -197,6 +198,7 @@ loadRepl cache monitors evalRes cp =
         let replEntityId = expr ^. bbContent . SugarLens.binderContentResultExpr . annotation . plEntityId
         pure Repl
             { _replExpr = expr
+            , _replVarInfo = mkVarInfo typ
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where

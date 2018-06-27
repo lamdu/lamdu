@@ -518,8 +518,11 @@ toRepl ::
     MonadNaming m =>
     Repl (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toRepl (Repl bod res) =
-    Repl <$> toBinderBody bod <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
+toRepl (Repl bod varInfo res) =
+    Repl
+    <$> toBinderBody bod
+    <*> pure varInfo
+    <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 
 toWorkArea ::
     MonadNaming m =>

@@ -190,6 +190,7 @@ repl x =
         { Sugar._bbContent = Sugar.BinderExpr x
         , Sugar._bbAddOuterLet = error "not implemented"
         }
+    , Sugar._replVarInfo = Sugar.VarNormal
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
 

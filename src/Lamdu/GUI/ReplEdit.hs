@@ -192,7 +192,7 @@ make ::
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
     ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
-make exportRepl (Sugar.Repl replExpr replResult) =
+make exportRepl (Sugar.Repl replExpr _varInfo replResult) =
     do
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys

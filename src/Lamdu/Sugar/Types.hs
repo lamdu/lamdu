@@ -3,7 +3,7 @@ module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
     , Pane(..), paneDefinition, paneClose, paneMoveDown, paneMoveUp
-    , Repl(..), replExpr, replResult
+    , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
@@ -63,6 +63,7 @@ data Pane name i o a = Pane
 
 data Repl name i o a = Repl
     { _replExpr :: Binder name i o a
+    , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving (Functor, Foldable, Traversable, Generic)
 

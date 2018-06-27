@@ -52,7 +52,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -108,9 +107,7 @@ make cp gp width =
                 <&> Responsive.fromWidget
             eventMap <-
                 panesEventMap theExportActions cp gp
-                (workArea ^.
-                 Sugar.waRepl . Sugar.replExpr . Sugar.bbContent . SugarLens.binderContentResultExpr .
-                 Sugar.annotation . Sugar.plAnnotation . Sugar.aInferredType)
+                (workArea ^. Sugar.waRepl . Sugar.replVarInfo)
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
@@ -204,8 +201,8 @@ jumpBack gp =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    Sugar.Type name -> ExprGuiM' (T m) (EventMap (IOTrans m GuiState.Update))
-panesEventMap theExportActions cp gp replType =
+    Sugar.VarInfo -> ExprGuiM' (T m) (EventMap (IOTrans m GuiState.Update))
+panesEventMap theExportActions cp gp replVarInfo =
     do
         theConfig <- Lens.view config
         let exportConfig = theConfig ^. Config.export
@@ -227,13 +224,12 @@ panesEventMap theExportActions cp gp replType =
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (E.Doc ["Collaboration", "Import repl from JSON file"])
-            , if ReplEdit.isExecutableType replType
-                then
+            , case replVarInfo of
+                Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
                     (E.Doc ["Execute Repl Process"])
                     (IOTrans.liftIO executeRepl)
-                else
-                    mempty
+                _ -> mempty
             ]
     where
         executeRepl = exportReplActions theExportActions & ReplEdit.executeIOProcess
