@@ -1,10 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module TestGui where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -81,22 +82,33 @@ makeReplGui cache env =
         unless (Lens.has wideFocused gui) (fail "Red cursor!")
         pure gui
 
+focusedWidget :: Responsive a -> Widget.Focused a
+focusedWidget gui = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
+
+mApplyEvent ::
+    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    , HasSettings env, HasStyle env
+    ) =>
+    Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM (Maybe GuiState.Update)
+mApplyEvent cache env virtCursor event =
+    do
+        gui <- makeReplGui cache env
+        let eventMap =
+                (focusedWidget gui ^. Widget.fEventMap)
+                Widget.EventContext
+                { Widget._eVirtualCursor = virtCursor
+                , Widget._ePrevTextRemainder = ""
+                }
+        runIdentity (E.lookup (Identity Nothing) event eventMap) & sequenceA
+
 applyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    Cache.Functions -> env -> Event -> T ViewM env
-applyEvent cache env event =
-    do
-        gui <- makeReplGui cache env
-        let eventMap =
-                ((gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap)
-                Widget.EventContext
-                { Widget._eVirtualCursor = VirtualCursor (Rect 0 0)
-                , Widget._ePrevTextRemainder = ""
-                }
-        runIdentity (E.lookup (Identity Nothing) event eventMap) ^?! Lens._Just
-            <&> (`GuiState.update` env)
+    Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env
+applyEvent cache env virtCursor event =
+    mApplyEvent cache env virtCursor event <&> (^?! Lens._Just)
+    <&> (`GuiState.update` env)
 
 fromWorkArea ::
     Cache.Functions ->
@@ -106,6 +118,19 @@ fromWorkArea ::
     T ViewM a
 fromWorkArea cache path =
     convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
+
+simpleKeyEvent :: GLFW.Key -> Event
+simpleKeyEvent key =
+    EventKey KeyEvent
+    { keKey = key
+    , keScanCode = 0 -- dummy
+    , keModKeys = mempty
+    , keState = GLFW.KeyState'Pressed
+    , keChar = Nothing
+    }
+
+dummyVirt :: VirtualCursor
+dummyVirt = VirtualCursor (Rect 0 0)
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
@@ -123,17 +148,10 @@ testLambdaDelete =
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
-        let delEvent =
-                EventKey KeyEvent
-                { keKey = GLFW.Key'Backspace
-                , keScanCode = 0 -- dummy
-                , keModKeys = mempty
-                , keState = GLFW.KeyState'Pressed
-                , keChar = Nothing
-                }
-        env0 <- applyEvent cache (baseEnv & cursor .~ paramCursor) delEvent
+        let delEvent = simpleKeyEvent GLFW.Key'Backspace
+        env0 <- applyEvent cache (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
-        env1 <- applyEvent cache env0 delEvent
+        env1 <- applyEvent cache env0 dummyVirt delEvent
         _ <- makeReplGui cache env1
         pure ()
 
@@ -181,7 +199,7 @@ testOpPrec =
             , keModKeys = GLFW.ModifierKeys True False False False
             , keState = GLFW.KeyState'Pressed
             , keChar = Just '&'
-            } & applyEvent cache (baseEnv & cursor .~ holeId)
+            } & applyEvent cache (baseEnv & cursor .~ holeId) dummyVirt
         workArea' <- convertWorkArea cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
@@ -201,14 +219,59 @@ workAreaEq x y =
                 Sugar.WorkArea (Name Unit) Unit Unit
                 (Sugar.Payload (Name Unit) Unit Unit a)
 
+testConsistentNavigationForProg :: FilePath -> IO ()
+testConsistentNavigationForProg filename =
+    GuiEnv.make >>=
+    \baseEnv ->
+    testProgram filename $
+    \cache ->
+    do
+        let testDir posEnv posVirt (way, back) =
+                mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
+                >>=
+                \case
+                Nothing -> pure ()
+                Just updThere ->
+                    mApplyEvent cache
+                    (GuiState.update updThere posEnv)
+                    (updThere ^?! GuiState.uVirtualCursor . traverse)
+                    (simpleKeyEvent back)
+                    >>=
+                    \case
+                    Nothing -> fail (baseInfo <> "can't move back with cursor keys")
+                    Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
+                        baseInfo <> "moving back with cursor keys goes to different place: " <>
+                        show (updBack ^. GuiState.uCursor)
+                        & fail
+                    Just{} -> pure ()
+                where
+                    baseInfo =
+                        filename <> "/" <> show (posEnv ^. GuiState.cursor, way, back) <> ": "
+        baseGui <- makeReplGui cache baseEnv
+        let focused = focusedWidget baseGui
+        let testProgPos pos =
+                do
+                    upd <- enter ^. Widget.enterResultEvent
+                    let newEnv = GuiState.update upd baseEnv
+                    traverse_ (testDir newEnv virtCursor) dirs
+                where
+                    enter = (focused ^?! Widget.fMEnterPoint . Lens._Just) pos
+                    virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
+        let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
+        Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
+            & traverse_ testProgPos
+    where
+        dirs =
+            [ (GLFW.Key'Up, GLFW.Key'Down)
+            , (GLFW.Key'Down, GLFW.Key'Up)
+            , (GLFW.Key'Left, GLFW.Key'Right)
+            , (GLFW.Key'Right, GLFW.Key'Left)
+            ]
+
 testConsistentNavigation :: Test
 testConsistentNavigation =
-    do
-        baseEnv <- GuiEnv.make
-        let testProg cache = makeReplGui cache baseEnv
-        let loadTestProg filename = testProgram filename testProg
-        listDirectory "test/programs"
-            <&> -- TODO: What to do with that program?
-                filter (/= "old-codec-factorial.json")
-            >>= traverse loadTestProg & void
+    listDirectory "test/programs"
+    <&> -- TODO: What to do with that program?
+        filter (/= "old-codec-factorial.json")
+    >>= traverse testConsistentNavigationForProg & void
     & testCase "consistent-navigation"
