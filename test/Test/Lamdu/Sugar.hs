@@ -34,6 +34,13 @@ allEntityIds ::
 allEntityIds workArea =
     pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
+    <>
+        -- TODO: When Assignments will contains proper payloads,
+        -- there will be no need for this temporary workaround:
+        workArea ^..
+        waPanes . traverse . paneDefinition .
+        drBody . _DefinitionBodyExpression . deContent .
+        aBody . _BodyFunction . afLamId
     & Set.fromList
     where
         pls = workArea ^.. workAreaExpressions . subExprPayloads
