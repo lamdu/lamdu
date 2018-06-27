@@ -22,10 +22,12 @@ Lens.makeLenses ''NameGen
 
 initial :: NameGen g
 initial =
-    NameGen indepNames indepFuncNames Map.empty
+    NameGen
+    { _ngUnusedNames = numberCycle ["x", "y", "z", "w", "u", "v"]
+    , _ngUnusedFuncNames = numberCycle ["f", "g", "h"]
+    , _ngUsedNames = Map.empty
+    }
     where
-        indepFuncNames = numberCycle ["f", "g", "h"]
-        indepNames = numberCycle ["x", "y", "z", "w", "u", "v"]
         numberCycle s = (s <>) . mconcat . zipWith appendAll [0::Int ..] $ repeat s
         appendAll num = map (<> Text.pack (show num))
 
