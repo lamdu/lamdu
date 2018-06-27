@@ -2,7 +2,8 @@
 -- These don't contain more expressions in them.
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Parts
-    ( FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
+    ( VarInfo(..), _VarFunction, _VarNormal
+    , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , HoleResultScore(..), hrsNumFragments, hrsScore
     , -- Annotations
@@ -135,6 +136,8 @@ data BinderBodyScope
       -- scopes
     deriving (Generic, Eq)
 
+data VarInfo = VarFunction | VarNormal
+
 data Payload name i o a = Payload
     { _plAnnotation :: Annotation name
     , _plActions :: NodeActions name i o
@@ -216,3 +219,4 @@ Lens.makePrisms ''DetachAction
 Lens.makePrisms ''FuncApplyLimit
 Lens.makePrisms ''Heal
 Lens.makePrisms ''Literal
+Lens.makePrisms ''VarInfo

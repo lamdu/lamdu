@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
-    , VarInfo(..), existingName, newName
+    , existingName, newName
     ) where
 
 import           Control.Arrow ((&&&))
@@ -9,10 +9,9 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.State (State, state)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           Lamdu.Sugar.Types.Parts (VarInfo(..))
 
 import           Lamdu.Prelude
-
-data VarInfo = Function | NormalVar
 
 data NameGen g = NameGen
     { _ngUnusedNames :: [Text]
@@ -50,5 +49,5 @@ newName acceptName isFunc g =
                     else loop
         names =
             case isFunc of
-            NormalVar -> ngUnusedNames
-            Function -> ngUnusedFuncNames
+            VarNormal -> ngUnusedNames
+            VarFunction -> ngUnusedFuncNames

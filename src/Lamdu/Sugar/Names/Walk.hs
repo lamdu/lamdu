@@ -13,7 +13,6 @@ import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
-import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Sugar.Types hiding (Tag)
 
@@ -56,14 +55,14 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     type IM m :: * -> *
     opRun :: m (m a -> IM m a)
 
-    opWithName :: NameGen.VarInfo -> NameType -> CPSNameConvertor m
+    opWithName :: Sugar.VarInfo -> NameType -> CPSNameConvertor m
     opGetName :: Maybe Disambiguator -> NameType -> NameConvertor m
 
-isFunctionType :: Sugar.Type name -> NameGen.VarInfo
+isFunctionType :: Sugar.Type name -> Sugar.VarInfo
 isFunctionType typ =
     case typ ^. tBody of
-    Sugar.TFun {} -> NameGen.Function
-    _ -> NameGen.NormalVar
+    Sugar.TFun {} -> Sugar.VarFunction
+    _ -> Sugar.VarNormal
 
 toParamRef ::
     MonadNaming m =>
@@ -185,7 +184,7 @@ toLet Let{..} =
     where
         varInfo =
             case _lValue ^. aBody of
-            BodyFunction{} -> NameGen.Function
+            BodyFunction{} -> Sugar.VarFunction
             BodyPlain p ->
                 p ^. apBody . bbContent . SugarLens.binderContentResultExpr
                 . annotation . plAnnotation . aInferredType
@@ -274,7 +273,7 @@ toTagOf nameType (Sugar.Tag info actions) =
 
 withTag ::
     MonadNaming m =>
-    NameType -> NameGen.VarInfo ->
+    NameType -> Sugar.VarInfo ->
     Sugar.Tag (OldName m) (IM m) o ->
     CPS m (Sugar.Tag (NewName m) (IM m) o)
 withTag nameType varInfo (Sugar.Tag info actions) =
@@ -468,7 +467,7 @@ toExpression (Expression pl x) =
 
 withParamInfo ::
     MonadNaming m =>
-    NameGen.VarInfo -> ParamInfo (OldName m) (IM m) o ->
+    Sugar.VarInfo -> ParamInfo (OldName m) (IM m) o ->
     CPS m (ParamInfo (NewName m) (IM m) o)
 withParamInfo varInfo (ParamInfo tag fpActions) =
     ParamInfo
@@ -477,7 +476,7 @@ withParamInfo varInfo (ParamInfo tag fpActions) =
 
 withFuncParam ::
     MonadNaming m =>
-    (NameGen.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) a ->
+    (Sugar.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) a ->
     CPS m (FuncParam (NewName m) b)
 withFuncParam f (FuncParam ann info) =
     FuncParam

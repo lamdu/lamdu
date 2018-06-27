@@ -405,7 +405,7 @@ p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
         -- of crashing, show -1 as the suffix
         bugCollision = -1
 
-p2cpsNameConvertor :: NameGen.VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames i o)
+p2cpsNameConvertor :: VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames i o)
 p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
     CPS $ \inner ->
     do
