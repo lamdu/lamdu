@@ -90,6 +90,62 @@ data RecordChange = RecordChange
 
 data ArgChange = ArgChange | ArgRecordChange RecordChange
 
+fixArg ::
+    Monad m =>
+    ArgChange -> Val (ValP m) ->
+    (IsHoleArg -> Val (ValP m) -> T m ()) ->
+    T m ()
+fixArg ArgChange arg go =
+    do
+        applyHoleTo arg
+        go IsHoleArg arg
+fixArg (ArgRecordChange recChange) arg go =
+    ( if Set.null (fieldsRemoved recChange)
+        then
+            arg ^. Val.payload . Property.pVal
+            <$ changeFields (fieldsChanged recChange) arg go
+        else
+            do
+                go IsHoleArg arg
+                V.Apply
+                    <$> DataOps.newHole
+                    ?? arg ^. Val.payload . Property.pVal
+                    <&> V.BApp
+                    >>= ExprIRef.newValBody
+    )
+    >>= addFields (fieldsAdded recChange)
+    >>= arg ^. Val.payload . Property.pSet
+
+addFields :: Monad m => Set T.Tag -> ValI m -> Transaction m (ValI m)
+addFields fields src =
+    foldM addField src fields
+    where
+        addField x tag =
+            V.RecExtend tag <$> DataOps.newHole ?? x
+            <&> V.BRecExtend
+            >>= ExprIRef.newValBody
+
+changeFields ::
+    Monad m =>
+    Map T.Tag ArgChange -> Val (ValP m) ->
+    (IsHoleArg -> Val (ValP m) -> T m ()) ->
+    T m ()
+changeFields changes arg go
+    | Map.null changes = go NotHoleArg arg
+    | otherwise =
+        case arg ^. Val.body of
+        V.BRecExtend (V.RecExtend tag fieldVal rest) ->
+            case Map.lookup tag changes of
+            Nothing ->
+                do
+                    go NotHoleArg fieldVal
+                    changeFields changes rest go
+            Just fieldChange ->
+                do
+                    fixArg fieldChange fieldVal go
+                    changeFields (Map.delete tag changes) rest go
+        _ -> fixArg ArgChange arg go
+
 changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValP m) -> T m ()
 changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
@@ -99,46 +155,6 @@ changeFuncArg change usedDefVar =
         mFix _ (Val _ (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar = fixArg change arg & Just
         mFix _ _ = Nothing
-        fixArg ArgChange arg go =
-            do
-                applyHoleTo arg
-                go IsHoleArg arg
-        fixArg (ArgRecordChange recChange) arg go =
-            ( if Set.null (fieldsRemoved recChange)
-                then
-                    arg ^. Val.payload . Property.pVal
-                    <$ changeFields (fieldsChanged recChange) arg go
-                else
-                    do
-                        go IsHoleArg arg
-                        V.Apply
-                            <$> DataOps.newHole
-                            ?? arg ^. Val.payload . Property.pVal
-                            <&> V.BApp
-                            >>= ExprIRef.newValBody
-            )
-            >>= addFields (fieldsAdded recChange)
-            >>= arg ^. Val.payload . Property.pSet
-        addFields fields src = foldM addField src fields
-        addField src tag =
-            V.RecExtend tag <$> DataOps.newHole ?? src
-            <&> V.BRecExtend
-            >>= ExprIRef.newValBody
-        changeFields changes arg go
-            | Map.null changes = go NotHoleArg arg
-            | otherwise =
-                case arg ^. Val.body of
-                V.BRecExtend (V.RecExtend tag fieldVal rest) ->
-                    case Map.lookup tag changes of
-                    Nothing ->
-                        do
-                            go NotHoleArg fieldVal
-                            changeFields changes rest go
-                    Just fieldChange ->
-                        do
-                            fixArg fieldChange fieldVal go
-                            changeFields (Map.delete tag changes) rest go
-                _ -> fixArg ArgChange arg go
 
 isPartSame ::
     Lens.Getting (Monoid.First T.Type) T.Type T.Type -> Scheme -> Scheme -> Bool
