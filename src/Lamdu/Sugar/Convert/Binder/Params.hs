@@ -19,6 +19,7 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -525,6 +526,7 @@ makeNonRecordParamActions binderKind storedLam =
 
 mkVarInfo :: T.Type -> VarInfo
 mkVarInfo T.TFun{} = VarFunction
+mkVarInfo (T.TInst tid _) | tid == Builtins.mutTid = VarAction
 mkVarInfo _ = VarNormal
 
 mkFuncParam ::

@@ -2,7 +2,7 @@
 -- These don't contain more expressions in them.
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Parts
-    ( VarInfo(..), _VarFunction, _VarNormal
+    ( VarInfo(..), _VarNormal, _VarFunction, _VarAction
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , HoleResultScore(..), hrsNumFragments, hrsScore
@@ -134,7 +134,7 @@ data BinderBodyScope
       -- scopes
     deriving (Generic, Eq)
 
-data VarInfo = VarFunction | VarNormal
+data VarInfo = VarNormal | VarFunction | VarAction
     deriving (Generic, Eq)
 
 data Payload name i o a = Payload

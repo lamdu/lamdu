@@ -16,6 +16,7 @@ import           Lamdu.Prelude
 data NameGen g = NameGen
     { _ngUnusedNames :: [Text]
     , _ngUnusedFuncNames :: [Text]
+    , _ngUnusedActionNames :: [Text]
     , _ngUsedNames :: Map g Text
     }
 Lens.makeLenses ''NameGen
@@ -25,6 +26,7 @@ initial =
     NameGen
     { _ngUnusedNames = numberCycle ["x", "y", "z", "w", "u", "v"]
     , _ngUnusedFuncNames = numberCycle ["f", "g", "h"]
+    , _ngUnusedActionNames = numberCycle ["a", "b", "c"]
     , _ngUsedNames = Map.empty
     }
     where
@@ -53,3 +55,4 @@ newName acceptName isFunc g =
             case isFunc of
             VarNormal -> ngUnusedNames
             VarFunction -> ngUnusedFuncNames
+            VarAction -> ngUnusedActionNames
