@@ -40,12 +40,7 @@ setToAppliedHole innerI destP =
         pure resI
 
 applyHoleTo :: Monad m => ValP m -> T m (ValI m)
-applyHoleTo exprP =
-    do
-        newFuncI <- newHole
-        applyI <- ExprIRef.newValBody . V.BApp . V.Apply newFuncI $ Property.value exprP
-        (exprP ^. Property.pSet) applyI
-        pure applyI
+applyHoleTo exprP = setToAppliedHole (exprP ^. Property.pVal) exprP
 
 newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
