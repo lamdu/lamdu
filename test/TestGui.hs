@@ -35,6 +35,7 @@ import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
+import           System.Directory (listDirectory)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
 import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
@@ -50,6 +51,7 @@ test =
     [ testOpPrec
     , testFragmentSize
     , testLambdaDelete
+    , testConsistentNavigation
     ]
 
 replExpr ::
@@ -198,3 +200,15 @@ workAreaEq x y =
             unsafeCoerce x ::
                 Sugar.WorkArea (Name Unit) Unit Unit
                 (Sugar.Payload (Name Unit) Unit Unit a)
+
+testConsistentNavigation :: Test
+testConsistentNavigation =
+    do
+        baseEnv <- GuiEnv.make
+        let testProg cache = makeReplGui cache baseEnv
+        let loadTestProg filename = testProgram filename testProg
+        listDirectory "test/programs"
+            <&> -- TODO: What to do with that program?
+                filter (/= "old-codec-factorial.json")
+            >>= traverse loadTestProg & void
+    & testCase "consistent-navigation"
