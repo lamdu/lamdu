@@ -621,14 +621,7 @@ convertLamParams ::
     Monad m =>
     V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
-convertLamParams lambda lambdaPl =
-    do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let maybeWrap = protectedSetToVal lambdaProp (Property.value lambdaProp)
-        convertNonEmptyParams Nothing BinderKindLambda lambda lambdaPl
-            <&> postProcessActions (void maybeWrap)
-    where
-        lambdaProp = lambdaPl ^. Input.stored
+convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
 makeFieldParam :: Input.Payload m a -> (T.Tag, T.Type) -> FieldParam
 makeFieldParam lambdaPl (tag, typeExpr) =
