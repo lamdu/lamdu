@@ -20,7 +20,8 @@ type T = Transaction
 test :: Test
 test =
     testGroup "sugar-tests"
-    [ delParam
+    [ delDefParam
+    , delParam
     , paramAnnotations
     , testChangeParam
     , testExtract
@@ -173,3 +174,16 @@ testLightLambda =
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             body . _BodyLam . lamMode . _LightLambda
+
+delDefParam :: Test
+delDefParam =
+    testSugarActions "def-with-params.json" [void . (^?! openDef), (^?! action)]
+    & testCase "del-def-param"
+    where
+        openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
+        action =
+            waPanes . traverse . paneDefinition .
+            drBody . _DefinitionBodyExpression . deContent .
+            aBody . _BodyFunction . afFunction .
+            fParams . _Params . traverse .
+            fpInfo . piActions . fpDelete
