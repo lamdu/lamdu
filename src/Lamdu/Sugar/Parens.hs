@@ -40,6 +40,15 @@ loop ::
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
 loop minOpPrec parentPrec (Expression pl body_) =
+    Expression (resPrec, parens, pl) newBody
+    where
+        (resPrec, parens, newBody) = loopExprBody minOpPrec parentPrec body_
+
+loopExprBody ::
+    HasPrecedence name =>
+    MinOpPrec -> Precedence Prec -> Body name i o a ->
+    (MinOpPrec, NeedsParens, Body name i o (MinOpPrec, NeedsParens, a))
+loopExprBody minOpPrec parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
     BodyLiteral      x -> result False (BodyLiteral x)
@@ -57,8 +66,8 @@ loop minOpPrec parentPrec (Expression pl body_) =
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
     where
-        result True = Expression (0, NeedsParens, pl)
-        result False = Expression (minOpPrec, NoNeedForParens, pl)
+        result True = (,,) 0 NeedsParens
+        result False = (,,) minOpPrec NoNeedForParens
         mkUnambiguous l cons x =
             x & l %~ loop 0 unambiguous & cons & result False
         childPrec _ True = pure 0
