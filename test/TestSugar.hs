@@ -21,6 +21,7 @@ test :: Test
 test =
     testGroup "sugar-tests"
     [ delParam
+    , paramAnnotations
     , testChangeParam
     , testExtract
     , testLightLambda
@@ -139,6 +140,16 @@ findM f (x:xs) =
         if found
             then Just x & pure
             else findM f xs
+
+paramAnnotations :: Test
+paramAnnotations =
+    testSugarActions "const-five.json" [verify]
+    & testCase "param-annotations"
+    where
+        verify workArea =
+            unless
+            (Lens.allOf (replBody . lamFirstParam . fpAnnotation) (Lens.has _AnnotationNone) workArea)
+            (fail "parameter should not have type annotation")
 
 delParam :: Test
 delParam =
