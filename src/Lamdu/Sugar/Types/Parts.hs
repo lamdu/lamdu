@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types.Parts
     , -- Binders
       BinderParams(..), _NullParam, _Params
     , BinderBodyScope(..)
-    , FuncParam(..), fpInfo, fpAnnotation
+    , FuncParam(..), fpInfo, fpAnnotation, fpVarInfo
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , NullParamActions(..), npDeleteLambda
     , ParamInfo(..), piActions, piTag
@@ -82,11 +82,9 @@ instance Show name => Show (ParamInfo name i o) where
 
 data FuncParam name info = FuncParam
     { _fpAnnotation :: Annotation name
+    , _fpVarInfo :: VarInfo
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable, Generic)
-
-instance (Show info, Show name) => Show (FuncParam name info) where
-    show (FuncParam a i) = "(FuncParam " ++ show a ++ " " ++ show i ++ " )"
 
 data ExtractDestination
     = ExtractToLet EntityId
@@ -137,6 +135,7 @@ data BinderBodyScope
     deriving (Generic, Eq)
 
 data VarInfo = VarFunction | VarNormal
+    deriving (Generic, Eq)
 
 data Payload name i o a = Payload
     { _plAnnotation :: Annotation name

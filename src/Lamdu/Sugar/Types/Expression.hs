@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types.Expression
     -- Binders
     , Let(..)
         , lEntityId, lValue, lName, lUsages
-        , lActions, lBodyScope, lBody
+        , lActions, lBodyScope, lBody, lVarInfo
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
@@ -139,6 +139,7 @@ data Body name i o a
 
 data Let name i o a = Let
     { _lValue :: Assignment name i o a -- "let foo = [[bar]] in x"
+    , _lVarInfo :: VarInfo
     , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lName :: Tag name i o -- let [[foo]] = bar in x

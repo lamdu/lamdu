@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     , StoredLam(..), slLam, slLambdaProp
     , NewParamPosition(..), addFieldParam
     , isParamAlwaysUsedWithGetField
+    , mkVarInfo
     ) where
 
 import qualified Control.Lens as Lens
@@ -399,6 +400,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                             fpValue fp & ConvertEval.param (EntityId.ofEvalOf paramEntityId)
                         }
                     , _fpInfo = paramInfo
+                    , _fpVarInfo = fpFieldType fp & mkVarInfo
                     }
             where
                 tag = fpTag fp
@@ -521,6 +523,10 @@ makeNonRecordParamActions binderKind storedLam =
     where
         param = storedLam ^. slLam . V.lamParamId
 
+mkVarInfo :: T.Type -> VarInfo
+mkVarInfo T.TFun{} = VarFunction
+mkVarInfo _ = VarNormal
+
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a -> info ->
@@ -537,6 +543,7 @@ mkFuncParam entityId lamExprPl info =
             lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
             & ConvertEval.param (EntityId.ofEvalOf entityId)
         }
+    , _fpVarInfo = mkVarInfo typ
     }
     where
         typ = lamParamType lamExprPl

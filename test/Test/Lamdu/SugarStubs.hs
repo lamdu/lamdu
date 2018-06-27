@@ -210,6 +210,7 @@ mkFuncParam (paramVar, paramTag, paramType) =
             , Sugar._fpMOrderAfter = Nothing
             }
         }
+    , Sugar._fpVarInfo = Sugar.VarNormal
     }
 
 funcExpr ::

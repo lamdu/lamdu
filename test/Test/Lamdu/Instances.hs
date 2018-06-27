@@ -288,6 +288,7 @@ instance NFData EntityId where rnf = genericRnf
 instance NFData ExprGui.Payload
 instance NFData ShowAnnotation
 instance NFData Sugar.FuncApplyLimit
+instance NFData Sugar.VarInfo
 instance NFData n => NFData (Sugar.Annotation n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderParams n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderVarForm n (T o)) where rnf = genericRnf

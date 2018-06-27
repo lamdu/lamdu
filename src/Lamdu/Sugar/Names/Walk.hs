@@ -58,12 +58,6 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     opWithName :: Sugar.VarInfo -> NameType -> CPSNameConvertor m
     opGetName :: Maybe Disambiguator -> NameType -> NameConvertor m
 
-isFunctionType :: Sugar.Type name -> Sugar.VarInfo
-isFunctionType typ =
-    case typ ^. tBody of
-    Sugar.TFun {} -> Sugar.VarFunction
-    _ -> Sugar.VarNormal
-
 toParamRef ::
     MonadNaming m =>
     ParamRef (OldName m) o ->
@@ -177,18 +171,10 @@ toLet ::
 toLet Let{..} =
     do
         (_lName, _lBody) <-
-            unCPS (withTag TaggedVar varInfo _lName) (toBinderBody _lBody)
+            unCPS (withTag TaggedVar _lVarInfo _lName) (toBinderBody _lBody)
         _lValue <- toBinder _lValue
         _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
-    where
-        varInfo =
-            case _lValue ^. aBody of
-            BodyFunction{} -> Sugar.VarFunction
-            BodyPlain p ->
-                p ^. apBody . bbContent . SugarLens.binderContentResultExpr
-                . annotation . plAnnotation . aInferredType
-                & isFunctionType
 
 toBinderContent ::
     MonadNaming m =>
@@ -478,12 +464,11 @@ withFuncParam ::
     MonadNaming m =>
     (Sugar.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) a ->
     CPS m (FuncParam (NewName m) b)
-withFuncParam f (FuncParam ann info) =
+withFuncParam f (FuncParam ann varInfo info) =
     FuncParam
     <$> liftCPS (toAnnotation ann)
+    <*> pure varInfo
     <*> f varInfo info
-    where
-        varInfo = ann ^. aInferredType & isFunctionType
 
 withBinderParams ::
     MonadNaming m =>

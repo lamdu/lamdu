@@ -20,7 +20,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams, cpAddFirstParam)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams, cpAddFirstParam, mkVarInfo)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -128,6 +128,7 @@ convertRedex expr redex =
                     )
         pure Let
             { _lEntityId = EntityId.ofBinder param
+            , _lVarInfo = redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plType & mkVarInfo
             , _lValue = value & aNodeActions %~ fixValueNodeActions
             , _lActions = actions
             , _lName = tag
