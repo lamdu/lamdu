@@ -51,6 +51,9 @@ testSugarActions program actions =
 replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o a)
 replBody = waRepl . replExpr . bContent . _BinderExpr . body
 
+lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name (ParamInfo name i o))
+lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
+
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
 testChangeParam :: Test
@@ -63,8 +66,7 @@ testChangeParam =
             workArea ^?!
             replBody . _BodySimpleApply . V.applyFunc .
             body . _BodySimpleApply . V.applyArg .
-            body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
-            fpInfo . piTag . tagSelection . tsNewTag
+            body . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -143,9 +145,7 @@ delParam =
     testSugarActions "const-five.json" [(^?! action), verify]
     & testCase "del-param"
     where
-        action =
-            replBody . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
-            fpInfo . piActions . fpDelete
+        action = replBody . lamFirstParam . fpInfo . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
