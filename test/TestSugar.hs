@@ -48,6 +48,9 @@ testSugarActions program actions =
     testProgram program $ \cache ->
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
+replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o a)
+replBody = waRepl . replExpr . bContent . _BinderExpr . body
+
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
 testChangeParam :: Test
@@ -57,8 +60,8 @@ testChangeParam =
     where
         action workArea =
             "new" &
-            workArea ^?! waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodySimpleApply . V.applyFunc .
+            workArea ^?!
+            replBody . _BodySimpleApply . V.applyFunc .
             body . _BodySimpleApply . V.applyArg .
             body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piTag . tagSelection . tsNewTag
@@ -77,8 +80,7 @@ testReorderLets =
             testSugarActions program [(^?! extractSecondLetItemInLambda)]
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
-            waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodyLam . lamFunc . fBody .
+            replBody . _BodyLam . lamFunc . fBody .
             bContent . _BinderLet . lBody .
             bContent . _BinderLet . lValue .
             aNodeActions . extract
@@ -91,8 +93,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodyLam . lamFunc . fBody .
+            replBody . _BodyLam . lamFunc . fBody .
             bContent . _BinderLet . lActions . laNodeActions . extract
 
 -- Test for issue #402
@@ -115,8 +116,7 @@ testInline =
             where
                 letItem =
                     workArea ^?!
-                    waRepl . replExpr . bContent . _BinderExpr .
-                    body . _BodyLam . lamFunc . fBody .
+                    replBody . _BodyLam . lamFunc . fBody .
                     bContent . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
@@ -125,8 +125,7 @@ testInline =
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
-            waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodyLam . lamFunc . fBody .
+            replBody . _BodyLam . lamFunc . fBody .
             bContent . _BinderExpr .
             body . _BodyLiteral . _LiteralNum
 
@@ -145,15 +144,12 @@ delParam =
     & testCase "del-param"
     where
         action =
-            waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
+            replBody . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
-        afterDel =
-            waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodyLiteral . _LiteralNum
+        afterDel = replBody . _BodyLiteral . _LiteralNum
 
 testLightLambda :: Test
 testLightLambda =
@@ -164,6 +160,5 @@ testLightLambda =
             | Lens.has expected workArea = pure ()
             | otherwise = fail "Expected light lambda sugar!"
         expected =
-            waRepl . replExpr . bContent . _BinderExpr .
-            body . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
+            replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             body . _BodyLam . lamMode . _LightLambda
