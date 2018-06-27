@@ -54,7 +54,7 @@ test =
 
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Expression name i o a)
-replExpr = Sugar.waRepl . Sugar.replExpr . Sugar.bbContent . Sugar._BinderExpr
+replExpr = Sugar.waRepl . Sugar.replExpr . Sugar.bContent . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -69,7 +69,7 @@ makeReplGui cache env =
         workArea <- convertWorkArea cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId =
-                repl ^. Sugar.bbContent . SugarLens.binderContentResultExpr
+                repl ^. Sugar.bContent . SugarLens.binderContentResultExpr
                 . Sugar.annotation
                 & WidgetIds.fromExprPayload
         gui <-
@@ -168,7 +168,7 @@ testOpPrec =
         holeId <-
             fromWorkArea cache
             (replExpr . Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . Sugar.bbContent . Sugar._BinderExpr .
+             Sugar.fBody . Sugar.bContent . Sugar._BinderExpr .
              Sugar.annotation . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed

@@ -135,11 +135,11 @@ convertRedex expr redex =
             , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody =
                 letBody
-                & bbContent .
+                & bContent .
                     Lens.failing
                     (_BinderExpr . annotation . pActions)
                     (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
-                    (letBody ^. bbContent . binderContentEntityId <$ actions ^. laDelete)
+                    (letBody ^. bContent . binderContentEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
@@ -170,9 +170,9 @@ convertBinderBody expr =
     <&>
     \content ->
     Binder
-    { _bbAddOuterLet =
+    { _bAddOuterLet =
         expr ^. Val.payload . Input.stored & DataOps.redexWrap <&> EntityId.ofBinder
-    , _bbContent = content
+    , _bContent = content
     }
 
 makeFunction ::
@@ -222,7 +222,7 @@ makeAssignment chosenScopeProp params funcBody pl =
                 <&> BodyFunction
         nodeActions <- makeActions pl
         let mRemoveSetToHole
-                | Lens.has (_BodyPlain . apBody . bbContent . _BinderExpr . body . _BodyHole) bod =
+                | Lens.has (_BodyPlain . apBody . bContent . _BinderExpr . body . _BodyHole) bod =
                     mSetToHole .~ Nothing
                 | otherwise = id
         pure Assignment
@@ -261,7 +261,7 @@ useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
         any (func &)
-        [ Lens.has (fBody . bbContent . _BinderLet)
+        [ Lens.has (fBody . bContent . _BinderLet)
         , Lens.has (fBody . SugarLens.binderExprs . SugarLens.payloadsOf forbiddenLightLamSubExprs)
         , not . allParamsUsed paramNames
         ]

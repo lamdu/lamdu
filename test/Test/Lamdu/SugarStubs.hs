@@ -155,8 +155,8 @@ repl x =
     Sugar.Repl
     { Sugar._replExpr =
         Sugar.Binder
-        { Sugar._bbContent = Sugar.BinderExpr x
-        , Sugar._bbAddOuterLet = error "not implemented"
+        { Sugar._bContent = Sugar.BinderExpr x
+        , Sugar._bAddOuterLet = error "not implemented"
         }
     , Sugar._replVarInfo = Sugar.VarNormal
     , Sugar._replResult = CurAndPrev Nothing Nothing
@@ -198,8 +198,8 @@ funcExpr params body =
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._fBody =
         Sugar.Binder
-        { Sugar._bbAddOuterLet = Unit
-        , Sugar._bbContent = Sugar.BinderExpr body
+        { Sugar._bAddOuterLet = Unit
+        , Sugar._bContent = Sugar.BinderExpr body
         }
     }
 

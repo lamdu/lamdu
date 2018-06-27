@@ -72,7 +72,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         defPl
         & _1 . showInEvalMode .~
             ( tid ^. tidTId == Builtins.textTid
-                || binder ^. bbContent . SugarLens.binderContentResultExpr .
+                || binder ^. bContent . SugarLens.binderContentResultExpr .
                     topLevelAnn . showInEvalMode
             )
         & (`Expression` newBodyWith dontShowEval)
@@ -128,7 +128,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
-            & body . _BodyLam . lamFunc . fBody . bbContent .
+            & body . _BodyLam . lamFunc . fBody . bContent .
               SugarLens.binderContentResultExpr . nonHoleAnn .~ neverShowAnnotations
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =

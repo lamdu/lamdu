@@ -84,7 +84,7 @@ expr (Expression _ body_) =
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
     BodyToNom (Nominal tid binder) ->
         ofName (tid ^. tidName)
-        ++ expr (binder ^. bbContent . SugarLens.binderContentResultExpr)
+        ++ expr (binder ^. bContent . SugarLens.binderContentResultExpr)
     BodyFromNom (Nominal tid _) ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an

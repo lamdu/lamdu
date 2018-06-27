@@ -42,7 +42,7 @@ convertIfElse setToVal caseBody =
         convIfElse cond altTrue altFalse =
             case mAltFalseBinder of
             Just binder ->
-                case binder ^? fBody . bbContent . _BinderExpr of
+                case binder ^? fBody . bContent . _BinderExpr of
                 Just altFalseBinderExpr ->
                     case altFalseBinderExpr ^. body of
                     BodyIfElse innerIfElse ->
@@ -53,7 +53,7 @@ convertIfElse setToVal caseBody =
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
                         , _eiEntityId = altFalseBinderExpr ^. annotation . pInput . Input.entityId
                         , _eiContent = innerIfElse
-                        , _eiCondAddLet = binder ^. fBody . bbAddOuterLet
+                        , _eiCondAddLet = binder ^. fBody . bAddOuterLet
                         , _eiNodeActions = altFalseBinderExpr ^. annotation . pActions
                         }
                         & makeRes
@@ -69,13 +69,13 @@ convertIfElse setToVal caseBody =
                 simpleIfElse =
                     altFalse ^. ciExpr
                     & body . _BodyHole . holeMDelete ?~ elseDel
-                    & body . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
+                    & body . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
                         . body . _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
                     & makeRes
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . body . _BodyLam . lamFunc . fBody . bbContent . _BinderExpr
+                    alt ^? ciExpr . body . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
                     & (^. annotation . pInput . Input.stored . Property.pVal)
                 makeRes els =

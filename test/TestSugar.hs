@@ -57,7 +57,7 @@ testChangeParam =
     where
         action workArea =
             "new" &
-            workArea ^?! waRepl . replExpr . bbContent . _BinderExpr .
+            workArea ^?! waRepl . replExpr . bContent . _BinderExpr .
             body . _BodySimpleApply . V.applyFunc .
             body . _BodySimpleApply . V.applyArg .
             body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
@@ -77,10 +77,10 @@ testReorderLets =
             testSugarActions program [(^?! extractSecondLetItemInLambda)]
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
-            waRepl . replExpr . bbContent . _BinderExpr .
+            waRepl . replExpr . bContent . _BinderExpr .
             body . _BodyLam . lamFunc . fBody .
-            bbContent . _BinderLet . lBody .
-            bbContent . _BinderLet . lValue .
+            bContent . _BinderLet . lBody .
+            bContent . _BinderLet . lValue .
             aNodeActions . extract
 
 -- Test for issue #395
@@ -91,9 +91,9 @@ testExtract =
     & testCase "extract"
     where
         action =
-            waRepl . replExpr . bbContent . _BinderExpr .
+            waRepl . replExpr . bContent . _BinderExpr .
             body . _BodyLam . lamFunc . fBody .
-            bbContent . _BinderLet . lActions . laNodeActions . extract
+            bContent . _BinderLet . lActions . laNodeActions . extract
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
@@ -105,7 +105,7 @@ testInline =
         inline workArea =
             do
                 Just yOption <-
-                    letItem ^. lBody . bbContent . _BinderExpr . body . _BodyHole . holeOptions
+                    letItem ^. lBody . bContent . _BinderExpr . body . _BodyHole . holeOptions
                     >>= findM isY
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
@@ -115,9 +115,9 @@ testInline =
             where
                 letItem =
                     workArea ^?!
-                    waRepl . replExpr . bbContent . _BinderExpr .
+                    waRepl . replExpr . bContent . _BinderExpr .
                     body . _BodyLam . lamFunc . fBody .
-                    bbContent . _BinderLet
+                    bContent . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
                     <&> Lens.has (_BinderExpr . body . _BodyGetVar . _GetBinder . bvForm . _GetLet)
@@ -125,9 +125,9 @@ testInline =
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
-            waRepl . replExpr . bbContent . _BinderExpr .
+            waRepl . replExpr . bContent . _BinderExpr .
             body . _BodyLam . lamFunc . fBody .
-            bbContent . _BinderExpr .
+            bContent . _BinderExpr .
             body . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
@@ -145,14 +145,14 @@ delParam =
     & testCase "del-param"
     where
         action =
-            waRepl . replExpr . bbContent . _BinderExpr .
+            waRepl . replExpr . bContent . _BinderExpr .
             body . _BodyLam . lamFunc . fParams . _Params . Lens.ix 0 .
             fpInfo . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
         afterDel =
-            waRepl . replExpr . bbContent . _BinderExpr .
+            waRepl . replExpr . bContent . _BinderExpr .
             body . _BodyLiteral . _LiteralNum
 
 testLightLambda :: Test
@@ -164,6 +164,6 @@ testLightLambda =
             | Lens.has expected workArea = pure ()
             | otherwise = fail "Expected light lambda sugar!"
         expected =
-            waRepl . replExpr . bbContent . _BinderExpr .
+            waRepl . replExpr . bContent . _BinderExpr .
             body . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             body . _BodyLam . lamMode . _LightLambda

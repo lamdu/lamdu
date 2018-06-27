@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types.Expression
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
-    , Binder(..), bbAddOuterLet, bbContent
+    , Binder(..), bAddOuterLet, bContent
     , BinderContent(..), _BinderLet, _BinderExpr
     , Function(..)
         , fChosenScopeProp, fParams, fBody
@@ -160,8 +160,8 @@ data BinderContent name i o a
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
 data Binder name i o a = Binder
-    { _bbAddOuterLet :: o EntityId
-    , _bbContent :: BinderContent name i o a
+    { _bAddOuterLet :: o EntityId
+    , _bContent :: BinderContent name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Function name i o a = Function

@@ -328,7 +328,7 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
                 ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
         bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
-        bodyContent = func ^. Sugar.fBody . Sugar.bbContent
+        bodyContent = func ^. Sugar.fBody . Sugar.bContent
 
 makePlainParts ::
     (Monad i, Monad o) =>
@@ -345,7 +345,7 @@ makePlainParts binder delVarBackwardsId myId =
         Parts mParamsEdit Nothing rhs mempty & pure
     where
         bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
-        bodyContent = binder ^. Sugar.apBody . Sugar.bbContent
+        bodyContent = binder ^. Sugar.apBody . Sugar.bContent
 
 makeParts ::
     (Monad i, Monad o) =>
@@ -442,8 +442,8 @@ make pMode defEventMap tag color binder myId =
         nameId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = binder ^. SugarLens.assignmentBody
-        bodyId = body ^. Sugar.bbContent . SugarLens.binderContentEntityId & WidgetIds.fromEntityId
-        nearestHoles = binderContentNearestHoles (body ^. Sugar.bbContent)
+        bodyId = body ^. Sugar.bContent . SugarLens.binderContentEntityId & WidgetIds.fromEntityId
+        nearestHoles = binderContentNearestHoles (body ^. Sugar.bContent)
 
 makeLetEdit ::
     (Monad i, Monad o) =>
@@ -479,7 +479,7 @@ makeLetEdit item =
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where
         bodyId =
-            item ^. Sugar.lBody . Sugar.bbContent . SugarLens.binderContentEntityId
+            item ^. Sugar.lBody . Sugar.bContent . SugarLens.binderContentEntityId
             & WidgetIds.fromEntityId
         letId =
             item ^. Sugar.lEntityId & WidgetIds.fromEntityId
@@ -530,7 +530,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
         config <- Lens.view Config.config
         let moveToInnerEventMap =
                 body
-                ^? Sugar.bbContent . Sugar._BinderLet
+                ^? Sugar.bContent . Sugar._BinderLet
                 . Sugar.lActions . Sugar.laNodeActions . Sugar.extract
                 & foldMap
                 (E.keysEventMap (config ^. Config.moveLetInwardKeys)

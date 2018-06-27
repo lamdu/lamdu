@@ -46,8 +46,8 @@ makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
     & mkNomGui id "ToNominal" "«" mDel pl
     where
-        bbContent = nom ^. Sugar.nVal . Sugar.bbContent
-        mDel = bbContent ^? Sugar._BinderExpr . mReplaceParent
+        bContent = nom ^. Sugar.nVal . Sugar.bContent
+        mDel = bContent ^? Sugar._BinderExpr . mReplaceParent
 
 makeFromNom ::
     (Monad i, Monad o) =>

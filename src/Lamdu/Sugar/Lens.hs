@@ -63,7 +63,7 @@ binderExprs ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
     Binder name i o a -> f (Binder name i o b)
-binderExprs = bbContent . binderContentExprs
+binderExprs = bContent . binderContentExprs
 
 funcExprs ::
     Applicative f =>
@@ -256,7 +256,7 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
 binderContentResultExpr :: Lens' (BinderContent name i o a) (Expression name i o a)
-binderContentResultExpr f (BinderLet l) = l & lBody . bbContent . binderContentResultExpr %%~ f <&> BinderLet
+binderContentResultExpr f (BinderLet l) = l & lBody . bContent . binderContentResultExpr %%~ f <&> BinderLet
 binderContentResultExpr f (BinderExpr e) = f e <&> BinderExpr
 
 binderContentEntityId ::

@@ -192,7 +192,7 @@ toBinderBody ::
     MonadNaming m =>
     Binder (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Binder (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toBinderBody = bbContent toBinderContent
+toBinderBody = bContent toBinderContent
 
 toAddFirstParam ::
     MonadNaming m =>
