@@ -7,7 +7,7 @@
 , optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
 , split, StateVar, stdenv, stm, temporary, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers, unordered-containers
-, uuid, uuid-types, vector, wl-pprint, yaml, zip-archive, imagemagick, HUnit
+, uuid, uuid-types, vector, wl-pprint, yaml, zip-archive, HUnit
 }:
 mkDerivation {
   pname = "Lamdu";
@@ -27,7 +27,6 @@ mkDerivation {
     text time timeit transformers unordered-containers uuid uuid-types vector wl-pprint
     yaml zip-archive
   ];
-  executablePkgconfigDepends = [ imagemagick ];
   homepage = "http://www.lamdu.org";
   description = "A next generation IDE";
   license = "GPL";
