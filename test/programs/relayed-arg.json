@@ -1,0 +1,154 @@
+[
+    {
+        "schemaVersion": 5
+    },
+    {
+        "tagOrder": 0,
+        "tag": "252f10c83610ebca1a059c0bae8255eb",
+        "name": "f"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "name": "a"
+    },
+    {
+        "tagOrder": 1,
+        "tag": "fa4970527c82ac935af48b0693d96cd9",
+        "name": "b"
+    },
+    {
+        "tag": null,
+        "lamId": "3ab69508-9e90-46f2-a57a-d3ae062e9f76",
+        "lamVar": "94496880b6034251a4b0ad86d0fd3fb1",
+        "lamFieldParams": [
+            "64077ff41e0a8ee59e103f93023ad302",
+            "fa4970527c82ac935af48b0693d96cd9"
+        ]
+    },
+    {
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "defPresentationMode": "Verbose",
+        "def": "012bd2d33d774206bc3c2ca8f2f6a4ca",
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "61"
+                ]
+            }
+        },
+        "val": {
+            "hole": {},
+            "id": "303fe3a1-4ab1-4d46-a8ff-10caac217748"
+        }
+    },
+    {
+        "tag": "252f10c83610ebca1a059c0bae8255eb",
+        "defPresentationMode": "Verbose",
+        "def": "141b93fe48c04af6922313328bbc8ca9",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": {
+                        "fa4970527c82ac935af48b0693d96cd9": {
+                            "typeVar": "7434"
+                        },
+                        "64077ff41e0a8ee59e103f93023ad302": {
+                            "typeVar": "7433"
+                        }
+                    }
+                },
+                "funcResult": {
+                    "typeVar": "6c35"
+                }
+            },
+            "schemeBinders": {
+                "typeVars": [
+                    "6c35",
+                    "7433",
+                    "7434"
+                ]
+            }
+        },
+        "val": {
+            "lamVar": "94496880b6034251a4b0ad86d0fd3fb1",
+            "id": "3ab69508-9e90-46f2-a57a-d3ae062e9f76",
+            "lamBody": {
+                "hole": {},
+                "id": "9015ebe0-5220-49b1-8440-1b80d4281ab9"
+            }
+        }
+    },
+    {
+        "repl": {
+            "frozenDeps": {
+                "defTypes": {
+                    "012bd2d33d774206bc3c2ca8f2f6a4ca": {
+                        "schemeType": {
+                            "typeVar": "61"
+                        },
+                        "schemeBinders": {
+                            "typeVars": [
+                                "61"
+                            ]
+                        }
+                    },
+                    "141b93fe48c04af6922313328bbc8ca9": {
+                        "schemeType": {
+                            "funcParam": {
+                                "record": {
+                                    "fa4970527c82ac935af48b0693d96cd9": {
+                                        "typeVar": "7434"
+                                    },
+                                    "64077ff41e0a8ee59e103f93023ad302": {
+                                        "typeVar": "7433"
+                                    }
+                                }
+                            },
+                            "funcResult": {
+                                "typeVar": "6c35"
+                            }
+                        },
+                        "schemeBinders": {
+                            "typeVars": [
+                                "6c35",
+                                "7433",
+                                "7434"
+                            ]
+                        }
+                    }
+                }
+            },
+            "val": {
+                "applyFunc": {
+                    "var": "141b93fe48c04af6922313328bbc8ca9",
+                    "id": "970f38f9-45b5-2bf6-99da-8ea6f3083d2a"
+                },
+                "applyArg": {
+                    "extendVal": {
+                        "var": "012bd2d33d774206bc3c2ca8f2f6a4ca",
+                        "id": "8a57a2b6-f1e2-bfe6-de3e-c57705238516"
+                    },
+                    "extendTag": "64077ff41e0a8ee59e103f93023ad302",
+                    "id": "fbca3f4c-e729-2bd2-82dc-b8ea00404f6f",
+                    "extendRest": {
+                        "extendVal": {
+                            "hole": {},
+                            "id": "98e37776-8ac8-2a3a-a5a5-718e9c8d4256"
+                        },
+                        "extendTag": "fa4970527c82ac935af48b0693d96cd9",
+                        "id": "10fb88b2-9020-27cf-a247-04cd7ea5ef75",
+                        "extendRest": {
+                            "recEmpty": {},
+                            "id": "fb2ca26a-11d6-2e6a-85cb-c9f70e079534"
+                        }
+                    }
+                },
+                "id": "33164582-bc53-22a2-9663-8fed77062c2f"
+            }
+        }
+    }
+]
