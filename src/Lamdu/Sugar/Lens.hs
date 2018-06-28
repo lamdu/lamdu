@@ -29,6 +29,7 @@ import           Lamdu.Prelude
 data PayloadOf name i o
     = OfExpr (Expression name i o ())
     | OfLabeledApplyFunc (LabeledApplyFunc name o ())
+    | OfRelayedArg (RelayedArg name o ())
     | OfNullaryVal (NullaryVal name i o ())
 Lens.makePrisms ''PayloadOf
 
@@ -76,13 +77,14 @@ funcExprs = fBody . binderExprs
 labeledApplyChildren ::
     Applicative f =>
     (LabeledApplyFunc name o a -> f (LabeledApplyFunc name o b)) ->
+    (RelayedArg name o a -> f (RelayedArg name o b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
     LabeledApply name i o a -> f (LabeledApply name i o b)
-labeledApplyChildren l e (LabeledApply func special annotated relayed) =
+labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
     uncurry LabeledApply
     <$> funcAndSpecial
     <*> (traverse . traverse) e annotated
-    <*> pure relayed
+    <*> traverse r relayed
     where
         funcAndSpecial =
             case special of
@@ -109,9 +111,10 @@ bodyChildren ::
     Applicative f =>
     (NullaryVal name i o a -> f (NullaryVal name i o b)) ->
     (LabeledApplyFunc name o a -> f (LabeledApplyFunc name o b)) ->
+    (RelayedArg name o a -> f (RelayedArg name o b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
     Body name i o a -> f (Body name i o b)
-bodyChildren n l f =
+bodyChildren n l r f =
     \case
     BodyPlaceHolder -> pure BodyPlaceHolder
     BodyLiteral x -> BodyLiteral x & pure
@@ -119,7 +122,7 @@ bodyChildren n l f =
     BodyHole    x -> BodyHole    x & pure
     BodyLam          x -> (lamFunc . funcExprs) f x <&> BodyLam
     BodySimpleApply  x -> traverse f x <&> BodySimpleApply
-    BodyLabeledApply x -> labeledApplyChildren l f x <&> BodyLabeledApply
+    BodyLabeledApply x -> labeledApplyChildren l r f x <&> BodyLabeledApply
     BodyRecord       x -> traverse f x <&> BodyRecord
     BodyGetField     x -> traverse f x <&> BodyGetField
     BodyCase         x -> traverse f x <&> BodyCase
@@ -133,20 +136,28 @@ bodyChildPayloads ::
     forall name i o a.
     Lens.IndexedTraversal' (PayloadOf name i o) (Body name i o a) a
 bodyChildPayloads f =
-    bodyChildren (nullaryValPayload f) (Lens.cloneIndexedLens labeledFuncPayloads f) g
+    bodyChildren
+    (nullaryValPayload f)
+    (Lens.cloneIndexedLens labeledFuncPayloads f)
+    (Lens.cloneIndexedLens relayedPayloads f)
+    g
     where
         g val@(Expression pl x) = Lens.indexed f (OfExpr (void val)) pl <&> (`Expression` x)
         labeledFuncPayloads ::
             Lens.AnIndexedLens' (PayloadOf name i o) (LabeledApplyFunc name o a) a
         labeledFuncPayloads = labeledApplyFuncPayload
+        relayedPayloads ::
+            Lens.AnIndexedLens' (PayloadOf name i o) (RelayedArg name o a) a
+        relayedPayloads = relayedArgPayload
 
 overBodyChildren ::
     (NullaryVal name i o a -> NullaryVal name i o b) ->
     (LabeledApplyFunc name o a -> LabeledApplyFunc name o b) ->
+    (RelayedArg name o a -> RelayedArg name o b) ->
     (Expression name i o a -> Expression name i o b) ->
     Body name i o a -> Body name i o b
-overBodyChildren n f e =
-    Lens.runIdentity . bodyChildren (pure . n) (pure . f) (pure . e)
+overBodyChildren n f r e =
+    Lens.runIdentity . bodyChildren (pure . n) (pure . f) (pure . r) (pure . e)
 
 nullaryValPayload ::
     Lens.IndexedLens (PayloadOf name i o)
@@ -166,6 +177,15 @@ labeledApplyFuncPayload f val@(LabeledApplyFunc func pl) =
     Lens.indexed f (OfLabeledApplyFunc (void val)) pl
     <&> LabeledApplyFunc func
 
+relayedArgPayload ::
+    Lens.AnIndexedLens (PayloadOf name i o)
+    (RelayedArg name o a)
+    (RelayedArg name o b)
+    a b
+relayedArgPayload f val@(RelayedArg x pl) =
+    Lens.indexed f (OfRelayedArg (void val)) pl
+    <&> RelayedArg x
+
 subExprPayloads ::
     forall name i o a b.
     Lens.IndexedTraversal (PayloadOf name i o)
@@ -174,7 +194,11 @@ subExprPayloads ::
     a b
 subExprPayloads f val@(Expression pl x) =
     flip Expression
-    <$> bodyChildren (nullaryValPayload f) (Lens.cloneIndexedLens labeledFuncPayloads f) (subExprPayloads f) x
+    <$> bodyChildren
+        (nullaryValPayload f)
+        (Lens.cloneIndexedLens labeledFuncPayloads f)
+        (Lens.cloneIndexedLens relayedPayloads f)
+        (subExprPayloads f) x
     <*> Lens.indexed f (OfExpr (void val)) pl
     where
         labeledFuncPayloads ::
@@ -183,6 +207,12 @@ subExprPayloads f val@(Expression pl x) =
             (LabeledApplyFunc name o b)
             a b
         labeledFuncPayloads = labeledApplyFuncPayload
+        relayedPayloads ::
+            Lens.AnIndexedLens (PayloadOf name i o)
+            (RelayedArg name o a)
+            (RelayedArg name o b)
+            a b
+        relayedPayloads = relayedArgPayload
 
 payloadsIndexedByPath ::
     Lens.IndexedTraversal [PayloadOf name i o]
@@ -195,7 +225,11 @@ payloadsIndexedByPath f =
         go path val@(Expression pl x) =
             Expression
             <$> Lens.indexed f newPath pl
-            <*> bodyChildren (goNull newPath) (goFunc newPath) (go newPath) x
+            <*> bodyChildren
+                (goNull newPath)
+                (goFunc newPath)
+                (goRelayed newPath)
+                (go newPath) x
             where
                 newPath = OfExpr (void val) : path
         goFunc path val@(LabeledApplyFunc func pl) =
@@ -204,6 +238,9 @@ payloadsIndexedByPath f =
         goNull path val =
             Lens.indexed f (OfNullaryVal (void val) : path) (val ^. nullaryPayload)
             <&> \x -> val & nullaryPayload .~ x
+        goRelayed path val@(RelayedArg x pl) =
+            Lens.indexed f (OfRelayedArg (void val) : path) pl
+            <&> RelayedArg x
 
 payloadsOf ::
     Lens.Fold (Body name i o ()) a ->
@@ -270,7 +307,7 @@ binderContentEntityId f (BinderLet l) =
 
 leftMostLeaf :: Expression name i o a -> Expression name i o a
 leftMostLeaf val =
-    case val ^.. body . bodyChildren pure pure of
+    case val ^.. body . bodyChildren pure pure pure of
     [] -> val
     (x:_) -> leftMostLeaf x
 
@@ -354,7 +391,7 @@ funcSubExprParams f x =
 
 bodySubExprParams :: Lens.Traversal' (Body name i o a) (BinderParams name i o)
 bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
-bodySubExprParams f x = bodyChildren pure pure ((body . bodySubExprParams) f) x
+bodySubExprParams f x = bodyChildren pure pure pure ((body . bodySubExprParams) f) x
 
 binderContentSubExprParams :: Lens.Traversal' (BinderContent name i o a) (BinderParams name i o)
 binderContentSubExprParams f (BinderExpr x) =

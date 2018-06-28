@@ -160,12 +160,13 @@ setChildReplaceParentActions =
             overBodyChildren
             (nullaryPayload %~ join setToExpr)
             (afPayload %~ join setToExpr)
+            (raPayload %~ join setToExpr)
             (annotation %~ join setToExpr)
         -- Replace-parent with fragment sets directly to fragment expression
-        & bodyChildren pure pure . Lens.filteredBy (body . _BodyFragment . fExpr . annotation) <. annotation %@~ setToExpr
+        & bodyChildren pure pure pure . Lens.filteredBy (body . _BodyFragment . fExpr . annotation) <. annotation %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        & bodyChildren pure pure . body . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
+        & bodyChildren pure pure pure . body . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
             fExpr . annotation %~ join setToExpr
 
 subexprPayloads ::

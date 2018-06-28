@@ -66,7 +66,7 @@ data LabeledApply name i o a = LabeledApply
     { _aFunc :: LabeledApplyFunc name o a
     , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
     , _aAnnotatedArgs :: [AnnotatedArg name (Expression name i o a)]
-    , _aRelayedArgs :: [RelayedArg name i o]
+    , _aRelayedArgs :: [RelayedArg name o a]
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data InjectVal name i o a

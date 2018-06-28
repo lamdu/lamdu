@@ -114,6 +114,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             SugarLens.overBodyChildren
             (nullaryPayload . _1 .~ f)
             (afPayload . _1 .~ f)
+            (raPayload . _1 .~ f)
             (nonHoleAnn .~ f)
             newBody
         plWith ann = (ann, pl)
@@ -123,6 +124,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             SugarLens.overBodyChildren
             (nullaryPayload %~ (,) neverShowAnnotations)
             (afPayload %~ (,) neverShowAnnotations)
+            (raPayload %~ (,) neverShowAnnotations)
             markAnnotationsToDisplay
             oldBody
         nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn

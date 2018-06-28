@@ -31,7 +31,7 @@ module Lamdu.Sugar.Types.Parts
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , NullaryVal(..), nullaryPayload, nullaryClosedCompositeActions, nullaryAddItem
     , LabeledApplyFunc(..), afVar, afPayload
-    , RelayedArg(..), raValue, raId, raActions
+    , RelayedArg(..), raValue, raPayload
     , Heal(..), _HealAction, _TypeMismatch
     ) where
 
@@ -176,11 +176,10 @@ data NullaryVal name i o a = NullaryVal
     , _nullaryAddItem :: TagSelection name i o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data RelayedArg name i o = RelayedArg
+data RelayedArg name o a = RelayedArg
     { _raValue :: GetVar name o
-    , _raId :: EntityId
-    , _raActions :: NodeActions name i o
-    } deriving Generic
+    , _raPayload :: a
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data LabeledApplyFunc name o a = LabeledApplyFunc
     { _afVar :: BinderVarRef name o

@@ -6,7 +6,6 @@ import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -66,7 +65,6 @@ makeLabeledApply func args =
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Sugar.RelayedArg
                     { Sugar._raValue = getVar
-                    , Sugar._raId = arg ^. Sugar.aaExpr . Sugar.annotation . pInput . Input.entityId
-                    , Sugar._raActions = arg ^. Sugar.aaExpr . Sugar.annotation . pActions
+                    , Sugar._raPayload = arg ^. Sugar.aaExpr . Sugar.annotation
                     } & Just
             & fromMaybe (Left arg)

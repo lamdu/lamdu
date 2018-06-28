@@ -274,12 +274,12 @@ withTag nameType varInfo (Sugar.Tag info actions) =
 
 toRelayedArg ::
     MonadNaming m =>
-    RelayedArg (OldName m) (IM m) o ->
-    m (RelayedArg (NewName m) (IM m) o)
+    RelayedArg (OldName m) o (Payload (OldName m) (IM m) o a) ->
+    m (RelayedArg (NewName m) o (Payload (NewName m) (IM m) o a))
 toRelayedArg RelayedArg{..} =
-    (\_raValue _raActions -> RelayedArg{..})
+    (\_raValue _raPayload -> RelayedArg{..})
     <$> toGetVar _raValue
-    <*> toNodeActions _raActions
+    <*> toPayload _raPayload
 
 toLabeledApplyFunc ::
     MonadNaming m =>

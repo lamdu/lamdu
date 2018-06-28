@@ -79,9 +79,10 @@ loopExprBody minOpPrec parentPrec body_ =
             & result needParens
             where
                 needParens = parentPrec ^. checkSide > prec
+        neverParen = (,,) (maxNamePrec + 1) NoNeedForParens
         inject (Inject t v) =
             case v of
-            InjectNullary x -> x <&> (,,) (maxNamePrec + 1) NoNeedForParens & InjectNullary
+            InjectNullary x -> x <&> neverParen & InjectNullary
             InjectVal x -> loop 0 (childPrec (before .~ 0) needParens) x & InjectVal
             & Inject t & BodyInject
             & result needParens
@@ -100,8 +101,7 @@ loopExprBody minOpPrec parentPrec body_ =
             where
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
         labeledApply (LabeledApply func special ann relayed) =
-            LabeledApply
-            (func <&> (,,) (maxNamePrec + 1) NoNeedForParens) s a relayed
+            LabeledApply (func <&> neverParen) s a (relayed <&> Lens.mapped %~ neverParen)
             & BodyLabeledApply & result needParens
             where
                 (s, a) =

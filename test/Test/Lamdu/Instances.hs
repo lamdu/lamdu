@@ -165,6 +165,7 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.NullaryVal n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Pane n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Payload n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.RecordType n a)
+deriving instance (Eq a, Eq n) => Eq (Sugar.RelayedArg n Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Repl n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResBody n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResInject n a)
@@ -208,7 +209,6 @@ deriving instance Eq n => Eq (Sugar.NameRef n Unit)
 deriving instance Eq n => Eq (Sugar.NodeActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.ParamInfo n Unit Unit)
 deriving instance Eq n => Eq (Sugar.ParamRef n Unit)
-deriving instance Eq n => Eq (Sugar.RelayedArg n Unit Unit)
 deriving instance Eq n => Eq (Sugar.ResVal n)
 deriving instance Eq n => Eq (Sugar.Scheme n)
 deriving instance Eq n => Eq (Sugar.Tag n Unit Unit)
@@ -250,6 +250,7 @@ instance (NFData a, NFData n) => NFData (Sugar.Let n (T i) (T o) a) where rnf = 
 instance (NFData a, NFData n) => NFData (Sugar.Nominal n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Pane n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Payload n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.RelayedArg n (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Repl n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ResBody n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ResInject n a) where rnf = genericRnf
@@ -287,9 +288,6 @@ instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf
 instance NFData Def.FFIName where rnf = genericRnf
 instance NFData EntityId where rnf = genericRnf
 instance NFData ExprGui.Payload
-instance NFData ShowAnnotation
-instance NFData Sugar.FuncApplyLimit
-instance NFData Sugar.VarInfo
 instance NFData n => NFData (Sugar.Annotation n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderParams n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderVarForm n (T o)) where rnf = genericRnf
@@ -302,7 +300,6 @@ instance NFData n => NFData (Sugar.NameRef n (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ParamInfo n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ParamRef n (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ParamsRecordVarRef n) where rnf = genericRnf
-instance NFData n => NFData (Sugar.RelayedArg n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ResVal n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Scheme n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Tag n (T i) (T o)) where rnf = genericRnf
@@ -313,9 +310,12 @@ instance NFData n => NFData (Sugar.ValAnnotation n) where rnf = genericRnf
 instance NFData Name.Collision
 instance NFData Name.TagText
 instance NFData NearestHoles
+instance NFData ShowAnnotation
 instance NFData Sugar.BinderBodyScope where rnf = genericRnf
 instance NFData Sugar.BinderMode where rnf = genericRnf
 instance NFData Sugar.BinderParamScopeId where rnf = genericRnf
 instance NFData Sugar.ErrorType where rnf = genericRnf
 instance NFData Sugar.EvalTypeError
+instance NFData Sugar.FuncApplyLimit
 instance NFData Sugar.ScopeId
+instance NFData Sugar.VarInfo

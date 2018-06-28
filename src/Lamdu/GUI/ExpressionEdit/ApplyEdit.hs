@@ -18,7 +18,6 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui (ExpressionGui)
@@ -30,7 +29,6 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -128,7 +126,7 @@ makeLabeled apply pl =
     <*> (makeFuncRow (ExprGui.mParensId pl) apply >>= addBox)
     where
         addBox
-            | isBoxed apply = mkBoxed apply (pl ^. Sugar.plData . ExprGui.plNearestHoles)
+            | isBoxed apply = mkBoxed apply
             | otherwise = pure
 
 makeArgRow ::
@@ -148,32 +146,22 @@ makeArgRow arg =
 
 mkRelayedArgs ::
     (Monad i, Monad o) =>
-    NearestHoles -> [Sugar.RelayedArg (Name o) i o] ->
+    [Sugar.RelayedArg (Name o) o (Sugar.Payload (Name o) i o ExprGui.Payload)] ->
     ExprGuiM i o (ExpressionGui o)
-mkRelayedArgs nearestHoles args =
+mkRelayedArgs args =
     do
         argEdits <- traverse makeArgEdit args
         collapsed <- Styled.grammarLabel "➾" <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
-        makeArgEdit arg =
-            ExprEventMap.addWith ExprEventMap.defaultOptions
-            ExprEventMap.ExprInfo
-            { exprInfoActions = arg ^. Sugar.raActions
-            , exprInfoNearestHoles = nearestHoles
-            , exprInfoIsHoleResult = False
-            , exprInfoMinOpPrec = 0
-            , exprInfoIsSelected = True
-            }
-            <*> GetVarEdit.makeNoActions (arg ^. Sugar.raValue) (WidgetIds.fromEntityId (arg ^. Sugar.raId))
+        makeArgEdit arg = GetVarEdit.make (arg ^. Sugar.raValue) (arg ^. Sugar.raPayload)
 
 mkBoxed ::
     (Monad i, Monad o) =>
     Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    NearestHoles ->
     ExpressionGui o ->
     ExprGuiM i o (ExpressionGui o)
-mkBoxed apply nearestHoles funcRow =
+mkBoxed apply funcRow =
     do
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
@@ -185,7 +173,7 @@ mkBoxed apply nearestHoles funcRow =
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
             [] -> pure []
-            args -> mkRelayedArgs nearestHoles args <&> (:[])
+            args -> mkRelayedArgs args <&> (:[])
         Styled.addValFrame
             <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
 
