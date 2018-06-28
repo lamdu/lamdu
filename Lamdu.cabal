@@ -350,7 +350,6 @@ Library
                   , Lamdu.Sugar.Names.Annotated
                   , Lamdu.Sugar.Names.CPS
                   , Lamdu.Sugar.Names.Clash
-                  , Lamdu.Sugar.Names.Get
                   , Lamdu.Sugar.Names.Map
                   , Lamdu.Sugar.Names.NameGen
                   , Lamdu.Sugar.Names.Walk

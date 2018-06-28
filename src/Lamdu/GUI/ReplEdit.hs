@@ -35,7 +35,7 @@ import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -191,7 +191,7 @@ make ::
     ExportRepl m ->
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
+    ExprGuiM (T m) (T m) (Responsive (IOTrans m GuiState.Update))
 make exportRepl (Sugar.Repl replExpr _varInfo replResult) =
     do
         theConfig <- Lens.view config

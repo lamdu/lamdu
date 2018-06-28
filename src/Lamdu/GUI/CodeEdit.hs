@@ -41,7 +41,7 @@ import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM')
+import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -131,7 +131,7 @@ makePaneEdit ::
     ExportActions m ->
     Sugar.Pane (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM' (T m) (Responsive (IOTrans m GuiState.Update))
+    ExprGuiM (T m) (T m) (Responsive (IOTrans m GuiState.Update))
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
@@ -168,7 +168,7 @@ makePaneEdit theExportActions pane =
             <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinition ::
-    Monad m => Anchors.CodeAnchors m -> ExprGuiM' (T m) (T m Widget.Id)
+    Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (T m) (T m Widget.Id)
 makeNewDefinition cp =
     ExprGuiM.mkPrejumpPosSaver <&>
     \savePrecursor ->
@@ -185,7 +185,7 @@ newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
 
 makeNewDefinitionButton ::
-    Monad m => Anchors.CodeAnchors m -> ExprGuiM' (T m) (Widget (T m GuiState.Update))
+    Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (T m) (Widget (T m GuiState.Update))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
@@ -203,7 +203,7 @@ jumpBack gp =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    Sugar.VarInfo -> ExprGuiM' (T m) (EventMap (IOTrans m GuiState.Update))
+    Sugar.VarInfo -> ExprGuiM (T m) (T m) (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replVarInfo =
     do
         theConfig <- Lens.view config

@@ -13,7 +13,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , im
     , IOM(..), iom
     , makeSubexpression
-    , ExprGuiM, ExprGuiM', run
+    , ExprGuiM, run
     ) where
 
 import           Control.Applicative (liftA2)
@@ -78,9 +78,6 @@ data Askable i o = Askable
 newtype ExprGuiM i (o :: * -> *) a =
     ExprGuiM (ReaderT (Askable i o) i a)
     deriving (Functor, Applicative, Monad, MonadReader (Askable i o))
-
--- TODO: Remove this:
-type ExprGuiM' m = ExprGuiM m m
 
 Lens.makeLenses ''Askable
 

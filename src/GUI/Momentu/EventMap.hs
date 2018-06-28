@@ -211,10 +211,6 @@ isCharMods modKeys =
         , GLFW.modifierKeysAlt
         ]
 
--- TODO: Remove this:
-mkModKey :: GLFW.ModifierKeys -> ModKey.Key -> ModKey
-mkModKey = ModKey
-
 filterByKey :: (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
@@ -248,7 +244,7 @@ lookupKeyMap getClipboard dict (Events.KeyEvent k _scanCode keyState modKeys _) 
           Doesn'tWantClipboard x -> pure (Just x)
           WantsClipboard f -> getClipboard <&> (>>= f)
     where
-        modKey = mkModKey modKeys k
+        modKey = ModKey modKeys k
 
 lookupCharGroup :: [CharGroupHandler a] -> Events.KeyEvent -> Maybe a
 lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =

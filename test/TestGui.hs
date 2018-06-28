@@ -271,7 +271,13 @@ testConsistentNavigationForProg filename =
 testConsistentNavigation :: Test
 testConsistentNavigation =
     listDirectory "test/programs"
-    <&> -- TODO: What to do with that program?
-        filter (/= "old-codec-factorial.json")
+    <&> filter (`notElem` skipped)
     >>= traverse testConsistentNavigationForProg & void
     & testCase "consistent-navigation"
+    where
+        skipped =
+            [ -- These tests import a program without first importing freshdb.
+              -- This program, saved with an old codec (the first version),
+              -- is not compatible with that
+              "old-codec-factorial.json"
+            ]
