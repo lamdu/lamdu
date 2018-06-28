@@ -5,13 +5,11 @@ module GUI.Momentu.Widgets.Choice
     ( make
     , defaultFdConfig
     , Config(..), defaultConfig
-    , ExpandMode(..)
     , Orientation(..)
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
-import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (Orientation(..))
@@ -24,16 +22,8 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
-
-data ExpandMode
-    -- Cursor is on expanded widget, need to show selected choice with a
-    -- color: (TODO: Remove this?)
-    = AutoExpand Draw.Color
-    | ExplicitEntry
-Lens.makePrisms ''ExpandMode
 
 defaultFdConfig :: E.Subtitle -> FocusDelegator.Config
 defaultFdConfig helpPrefix =
@@ -47,7 +37,6 @@ defaultFdConfig helpPrefix =
 data Config = Config
     { cwcFDConfig :: FocusDelegator.Config
     , cwcOrientation :: Orientation
-    , cwcExpandMode :: ExpandMode
     }
 
 defaultConfig :: E.Subtitle -> Config
@@ -55,7 +44,6 @@ defaultConfig helpPrefix =
     Config
     { cwcFDConfig = defaultFdConfig helpPrefix
     , cwcOrientation = Vertical
-    , cwcExpandMode = ExplicitEntry
     }
 
 data IsSelected = Selected | NotSelected
@@ -66,15 +54,15 @@ type HoverFunc f =
 
 makeInner ::
     (Applicative f, Eq childId) =>
-    HoverFunc f -> (Widget.Id -> Bool) ->
+    HoverFunc f ->
     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
      Widget.Id -> Widget (f State.Update) -> Widget (f State.Update)) ->
     Property f childId ->
     [(childId, Widget (f State.Update))] -> Config -> Widget.Id ->
     Widget (f State.Update)
-makeInner hover cursorOn fd (Property curChild choose) children config myId =
+makeInner hover fd (Property curChild choose) children config myId =
     widget True
-    & (if expanded then hoverAsClosed else id)
+    & (if anyChildFocused then hoverAsClosed else id)
     & axis .~ maxDim
     where
         orientation = cwcOrientation config
@@ -87,27 +75,16 @@ makeInner hover cursorOn fd (Property curChild choose) children config myId =
         hoverAsClosed open =
             [hover (Hover.anchor open)]
             `Hover.hoverInPlaceOf` Hover.anchor (widget False)
-        expanded = anyChildFocused || (autoExpand && cursorOn myId)
         widget allowExpand =
             children <&> annotate
             <&> prependEntryAction
             & filterVisible allowExpand
-            <&> colorize
+            <&> snd
             & Glue.box orientation
             & fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId
         filterVisible allowExpand
-            | allowExpand && expanded = id
+            | allowExpand && anyChildFocused = id
             | otherwise = filter ((== Selected) . fst)
-        autoExpand = cwcExpandMode config & Lens.has _AutoExpand
-        colorize (isSelected, w)
-            | anyChildFocused = w -- focus shows selection already
-            | otherwise = -- need to show selection even as focus is elsewhere
-                w
-                & case cwcExpandMode config of
-                    AutoExpand color
-                        | isSelected == Selected ->
-                            MDraw.backgroundColor (Widget.toAnimId myId) color
-                    _ -> id
         prependEntryAction (isSelected, action, w) =
             ( isSelected
             , w
@@ -130,9 +107,4 @@ make ::
     m
     (Property f childId -> [(childId, Widget (f State.Update))] ->
      Config -> Widget.Id -> Widget (f State.Update))
-make =
-    do
-        hover <- Hover.hover
-        cursorOn <- State.isSubCursor
-        fd <- FocusDelegator.make
-        makeInner hover cursorOn fd & pure
+make = makeInner <$> Hover.hover <*> FocusDelegator.make
