@@ -62,11 +62,11 @@ makeFunc ::
     ExprGuiM i o (ExpressionGui o)
 makeFunc func =
     stdWrap pl <*>
-    ( GetVarEdit.makeGetBinder (func ^. Sugar.afVar) myId
+    ( GetVarEdit.makeGetBinder (func ^. Sugar.fVar) myId
         <&> Responsive.fromWithTextPos
     )
     where
-        pl = func ^. Sugar.afPayload
+        pl = func ^. Sugar.fPayload
         myId = WidgetIds.fromExprPayload pl
 
 makeInfixFunc ::
@@ -77,12 +77,12 @@ makeInfixFunc func =
     makeFunc func <&> mAddMarker
     where
         nameText =
-            Name.visible (func ^. Sugar.afVar . Sugar.bvNameRef . Sugar.nrName)
+            Name.visible (func ^. Sugar.fVar . Sugar.bvNameRef . Sugar.nrName)
             ^. _1 . Name.ttText
         mAddMarker
             | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
             | otherwise = addInfixMarker myId
-        myId = func ^. Sugar.afPayload & WidgetIds.fromExprPayload
+        myId = func ^. Sugar.fPayload & WidgetIds.fromExprPayload
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
 isBoxed apply =

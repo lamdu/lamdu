@@ -144,7 +144,7 @@ loopExprBody minOpPrec parentPrec body_ =
             , loop (prec+1) (childPrec (before .~ prec) needParens) r
             ) & BodyLabeledApply & result needParens
             where
-                prec = func ^. afVar . bvNameRef . nrName & precedence
+                prec = func ^. fVar . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
         ifElse x =

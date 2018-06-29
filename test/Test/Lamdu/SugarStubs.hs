@@ -50,8 +50,8 @@ labeledApplyFunc ::
     Sugar.LabeledApplyFunc name Unit (Sugar.Payload name Identity Unit ())
 labeledApplyFunc varRef =
     Sugar.LabeledApplyFunc
-    { Sugar._afVar = varRef
-    , Sugar._afPayload = payload
+    { Sugar._fVar = varRef
+    , Sugar._fPayload = payload
     }
 
 type Infix2 = Expr -> Expr -> Expr

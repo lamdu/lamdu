@@ -110,7 +110,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         newBodyWith f =
             SugarLens.overBodyChildren
             (nullaryPayload . _1 .~ f)
-            (afPayload . _1 .~ f)
+            (fPayload . _1 .~ f)
             (raPayload . _1 .~ f)
             (nonHoleAnn .~ f)
             newBody
@@ -120,7 +120,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         newBody =
             SugarLens.overBodyChildren
             (nullaryPayload %~ (,) neverShowAnnotations)
-            (afPayload %~ (,) neverShowAnnotations)
+            (fPayload %~ (,) neverShowAnnotations)
             (raPayload %~ (,) neverShowAnnotations)
             markAnnotationsToDisplay
             oldBody

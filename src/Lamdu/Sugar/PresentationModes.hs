@@ -20,7 +20,7 @@ makeLabeledApply ::
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
     T m (Sugar.LabeledApply InternalName (T m) (T m) (ConvertPayload m a))
 makeLabeledApply func args =
-    func ^. Sugar.afVar . Sugar.bvVar
+    func ^. Sugar.fVar . Sugar.bvVar
     & Anchors.assocPresentationMode & Property.getP
     <&> \presentationMode ->
     let (specialArgs, otherArgs) =

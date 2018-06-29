@@ -56,7 +56,7 @@ expr (Expression _ body_) =
     BodySimpleApply x -> "apply" : foldMap expr x
     BodyLabeledApply x ->
         "apply"
-        : ofName (x ^. aFunc . afVar . bvNameRef . nrName)
+        : ofName (x ^. aFunc . fVar . bvNameRef . nrName)
         ++ (x ^.. aAnnotatedArgs . Lens.folded . aaTag . tagName >>= ofName)
     BodyRecord {} ->
         -- We don't allow completing a record by typing one of its

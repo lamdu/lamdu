@@ -30,7 +30,7 @@ module Lamdu.Sugar.Types.Parts
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , NullaryVal(..), nullaryPayload, nullaryClosedCompositeActions, nullaryAddItem
-    , LabeledApplyFunc(..), afVar, afPayload
+    , LabeledApplyFunc(..), fVar, fPayload
     , RelayedArg(..), raValue, raPayload
     , Heal(..), _HealAction, _TypeMismatch
     ) where
@@ -182,8 +182,8 @@ data RelayedArg name o a = RelayedArg
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data LabeledApplyFunc name o a = LabeledApplyFunc
-    { _afVar :: BinderVarRef name o
-    , _afPayload :: a
+    { _fVar :: BinderVarRef name o
+    , _fPayload :: a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 instance (Show name, Show a) => Show (LabeledApplyFunc name o a) where
