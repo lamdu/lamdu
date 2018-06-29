@@ -4,9 +4,9 @@ module Lamdu.Sugar.Lens
     , bodyChildren, overBodyChildren, bodyChildPayloads
     , labeledApplyChildren
     , binderExprs, binderContentExprs, funcExprs, assignmentExprs
-    , subExprPayloads, payloadsIndexedByPath
+    , subExprPayloads
     , payloadsOf
-    , bodyUnfinished, unfinishedExprPayloads, fragmentExprs
+    , bodyUnfinished, unfinishedExprPayloads
     , defSchemes
     , assignmentBody, binderFormBody
     , assignmentAddFirstParam, binderFormAddFirstParam
@@ -214,34 +214,6 @@ subExprPayloads f val@(Expression pl x) =
             a b
         relayedPayloads = relayedArgPayload
 
-payloadsIndexedByPath ::
-    Lens.IndexedTraversal [PayloadOf name i o]
-    (Expression name i o a)
-    (Expression name i o b)
-    a b
-payloadsIndexedByPath f =
-    go []
-    where
-        go path val@(Expression pl x) =
-            Expression
-            <$> Lens.indexed f newPath pl
-            <*> bodyChildren
-                (goNull newPath)
-                (goFunc newPath)
-                (goRelayed newPath)
-                (go newPath) x
-            where
-                newPath = OfExpr (void val) : path
-        goFunc path val@(LabeledApplyFunc func pl) =
-            Lens.indexed f (OfLabeledApplyFunc (void val) : path) pl
-            <&> LabeledApplyFunc func
-        goNull path val =
-            Lens.indexed f (OfNullaryVal (void val) : path) (val ^. nullaryPayload)
-            <&> \x -> val & nullaryPayload .~ x
-        goRelayed path val@(RelayedArg x pl) =
-            Lens.indexed f (OfRelayedArg (void val) : path) pl
-            <&> RelayedArg x
-
 payloadsOf ::
     Lens.Fold (Body name i o ()) a ->
     Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o b) b
@@ -264,19 +236,6 @@ bodyUnfinished =
 unfinishedExprPayloads ::
     Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a
 unfinishedExprPayloads = payloadsOf bodyUnfinished
-
-subExprsOf ::
-    Lens.Traversal' (Body name i o ()) b ->
-    Lens.IndexedTraversal' [PayloadOf name i o] (Expression name i o a) a
-subExprsOf f =
-    payloadsIndexedByPath . Lens.ifiltered predicate
-    where
-        predicate (_:parent:_) _ = Lens.has (_OfExpr . body . f) parent
-        predicate _ _ = False
-
-fragmentExprs ::
-    Lens.IndexedTraversal' [PayloadOf name i o] (Expression name i o a) a
-fragmentExprs = subExprsOf _BodyFragment
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name i o expr) (Scheme name)
 defBodySchemes f (DefinitionBodyBuiltin b) =
