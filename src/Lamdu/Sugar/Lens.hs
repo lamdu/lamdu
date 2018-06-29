@@ -46,21 +46,17 @@ assignmentExprs ::
     Assignment name i o a -> f (Assignment name i o b)
 assignmentExprs = aBody . assignmentBodyExprs
 
-letExprs ::
-    Applicative f =>
-    (Expression name i o a -> f (Expression name i o b)) ->
-    Let name i o a -> f (Let name i o b)
-letExprs f x =
-    (\val bod -> x{_lValue=val, _lBody=bod})
-    <$> assignmentExprs f (x ^. lValue)
-    <*> binderExprs f (x ^. lBody)
-
 binderContentExprs ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
     BinderContent name i o a -> f (BinderContent name i o b)
-binderContentExprs f (BinderExpr x) = f x <&> BinderExpr
-binderContentExprs f (BinderLet x) = letExprs f x <&> BinderLet
+binderContentExprs f (BinderExpr x) =
+    f x <&> BinderExpr
+binderContentExprs f (BinderLet x) =
+    (\val bod -> x{_lValue=val, _lBody=bod})
+    <$> assignmentExprs f (x ^. lValue)
+    <*> binderExprs f (x ^. lBody)
+    <&> BinderLet
 
 binderExprs ::
     Applicative f =>
@@ -140,9 +136,8 @@ bodyChildPayloads f =
     (nullaryValPayload f)
     (Lens.cloneIndexedLens labeledFuncPayloads f)
     (Lens.cloneIndexedLens relayedPayloads f)
-    g
+    (exprPayload f)
     where
-        g val@(Expression pl x) = Lens.indexed f (OfExpr (void val)) pl <&> (`Expression` x)
         labeledFuncPayloads ::
             Lens.AnIndexedLens' (PayloadOf name i o) (LabeledApplyFunc name o a) a
         labeledFuncPayloads = labeledApplyFuncPayload
@@ -158,6 +153,11 @@ overBodyChildren ::
     Body name i o a -> Body name i o b
 overBodyChildren n f r e =
     Lens.runIdentity . bodyChildren (pure . n) (pure . f) (pure . r) (pure . e)
+
+exprPayload ::
+    Lens.IndexedLens' (PayloadOf name i o) (Expression name i o a) a
+exprPayload f val@(Expression pl x) =
+    Lens.indexed f (OfExpr (void val)) pl <&> (`Expression` x)
 
 nullaryValPayload ::
     Lens.IndexedLens (PayloadOf name i o)
@@ -315,7 +315,7 @@ definitionExprs ::
     Lens.Traversal
     (Definition name i o a) (Definition name i o b)
     (Expression name i o a) (Expression name i o b)
-definitionExprs = drBody . _DefinitionBodyExpression . deContent . aBody . assignmentBodyExprs
+definitionExprs = drBody . _DefinitionBodyExpression . deContent . assignmentExprs
 
 workAreaExpressions ::
     Lens.Traversal
