@@ -14,14 +14,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
--- TODO: Remove the superfluous Payload wrapper here
 markStoredHoles ::
-    Sugar.Expression name i o (Sugar.Payload name i o a) ->
-    Sugar.Expression name i o (Sugar.Payload name i o (Bool, a))
+    Sugar.Expression name i o a ->
+    Sugar.Expression name i o (Bool, a)
 markStoredHoles expr =
     expr
-    <&> Sugar.plData %~ (,) False
-    & SugarLens.unfinishedExprPayloads . Sugar.plData . _1 .~ True
+    <&> (,) False
+    & SugarLens.unfinishedExprPayloads . _1 .~ True
 
 data NearestHoles = NearestHoles
     { _prev :: Maybe Sugar.EntityId
@@ -33,21 +32,22 @@ none :: NearestHoles
 none = NearestHoles Nothing Nothing
 
 add ::
+    Functor f =>
     (forall a b.
       Lens.Traversal
-      (f (Sugar.Payload name i o a))
-      (f (Sugar.Payload name i o b))
-      (Sugar.Expression name i o (Sugar.Payload name i o a))
-      (Sugar.Expression name i o (Sugar.Payload name i o b))) ->
+      (f a)
+      (f b)
+      (Sugar.Expression name i o a)
+      (Sugar.Expression name i o b)) ->
     f (Sugar.Payload name i o c) ->
     f (Sugar.Payload name i o (c, NearestHoles))
 add exprs s =
     s
-    & exprs . Lens.mapped . Sugar.plData %~ toNearestHoles
+    <&> Sugar.plData %~ toNearestHoles
     & exprs %~ markStoredHoles
     & passAll (exprs . SugarLens.subExprPayloads)
     & passAll (Lens.backwards (exprs . SugarLens.subExprPayloads))
-    & exprs . Lens.mapped . Sugar.plData %~ snd
+    <&> snd
     where
         toNearestHoles x prevHole nextHole = (x, NearestHoles prevHole nextHole)
 
@@ -55,22 +55,18 @@ type M = State (Maybe Sugar.EntityId)
 
 passAll ::
     LensLike M s t
-    (Sugar.Payload name i o (Bool, Maybe Sugar.EntityId -> a))
-    (Sugar.Payload name i o (Bool, a)) -> s -> t
+    (Bool, Sugar.Payload name i o (Maybe Sugar.EntityId -> a))
+    (Bool, Sugar.Payload name i o a) -> s -> t
 passAll sugarPls s =
     s
     & sugarPls %%~ setEntityId
     & (`evalState` Nothing)
 
 setEntityId ::
-    Sugar.Payload name i o (Bool, Maybe Sugar.EntityId -> a) ->
-    M (Sugar.Payload name i o (Bool, a))
-setEntityId pl =
+    (Bool, Sugar.Payload name i o (Maybe Sugar.EntityId -> a)) ->
+    M (Bool, Sugar.Payload name i o a)
+setEntityId (isStoredHole, pl) =
     do
         oldEntityId <- State.get
-        when isStoredHole $ State.put $ Just $ pl ^. Sugar.plEntityId
-        pl
-            & Sugar.plData . _2 %~ ($ oldEntityId)
-            & pure
-    where
-        isStoredHole = pl ^. Sugar.plData . _1
+        when isStoredHole (State.put (Just (pl ^. Sugar.plEntityId)))
+        pure (isStoredHole, pl & Sugar.plData %~ (oldEntityId &))
