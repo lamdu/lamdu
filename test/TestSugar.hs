@@ -53,7 +53,7 @@ testSugarActions program actions =
 replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o a)
 replBody = waRepl . replExpr . bContent . _BinderExpr . body
 
-lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name (ParamInfo name i o))
+lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 -- | Test for issue #374

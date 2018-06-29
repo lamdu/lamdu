@@ -243,7 +243,7 @@ addEvaluationResult mNeigh resDisp wideBehavior =
 
 maybeAddAnnotationPl ::
     (Monad i, Monad o) =>
-    Sugar.Payload (Name o) i1 o1 ExprGui.Payload ->
+    Sugar.Payload (Name o) i o1 ExprGui.Payload ->
     ExprGuiM i o
     (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotationPl pl =
@@ -269,11 +269,11 @@ evaluationResult ::
     Sugar.Payload name i o ExprGui.Payload ->
     ExprGuiM i o (Maybe (Sugar.ResVal name))
 evaluationResult pl =
-    ExprGuiM.readMScopeId <&>
-    \scopeId ->
-    (pl ^? Sugar.plAnnotation . Sugar._AnnotationVal . Sugar.annotationVal)
-    >>= (`valOfScope` scopeId)
-    <&> erdVal
+    do
+        scopeId <- ExprGuiM.readMScopeId
+        case pl ^? Sugar.plAnnotation . Sugar._AnnotationVal . Sugar.annotationVal of
+            Nothing -> pure Nothing
+            Just x -> valOfScope x scopeId & ExprGuiM.im <&> Lens._Just %~ erdVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
@@ -281,24 +281,28 @@ data EvalAnnotationOptions
 
 getAnnotationMode ::
     Monad i =>
-    EvalAnnotationOptions -> Sugar.EvaluationScopes name ->
+    EvalAnnotationOptions -> Sugar.EvaluationScopes name i ->
     ExprGuiM i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
 getAnnotationMode opt annotation =
-    ExprGuiM.readMScopeId
-    <&> valOfScope annotation
-    <&> Lens.mapped %~ (, neighbourVals)
-    where
-        neighbourVals =
+    do
+        neighbourVals <-
             case opt of
-            NormalEvalAnnotation -> Nothing
+            NormalEvalAnnotation -> pure Nothing
             WithNeighbouringEvalAnnotations neighbors ->
-                neighbors <&> (>>= valOfScopePreferCur annotation . (^. Sugar.bParamScopeId))
-                & Just
+                -- neighbors <&> (>>= valOfScopePreferCur annotation . (^. Sugar.bParamScopeId))
+                -- & Just
+                neighbors & traverse . Lens._Just %%~
+                    ExprGuiM.im . valOfScopePreferCur annotation . (^. Sugar.bParamScopeId)
+                <&> traverse %~ join
+                <&> Just
+        ExprGuiM.readMScopeId
+            >>= ExprGuiM.im . valOfScope annotation
+            <&> Lens.mapped %~ (, neighbourVals)
 
 maybeAddAnnotationWith ::
     (Monad i, Monad o) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
-    Sugar.Annotation (Name o) ->
+    Sugar.Annotation (Name o) i ->
     ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
     case annotation of
@@ -309,7 +313,7 @@ maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
 maybeAddValAnnotationWith ::
     (Monad i, Monad o) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
-    Sugar.ValAnnotation (Name o) ->
+    Sugar.ValAnnotation (Name o) i ->
     ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
     getAnnotationMode opt (ann ^. Sugar.annotationVal)
@@ -328,24 +332,28 @@ maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
 
 maybeAddAnnotation ::
     (Monad i, Monad o) =>
-    WideAnnotationBehavior -> Sugar.Annotation (Name o) ->
+    WideAnnotationBehavior -> Sugar.Annotation (Name o) i ->
     ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::
-    Sugar.EvaluationScopes name -> CurAndPrev (Maybe Sugar.ScopeId) ->
-    Maybe (EvalResDisplay name)
+    Applicative i =>
+    Sugar.EvaluationScopes name i -> CurAndPrev (Maybe Sugar.ScopeId) ->
+    i (Maybe (EvalResDisplay name))
 valOfScope annotation mScopeIds =
     go
     <$> curPrevTag
     <*> annotation
     <*> mScopeIds
     & fallbackToPrev
+    & sequenceA
     where
         go _ _ Nothing = Nothing
         go tag ann (Just scopeId) =
-            ann ^? Lens._Just . Lens.ix scopeId <&> EvalResDisplay tag
+            ann ^? Lens._Just . Lens.ix scopeId <&> Lens.mapped %~ EvalResDisplay tag
 
 valOfScopePreferCur ::
-    Sugar.EvaluationScopes name -> Sugar.ScopeId -> Maybe (EvalResDisplay name)
+    Applicative i =>
+    Sugar.EvaluationScopes name i -> Sugar.ScopeId ->
+    i (Maybe (EvalResDisplay name))
 valOfScopePreferCur annotation = valOfScope annotation . pure . Just

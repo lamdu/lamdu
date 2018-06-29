@@ -158,13 +158,16 @@ toResBody f =
 toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
 toResVal = resBody (toResBody toResVal)
 
-toValAnnotation :: MonadNaming m => ValAnnotation (OldName m) -> m (ValAnnotation (NewName m))
+toValAnnotation :: MonadNaming m => ValAnnotation (OldName m) (IM m) -> m (ValAnnotation (NewName m) (IM m))
 toValAnnotation (ValAnnotation evalRes typ) =
-    ValAnnotation
-    <$> (traverse . traverse . traverse) toResVal evalRes
-    <*> Lens._Just toType typ
+    do
+        run <- opRun
+        Lens._Just toType typ
+            <&>
+            ValAnnotation
+            (evalRes <&> traverse . traverse %~ (>>= run . toResVal))
 
-toAnnotation :: MonadNaming m => Annotation (OldName m) -> m (Annotation (NewName m))
+toAnnotation :: MonadNaming m => Annotation (OldName m) (IM m) -> m (Annotation (NewName m) (IM m))
 toAnnotation AnnotationNone = pure AnnotationNone
 toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
@@ -467,8 +470,8 @@ withParamInfo varInfo (ParamInfo tag fpActions) =
 
 withFuncParam ::
     MonadNaming m =>
-    (Sugar.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) a ->
-    CPS m (FuncParam (NewName m) b)
+    (Sugar.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) (IM m) a ->
+    CPS m (FuncParam (NewName m) (IM m) b)
 withFuncParam f (FuncParam ann varInfo info) =
     FuncParam
     <$> liftCPS (toAnnotation ann)

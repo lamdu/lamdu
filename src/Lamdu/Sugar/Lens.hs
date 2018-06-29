@@ -374,12 +374,12 @@ binderFormAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 assignmentAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
 assignmentAddFirstParam = aBody . binderFormAddFirstParam
 
-annotationTypes :: Lens.Traversal' (Annotation name) (Type name)
+annotationTypes :: Lens.Traversal' (Annotation name i) (Type name)
 annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal
 
-binderParamsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name)
+binderParamsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
 binderParamsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
 binderParamsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 

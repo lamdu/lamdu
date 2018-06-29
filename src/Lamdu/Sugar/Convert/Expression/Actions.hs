@@ -220,7 +220,7 @@ makeTypeAnnotation payload =
 makeAnnotation ::
     Monad m =>
     Input.AnnotationMode -> Ann.ShowAnnotation -> Input.Payload m a ->
-    ConvertM m (Annotation InternalName)
+    ConvertM m (Annotation InternalName (T m))
 makeAnnotation Input.None showAnn pl
     | showAnn ^. Ann.showExpanded = makeTypeAnnotation pl <&> AnnotationType
     | otherwise = pure AnnotationNone

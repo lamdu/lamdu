@@ -164,7 +164,7 @@ repl x =
 
 mkFuncParam ::
     (UUID, T.Tag) ->
-    Sugar.FuncParam name (Sugar.ParamInfo InternalName Identity Unit)
+    Sugar.FuncParam name Identity (Sugar.ParamInfo InternalName Identity Unit)
 mkFuncParam (paramVar, paramTag) =
     Sugar.FuncParam
     { Sugar._fpAnnotation = Sugar.AnnotationNone

@@ -91,7 +91,7 @@ canInlineDefinition defExpr recursiveVars var entityId =
     where
         f pl v = v == var && entityId `notElem` pl ^. Input.userData
 
-trimParamAnnotation :: Input.AnnotationMode -> Annotation name -> Annotation name
+trimParamAnnotation :: Input.AnnotationMode -> Annotation name i -> Annotation name i
 trimParamAnnotation Input.None _ = AnnotationNone
 trimParamAnnotation Input.Evaluation (AnnotationVal x) =
     x & annotationType .~ Nothing & AnnotationVal

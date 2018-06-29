@@ -533,7 +533,7 @@ mkVarInfo _ = VarNormal
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a -> info ->
-    ConvertM m (FuncParam InternalName info)
+    ConvertM m (FuncParam InternalName (T m) info)
 mkFuncParam entityId lamExprPl info =
     convertType (EntityId.ofTypeOf entityId) typ
     <&> \typS ->

@@ -193,15 +193,17 @@ entityIdForParam entityId (ER.ScopeId scopeId) =
     EntityId.ofEvalArrayIdx scopeId entityId
 
 convertEvalResultsWith ::
+    Applicative i =>
     (ScopeId -> EntityId) -> EvalScopes ERV ->
-    EvaluationScopes InternalName
+    EvaluationScopes InternalName i
 convertEvalResultsWith entityId evalResults =
     evalResults
-    & Lens.mapped .> Lens.imapped %@~ convertVal . entityId
+    & Lens.mapped .> Lens.imapped %@~ fmap pure . convertVal . entityId
     <&> nullToNothing
 
 results ::
-    EntityId -> EvalScopes ERV -> EvaluationScopes InternalName
+    Applicative i =>
+    EntityId -> EvalScopes ERV -> EvaluationScopes InternalName i
 results = convertEvalResultsWith . entityIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
@@ -209,7 +211,8 @@ results = convertEvalResultsWith . entityIdForEvalResult
 -- this map is used to just figure out the val of the param in some
 -- (deeply) nested scope
 param ::
-    EntityId -> EvalScopes [(ScopeId, ERV)] -> EvaluationScopes InternalName
+    Applicative i =>
+    EntityId -> EvalScopes [(ScopeId, ERV)] -> EvaluationScopes InternalName i
 param entityId evalResults =
     evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
     & convertEvalResultsWith (entityIdForParam entityId)

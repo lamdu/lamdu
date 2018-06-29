@@ -86,7 +86,10 @@ type ParamScopes = EvalScopes [BinderParamScopeId]
 -- will not fall back to showing the prev
 -- TODO: Does this actually happen? Do we generate empty lists of
 -- scope-val pairs for lams?
-type EvaluationScopes name = CurAndPrev (Maybe (Map ScopeId (ResVal name)))
+--
+-- Values are wrapped in an "i" action to avoid unnecessarily passing on all
+-- values during the names pass.
+type EvaluationScopes name i = CurAndPrev (Maybe (Map ScopeId (i (ResVal name))))
 
 data EvalException o = EvalException
     { _evalExceptionType :: ErrorType

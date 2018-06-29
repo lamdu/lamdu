@@ -49,17 +49,17 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Show, Generic)
 
 -- Value annotations may also have types as fallbacks in scopes where no value was calculated
-data ValAnnotation name =
+data ValAnnotation name i =
     ValAnnotation
-    { _annotationVal :: EvaluationScopes name
+    { _annotationVal :: EvaluationScopes name i
     , _annotationType :: Maybe (Type name)
-    } deriving (Show, Generic)
+    } deriving Generic
 
-data Annotation name
+data Annotation name i
     = AnnotationType (Type name)
-    | AnnotationVal (ValAnnotation name)
+    | AnnotationVal (ValAnnotation name i)
     | AnnotationNone
-    deriving (Show, Generic)
+    deriving Generic
 
 data AddNextParam name i o
     = AddNext (TagSelection name i o ())
@@ -89,8 +89,8 @@ data ParamInfo name i o = ParamInfo
 instance Show name => Show (ParamInfo name i o) where
     show (ParamInfo tag _) = show tag
 
-data FuncParam name info = FuncParam
-    { _fpAnnotation :: Annotation name
+data FuncParam name i info = FuncParam
+    { _fpAnnotation :: Annotation name i
     , _fpVarInfo :: VarInfo
     , _fpInfo :: info
     } deriving (Functor, Foldable, Traversable, Generic)
@@ -131,8 +131,8 @@ data BinderParams name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam name (NullParamActions o))
-    | Params [FuncParam name (ParamInfo name i o)]
+      NullParam (FuncParam name i (NullParamActions o))
+    | Params [FuncParam name i (ParamInfo name i o)]
     deriving Generic
 
 data BinderBodyScope
@@ -147,7 +147,7 @@ data VarInfo = VarNormal | VarFunction | VarAction
     deriving (Generic, Eq)
 
 data Payload name i o a = Payload
-    { _plAnnotation :: Annotation name
+    { _plAnnotation :: Annotation name i
     , _plNeverShrinkAnnotation :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId

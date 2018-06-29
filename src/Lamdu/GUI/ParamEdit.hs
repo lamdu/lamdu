@@ -96,7 +96,7 @@ make ::
     (Monad i, Monad o) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name o) (Info i o) ->
+    Sugar.FuncParam (Name o) i (Info i o) ->
     ExprGuiM i o [ExpressionGui o]
 make annotationOpts prevId nextId param =
     do
