@@ -19,7 +19,6 @@ import           Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (workAreaExpressions, subExprPayloads)
 import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
@@ -43,7 +42,7 @@ allEntityIds workArea =
         aBody . _BodyFunction . afLamId
     & Set.fromList
     where
-        pls = workArea ^.. workAreaExpressions . subExprPayloads
+        pls = workArea ^.. traverse
 
 validateHiddenEntityIds ::
     WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Either String ()
@@ -53,7 +52,7 @@ validateHiddenEntityIds workArea
         show hiddenAndExplicit ++ " are both hidden and explicit entityIds"
         & Left
     where
-        pls = workArea ^.. workAreaExpressions . subExprPayloads
+        pls = workArea ^.. traverse
         explicitEntityIds = pls ^.. Lens.folded . plEntityId & Set.fromList
         hiddenEntityIds =
             pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
