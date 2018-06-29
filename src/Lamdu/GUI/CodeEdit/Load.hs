@@ -42,13 +42,6 @@ toExprGuiMPayload (minOpPrec, needParens, pl) =
     (needParens == AddParens.NeedsParens)
     minOpPrec
 
-postProcessExpr ::
-    Sugar.Expression (Name n) i o
-    (Sugar.Payload (Name n) i o ([Sugar.EntityId], NearestHoles)) ->
-    Sugar.Expression (Name n) i o
-    (Sugar.Payload (Name n) i o ExprGui.Payload)
-postProcessExpr expr = AddParens.add expr <&> toExprGuiMPayload
-
 getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Text
 getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 
@@ -73,6 +66,7 @@ loadWorkArea cache monitors annMode  theEvalResults cp =
         _waRepl & Sugar.replExpr %~ NearestHoles.add SugarLens.binderExprs
     , _waGlobals = _waGlobals
     }
-    & SugarLens.workAreaExpressions %~ postProcessExpr
+    & AddParens.addToWorkArea
+    <&> toExprGuiMPayload
     where
         Debug.EvaluatorM report = monitors ^. Debug.naming . Debug.mAction

@@ -14,7 +14,7 @@ module Lamdu.Sugar.Lens
     , binderContentResultExpr
     , binderContentEntityId
     , leftMostLeaf
-    , workAreaExpressions, definitionExprs
+    , definitionExprs
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
     , assignmentSubExprParams, binderSubExprParams
@@ -275,16 +275,6 @@ definitionExprs ::
     (Definition name i o a) (Definition name i o b)
     (Expression name i o a) (Expression name i o b)
 definitionExprs = drBody . _DefinitionBodyExpression . deContent . assignmentExprs
-
-workAreaExpressions ::
-    Lens.Traversal
-    (WorkArea name i o a) (WorkArea name i o b)
-    (Expression name i o a) (Expression name i o b)
-workAreaExpressions f (WorkArea panes repl globals) =
-    WorkArea
-    <$> (traverse . paneDefinition . definitionExprs) f panes
-    <*> (replExpr . binderExprs) f repl
-    ?? globals
 
 holeOptionTransformExprs ::
     Monad i =>

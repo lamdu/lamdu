@@ -32,7 +32,7 @@ testGetFieldOfApply =
         Parens.NeedsParens
     & testCase "get-field-of-apply"
     where
-        expr = (Stub.identity $$ Stub.hole) $. "a" & Parens.add
+        expr = (Stub.identity $$ Stub.hole) $. "a" & Parens.addToExpr
 
 testMinOpPrecInfix :: Test
 testMinOpPrecInfix =
@@ -42,5 +42,5 @@ testMinOpPrecInfix =
         & testCase "min-op-prec-infix"
     where
         (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . Sugar.annotation
-        expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.add
+        expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExpr
         i = Stub.litNum

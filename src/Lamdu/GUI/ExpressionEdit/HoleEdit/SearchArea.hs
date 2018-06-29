@@ -84,7 +84,7 @@ postProcessSugar ::
     Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload)
 postProcessSugar minOpPrec expr =
     expr
-    & AddParens.addWith minOpPrec
+    & AddParens.addToExprWith minOpPrec
     <&> pl
     where
         pl (x, needParens, sugarPl) =

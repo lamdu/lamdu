@@ -2,7 +2,9 @@
 module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
-    , add, addWith
+    , addToWorkArea, addToExprWith
+    , -- Exposed for tests
+      addToExpr
     ) where
 
 import qualified Control.Lens as Lens
@@ -23,17 +25,32 @@ unambiguous = Precedence 0 0
 
 type MinOpPrec = Prec
 
-add ::
+addToWorkArea ::
+    HasPrecedence name =>
+    WorkArea name i o a ->
+    WorkArea name i o (MinOpPrec, NeedsParens, a)
+addToWorkArea w =
+    w
+    { _waRepl =
+        w ^. waRepl &
+        replExpr . SugarLens.binderExprs %~ addToExpr
+    , _waPanes =
+        w ^. waPanes <&>
+        paneDefinition . drBody . _DefinitionBodyExpression .
+        deContent . SugarLens.assignmentExprs %~ addToExpr
+    }
+
+addToExpr ::
     HasPrecedence name =>
     Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-add = addWith 0
+addToExpr = addToExprWith 0
 
-addWith ::
+addToExprWith ::
     HasPrecedence name =>
     Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-addWith minOpPrec = loop minOpPrec (Precedence 0 0)
+addToExprWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
 loop ::
     HasPrecedence name =>
