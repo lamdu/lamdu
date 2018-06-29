@@ -3,8 +3,7 @@ module Lamdu.GUI.ExpressionGui
     ( ExpressionGui
     , SugarExpr
     , Payload(..)
-        , plHiddenEntityIds, plNearestHoles, plShowAnnotation, plNeedParens
-        , plMinOpPrec
+        , plHiddenEntityIds, plNearestHoles, plNeedParens, plMinOpPrec
     , nextHolesBefore
     , adhocPayload
     , mParensId
@@ -17,7 +16,6 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
-import           Lamdu.Sugar.Annotations (ShowAnnotation, neverShowAnnotations)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -31,7 +29,6 @@ type ExpressionGui m = Responsive (m GuiState.Update)
 data Payload = Payload
     { _plHiddenEntityIds :: [Sugar.EntityId]
     , _plNearestHoles :: NearestHoles
-    , _plShowAnnotation :: ShowAnnotation
     , _plNeedParens :: Bool
     , _plMinOpPrec :: Int
     } deriving (Generic, Eq, Show)
@@ -57,7 +54,6 @@ adhocPayload :: NearestHoles -> Payload
 adhocPayload nearestHoles = Payload
     { _plHiddenEntityIds = []
     , _plNearestHoles = nearestHoles
-    , _plShowAnnotation = neverShowAnnotations
     , _plNeedParens = False
     , _plMinOpPrec = 13 -- TODO: Export Parens.applyPrec?
     }

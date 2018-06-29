@@ -3,7 +3,7 @@
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
     , markAnnotationsToDisplay
-    , neverShowAnnotations, alwaysShowAnnotations, showAnnotationWhenVerbose
+    , neverShowAnnotations
     ) where
 
 import qualified Control.Lens as Lens
@@ -33,9 +33,6 @@ showAnnotationWhenVerbose =
 
 neverShowAnnotations :: ShowAnnotation
 neverShowAnnotations = ShowAnnotation False False False
-
-alwaysShowAnnotations :: ShowAnnotation
-alwaysShowAnnotations = ShowAnnotation True True True
 
 dontShowEval :: ShowAnnotation
 dontShowEval = showAnnotationWhenVerbose & showInEvalMode .~ False
