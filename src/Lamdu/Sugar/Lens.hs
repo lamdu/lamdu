@@ -175,20 +175,28 @@ leafNodePayload c f (Node pl x) =
     Lens.indexed f (c x) pl <&> (`Node` x)
 
 exprPayloads ::
-    forall name i o a b.
     Lens.IndexedTraversal (PayloadOf name i o)
     (Expression name i o a)
     (Expression name i o b)
     a b
 exprPayloads f (PNode (Node pl x)) =
     flip Node
-    <$> bodyChildren
-        (leafNodePayload OfNullaryVal f)
-        (Lens.cloneIndexedLens labeledFuncPayloads f)
-        (Lens.cloneIndexedLens relayedPayloads f)
-        (exprPayloads f) x
+    <$> bodyPayloads f x
     <*> Lens.indexed f (OfExpr (void x)) pl
     <&> PNode
+
+bodyPayloads ::
+    forall name i o a b.
+    Lens.IndexedTraversal (PayloadOf name i o)
+    (Body name i o a)
+    (Body name i o b)
+    a b
+bodyPayloads f =
+    bodyChildren
+    (leafNodePayload OfNullaryVal f)
+    (Lens.cloneIndexedLens labeledFuncPayloads f)
+    (Lens.cloneIndexedLens relayedPayloads f)
+    (exprPayloads f)
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
