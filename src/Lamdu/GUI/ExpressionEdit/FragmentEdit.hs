@@ -61,7 +61,7 @@ make fragment pl =
         config <- Lens.view Config.config
         fragmentExprGui <-
             fragment
-            & Sugar.fExpr . Sugar._Expr . Sugar.ann . Sugar.plData %~ mRemoveNextHoles
+            & Sugar.fExpr . Sugar._PNode . Sugar.ann . Sugar.plData %~ mRemoveNextHoles
             & makeFragmentExprEdit & GuiState.assignCursor myId innerId
         hover <- Hover.hover
         searchAreaGui <-
@@ -107,7 +107,7 @@ make fragment pl =
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents healEventMap
     where
-        innerId = fragment ^. Sugar.fExpr . Sugar._Expr . Sugar.ann & WidgetIds.fromExprPayload
+        innerId = fragment ^. Sugar.fExpr . Sugar._PNode . Sugar.ann & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
 
 makeFragmentExprEdit ::

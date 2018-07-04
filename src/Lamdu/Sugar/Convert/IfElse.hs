@@ -26,9 +26,9 @@ convertIfElse ::
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
-        case arg ^. _Expr . val of
+        case arg ^. _PNode . val of
             BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
-            _ | arg ^? _Expr . ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
+            _ | arg ^? _PNode . ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
     where
@@ -44,17 +44,17 @@ convertIfElse setToVal caseBody =
             Just binder ->
                 case binder ^? fBody . bContent . _BinderExpr of
                 Just altFalseBinderExpr ->
-                    case altFalseBinderExpr ^. _Expr . val of
+                    case altFalseBinderExpr ^. _PNode . val of
                     BodyIfElse innerIfElse ->
                         ElseIf ElseIfContent
                         { _eiScopes =
                             case binder ^. fBodyScopes of
                             SameAsParentScope -> error "lambda body should have scopes"
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
-                        , _eiEntityId = altFalseBinderExpr ^. _Expr . ann . pInput . Input.entityId
+                        , _eiEntityId = altFalseBinderExpr ^. _PNode . ann . pInput . Input.entityId
                         , _eiContent = innerIfElse
                         , _eiCondAddLet = binder ^. fBody . bAddOuterLet
-                        , _eiNodeActions = altFalseBinderExpr ^. _Expr . ann . pActions
+                        , _eiNodeActions = altFalseBinderExpr ^. _PNode . ann . pActions
                         }
                         & makeRes
                         where
@@ -65,19 +65,19 @@ convertIfElse setToVal caseBody =
             Nothing -> simpleIfElse
             & Just
             where
-                mAltFalseBinder = altFalse ^? ciExpr . _Expr . val . _BodyLam . lamFunc
+                mAltFalseBinder = altFalse ^? ciExpr . _PNode . val . _BodyLam . lamFunc
                 simpleIfElse =
                     altFalse ^. ciExpr
-                    & _Expr . val . _BodyHole . holeMDelete ?~ elseDel
-                    & _Expr . val . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
-                        . _Expr . val . _BodyHole . holeMDelete ?~ elseDel
+                    & _PNode . val . _BodyHole . holeMDelete ?~ elseDel
+                    & _PNode . val . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
+                        . _PNode . val . _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
                     & makeRes
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . _Expr . val . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
+                    alt ^? ciExpr . _PNode . val . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
-                    & (^. _Expr . ann . pInput . Input.stored . Property.pVal)
+                    & (^. _PNode . ann . pInput . Input.stored . Property.pVal)
                 makeRes els =
                     IfElse
                     { _iIfThen =

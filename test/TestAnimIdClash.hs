@@ -86,7 +86,7 @@ testFragment =
                 , Sugar._fOptions = pure []
                 } & Stub.expr
             )
-            & Sugar._Expr . Sugar.ann . Sugar.plEntityId .~ fragEntityId
+            & Sugar._PNode . Sugar.ann . Sugar.plEntityId .~ fragEntityId
             & Stub.addNamesToExpr
             <&> Sugar.plData .~ adhocPayload NearestHoles.none
         fragEntityId = "frag"

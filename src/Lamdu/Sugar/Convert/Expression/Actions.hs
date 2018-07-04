@@ -161,13 +161,13 @@ setChildReplaceParentActions =
             (ann %~ join setToExpr)
             (ann %~ join setToExpr)
             (ann %~ join setToExpr)
-            (_Expr . ann %~ join setToExpr)
+            (_PNode . ann %~ join setToExpr)
         -- Replace-parent with fragment sets directly to fragment expression
-        & bodyChildren pure pure pure . Lens.filteredBy (_Expr . val . _BodyFragment . fExpr . _Expr . ann) <. _Expr . ann %@~ setToExpr
+        & bodyChildren pure pure pure . Lens.filteredBy (_PNode . val . _BodyFragment . fExpr . _PNode . ann) <. _PNode . ann %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        & bodyChildren pure pure pure . _Expr . val . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
-            fExpr . _Expr . ann %~ join setToExpr
+        & bodyChildren pure pure pure . _PNode . val . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
+            fExpr . _PNode . ann %~ join setToExpr
 
 subexprPayloads ::
     Foldable f =>
@@ -191,7 +191,7 @@ addActionsWith userData exprPl bodyS =
     do
         actions <- makeActions exprPl
         addReplaceParents <- setChildReplaceParentActions
-        Expr Node
+        PNode Node
             { _val = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _ann =
                 ConvertPayload

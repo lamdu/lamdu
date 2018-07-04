@@ -64,7 +64,7 @@ mkOptions sugarContext argI argS exprPl =
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
-            [ P.app P.hole P.hole | Lens.nullOf (_Expr . val . _BodyLam) argS ]
+            [ P.app P.hole P.hole | Lens.nullOf (_PNode . val . _BodyLam) argS ]
             <&> Hole.SeedExpr
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
@@ -114,8 +114,8 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             BodyFragment Fragment
                 { _fExpr =
                       argS
-                      & _Expr . ann . pActions . detach .~ FragmentExprAlready storedEntityId
-                      & _Expr . ann . pActions . mSetToHole ?~
+                      & _PNode . ann . pActions . detach .~ FragmentExprAlready storedEntityId
+                      & _PNode . ann . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                       if isTypeMatch
@@ -129,7 +129,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-            <&> _Expr . ann . pActions . detach .~ FragmentAlready storedEntityId
+            <&> _PNode . ann . pActions . detach .~ FragmentAlready storedEntityId
     where
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI

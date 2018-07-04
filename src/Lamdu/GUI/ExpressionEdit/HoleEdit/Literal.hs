@@ -38,10 +38,10 @@ makeLiteral io optionLiteral lit =
                 mkResult
             & io
         result ^. Sugar.holeResultPick
-        case result ^? Sugar.holeResultConverted . Sugar._BinderExpr . Sugar._Expr . Sugar.val . Sugar._BodyFragment . Sugar.fExpr of
+        case result ^? Sugar.holeResultConverted . Sugar._BinderExpr . Sugar._PNode . Sugar.val . Sugar._BodyFragment . Sugar.fExpr of
             Just arg -> arg
             _ -> result ^. Sugar.holeResultConverted . SugarLens.binderContentResultExpr
-            ^. Sugar._Expr . Sugar.ann . Sugar.plEntityId
+            ^. Sugar._PNode . Sugar.ann . Sugar.plEntityId
             & WidgetIds.fromEntityId
             & WidgetIds.literalEditOf
             & pure

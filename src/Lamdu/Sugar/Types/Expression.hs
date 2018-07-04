@@ -1,12 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Expression
     ( Node(..), ann, val
+    , ParentNode(..), _PNode
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
-    , Expression(..), _Expr
+    , Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
@@ -58,14 +59,16 @@ data Node v a = Node
     , _val :: v
     } deriving (Functor, Foldable, Traversable, Generic)
 
-newtype Expression name i o a = Expr (Node (Body name i o a) a)
+newtype ParentNode f a = PNode (Node (f a) a)
     deriving Generic
-instance Functor (Expression name i o) where
-    fmap f (Expr (Node a b)) = Node (f a) (b <&> f) & Expr
-instance Foldable (Expression name i o) where
-    foldMap f (Expr (Node a b)) = f a <> foldMap f b
-instance Traversable (Expression name i o) where
-    traverse f (Expr (Node a b)) = (Node <$> f a <*> traverse f b) <&> Expr
+instance Functor f => Functor (ParentNode f) where
+    fmap f (PNode (Node a b)) = Node (f a) (b <&> f) & PNode
+instance Foldable f => Foldable (ParentNode f) where
+    foldMap f (PNode (Node a b)) = f a <> foldMap f b
+instance Traversable f => Traversable (ParentNode f) where
+    traverse f (PNode (Node a b)) = (Node <$> f a <*> traverse f b) <&> PNode
+
+type Expression name i o a = ParentNode (Body name i o) a
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo name
@@ -224,4 +227,4 @@ Lens.makeLenses ''Node
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''Body
-Lens.makePrisms ''Expression
+Lens.makePrisms ''ParentNode

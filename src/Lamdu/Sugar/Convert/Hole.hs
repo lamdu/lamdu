@@ -88,7 +88,7 @@ convert holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> _Expr . ann . pActions . mSetToHole .~ Nothing
+    <&> _PNode . ann . pActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
 

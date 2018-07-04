@@ -234,7 +234,6 @@ instance (NFData a, NFData n) => NFData (Sugar.DefinitionExpression n (T i) (T o
 instance (NFData a, NFData n) => NFData (Sugar.DefinitionOutdatedType n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Else n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ElseIfContent n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Expression n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Fragment n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.FuncParam n (T i) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Function n (T i) (T o) a) where rnf = genericRnf
@@ -248,6 +247,7 @@ instance (NFData a, NFData n) => NFData (Sugar.Let n (T i) (T o) a) where rnf = 
 instance (NFData a, NFData n) => NFData (Sugar.Node n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Nominal n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Pane n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData (f a)) => NFData (Sugar.ParentNode f a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Payload n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Repl n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ResBody n a) where rnf = genericRnf

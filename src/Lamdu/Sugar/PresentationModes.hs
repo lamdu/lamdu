@@ -52,11 +52,11 @@ makeLabeledApply func args =
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
         mkInfixArg arg other =
             arg
-            & Sugar._Expr . Sugar.val . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. Sugar._Expr . Sugar.ann . pActions . Sugar.mReplaceParent
+            & Sugar._PNode . Sugar.val . Sugar._BodyHole . Sugar.holeMDelete .~
+                other ^. Sugar._PNode . Sugar.ann . pActions . Sugar.mReplaceParent
         processArg arg =
             do
-                getVar <- arg ^? Sugar.aaExpr . Sugar._Expr . Sugar.val . Sugar._BodyGetVar
+                getVar <- arg ^? Sugar.aaExpr . Sugar._PNode . Sugar.val . Sugar._BodyGetVar
                 name <-
                     case getVar of
                     Sugar.GetParam x -> x ^. Sugar.pNameRef . Sugar.nrName & Just
@@ -65,6 +65,6 @@ makeLabeledApply func args =
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Sugar.Node
                     { Sugar._val = getVar
-                    , Sugar._ann = arg ^. Sugar.aaExpr . Sugar._Expr . Sugar.ann
+                    , Sugar._ann = arg ^. Sugar.aaExpr . Sugar._PNode . Sugar.ann
                     } & Just
             & fromMaybe (Left arg)

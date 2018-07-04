@@ -50,7 +50,7 @@ formatLiteral (LiteralText i) = formatProp i
 formatLiteral (LiteralBytes i) = formatProp i
 
 expr :: Monad i => Expression (Name o) i o a -> [Text]
-expr (Expr (Node _ body_)) =
+expr (PNode (Node _ body_)) =
     case body_ of
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     BodySimpleApply x -> "apply" : foldMap expr x
@@ -141,11 +141,11 @@ getSearchStringRemainder ctx holeResult
     | otherwise = ""
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
-        fragmentExpr = _Expr . val . _BodyFragment . fExpr
-        isA x = any (`Lens.has` holeResult) [_Expr . val . x, fragmentExpr . _Expr . val . x]
+        fragmentExpr = _PNode . val . _BodyFragment . fExpr
+        isA x = any (`Lens.has` holeResult) [_PNode . val . x, fragmentExpr . _PNode . val . x]
 
 injectContent :: Lens.Traversal' (Expression name i o a) (InjectContent name i o a)
-injectContent = _Expr . val . _BodyInject . iContent
+injectContent = _PNode . val . _BodyInject . iContent
 
 verifyInjectSuffix :: Text -> Expression name i o a -> Bool
 verifyInjectSuffix searchTerm x =

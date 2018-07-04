@@ -68,13 +68,13 @@ makeInject val tag pl =
     where
         nearestHoles = ExprGui.nextHolesBefore val
         delDoc = E.Doc ["Edit", "Delete"]
-        mReplaceParent = val ^. Sugar._Expr . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. Sugar._PNode . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec :: Sugar.Node (Sugar.NullaryVal name i o) a -> Sugar.Expression name i o a
 emptyRec (Sugar.Node pl (Sugar.NullaryVal closedActions addItem)) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & Sugar.Node pl & Sugar.Expr
+    & Sugar.Node pl & Sugar.PNode
 
 makeNullaryInject ::
     (Monad i, Monad o) =>

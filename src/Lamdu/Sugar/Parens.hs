@@ -69,8 +69,8 @@ loop ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-loop minOpPrec parentPrec (Expr (Node pl body_)) =
-    Node (resPrec, parens, pl) newBody & Expr
+loop minOpPrec parentPrec (PNode (Node pl body_)) =
+    Node (resPrec, parens, pl) newBody & PNode
     where
         (resPrec, parens, newBody) = loopExprBody minOpPrec parentPrec body_
 
