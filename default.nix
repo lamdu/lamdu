@@ -5,6 +5,7 @@ let config = {
                 ghc843 = pkgs.haskell.packages.ghc843.override {
                     overrides = self: super: rec {
                         AlgoW = self.callPackage ./nix/AlgoW.nix {};
+                        freetype2 = self.callPackage ./nix/freetype2.nix {};
                         bindings-freetype-gl = self.callPackage ./nix/bindings-freetype-gl.nix { GLEW = pkgs.glew; freetype-gl = freetype-gl; };
                         freetype-gl = self.callPackage ./nix/FreetypeGL.nix {};
                         graphics-drawingcombinators = self.callPackage ./nix/graphics-drawingcombinators.nix {};
