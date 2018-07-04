@@ -38,7 +38,7 @@ convert (V.Inject tag injected) exprPl =
                     (BodyRecord
                      (Composite []
                       (ClosedComposite closedCompositeActions) addItem)) ->
-                    NullaryVal pl closedCompositeActions addItem
+                    Node pl (NullaryVal closedCompositeActions addItem)
                     & InjectNullary
                 _ ->
                     injectedS

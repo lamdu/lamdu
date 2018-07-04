@@ -30,7 +30,7 @@ data PayloadOf name i o
     = OfExpr (Expression name i o ())
     | OfLabeledApplyFunc (BinderVarRef name o)
     | OfRelayedArg (GetVar name o)
-    | OfNullaryVal (NullaryVal name i o ())
+    | OfNullaryVal (NullaryVal name i o)
 Lens.makePrisms ''PayloadOf
 
 assignmentBodyExprs ::
@@ -105,7 +105,7 @@ overLabeledApplyChildren l r e =
 
 injectContentChildren ::
     Applicative f =>
-    (NullaryVal name i o a -> f (NullaryVal name i o b)) ->
+    (Node (NullaryVal name i o) a -> f (Node (NullaryVal name i o) b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
     InjectContent name i o a -> f (InjectContent name i o b)
 injectContentChildren _ e (InjectVal x) = e x <&> InjectVal
@@ -113,7 +113,7 @@ injectContentChildren n _ (InjectNullary x) = n x <&> InjectNullary
 
 bodyChildren ::
     Applicative f =>
-    (NullaryVal name i o a -> f (NullaryVal name i o b)) ->
+    (Node (NullaryVal name i o) a -> f (Node (NullaryVal name i o) b)) ->
     (Node (BinderVarRef name o) a -> f (Node (BinderVarRef name o) b)) ->
     (Node (GetVar name o) a -> f (Node (GetVar name o) b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
@@ -141,7 +141,7 @@ bodyChildPayloads ::
     Lens.IndexedTraversal' (PayloadOf name i o) (Body name i o a) a
 bodyChildPayloads f =
     bodyChildren
-    (nullaryValPayload f)
+    (leafNodePayload OfNullaryVal f)
     (Lens.cloneIndexedLens labeledFuncPayloads f)
     (Lens.cloneIndexedLens relayedPayloads f)
     (exprPayload f)
@@ -154,7 +154,7 @@ bodyChildPayloads f =
         relayedPayloads = leafNodePayload OfRelayedArg
 
 overBodyChildren ::
-    (NullaryVal name i o a -> NullaryVal name i o b) ->
+    (Node (NullaryVal name i o) a -> Node (NullaryVal name i o) b) ->
     (Node (BinderVarRef name o) a -> Node (BinderVarRef name o) b) ->
     (Node (GetVar name o) a -> Node (GetVar name o) b) ->
     (Expression name i o a -> Expression name i o b) ->
@@ -167,18 +167,9 @@ exprPayload ::
 exprPayload f v@(Expression pl x) =
     Lens.indexed f (OfExpr (void v)) pl <&> (`Expression` x)
 
-nullaryValPayload ::
-    Lens.IndexedLens (PayloadOf name i o)
-    (NullaryVal name i o a)
-    (NullaryVal name i o b)
-    a b
-nullaryValPayload f v =
-    Lens.indexed f (OfNullaryVal (void v)) (v ^. nullaryPayload)
-    <&> \x -> v & nullaryPayload .~ x
-
 leafNodePayload ::
     (l -> p) ->
-    Lens.AnIndexedLens p (Node l a) (Node l b) a b
+    Lens.IndexedLens p (Node l a) (Node l b) a b
 leafNodePayload c f (Node pl x) =
     Lens.indexed f (c x) pl <&> (`Node` x)
 
@@ -191,7 +182,7 @@ subExprPayloads ::
 subExprPayloads f v@(Expression pl x) =
     flip Expression
     <$> bodyChildren
-        (nullaryValPayload f)
+        (leafNodePayload OfNullaryVal f)
         (Lens.cloneIndexedLens labeledFuncPayloads f)
         (Lens.cloneIndexedLens relayedPayloads f)
         (subExprPayloads f) x

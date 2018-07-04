@@ -161,7 +161,6 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.Lambda n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Let n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Node n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Nominal n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.NullaryVal n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Pane n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Payload n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.RecordType n a)
@@ -206,6 +205,7 @@ deriving instance Eq n => Eq (Sugar.HoleResult n Unit Unit)
 deriving instance Eq n => Eq (Sugar.LetActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.NameRef n Unit)
 deriving instance Eq n => Eq (Sugar.NodeActions n Unit Unit)
+deriving instance Eq n => Eq (Sugar.NullaryVal n Unit Unit)
 deriving instance Eq n => Eq (Sugar.ParamInfo n Unit Unit)
 deriving instance Eq n => Eq (Sugar.ParamRef n Unit)
 deriving instance Eq n => Eq (Sugar.ResVal n)
@@ -270,6 +270,7 @@ instance NFData (Sugar.Hole n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.LetActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Literal (Property (T o))) where rnf = genericRnf
 instance NFData (Sugar.NodeActions n (T i) (T o)) where rnf = genericRnf
+instance NFData (Sugar.NullaryVal n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.NullParamActions (T o)) where rnf = genericRnf
 instance NFData (Sugar.OpenCompositeActions (T o)) where rnf = genericRnf
 instance NFData (Sugar.TagSelection n (T i) (T o) a) where rnf = genericRnf
@@ -279,7 +280,6 @@ instance NFData a => NFData (Sugar.CaseArg (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseKind (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CompositeTail (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.IfThen (T o) a) where rnf = genericRnf
-instance NFData a => NFData (Sugar.NullaryVal n (T i) (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResStream a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf

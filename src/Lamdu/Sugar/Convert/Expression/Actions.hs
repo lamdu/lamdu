@@ -158,7 +158,7 @@ setChildReplaceParentActions =
         bod
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) %~
             overBodyChildren
-            (nullaryPayload %~ join setToExpr)
+            (ann %~ join setToExpr)
             (ann %~ join setToExpr)
             (ann %~ join setToExpr)
             (annotation %~ join setToExpr)

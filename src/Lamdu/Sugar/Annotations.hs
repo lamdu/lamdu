@@ -109,7 +109,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
     where
         newBodyWith f =
             SugarLens.overBodyChildren
-            (nullaryPayload . _1 .~ f)
+            (ann . _1 .~ f)
             (ann . _1 .~ f)
             (ann . _1 .~ f)
             (nonHoleAnn .~ f)
@@ -119,7 +119,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         set x = Expression (plWith x) newBody
         newBody =
             SugarLens.overBodyChildren
-            (nullaryPayload %~ (,) neverShowAnnotations)
+            (ann %~ (,) neverShowAnnotations)
             (ann %~ (,) neverShowAnnotations)
             (ann %~ (,) neverShowAnnotations)
             markAnnotationsToDisplay

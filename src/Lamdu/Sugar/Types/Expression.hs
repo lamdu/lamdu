@@ -78,7 +78,7 @@ data LabeledApply name i o a = LabeledApply
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data InjectContent name i o a
-    = InjectNullary (NullaryVal name i o a)
+    = InjectNullary (Node (NullaryVal name i o) a)
     | InjectVal (Expression name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 

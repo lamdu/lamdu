@@ -70,15 +70,15 @@ makeInject val tag pl =
         delDoc = E.Doc ["Edit", "Delete"]
         mReplaceParent = val ^. Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent
 
-emptyRec :: Sugar.NullaryVal name i o a -> Sugar.Expression name i o a
-emptyRec (Sugar.NullaryVal pl closedActions addItem) =
+emptyRec :: Sugar.Node (Sugar.NullaryVal name i o) a -> Sugar.Expression name i o a
+emptyRec (Sugar.Node pl (Sugar.NullaryVal closedActions addItem)) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
     & Sugar.Expression pl
 
 makeNullaryInject ::
     (Monad i, Monad o) =>
-    Sugar.NullaryVal (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Node (Sugar.NullaryVal (Name o) i o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (ExpressionGui o)
@@ -98,7 +98,7 @@ makeNullaryInject nullary tag pl =
             GuiState.updateCursor nullaryRecEntityId & pure & const
             & E.charGroup Nothing (E.Doc ["Edit", "Inject", "Value"]) ":"
         nullaryRecEntityId =
-            nullary ^. Sugar.nullaryPayload . Sugar.plEntityId
+            nullary ^. Sugar.ann . Sugar.plEntityId
             & WidgetIds.fromEntityId
         nearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
 

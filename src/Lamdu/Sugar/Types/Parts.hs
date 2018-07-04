@@ -29,7 +29,7 @@ module Lamdu.Sugar.Types.Parts
     , ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
-    , NullaryVal(..), nullaryPayload, nullaryClosedCompositeActions, nullaryAddItem
+    , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
     , Heal(..), _HealAction, _TypeMismatch
     ) where
 
@@ -166,12 +166,11 @@ data CompositeTail o expr
     | ClosedComposite (ClosedCompositeActions o)
     deriving (Functor, Foldable, Traversable, Generic)
 
--- | The empty record (for manipulations in GUI)
-data NullaryVal name i o a = NullaryVal
-    { _nullaryPayload :: a
-    , _nullaryClosedCompositeActions :: ClosedCompositeActions o
+-- | The empty record in a nullary inject
+data NullaryVal name i o = NullaryVal
+    { _nullaryClosedCompositeActions :: ClosedCompositeActions o
     , _nullaryAddItem :: TagSelection name i o EntityId
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
 data Heal o
     = HealAction (o EntityId)
