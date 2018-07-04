@@ -23,6 +23,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
@@ -48,8 +49,8 @@ data NavDests a = NavDests
 mkNavDests ::
     Functor f =>
     Cursor -> State.VirtualCursor ->
-    [[Maybe (Direction -> Widget.EnterResult (f State.Update))]] ->
-    NavDests (f State.Update)
+    [[Maybe (Direction -> Gui Widget.EnterResult f)]] ->
+    Gui NavDests f
 mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
     NavDests
     { leftOfCursor    = reverse colsLeft  & enterHoriz FromRight
@@ -136,15 +137,15 @@ addNavEventmap keys navDests eMap =
 
 make ::
     (Traversable vert, Traversable horiz, Functor f) =>
-    vert (horiz (Aligned (Widget (f State.Update)))) ->
-    (vert (horiz (Aligned ())), Widget (f State.Update))
+    vert (horiz (Aligned (Gui Widget f))) ->
+    (vert (horiz (Aligned ())), Gui Widget f)
 make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz, Functor f) =>
     Keys ModKey ->
-    vert (horiz (Aligned (Widget (f State.Update)))) ->
-    (vert (horiz (Aligned ())), Widget (f State.Update))
+    vert (horiz (Aligned (Gui Widget f))) ->
+    (vert (horiz (Aligned ())), Gui Widget f)
 makeWithKeys keys children =
     ( content & each2d %~ void
     , toList content <&> toList
@@ -162,8 +163,8 @@ each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vecto
 toWidgetWithKeys ::
     Functor f =>
     Keys ModKey -> Widget.Size ->
-    [[(Rect, Widget (f State.Update))]] ->
-    Widget (f State.Update)
+    [[(Rect, Gui Widget f)]] ->
+    Gui Widget f
 toWidgetWithKeys keys size sChildren =
     Widget
     { _wSize = size

@@ -17,6 +17,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -84,7 +85,7 @@ make ::
     , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
-    n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m GuiState.Update))
+    n (StatusBar.StatusWidget (IOTrans m), Gui Widget (IOTrans m))
 make cp gp width =
     do
         theEvalResults <- Lens.view evalResults
@@ -131,7 +132,7 @@ makePaneEdit ::
     ExportActions m ->
     Sugar.Pane (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (T m) (Responsive (IOTrans m GuiState.Update))
+    ExprGuiM (T m) (T m) (Gui Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
@@ -185,7 +186,8 @@ newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]
 
 makeNewDefinitionButton ::
-    Monad m => Anchors.CodeAnchors m -> ExprGuiM (T m) (T m) (Widget (T m GuiState.Update))
+    Monad m =>
+    Anchors.CodeAnchors m -> ExprGuiM (T m) (T m) (Gui Widget (T m))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
@@ -203,7 +205,7 @@ jumpBack gp =
 panesEventMap ::
     Monad m =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    Sugar.VarInfo -> ExprGuiM (T m) (T m) (EventMap (IOTrans m GuiState.Update))
+    Sugar.VarInfo -> ExprGuiM (T m) (T m) (Gui EventMap (IOTrans m))
 panesEventMap theExportActions cp gp replVarInfo =
     do
         theConfig <- Lens.view config

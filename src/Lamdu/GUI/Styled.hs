@@ -21,6 +21,7 @@ import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Font as Font
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -146,7 +147,7 @@ actionable ::
     , MonadReader env m
     ) =>
     Widget.Id -> Text -> E.Doc -> f Widget.Id ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f))
 actionable myId text doc action =
     do
         color <- Lens.view (Theme.theme . Theme.textColors . TextColors.actionTextColor)

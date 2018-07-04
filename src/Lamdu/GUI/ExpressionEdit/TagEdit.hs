@@ -22,6 +22,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -72,7 +73,7 @@ makeTagNameEdit ::
     , GuiState.HasCursor env, Applicative f
     ) =>
     NearestHoles -> Name.StoredName f -> Widget.Id ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f))
 makeTagNameEdit nearestHoles (Name.StoredName prop tagText _tagCollision) myId =
     do
         keys <- Lens.view (Config.config . Config.menu . Menu.keysPickOptionAndGotoNext)
@@ -106,7 +107,7 @@ tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 makePickEventMap ::
     (Functor f, Config.HasConfig env, MonadReader env m) =>
     f Menu.PickResult ->
-    m (EventMap (f GuiState.Update))
+    m (Gui EventMap f)
 makePickEventMap action =
     Lens.view (Config.config . Config.menu) <&>
     \config ->
@@ -302,7 +303,7 @@ makeTagHoleEdit ::
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeTagHoleEdit tagSelection mkPickResult holeId =
     SearchMenu.make
     (const (makeHoleSearchTerm tagSelection mkPickResult holeId))
@@ -326,7 +327,7 @@ makeTagView tag =
 makeTagEdit ::
     (Monad i, Monad o) =>
     NearestHoles -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeTagEdit = makeTagEditWith id defaultOnPickNext <&> (fmap . fmap) snd
 
 defaultOnPickNext :: Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id
@@ -343,12 +344,12 @@ makeTagEditWith ::
     , GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
     ) =>
-    (n (WithTextPos (Widget (o GuiState.Update))) ->
-     ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))) ->
+    (n (WithTextPos (Gui Widget o)) ->
+     ExprGuiM i o (WithTextPos (Gui Widget o))) ->
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
     NearestHoles ->
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TagEditType, WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (TagEditType, WithTextPos (Gui Widget o))
 makeTagEditWith onView onPickNext nearestHoles tag =
     do
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
@@ -413,7 +414,7 @@ makeTagEditWith onView onPickNext nearestHoles tag =
 makeRecordTag ::
     (Monad i, Monad o) =>
     NearestHoles -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeRecordTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & Styled.withColor TextColors.recordTagColor
@@ -421,7 +422,7 @@ makeRecordTag nearestHoles tag =
 makeVariantTag ::
     (Monad i, Monad o) =>
     NearestHoles -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeVariantTag nearestHoles tag =
     makeTagEdit nearestHoles tag
     & Styled.withColor TextColors.caseTagColor
@@ -433,7 +434,7 @@ makeLHSTag ::
     (Monad i, Applicative o) =>
     (Maybe Sugar.EntityId -> Sugar.EntityId -> Widget.Id) ->
     Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeLHSTag onPickNext color tag =
     do
         style <- Lens.view Style.style
@@ -462,7 +463,7 @@ makeLHSTag onPickNext color tag =
 makeParamTag ::
     (Monad i, Monad o) =>
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
@@ -482,7 +483,7 @@ makeArgTag name tagInstance =
 makeBinderTagEdit ::
     (Monad i, Applicative o) =>
     Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeBinderTagEdit color tag =
     makeLHSTag defaultOnPickNext color tag
     & Reader.local (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

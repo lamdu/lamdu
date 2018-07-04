@@ -58,7 +58,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (VirtualCursor(..), Update, HasCursor(..))
+import           GUI.Momentu.State (VirtualCursor(..), HasCursor(..), Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget.Id (Id(..))
@@ -74,13 +74,13 @@ instance HasWidget Widget where widget = id
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
 
-enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w (f Update)) Id
+enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (Gui w f) Id
 enterResultCursor =
     widget . enterResult . enterResultEvent . Lens.mapped . State.uCursor . Lens.mapped
 
 takesFocus ::
     (HasWidget w, Functor f) =>
-    (Direction -> f Id) -> w (f Update) -> w (f Update)
+    (Direction -> f Id) -> Gui w f -> Gui w f
 takesFocus enterFunc =
     widget %~
     \w ->
@@ -97,7 +97,7 @@ takesFocus enterFunc =
 
 enterFuncAddVirtualCursor ::
     Functor f =>
-    Rect -> (Direction -> EnterResult (f Update)) -> (Direction -> EnterResult (f Update))
+    Rect -> (Direction -> Gui EnterResult f) -> (Direction -> Gui EnterResult f)
 enterFuncAddVirtualCursor destRect =
     Lens.imapped <. (enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
     where
@@ -194,12 +194,12 @@ weakerEventsWithoutPreevents eventMap =
 
 translateFocused ::
     Functor f =>
-    Vector2 R -> (Surrounding -> Focused (f Update)) ->
-    Surrounding -> Focused (f Update)
+    Vector2 R -> (Surrounding -> Gui Focused f) ->
+    Surrounding -> Gui Focused f
 translateFocused pos = translateFocusedGeneric (fmap (translateUpdate pos)) pos
 
 padToSizeAlign ::
-    Functor f => Size -> Vector2 R -> Widget (f Update) -> Widget (f Update)
+    Functor f => Size -> Vector2 R -> Gui Widget f -> Gui Widget f
 padToSizeAlign newSize alignment w =
     w
     & wState .~ translate (sizeDiff * alignment) w
@@ -250,13 +250,13 @@ makeSubId suffix = Lens.view Element.animIdPrefix <&> (++ suffix) <&> Id
 
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>
-    m (Id -> View -> Widget (f Update))
+    m (Id -> View -> Gui Widget f)
 makeFocusableView = makeFocusableWidget <&> Lens.mapped . Lens.argument %~ fromView
 
 -- TODO: Describe why makeFocusableView is to be usually preferred
 makeFocusableWidget ::
     (MonadReader env m, HasCursor env, Applicative f) =>
-    m (Id -> Widget (f Update) -> Widget (f Update))
+    m (Id -> Gui Widget f -> Gui Widget f)
 makeFocusableWidget =
     respondToCursorPrefix
     <&> \respond myIdPrefix w ->

@@ -11,6 +11,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -33,7 +34,7 @@ eventMapAddFirstParam ::
     (MonadReader env m, Applicative o, HasConfig env) =>
     Widget.Id ->
     Sugar.AddFirstParam name i o ->
-    m (EventMap (o GuiState.Update))
+    m (Gui EventMap o)
 eventMapAddFirstParam binderId addFirst =
     Lens.view (Config.config . Config.addNextParamKeys)
     <&>
@@ -50,7 +51,7 @@ eventMapAddFirstParam binderId addFirst =
 eventMapAddNextParam ::
     Applicative o =>
     Config -> Widget.Id -> Sugar.AddNextParam name i o ->
-    EventMap (o GuiState.Update)
+    Gui EventMap o
 eventMapAddNextParam conf myId addNext =
     E.keysEventMapMovesCursor (conf ^. Config.addNextParamKeys)
     (E.Doc ["Edit", doc]) (pure dst)
@@ -63,19 +64,19 @@ eventMapAddNextParam conf myId addNext =
 
 eventMapOrderParam ::
     Monad m =>
-    [MetaKey] -> Text -> m () -> EventMap (m GuiState.Update)
+    [MetaKey] -> Text -> m () -> Gui EventMap m
 eventMapOrderParam keys docSuffix =
     E.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
 
 eventParamDelEventMap ::
-    Monad m => m () -> [MetaKey] -> Text -> Widget.Id -> EventMap (m GuiState.Update)
+    Monad m => m () -> [MetaKey] -> Text -> Widget.Id -> Gui EventMap m
 eventParamDelEventMap fpDel keys docSuffix dstPosId =
     GuiState.updateCursor dstPosId <$ fpDel
     & E.keyPresses (keys <&> toModKey)
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
 data Info i o = Info
-    { iNameEdit :: WithTextPos (Widget (o GuiState.Update))
+    { iNameEdit :: WithTextPos (Gui Widget o)
     , iDel :: o ()
     , iAddNext :: Maybe (Sugar.AddNextParam (Name o) i o)
     , iMOrderBefore :: Maybe (o ())

@@ -15,6 +15,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -43,7 +44,7 @@ branchNameFDConfig = FocusDelegator.Config
 
 undoEventMap ::
     VersionControl.Config -> Maybe (m GuiState.Update) ->
-    EventMap (m GuiState.Update)
+    Gui EventMap m
 undoEventMap config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
     (E.Doc ["Edit", "Undo"])
@@ -51,7 +52,7 @@ undoEventMap config =
 
 redoEventMap ::
     VersionControl.Config -> Maybe (m GuiState.Update) ->
-    EventMap (m GuiState.Update)
+    Gui EventMap m
 redoEventMap config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
     (E.Doc ["Edit", "Redo"])
@@ -60,7 +61,7 @@ redoEventMap config =
 eventMap ::
     Applicative f =>
     VersionControl.Config -> Actions t f ->
-    EventMap (f GuiState.Update)
+    Gui EventMap f
 eventMap config actions = mconcat
     [ E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
       (E.Doc ["Branches", "New"]) $ branchTextEditId <$> makeBranch actions
@@ -86,7 +87,7 @@ makeBranchSelector ::
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     Actions n mw ->
-    mr (WithTextPos (Widget (mw GuiState.Update)))
+    mr (WithTextPos (Gui Widget mw))
 makeBranchSelector rwtransaction rtransaction actions =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit

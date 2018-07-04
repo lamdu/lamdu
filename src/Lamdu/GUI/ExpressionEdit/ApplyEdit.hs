@@ -14,7 +14,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
@@ -132,7 +132,7 @@ makeLabeled apply pl =
 makeArgRow ::
     (Monad i, Monad o) =>
     Sugar.AnnotatedArg (Name o) (ExprGui.SugarExpr i o) ->
-    ExprGuiM i o (Responsive.TaggedItem (o GuiState.Update))
+    ExprGuiM i o (Gui Responsive.TaggedItem o)
 makeArgRow arg =
     do
         argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName) (arg ^. Sugar.aaTag . Sugar.tagInstance)

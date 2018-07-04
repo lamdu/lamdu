@@ -9,6 +9,7 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive(..))
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -38,7 +39,7 @@ stdWrap ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o
-    (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    (Gui Responsive o -> Gui Responsive o)
 stdWrap pl =
     (maybeAddAnnotationPl pl <&> (Widget.widget %~))
     <<< Dotter.with pl
@@ -49,7 +50,7 @@ stdWrap pl =
 parentDelegator ::
     ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative o
     ) => Widget.Id ->
-    m (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    m (Gui Responsive o -> Gui Responsive o)
 parentDelegator myId =
     FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
     ?? FocusDelegator.FocusEntryChild ?? myId

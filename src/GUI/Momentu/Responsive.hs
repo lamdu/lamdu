@@ -53,6 +53,7 @@ import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), (/-/), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -144,9 +145,7 @@ alignedWidget f (Responsive w wd n) =
     <*> Lens.mapped f n
 
 -- | Lifts a Widget into a 'Responsive'
-fromAlignedWidget ::
-    Functor f =>
-    Aligned (Widget (f State.Update)) -> Responsive (f State.Update)
+fromAlignedWidget :: Functor f => Aligned (Gui Widget f) -> Gui Responsive f
 fromAlignedWidget (Aligned a w) =
     WithTextPos (a ^. _2 * w ^. Element.height) w & fromWithTextPos
 
@@ -154,11 +153,11 @@ fromWithTextPos :: WithTextPos (Widget a) -> Responsive a
 fromWithTextPos x = Responsive x x (const x)
 
 -- | Lifts a Widget into a 'Responsive' with an alignment point at the top left
-fromWidget :: Functor f => Widget (f State.Update) -> Responsive (f State.Update)
+fromWidget :: Functor f => Gui Widget f -> Gui Responsive f
 fromWidget = fromAlignedWidget . Aligned 0
 
 -- | Lifts a View into a 'Responsive' with an alignment point at the top left
-fromView :: Functor f => View -> Responsive (f State.Update)
+fromView :: Functor f => View -> Gui Responsive f
 fromView = fromWidget . Widget.fromView
 
 -- | Lifts a View into a 'Responsive' with an alignment point at the top left
@@ -166,7 +165,7 @@ fromTextView :: WithTextPos View -> Responsive a
 fromTextView tv = tv & Align.tValue %~ Widget.fromView & fromWithTextPos
 
 -- | The empty 'Responsive'
-empty :: Functor f => Responsive (f State.Update)
+empty :: Functor f => Gui Responsive f
 empty = fromView Element.empty
 
 data VerticalLayout t a = VerticalLayout
@@ -201,7 +200,7 @@ verticalLayout vert items =
 -- | Vertical box with the alignment point from the top widget
 vbox ::
     Functor f =>
-    [Responsive (f State.Update)] -> Responsive (f State.Update)
+    [Gui Responsive f] -> Gui Responsive f
 vbox =
     verticalLayout VerticalLayout
     { _vContexts = Lens.reindexed (const idx) Lens.traversed
@@ -216,7 +215,7 @@ vbox =
 
 vboxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([Responsive (f State.Update)] -> Responsive (f State.Update))
+    m ([Gui Responsive f] -> Gui Responsive f)
 vboxSpaced =
     Spacer.stdVSpace
     <&> fromView
@@ -226,8 +225,8 @@ vboxSpaced =
 vboxWithSeparator ::
     Functor f =>
     Bool -> (Widget.R -> View) ->
-    Responsive (f State.Update) -> Responsive (f State.Update) ->
-    Responsive (f State.Update)
+    Gui Responsive f -> Gui Responsive f ->
+    Gui Responsive f
 vboxWithSeparator needDisamb makeSeparator top bottom =
     Vector2 top bottom
     & verticalLayout VerticalLayout
@@ -257,7 +256,7 @@ Lens.makeLenses ''TaggedItem
 
 taggedList ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m ([TaggedItem (f State.Update)] -> Responsive (f State.Update))
+    m ([Gui TaggedItem f] -> Gui Responsive f)
 taggedList =
     Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0
     <&>

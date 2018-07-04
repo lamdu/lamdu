@@ -30,7 +30,7 @@ import           GUI.Momentu.Main.Animation (PerfCounters(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (GUIState(..))
+import           GUI.Momentu.State (GUIState(..), Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
@@ -126,7 +126,7 @@ defaultOptions helpFontPath =
             , debug = defaultDebugOptions
             }
 
-quitEventMap :: Functor f => EventMap (f State.Update)
+quitEventMap :: Functor f => Gui EventMap f
 quitEventMap =
     E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
@@ -179,7 +179,7 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
 
 mainLoopWidget ::
     GLFW.Window ->
-    (Env -> IO (Widget (M IO State.Update))) ->
+    (Env -> IO (Gui Widget (M IO))) ->
     Options ->
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =

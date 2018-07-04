@@ -36,6 +36,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget (Widget)
@@ -285,10 +286,7 @@ toggleEventMap showingHelpVar showingHelp env =
 makeToggledHelpAdder ::
     MonadIO m =>
     IsHelpShown ->
-    IO
-    (Env -> Widget.Size ->
-     Widget (m State.Update) ->
-     IO (Widget (m State.Update)))
+    IO (Env -> Widget.Size -> Gui Widget m -> IO (Gui Widget m))
 makeToggledHelpAdder startValue =
     newIORef startValue
     <&>

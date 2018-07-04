@@ -12,6 +12,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Rect (Rect(..))
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 
@@ -41,8 +42,8 @@ focusChildEventMap config mEnter =
 modifyEntry ::
     Applicative f =>
     Widget.Id -> Rect -> FocusEntryTarget ->
-    Maybe (Direction -> Widget.EnterResult (f State.Update)) ->
-    Maybe (Direction -> Widget.EnterResult (f State.Update))
+    Maybe (Direction -> Gui Widget.EnterResult f) ->
+    Maybe (Direction -> Gui Widget.EnterResult f)
 modifyEntry myId fullChildRect target mChildEnter =
     case target of
     FocusEntryParent -> parentEnter
@@ -62,8 +63,7 @@ modifyEntry myId fullChildRect target mChildEnter =
 
 make ::
     (MonadReader env m, State.HasCursor env, Applicative f, Widget.HasWidget w) =>
-    m (Config -> FocusEntryTarget -> Widget.Id ->
-       w (f State.Update) -> w (f State.Update))
+    m (Config -> FocusEntryTarget -> Widget.Id -> Gui w f -> Gui w f)
 make =
     Lens.view State.cursor <&>
     \cursor config focusEntryTarget myId -> Widget.widget %~ \childWidget ->

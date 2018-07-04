@@ -21,6 +21,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (GluesTo, (/|/), hbox)
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget, R)
@@ -39,8 +40,8 @@ import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.Prelude
 
 data StatusWidget f = StatusWidget
-    { _widget :: WithTextPos (Widget (f GuiState.Update))
-    , _globalEventMap :: EventMap (f GuiState.Update)
+    { _widget :: WithTextPos (Gui Widget f)
+    , _globalEventMap :: Gui EventMap f
     }
 Lens.makeLenses ''StatusWidget
 
@@ -71,7 +72,7 @@ makeLabeledWidget headerText w =
 makeStatusWidget ::
     ( MonadReader env m, Functor f
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    ) => Text -> WithTextPos (Widget (f GuiState.Update)) -> m (StatusWidget f)
+    ) => Text -> WithTextPos (Gui Widget f) -> m (StatusWidget f)
 makeStatusWidget headerText w =
     makeLabeledWidget headerText w
     <&> (`StatusWidget` mempty)
@@ -82,7 +83,7 @@ makeChoice ::
     , Element.HasAnimIdPrefix env
     ) =>
     Text -> Property f a -> [(Text, a)] ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f))
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
@@ -101,7 +102,7 @@ makeSwitchWidget ::
     , GuiState.HasCursor env, Hover.HasStyle env
     ) =>
     Text -> Property f a -> [(Text, a)] ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f))
 makeSwitchWidget headerText prop choiceVals =
     do
         choice <- makeChoice headerText prop choiceVals
@@ -111,7 +112,7 @@ makeSwitchEventMap ::
     (MonadReader env m, HasConfig env, Eq a, Functor f) =>
     Text -> Lens' Config [MetaKey] ->
     Property f a -> [a] ->
-    m (EventMap (f GuiState.Update))
+    m (Gui EventMap f)
 makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
     Lens.view (Config.config . keysGetter)
     <&> \keys ->

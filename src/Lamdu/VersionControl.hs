@@ -69,7 +69,9 @@ getVersion =
         currentBranch <- Property.getP $ revProp DbLayout.currentBranch
         Branch.curVersion currentBranch
 
-runEvent :: Traversable t => GUIState -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
+runEvent ::
+    Traversable t =>
+    GUIState -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
 runEvent preGuiState eventHandler = do
     (eventResult, isEmpty) <- runAction $ do
         eventResult <- eventHandler

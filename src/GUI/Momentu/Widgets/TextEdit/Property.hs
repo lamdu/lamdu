@@ -13,6 +13,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -25,7 +26,7 @@ make ::
      State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-     WithTextPos (Widget (f State.Update)))
+     WithTextPos (Gui Widget f))
 make =
     TextEdit.make <&> f
     where
@@ -45,7 +46,7 @@ makeLineEdit ::
     (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-     WithTextPos (Widget (f State.Update)))
+     WithTextPos (Gui Widget f))
 makeLineEdit =
     make
     <&> \mk empty textRef myId ->
@@ -57,7 +58,7 @@ makeWordEdit ::
     (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-     WithTextPos (Widget (f State.Update)))
+     WithTextPos (Gui Widget f))
 makeWordEdit =
     makeLineEdit
     <&> \mk empty textRef myId -> mk empty textRef myId

@@ -89,7 +89,8 @@ mApplyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM (Maybe GuiState.Update)
+    Cache.Functions -> env -> VirtualCursor -> Event ->
+    T ViewM (Maybe GuiState.Update)
 mApplyEvent cache env virtCursor event =
     do
         gui <- makeReplGui cache env

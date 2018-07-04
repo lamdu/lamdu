@@ -22,6 +22,7 @@ import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
@@ -104,7 +105,7 @@ type Ctx env =
 layout ::
     Ctx env =>
     [Themes.Selection] -> Property IO Settings ->
-    ReaderT env (T DbM) (Widget (IOTrans DbM GuiState.Update))
+    ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
 layout themeNames settingsProp =
     do
         vcActions <-
@@ -145,5 +146,5 @@ layout themeNames settingsProp =
 make ::
     Ctx env =>
     [Themes.Selection] -> Property IO Settings -> env ->
-    T DbM (Widget (IOTrans DbM GuiState.Update))
+    T DbM (Gui Widget (IOTrans DbM))
 make themeNames settingsProp env = layout themeNames settingsProp & (`runReaderT` env)

@@ -31,6 +31,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
@@ -114,7 +115,7 @@ cursorRects s str =
 makeInternal ::
     Style -> Text -> EmptyStrings ->
     (forall a. Lens.Getting a (Modes a) a) ->
-    Widget.Id -> WithTextPos (Widget (Text, State.Update))
+    Widget.Id -> WithTextPos (Gui Widget ((,) Text))
 makeInternal s str emptyStrings mode myId =
     v
     & Align.tValue %~ Widget.fromView
@@ -129,7 +130,9 @@ makeInternal s str emptyStrings mode myId =
             & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
-makeUnfocused :: EmptyStrings -> Style -> Text -> Widget.Id -> WithTextPos (Widget (Text, State.Update))
+makeUnfocused ::
+    EmptyStrings -> Style -> Text -> Widget.Id ->
+    WithTextPos (Gui Widget ((,) Text))
 makeUnfocused empty s str = makeInternal s str empty unfocused
 
 minimumIndex :: Ord a => [a] -> Int
@@ -143,7 +146,7 @@ cursorNearRect s str fromRect =
 
 enterFromDirection ::
     Widget.Size -> Style -> Text -> Widget.Id ->
-    Direction.Direction -> Widget.EnterResult (Text, State.Update)
+    Direction.Direction -> Gui Widget.EnterResult ((,) Text)
 enterFromDirection sz sty str myId dir =
     encodeCursor myId cursor
     & State.updateCursor
@@ -172,7 +175,7 @@ eventResult myId newText newCursor =
 -- | given text...
 makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
-    WithTextPos (Widget (Text, State.Update))
+    WithTextPos (Gui Widget ((,) Text))
 makeFocused cursor empty s str myId =
     makeInternal s str empty focused myId
     & Element.bottomLayer <>~ cursorFrame
@@ -364,7 +367,7 @@ getCursor =
 make ::
     (MonadReader env m, State.HasCursor env, HasStyle env) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
-        WithTextPos (Widget (Text, State.Update))
+        WithTextPos (Gui Widget ((,) Text))
       )
 make =
     do

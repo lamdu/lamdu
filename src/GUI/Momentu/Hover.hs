@@ -26,6 +26,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), Orientation, GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Rect (Rect(..))
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -187,9 +188,9 @@ sequenceHover (Hover x) = x <&> Hover
 
 emplaceAt ::
     Functor f =>
-    AnchoredWidget (f State.Update) ->
-    AnchoredWidget (f State.Update) ->
-    Widget (f State.Update)
+    Gui AnchoredWidget f ->
+    Gui AnchoredWidget f ->
+    Gui Widget f
 emplaceAt h place =
     Element.assymetricPad translation 0 (h ^. anchored)
     & Element.size .~ place ^. Element.size
@@ -200,8 +201,8 @@ emplaceAt h place =
 -- it as such?
 hoverInPlaceOf ::
     Functor f =>
-    [Hover (AnchoredWidget (f State.Update))] ->
-    AnchoredWidget (f State.Update) -> Widget (f State.Update)
+    [Hover (Gui AnchoredWidget f)] ->
+    Gui AnchoredWidget f -> Gui Widget f
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
     | null focusedOptions =
@@ -242,15 +243,15 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
                 br = h ^. Element.size - place ^. Element.size - tl
 
 hoverBeside ::
-    ( GluesTo (Hover w) (AnchoredWidget (f State.Update)) (Hover (AnchoredWidget (f State.Update)))
+    ( GluesTo (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
     , SizedElement w
     , Element.HasAnimIdPrefix env, HasStyle env, MonadReader env m
     , Functor f
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m
-    ( t (Widget (f State.Update)) ->
-      w -> t (Widget (f State.Update))
+    ( t (Gui Widget f) ->
+      w -> t (Gui Widget f)
     )
 hoverBeside lens =
     hover <&>

@@ -24,6 +24,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.Responsive (Responsive)
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -41,7 +42,7 @@ add ::
     , Element.HasAnimIdPrefix env, Applicative o
     ) =>
     Sugar.Payload name i o a ->
-    m (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    m (Gui Responsive o -> Gui Responsive o)
 add pl =
     do
         ev <- eventMap pl
@@ -62,7 +63,7 @@ add pl =
 
 eventMap ::
     (MonadReader env m, HasConfig env, Applicative o) =>
-    Sugar.Payload name i o expr -> m (EventMap (o GuiState.Update))
+    Sugar.Payload name i o expr -> m (Gui EventMap o)
 eventMap pl =
     delDotEventMap (WidgetIds.fromExprPayload pl)
     <&> (<> fragmentEventMap pl)
@@ -74,7 +75,7 @@ with ::
     , HasConfig env, Element.HasAnimIdPrefix env, Applicative o
     ) =>
     Sugar.Payload name i o a ->
-    m (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    m (Gui Responsive o -> Gui Responsive o)
 with pl =
     do
         isActive <-
@@ -87,7 +88,7 @@ with pl =
 -- | Pressing alpha char transforms the dotted expr into a fragment
 -- with '.<char>' as the search term
 fragmentEventMap ::
-    Applicative o => Sugar.Payload name i o expr -> EventMap (o GuiState.Update)
+    Applicative o => Sugar.Payload name i o expr -> Gui EventMap o
 fragmentEventMap pl =
     E.charEventMap "Character" (E.Doc ["Edit", "Get field"]) getField
     where
@@ -104,7 +105,7 @@ fragmentEventMap pl =
 
 delDotEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
-    Widget.Id -> m (EventMap (f GuiState.Update))
+    Widget.Id -> m (Gui EventMap f)
 delDotEventMap widgetId =
     Config.delKeys
     <&>
@@ -113,8 +114,7 @@ delDotEventMap widgetId =
     & E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete dot"])
 
 addEventMap ::
-    (Applicative f, Widget.HasWidget w) =>
-    Widget.Id -> w (f GuiState.Update) -> w (f GuiState.Update)
+    (Applicative f, Widget.HasWidget w) => Widget.Id -> Gui w f -> Gui w f
 addEventMap myId =
     Widget.weakerEventsWithContext f
     where

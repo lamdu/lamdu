@@ -12,7 +12,7 @@ module Lamdu.GUI.ExpressionGui
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
 import           GUI.Momentu.Responsive (Responsive(..))
-import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -23,7 +23,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type ExpressionGui m = Responsive (m GuiState.Update)
+type ExpressionGui a = Gui Responsive a
 
 -- GUI input payload on sugar exprs
 data Payload = Payload

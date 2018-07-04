@@ -14,6 +14,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -115,7 +116,7 @@ makeAltRow ::
     (Monad i, Monad o) =>
     Maybe Tag ->
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    ExprGuiM i o (Responsive.TaggedItem (o GuiState.Update))
+    ExprGuiM i o (Gui Responsive.TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         config <- Lens.view Config.config
@@ -165,7 +166,7 @@ makeAltsWidget mActiveTag alts addAlt altsId =
 makeAddAltRow ::
     (Monad i, Monad o) =>
     Sugar.TagSelection (Name o) i o Sugar.EntityId -> Widget.Id ->
-    ExprGuiM i o (Responsive.TaggedItem (o GuiState.Update))
+    ExprGuiM i o (Gui Responsive.TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
@@ -211,7 +212,7 @@ makeOpenCase actions rest animId altsGui =
 openCaseEventMap ::
     Monad o =>
     Config -> Sugar.OpenCompositeActions o ->
-    EventMap (o GuiState.Update)
+    Gui EventMap o
 openCaseEventMap config (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
@@ -219,21 +220,21 @@ openCaseEventMap config (Sugar.OpenCompositeActions close) =
 closedCaseEventMap ::
     Monad o =>
     Config -> Sugar.ClosedCompositeActions o ->
-    EventMap (o GuiState.Update)
+    Gui EventMap o
 closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (config ^. Config.caseOpenKeys) (doc "Open")
 
 caseDelEventMap ::
     Monad o =>
-    Config -> o Sugar.EntityId -> EventMap (o GuiState.Update)
+    Config -> o Sugar.EntityId -> Gui EventMap o
 caseDelEventMap config delete =
     delete <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Alt")
 
 toLambdaCaseEventMap ::
     Monad o =>
-    Config -> o Sugar.EntityId -> EventMap (o GuiState.Update)
+    Config -> o Sugar.EntityId -> Gui EventMap o
 toLambdaCaseEventMap config toLamCase =
     toLamCase <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Turn to Lambda-Case")

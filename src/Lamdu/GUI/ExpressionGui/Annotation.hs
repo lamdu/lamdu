@@ -19,6 +19,7 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/))
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -200,8 +201,8 @@ addAnnotationH ::
     WideAnnotationBehavior ->
     m
     ((Widget.R -> Widget.R) ->
-     Widget (f GuiState.Update) ->
-     Widget (f GuiState.Update))
+     Gui Widget f ->
+     Gui Widget f)
 addAnnotationH f wideBehavior =
     do
         vspace <- annotationSpacer
@@ -218,7 +219,7 @@ addInferredType ::
     , Element.HasAnimIdPrefix env
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
-    m (Widget (f GuiState.Update) -> Widget (f GuiState.Update))
+    m (Gui Widget f -> Gui Widget f)
 addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
@@ -228,8 +229,8 @@ addEvaluationResult ::
     EvalResDisplay (Name g) -> WideAnnotationBehavior ->
     ExprGuiM i o
     ((Widget.R -> Widget.R) ->
-     Widget (f GuiState.Update) ->
-     Widget (f GuiState.Update))
+     Gui Widget f ->
+     Gui Widget f)
 addEvaluationResult mNeigh resDisp wideBehavior =
     case erdVal resDisp ^. Sugar.resBody of
     Sugar.RRecord (Sugar.ResRecord []) ->
@@ -244,8 +245,7 @@ addEvaluationResult mNeigh resDisp wideBehavior =
 maybeAddAnnotationPl ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i o1 ExprGui.Payload ->
-    ExprGuiM i o
-    (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
+    ExprGuiM i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
@@ -303,7 +303,7 @@ maybeAddAnnotationWith ::
     (Monad i, Monad o) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.Annotation (Name o) i ->
-    ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
+    ExprGuiM i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
     case annotation of
     Sugar.AnnotationNone -> pure id
@@ -314,7 +314,7 @@ maybeAddValAnnotationWith ::
     (Monad i, Monad o) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.ValAnnotation (Name o) i ->
-    ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
+    ExprGuiM i o (Gui Widget o -> Gui Widget o)
 maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
     getAnnotationMode opt (ann ^. Sugar.annotationVal)
     >>=
@@ -333,7 +333,7 @@ maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
 maybeAddAnnotation ::
     (Monad i, Monad o) =>
     WideAnnotationBehavior -> Sugar.Annotation (Name o) i ->
-    ExprGuiM i o (Widget (o GuiState.Update) -> Widget (o GuiState.Update))
+    ExprGuiM i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::

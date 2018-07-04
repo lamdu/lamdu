@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -64,9 +65,9 @@ import           Lamdu.Prelude
 makeBinderNameEdit ::
     (Monad i, Applicative o) =>
     Widget.Id -> Sugar.AddFirstParam (Name o) i o ->
-    EventMap (o GuiState.Update) ->
+    Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeBinderNameEdit binderId addFirstParam rhsJumperEquals tag color =
     do
         addFirstParamEventMap <- ParamEdit.eventMapAddFirstParam binderId addFirstParam
@@ -76,9 +77,9 @@ makeBinderNameEdit binderId addFirstParam rhsJumperEquals tag color =
 
 data Parts o = Parts
     { pMParamsEdit :: Maybe (ExpressionGui o)
-    , pMScopesEdit :: Maybe (Widget (o GuiState.Update))
+    , pMScopesEdit :: Maybe (Gui Widget o)
     , pBodyEdit :: ExpressionGui o
-    , pEventMap :: EventMap (o GuiState.Update)
+    , pEventMap :: Gui EventMap o
     }
 
 data ScopeCursor = ScopeCursor
@@ -135,7 +136,7 @@ mkChosenScopeCursor func =
 makeScopeEventMap ::
     Functor o =>
     [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
-    EventMap (o GuiState.Update)
+    Gui EventMap o
 makeScopeEventMap prevKey nextKey cursor setter =
     do
         (key, doc, scope) <-
@@ -147,7 +148,7 @@ makeScopeEventMap prevKey nextKey cursor setter =
         prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
         nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
 
-blockEventMap :: Applicative m => EventMap (m GuiState.Update)
+blockEventMap :: Applicative m => Gui EventMap m
 blockEventMap =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
@@ -190,8 +191,8 @@ makeScopeNavEdit ::
     (Monad i, Applicative o) =>
     Sugar.Function name i o expr -> Widget.Id -> ScopeCursor ->
     ExprGuiM i o
-    ( EventMap (o GuiState.Update)
-    , Maybe (Widget (o GuiState.Update))
+    ( Gui EventMap o
+    , Maybe (Gui Widget o)
     )
 makeScopeNavEdit func myId curCursor =
     do
@@ -362,7 +363,7 @@ makeParts funcApplyLimit binder =
 maybeAddNodeActions ::
     (MonadReader env m, GuiState.HasCursor env, Config.HasConfig env, Applicative o) =>
     Widget.Id -> NearestHoles -> Sugar.NodeActions name i o ->
-    m (Responsive (o GuiState.Update) -> Responsive (o GuiState.Update))
+    m (Gui Responsive o -> Gui Responsive o)
 maybeAddNodeActions partId nearestHoles nodeActions =
     do
         isSelected <- Lens.view GuiState.cursor <&> (== partId)
@@ -382,7 +383,7 @@ maybeAddNodeActions partId nearestHoles nodeActions =
 make ::
     (Monad i, Monad o) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
-    EventMap (o GuiState.Update) ->
+    Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Sugar.Assignment (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
@@ -488,7 +489,7 @@ makeLetEdit item =
 
 jumpToRHS ::
     (Monad i, Monad o) =>
-    Widget.Id -> ExprGuiM i o (EventMap (o GuiState.Update))
+    Widget.Id -> ExprGuiM i o (Gui EventMap o)
 jumpToRHS rhsId =
     ExprGuiM.mkPrejumpPosSaver
     <&> Lens.mapped .~ rhsId
@@ -497,7 +498,7 @@ jumpToRHS rhsId =
 
 addLetEventMap ::
     (Monad i, Monad o) =>
-    o Sugar.EntityId -> ExprGuiM i o (EventMap (o GuiState.Update))
+    o Sugar.EntityId -> ExprGuiM i o (Gui EventMap o)
 addLetEventMap addLet =
     do
         config <- Lens.view Config.config
@@ -557,7 +558,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
 
 namedParamEditInfo ::
     Widget.Id -> Sugar.FuncParamActions (Name o) i o ->
-    WithTextPos (Widget (o GuiState.Update)) ->
+    WithTextPos (Gui Widget o) ->
     ParamEdit.Info i o
 namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
@@ -570,7 +571,7 @@ namedParamEditInfo widgetId actions nameEdit =
     }
 
 nullParamEditInfo ::
-    Widget.Id -> WithTextPos (Widget (o GuiState.Update)) ->
+    Widget.Id -> WithTextPos (Gui Widget o) ->
     Sugar.NullParamActions o -> ParamEdit.Info i o
 nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info

@@ -19,6 +19,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -51,7 +52,7 @@ makeSimpleView ::
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f))
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
@@ -62,7 +63,7 @@ makeParamsRecord ::
     , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
     , Applicative f
     ) =>
-    Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Responsive (f GuiState.Update))
+    Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Gui Responsive f)
 makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
@@ -90,7 +91,7 @@ makeNameRef ::
     (Monad i, Monad o) =>
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
     Sugar.NameRef (Name x) o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeNameRef color myId nameRef =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
@@ -113,7 +114,7 @@ makeNameRef color myId nameRef =
 makeInlineEventMap ::
     Applicative f =>
     Config -> Sugar.BinderVarInline f ->
-    EventMap (f GuiState.Update)
+    Gui EventMap f
 makeInlineEventMap config (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
@@ -131,7 +132,7 @@ definitionTypeChangeBox ::
     , HasConfig env, Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f))
 definitionTypeChangeBox info getVarId =
     do
         updateLabel <- Styled.actionable myId "Update" updateDoc update
@@ -166,8 +167,8 @@ processDefinitionWidget ::
     , Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->
-    m (WithTextPos (Widget (f GuiState.Update))) ->
-    m (WithTextPos (Widget (f GuiState.Update)))
+    m (WithTextPos (Gui Widget f)) ->
+    m (WithTextPos (Gui Widget f))
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
@@ -208,7 +209,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 makeGetBinder ::
     (Monad i, Monad o) =>
     Sugar.BinderVarRef (Name x) o -> Widget.Id ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -227,7 +228,7 @@ makeGetBinder binderVar myId =
 makeGetParam ::
     (Monad i, Monad o) =>
     Sugar.ParamRef (Name x) o -> Widget.Id ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme

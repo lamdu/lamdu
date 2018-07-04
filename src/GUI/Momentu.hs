@@ -23,6 +23,7 @@ module GUI.Momentu
     , Widget.isFocused
     , WidgetId, pattern WidgetId
     , State.Update
+    , State.Gui
 
     -- | View
     , View

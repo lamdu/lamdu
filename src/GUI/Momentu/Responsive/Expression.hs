@@ -23,7 +23,7 @@ import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import qualified GUI.Momentu.State as State
+import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -47,7 +47,7 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> Options.Disambiguators (f State.Update))
+    m (AnimId -> Gui Options.Disambiguators f)
 disambiguators =
     do
         h <- addParens
@@ -56,7 +56,7 @@ disambiguators =
 
 addParens ::
     (MonadReader env m, TextView.HasStyle env, Functor f) =>
-    m (AnimId -> WithTextPos (Widget (f State.Update)) -> WithTextPos (Widget (f State.Update)))
+    m (AnimId -> WithTextPos (Gui Widget f) -> WithTextPos (Gui Widget f))
 addParens =
     Lens.view TextView.style
     <&> \textStyle myId w ->
@@ -65,7 +65,7 @@ addParens =
 
 indent ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> Responsive (f State.Update) -> Responsive (f State.Update))
+    m (AnimId -> Gui Responsive f -> Gui Responsive f)
 indent =
     do
         bWidth <- totalBarWidth
@@ -102,12 +102,12 @@ indentBar =
 
 boxSpacedDisambiguated ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (AnimId -> [Responsive (f State.Update)] -> Responsive (f State.Update))
+    m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
-    m (Maybe AnimId -> [Responsive (f State.Update)] -> Responsive (f State.Update))
+    m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedMDisamb =
     do
         disamb <- disambiguators

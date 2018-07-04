@@ -31,6 +31,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.State (GUIState(..))
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
@@ -149,7 +150,7 @@ instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
 makeSubexpression ::
     Monad i =>
     Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (Responsive.Responsive (o GuiState.Update))
+    ExprGuiM i o (Gui Responsive.Responsive o)
 makeSubexpression expr =
     do
         maker <- Lens.view aMakeSubexpression

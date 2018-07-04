@@ -8,6 +8,7 @@ module GUI.Momentu.State
     ( VirtualCursor(..), vcRect
     , GUIState(..), sCursor, sWidgetStates
     , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
+    , Gui
     , update
     , updateCursor, fullUpdate
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
@@ -58,6 +59,8 @@ instance Semigroup Update where
 instance Monoid Update where
     mempty = def_mempty
     mappend = (<>)
+
+type Gui w f = w (f Update)
 
 updateCursor :: Id -> Update
 updateCursor c = mempty { _uCursor = Just c & Monoid.Last }

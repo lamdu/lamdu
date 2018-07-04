@@ -38,6 +38,7 @@ import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -113,7 +114,7 @@ data PickFirstResult f
     | PickFirstResult (Widget.PreEvent (f PickResult))
 
 data RenderedOption f = RenderedOption
-    { _rWidget :: WithTextPos (Widget (f State.Update))
+    { _rWidget :: WithTextPos (Gui Widget f)
     , _rPick :: Widget.PreEvent (f PickResult)
     }
 Lens.makeLenses ''RenderedOption
@@ -167,7 +168,7 @@ Lens.makePrisms ''Submenu
 Lens.makeLenses ''Option
 
 optionWidgets ::
-    Functor m => Lens.Setter' (Option m f) (WithTextPos (Widget (f State.Update)))
+    Functor m => Lens.Setter' (Option m f) (WithTextPos (Gui Widget f))
 optionWidgets f (Option i w s) =
     Option i <$> (Lens.mapped . rWidget) f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
@@ -178,7 +179,7 @@ makeNoResults = TextView.makeLabel "(No results)"
 
 blockEvents ::
     Applicative f =>
-    Hover.Ordered (Widget (f State.Update) -> Widget (f State.Update))
+    Hover.Ordered (Gui Widget f -> Gui Widget f)
 blockEvents =
     Hover.Ordered
     { _forward = blockDirection MetaKey.Key'Down "down"
@@ -233,8 +234,8 @@ layoutOption ::
     , State.HasCursor env, Hover.HasStyle env, HasConfig env, Applicative f
     ) =>
     Widget.R ->
-    (Widget.Id, WithTextPos (Widget (f State.Update)), Submenu m f) ->
-    m (WithTextPos (Widget (f State.Update)))
+    (Widget.Id, WithTextPos (Gui Widget f), Submenu m f) ->
+    m (WithTextPos (Gui Widget f))
 layoutOption maxOptionWidth (optionId, rendered, submenu) =
     case submenu of
     SubmenuEmpty -> rendered & Element.width .~ maxOptionWidth & pure
@@ -270,7 +271,7 @@ instance Semigroup (OptionList a) where
 
 makePickEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
-    m (Widget.PreEvent (f PickResult) -> EventMap (f State.Update))
+    m (Widget.PreEvent (f PickResult) -> Gui EventMap f)
 makePickEventMap =
     Lens.view (config . configKeys)
     <&>
@@ -284,8 +285,8 @@ makePickEventMap =
 addPickers ::
     (MonadReader env m, HasConfig env, Applicative f) =>
     m ( Widget.PreEvent (f PickResult) ->
-        Widget (f State.Update) ->
-        Widget (f State.Update)
+        Gui Widget f ->
+        Gui Widget f
       )
 addPickers =
     makePickEventMap
@@ -309,7 +310,7 @@ make ::
     , Applicative f
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
-    m (PickFirstResult f, Hover.Ordered (Widget (f State.Update)))
+    m (PickFirstResult f, Hover.Ordered (Gui Widget f))
 make myId minWidth options =
     case options of
     TooMany -> pure (NoPickFirstResult, pure Element.empty)
@@ -369,9 +370,9 @@ hoverOptions ::
     ) =>
     m ( Placement ->
         View ->
-        Hover.Ordered (Widget (f State.Update)) ->
-        Hover.AnchoredWidget (f State.Update) ->
-        [Hover (Hover.AnchoredWidget (f State.Update))]
+        Hover.Ordered (Gui Widget f) ->
+        Gui Hover.AnchoredWidget f ->
+        [Hover (Gui Hover.AnchoredWidget f)]
       )
 hoverOptions =
     Hover.hover <&>
@@ -426,7 +427,7 @@ makeHovered ::
     OptionList (Option m f) ->
     m
     ( PickFirstResult f
-    , Placement -> Widget (f State.Update) -> Widget (f State.Update)
+    , Placement -> Gui Widget f -> Gui Widget f
     )
 makeHovered myId annotation options =
     do

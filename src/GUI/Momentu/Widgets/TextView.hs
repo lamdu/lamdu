@@ -26,6 +26,7 @@ import           GUI.Momentu.Font (Font, RenderedText(..), renderedText, rendere
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -125,7 +126,7 @@ makeLabel text = (make ?? text) <*> Element.subAnimId [encodeUtf8 text]
 
 makeFocusable ::
     (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env) =>
-    m (Text -> Widget.Id -> WithTextPos (Widget (f State.Update)))
+    m (Text -> Widget.Id -> WithTextPos (Gui Widget f))
 makeFocusable =
     do
         toFocusable <- Widget.makeFocusableView
@@ -136,7 +137,7 @@ makeFocusable =
 
 makeFocusableLabel ::
     (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
-    Text -> m (WithTextPos (Widget (f State.Update)))
+    Text -> m (WithTextPos (Gui Widget f))
 makeFocusableLabel text =
     do
         toFocusable <- Widget.makeFocusableView

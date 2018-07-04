@@ -44,7 +44,7 @@ import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
-import           GUI.Momentu.State (HasState(..))
+import           GUI.Momentu.State (HasState(..), Gui)
 import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (Id(..), joinId)
@@ -76,8 +76,8 @@ class HasTermStyle env where termStyle :: Lens' env TermStyle
 instance HasTermStyle TermStyle where termStyle = id
 
 data Term f = Term
-    { _termWidget :: WithTextPos (Widget (f State.Update))
-    , _termEditEventMap :: EventMap (f State.Update)
+    { _termWidget :: WithTextPos (Gui Widget f)
+    , _termEditEventMap :: Gui EventMap f
     }
 Lens.makeLenses ''Term
 
@@ -96,7 +96,7 @@ type AllowedSearchTerm = Text -> TermCtx Bool
 
 emptyPickEventMap ::
     (MonadReader env m, Menu.HasConfig env, Applicative f) =>
-    m (EventMap (f State.Update))
+    m (Gui EventMap f)
 emptyPickEventMap =
     Lens.view (Menu.config . Menu.configKeys)
     <&> allPickKeys
@@ -287,7 +287,7 @@ make ::
     (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Id ->
-    m (Menu.Placement -> WithTextPos (Widget (f State.Update)))
+    m (Menu.Placement -> WithTextPos (Gui Widget f))
 make makeSearchTerm makeOptions annotation myId =
     readSearchTerm myId <&> (`ResultsContext` resultsIdPrefix myId)
     >>= makeOptions
@@ -304,7 +304,7 @@ make makeSearchTerm makeOptions annotation myId =
 
 searchTermEditEventMap ::
     Applicative f =>
-    Id -> (Text -> Bool) -> Text -> EventMap (f State.Update)
+    Id -> (Text -> Bool) -> Text -> Gui EventMap f
 searchTermEditEventMap myId allowedTerms searchTerm =
     appendCharEventMap <> deleteCharEventMap
     <&> State.updateWidgetState myId

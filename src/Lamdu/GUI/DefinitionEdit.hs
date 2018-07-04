@@ -12,7 +12,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -35,7 +35,7 @@ import           Lamdu.Prelude
 
 undeleteButton ::
     (Monad i, Monad o) =>
-    o Widget.Id -> ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    o Widget.Id -> ExprGuiM i o (WithTextPos (Gui Widget o))
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ["Undelete"] <&> Widget.Id
@@ -45,7 +45,7 @@ undeleteButton undelete =
 
 makeExprDefinition ::
     (Monad i, Monad o) =>
-    EventMap (o GuiState.Update) ->
+    Gui EventMap o ->
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionExpression (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
@@ -62,7 +62,7 @@ makeBuiltinDefinition ::
     (Monad i, Monad o) =>
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionBuiltin (Name g) o ->
-    ExprGuiM i o (WithTextPos (Widget (o GuiState.Update)))
+    ExprGuiM i o (WithTextPos (Gui Widget o))
 makeBuiltinDefinition def builtin =
     do
         nameEdit <- TagEdit.makeBinderTagEdit TextColors.definitionColor name
@@ -92,7 +92,7 @@ wholeFocused size f =
 
 make ::
     (Monad i, Monad o) =>
-    EventMap (o GuiState.Update) ->
+    Gui EventMap o ->
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
 make defEventMap def =

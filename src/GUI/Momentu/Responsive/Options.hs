@@ -23,6 +23,7 @@ import           GUI.Momentu.Responsive
     , rWide, rWideDisambig, rNarrow
     , layoutWidth , vbox, fromView, vertLayoutMaybeDisambiguate
     )
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -80,8 +81,8 @@ makeWideLayouts disamb w =
 hbox ::
     Functor f =>
     HorizDisambiguator (f State.Update) ->
-    ([WithTextPos (Widget (f State.Update))] -> [WithTextPos (Widget (f State.Update))]) ->
-    WideLayoutOption [] (f State.Update)
+    ([WithTextPos (Gui Widget f)] -> [WithTextPos (Gui Widget f)]) ->
+    Gui (WideLayoutOption []) f
 hbox disamb spacer =
     WideLayoutOption
     { _wContexts =
@@ -92,7 +93,7 @@ hbox disamb spacer =
 
 table ::
     (Traversable t0, Traversable t1, Functor f) =>
-    WideLayoutOption (Compose t0 t1) (f State.Update)
+    Gui (WideLayoutOption (Compose t0 t1)) f
 table =
     WideLayoutOption
     { _wContexts =
@@ -125,11 +126,9 @@ disambiguationNone = Disambiguators id id
 
 boxH ::
     Functor f =>
-    ([WithTextPos (Widget (f State.Update))] -> [WithTextPos (Widget (f State.Update))]) ->
-    ([Responsive (f State.Update)] -> [Responsive (f State.Update)]) ->
-    Disambiguators (f State.Update) ->
-    [Responsive (f State.Update)] ->
-    Responsive (f State.Update)
+    ([WithTextPos (Gui Widget f)] -> [WithTextPos (Gui Widget f)]) ->
+    ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
+    [Gui Responsive f] -> Gui Responsive f
 boxH onHGuis onVGuis disamb guis =
     vbox (onVGuis guis)
     & vertLayoutMaybeDisambiguate (disamb ^. disambVert)
@@ -137,14 +136,14 @@ boxH onHGuis onVGuis disamb guis =
 
 box ::
     Functor f =>
-    Disambiguators (f State.Update) ->
-    [Responsive (f State.Update)] ->
-    Responsive (f State.Update)
+    Gui Disambiguators f ->
+    [Gui Responsive f] ->
+    Gui Responsive f
 box = boxH id id
 
 boxSpaced ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m (Disambiguators (f State.Update) -> [Responsive (f State.Update)] -> Responsive (f State.Update))
+    m (Gui Disambiguators f -> [Gui Responsive f] -> Gui Responsive f)
 boxSpaced =
     do
         hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0

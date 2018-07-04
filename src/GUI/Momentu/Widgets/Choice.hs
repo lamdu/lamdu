@@ -17,6 +17,7 @@ import           GUI.Momentu.Hover (Hover, AnchoredWidget)
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -48,17 +49,16 @@ defaultConfig helpPrefix =
 data IsSelected = Selected | NotSelected
     deriving Eq
 
-type HoverFunc f =
-    AnchoredWidget (f State.Update) -> Hover (AnchoredWidget (f State.Update))
+type HoverFunc f = Gui AnchoredWidget f -> Hover (Gui AnchoredWidget f)
 
 makeInner ::
     (Applicative f, Eq childId) =>
     HoverFunc f ->
     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
-     Widget.Id -> Widget (f State.Update) -> Widget (f State.Update)) ->
+     Widget.Id -> Gui Widget f -> Gui Widget f) ->
     Property f childId ->
-    [(childId, Widget (f State.Update))] -> Config -> Widget.Id ->
-    Widget (f State.Update)
+    [(childId, Gui Widget f)] -> Config -> Widget.Id ->
+    Gui Widget f
 makeInner hover fd (Property curChild choose) children config myId =
     widget True
     & (if anyChildFocused then hoverAsClosed else id)
@@ -104,6 +104,6 @@ make ::
     , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
     m
-    (Property f childId -> [(childId, Widget (f State.Update))] ->
-     Config -> Widget.Id -> Widget (f State.Update))
+    (Property f childId -> [(childId, Gui Widget f)] ->
+     Config -> Widget.Id -> Gui Widget f)
 make = makeInner <$> Hover.hover <*> FocusDelegator.make

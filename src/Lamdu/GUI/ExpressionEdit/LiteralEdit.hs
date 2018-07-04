@@ -19,6 +19,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -48,7 +49,7 @@ import           Lamdu.Prelude
 mkEditEventMap ::
     Monad o =>
     Text -> o Sugar.EntityId ->
-    EventMap (o GuiState.Update)
+    Gui EventMap o
 mkEditEventMap valText setToHole =
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
@@ -104,7 +105,7 @@ withFd ::
     ( MonadReader env m, HasConfig env, GuiState.HasCursor env, Menu.HasConfig env
     , Applicative f
     ) =>
-    m (Widget.Id -> WithTextPos (Widget (f GuiState.Update)) -> WithTextPos (Widget (f GuiState.Update)))
+    m (Widget.Id -> WithTextPos (Gui Widget f) -> WithTextPos (Gui Widget f))
 withFd =
     (FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent)
     <&> Lens.mapped %~ (Align.tValue %~)
@@ -115,7 +116,7 @@ textEdit ::
     ) =>
     Property o Text ->
     Sugar.Payload name i o ExprGui.Payload ->
-    m (WithTextPos (Widget (o GuiState.Update)))
+    m (WithTextPos (Gui Widget o))
 textEdit prop pl =
     do
         left <- TextView.makeLabel "“"
@@ -141,7 +142,7 @@ numEdit ::
     ) =>
     Property o Double ->
     Sugar.Payload name i o ExprGui.Payload ->
-    m (WithTextPos (Widget (o GuiState.Update)))
+    m (WithTextPos (Gui Widget o))
 numEdit prop pl =
     (withFd ?? myId) <*>
     do

@@ -11,6 +11,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -33,7 +34,7 @@ make ::
     Widget.Id ->
     Sugar.BinderParams name i o ->
     Property f Sugar.PresentationMode ->
-    m (Widget (f GuiState.Update))
+    m (Gui Widget f)
 make myId (Sugar.Params params) prop =
     do
         theme <- Lens.view Theme.theme

@@ -14,6 +14,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -38,14 +39,14 @@ import           Lamdu.Prelude
 
 addScopeEdit ::
     Functor o =>
-    Maybe (Widget (o GuiState.Update)) -> ExpressionGui o ->
+    Maybe (Gui Widget o) -> ExpressionGui o ->
     ExpressionGui o
 addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
     Functor o =>
     Maybe (ExpressionGui o) ->
-    Maybe (Widget (o GuiState.Update)) -> [ExpressionGui o]
+    Maybe (Gui Widget o) -> [ExpressionGui o]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
@@ -53,7 +54,7 @@ mkExpanded ::
     ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
-    f (Maybe (ExpressionGui o) -> Maybe (Widget (o GuiState.Update)) ->
+    f (Maybe (ExpressionGui o) -> Maybe (Gui Widget o) ->
      [ExpressionGui o])
 mkExpanded =
     Styled.grammarLabel "→" <&> Responsive.fromTextView
@@ -67,7 +68,7 @@ mkShrunk ::
     ( Monad o, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Widget (o GuiState.Update)) -> [ExpressionGui o])
+    f (Maybe (Gui Widget o) -> [ExpressionGui o])
 mkShrunk paramIds myId =
     do
         jumpKeys <- Lens.view (Config.config . Config.jumpToDefinitionKeys)
@@ -95,7 +96,7 @@ mkLightLambda ::
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f
-    (Maybe (ExpressionGui o) -> Maybe (Widget (o GuiState.Update)) ->
+    (Maybe (ExpressionGui o) -> Maybe (Gui Widget o) ->
      [ExpressionGui o])
 mkLightLambda params myId =
     do

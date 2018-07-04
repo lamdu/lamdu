@@ -5,7 +5,7 @@ module GUI.Momentu.Scroll
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Rect as Rect
-import qualified GUI.Momentu.State as State
+import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 
@@ -14,7 +14,7 @@ import           Lamdu.Prelude
 -- Focus area into the given region
 focusAreaInto ::
     Functor f =>
-    Widget.Size -> Widget (f State.Update) -> Widget (f State.Update)
+    Widget.Size -> Gui Widget f -> Gui Widget f
 focusAreaInto regionSize widget =
     widget
     & Widget.wState .~ Widget.translate translation2d widget

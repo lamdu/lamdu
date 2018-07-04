@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (HasWidget(..), EventContext)
 import qualified GUI.Momentu.Widget as Widget
@@ -67,12 +68,12 @@ exprInfoFromPl pl =
 add ::
     (Monad i, HasWidget w, Applicative o0) =>
     Options -> Sugar.Payload name i0 o0 ExprGui.Payload ->
-    ExprGuiM i o (w (o0 GuiState.Update) -> w (o0 GuiState.Update))
+    ExprGuiM i o (Gui w o0 -> Gui w o0)
 add options pl = exprInfoFromPl pl >>= addWith options
 
 addWith ::
     (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative o) =>
-    Options -> ExprInfo name i o -> m (w (o GuiState.Update) -> w (o GuiState.Update))
+    Options -> ExprInfo name i o -> m (Gui w o -> Gui w o)
 addWith options exprInfo =
     do
         actions <- actionsEventMap options exprInfo
@@ -83,7 +84,7 @@ addWith options exprInfo =
 
 jumpHolesEventMap ::
     (MonadReader env m, Config.HasConfig env, Applicative f) =>
-    NearestHoles -> m (EventMap (f GuiState.Update))
+    NearestHoles -> m (Gui EventMap f)
 jumpHolesEventMap hg =
     Lens.view (Config.config . Config.completion)
     <&>
@@ -106,7 +107,7 @@ extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor o) =>
-    Sugar.NodeActions name i o -> m (EventMap (o GuiState.Update))
+    Sugar.NodeActions name i o -> m (Gui EventMap o)
 extractEventMap actions =
     Lens.view (Config.config . Config.extractKeys)
     <&>
@@ -119,7 +120,7 @@ extractEventMap actions =
 actionsEventMap ::
     (MonadReader env m, Config.HasConfig env, Applicative o) =>
     Options -> ExprInfo name i o ->
-    m (EventContext -> EventMap (o GuiState.Update))
+    m (EventContext -> Gui EventMap o)
 actionsEventMap options exprInfo =
     sequence
     [ case exprInfoActions exprInfo ^. Sugar.detach of
@@ -170,7 +171,7 @@ transformSearchTerm exprInfo eventCtx =
 
 transformEventMap ::
     Applicative o =>
-    Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update)
+    Options -> ExprInfo name i o -> EventContext -> Gui EventMap o
 transformEventMap options exprInfo eventCtx =
     case exprInfoActions exprInfo ^. Sugar.detach of
     Sugar.DetachAction detach ->
@@ -189,7 +190,7 @@ transformEventMap options exprInfo eventCtx =
 
 detachEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    f Sugar.EntityId -> m (EventMap (f GuiState.Update))
+    f Sugar.EntityId -> m (Gui EventMap f)
 detachEventMap detach =
     Lens.view Config.config
     <&>
@@ -204,7 +205,7 @@ detachEventMap detach =
 
 replaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    f Sugar.EntityId-> m (EventMap (f GuiState.Update))
+    f Sugar.EntityId-> m (Gui EventMap f)
 replaceEventMap action =
     Lens.view Config.config
     <&>

@@ -20,6 +20,7 @@ import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -62,9 +63,7 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    Functor m =>
-    Sugar.Payload name i (T m) a -> [MetaKey] ->
-    EventMap (T m GuiState.Update)
+    Functor m => Sugar.Payload name i (T m) a -> [MetaKey] -> Gui EventMap (T m)
 extractEventMap pl keys =
     pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor
@@ -72,9 +71,8 @@ extractEventMap pl keys =
 
 replEventMap ::
     Monad m =>
-    Config -> ExportRepl m ->
-    Sugar.Payload name i (T m) a ->
-    EventMap (IOTrans m GuiState.Update)
+    Config -> ExportRepl m -> Sugar.Payload name i (T m) a ->
+    Gui EventMap (IOTrans m)
 replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
     mconcat
     [ extractEventMap replExprPl (theConfig ^. Config.extractKeys)
@@ -109,7 +107,7 @@ errorIndicator ::
     , HasTheme env, HasConfig env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
-    m (Align.WithTextPos (Widget (o GuiState.Update)))
+    m (Align.WithTextPos (Gui Widget o))
 errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
     do
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
@@ -166,7 +164,7 @@ resultWidget ::
     , HasTheme env, HasConfig env
     ) =>
     ExportRepl o -> Sugar.Payload name i (T o) a -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
-    m (Align.WithTextPos (Widget (IOTrans o GuiState.Update)))
+    m (Align.WithTextPos (Gui Widget (IOTrans o)))
 resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
@@ -191,7 +189,7 @@ make ::
     ExportRepl m ->
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (T m) (Responsive (IOTrans m GuiState.Update))
+    ExprGuiM (T m) (T m) (Gui Responsive (IOTrans m))
 make exportRepl (Sugar.Repl replExpr _varInfo replResult) =
     do
         theConfig <- Lens.view config

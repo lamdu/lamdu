@@ -9,6 +9,7 @@ import           GUI.Momentu (MetaKey(..), WidgetId)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -49,7 +50,7 @@ makeLiteralEventMap ::
     (Monad i, Monad o) =>
     (forall x. i x -> o x) ->
     Sugar.OptionLiteral name i o ->
-    EventMap (o GuiState.Update)
+    Gui EventMap o
 makeLiteralEventMap io optionLiteral =
     E.keysEventMapMovesCursor toLiteralTextKeys (E.Doc ["Edit", "Literal Text"])
     (makeLiteral io optionLiteral (Sugar.LiteralText (Identity "")))

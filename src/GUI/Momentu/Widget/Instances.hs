@@ -27,7 +27,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Update)
+import           GUI.Momentu.State (Gui, Update)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -93,7 +93,7 @@ data NavDir = NavDir
 
 glueStates ::
     Functor f =>
-    Orientation -> Widget (f Update) -> Widget (f Update) -> Widget (f Update)
+    Orientation -> Gui Widget f -> Gui Widget f -> Gui Widget f
 glueStates orientation w0 w1 =
     w0
     & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wState) (w1 ^. wState)
@@ -112,7 +112,7 @@ glueStates orientation w0 w1 =
 combineStates ::
     Functor f =>
     Orientation -> NavDir -> NavDir ->
-    State (f Update) -> State (f Update) -> State (f Update)
+    Gui State f -> Gui State f -> Gui State f
 combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates o _ _ (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
@@ -224,7 +224,7 @@ onState _   onFocused (StateFocused   x) = onFocused   x <&> StateFocused
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate :: Functor f => Vector2 R -> Widget (f Update) -> State (f Update)
+translate :: Functor f => Vector2 R -> Gui Widget f -> Gui State f
 translate pos = translateGeneric (fmap (translateUpdate pos)) pos
 
 translateUpdate :: Vector2 R -> Update -> Update
