@@ -62,6 +62,8 @@ data AnnotatedArg name expr = AnnotatedArg
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
+-- TODO: func + specialArgs into a single sum type so that field order
+-- matches gui order, no need for special traversal code
 data LabeledApply name i o a = LabeledApply
     { _aFunc :: LabeledApplyFunc name o a
     , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
