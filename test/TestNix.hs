@@ -43,13 +43,11 @@ stackDepsTest =
                     <&> (<> ".nix")
                 ) <> extraNixFiles
         nixFiles <- listDirectory "nix"
-        let unexpectedNixFiles = Set.difference (Set.fromList nixFiles) (Set.fromList expectedNixFiles)
-        unless (Set.null unexpectedNixFiles)
-            (assertString ("Unexpected nix files: " ++ show unexpectedNixFiles))
+        assertSetEquals "Nix files" (Set.fromList expectedNixFiles) (Set.fromList nixFiles)
     & testCase "verify-nix-stack"
     where
         -- Nix files that don't reflect stack.yaml dependencies
-        extraNixFiles = ["AntTweakBar.nix", "OpenGL.nix", "freetype-gl.nix", "lamdu.nix"]
+        extraNixFiles = ["lamdu.nix"]
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
