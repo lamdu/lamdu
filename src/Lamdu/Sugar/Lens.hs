@@ -27,7 +27,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 data PayloadOf name i o
-    = OfExpr (Expression name i o ())
+    = OfExpr (Body name i o ())
     | OfLabeledApplyFunc (BinderVarRef name o)
     | OfRelayedArg (GetVar name o)
     | OfNullaryVal (NullaryVal name i o)
@@ -164,8 +164,8 @@ overBodyChildren n f r e =
 
 exprPayload ::
     Lens.IndexedLens' (PayloadOf name i o) (Expression name i o a) a
-exprPayload f v@(Expression pl x) =
-    Lens.indexed f (OfExpr (void v)) pl <&> (`Expression` x)
+exprPayload f (Expression pl x) =
+    Lens.indexed f (OfExpr (void x)) pl <&> (`Expression` x)
 
 leafNodePayload ::
     (l -> p) ->
@@ -179,14 +179,14 @@ subExprPayloads ::
     (Expression name i o a)
     (Expression name i o b)
     a b
-subExprPayloads f v@(Expression pl x) =
+subExprPayloads f (Expression pl x) =
     flip Expression
     <$> bodyChildren
         (leafNodePayload OfNullaryVal f)
         (Lens.cloneIndexedLens labeledFuncPayloads f)
         (Lens.cloneIndexedLens relayedPayloads f)
         (subExprPayloads f) x
-    <*> Lens.indexed f (OfExpr (void v)) pl
+    <*> Lens.indexed f (OfExpr (void x)) pl
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
@@ -207,7 +207,7 @@ payloadsOf ::
 payloadsOf x =
     subExprPayloads . Lens.ifiltered predicate
     where
-        predicate idx _ = Lens.has (_OfExpr . body . x) idx
+        predicate idx _ = Lens.has (_OfExpr . x) idx
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
