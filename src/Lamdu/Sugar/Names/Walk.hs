@@ -275,24 +275,15 @@ withTag nameType varInfo (Sugar.Tag info actions) =
     <$> tagName (opWithName varInfo nameType) info
     <*> liftCPS (toTagSelection actions)
 
-toRelayedArg ::
+toNode ::
     MonadNaming m =>
-    Node (GetVar (OldName m) o) (Payload (OldName m) (IM m) o a) ->
-    m (Node (GetVar (NewName m) o) (Payload (NewName m) (IM m) o a))
-toRelayedArg Node{..} =
-    (\_val _ann -> Node{..})
-    <$> toGetVar _val
-    <*> toPayload _ann
-
-toLabeledApplyFunc ::
-    MonadNaming m =>
-    Maybe Disambiguator ->
-    Node (BinderVarRef (OldName m) o) (Payload (OldName m) (IM m) o a) ->
-    m (Node (BinderVarRef (NewName m) o) (Payload (NewName m) (IM m) o a))
-toLabeledApplyFunc disambiguator (Node pl func) =
+    (a -> m b) ->
+    Node a (Payload (OldName m) (IM m) o p) ->
+    m (Node b (Payload (NewName m) (IM m) o p))
+toNode toV (Node pl v) =
     Node
     <$> toPayload pl
-    <*> toBinderVarRef disambiguator func
+    <*> toV v
 
 toAnnotatedArg ::
     MonadNaming m =>
@@ -310,10 +301,10 @@ toLabeledApply ::
     m (LabeledApply (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toLabeledApply app@LabeledApply{..} =
     LabeledApply
-    <$> toLabeledApplyFunc (Just (funcSignature app)) _aFunc
+    <$> toNode (toBinderVarRef (Just (funcSignature app))) _aFunc
     <*> traverse toExpression _aSpecialArgs
     <*> traverse (toAnnotatedArg toExpression) _aAnnotatedArgs
-    <*> traverse toRelayedArg _aRelayedArgs
+    <*> traverse (toNode toGetVar) _aRelayedArgs
 
 toHole ::
     MonadNaming m =>
