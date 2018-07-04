@@ -174,16 +174,25 @@ leafNodePayload ::
 leafNodePayload c f (Node pl x) =
     Lens.indexed f (c x) pl <&> (`Node` x)
 
+parentNodePayloads ::
+    Lens.AnIndexedTraversal i (f a) (f b) a b ->
+    (f a -> i) ->
+    Lens.IndexedTraversal i
+    (ParentNode f a)
+    (ParentNode f b)
+    a b
+parentNodePayloads b i f (PNode (Node pl x)) =
+    flip Node
+    <$> Lens.cloneIndexedTraversal b f x
+    <*> Lens.indexed f (i x) pl
+    <&> PNode
+
 exprPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
     (Expression name i o a)
     (Expression name i o b)
     a b
-exprPayloads f (PNode (Node pl x)) =
-    flip Node
-    <$> bodyPayloads f x
-    <*> Lens.indexed f (OfExpr (void x)) pl
-    <&> PNode
+exprPayloads = parentNodePayloads bodyPayloads (OfExpr . void)
 
 bodyPayloads ::
     forall name i o a b.
