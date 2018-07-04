@@ -6,7 +6,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
-    , Expression(..), body, annotation
+    , Expression(..), _Expr
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
@@ -58,10 +58,14 @@ data Node v a = Node
     , _val :: v
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Expression name i o a = Expression
-    { _annotation :: a
-    , _body :: Body name i o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+newtype Expression name i o a = Expr (Node (Body name i o a) a)
+    deriving Generic
+instance Functor (Expression name i o) where
+    fmap f (Expr (Node a b)) = Node (f a) (b <&> f) & Expr
+instance Foldable (Expression name i o) where
+    foldMap f (Expr (Node a b)) = f a <> foldMap f b
+instance Traversable (Expression name i o) where
+    traverse f (Expr (Node a b)) = (Node <$> f a <*> traverse f b) <&> Expr
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo name
@@ -206,7 +210,6 @@ Lens.makeLenses ''AssignFunction
 Lens.makeLenses ''Assignment
 Lens.makeLenses ''AssignPlain
 Lens.makeLenses ''Binder
-Lens.makeLenses ''Expression
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
 Lens.makeLenses ''Hole
@@ -221,3 +224,4 @@ Lens.makeLenses ''Node
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''Body
+Lens.makePrisms ''Expression

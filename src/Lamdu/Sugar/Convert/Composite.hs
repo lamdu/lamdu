@@ -183,7 +183,7 @@ convert ::
     ExtendVal m (Input.Payload m a) ->
     ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
-    case restS ^? body . prism of
+    case restS ^? _Expr . val . prism of
     Just r ->
         convertExtend cons op valS exprPl extendV r
         <&> (prism #)
@@ -194,9 +194,9 @@ convert op empty cons prism valS restS exprPl extendV =
         -- subexprs given will add no hidden payloads. Then we add the
         -- extend only to pUserData as the hidden payload
         >>= addActions [] exprPl
-        <&> annotation . pInput . Input.entityId .~ restS ^. annotation . pInput . Input.entityId
-        <&> annotation . pInput . Input.userData <>~
-            (exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData)
+        <&> _Expr . ann . pInput . Input.entityId .~ restS ^. _Expr . ann . pInput . Input.entityId
+        <&> _Expr . ann . pInput . Input.userData <>~
+            (exprPl ^. Input.userData <> restS ^. _Expr . ann . pInput . Input.userData)
     Nothing ->
         convertOneItemOpenComposite empty cons op valS restS exprPl extendV
         <&> (prism #)

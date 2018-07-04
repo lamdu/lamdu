@@ -51,7 +51,7 @@ testSugarActions program actions =
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
 replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o a)
-replBody = waRepl . replExpr . bContent . _BinderExpr . body
+replBody = waRepl . replExpr . bContent . _BinderExpr . _Expr . val
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
@@ -67,8 +67,8 @@ testChangeParam =
             "new" &
             workArea ^?!
             replBody . _BodySimpleApply . V.applyFunc .
-            body . _BodySimpleApply . V.applyArg .
-            body . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
+            _Expr . val . _BodySimpleApply . V.applyArg .
+            _Expr . val . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -110,12 +110,12 @@ testInline =
         inline workArea =
             do
                 Just yOption <-
-                    letItem ^. lBody . bContent . _BinderExpr . body . _BodyHole . holeOptions
+                    letItem ^. lBody . bContent . _BinderExpr . _Expr . val . _BodyHole . holeOptions
                     >>= findM isY
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
-                _ <- result ^?! holeResultConverted . _BinderExpr . body . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                _ <- result ^?! holeResultConverted . _BinderExpr . _Expr . val . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
                 letItem =
@@ -124,14 +124,14 @@ testInline =
                     bContent . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
-                    <&> Lens.has (_BinderExpr . body . _BodyGetVar . _GetBinder . bvForm . _GetLet)
+                    <&> Lens.has (_BinderExpr . _Expr . val . _BodyGetVar . _GetBinder . bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
             bContent . _BinderExpr .
-            body . _BodyLiteral . _LiteralNum
+            _Expr . val . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
@@ -173,7 +173,7 @@ testLightLambda =
             | otherwise = fail "Expected light lambda sugar!"
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
-            body . _BodyLam . lamMode . _LightLambda
+            _Expr . val . _BodyLam . lamMode . _LightLambda
 
 delDefParam :: Test
 delDefParam =

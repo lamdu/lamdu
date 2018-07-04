@@ -438,10 +438,7 @@ toExpression ::
     MonadNaming m =>
     Expression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Expression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toExpression (Expression pl x) =
-    Expression
-    <$> toPayload pl
-    <*> toBody x
+toExpression = _Expr (toNode toBody)
 
 withParamInfo ::
     MonadNaming m =>

@@ -78,7 +78,7 @@ makeElse (Sugar.SimpleElse expr) =
     <&> pure
     where
         elseAnimId = Widget.toAnimId elseId <> ["else"]
-        elseId = WidgetIds.fromExprPayload (expr ^. Sugar.annotation)
+        elseId = WidgetIds.fromExprPayload (expr ^. Sugar._Expr . Sugar.ann)
 makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _nodeActions)) =
     -- TODO: use nodeActions
     do

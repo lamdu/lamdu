@@ -104,7 +104,7 @@ make mNextEntry ctx resultId pick holeResultConverted =
     }
     where
         holeResultId =
-            holeResultConverted ^. SugarLens.binderContentResultExpr . Sugar.annotation . Sugar.plEntityId
+            holeResultConverted ^. SugarLens.binderContentResultExpr . Sugar._Expr . Sugar.ann . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResultConverted ^? SugarLens.binderContentExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId

@@ -250,7 +250,7 @@ openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
         & E.keysEventMapMovesCursor keys (doc "Close")
     | otherwise = pure mempty
     where
-        isHole = Lens.has (Sugar.body . Sugar._BodyHole)
+        isHole = Lens.has (Sugar._Expr . Sugar.val . Sugar._BodyHole)
 
 closedRecordEventMap ::
     (MonadReader env m, HasConfig env, Functor o) =>

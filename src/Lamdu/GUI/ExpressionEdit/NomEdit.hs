@@ -33,7 +33,7 @@ mReplaceParent ::
     Lens.Traversal'
     (Sugar.Expression name i o (Sugar.Payload name i o a))
     (o Sugar.EntityId)
-mReplaceParent = Sugar.annotation . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
+mReplaceParent = Sugar._Expr . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
     (Monad i, Monad o) =>

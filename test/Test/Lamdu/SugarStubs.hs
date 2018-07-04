@@ -217,7 +217,7 @@ expr ::
     Sugar.Body name Identity Unit (Sugar.Payload name Identity Unit ()) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr body =
-    Sugar.Expression { Sugar._body = body, Sugar._annotation = payload }
+    Sugar.Expr Sugar.Node { Sugar._val = body, Sugar._ann = payload }
 
 numType :: Sugar.Type InternalName
 numType =

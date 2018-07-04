@@ -164,8 +164,8 @@ overBodyChildren n f r e =
 
 exprPayload ::
     Lens.IndexedLens' (PayloadOf name i o) (Expression name i o a) a
-exprPayload f (Expression pl x) =
-    Lens.indexed f (OfExpr (void x)) pl <&> (`Expression` x)
+exprPayload f (Expr (Node pl x)) =
+    Lens.indexed f (OfExpr (void x)) pl <&> (`Node` x) <&> Expr
 
 leafNodePayload ::
     (l -> p) ->
@@ -179,14 +179,15 @@ subExprPayloads ::
     (Expression name i o a)
     (Expression name i o b)
     a b
-subExprPayloads f (Expression pl x) =
-    flip Expression
+subExprPayloads f (Expr (Node pl x)) =
+    flip Node
     <$> bodyChildren
         (leafNodePayload OfNullaryVal f)
         (Lens.cloneIndexedLens labeledFuncPayloads f)
         (Lens.cloneIndexedLens relayedPayloads f)
         (subExprPayloads f) x
     <*> Lens.indexed f (OfExpr (void x)) pl
+    <&> Expr
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
@@ -247,13 +248,13 @@ binderContentResultExpr f (BinderExpr e) = f e <&> BinderExpr
 binderContentEntityId ::
     Lens' (BinderContent name i o (Payload name i o a)) EntityId
 binderContentEntityId f (BinderExpr e) =
-    e & annotation . plEntityId %%~ f <&> BinderExpr
+    e & _Expr . ann . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
 leftMostLeaf :: Expression name i o a -> Expression name i o a
 leftMostLeaf v =
-    case v ^.. body . bodyChildren pure pure pure of
+    case v ^.. _Expr . val . bodyChildren pure pure pure of
     [] -> v
     (x:_) -> leftMostLeaf x
 
@@ -327,11 +328,11 @@ funcSubExprParams f x =
 
 bodySubExprParams :: Lens.Traversal' (Body name i o a) (BinderParams name i o)
 bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
-bodySubExprParams f x = bodyChildren pure pure pure ((body . bodySubExprParams) f) x
+bodySubExprParams f x = bodyChildren pure pure pure ((_Expr . val . bodySubExprParams) f) x
 
 binderContentSubExprParams :: Lens.Traversal' (BinderContent name i o a) (BinderParams name i o)
 binderContentSubExprParams f (BinderExpr x) =
-    (body . bodySubExprParams) f x <&> BinderExpr
+    (_Expr . val . bodySubExprParams) f x <&> BinderExpr
 binderContentSubExprParams f (BinderLet x) =
     (\v b -> BinderLet x{_lValue = v, _lBody = b})
     <$> assignmentSubExprParams f (x ^. lValue)

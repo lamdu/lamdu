@@ -73,7 +73,7 @@ makeReplGui cache env =
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId =
                 repl ^. Sugar.bContent . SugarLens.binderContentResultExpr
-                . Sugar.annotation
+                . Sugar._Expr . Sugar.ann
                 & WidgetIds.fromExprPayload
         gui <-
             makeBinderBodyEdit repl
@@ -145,7 +145,7 @@ testLambdaDelete =
     do
         paramCursor <-
             fromWorkArea cache
-            (replExpr . Sugar.body. Sugar._BodyLam . Sugar.lamFunc .
+            (replExpr . Sugar._Expr . Sugar.val. Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
@@ -166,7 +166,7 @@ testFragmentSize =
     testProgram "simple-fragment.json" $
     \cache ->
     do
-        frag <- fromWorkArea cache (replExpr . Sugar.annotation)
+        frag <- fromWorkArea cache (replExpr . Sugar._Expr . Sugar.ann)
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
@@ -188,9 +188,9 @@ testOpPrec =
     do
         holeId <-
             fromWorkArea cache
-            (replExpr . Sugar.body . Sugar._BodyLam . Sugar.lamFunc .
+            (replExpr . Sugar._Expr . Sugar.val . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fBody . Sugar.bContent . Sugar._BinderExpr .
-             Sugar.annotation . Sugar.plEntityId)
+             Sugar._Expr . Sugar.ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache

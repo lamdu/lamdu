@@ -15,7 +15,7 @@ infixArgs ::
     ( Sugar.Expression name i o a
     , Sugar.Expression name i o a
     )
-infixArgs = Sugar.body . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
+infixArgs = Sugar._Expr . Sugar.val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
 
 test :: Test
 test =
@@ -27,7 +27,7 @@ test =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    Sugar.body . Sugar._BodyGetField . Sugar.gfRecord . Sugar.annotation . _2
+    Sugar._Expr . Sugar.val . Sugar._BodyGetField . Sugar.gfRecord . Sugar._Expr . Sugar.ann . _2
     & assertEqual "get field should disambiguate compound expression"
         Parens.NeedsParens
     & testCase "get-field-of-apply"
@@ -41,6 +41,6 @@ testMinOpPrecInfix =
         assertEqual "Parens minOpPrec is not 0?!" 0 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . Sugar.annotation
+        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . Sugar._Expr . Sugar.ann
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExpr
         i = Stub.litNum

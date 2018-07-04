@@ -93,7 +93,7 @@ makeInline stored redex useId
 binderContentEntityId ::
     Lens' (BinderContent name i o (ConvertPayload m a)) EntityId
 binderContentEntityId f (BinderExpr e) =
-    e & annotation . pInput . Input.entityId %%~ f <&> BinderExpr
+    e & _Expr . ann . pInput . Input.entityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
@@ -137,7 +137,7 @@ convertRedex expr redex =
                 letBody
                 & bContent .
                     Lens.failing
-                    (_BinderExpr . annotation . pActions)
+                    (_BinderExpr . _Expr . ann . pActions)
                     (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
                     (letBody ^. bContent . binderContentEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
@@ -222,7 +222,7 @@ makeAssignment chosenScopeProp params funcBody pl =
                 <&> BodyFunction
         nodeActions <- makeActions pl
         let mRemoveSetToHole
-                | Lens.has (_BodyPlain . apBody . bContent . _BinderExpr . body . _BodyHole) bod =
+                | Lens.has (_BodyPlain . apBody . bContent . _BinderExpr . _Expr . val . _BodyHole) bod =
                     mSetToHole .~ Nothing
                 | otherwise = id
         pure Assignment
@@ -253,7 +253,7 @@ convertLam lam exprPl =
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions lam exprPl
-            <&> body . SugarLens.bodyChildPayloads .
+            <&> _Expr . val . SugarLens.bodyChildPayloads .
                 pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda :: Set InternalName -> Function InternalName i o a -> Bool
@@ -284,7 +284,7 @@ markLightParams ::
     Monad m =>
     Set InternalName -> Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
-markLightParams paramNames (Expression pl bod) =
+markLightParams paramNames (Expr (Node pl bod)) =
     case bod of
     BodyGetVar (GetParam n)
         | Set.member (n ^. pNameRef . nrName) paramNames ->
@@ -293,7 +293,7 @@ markLightParams paramNames (Expression pl bod) =
             & GetParam & BodyGetVar
     BodyFragment w -> w & fExpr %~ markLightParams paramNames & BodyFragment
     _ -> bod & SugarLens.bodyChildren pure pure pure %~ markLightParams paramNames
-    & Expression pl
+    & Node pl & Expr
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertBinder ::

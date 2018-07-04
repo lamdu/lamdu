@@ -34,7 +34,7 @@ import           Lamdu.Prelude
 make ::
     (Monad i, Monad o) =>
     ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
-make (Sugar.Expression pl body) =
+make (Sugar.Expr (Sugar.Node pl body)) =
     makeEditor body pl & assignCursor
     where
         exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds

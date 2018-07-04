@@ -41,9 +41,9 @@ nextHolesBefore ::
     Sugar.Expression name0 i0 o0 (Sugar.Payload name1 i1 o1 Payload) ->
     NearestHoles
 nextHolesBefore val =
-    node ^. Sugar.annotation . Sugar.plData . plNearestHoles
-    & if Lens.has (Sugar.body . SugarLens.bodyUnfinished) node
-        then NearestHoles.next ?~ node ^. Sugar.annotation . Sugar.plEntityId
+    node ^. Sugar._Expr . Sugar.ann . Sugar.plData . plNearestHoles
+    & if Lens.has (Sugar._Expr . Sugar.val . SugarLens.bodyUnfinished) node
+        then NearestHoles.next ?~ node ^. Sugar._Expr . Sugar.ann . Sugar.plEntityId
         else id
     where
         node = SugarLens.leftMostLeaf val

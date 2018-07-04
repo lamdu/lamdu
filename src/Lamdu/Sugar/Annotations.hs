@@ -43,12 +43,12 @@ forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
     ShowAnnotation
-topLevelAnn = annotation . _1
+topLevelAnn = _Expr . ann . _1
 
 markAnnotationsToDisplay ::
     Expression name i o a ->
     Expression name i o (ShowAnnotation, a)
-markAnnotationsToDisplay (Expression pl oldBody) =
+markAnnotationsToDisplay (Expr (Node pl oldBody)) =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations
     BodyLiteral LiteralNum {} -> set neverShowAnnotations
@@ -72,7 +72,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
                 || binder ^. bContent . SugarLens.binderContentResultExpr .
                     topLevelAnn . showInEvalMode
             )
-        & (`Expression` newBodyWith dontShowEval)
+        & (`Node` newBodyWith dontShowEval) & Expr
     BodyInject _ -> set dontShowEval
     BodyGetVar (GetParamsRecord _) -> set showAnnotationWhenVerbose
     BodyGetField _ -> set showAnnotationWhenVerbose
@@ -80,23 +80,23 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         app
         & applyFunc . nonHoleAnn .~ neverShowAnnotations
         & BodySimpleApply
-        & Expression defPl
+        & Node defPl & Expr
     BodyLabeledApply _ -> set showAnnotationWhenVerbose
     BodyIfElse i ->
         i
         & iIfThen . itThen %~ onCaseAlt
         & iElse %~ onElse
         & BodyIfElse
-        & Expression defPl
+        & Node defPl & Expr
     BodyHole hole ->
         hole
         & BodyHole
-        & Expression (plWith forceShowTypeOrEval)
+        & Node (plWith forceShowTypeOrEval) & Expr
     BodyFragment fragment ->
         fragment
         & fExpr . nonHoleAnn .~ forceShowTypeOrEval
         & BodyFragment
-        & Expression (plWith forceShowTypeOrEval)
+        & Node (plWith forceShowTypeOrEval) & Expr
     BodyCase cas ->
         cas
         -- cKind contains the scrutinee which is not always
@@ -105,7 +105,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
         & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
         & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
         & BodyCase
-        & Expression defPl
+        & Node defPl & Expr
     where
         newBodyWith f =
             SugarLens.overBodyChildren
@@ -116,7 +116,7 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             newBody
         plWith x = (x, pl)
         defPl = plWith showAnnotationWhenVerbose
-        set x = Expression (plWith x) newBody
+        set x = Node (plWith x) newBody & Expr
         newBody =
             SugarLens.overBodyChildren
             (ann %~ (,) neverShowAnnotations)
@@ -124,10 +124,10 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             (ann %~ (,) neverShowAnnotations)
             markAnnotationsToDisplay
             oldBody
-        nonHoleAnn = Lens.filtered (Lens.nullOf (body . SugarLens.bodyUnfinished)) . topLevelAnn
+        nonHoleAnn = Lens.filtered (Lens.nullOf (_Expr . val . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
-            & body . _BodyLam . lamFunc . fBody . bContent .
+            & _Expr . val . _BodyLam . lamFunc . fBody . bContent .
               SugarLens.binderContentResultExpr . nonHoleAnn .~ neverShowAnnotations
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =

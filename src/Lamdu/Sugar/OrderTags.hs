@@ -83,9 +83,9 @@ orderExpr ::
     Monad m => Order m (Sugar.Expression name (T m) o (Sugar.Payload name i o a))
 orderExpr e =
     e
-    & Sugar.annotation . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
-    >>= Sugar.body %%~ orderBody
-    >>= Sugar.body . SugarLens.bodyChildren pure pure pure %%~ orderExpr
+    & Sugar._Expr . Sugar.ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
+    >>= Sugar._Expr . Sugar.val %%~ orderBody
+    >>= Sugar._Expr . Sugar.val . SugarLens.bodyChildren pure pure pure %%~ orderExpr
 
 orderFunction :: Monad m => Order m (Sugar.Function name (T m) o a)
 orderFunction =
