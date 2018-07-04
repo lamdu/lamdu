@@ -159,8 +159,8 @@ setChildReplaceParentActions =
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) %~
             overBodyChildren
             (nullaryPayload %~ join setToExpr)
-            (fPayload %~ join setToExpr)
-            (raPayload %~ join setToExpr)
+            (ann %~ join setToExpr)
+            (ann %~ join setToExpr)
             (annotation %~ join setToExpr)
         -- Replace-parent with fragment sets directly to fragment expression
         & bodyChildren pure pure pure . Lens.filteredBy (body . _BodyFragment . fExpr . annotation) <. annotation %@~ setToExpr

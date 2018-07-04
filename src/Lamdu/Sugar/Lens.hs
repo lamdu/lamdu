@@ -28,8 +28,8 @@ import           Lamdu.Prelude
 
 data PayloadOf name i o
     = OfExpr (Expression name i o ())
-    | OfLabeledApplyFunc (LabeledApplyFunc name o ())
-    | OfRelayedArg (RelayedArg name o ())
+    | OfLabeledApplyFunc (BinderVarRef name o)
+    | OfRelayedArg (GetVar name o)
     | OfNullaryVal (NullaryVal name i o ())
 Lens.makePrisms ''PayloadOf
 
@@ -72,8 +72,8 @@ funcExprs = fBody . binderExprs
 
 labeledApplyChildren ::
     Applicative f =>
-    (LabeledApplyFunc name o a -> f (LabeledApplyFunc name o b)) ->
-    (RelayedArg name o a -> f (RelayedArg name o b)) ->
+    (Node (BinderVarRef name o) a -> f (Node (BinderVarRef name o) b)) ->
+    (Node (GetVar name o) a -> f (Node (GetVar name o) b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
     LabeledApply name i o a -> f (LabeledApply name i o b)
 labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
@@ -96,8 +96,8 @@ labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
                 <*> traverse e special
 
 overLabeledApplyChildren ::
-    (LabeledApplyFunc name o a -> LabeledApplyFunc name o b) ->
-    (RelayedArg name o a -> RelayedArg name o b) ->
+    (Node (BinderVarRef name o) a -> Node (BinderVarRef name o) b) ->
+    (Node (GetVar name o) a -> Node (GetVar name o) b) ->
     (Expression name i o a -> Expression name i o b) ->
     LabeledApply name i o a -> LabeledApply name i o b
 overLabeledApplyChildren l r e =
@@ -114,8 +114,8 @@ injectValChildren n _ (InjectNullary x) = n x <&> InjectNullary
 bodyChildren ::
     Applicative f =>
     (NullaryVal name i o a -> f (NullaryVal name i o b)) ->
-    (LabeledApplyFunc name o a -> f (LabeledApplyFunc name o b)) ->
-    (RelayedArg name o a -> f (RelayedArg name o b)) ->
+    (Node (BinderVarRef name o) a -> f (Node (BinderVarRef name o) b)) ->
+    (Node (GetVar name o) a -> f (Node (GetVar name o) b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
     Body name i o a -> f (Body name i o b)
 bodyChildren n l r f =
@@ -147,16 +147,16 @@ bodyChildPayloads f =
     (exprPayload f)
     where
         labeledFuncPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (LabeledApplyFunc name o a) a
-        labeledFuncPayloads = labeledApplyFuncPayload
+            Lens.AnIndexedLens' (PayloadOf name i o) (Node (BinderVarRef name o) a) a
+        labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
         relayedPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (RelayedArg name o a) a
-        relayedPayloads = relayedArgPayload
+            Lens.AnIndexedLens' (PayloadOf name i o) (Node (GetVar name o) a) a
+        relayedPayloads = leafNodePayload OfRelayedArg
 
 overBodyChildren ::
     (NullaryVal name i o a -> NullaryVal name i o b) ->
-    (LabeledApplyFunc name o a -> LabeledApplyFunc name o b) ->
-    (RelayedArg name o a -> RelayedArg name o b) ->
+    (Node (BinderVarRef name o) a -> Node (BinderVarRef name o) b) ->
+    (Node (GetVar name o) a -> Node (GetVar name o) b) ->
     (Expression name i o a -> Expression name i o b) ->
     Body name i o a -> Body name i o b
 overBodyChildren n f r e =
@@ -176,23 +176,11 @@ nullaryValPayload f v =
     Lens.indexed f (OfNullaryVal (void v)) (v ^. nullaryPayload)
     <&> \x -> v & nullaryPayload .~ x
 
-labeledApplyFuncPayload ::
-    Lens.AnIndexedLens (PayloadOf name i o)
-    (LabeledApplyFunc name o a)
-    (LabeledApplyFunc name o b)
-    a b
-labeledApplyFuncPayload f val@(LabeledApplyFunc func pl) =
-    Lens.indexed f (OfLabeledApplyFunc (void val)) pl
-    <&> LabeledApplyFunc func
-
-relayedArgPayload ::
-    Lens.AnIndexedLens (PayloadOf name i o)
-    (RelayedArg name o a)
-    (RelayedArg name o b)
-    a b
-relayedArgPayload f val@(RelayedArg x pl) =
-    Lens.indexed f (OfRelayedArg (void val)) pl
-    <&> RelayedArg x
+leafNodePayload ::
+    (l -> p) ->
+    Lens.AnIndexedLens p (Node l a) (Node l b) a b
+leafNodePayload c f (Node pl x) =
+    Lens.indexed f (c x) pl <&> (`Node` x)
 
 subExprPayloads ::
     forall name i o a b.
@@ -200,27 +188,27 @@ subExprPayloads ::
     (Expression name i o a)
     (Expression name i o b)
     a b
-subExprPayloads f val@(Expression pl x) =
+subExprPayloads f v@(Expression pl x) =
     flip Expression
     <$> bodyChildren
         (nullaryValPayload f)
         (Lens.cloneIndexedLens labeledFuncPayloads f)
         (Lens.cloneIndexedLens relayedPayloads f)
         (subExprPayloads f) x
-    <*> Lens.indexed f (OfExpr (void val)) pl
+    <*> Lens.indexed f (OfExpr (void v)) pl
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
-            (LabeledApplyFunc name o a)
-            (LabeledApplyFunc name o b)
+            (Node (BinderVarRef name o) a)
+            (Node (BinderVarRef name o) b)
             a b
-        labeledFuncPayloads = labeledApplyFuncPayload
+        labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
         relayedPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
-            (RelayedArg name o a)
-            (RelayedArg name o b)
+            (Node (GetVar name o) a)
+            (Node (GetVar name o) b)
             a b
-        relayedPayloads = relayedArgPayload
+        relayedPayloads = leafNodePayload OfRelayedArg
 
 payloadsOf ::
     Lens.Fold (Body name i o ()) a ->
@@ -239,7 +227,7 @@ bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
     & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
-    & Lens.failing (_BodyLabeledApply . aFunc . fVar . binderVarRefUnfinished)
+    & Lens.failing (_BodyLabeledApply . aFunc . val . binderVarRefUnfinished)
 
 unfinishedExprPayloads ::
     Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a

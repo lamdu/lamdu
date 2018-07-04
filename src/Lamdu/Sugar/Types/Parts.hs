@@ -30,15 +30,12 @@ module Lamdu.Sugar.Types.Parts
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , NullaryVal(..), nullaryPayload, nullaryClosedCompositeActions, nullaryAddItem
-    , LabeledApplyFunc(..), fVar, fPayload
-    , RelayedArg(..), raValue, raPayload
     , Heal(..), _HealAction, _TypeMismatch
     ) where
 
 import qualified Control.Lens as Lens
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
-import           Lamdu.Sugar.Types.GetVar
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
@@ -176,19 +173,6 @@ data NullaryVal name i o a = NullaryVal
     , _nullaryAddItem :: TagSelection name i o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data RelayedArg name o a = RelayedArg
-    { _raValue :: GetVar name o
-    , _raPayload :: a
-    } deriving (Functor, Foldable, Traversable, Generic)
-
-data LabeledApplyFunc name o a = LabeledApplyFunc
-    { _fVar :: BinderVarRef name o
-    , _fPayload :: a
-    } deriving (Functor, Foldable, Traversable, Generic)
-
-instance (Show name, Show a) => Show (LabeledApplyFunc name o a) where
-    show (LabeledApplyFunc func pl) = concat [show func, "{", show pl, "}"]
-
 data Heal o
     = HealAction (o EntityId)
     | TypeMismatch
@@ -209,7 +193,6 @@ Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''HoleResultScore
-Lens.makeLenses ''LabeledApplyFunc
 Lens.makeLenses ''LetActions
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullaryVal
@@ -217,7 +200,6 @@ Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''ParamInfo
 Lens.makeLenses ''Payload
-Lens.makeLenses ''RelayedArg
 Lens.makeLenses ''ValAnnotation
 Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''AddNextParam

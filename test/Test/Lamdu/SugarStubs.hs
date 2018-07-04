@@ -47,11 +47,11 @@ defRef var tag =
 
 labeledApplyFunc ::
     Sugar.BinderVarRef name Unit ->
-    Sugar.LabeledApplyFunc name Unit (Sugar.Payload name Identity Unit ())
+    Sugar.Node (Sugar.BinderVarRef name Unit) (Sugar.Payload name Identity Unit ())
 labeledApplyFunc varRef =
-    Sugar.LabeledApplyFunc
-    { Sugar._fVar = varRef
-    , Sugar._fPayload = payload
+    Sugar.Node
+    { Sugar._val = varRef
+    , Sugar._ann = payload
     }
 
 type Infix2 = Expr -> Expr -> Expr

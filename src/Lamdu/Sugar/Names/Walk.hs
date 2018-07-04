@@ -277,22 +277,22 @@ withTag nameType varInfo (Sugar.Tag info actions) =
 
 toRelayedArg ::
     MonadNaming m =>
-    RelayedArg (OldName m) o (Payload (OldName m) (IM m) o a) ->
-    m (RelayedArg (NewName m) o (Payload (NewName m) (IM m) o a))
-toRelayedArg RelayedArg{..} =
-    (\_raValue _raPayload -> RelayedArg{..})
-    <$> toGetVar _raValue
-    <*> toPayload _raPayload
+    Node (GetVar (OldName m) o) (Payload (OldName m) (IM m) o a) ->
+    m (Node (GetVar (NewName m) o) (Payload (NewName m) (IM m) o a))
+toRelayedArg Node{..} =
+    (\_val _ann -> Node{..})
+    <$> toGetVar _val
+    <*> toPayload _ann
 
 toLabeledApplyFunc ::
     MonadNaming m =>
     Maybe Disambiguator ->
-    LabeledApplyFunc (OldName m) o (Payload (OldName m) (IM m) o a) ->
-    m (LabeledApplyFunc (NewName m) o (Payload (NewName m) (IM m) o a))
-toLabeledApplyFunc disambiguator (LabeledApplyFunc func pl) =
-    LabeledApplyFunc
-    <$> toBinderVarRef disambiguator func
-    <*> toPayload pl
+    Node (BinderVarRef (OldName m) o) (Payload (OldName m) (IM m) o a) ->
+    m (Node (BinderVarRef (NewName m) o) (Payload (NewName m) (IM m) o a))
+toLabeledApplyFunc disambiguator (Node pl func) =
+    Node
+    <$> toPayload pl
+    <*> toBinderVarRef disambiguator func
 
 toAnnotatedArg ::
     MonadNaming m =>

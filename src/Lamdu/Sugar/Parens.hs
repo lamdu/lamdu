@@ -55,7 +55,7 @@ addToExprWith minOpPrec = loop minOpPrec (Precedence 0 0)
 bareInfix ::
     Lens.Prism' (LabeledApply name i o a)
     ( Expression name i o a
-    , LabeledApplyFunc name o a
+    , Node (BinderVarRef name o) a
     , Expression name i o a
     )
 bareInfix =
@@ -144,7 +144,7 @@ loopExprBody minOpPrec parentPrec body_ =
             , loop (prec+1) (childPrec (before .~ prec) needParens) r
             ) & BodyLabeledApply & result needParens
             where
-                prec = func ^. fVar . bvNameRef . nrName & precedence
+                prec = func ^. val . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
         ifElse x =

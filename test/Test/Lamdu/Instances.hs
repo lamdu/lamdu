@@ -157,15 +157,14 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.IfElse n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Inject n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.InjectVal n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.LabeledApply n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.LabeledApplyFunc n Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Lambda n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Let n Unit Unit a)
+deriving instance (Eq a, Eq n) => Eq (Sugar.Node n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Nominal n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.NullaryVal n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Pane n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Payload n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.RecordType n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.RelayedArg n Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Repl n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResBody n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResInject n a)
@@ -244,13 +243,12 @@ instance (NFData a, NFData n) => NFData (Sugar.IfElse n (T i) (T o) a) where rnf
 instance (NFData a, NFData n) => NFData (Sugar.Inject n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.InjectVal n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.LabeledApply n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.LabeledApplyFunc n (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Lambda n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Let n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.Node n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Nominal n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Pane n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Payload n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.RelayedArg n (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Repl n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ResBody n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.ResInject n a) where rnf = genericRnf

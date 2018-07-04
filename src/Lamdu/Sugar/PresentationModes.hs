@@ -16,11 +16,11 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Sugar.LabeledApplyFunc InternalName (T m) (ConvertPayload m a) ->
+    Sugar.Node (Sugar.BinderVarRef InternalName (T m)) (ConvertPayload m a) ->
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
     T m (Sugar.LabeledApply InternalName (T m) (T m) (ConvertPayload m a))
 makeLabeledApply func args =
-    func ^. Sugar.fVar . Sugar.bvVar
+    func ^. Sugar.val . Sugar.bvVar
     & Anchors.assocPresentationMode & Property.getP
     <&> \presentationMode ->
     let (specialArgs, otherArgs) =
@@ -63,8 +63,8 @@ makeLabeledApply func args =
                     Sugar.GetBinder x -> x ^. Sugar.bvNameRef . Sugar.nrName & Just
                     Sugar.GetParamsRecord _ -> Nothing
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
-                Right Sugar.RelayedArg
-                    { Sugar._raValue = getVar
-                    , Sugar._raPayload = arg ^. Sugar.aaExpr . Sugar.annotation
+                Right Sugar.Node
+                    { Sugar._val = getVar
+                    , Sugar._ann = arg ^. Sugar.aaExpr . Sugar.annotation
                     } & Just
             & fromMaybe (Left arg)

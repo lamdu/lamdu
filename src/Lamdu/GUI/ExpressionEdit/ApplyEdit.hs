@@ -58,31 +58,31 @@ addInfixMarker widgetId =
 
 makeFunc ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Node (Sugar.BinderVarRef (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
 makeFunc func =
     stdWrap pl <*>
-    ( GetVarEdit.makeGetBinder (func ^. Sugar.fVar) myId
+    ( GetVarEdit.makeGetBinder (func ^. Sugar.val) myId
         <&> Responsive.fromWithTextPos
     )
     where
-        pl = func ^. Sugar.fPayload
+        pl = func ^. Sugar.ann
         myId = WidgetIds.fromExprPayload pl
 
 makeInfixFunc ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApplyFunc (Name o) o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Node (Sugar.BinderVarRef (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (ExpressionGui o)
 makeInfixFunc func =
     makeFunc func <&> mAddMarker
     where
         nameText =
-            Name.visible (func ^. Sugar.fVar . Sugar.bvNameRef . Sugar.nrName)
+            Name.visible (func ^. Sugar.val . Sugar.bvNameRef . Sugar.nrName)
             ^. _1 . Name.ttText
         mAddMarker
             | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
             | otherwise = addInfixMarker myId
-        myId = func ^. Sugar.fPayload & WidgetIds.fromExprPayload
+        myId = func ^. Sugar.ann & WidgetIds.fromExprPayload
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
 isBoxed apply =
@@ -146,7 +146,7 @@ makeArgRow arg =
 
 mkRelayedArgs ::
     (Monad i, Monad o) =>
-    [Sugar.RelayedArg (Name o) o (Sugar.Payload (Name o) i o ExprGui.Payload)] ->
+    [Sugar.Node (Sugar.GetVar (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload)] ->
     ExprGuiM i o (ExpressionGui o)
 mkRelayedArgs args =
     do
@@ -154,7 +154,7 @@ mkRelayedArgs args =
         collapsed <- Styled.grammarLabel "➾" <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
     where
-        makeArgEdit arg = GetVarEdit.make (arg ^. Sugar.raValue) (arg ^. Sugar.raPayload)
+        makeArgEdit arg = GetVarEdit.make (arg ^. Sugar.val) (arg ^. Sugar.ann)
 
 mkBoxed ::
     (Monad i, Monad o) =>

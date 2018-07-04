@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Expression
-    ( Body(..)
+    ( Node(..), ann, val
+    , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
@@ -45,12 +46,17 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
-import           Lamdu.Sugar.Types.GetVar (GetVar, BinderMode)
+import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Simple
 import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
+
+data Node v a = Node
+    { _ann :: a
+    , _val :: v
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data Expression name i o a = Expression
     { _annotation :: a
@@ -65,10 +71,10 @@ data AnnotatedArg name expr = AnnotatedArg
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o a = LabeledApply
-    { _aFunc :: LabeledApplyFunc name o a
+    { _aFunc :: Node (BinderVarRef name o) a
     , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
     , _aAnnotatedArgs :: [AnnotatedArg name (Expression name i o a)]
-    , _aRelayedArgs :: [RelayedArg name o a]
+    , _aRelayedArgs :: [Node (GetVar name o) a]
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data InjectVal name i o a
@@ -211,6 +217,7 @@ Lens.makePrisms ''InjectVal
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
+Lens.makeLenses ''Node
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''Body
