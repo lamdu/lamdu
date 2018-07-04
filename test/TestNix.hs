@@ -42,12 +42,16 @@ stackDepsTest =
                     <&> packageNameFromGitUrl
                     <&> (<> ".nix")
                 ) <> extraNixFiles
+                & filter (`notElem` knownMissingNixFiles)
         nixFiles <- listDirectory "nix"
         assertSetEquals "Nix files" (Set.fromList expectedNixFiles) (Set.fromList nixFiles)
-    & testCase "verify-nix-stack"
+        & testCase "verify-nix-stack"
     where
         -- Nix files that don't reflect stack.yaml dependencies
         extraNixFiles = ["lamdu.nix"]
+        -- Using our freetype2 version via nix causes GHC panics for some reason
+        -- TODO: Remove this and fix the nix issues
+        knownMissingNixFiles = ["freetype2.nix"]
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
