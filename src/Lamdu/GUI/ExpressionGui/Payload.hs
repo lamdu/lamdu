@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.GUI.ExpressionGui
+module Lamdu.GUI.ExpressionGui.Payload
     ( SugarExpr
     , Payload(..)
         , plHiddenEntityIds, plNearestHoles, plNeedParens, plMinOpPrec

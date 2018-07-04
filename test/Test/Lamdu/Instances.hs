@@ -33,7 +33,7 @@ import qualified Lamdu.Config.Theme.TextColors as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Font (Fonts(..))
-import           Lamdu.GUI.ExpressionGui as ExprGui
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name

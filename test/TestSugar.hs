@@ -6,7 +6,7 @@ import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Db.Layout (ViewM)
-import           Lamdu.GUI.ExpressionGui as ExprGui
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)

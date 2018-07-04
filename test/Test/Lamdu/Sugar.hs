@@ -15,7 +15,7 @@ import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
-import           Lamdu.GUI.ExpressionGui as ExprGui
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -31,7 +31,7 @@ type T = Transaction
 allEntityIds ::
     WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Set EntityId
 allEntityIds workArea =
-    pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
+    pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
     <>
         -- TODO: When Assignments will contains proper payloads,
@@ -55,7 +55,7 @@ validateHiddenEntityIds workArea
         pls = workArea ^.. traverse
         explicitEntityIds = pls ^.. Lens.folded . plEntityId & Set.fromList
         hiddenEntityIds =
-            pls ^.. Lens.folded . plData . plHiddenEntityIds . Lens.folded
+            pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
             & Set.fromList
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
