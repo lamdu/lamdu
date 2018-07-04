@@ -4,7 +4,7 @@ module Lamdu.Sugar.Lens
     , bodyChildren, overBodyChildren, bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
     , binderExprs, binderContentExprs, funcExprs, assignmentExprs
-    , subExprPayloads
+    , exprPayloads
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads
     , defSchemes
@@ -174,19 +174,19 @@ leafNodePayload ::
 leafNodePayload c f (Node pl x) =
     Lens.indexed f (c x) pl <&> (`Node` x)
 
-subExprPayloads ::
+exprPayloads ::
     forall name i o a b.
     Lens.IndexedTraversal (PayloadOf name i o)
     (Expression name i o a)
     (Expression name i o b)
     a b
-subExprPayloads f (PNode (Node pl x)) =
+exprPayloads f (PNode (Node pl x)) =
     flip Node
     <$> bodyChildren
         (leafNodePayload OfNullaryVal f)
         (Lens.cloneIndexedLens labeledFuncPayloads f)
         (Lens.cloneIndexedLens relayedPayloads f)
-        (subExprPayloads f) x
+        (exprPayloads f) x
     <*> Lens.indexed f (OfExpr (void x)) pl
     <&> PNode
     where
@@ -207,7 +207,7 @@ payloadsOf ::
     Lens.Fold (Body name i o ()) a ->
     Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o b) b
 payloadsOf x =
-    subExprPayloads . Lens.ifiltered predicate
+    exprPayloads . Lens.ifiltered predicate
     where
         predicate idx _ = Lens.has (_OfExpr . x) idx
 

@@ -276,7 +276,7 @@ allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            func ^.. SugarLens.funcExprs . SugarLens.subExprPayloads . Lens.asIndex .
+            func ^.. SugarLens.funcExprs . SugarLens.exprPayloads . Lens.asIndex .
             SugarLens._OfExpr . _BodyGetVar . _GetParam . pNameRef . nrName
             & Set.fromList
 

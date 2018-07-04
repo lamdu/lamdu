@@ -45,8 +45,8 @@ add exprs s =
     s
     <&> Sugar.plData %~ toNearestHoles
     & exprs %~ markStoredHoles
-    & passAll (exprs . SugarLens.subExprPayloads)
-    & passAll (Lens.backwards (exprs . SugarLens.subExprPayloads))
+    & passAll (exprs . SugarLens.exprPayloads)
+    & passAll (Lens.backwards (exprs . SugarLens.exprPayloads))
     <&> snd
     where
         toNearestHoles x prevHole nextHole = (x, NearestHoles prevHole nextHole)
