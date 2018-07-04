@@ -4,7 +4,6 @@ module Lamdu.GUI.ExpressionGui
     , Payload(..)
         , plHiddenEntityIds, plNearestHoles, plNeedParens, plMinOpPrec
     , nextHolesBefore
-    , adhocPayload
     , mParensId
     ) where
 
@@ -42,16 +41,6 @@ nextHolesBefore val =
         else id
     where
         node = SugarLens.leftMostLeaf val
-
--- | Used to create a sugar expr payload when the original sugar
--- expression contains a fake unit () payload (in LabeledApply and InjectNullary)
-adhocPayload :: NearestHoles -> Payload
-adhocPayload nearestHoles = Payload
-    { _plHiddenEntityIds = []
-    , _plNearestHoles = nearestHoles
-    , _plNeedParens = False
-    , _plMinOpPrec = 13 -- TODO: Export Parens.applyPrec?
-    }
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: Sugar.Payload name i o Payload -> Maybe AnimId
