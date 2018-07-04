@@ -144,14 +144,14 @@ getSearchStringRemainder ctx holeResult
         fragmentExpr = body . _BodyFragment . fExpr
         isA x = any (`Lens.has` holeResult) [body . x, fragmentExpr . body . x]
 
-injectMVal :: Lens.Traversal' (Expression name i o a) (InjectVal name i o a)
-injectMVal = body . _BodyInject . iMVal
+injectContent :: Lens.Traversal' (Expression name i o a) (InjectContent name i o a)
+injectContent = body . _BodyInject . iContent
 
 verifyInjectSuffix :: Text -> Expression name i o a -> Bool
 verifyInjectSuffix searchTerm x =
     case suffix of
-    Just ':' | Lens.has (injectMVal . _InjectNullary) x -> False
-    Just '.' | Lens.has (injectMVal . _InjectVal) x -> False
+    Just ':' | Lens.has (injectContent . _InjectNullary) x -> False
+    Just '.' | Lens.has (injectContent . _InjectVal) x -> False
     _ -> True
     where
         suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1

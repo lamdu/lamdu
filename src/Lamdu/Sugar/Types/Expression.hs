@@ -11,8 +11,8 @@ module Lamdu.Sugar.Types.Expression
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
     , Fragment(..), fExpr, fHeal, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
-    , InjectVal(..), _InjectVal, _InjectNullary
-    , Inject(..), iTag, iMVal
+    , InjectContent(..), _InjectVal, _InjectNullary
+    , Inject(..), iTag, iContent
     -- Binders
     , Let(..)
         , lEntityId, lValue, lName, lUsages
@@ -77,14 +77,14 @@ data LabeledApply name i o a = LabeledApply
     , _aRelayedArgs :: [Node (GetVar name o) a]
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data InjectVal name i o a
+data InjectContent name i o a
     = InjectNullary (NullaryVal name i o a)
     | InjectVal (Expression name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Inject name i o a = Inject
     { _iTag :: Tag name i o
-    , _iMVal :: InjectVal name i o a
+    , _iContent :: InjectContent name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Lambda name i o a = Lambda
@@ -213,7 +213,7 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inject
-Lens.makePrisms ''InjectVal
+Lens.makePrisms ''InjectContent
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let

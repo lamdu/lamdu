@@ -370,8 +370,8 @@ toNullary (NullaryVal pl closed addItem) =
 
 toInjectVal ::
     MonadNaming m =>
-    InjectVal (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (InjectVal (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    InjectContent (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (InjectContent (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toInjectVal (InjectVal v) = toExpression v <&> InjectVal
 toInjectVal (InjectNullary n) = toNullary n <&> InjectNullary
 

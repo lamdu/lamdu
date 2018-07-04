@@ -103,13 +103,13 @@ overLabeledApplyChildren ::
 overLabeledApplyChildren l r e =
     Lens.runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
-injectValChildren ::
+injectContentChildren ::
     Applicative f =>
     (NullaryVal name i o a -> f (NullaryVal name i o b)) ->
     (Expression name i o a -> f (Expression name i o b)) ->
-    InjectVal name i o a -> f (InjectVal name i o b)
-injectValChildren _ e (InjectVal x) = e x <&> InjectVal
-injectValChildren n _ (InjectNullary x) = n x <&> InjectNullary
+    InjectContent name i o a -> f (InjectContent name i o b)
+injectContentChildren _ e (InjectVal x) = e x <&> InjectVal
+injectContentChildren n _ (InjectNullary x) = n x <&> InjectNullary
 
 bodyChildren ::
     Applicative f =>
@@ -131,7 +131,7 @@ bodyChildren n l r f =
     BodyGetField     x -> traverse f x <&> BodyGetField
     BodyCase         x -> traverse f x <&> BodyCase
     BodyIfElse       x -> traverse f x <&> BodyIfElse
-    BodyInject       x -> iMVal (injectValChildren n f) x <&> BodyInject
+    BodyInject       x -> iContent (injectContentChildren n f) x <&> BodyInject
     BodyFromNom      x -> traverse f x <&> BodyFromNom
     BodyFragment     x -> fExpr f x <&> BodyFragment
     BodyToNom        x -> (traverse . binderExprs) f x <&> BodyToNom

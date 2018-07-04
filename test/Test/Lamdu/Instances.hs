@@ -155,7 +155,7 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.Function n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.GetField n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.IfElse n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Inject n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.InjectVal n Unit Unit a)
+deriving instance (Eq a, Eq n) => Eq (Sugar.InjectContent n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.LabeledApply n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Lambda n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Let n Unit Unit a)
@@ -241,7 +241,7 @@ instance (NFData a, NFData n) => NFData (Sugar.Function n (T i) (T o) a) where r
 instance (NFData a, NFData n) => NFData (Sugar.GetField n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.IfElse n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Inject n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.InjectVal n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.InjectContent n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.LabeledApply n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Lambda n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Let n (T i) (T o) a) where rnf = genericRnf
