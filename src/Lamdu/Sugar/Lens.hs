@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
     , bodyChildren, overBodyChildren, bodyChildPayloads
-    , labeledApplyChildren
+    , labeledApplyChildren, overLabeledApplyChildren
     , binderExprs, binderContentExprs, funcExprs, assignmentExprs
     , subExprPayloads
     , payloadsOf
@@ -94,6 +94,14 @@ labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
                 (,)
                 <$> l func
                 <*> traverse e special
+
+overLabeledApplyChildren ::
+    (LabeledApplyFunc name o a -> LabeledApplyFunc name o b) ->
+    (RelayedArg name o a -> RelayedArg name o b) ->
+    (Expression name i o a -> Expression name i o b) ->
+    LabeledApply name i o a -> LabeledApply name i o b
+overLabeledApplyChildren l r e =
+    Lens.runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
 injectValChildren ::
     Applicative f =>
