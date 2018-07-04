@@ -39,7 +39,7 @@ import           Lamdu.Prelude
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
-instance Functor f => Element (Widget (f Update)) where
+instance (Functor f, a ~ f Update) => Element (Widget a) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
         w
@@ -61,7 +61,7 @@ instance Functor f => Element (Widget (f Update)) where
         & wFocused . fMEnterPoint . Lens._Just . Lens.argument //~ mult
         & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeftAndSize *~ mult
 
-instance Functor f => SizedElement (Widget (f Update)) where
+instance (Functor f, a ~ f Update) => SizedElement (Widget a) where
     size f w =
         w
         & wSize f
