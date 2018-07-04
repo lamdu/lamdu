@@ -472,9 +472,9 @@ withFuncParam ::
     MonadNaming m =>
     (Sugar.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) (IM m) a ->
     CPS m (FuncParam (NewName m) (IM m) b)
-withFuncParam f (FuncParam ann varInfo info) =
+withFuncParam f (FuncParam pl varInfo info) =
     FuncParam
-    <$> liftCPS (toAnnotation ann)
+    <$> liftCPS (toAnnotation pl)
     <*> pure varInfo
     <*> f varInfo info
 

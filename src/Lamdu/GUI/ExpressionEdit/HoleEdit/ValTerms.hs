@@ -148,10 +148,10 @@ injectMVal :: Lens.Traversal' (Expression name i o a) (InjectVal name i o a)
 injectMVal = body . _BodyInject . iMVal
 
 verifyInjectSuffix :: Text -> Expression name i o a -> Bool
-verifyInjectSuffix searchTerm val =
+verifyInjectSuffix searchTerm x =
     case suffix of
-    Just ':' | Lens.has (injectMVal . _InjectNullary) val -> False
-    Just '.' | Lens.has (injectMVal . _InjectVal) val -> False
+    Just ':' | Lens.has (injectMVal . _InjectNullary) x -> False
+    Just '.' | Lens.has (injectMVal . _InjectVal) x -> False
     _ -> True
     where
         suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1

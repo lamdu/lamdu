@@ -51,10 +51,10 @@ type ERV = ER.Val T.Type
 
 flattenRecord :: ERV -> Either EvalTypeError ([(T.Tag, ERV)], Map T.Tag ERV)
 flattenRecord (ER.Val _ ER.RRecEmpty) = Right ([], Map.empty)
-flattenRecord (ER.Val _ (ER.RRecExtend (V.RecExtend tag val rest))) =
+flattenRecord (ER.Val _ (ER.RRecExtend (V.RecExtend tag v rest))) =
     flattenRecord rest
-    <&> _1 %~ ((tag, val) :)
-    <&> _2 . Lens.at tag ?~ val
+    <&> _1 %~ ((tag, v) :)
+    <&> _2 . Lens.at tag ?~ v
 flattenRecord (ER.Val _ (ER.RError err)) = Left err
 flattenRecord _ = Left (EvalTypeError "Record extents non-record")
 
@@ -72,19 +72,19 @@ convertNullaryInject entityId (V.Inject tag (ER.Val _ ER.RRecEmpty)) =
 convertNullaryInject _ _ = Nothing
 
 convertStream :: EntityId -> T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
-convertStream entityId typ (V.Inject _ val) =
+convertStream entityId typ (V.Inject _ x) =
     do
         T.TInst tid _ <- Just typ
         guard (tid == Builtins.streamTid)
-        (_, fields) <- flattenRecord val & either (const Nothing) Just & maybeToMPlus
+        (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
         ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . ER.body & maybeToMPlus
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
             & ResStream & RStream & ResVal entityId & Just
 
 simpleInject :: EntityId -> V.Inject (ER.Val T.Type) -> ResVal InternalName
-simpleInject entityId (V.Inject tag val) =
-    convertVal (EntityId.ofEvalField tag entityId) val
+simpleInject entityId (V.Inject tag x) =
+    convertVal (EntityId.ofEvalField tag entityId) x
     & Just
     & ResInject (mkTagInfo entityId tag) & RInject
     & ResVal entityId
@@ -104,8 +104,8 @@ convertPlainRecord entityId (Right fields) =
     <&> convertField
     & ResRecord & RRecord & ResVal entityId
     where
-        convertField (tag, val) =
-            convertVal (EntityId.ofEvalField tag entityId) val
+        convertField (tag, x) =
+            convertVal (EntityId.ofEvalField tag entityId) x
             & (,) (mkTagInfo entityId tag)
 
 convertTree ::
@@ -238,4 +238,4 @@ completion cp entityId completions =
                     ER.GlobalRepl -> pure ()
                     ER.GlobalDef varId -> DataOps.newPane cp (ExprIRef.defI varId)
                 }
-        f (Right val) = convertVal entityId val & EvalSuccess
+        f (Right x) = convertVal entityId x & EvalSuccess

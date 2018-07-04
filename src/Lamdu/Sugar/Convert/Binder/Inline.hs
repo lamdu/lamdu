@@ -30,8 +30,8 @@ wrapWithRedexes :: [(V.Var, Val (Maybe a))] -> Val (Maybe a) -> Val (Maybe a)
 wrapWithRedexes rs x =
     foldr wrapWithRedex x rs
     where
-        wrapWithRedex (v, val) b =
-            V.Apply (Val Nothing (V.BLam (V.Lam v b))) val
+        wrapWithRedex (v, a) b =
+            V.Apply (Val Nothing (V.BLam (V.Lam v b))) a
             & V.BApp
             & Val Nothing
 
@@ -60,10 +60,10 @@ inlineLetH var arg bod =
                     r = b <&> go
 
 cursorDest :: Val a -> a
-cursorDest val =
-    case val ^. Val.body of
+cursorDest x =
+    case x ^. Val.body of
     V.BLam lam -> lam ^. V.lamResult
-    _ -> val
+    _ -> x
     & redexes
     & (^. _2 . Val.payload)
 

@@ -122,12 +122,12 @@ loadInferPrepareInput ::
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValP m) ->
     InferT.M (T m) (Val (Input.Payload m [EntityId]))
-loadInferPrepareInput evalRes val =
+loadInferPrepareInput evalRes x =
     do
         nomsMap <-
-            val ^.. Lens.folded . _1 . Infer.plType
+            x ^.. Lens.folded . _1 . Infer.plType
             & makeNominalsMap & transaction
-        preparePayloads nomsMap evalRes val
+        preparePayloads nomsMap evalRes x
             <&> setUserData
             & ParamList.loadForLambdas
     where
@@ -160,7 +160,7 @@ runInferResult monitors results act =
     & InferT.run monitors
     <&> fmap toResult
     where
-        toResult (val, ctx) = InferResult val ctx
+        toResult (x, ctx) = InferResult x ctx
 
 inferDef ::
     (HasCallStack, Monad m) =>

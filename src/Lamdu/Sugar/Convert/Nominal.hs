@@ -18,12 +18,12 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertNom :: Monad m => V.Nom expr -> ConvertM m (Nominal InternalName expr)
-convertNom (V.Nom tid val) =
+convertNom (V.Nom tid x) =
     ConvertTId.convert tid
     <&> \tidS ->
     Nominal
     { _nTId = tidS
-    , _nVal = val
+    , _nVal = x
     }
 
 convertFromNom ::

@@ -114,14 +114,14 @@ mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> BaseExpr ->
     HoleOption InternalName (T m) (T m)
-mkOption sugarContext resultProcessor holePl val =
+mkOption sugarContext resultProcessor holePl x =
     HoleOption
     { _hoVal = baseExpr
     , _hoSugaredBaseExpr = sugar sugarContext holePl baseExpr
-    , _hoResults = mkResults resultProcessor sugarContext holePl val
+    , _hoResults = mkResults resultProcessor sugarContext holePl x
     }
     where
-        baseExpr = getBaseExprVal val
+        baseExpr = getBaseExprVal x
 
 mkHoleSuggesteds ::
     Monad m =>
@@ -245,13 +245,13 @@ loadDeps vars noms =
 -- TODO: Generalize into a separate module?
 loadNewDeps ::
     Monad m => Infer.Dependencies -> Infer.Scope -> Val a -> T m Infer.Dependencies
-loadNewDeps currentDeps scope val =
+loadNewDeps currentDeps scope x =
     loadDeps newDepVars newNoms
     <&> mappend currentDeps
     where
         scopeVars = Infer.scopeToTypeMap scope & Map.keysSet
         newDeps depsLens valLens =
-            Set.fromList (val ^.. valLens)
+            Set.fromList (x ^.. valLens)
             `Set.difference` Map.keysSet (currentDeps ^. depsLens)
             & Set.toList
         newDepVars = newDeps Infer.depsGlobalTypes (ExprLens.valGlobals scopeVars)
@@ -261,8 +261,8 @@ loadNewDeps currentDeps scope val =
 prepareUnstoredPayloads ::
     Val (Infer.Payload, EntityId, a) ->
     Val (Input.Payload m a)
-prepareUnstoredPayloads val =
-    val <&> mk & Input.preparePayloads
+prepareUnstoredPayloads v =
+    v <&> mk & Input.preparePayloads
     where
         mk (inferPl, eId, x) =
             ( eId
@@ -283,8 +283,8 @@ sugar ::
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
     T m (BinderContent InternalName (T m) (T m)
             (Payload InternalName (T m) (T m) a))
-sugar sugarContext holePl val =
-    val
+sugar sugarContext holePl v =
+    v
     <&> mkPayload
     & (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (holePl ^. Input.entityId)
@@ -312,18 +312,18 @@ mkLiteralOptions holePl =
     Lens.view id
     <&>
     \sugarContext ->
-    let mk updateDeps val =
+    let mk updateDeps x =
             pure
             ( HoleResultScore 0 []
             , fixedVal <&> convPl
                 & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
             )
             where
-                typ = val ^. Val.payload
+                typ = x ^. Val.payload
                 fixedVal
-                    | inferredType == typ || Lens.has T._TVar inferredType = val
+                    | inferredType == typ || Lens.has T._TVar inferredType = x
                     | otherwise =
-                        V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) val
+                        V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
                         & V.BApp
                         & Val inferredType
         addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
@@ -418,11 +418,11 @@ detachValIfNeeded ::
     Monad m =>
     a -> T.Type -> Val (Infer.Payload, a) ->
     StateT Infer.Context m (Val (Infer.Payload, a))
-detachValIfNeeded emptyPl holeType val =
+detachValIfNeeded emptyPl holeType x =
     do
         unifyResult <-
-            unify holeType (val ^. Val.payload . _1 . Infer.plType) & liftInfer
-        updated <- Update.inferredVal val & liftUpdate
+            unify holeType (x ^. Val.payload . _1 . Infer.plType) & liftInfer
+        updated <- Update.inferredVal x & liftUpdate
         case unifyResult of
             Right{} -> pure updated
             Left{} -> detachVal emptyPl holeType updated & liftUpdate
@@ -433,14 +433,14 @@ detachValIfNeeded emptyPl holeType val =
 detachVal ::
     a -> T.Type -> Val (Infer.Payload, a) ->
     Update (Val (Infer.Payload, a))
-detachVal emptyPl resultType val =
+detachVal emptyPl resultType x =
     update resultType <&> mk
     where
         mk updatedType =
-            V.Apply func val & V.BApp
+            V.Apply func x & V.BApp
             & Val (plSameScope updatedType, emptyPl)
         plSameScope typ = inferPl & Infer.plType .~ typ
-        inferPl = val ^. Val.payload . _1
+        inferPl = x ^. Val.payload . _1
         func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
         funcType = T.TFun (inferPl ^. Infer.plType) resultType
 
@@ -487,10 +487,10 @@ mkResult ::
     Preconversion m a -> ConvertM.Context m -> T m () -> ValP m ->
     ResultVal m a ->
     T m (HoleResult InternalName (T m) (T m))
-mkResult preConversion sugarContext updateDeps stored val =
+mkResult preConversion sugarContext updateDeps stored x =
     do
         updateDeps
-        writeResult preConversion stored val
+        writeResult preConversion stored x
         <&> (convertBinderContent >=> traverse (convertPayload Input.None) . fmap ((,) neverShowAnnotations))
         >>= ConvertM.run sugarContext
         & Transaction.fork
@@ -516,14 +516,14 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~ detachValIfNeeded (Nothing, emptyPl) typ
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-    <&> \((newDeps, val), inferContext) ->
+    <&> \((newDeps, x), inferContext) ->
     let newSugarContext =
             sugarContext
             & ConvertM.scInferContext .~ inferContext
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( resultScore (val <&> fst)
-        , mkResult preConversion newSugarContext updateDeps stored val
+    in  ( resultScore (x <&> fst)
+        , mkResult preConversion newSugarContext updateDeps stored x
         )
     where
         stored = holePl ^. Input.stored
@@ -555,8 +555,8 @@ randomizeNonStoredParamIds gen =
 
 randomizeNonStoredRefs ::
     ByteString -> Random.StdGen -> Val (StorePoint m a) -> Val (StorePoint m a)
-randomizeNonStoredRefs uniqueIdent gen val =
-    evalState ((traverse . _1) f val) gen
+randomizeNonStoredRefs uniqueIdent gen v =
+    evalState ((traverse . _1) f v) gen
     where
         f Nothing =
             state random

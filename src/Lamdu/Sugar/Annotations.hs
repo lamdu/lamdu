@@ -114,9 +114,9 @@ markAnnotationsToDisplay (Expression pl oldBody) =
             (raPayload . _1 .~ f)
             (nonHoleAnn .~ f)
             newBody
-        plWith ann = (ann, pl)
+        plWith x = (x, pl)
         defPl = plWith showAnnotationWhenVerbose
-        set ann = Expression (plWith ann) newBody
+        set x = Expression (plWith x) newBody
         newBody =
             SugarLens.overBodyChildren
             (nullaryPayload %~ (,) neverShowAnnotations)

@@ -32,7 +32,7 @@ convert (V.Inject tag injected) exprPl =
                         <&> V.Inject tag <&> V.BInject
                         >>= ExprIRef.writeValBody valI
                     typeProtect <&> EntityId.ofValI
-        let val =
+        let inj =
                 case injectedS of
                 Expression pl
                     (BodyRecord
@@ -49,7 +49,7 @@ convert (V.Inject tag injected) exprPl =
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
                     void typeProtect
         convertTag tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
-            <&> (`Inject` val) <&> BodyInject
+            <&> (`Inject` inj) <&> BodyInject
             >>= addActions [] exprPl
     where
         entityId = exprPl ^. Input.entityId

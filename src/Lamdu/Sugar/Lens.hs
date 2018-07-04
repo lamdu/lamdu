@@ -53,7 +53,7 @@ binderContentExprs ::
 binderContentExprs f (BinderExpr x) =
     f x <&> BinderExpr
 binderContentExprs f (BinderLet x) =
-    (\val bod -> x{_lValue=val, _lBody=bod})
+    (\v bod -> x{_lValue=v, _lBody=bod})
     <$> assignmentExprs f (x ^. lValue)
     <*> binderExprs f (x ^. lBody)
     <&> BinderLet
@@ -164,17 +164,17 @@ overBodyChildren n f r e =
 
 exprPayload ::
     Lens.IndexedLens' (PayloadOf name i o) (Expression name i o a) a
-exprPayload f val@(Expression pl x) =
-    Lens.indexed f (OfExpr (void val)) pl <&> (`Expression` x)
+exprPayload f v@(Expression pl x) =
+    Lens.indexed f (OfExpr (void v)) pl <&> (`Expression` x)
 
 nullaryValPayload ::
     Lens.IndexedLens (PayloadOf name i o)
     (NullaryVal name i o a)
     (NullaryVal name i o b)
     a b
-nullaryValPayload f val =
-    Lens.indexed f (OfNullaryVal (void val)) (val ^. nullaryPayload)
-    <&> \x -> val & nullaryPayload .~ x
+nullaryValPayload f v =
+    Lens.indexed f (OfNullaryVal (void v)) (v ^. nullaryPayload)
+    <&> \x -> v & nullaryPayload .~ x
 
 labeledApplyFuncPayload ::
     Lens.AnIndexedLens (PayloadOf name i o)
@@ -273,9 +273,9 @@ binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
 leftMostLeaf :: Expression name i o a -> Expression name i o a
-leftMostLeaf val =
-    case val ^.. body . bodyChildren pure pure pure of
-    [] -> val
+leftMostLeaf v =
+    case v ^.. body . bodyChildren pure pure pure of
+    [] -> v
     (x:_) -> leftMostLeaf x
 
 definitionExprs ::

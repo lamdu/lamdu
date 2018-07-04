@@ -246,9 +246,9 @@ convertPayload ::
 convertPayload mode (showAnn, pl) =
     makeAnnotation mode showAnn (pl ^. pInput)
     <&>
-    \ann ->
+    \x ->
     Payload
-    { _plAnnotation = ann
+    { _plAnnotation = x
     , _plActions = pl ^. pActions
     , _plNeverShrinkAnnotation = showAnn ^. Ann.showExpanded
     , _plEntityId = pl ^. pInput . Input.entityId

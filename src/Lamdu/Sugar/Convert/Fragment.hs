@@ -142,8 +142,8 @@ holeResultsEmplaceFragment ::
     Monad m =>
     Val (Input.Payload n a) -> Hole.ResultVal n () ->
     Hole.ResultGen m (Hole.ResultVal n IsFragment)
-holeResultsEmplaceFragment rawFragmentExpr val =
-    markNotFragment val
+holeResultsEmplaceFragment rawFragmentExpr x =
+    markNotFragment x
     & emplaceInHoles emplace
     & ListClass.fromList
     & lift
@@ -175,7 +175,7 @@ holeResultsEmplaceFragment rawFragmentExpr val =
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment :: Hole.ResultVal n () -> Hole.ResultVal n IsFragment
-markNotFragment val = val <&> _2 . _2 .~ NotFragment
+markNotFragment = (<&> _2 . _2 .~ NotFragment)
 
 -- TODO: Unify type according to IsFragment, avoid magic var
 fragmentVar :: V.Var
@@ -222,8 +222,8 @@ mkResultValFragment ::
     Infer.Payload ->
     Val (T.Type, Maybe (Input.Payload m a)) ->
     StateT Infer.Context (T m) (Hole.ResultVal m IsFragment)
-mkResultValFragment inferred val =
-    val <&> onPl
+mkResultValFragment inferred x =
+    x <&> onPl
     & Hole.detachValIfNeeded emptyPl (inferred ^. Infer.plType)
     where
         emptyPl = (Nothing, NotFragment)
@@ -241,19 +241,19 @@ mkOptionFromFragment ::
     Input.Payload m a ->
     Val (T.Type, Maybe (Input.Payload m a)) ->
     HoleOption InternalName (T m) (T m)
-mkOptionFromFragment sugarContext exprPl val =
+mkOptionFromFragment sugarContext exprPl x =
     HoleOption
     { _hoVal = baseExpr
     , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
             (result, inferContext) <-
-                mkResultValFragment (exprPl ^. Input.inferred) val
+                mkResultValFragment (exprPl ^. Input.inferred) x
                 & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
             let depsProp = sugarContext ^. ConvertM.scFrozenDeps
             newDeps <-
                 Hole.loadNewDeps (depsProp ^. Property.pVal)
-                (exprPl ^. Input.inferred . Infer.plScope) val
+                (exprPl ^. Input.inferred . Infer.plScope) x
             let newSugarContext =
                     sugarContext
                     & ConvertM.scInferContext .~ inferContext
@@ -269,6 +269,6 @@ mkOptionFromFragment sugarContext exprPl val =
     where
         stored = exprPl ^. Input.stored
         topEntityId = Property.value stored & EntityId.ofValI
-        baseExpr = pruneExpr val
+        baseExpr = pruneExpr x
         pruneExpr (Val (_, Just{}) _) = P.hole
         pruneExpr (Val _ b) = b <&> pruneExpr & Val ()

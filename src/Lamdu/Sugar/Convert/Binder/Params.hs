@@ -129,11 +129,11 @@ wrapUnappliedUsesOfVar var =
 changeCallArgs ::
     Monad m =>
     (ValI m -> T m (ValI m)) -> Val (ValP m) -> V.Var -> T m ()
-changeCallArgs change val var  =
+changeCallArgs change v var  =
     do
         SubExprs.onMatchingSubexprsWithPath (Property.modify_ ?? change)
-            (isArgOfCallTo var) val
-        wrapUnappliedUsesOfVar var val
+            (isArgOfCallTo var) v
+        wrapUnappliedUsesOfVar var v
 
 -- | If the lam is bound to a variable, we can fix all uses of the
 --   variable. When it isn't, we may need to fix the lam itself
@@ -301,15 +301,15 @@ mkParamInfo param fp =
 
 changeGetFieldTags ::
     Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValP m) -> T m ()
-changeGetFieldTags param prevTag chosenTag val =
-    case val ^. Val.body of
+changeGetFieldTags param prevTag chosenTag x =
+    case x ^. Val.body of
     V.BGetField (V.GetField getVar@(Val _ (V.BLeaf (V.LVar v))) t)
         | v == param && t == prevTag ->
             V.GetField (getVar ^. Val.payload . Property.pVal) chosenTag & V.BGetField
-            & ExprIRef.writeValBody (val ^. Val.payload . Property.pVal)
+            & ExprIRef.writeValBody (x ^. Val.payload . Property.pVal)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
-        | v == param -> DataOps.applyHoleTo (val ^. Val.payload) & void
+        | v == param -> DataOps.applyHoleTo (x ^. Val.payload) & void
     b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
 
 setFieldParamTag ::
@@ -409,13 +409,13 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 tagList = fieldParams <&> fpTag
 
 removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
-removeCallsToVar funcVar val =
+removeCallsToVar funcVar x =
     do
         SubExprs.onMatchingSubexprs changeRecursion
             ( Val.body . V._BApp . V.applyFunc . ExprLens.valVar
             . Lens.only funcVar
-            ) val
-        wrapUnappliedUsesOfVar funcVar val
+            ) x
+        wrapUnappliedUsesOfVar funcVar x
     where
         changeRecursion prop =
             ExprIRef.readValBody (Property.value prop)
@@ -600,8 +600,8 @@ isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param bod) =
     go False bod
     where
-        go isGetFieldChild val =
-            case val ^. Val.body of
+        go isGetFieldChild expr =
+            case expr ^. Val.body of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
             x -> all (go False) (x ^.. Lens.traverse)
@@ -675,18 +675,18 @@ convertVarToCalls ::
 convertVarToCalls mkArg var =
     SubExprs.onMatchingSubexprs (Property.modify_ ?? change) (ExprLens.valVar . Lens.only var)
     where
-        change val = mkArg >>= ExprIRef.newValBody . V.BApp . V.Apply val
+        change x = mkArg >>= ExprIRef.newValBody . V.BApp . V.Apply x
 
 convertBinderToFunction ::
     Monad m =>
     T m (ValI m) -> BinderKind m -> Val (ValP m) ->
     T m (V.Var, ValP m)
-convertBinderToFunction mkArg binderKind val =
+convertBinderToFunction mkArg binderKind x =
     do
-        (newParam, newValP) <- DataOps.lambdaWrap (val ^. Val.payload)
+        (newParam, newValP) <- DataOps.lambdaWrap (x ^. Val.payload)
         case binderKind of
             BinderKindDef defI ->
-                convertVarToCalls mkArg (ExprIRef.globalId defI) val
+                convertVarToCalls mkArg (ExprIRef.globalId defI) x
             BinderKindLet redexLam ->
                 convertVarToCalls mkArg
                 (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
@@ -696,7 +696,7 @@ convertBinderToFunction mkArg binderKind val =
 convertEmptyParams ::
     Monad m =>
     BinderKind m -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m)
-convertEmptyParams binderKind val =
+convertEmptyParams binderKind x =
     ConvertM.postProcessAssert
     <&>
     \postProcess ->
@@ -707,7 +707,7 @@ convertEmptyParams binderKind val =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                val <&> (^. Input.stored)
+                x <&> (^. Input.stored)
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure

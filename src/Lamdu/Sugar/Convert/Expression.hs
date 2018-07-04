@@ -35,9 +35,9 @@ convertLiteralCommon ::
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
     Input.Payload m b -> ConvertM m (ExpressionU m b)
-convertLiteralCommon mkLit mkBody val exprPl =
+convertLiteralCommon mkLit mkBody x exprPl =
     Property
-    { _pVal = val
+    { _pVal = x
     , _pSet =
       ExprIRef.writeValBody iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
