@@ -43,7 +43,6 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -76,9 +75,9 @@ makeBinderNameEdit binderId addFirstParam rhsJumperEquals tag color =
             <&> Align.tValue %~ Widget.weakerEvents eventMap
 
 data Parts o = Parts
-    { pMParamsEdit :: Maybe (ExpressionGui o)
+    { pMParamsEdit :: Maybe (Gui Responsive o)
     , pMScopesEdit :: Maybe (Gui Widget o)
-    , pBodyEdit :: ExpressionGui o
+    , pBodyEdit :: Gui Responsive o
     , pEventMap :: Gui EventMap o
     }
 
@@ -236,7 +235,7 @@ makeMParamsEdit ::
     NearestHoles -> Widget.Id ->
     Sugar.AddFirstParam (Name o) i o ->
     Maybe (Sugar.BinderParams (Name o) i o) ->
-    ExprGuiM i o (Maybe (ExpressionGui o))
+    ExprGuiM i o (Maybe (Gui Responsive o))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHoles bodyId addFirstParam mParams =
     do
         isPrepend <- GuiState.isSubCursor ?? prependId
@@ -388,7 +387,7 @@ make ::
     Sugar.Assignment (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Widget.Id ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make pMode defEventMap tag color binder myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
@@ -449,7 +448,7 @@ make pMode defEventMap tag color binder myId =
 makeLetEdit ::
     (Monad i, Monad o) =>
     Sugar.Let (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeLetEdit item =
     do
         config <- Lens.view Config.config
@@ -513,7 +512,7 @@ makeBinderBodyEdit ::
     (Monad i, Monad o) =>
     Sugar.Binder (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeBinderBodyEdit (Sugar.Binder addOuterLet content) =
     do
         newLetEventMap <- addLetEventMap addOuterLet
@@ -523,7 +522,7 @@ makeBinderContentEdit ::
     (Monad i, Monad o) =>
     Sugar.BinderContent (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeBinderContentEdit (Sugar.BinderExpr assignmentBody) =
     ExprGuiM.makeSubexpression assignmentBody
 makeBinderContentEdit content@(Sugar.BinderLet l) =
@@ -588,7 +587,7 @@ makeParamsEdit ::
     Annotation.EvalAnnotationOptions -> NearestHoles ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name o) i o ->
-    ExprGuiM i o [ExpressionGui o]
+    ExprGuiM i o [Gui Responsive o]
 makeParamsEdit annotationOpts nearestHoles delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam p ->

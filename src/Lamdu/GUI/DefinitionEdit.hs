@@ -11,6 +11,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.Rect (Rect(..))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
@@ -20,7 +21,6 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -48,7 +48,7 @@ makeExprDefinition ::
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionExpression (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeExprDefinition defEventMap def bodyExpr =
     BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
@@ -93,7 +93,7 @@ make ::
     (Monad i, Monad o) =>
     Gui EventMap o ->
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make defEventMap def =
     do
         defStateProp <- def ^. Sugar.drDefinitionState & ExprGuiM.im

@@ -12,14 +12,16 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
-import qualified GUI.Momentu as Momentu
 import           GUI.Momentu (View, (/-/))
+import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -34,7 +36,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
@@ -148,7 +149,7 @@ make ::
     Maybe (Sugar.OptionLiteral (Name o) i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
-    ExprGuiM i o (Menu.Placement -> ExpressionGui o)
+    ExprGuiM i o (Menu.Placement -> Gui Responsive o)
 make mkOptions mOptionLiteral pl allowedTerms =
     do
         config <- Lens.view Config.config

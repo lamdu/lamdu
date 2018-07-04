@@ -13,9 +13,11 @@ import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -24,7 +26,6 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (addLetEventMap)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -48,8 +49,8 @@ makeIfThen ::
     ( Monad o, MonadReader env f, HasTheme env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     ) =>
-    WithTextPos View -> Sugar.EntityId -> Sugar.IfThen o (ExpressionGui o) ->
-    f (Row (ExpressionGui o))
+    WithTextPos View -> Sugar.EntityId -> Sugar.IfThen o (Gui Responsive o) ->
+    f (Row (Gui Responsive o))
 makeIfThen prefixLabel entityId ifThen =
     do
         label <- Styled.grammarLabel "if "
@@ -69,7 +70,7 @@ makeIfThen prefixLabel entityId ifThen =
 makeElse ::
     (Monad i, Monad o) =>
     Sugar.Else name i o (ExprGui.SugarExpr i o) ->
-    ExprGuiM i o [Row (ExpressionGui o)]
+    ExprGuiM i o [Row (Gui Responsive o)]
 makeElse (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
@@ -104,7 +105,7 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _node
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    ) => f (Row (ExpressionGui o) -> ExpressionGui o)
+    ) => f (Row (Gui Responsive o) -> Gui Responsive o)
 verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
@@ -119,7 +120,7 @@ verticalRowRender =
 renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    ) => Maybe AnimId -> f ([Row (ExpressionGui o)] -> ExpressionGui o)
+    ) => Maybe AnimId -> f ([Row (Gui Responsive o)] -> Gui Responsive o)
 renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
@@ -148,7 +149,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.IfElse name i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows (ExprGui.mParensId pl)

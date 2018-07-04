@@ -10,6 +10,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -19,7 +20,6 @@ import           Lamdu.Config (Config, HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled
@@ -97,7 +97,7 @@ make ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Name o) i (Info i o) ->
-    ExprGuiM i o [ExpressionGui o]
+    ExprGuiM i o [Gui Responsive o]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view Config.config

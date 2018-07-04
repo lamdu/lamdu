@@ -4,12 +4,13 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -25,7 +26,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.GetField (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <- ExprGuiM.makeSubexpression recExpr

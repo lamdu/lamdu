@@ -32,7 +32,6 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -95,7 +94,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.Composite (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -218,7 +217,7 @@ separationBar theme animId width =
 makeOpenRecord ::
     (Monad i, Monad o) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    ExpressionGui o -> ExprGuiM i o (ExpressionGui o)
+    Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view Theme.theme

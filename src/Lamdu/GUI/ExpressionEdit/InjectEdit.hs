@@ -8,8 +8,10 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -17,7 +19,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -41,7 +42,7 @@ makeInject ::
     ExprGui.SugarExpr i o ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
@@ -81,7 +82,7 @@ makeNullaryInject ::
     Sugar.Node (Sugar.NullaryVal (Name o) i o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
     >>= \case
@@ -106,7 +107,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.Inject (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make (Sugar.Inject tag mVal) =
     case mVal of
     Sugar.InjectNullary nullary -> makeNullaryInject nullary tag

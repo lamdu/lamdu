@@ -11,6 +11,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -24,7 +25,6 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
@@ -38,15 +38,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 addScopeEdit ::
-    Functor o =>
-    Maybe (Gui Widget o) -> ExpressionGui o ->
-    ExpressionGui o
+    Functor o => Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o
 addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
     Functor o =>
-    Maybe (ExpressionGui o) ->
-    Maybe (Gui Widget o) -> [ExpressionGui o]
+    Maybe (Gui Responsive o) ->
+    Maybe (Gui Widget o) -> [Gui Responsive o]
 mkLhsEdits mParamsEdit mScopeEdit =
     mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
 
@@ -54,8 +52,8 @@ mkExpanded ::
     ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
-    f (Maybe (ExpressionGui o) -> Maybe (Gui Widget o) ->
-     [ExpressionGui o])
+    f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) ->
+     [Gui Responsive o])
 mkExpanded =
     Styled.grammarLabel "→" <&> Responsive.fromTextView
     <&> \labelEdit mParamsEdit mScopeEdit ->
@@ -68,7 +66,7 @@ mkShrunk ::
     ( Monad o, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Gui Widget o) -> [ExpressionGui o])
+    f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
     do
         jumpKeys <- Lens.view (Config.config . Config.jumpToDefinitionKeys)
@@ -96,8 +94,8 @@ mkLightLambda ::
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f
-    (Maybe (ExpressionGui o) -> Maybe (Gui Widget o) ->
-     [ExpressionGui o])
+    (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) ->
+     [Gui Responsive o])
 mkLightLambda params myId =
     do
         isSelected <-
@@ -125,7 +123,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.Lambda (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make lam pl =
     do
         BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-

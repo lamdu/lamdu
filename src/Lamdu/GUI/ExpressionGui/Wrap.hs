@@ -17,7 +17,6 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -58,7 +57,7 @@ parentDelegator myId =
 stdWrapParentExpr ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o -> ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o -> Gui Responsive o)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl

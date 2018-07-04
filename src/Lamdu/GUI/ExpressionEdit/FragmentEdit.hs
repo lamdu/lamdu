@@ -13,6 +13,7 @@ import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -22,7 +23,6 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -51,7 +51,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.Fragment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
@@ -113,7 +113,7 @@ make fragment pl =
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
     Sugar.Fragment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeFragmentExprEdit fragment =
     do
         theme <- Lens.view Theme.theme

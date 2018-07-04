@@ -12,7 +12,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (HasState, HasCursor(..), VirtualCursor(..))
+import           GUI.Momentu.State (Gui, HasState, HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
@@ -26,7 +26,6 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -66,7 +65,7 @@ makeReplGui ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    Cache.Functions -> env -> T ViewM (ExpressionGui (T ViewM))
+    Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeReplGui cache env =
     do
         workArea <- convertWorkArea cache

@@ -28,10 +28,10 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import           GUI.Momentu.State (GUIState(..))
-import           GUI.Momentu.State (Gui)
+import           GUI.Momentu.State (Gui, GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
@@ -46,7 +46,6 @@ import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -67,7 +66,7 @@ data Askable i o = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
+    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -171,7 +170,7 @@ run ::
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)) ->
+    (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> ExprGuiM i o a -> i a
 run makeSubexpr theGuiAnchors env liftIom (ExprGuiM action) =

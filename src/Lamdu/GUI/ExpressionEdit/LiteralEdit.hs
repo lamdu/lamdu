@@ -18,6 +18,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -32,7 +33,6 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
@@ -65,7 +65,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
-    Sugar.Payload name i o ExprGui.Payload -> f (ExpressionGui o)
+    Sugar.Payload name i o ExprGui.Payload -> f (Gui Responsive o)
 genericEdit whichStyle prop pl =
     TextView.makeFocusable ?? valText ?? myId
     <&> Align.tValue %~ Widget.weakerEvents editEventMap
@@ -216,7 +216,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.Literal (Property o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make lit pl =
     stdWrap pl
     <*>

@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
@@ -29,7 +30,6 @@ import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -52,7 +52,7 @@ make ::
     (Monad i, Monad o) =>
     Sugar.Case (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
@@ -147,7 +147,7 @@ makeAltsWidget ::
     [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
     Sugar.TagSelection (Name o) i o Sugar.EntityId ->
     Widget.Id ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeAltsWidget mActiveTag alts addAlt altsId =
     do
         existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
@@ -193,8 +193,7 @@ separationBar theme animId width =
 makeOpenCase ::
     (Monad i, Monad o) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    AnimId -> ExpressionGui o ->
-    ExprGuiM i o (ExpressionGui o)
+    AnimId -> Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme

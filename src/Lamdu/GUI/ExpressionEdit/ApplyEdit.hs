@@ -11,6 +11,7 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -20,7 +21,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -59,7 +59,7 @@ addInfixMarker widgetId =
 makeFunc ::
     (Monad i, Monad o) =>
     Sugar.Node (Sugar.BinderVarRef (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeFunc func =
     stdWrap pl <*>
     ( GetVarEdit.makeGetBinder (func ^. Sugar.val) myId
@@ -72,7 +72,7 @@ makeFunc func =
 makeInfixFunc ::
     (Monad i, Monad o) =>
     Sugar.Node (Sugar.BinderVarRef (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeInfixFunc func =
     makeFunc func <&> mAddMarker
     where
@@ -93,7 +93,7 @@ makeFuncRow ::
     (Monad i, Monad o) =>
     Maybe AnimId ->
     Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.Verbose -> makeFunc func
@@ -120,7 +120,7 @@ makeLabeled ::
     (Monad i, Monad o) =>
     Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeLabeled apply pl =
     stdWrapParentExpr pl
     <*> (makeFuncRow (ExprGui.mParensId pl) apply >>= addBox)
@@ -147,7 +147,7 @@ makeArgRow arg =
 mkRelayedArgs ::
     (Monad i, Monad o) =>
     [Sugar.Node (Sugar.GetVar (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload)] ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 mkRelayedArgs args =
     do
         argEdits <- traverse makeArgEdit args
@@ -159,8 +159,7 @@ mkRelayedArgs args =
 mkBoxed ::
     (Monad i, Monad o) =>
     Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExpressionGui o ->
-    ExprGuiM i o (ExpressionGui o)
+    Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 mkBoxed apply funcRow =
     do
         argRows <-
@@ -181,7 +180,7 @@ makeSimple ::
     (Monad i, Monad o) =>
     Sugar.Apply (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeSimple (Sugar.Apply func arg) pl =
     stdWrapParentExpr pl
     <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)

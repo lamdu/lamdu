@@ -5,7 +5,9 @@ module Lamdu.GUI.ExpressionEdit
 
 import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -22,7 +24,6 @@ import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -33,7 +34,7 @@ import           Lamdu.Prelude
 
 make ::
     (Monad i, Monad o) =>
-    ExprGui.SugarExpr i o -> ExprGuiM i o (ExpressionGui o)
+    ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)
 make (Sugar.PNode (Sugar.Node pl body)) =
     makeEditor body pl & assignCursor
     where
@@ -46,7 +47,7 @@ make (Sugar.PNode (Sugar.Node pl body)) =
 placeHolder ::
     (Monad i, Applicative o) =>
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 placeHolder pl =
     (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
     <*> TextView.makeLabel "★"
@@ -56,7 +57,7 @@ makeEditor ::
     (Monad i, Monad o) =>
     Sugar.Body (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeEditor body pl =
     case body of
     Sugar.BodyPlaceHolder    -> placeHolder pl

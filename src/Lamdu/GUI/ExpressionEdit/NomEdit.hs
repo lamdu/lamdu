@@ -8,15 +8,16 @@ import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui (ExpressionGui)
 import qualified Lamdu.GUI.ExpressionGui as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -41,7 +42,7 @@ makeToNom ::
     (Sugar.Binder (Name o) i o
         (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> BinderEdit.makeBinderBodyEdit
     & mkNomGui id "ToNominal" "«" mDel pl
@@ -53,7 +54,7 @@ makeFromNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o) (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (ExpressionGui o)
+    ExprGuiM i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
     & mkNomGui reverse "FromNominal" "»" mDel pl
@@ -62,11 +63,11 @@ makeFromNom nom pl =
 
 mkNomGui ::
     (Monad i, Monad o) =>
-    ([ExpressionGui o] -> [ExpressionGui o]) ->
+    ([Gui Responsive o] -> [Gui Responsive o]) ->
     Text -> Text -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Nominal (Name o) (ExprGuiM i o (ExpressionGui o)) ->
-    ExprGuiM i o (ExpressionGui o)
+    Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
+    ExprGuiM i o (Gui Responsive o)
 mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (Theme.theme . Theme.textColors . TextColors.nomColor)

@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui
-    ( ExpressionGui
-    , SugarExpr
+    ( SugarExpr
     , Payload(..)
         , plHiddenEntityIds, plNearestHoles, plNeedParens, plMinOpPrec
     , nextHolesBefore
@@ -11,8 +10,6 @@ module Lamdu.GUI.ExpressionGui
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
-import           GUI.Momentu.Responsive (Responsive(..))
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -22,8 +19,6 @@ import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-type ExpressionGui a = Gui Responsive a
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
