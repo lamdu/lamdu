@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (WithTextPos(..))
+import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -17,7 +17,6 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -86,8 +85,7 @@ makeBranchSelector ::
     ) =>
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
-    Actions n mw ->
-    mr (WithTextPos (Gui Widget mw))
+    Actions n mw -> mr (TextWidget mw)
 makeBranchSelector rwtransaction rtransaction actions =
     do
         branchNameEdits <- branches actions & traverse makeBranchNameEdit

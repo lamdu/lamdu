@@ -14,7 +14,7 @@ import qualified Control.Lens as Lens
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
@@ -81,7 +81,7 @@ makeWideLayouts disamb w =
 hbox ::
     Functor f =>
     HorizDisambiguator (f State.Update) ->
-    ([WithTextPos (Gui Widget f)] -> [WithTextPos (Gui Widget f)]) ->
+    ([TextWidget f] -> [TextWidget f]) ->
     Gui (WideLayoutOption []) f
 hbox disamb spacer =
     WideLayoutOption
@@ -126,7 +126,7 @@ disambiguationNone = Disambiguators id id
 
 boxH ::
     Functor f =>
-    ([WithTextPos (Gui Widget f)] -> [WithTextPos (Gui Widget f)]) ->
+    ([TextWidget f] -> [TextWidget f]) ->
     ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
     [Gui Responsive f] -> Gui Responsive f
 boxH onHGuis onVGuis disamb guis =

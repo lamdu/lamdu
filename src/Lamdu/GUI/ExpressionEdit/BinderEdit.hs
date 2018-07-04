@@ -14,7 +14,7 @@ import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Draw as Draw
@@ -67,7 +67,7 @@ makeBinderNameEdit ::
     Widget.Id -> Sugar.AddFirstParam (Name o) i o ->
     Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    ExprGuiM i o (WithTextPos (Gui Widget o))
+    ExprGuiM i o (TextWidget o)
 makeBinderNameEdit binderId addFirstParam rhsJumperEquals tag color =
     do
         addFirstParamEventMap <- ParamEdit.eventMapAddFirstParam binderId addFirstParam
@@ -558,7 +558,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
 
 namedParamEditInfo ::
     Widget.Id -> Sugar.FuncParamActions (Name o) i o ->
-    WithTextPos (Gui Widget o) ->
+    TextWidget o ->
     ParamEdit.Info i o
 namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
@@ -571,7 +571,7 @@ namedParamEditInfo widgetId actions nameEdit =
     }
 
 nullParamEditInfo ::
-    Widget.Id -> WithTextPos (Gui Widget o) ->
+    Widget.Id -> TextWidget o ->
     Sugar.NullParamActions o -> ParamEdit.Info i o
 nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info

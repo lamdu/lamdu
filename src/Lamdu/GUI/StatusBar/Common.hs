@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
-import           GUI.Momentu.Align (WithTextPos(..))
+import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
@@ -24,7 +24,7 @@ import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget, R)
+import           GUI.Momentu.Widget (R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
@@ -40,7 +40,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.Prelude
 
 data StatusWidget f = StatusWidget
-    { _widget :: WithTextPos (Gui Widget f)
+    { _widget :: TextWidget f
     , _globalEventMap :: Gui EventMap f
     }
 Lens.makeLenses ''StatusWidget
@@ -72,7 +72,7 @@ makeLabeledWidget headerText w =
 makeStatusWidget ::
     ( MonadReader env m, Functor f
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    ) => Text -> WithTextPos (Gui Widget f) -> m (StatusWidget f)
+    ) => Text -> TextWidget f -> m (StatusWidget f)
 makeStatusWidget headerText w =
     makeLabeledWidget headerText w
     <&> (`StatusWidget` mempty)
@@ -83,7 +83,7 @@ makeChoice ::
     , Element.HasAnimIdPrefix env
     ) =>
     Text -> Property f a -> [(Text, a)] ->
-    m (WithTextPos (Gui Widget f))
+    m (TextWidget f)
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
@@ -102,7 +102,7 @@ makeSwitchWidget ::
     , GuiState.HasCursor env, Hover.HasStyle env
     ) =>
     Text -> Property f a -> [(Text, a)] ->
-    m (WithTextPos (Gui Widget f))
+    m (TextWidget f)
 makeSwitchWidget headerText prop choiceVals =
     do
         choice <- makeChoice headerText prop choiceVals

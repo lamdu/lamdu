@@ -18,7 +18,7 @@ import           Data.List.Extended (genericLength, minimumOn)
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos(..))
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Direction
@@ -33,7 +33,6 @@ import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
-import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
@@ -115,7 +114,7 @@ cursorRects s str =
 makeInternal ::
     Style -> Text -> EmptyStrings ->
     (forall a. Lens.Getting a (Modes a) a) ->
-    Widget.Id -> WithTextPos (Gui Widget ((,) Text))
+    Widget.Id -> TextWidget ((,) Text)
 makeInternal s str emptyStrings mode myId =
     v
     & Align.tValue %~ Widget.fromView
@@ -132,7 +131,7 @@ makeInternal s str emptyStrings mode myId =
 
 makeUnfocused ::
     EmptyStrings -> Style -> Text -> Widget.Id ->
-    WithTextPos (Gui Widget ((,) Text))
+    TextWidget ((,) Text)
 makeUnfocused empty s str = makeInternal s str empty unfocused
 
 minimumIndex :: Ord a => [a] -> Int
@@ -175,7 +174,7 @@ eventResult myId newText newCursor =
 -- | given text...
 makeFocused ::
     Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
-    WithTextPos (Gui Widget ((,) Text))
+    TextWidget ((,) Text)
 makeFocused cursor empty s str myId =
     makeInternal s str empty focused myId
     & Element.bottomLayer <>~ cursorFrame
@@ -367,7 +366,7 @@ getCursor =
 make ::
     (MonadReader env m, State.HasCursor env, HasStyle env) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
-        WithTextPos (Gui Widget ((,) Text))
+        TextWidget ((,) Text)
       )
 make =
     do

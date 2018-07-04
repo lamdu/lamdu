@@ -4,7 +4,7 @@ module Lamdu.GUI.DefinitionEdit
 
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -14,7 +14,6 @@ import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -35,7 +34,7 @@ import           Lamdu.Prelude
 
 undeleteButton ::
     (Monad i, Monad o) =>
-    o Widget.Id -> ExprGuiM i o (WithTextPos (Gui Widget o))
+    o Widget.Id -> ExprGuiM i o (TextWidget o)
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ["Undelete"] <&> Widget.Id
@@ -62,7 +61,7 @@ makeBuiltinDefinition ::
     (Monad i, Monad o) =>
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionBuiltin (Name g) o ->
-    ExprGuiM i o (WithTextPos (Gui Widget o))
+    ExprGuiM i o (TextWidget o)
 makeBuiltinDefinition def builtin =
     do
         nameEdit <- TagEdit.makeBinderTagEdit TextColors.definitionColor name

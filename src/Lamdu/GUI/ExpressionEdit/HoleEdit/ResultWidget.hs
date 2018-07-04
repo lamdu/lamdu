@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Widget, WithTextPos(..))
+import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -13,7 +13,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -65,7 +64,7 @@ makeWidget ::
     Widget.Id ->
     Sugar.BinderContent (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (WithTextPos (Gui Widget o))
+    ExprGuiM i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted

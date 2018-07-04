@@ -7,15 +7,13 @@ module GUI.Momentu.Widgets.TextEdit.Property
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 
@@ -26,7 +24,7 @@ make ::
      State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-     WithTextPos (Gui Widget f))
+     TextWidget f)
 make =
     TextEdit.make <&> f
     where
@@ -46,7 +44,7 @@ makeLineEdit ::
     (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-     WithTextPos (Gui Widget f))
+     TextWidget f)
 makeLineEdit =
     make
     <&> \mk empty textRef myId ->
@@ -58,7 +56,7 @@ makeWordEdit ::
     (MonadReader env m, Applicative f, State.HasCursor env, TextEdit.HasStyle env) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
-     WithTextPos (Gui Widget f))
+     TextWidget f)
 makeWordEdit =
     makeLineEdit
     <&> \mk empty textRef myId -> mk empty textRef myId

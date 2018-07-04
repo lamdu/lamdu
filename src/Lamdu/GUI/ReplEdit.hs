@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import           GUI.Momentu.Align (Aligned(..), value)
+import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -107,7 +106,7 @@ errorIndicator ::
     , HasTheme env, HasConfig env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
-    m (Align.WithTextPos (Gui Widget o))
+    m (Align.TextWidget o)
 errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
     do
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
@@ -164,7 +163,7 @@ resultWidget ::
     , HasTheme env, HasConfig env
     ) =>
     ExportRepl o -> Sugar.Payload name i (T o) a -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
-    m (Align.WithTextPos (Gui Widget (IOTrans o)))
+    m (TextWidget (IOTrans o))
 resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
     do
         view <- makeIndicator tag Theme.successColor "✔"

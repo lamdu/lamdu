@@ -4,6 +4,7 @@ module GUI.Momentu.Align
     , boxAlign, hboxAlign, vboxAlign
     , WithTextPos(..), textTop, tValue
     , fromWithTextPos, toWithTextPos
+    , TextWidget
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,6 +13,7 @@ import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), GluesTo, Orientation)
 import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
@@ -29,6 +31,8 @@ data WithTextPos a = WithTextPos
     , _tValue :: a
     } deriving (Functor, Foldable, Traversable, Show)
 Lens.makeLenses ''WithTextPos
+
+type TextWidget f = WithTextPos (Gui Widget f)
 
 fromWithTextPos :: SizedElement a => R -> WithTextPos a -> Aligned a
 fromWithTextPos x (WithTextPos y w) =

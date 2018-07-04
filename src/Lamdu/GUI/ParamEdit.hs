@@ -5,7 +5,7 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -13,7 +13,6 @@ import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import           Lamdu.Config (Config, HasConfig(..))
@@ -76,7 +75,7 @@ eventParamDelEventMap fpDel keys docSuffix dstPosId =
         (E.Doc ["Edit", "Delete parameter" <> docSuffix])
 
 data Info i o = Info
-    { iNameEdit :: WithTextPos (Gui Widget o)
+    { iNameEdit :: TextWidget o
     , iDel :: o ()
     , iAddNext :: Maybe (Sugar.AddNextParam (Name o) i o)
     , iMOrderBefore :: Maybe (o ())

@@ -17,7 +17,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos(..))
+import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
@@ -26,11 +26,9 @@ import           GUI.Momentu.Font (Font, RenderedText(..), renderedText, rendere
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.DrawingCombinators as Draw
 
@@ -126,7 +124,7 @@ makeLabel text = (make ?? text) <*> Element.subAnimId [encodeUtf8 text]
 
 makeFocusable ::
     (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env) =>
-    m (Text -> Widget.Id -> WithTextPos (Gui Widget f))
+    m (Text -> Widget.Id -> TextWidget f)
 makeFocusable =
     do
         toFocusable <- Widget.makeFocusableView
@@ -137,7 +135,7 @@ makeFocusable =
 
 makeFocusableLabel ::
     (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
-    Text -> m (WithTextPos (Gui Widget f))
+    Text -> m (TextWidget f)
 makeFocusableLabel text =
     do
         toFocusable <- Widget.makeFocusableView

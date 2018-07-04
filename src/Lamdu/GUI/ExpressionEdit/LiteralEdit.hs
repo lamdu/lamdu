@@ -10,7 +10,7 @@ import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -21,7 +21,6 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -105,7 +104,7 @@ withFd ::
     ( MonadReader env m, HasConfig env, GuiState.HasCursor env, Menu.HasConfig env
     , Applicative f
     ) =>
-    m (Widget.Id -> WithTextPos (Gui Widget f) -> WithTextPos (Gui Widget f))
+    m (Widget.Id -> TextWidget f -> TextWidget f)
 withFd =
     (FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent)
     <&> Lens.mapped %~ (Align.tValue %~)
@@ -116,7 +115,7 @@ textEdit ::
     ) =>
     Property o Text ->
     Sugar.Payload name i o ExprGui.Payload ->
-    m (WithTextPos (Gui Widget o))
+    m (TextWidget o)
 textEdit prop pl =
     do
         left <- TextView.makeLabel "“"
@@ -142,7 +141,7 @@ numEdit ::
     ) =>
     Property o Double ->
     Sugar.Payload name i o ExprGui.Payload ->
-    m (WithTextPos (Gui Widget o))
+    m (TextWidget o)
 numEdit prop pl =
     (withFd ?? myId) <*>
     do

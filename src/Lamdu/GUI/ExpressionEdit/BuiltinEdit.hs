@@ -6,7 +6,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
@@ -14,9 +14,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -49,7 +47,7 @@ makeNamePartEditor ::
     , TextEdit.HasStyle env
     ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
-    m (WithTextPos (Gui Widget f))
+    m (TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent
      ?? myId <&> (Align.tValue %~))
@@ -69,7 +67,7 @@ make ::
     , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad o
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
-    f (WithTextPos (Gui Widget o))
+    f (TextWidget o)
 make def myId =
     do
         colors <- Lens.view (Theme.theme . Theme.textColors)

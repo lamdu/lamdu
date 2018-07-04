@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -52,7 +51,7 @@ makeSimpleView ::
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
-    m (WithTextPos (Gui Widget f))
+    m (TextWidget f)
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
@@ -91,7 +90,7 @@ makeNameRef ::
     (Monad i, Monad o) =>
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
     Sugar.NameRef (Name x) o ->
-    ExprGuiM i o (WithTextPos (Gui Widget o))
+    ExprGuiM i o (TextWidget o)
 makeNameRef color myId nameRef =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
@@ -132,7 +131,7 @@ definitionTypeChangeBox ::
     , HasConfig env, Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
-    m (WithTextPos (Gui Widget f))
+    m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
         updateLabel <- Styled.actionable myId "Update" updateDoc update
@@ -167,8 +166,8 @@ processDefinitionWidget ::
     , Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->
-    m (WithTextPos (Gui Widget f)) ->
-    m (WithTextPos (Gui Widget f))
+    m (TextWidget f) ->
+    m (TextWidget f)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
@@ -209,7 +208,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 makeGetBinder ::
     (Monad i, Monad o) =>
     Sugar.BinderVarRef (Name x) o -> Widget.Id ->
-    ExprGuiM i o (WithTextPos (Gui Widget o))
+    ExprGuiM i o (TextWidget o)
 makeGetBinder binderVar myId =
     do
         config <- Lens.view Config.config
@@ -228,7 +227,7 @@ makeGetBinder binderVar myId =
 makeGetParam ::
     (Monad i, Monad o) =>
     Sugar.ParamRef (Name x) o -> Widget.Id ->
-    ExprGuiM i o (WithTextPos (Gui Widget o))
+    ExprGuiM i o (TextWidget o)
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme

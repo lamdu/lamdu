@@ -36,7 +36,7 @@ module GUI.Momentu
 
     -- | Widget alignment
     , Align.Aligned(..), Align.alignmentRatio, Align.value
-    , Align.WithTextPos(..), Align.textTop, Align.tValue
+    , Align.WithTextPos(..), Align.TextWidget, Align.textTop, Align.tValue
 
     -- | Drawing
     , Font.Font, Font.openFont

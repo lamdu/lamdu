@@ -25,7 +25,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
-import           GUI.Momentu.Align (WithTextPos, Aligned(..))
+import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -114,7 +114,7 @@ data PickFirstResult f
     | PickFirstResult (Widget.PreEvent (f PickResult))
 
 data RenderedOption f = RenderedOption
-    { _rWidget :: WithTextPos (Gui Widget f)
+    { _rWidget :: TextWidget f
     , _rPick :: Widget.PreEvent (f PickResult)
     }
 Lens.makeLenses ''RenderedOption
@@ -168,7 +168,7 @@ Lens.makePrisms ''Submenu
 Lens.makeLenses ''Option
 
 optionWidgets ::
-    Functor m => Lens.Setter' (Option m f) (WithTextPos (Gui Widget f))
+    Functor m => Lens.Setter' (Option m f) (TextWidget f)
 optionWidgets f (Option i w s) =
     Option i <$> (Lens.mapped . rWidget) f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
@@ -234,8 +234,8 @@ layoutOption ::
     , State.HasCursor env, Hover.HasStyle env, HasConfig env, Applicative f
     ) =>
     Widget.R ->
-    (Widget.Id, WithTextPos (Gui Widget f), Submenu m f) ->
-    m (WithTextPos (Gui Widget f))
+    (Widget.Id, TextWidget f, Submenu m f) ->
+    m (TextWidget f)
 layoutOption maxOptionWidth (optionId, rendered, submenu) =
     case submenu of
     SubmenuEmpty -> rendered & Element.width .~ maxOptionWidth & pure

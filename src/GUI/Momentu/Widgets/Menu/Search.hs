@@ -34,7 +34,7 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
-import           GUI.Momentu (Widget, WithTextPos, View)
+import           GUI.Momentu (TextWidget, View)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -76,7 +76,7 @@ class HasTermStyle env where termStyle :: Lens' env TermStyle
 instance HasTermStyle TermStyle where termStyle = id
 
 data Term f = Term
-    { _termWidget :: WithTextPos (Gui Widget f)
+    { _termWidget :: TextWidget f
     , _termEditEventMap :: Gui EventMap f
     }
 Lens.makeLenses ''Term
@@ -287,7 +287,7 @@ make ::
     (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Id ->
-    m (Menu.Placement -> WithTextPos (Gui Widget f))
+    m (Menu.Placement -> TextWidget f)
 make makeSearchTerm makeOptions annotation myId =
     readSearchTerm myId <&> (`ResultsContext` resultsIdPrefix myId)
     >>= makeOptions
