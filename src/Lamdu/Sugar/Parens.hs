@@ -52,6 +52,19 @@ addToExprWith ::
     Expression name i o (MinOpPrec, NeedsParens, a)
 addToExprWith minOpPrec = loop minOpPrec (Precedence 0 0)
 
+bareInfix ::
+    Lens.Prism' (LabeledApply name i o a)
+    ( Expression name i o a
+    , LabeledApplyFunc name o a
+    , Expression name i o a
+    )
+bareInfix =
+    Lens.prism toLabeledApply fromLabeledApply
+    where
+        toLabeledApply (l, f, r) = LabeledApply f (Infix l r) [] []
+        fromLabeledApply (LabeledApply f (Infix l r) [] []) = Right (l, f, r)
+        fromLabeledApply a = Left a
+
 loop ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
@@ -117,23 +130,20 @@ loopExprBody minOpPrec parentPrec body_ =
             } & result needParens
             where
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
-        labeledApply (LabeledApply func special ann relayed) =
-            LabeledApply (func <&> neverParen) s a (relayed <&> Lens.mapped %~ neverParen)
-            & BodyLabeledApply & result needParens
+        labeledApply x =
+            case x ^? bareInfix of
+            Nothing ->
+                SugarLens.overLabeledApplyChildren
+                (<&> neverParen) (<&> neverParen) (loop 0 unambiguous) x
+                & BodyLabeledApply & result False
+            Just b -> simpleInfix b
+        simpleInfix (l, func, r) =
+            bareInfix #
+            ( loop 0 (childPrec (after .~ prec) needParens) l
+            , func <&> neverParen
+            , loop (prec+1) (childPrec (before .~ prec) needParens) r
+            ) & BodyLabeledApply & result needParens
             where
-                (s, a) =
-                    case (special, ann, relayed) of
-                    (Infix l r, [], []) ->
-                        ( Infix
-                            (loop 0 (childPrec (after .~ prec) needParens) l)
-                            (loop (prec+1)
-                                (childPrec (before .~ prec) needParens) r)
-                        , []
-                        )
-                    _ ->
-                        ( special <&> loop 0 unambiguous
-                        , ann <&> Lens.mapped %~ loop 0 unambiguous
-                        )
                 prec = func ^. afVar . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
