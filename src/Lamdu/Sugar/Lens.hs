@@ -137,11 +137,10 @@ bodyChildren n l r f =
     BodyToNom        x -> (traverse . binderExprs) f x <&> BodyToNom
 
 parentNodePayload ::
-    Functor f =>
-    (f () -> p) ->
+    (f a -> p) ->
     Lens.IndexedLens' p (ParentNode f a) a
 parentNodePayload c f (PNode (Node pl x)) =
-    Lens.indexed f (c (void x)) pl <&> (`Node` x) <&> PNode
+    Lens.indexed f (c x) pl <&> (`Node` x) <&> PNode
 
 bodyChildPayloads ::
     forall name i o a.
@@ -151,7 +150,7 @@ bodyChildPayloads f =
     (leafNodePayload OfNullaryVal f)
     (Lens.cloneIndexedLens labeledFuncPayloads f)
     (Lens.cloneIndexedLens relayedPayloads f)
-    (parentNodePayload OfExpr f)
+    (parentNodePayload (OfExpr . void) f)
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens' (PayloadOf name i o) (Node (BinderVarRef name o) a) a
