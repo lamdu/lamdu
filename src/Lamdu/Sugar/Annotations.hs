@@ -108,12 +108,10 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         & Node defPl & PNode
     where
         newBodyWith f =
-            SugarLens.overBodyChildren
-            (ann . _1 .~ f)
-            (ann . _1 .~ f)
-            (ann . _1 .~ f)
-            (nonHoleAnn .~ f)
             newBody
+            & SugarLens.bodyChildPayloads
+            . Lens.ifiltered (const . Lens.nullOf (SugarLens._OfExpr . SugarLens.bodyUnfinished))
+            . _1 .~ f
         plWith x = (x, pl)
         defPl = plWith showAnnotationWhenVerbose
         set x = Node (plWith x) newBody & PNode

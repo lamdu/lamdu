@@ -23,7 +23,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (bodyChildren, overBodyChildren, bodyChildPayloads)
+import           Lamdu.Sugar.Lens (bodyChildren, bodyChildPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -156,12 +156,8 @@ setChildReplaceParentActions =
     BodyLam lam | Lens.has (lamFunc . fBody . bContent . _BinderLet) lam -> bod
     _ ->
         bod
-        & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) %~
-            overBodyChildren
-            (ann %~ join setToExpr)
-            (ann %~ join setToExpr)
-            (ann %~ join setToExpr)
-            (_PNode . ann %~ join setToExpr)
+        & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
+        . bodyChildPayloads %~ join setToExpr
         -- Replace-parent with fragment sets directly to fragment expression
         & bodyChildren pure pure pure . Lens.filteredBy (_PNode . val . _BodyFragment . fExpr . _PNode . ann) <. _PNode . ann %@~ setToExpr
         -- Replace-parent of fragment expr without "heal" available -
