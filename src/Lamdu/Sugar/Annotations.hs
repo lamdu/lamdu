@@ -69,8 +69,7 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         defPl
         & _1 . showInEvalMode .~
             ( tid ^. tidTId == Builtins.textTid
-                || binder ^. bContent . SugarLens.binderContentResultExpr .
-                    _1 . showInEvalMode
+                || binder ^. SugarLens.binderResultExpr . _1 . showInEvalMode
             )
         & (`Node` newBodyWith dontShowEval) & PNode
     BodyInject _ -> set dontShowEval
@@ -122,8 +121,8 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         nonHoleAnn = Lens.filtered (Lens.nullOf (_PNode . val . SugarLens.bodyUnfinished)) . topLevelAnn
         onCaseAlt a =
             a
-            & _PNode . val . _BodyLam . lamFunc . fBody . bContent .
-              SugarLens.binderContentResultExpr . nonHoleIndex . _1 .~ neverShowAnnotations
+            & _PNode . val . _BodyLam . lamFunc . fBody .
+              SugarLens.binderResultExpr . nonHoleIndex . _1 .~ neverShowAnnotations
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =
             elseIf

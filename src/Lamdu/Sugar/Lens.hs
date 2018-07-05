@@ -11,7 +11,7 @@ module Lamdu.Sugar.Lens
     , assignmentBody, binderFormBody
     , assignmentAddFirstParam, binderFormAddFirstParam
     , binderFuncParamActions
-    , binderContentResultExpr
+    , binderResultExpr
     , binderContentEntityId
     , leftMostLeaf
     , definitionExprs
@@ -262,6 +262,9 @@ binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> 
 binderContentResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (BinderContent name i o a) a
 binderContentResultExpr f (BinderLet l) = (lBody . bContent) (binderContentResultExpr f) l <&> BinderLet
 binderContentResultExpr f (BinderExpr e) = parentNodePayload (OfExpr . void) f e <&> BinderExpr
+
+binderResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (Binder name i o a) a
+binderResultExpr = bContent . binderContentResultExpr
 
 binderContentEntityId ::
     Lens' (BinderContent name i o (Payload name i o a)) EntityId

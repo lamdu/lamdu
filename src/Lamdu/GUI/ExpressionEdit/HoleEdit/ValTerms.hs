@@ -87,8 +87,7 @@ ofBody =
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
     BodyToNom (Nominal tid binder) ->
         ofName (tid ^. tidName)
-        ++ binder ^. bContent . SugarLens.binderContentResultExpr . Lens.asIndex .
-            SugarLens._OfExpr . Lens.to ofBody
+        ++ binder ^. SugarLens.binderResultExpr . Lens.asIndex . SugarLens._OfExpr . Lens.to ofBody
     BodyFromNom (Nominal tid _) ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an

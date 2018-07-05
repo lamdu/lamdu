@@ -70,9 +70,7 @@ makeReplGui cache env =
     do
         workArea <- convertWorkArea cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
-        let replExprId =
-                repl ^. Sugar.bContent . SugarLens.binderContentResultExpr
-                & WidgetIds.fromExprPayload
+        let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         gui <-
             makeBinderBodyEdit repl
             & GuiState.assignCursor WidgetIds.replId replExprId
