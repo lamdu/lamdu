@@ -106,7 +106,7 @@ convertRedex expr redex =
     do
         tag <- convertTaggedEntity param
         (_pMode, value) <-
-            convertBinder binderKind param (redex ^. Redex.arg)
+            convertAssignment binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
         actions <-
             mkLetItemActions (expr ^. Val.payload) redex
@@ -295,14 +295,14 @@ markLightParams paramNames (PNode (Node pl bod)) =
     & Node pl & PNode
 
 -- Let-item or definition (form of <name> [params] = <body>)
-convertBinder ::
+convertAssignment ::
     (Monad m, Monoid a) =>
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Assignment InternalName (T m) (T m) (ConvertPayload m a)
     )
-convertBinder binderKind defVar expr =
+convertAssignment binderKind defVar expr =
     do
         (mPresentationModeProp, convParams, funcBody) <-
             convertParams binderKind defVar expr
@@ -318,4 +318,4 @@ convertDefinitionBinder ::
     , Assignment InternalName (T m) (T m) (ConvertPayload m a)
     )
 convertDefinitionBinder defI =
-    convertBinder (BinderKindDef defI) (ExprIRef.globalId defI)
+    convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)

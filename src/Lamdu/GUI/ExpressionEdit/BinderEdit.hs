@@ -388,13 +388,13 @@ make ::
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Widget.Id ->
     ExprGuiM i o (Gui Responsive o)
-make pMode defEventMap tag color binder myId =
+make pMode defEventMap tag color assignment myId =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            makeParts Sugar.UnlimitedFuncApply binder myId myId
+            makeParts Sugar.UnlimitedFuncApply assignment myId myId
         rhsJumperEquals <- jumpToRHS bodyId
         mPresentationEdit <-
-            case binder ^. Sugar.aBody of
+            case assignment ^. Sugar.aBody of
             Sugar.BodyPlain{} -> pure Nothing
             Sugar.BodyFunction x ->
                 pMode & sequenceA & ExprGuiM.im
@@ -402,7 +402,7 @@ make pMode defEventMap tag color binder myId =
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.afFunction . Sugar.fParams))
         jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
         defNameEdit <-
-            makeBinderNameEdit myId (binder ^. SugarLens.assignmentAddFirstParam) rhsJumperEquals
+            makeBinderNameEdit myId (assignment ^. SugarLens.assignmentAddFirstParam) rhsJumperEquals
             tag color
             <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
@@ -417,7 +417,7 @@ make pMode defEventMap tag color binder myId =
                 <&> Just
         equals <- TextView.makeLabel "="
         addWholeBinderActions <-
-            maybeAddNodeActions wholeBinderId nearestHoles (binder ^. Sugar.aNodeActions)
+            maybeAddNodeActions wholeBinderId nearestHoles (assignment ^. Sugar.aNodeActions)
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
         let layout =
                 hbox
@@ -431,7 +431,7 @@ make pMode defEventMap tag color binder myId =
             <&> Widget.weakerEvents (defEventMap <> eventMap)
             <&> addWholeBinderActions
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
-    & case binder ^? Sugar.aBody . Sugar._BodyFunction . Sugar.afLamId of
+    & case assignment ^? Sugar.aBody . Sugar._BodyFunction . Sugar.afLamId of
         Nothing -> id
         Just lamId ->
             GuiState.assignCursorPrefix (WidgetIds.fromEntityId lamId) (const bodyId)
@@ -441,7 +441,7 @@ make pMode defEventMap tag color binder myId =
         wholeBinderId = Widget.joinId myId ["whole binder"]
         nameId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
-        body = binder ^. SugarLens.assignmentBody
+        body = assignment ^. SugarLens.assignmentBody
         bodyId = body ^. Sugar.bContent . SugarLens.binderContentEntityId & WidgetIds.fromEntityId
         nearestHoles = binderContentNearestHoles (body ^. Sugar.bContent)
 

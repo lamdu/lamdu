@@ -9,7 +9,7 @@ module Lamdu.Sugar.Lens
     , bodyUnfinished, unfinishedExprPayloads
     , defSchemes
     , assignmentBody, binderFormBody
-    , assignmentAddFirstParam, binderFormAddFirstParam
+    , assignmentAddFirstParam
     , binderFuncParamActions
     , binderResultExpr
     , binderContentEntityId
@@ -325,12 +325,12 @@ assignmentBody ::
     (Binder name i o b)
 assignmentBody = aBody . binderFormBody
 
-binderFormAddFirstParam :: Lens' (AssignmentBody name i o a) (AddFirstParam name i o)
-binderFormAddFirstParam f (BodyFunction x) = (afFunction . fAddFirstParam) f x <&> BodyFunction
-binderFormAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
+assignmentBodyAddFirstParam :: Lens' (AssignmentBody name i o a) (AddFirstParam name i o)
+assignmentBodyAddFirstParam f (BodyFunction x) = (afFunction . fAddFirstParam) f x <&> BodyFunction
+assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 
 assignmentAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
-assignmentAddFirstParam = aBody . binderFormAddFirstParam
+assignmentAddFirstParam = aBody . assignmentBodyAddFirstParam
 
 annotationTypes :: Lens.Traversal' (Annotation name i) (Type name)
 annotationTypes _ AnnotationNone = pure AnnotationNone
