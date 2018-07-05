@@ -180,7 +180,7 @@ toLet Let{..} =
     do
         (_lName, _lBody) <-
             unCPS (withTag TaggedVar _lVarInfo _lName) (toBinderBody _lBody)
-        _lValue <- toBinder _lValue
+        _lValue <- toAssignment _lValue
         _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
 
@@ -221,20 +221,20 @@ toBinderPlain AssignPlain{..} =
     <$> toBinderBody _apBody
     <*> toAddFirstParam _apAddFirstParam
 
-toBinderForm ::
+toAssignmentBody ::
     MonadNaming m =>
     AssignmentBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (AssignmentBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toBinderForm (BodyPlain x) = toBinderPlain x <&> BodyPlain
-toBinderForm (BodyFunction x) = afFunction toFunction x <&> BodyFunction
+toAssignmentBody (BodyPlain x) = toBinderPlain x <&> BodyPlain
+toAssignmentBody (BodyFunction x) = afFunction toFunction x <&> BodyFunction
 
-toBinder ::
+toAssignment ::
     MonadNaming m =>
     Assignment (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Assignment (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toBinder Assignment{..} =
+toAssignment Assignment{..} =
     (\_aBody _aNodeActions -> Assignment{..})
-    <$> toBinderForm _aBody
+    <$> toAssignmentBody _aBody
     <*> toNodeActions _aNodeActions
 
 toLam ::
@@ -474,7 +474,7 @@ toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
     <*> pure presMode
-    <*> toBinder content
+    <*> toAssignment content
 
 toDefinitionBody ::
     MonadNaming m =>
