@@ -281,7 +281,6 @@ allParamsUsed paramNames func =
             & Set.fromList
 
 markLightParams ::
-    Monad m =>
     Set InternalName -> Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
 markLightParams paramNames (PNode (Node pl bod)) =

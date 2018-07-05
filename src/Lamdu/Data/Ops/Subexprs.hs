@@ -21,13 +21,13 @@ import           Lamdu.Prelude
 type T = Transaction
 
 onMatchingSubexprs ::
-    Monad m => (a -> m ()) -> Lens.Fold (Val ()) b -> Val a -> m ()
+    Applicative m => (a -> m ()) -> Lens.Fold (Val ()) b -> Val a -> m ()
 onMatchingSubexprs action predicate =
     Lens.itraverseOf_ (ExprLens.subExprPayloads . Lens.ifiltered (\i _ -> Lens.has predicate i))
     (const action)
 
 onMatchingSubexprsWithPath ::
-    Monad m => (a -> m ()) -> ([Val ()] -> Bool) -> Val a -> m ()
+    Applicative m => (a -> m ()) -> ([Val ()] -> Bool) -> Val a -> m ()
 onMatchingSubexprsWithPath action predicate =
     Lens.itraverseOf_ (ExprLens.payloadsIndexedByPath . Lens.ifiltered (\i _ -> predicate i))
     (const action)
