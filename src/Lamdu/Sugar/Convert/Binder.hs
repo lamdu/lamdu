@@ -291,7 +291,7 @@ markLightParams paramNames (PNode (Node pl bod)) =
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
     BodyFragment w -> w & fExpr %~ markLightParams paramNames & BodyFragment
-    _ -> bod & SugarLens.bodyChildren pure pure pure %~ markLightParams paramNames
+    _ -> SugarLens.overBodyChildren id id id (markLightParams paramNames) bod
     & Node pl & PNode
 
 -- Let-item or definition (form of <name> [params] = <body>)

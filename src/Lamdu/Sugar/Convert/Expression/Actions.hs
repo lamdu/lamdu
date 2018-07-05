@@ -23,7 +23,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (bodyChildren, bodyChildPayloads)
+import           Lamdu.Sugar.Lens (overBodyChildren, bodyChildPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -159,11 +159,13 @@ setChildReplaceParentActions =
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
         . bodyChildPayloads %~ join setToExpr
         -- Replace-parent with fragment sets directly to fragment expression
-        & bodyChildren pure pure pure . Lens.filteredBy (_PNode . val . _BodyFragment . fExpr . _PNode . ann) <. _PNode . ann %@~ setToExpr
+        & overBodyChildren id id id
+            (Lens.filteredBy (_PNode . val . _BodyFragment . fExpr . _PNode . ann) <. _PNode . ann %@~ setToExpr)
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        & bodyChildren pure pure pure . _PNode . val . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
-            fExpr . _PNode . ann %~ join setToExpr
+        & overBodyChildren id id id
+            (_PNode . val . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
+                fExpr . _PNode . ann %~ join setToExpr)
 
 subexprPayloads ::
     Foldable f =>
