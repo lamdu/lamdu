@@ -1,7 +1,8 @@
 {-# LANGUAGE RankNTypes, TupleSections #-}
 module Control.Lens.Extended
     ( module Control.Lens
-    , singletonAt, tagged, filteredBy
+    , singletonAt, tagged
+    , filteredBy, filteredByIndex
     ) where
 
 import           Control.Lens
@@ -21,6 +22,16 @@ tagged p =
 filteredBy :: Fold s i -> IndexedTraversal' i s s
 filteredBy fold f val =
     case val ^? fold of
+    Nothing -> pure val
+    Just proof -> indexed f proof val
+
+filteredByIndex ::
+    (Applicative f, Indexable j p) =>
+    Fold i j -> p a (f a) -> Indexed i a (f a)
+filteredByIndex fold f =
+    Indexed $
+    \idx val ->
+    case idx ^? fold of
     Nothing -> pure val
     Just proof -> indexed f proof val
 
