@@ -49,7 +49,7 @@ formatLiteral (LiteralNum i) = formatProp i
 formatLiteral (LiteralText i) = formatProp i
 formatLiteral (LiteralBytes i) = formatProp i
 
-expr :: Monad i => Expression (Name o) i o a -> [Text]
+expr :: Expression (Name o) i o a -> [Text]
 expr (PNode (Node _ body_)) =
     case body_ of
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
@@ -95,7 +95,7 @@ expr (PNode (Node _ body_)) =
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
 
-binderContent :: Monad i => BinderContent (Name o) i o a -> [Text]
+binderContent :: BinderContent (Name o) i o a -> [Text]
 binderContent BinderLet{} = ["let"]
 binderContent (BinderExpr x) = expr x
 
