@@ -49,6 +49,14 @@ markAnnotationsToDisplay ::
     Expression name i o a ->
     Expression name i o (ShowAnnotation, a)
 markAnnotationsToDisplay (PNode (Node pl oldBody)) =
+    Node (showAnn, pl) newBody & PNode
+    where
+        (showAnn, newBody) = markBodyAnnotations oldBody
+
+markBodyAnnotations ::
+    Body name i o a ->
+    (ShowAnnotation, Body name i o (ShowAnnotation, a))
+markBodyAnnotations oldBody =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations
     BodyLiteral LiteralNum {} -> set neverShowAnnotations
@@ -66,51 +74,51 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         set neverShowAnnotations
     BodyFromNom _ -> set dontShowEval
     BodyToNom (Nominal tid binder) ->
-        defPl
-        & _1 . showInEvalMode .~
-            ( tid ^. tidTId == Builtins.textTid
-                || binder ^. SugarLens.binderResultExpr . _1 . showInEvalMode
-            )
-        & (`Node` newBodyWith dontShowEval) & PNode
+        ( showAnnotationWhenVerbose
+            & showInEvalMode .~
+                ( tid ^. tidTId == Builtins.textTid
+                    || binder ^. SugarLens.binderResultExpr . _1 . showInEvalMode
+                )
+        , newBodyWith dontShowEval
+        )
     BodyInject _ -> set dontShowEval
     BodyGetVar (GetParamsRecord _) -> set showAnnotationWhenVerbose
     BodyGetField _ -> set showAnnotationWhenVerbose
     BodySimpleApply app ->
-        app
-        & applyFunc . nonHoleAnn .~ neverShowAnnotations
-        & BodySimpleApply
-        & Node defPl & PNode
+        ( showAnnotationWhenVerbose
+        , app
+            & applyFunc . nonHoleAnn .~ neverShowAnnotations
+            & BodySimpleApply
+        )
     BodyLabeledApply _ -> set showAnnotationWhenVerbose
     BodyIfElse i ->
-        i
-        & iIfThen . itThen %~ onCaseAlt
-        & iElse %~ onElse
-        & BodyIfElse
-        & Node defPl & PNode
-    BodyHole hole ->
-        hole
-        & BodyHole
-        & Node (plWith forceShowTypeOrEval) & PNode
+        ( showAnnotationWhenVerbose
+        , i
+            & iIfThen . itThen %~ onCaseAlt
+            & iElse %~ onElse
+            & BodyIfElse
+        )
+    BodyHole hole -> (forceShowTypeOrEval, BodyHole hole)
     BodyFragment fragment ->
-        fragment
-        & fExpr . nonHoleAnn .~ forceShowTypeOrEval
-        & BodyFragment
-        & Node (plWith forceShowTypeOrEval) & PNode
+        ( forceShowTypeOrEval
+        , fragment
+            & fExpr . nonHoleAnn .~ forceShowTypeOrEval
+            & BodyFragment
+        )
     BodyCase cas ->
-        cas
-        -- cKind contains the scrutinee which is not always
-        -- visible (for case alts that aren't lambdas), so
-        -- maybe we do want to show the annotation
-        & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
-        & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
-        & BodyCase
-        & Node defPl & PNode
+        ( showAnnotationWhenVerbose
+        , cas
+            -- cKind contains the scrutinee which is not always
+            -- visible (for case alts that aren't lambdas), so
+            -- maybe we do want to show the annotation
+            & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
+            & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
+            & BodyCase
+        )
     where
         newBodyWith f = newBody & SugarLens.bodyChildPayloads . nonHoleIndex . _1 .~ f
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf (SugarLens._OfExpr . SugarLens.bodyUnfinished))
-        plWith x = (x, pl)
-        defPl = plWith showAnnotationWhenVerbose
-        set x = Node (plWith x) newBody & PNode
+        set x = (x, newBody)
         newBody =
             SugarLens.overBodyChildren
             (ann %~ (,) neverShowAnnotations)
