@@ -98,13 +98,16 @@ make mNextEntry ctx resultId pick holeResultConverted =
         Widget.PreEvent
         { Widget._pDesc = "Pick"
         , Widget._pAction = pickResult <$ pick
-        , Widget._pTextRemainder = getSearchStringRemainder ctx (holeResultConverted ^. SugarLens.binderContentResultExpr)
+        , Widget._pTextRemainder =
+            holeResultConverted ^.
+            SugarLens.binderContentResultExpr . Lens.asIndex . SugarLens._OfExpr .
+            Lens.to (getSearchStringRemainder ctx)
         }
     , Menu._rWidget = widget
     }
     where
         holeResultId =
-            holeResultConverted ^. SugarLens.binderContentResultExpr . Sugar._PNode . Sugar.ann . Sugar.plEntityId
+            holeResultConverted ^. SugarLens.binderContentResultExpr . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResultConverted ^? SugarLens.binderContentExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId

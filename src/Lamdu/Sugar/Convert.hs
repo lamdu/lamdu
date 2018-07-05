@@ -212,7 +212,7 @@ loadRepl cache monitors annMode evalRes cp =
             <&> SugarLens.binderSubExprParams . SugarLens.binderParamsAnnotations %~
                 trimParamAnnotation annMode
             >>= SugarLens.binderExprs OrderTags.orderExpr
-        let replEntityId = expr ^. bContent . SugarLens.binderContentResultExpr . _PNode . ann . plEntityId
+        let replEntityId = expr ^. bContent . SugarLens.binderContentResultExpr . plEntityId
         pure Repl
             { _replExpr = expr
             , _replVarInfo = mkVarInfo typ
@@ -304,7 +304,7 @@ loadWorkArea cache monitors annMode evalRes cp =
         repl <- loadRepl cache monitors annMode evalRes cp
         panes <-
             loadPanes cache monitors annMode evalRes cp
-            (repl ^. replExpr . bContent . SugarLens.binderContentResultExpr . _PNode . ann . plEntityId)
+            (repl ^. replExpr . bContent . SugarLens.binderContentResultExpr . plEntityId)
         pure WorkArea
             { _waRepl = repl
             , _waPanes = panes

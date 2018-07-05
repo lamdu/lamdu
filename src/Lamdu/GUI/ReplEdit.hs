@@ -214,5 +214,5 @@ make exportRepl (Sugar.Repl replExpr _varInfo replResult) =
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
-        replExprPl = replExpr ^. Sugar.bContent . SugarLens.binderContentResultExpr . Sugar._PNode . Sugar.ann
+        replExprPl = replExpr ^. Sugar.bContent . SugarLens.binderContentResultExpr
         replExprId = WidgetIds.fromExprPayload replExprPl

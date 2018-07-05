@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -70,7 +70,7 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         & _1 . showInEvalMode .~
             ( tid ^. tidTId == Builtins.textTid
                 || binder ^. bContent . SugarLens.binderContentResultExpr .
-                    topLevelAnn . showInEvalMode
+                    _1 . showInEvalMode
             )
         & (`Node` newBodyWith dontShowEval) & PNode
     BodyInject _ -> set dontShowEval
@@ -107,11 +107,8 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         & BodyCase
         & Node defPl & PNode
     where
-        newBodyWith f =
-            newBody
-            & SugarLens.bodyChildPayloads
-            . Lens.ifiltered (const . Lens.nullOf (SugarLens._OfExpr . SugarLens.bodyUnfinished))
-            . _1 .~ f
+        newBodyWith f = newBody & SugarLens.bodyChildPayloads . nonHoleIndex . _1 .~ f
+        nonHoleIndex = Lens.ifiltered (const . Lens.nullOf (SugarLens._OfExpr . SugarLens.bodyUnfinished))
         plWith x = (x, pl)
         defPl = plWith showAnnotationWhenVerbose
         set x = Node (plWith x) newBody & PNode
@@ -126,7 +123,7 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
         onCaseAlt a =
             a
             & _PNode . val . _BodyLam . lamFunc . fBody . bContent .
-              SugarLens.binderContentResultExpr . nonHoleAnn .~ neverShowAnnotations
+              SugarLens.binderContentResultExpr . nonHoleIndex . _1 .~ neverShowAnnotations
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =
             elseIf

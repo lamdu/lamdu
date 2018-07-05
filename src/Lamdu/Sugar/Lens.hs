@@ -259,9 +259,9 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderContentResultExpr :: Lens' (BinderContent name i o a) (Expression name i o a)
-binderContentResultExpr f (BinderLet l) = l & lBody . bContent . binderContentResultExpr %%~ f <&> BinderLet
-binderContentResultExpr f (BinderExpr e) = f e <&> BinderExpr
+binderContentResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (BinderContent name i o a) a
+binderContentResultExpr f (BinderLet l) = (lBody . bContent) (binderContentResultExpr f) l <&> BinderLet
+binderContentResultExpr f (BinderExpr e) = parentNodePayload (OfExpr . void) f e <&> BinderExpr
 
 binderContentEntityId ::
     Lens' (BinderContent name i o (Payload name i o a)) EntityId

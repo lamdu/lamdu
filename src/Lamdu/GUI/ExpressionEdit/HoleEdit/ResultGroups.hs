@@ -263,4 +263,4 @@ holeMatches searchTerm groups =
         searchText = ValTerms.definitePart searchTerm
         searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
         isHoleResultOK =
-            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . SugarLens.binderContentResultExpr)
+            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . SugarLens.binderContentResultExpr . Lens.asIndex)

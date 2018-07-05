@@ -87,7 +87,8 @@ ofBody =
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
     BodyToNom (Nominal tid binder) ->
         ofName (tid ^. tidName)
-        ++ expr (binder ^. bContent . SugarLens.binderContentResultExpr)
+        ++ binder ^. bContent . SugarLens.binderContentResultExpr . Lens.asIndex .
+            SugarLens._OfExpr . Lens.to ofBody
     BodyFromNom (Nominal tid _) ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an
@@ -130,7 +131,7 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Expression name i o a -> Text
+    SearchMenu.ResultsContext -> Body name i o a -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
@@ -144,13 +145,10 @@ getSearchStringRemainder ctx holeResult
     | otherwise = ""
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
-        fragmentExpr = _PNode . val . _BodyFragment . fExpr
-        isA x = any (`Lens.has` holeResult) [_PNode . val . x, fragmentExpr . _PNode . val . x]
+        fragmentExpr = _BodyFragment . fExpr
+        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . _PNode . val . x]
 
-injectContent :: Lens.Traversal' (Expression name i o a) (InjectContent name i o a)
-injectContent = _PNode . val . _BodyInject . iContent
-
-verifyInjectSuffix :: Text -> Expression name i o a -> Bool
+verifyInjectSuffix :: Text -> SugarLens.PayloadOf name i o -> Bool
 verifyInjectSuffix searchTerm x =
     case suffix of
     Just ':' | Lens.has (injectContent . _InjectNullary) x -> False
@@ -158,6 +156,7 @@ verifyInjectSuffix searchTerm x =
     _ -> True
     where
         suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
+        injectContent = SugarLens._OfExpr . _BodyInject . iContent
 
 -- | Returns the part of the search term that is DEFINITELY part of
 -- it. Some of the stripped suffix may be part of the search term,

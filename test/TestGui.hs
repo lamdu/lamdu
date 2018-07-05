@@ -72,7 +72,6 @@ makeReplGui cache env =
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId =
                 repl ^. Sugar.bContent . SugarLens.binderContentResultExpr
-                . Sugar._PNode . Sugar.ann
                 & WidgetIds.fromExprPayload
         gui <-
             makeBinderBodyEdit repl
