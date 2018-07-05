@@ -109,13 +109,13 @@ data Fragment name i o a = Fragment
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: BinderContent name i o (Payload name i o ())
+    { _holeResultConverted :: Binder name i o (Payload name i o ())
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i (BinderContent name i o (Payload name i o ()))
+    , _hoSugaredBaseExpr :: i (Binder name i o (Payload name i o ()))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic

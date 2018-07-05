@@ -284,8 +284,8 @@ definitionExprs = drBody . _DefinitionBodyExpression . deContent . assignmentExp
 
 holeOptionTransformExprs ::
     Monad i =>
-    (BinderContent n0 i o (Payload n0 i o ()) ->
-     i (BinderContent n1 i o (Payload n1 i o ()))) ->
+    (Binder n0 i o (Payload n0 i o ()) ->
+     i (Binder n1 i o (Payload n1 i o ()))) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -295,8 +295,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (BinderContent n0 i o (Payload n0 i o ()) ->
-        i (BinderContent n1 i o (Payload n1 i o ()))) ->
+    (Binder n0 i o (Payload n0 i o ()) ->
+        i (Binder n1 i o (Payload n1 i o ()))) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr hole =
     hole

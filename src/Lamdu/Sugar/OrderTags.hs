@@ -61,12 +61,12 @@ orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
 orderBody (Sugar.BodyHole a) =
-    SugarLens.holeTransformExprs (SugarLens.binderContentExprs orderExpr) a
+    (SugarLens.holeTransformExprs . Sugar.bContent . SugarLens.binderContentExprs) orderExpr a
     & Sugar.BodyHole & pure
 orderBody (Sugar.BodyFragment a) =
     a
     & Sugar.fOptions . Lens.mapped . Lens.mapped %~
-        SugarLens.holeOptionTransformExprs (SugarLens.binderContentExprs orderExpr)
+        (SugarLens.holeOptionTransformExprs . Sugar.bContent . SugarLens.binderContentExprs) orderExpr
     & Sugar.BodyFragment
     & pure
 orderBody x@Sugar.BodyIfElse{} = pure x

@@ -22,7 +22,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderContentEdit)
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -62,7 +62,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Sugar.BinderContent (Name o) i o
+    Sugar.Binder (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (TextWidget o)
 makeWidget resultId holeResultConverted =
@@ -71,7 +71,7 @@ makeWidget resultId holeResultConverted =
         theme <- Lens.view (Theme.theme . Theme.hole)
         stdSpacing <- Spacer.getSpaceSize
         let padding = theme ^. Theme.holeResultPadding & (* stdSpacing)
-        makeBinderContentEdit holeResultConverted
+        makeBinderBodyEdit holeResultConverted
             <&> Widget.enterResultCursor .~ resultId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
@@ -85,7 +85,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Sugar.BinderContent (Name o) i o
+    Sugar.Binder (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Menu.RenderedOption o)
 make mNextEntry ctx resultId pick holeResultConverted =
@@ -100,6 +100,7 @@ make mNextEntry ctx resultId pick holeResultConverted =
         , Widget._pAction = pickResult <$ pick
         , Widget._pTextRemainder =
             holeResultConverted ^.
+            Sugar.bContent .
             SugarLens.binderContentResultExpr . Lens.asIndex . SugarLens._OfExpr .
             Lens.to (getSearchStringRemainder ctx)
         }
@@ -107,10 +108,10 @@ make mNextEntry ctx resultId pick holeResultConverted =
     }
     where
         holeResultId =
-            holeResultConverted ^. SugarLens.binderContentResultExpr . Sugar.plEntityId
+            holeResultConverted ^. Sugar.bContent . SugarLens.binderContentResultExpr . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
-            holeResultConverted ^? SugarLens.binderContentExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
+            holeResultConverted ^? Sugar.bContent . SugarLens.binderContentExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of

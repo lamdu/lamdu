@@ -194,7 +194,7 @@ mkGroup option =
     <&>
     \sugaredBaseExpr ->
     Group
-    { _groupSearchTerms = ValTerms.binderContent sugaredBaseExpr
+    { _groupSearchTerms = ValTerms.binderContent (sugaredBaseExpr ^. Sugar.bContent)
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }
@@ -263,4 +263,4 @@ holeMatches searchTerm groups =
         searchText = ValTerms.definitePart searchTerm
         searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
         isHoleResultOK =
-            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . SugarLens.binderContentResultExpr . Lens.asIndex)
+            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . Sugar.bContent . SugarLens.binderContentResultExpr . Lens.asIndex)
