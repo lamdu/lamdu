@@ -50,8 +50,11 @@ formatLiteral (LiteralText i) = formatProp i
 formatLiteral (LiteralBytes i) = formatProp i
 
 expr :: Expression (Name o) i o a -> [Text]
-expr (PNode (Node _ body_)) =
-    case body_ of
+expr = ofBody . (^. _PNode . val)
+
+ofBody :: Body (Name o) i o a -> [Text]
+ofBody =
+    \case
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
     BodySimpleApply x -> "apply" : foldMap expr x
     BodyLabeledApply x ->
