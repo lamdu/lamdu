@@ -7,7 +7,7 @@ module Lamdu.GUI.ExpressionGui.Payload
     , mParensId
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -34,13 +34,13 @@ type SugarExpr i o =
 nextHolesBefore ::
     Sugar.Expression name0 i0 o0 (Sugar.Payload name1 i1 o1 Payload) ->
     NearestHoles
-nextHolesBefore val =
-    node ^. Sugar._PNode . Sugar.ann . Sugar.plData . plNearestHoles
-    & if Lens.has (Sugar._PNode . Sugar.val . SugarLens.bodyUnfinished) node
-        then NearestHoles.next ?~ node ^. Sugar._PNode . Sugar.ann . Sugar.plEntityId
-        else id
+nextHolesBefore val
+    | Lens.has SugarLens.bodyUnfinished bod =
+        plNearest & NearestHoles.next ?~ pl ^. Sugar.plEntityId
+    | otherwise = plNearest
     where
-        node = SugarLens.leftMostLeaf val
+        (bod, pl) = val ^?! SugarLens.exprPayloads . Lens.filteredByIndex SugarLens._OfExpr . Lens.withIndex
+        plNearest = pl ^. Sugar.plData . plNearestHoles
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: Sugar.Payload name i o Payload -> Maybe AnimId

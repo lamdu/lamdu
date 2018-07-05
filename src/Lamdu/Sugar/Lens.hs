@@ -13,7 +13,6 @@ module Lamdu.Sugar.Lens
     , binderFuncParamActions
     , binderResultExpr
     , binderContentEntityId
-    , leftMostLeaf
     , definitionExprs
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
@@ -272,12 +271,6 @@ binderContentEntityId f (BinderExpr e) =
     e & _PNode . ann . plEntityId %%~ f <&> BinderExpr
 binderContentEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
-
-leftMostLeaf :: Expression name i o a -> Expression name i o a
-leftMostLeaf v =
-    case v ^.. _PNode . val . bodyChildren pure pure pure of
-    [] -> v
-    (x:_) -> leftMostLeaf x
 
 definitionExprs ::
     Lens.Traversal
