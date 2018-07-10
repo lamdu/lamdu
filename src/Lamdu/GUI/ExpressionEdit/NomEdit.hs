@@ -39,7 +39,7 @@ mReplaceParent = Sugar._PNode . Sugar.ann . Sugar.plActions . Sugar.mReplacePare
 makeToNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o)
-    (Sugar.Binder (Name o) i o
+    (Sugar.ParentNode (Sugar.Binder (Name o) i o)
         (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
@@ -47,8 +47,10 @@ makeToNom nom pl =
     nom <&> BinderEdit.makeBinderEdit
     & mkNomGui id "ToNominal" "«" mDel pl
     where
-        bContent = nom ^. Sugar.nVal
-        mDel = bContent ^? Sugar._BinderExpr . mReplaceParent
+        mDel =
+            nom ^. Sugar.nVal . Sugar._PNode . Sugar.ann . Sugar.plActions .
+            Sugar.mReplaceParent
+
 
 makeFromNom ::
     (Monad i, Monad o) =>

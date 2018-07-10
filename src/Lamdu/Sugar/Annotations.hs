@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
-    , markAnnotationsToDisplay
+    , markAnnotationsToDisplay, markBinderAnnotations, markAssignmentAnnotations
     , neverShowAnnotations
     ) where
 
@@ -53,6 +53,61 @@ markAnnotationsToDisplay (PNode (Node pl oldBody)) =
     where
         (showAnn, newBody) = markBodyAnnotations oldBody
 
+markBinderAnnotations ::
+    ParentNode (Binder name i o) a ->
+    ParentNode (Binder name i o) (ShowAnnotation, a)
+markBinderAnnotations (PNode (Node pl x)) =
+    Node (showAnn, pl) newBody & PNode
+    where
+        (showAnn, newBody) = markBinderBodyAnnotations x
+
+markBinderBodyAnnotations ::
+    Binder name i o a -> (ShowAnnotation, Binder name i o (ShowAnnotation, a))
+markBinderBodyAnnotations =
+    \case
+    BinderExpr body -> markBodyAnnotations body & _2 %~ BinderExpr
+    BinderLet let_ ->
+        ( neverShowAnnotations
+        , SugarLens.overLetChildren
+            markBinderAnnotations
+            markAssignmentAnnotations let_
+            & BinderLet
+        )
+
+markAssignmentAnnotations ::
+    ParentNode (AssignmentBody name i o) a ->
+    ParentNode (AssignmentBody name i o) (ShowAnnotation, a)
+markAssignmentAnnotations (PNode (Node pl x)) =
+    Node (showAnn, pl) newBody & PNode
+    where
+        (showAnn, newBody) =
+            case x of
+            BodyPlain (AssignPlain a b) ->
+                markBinderBodyAnnotations b
+                & _2 %~ BodyPlain . AssignPlain a
+            BodyFunction function ->
+                ( neverShowAnnotations
+                , function & fBody %~ markBinderAnnotations & BodyFunction
+                )
+
+markElseAnnotations ::
+    ParentNode (Else name i o) a ->
+    ParentNode (Else name i o) (ShowAnnotation, a)
+markElseAnnotations (PNode (Node pl x)) =
+    Node (showAnn, pl) newBody & PNode
+    where
+        (showAnn, newBody) =
+            case x of
+            SimpleElse body -> markBodyAnnotations body & _2 %~ SimpleElse
+            ElseIf elseIf ->
+                ( neverShowAnnotations
+                , elseIf
+                    & eiContent %~
+                    SugarLens.overIfElseChildren markElseAnnotations
+                    markAnnotationsToDisplay
+                    & ElseIf
+                )
+
 markBodyAnnotations ::
     Body name i o a ->
     (ShowAnnotation, Body name i o (ShowAnnotation, a))
@@ -92,12 +147,9 @@ markBodyAnnotations oldBody =
         )
     BodyLabeledApply _ -> set showAnnotationWhenVerbose
     BodyIfElse i ->
-        ( showAnnotationWhenVerbose
-        , i
-            & iThen %~ onCaseAlt
-            & iElse %~ onElse
-            & BodyIfElse
-        )
+       ( showAnnotationWhenVerbose
+       , onIfElse i & BodyIfElse
+       )
     BodyHole hole -> (forceShowTypeOrEval, BodyHole hole)
     BodyFragment fragment ->
         ( forceShowTypeOrEval
@@ -112,7 +164,7 @@ markBodyAnnotations oldBody =
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
             & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . Lens.mapped %~ onCaseAlt
+            & cBody . cItems . Lens.mapped . Lens.mapped . _PNode . val %~ onHandler
             & BodyCase
         )
     where
@@ -124,16 +176,18 @@ markBodyAnnotations oldBody =
             (ann %~ (,) neverShowAnnotations)
             (ann %~ (,) neverShowAnnotations)
             (ann %~ (,) neverShowAnnotations)
+            markElseAnnotations
+            markBinderAnnotations
             markAnnotationsToDisplay
             oldBody
         nonHoleAnn = Lens.filtered (Lens.nullOf (_PNode . val . SugarLens.bodyUnfinished)) . topLevelAnn
-        onCaseAlt a =
+        onHandler a =
             a
-            & _PNode . val . _BodyLam . lamFunc . fBody .
+            & _BodyLam . lamFunc . fBody .
               SugarLens.binderResultExpr . nonHoleIndex . _1 .~ neverShowAnnotations
-        onElse (SimpleElse x) = onCaseAlt x & SimpleElse
-        onElse (ElseIf elseIf) =
-            elseIf
-            & eiContent . iThen %~ onCaseAlt
-            & eiContent . iElse %~ onElse
-            & ElseIf
+        onElse (SimpleElse x) = onHandler x & SimpleElse
+        onElse (ElseIf elseIf) = elseIf & eiContent %~ onIfElse & ElseIf
+        onIfElse x =
+            x
+            & iThen . _PNode . val %~ onHandler
+            & iElse . _PNode . val %~ onElse

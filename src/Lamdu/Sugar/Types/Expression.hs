@@ -16,8 +16,8 @@ module Lamdu.Sugar.Types.Expression
     , Inject(..), iTag, iContent
     -- Binders
     , Let(..)
-        , lEntityId, lValue, lName, lUsages
-        , lActions, lBodyScope, lBody, lVarInfo
+        , lValue, lName, lUsages
+        , lDelete, lBodyScope, lBody, lVarInfo
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
@@ -25,8 +25,7 @@ module Lamdu.Sugar.Types.Expression
     , Function(..)
         , fChosenScopeProp, fParams, fBody
         , fAddFirstParam, fBodyScopes
-    , Assignment(..), aBody, aNodeActions
-    , AssignFunction(..), afFunction, afLamId
+    , Assignment
     , AssignPlain(..), apAddFirstParam, apBody
     , AssignmentBody(..), _BodyFunction, _BodyPlain
     -- Holes
@@ -35,9 +34,9 @@ module Lamdu.Sugar.Types.Expression
     , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
-    , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiNodeActions
+    , ElseIfContent(..), eiScopes, eiContent
     , Else(..), _SimpleElse, _ElseIf
-    , IfElse(..), iIf, iThen, iDeleteIfThen, iElse
+    , IfElse(..), iIf, iThen, iElse
     ) where
 
 import qualified Control.Lens as Lens
@@ -112,13 +111,13 @@ data Fragment name i o a = Fragment
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Binder name i o (Payload name i o ())
+    { _holeResultConverted :: ParentNode (Binder name i o) (Payload name i o ())
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i (Binder name i o (Payload name i o ()))
+    , _hoSugaredBaseExpr :: i (ParentNode (Binder name i o) (Payload name i o ()))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic
@@ -140,21 +139,18 @@ data Hole name i o = Hole
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
 data ElseIfContent name i o a = ElseIfContent
     { _eiScopes :: ChildScopes
-    , _eiEntityId :: EntityId
     , _eiContent :: IfElse name i o a
-    , _eiNodeActions :: NodeActions name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Else name i o a
-    = SimpleElse (Expression name i o a)
+    = SimpleElse (Body name i o a)
     | ElseIf (ElseIfContent name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data IfElse name i o a = IfElse
     { _iIf :: Expression name i o a
     , _iThen :: Expression name i o a
-    , _iDeleteIfThen :: o EntityId
-    , _iElse :: Else name i o a
+    , _iElse :: ParentNode (Else name i o) a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Body name i o a
@@ -169,21 +165,20 @@ data Body name i o a
     | BodyIfElse (IfElse name i o a)
     | BodyInject (Inject name i o a)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (Binder name i o a))
+    | BodyToNom (Nominal name (ParentNode (Binder name i o) a))
     | BodyFromNom (Nominal name (Expression name i o a))
     | BodyFragment (Fragment name i o a)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Let name i o a = Let
-    { _lValue :: Assignment name i o a -- "let foo = [[bar]] in x"
+    { _lValue :: ParentNode (AssignmentBody name i o) a -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
-    , _lEntityId :: EntityId
     , _lUsages :: [EntityId]
     , _lName :: Tag name i o -- let [[foo]] = bar in x
-    , _lActions :: LetActions name i o
+    , _lDelete :: o ()
     , _lBodyScope :: ChildScopes
-    , _lBody :: Binder name i o a -- "let foo = bar in [[x]]"
+    , _lBody :: ParentNode (Binder name i o) a -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable, Generic)
 
 -- An expression with 0 or more let items,
@@ -194,21 +189,17 @@ data Let name i o a = Let
 -- * Let-item/redex: "let x = y in [[THIS]]"
 data Binder name i o a
     = BinderLet (Let name i o a)
-    | BinderExpr (Expression name i o a)
+    | BinderExpr (Body name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
+
 
 data Function name i o a = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: Binder name i o a
+    , _fBody :: ParentNode (Binder name i o) a
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope
-    } deriving (Functor, Foldable, Traversable, Generic)
-
-data AssignFunction name i o a = AssignFunction
-    { _afLamId :: EntityId
-    , _afFunction :: Function name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data AssignPlain name i o a = AssignPlain
@@ -217,19 +208,14 @@ data AssignPlain name i o a = AssignPlain
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data AssignmentBody name i o a
-    = BodyFunction (AssignFunction name i o a)
+    = BodyFunction (Function name i o a)
     | BodyPlain (AssignPlain name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data Assignment name i o a = Assignment
-    { _aBody :: AssignmentBody name i o a
-    , _aNodeActions :: NodeActions name i o
-    } deriving (Functor, Foldable, Traversable, Generic)
+type Assignment name i o a = ParentNode (AssignmentBody name i o) a
 
 Lens.makeLenses ''AnnotatedArg
-Lens.makeLenses ''AssignFunction
 Lens.makeLenses ''AssignPlain
-Lens.makeLenses ''Assignment
 Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function

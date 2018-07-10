@@ -42,9 +42,6 @@ branchSelection = Id ["selected branch"]
 activePaneBackground :: AnimId
 activePaneBackground = ["active def bg"]
 
-letBinderId :: Id -> Id
-letBinderId = (`WidgetId.joinId` ["letId"])
-
 replId :: Id
 replId = Id ["repl"]
 
@@ -53,7 +50,3 @@ tagHoleId = (`WidgetId.joinId` ["hole"])
 
 dotterId :: Id -> Id
 dotterId widgetId = widgetId `WidgetId.joinId` ["dotter"]
-
--- Cursor dest for items first created
-newDest :: Id -> Id
-newDest = (`WidgetId.joinId` ["new"])

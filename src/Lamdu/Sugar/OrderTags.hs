@@ -1,10 +1,9 @@
 module Lamdu.Sugar.OrderTags
-    ( orderDef, orderType, orderExpr
+    ( orderDef, orderType, orderBinder
     , orderedClosedFlatComposite
     ) where
 
 import qualified Control.Lens.Extended as Lens
-import           Control.Monad ((>=>))
 import           Data.List (sortOn)
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Type as T
@@ -43,40 +42,69 @@ orderTBody t =
 orderType :: Monad m => Order m (Sugar.Type name)
 orderType = Sugar.tBody %%~ orderTBody
 
-orderRecord :: Monad m => Order m (Sugar.Composite name i o a)
-orderRecord = Sugar.cItems %%~ orderByTag (^. Sugar.ciTag . Sugar.tagInfo)
+orderRecord ::
+    Monad m =>
+    Order m (Sugar.Composite name (T m) o (Sugar.Expression name (T m) o (Sugar.Payload name i o a)))
+orderRecord r =
+    r
+    & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagInfo))
+    >>= traverse orderExpr
 
-orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name i o a)
-orderLabeledApply = Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
+orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name (T m) o (Sugar.Payload name i o a))
+orderLabeledApply a =
+    a
+    & Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
+    >>= SugarLens.labeledApplyChildren pure pure orderExpr
 
-orderCase :: Monad m => Order m (Sugar.Case name (T m) o a)
+orderCase ::
+    Monad m =>
+    Order m (Sugar.Case name (T m) o (Sugar.Expression name (T m) o (Sugar.Payload name i o a)))
 orderCase = Sugar.cBody %%~ orderRecord
 
 orderLam :: Monad m => Order m (Sugar.Lambda name (T m) o (Sugar.Payload name i o a))
 orderLam = Sugar.lamFunc orderFunction
+
+orderBinderBody :: Monad m => Order m (Sugar.Binder name (T m) o (Sugar.Payload name i o a))
+orderBinderBody (Sugar.BinderExpr x) = orderBody x <&> Sugar.BinderExpr
+orderBinderBody (Sugar.BinderLet x) =
+    x
+    & Sugar.lBody orderBinder
+    >>= Sugar.lValue orderAssignment
+    <&> Sugar.BinderLet
+
+orderBinder :: Monad m => Order m (Sugar.ParentNode (Sugar.Binder name (T m) o) (Sugar.Payload name i o a))
+orderBinder = (Sugar._PNode . Sugar.val) orderBinderBody
+
+orderElse :: Monad m => Order m (Sugar.Else name (T m) o (Sugar.Payload name i o a))
+orderElse (Sugar.SimpleElse x) = orderBody x <&> Sugar.SimpleElse
+orderElse (Sugar.ElseIf x) = Sugar.eiContent orderIfElse x <&> Sugar.ElseIf
+
+orderIfElse :: Monad m => Order m (Sugar.IfElse name (T m) o (Sugar.Payload name i o a))
+orderIfElse x =
+    x
+    & Sugar.iIf orderExpr
+    >>= Sugar.iThen orderExpr
+    >>= (Sugar.iElse . Sugar._PNode . Sugar.val) orderElse
 
 orderBody :: Monad m => Order m (Sugar.Body name (T m) o (Sugar.Payload name i o a))
 orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
 orderBody (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
-orderBody (Sugar.BodyHole a) =
-    (SugarLens.holeTransformExprs . SugarLens.binderExprs) orderExpr a
-    & Sugar.BodyHole & pure
+orderBody (Sugar.BodyHole a) = SugarLens.holeTransformExprs orderBinder a & Sugar.BodyHole & pure
 orderBody (Sugar.BodyFragment a) =
     a
-    & Sugar.fOptions . Lens.mapped . Lens.mapped %~
-        (SugarLens.holeOptionTransformExprs . SugarLens.binderExprs) orderExpr
+    & Sugar.fOptions . Lens.mapped . Lens.mapped %~ SugarLens.holeOptionTransformExprs orderBinder
     & Sugar.BodyFragment
     & pure
-orderBody x@Sugar.BodyIfElse{} = pure x
-orderBody x@Sugar.BodySimpleApply{} = pure x
+orderBody (Sugar.BodyIfElse x) = orderIfElse x <&> Sugar.BodyIfElse
+orderBody (Sugar.BodyInject x) = (Sugar.iContent . Sugar._InjectVal) orderExpr x <&> Sugar.BodyInject
+orderBody (Sugar.BodyToNom x) = traverse orderBinder x <&> Sugar.BodyToNom
+orderBody (Sugar.BodyFromNom x) = traverse orderExpr x <&> Sugar.BodyFromNom
+orderBody (Sugar.BodySimpleApply x) = traverse orderExpr x <&> Sugar.BodySimpleApply
+orderBody (Sugar.BodyGetField x) = traverse orderExpr x <&> Sugar.BodyGetField
 orderBody x@Sugar.BodyLiteral{} = pure x
-orderBody x@Sugar.BodyGetField{} = pure x
 orderBody x@Sugar.BodyGetVar{} = pure x
-orderBody x@Sugar.BodyInject{} = pure x
-orderBody x@Sugar.BodyToNom{} = pure x
-orderBody x@Sugar.BodyFromNom{} = pure x
 orderBody x@Sugar.BodyPlaceHolder{} = pure x
 
 orderExpr ::
@@ -85,24 +113,24 @@ orderExpr e =
     e
     & Sugar._PNode . Sugar.ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
     >>= Sugar._PNode . Sugar.val %%~ orderBody
-    >>= Sugar._PNode . Sugar.val . SugarLens.bodyChildren pure pure pure %%~ orderExpr
+    -- TODO: Skipping ordering of "if"
+    >>= (Sugar._PNode . Sugar.val) (SugarLens.bodyChildren pure pure pure pure orderBinder orderExpr)
 
-orderFunction :: Monad m => Order m (Sugar.Function name (T m) o a)
+orderFunction :: Monad m => Order m (Sugar.Function name (T m) o (Sugar.Payload name i o a))
 orderFunction =
     -- The ordering for binder params already occurs at the Assignment's conversion,
     -- because it needs to be consistent with the presentation mode.
-    pure
+    Sugar.fBody orderBinder
 
 orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o (Sugar.Payload name i o a))
-orderAssignment = (Sugar.aBody . Sugar._BodyFunction . Sugar.afFunction) orderFunction
+orderAssignment = (Sugar._PNode . Sugar.val . Sugar._BodyFunction) orderFunction
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))
 orderDef def =
     def
-    & SugarLens.defSchemes . Sugar.schemeType %%~ orderType
-    >>= Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
-        %%~ (orderAssignment >=> SugarLens.assignmentExprs %%~ orderExpr)
+    & (SugarLens.defSchemes . Sugar.schemeType) orderType
+    >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent) orderAssignment
 
 {-# INLINE orderedFlatComposite #-}
 orderedFlatComposite ::

@@ -32,7 +32,7 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Assignment name i o a
+    , _deContent :: ParentNode (AssignmentBody name i o) a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data DefinitionBuiltin name o = DefinitionBuiltin
@@ -62,7 +62,7 @@ data Pane name i o a = Pane
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
-    { _replExpr :: Binder name i o a
+    { _replExpr :: ParentNode (Binder name i o) a
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving (Functor, Foldable, Traversable, Generic)

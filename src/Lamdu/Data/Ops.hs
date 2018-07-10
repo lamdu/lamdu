@@ -80,13 +80,13 @@ redexWrapWithGivenParam param newValueI exprP =
     where
         mkLam = V.BLam . V.Lam param
 
-redexWrap :: Monad m => ValP m -> T m V.Var
+redexWrap :: Monad m => ValP m -> T m (ValI m)
 redexWrap exprP =
     do
         newValueI <- newHole
         newParam <- ExprIRef.newVar
         _ <- redexWrapWithGivenParam newParam newValueI exprP
-        pure newParam
+        pure newValueI
 
 data CompositeExtendResult m = CompositeExtendResult
     { cerNewVal :: ValI m

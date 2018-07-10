@@ -194,7 +194,8 @@ mkGroup option =
     <&>
     \sugaredBaseExpr ->
     Group
-    { _groupSearchTerms = ValTerms.binder sugaredBaseExpr
+    { _groupSearchTerms =
+        sugaredBaseExpr ^. Sugar._PNode . Sugar.val & ValTerms.binder
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }

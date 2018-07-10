@@ -180,7 +180,7 @@ makeNewDefinition cp =
             (Definition.BodyExpr (Definition.Expr holeI mempty))
             Scheme.any ()
             & DataOps.newPublicDefinitionWithPane cp
-    <&> WidgetIds.newDest . WidgetIds.fromIRef
+    <&> WidgetIds.fromIRef
 
 newDefinitionDoc :: E.Doc
 newDefinitionDoc = E.Doc ["Edit", "New definition"]

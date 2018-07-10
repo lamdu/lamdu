@@ -103,7 +103,7 @@ jumpHolesEventMap hg =
     jumpEventMap Config.completionJumpToPrevKeys "previous" NearestHoles.prev
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
-extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId & WidgetIds.letBinderId
+extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
 extractEventMap ::
@@ -126,7 +126,7 @@ addLetEventMap addLet =
         config <- Lens.view Config.config
         savePos <- ExprGuiM.mkPrejumpPosSaver
         savePos >> addLet
-            <&> WidgetIds.fromEntityId <&> WidgetIds.letBinderId
+            <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor (config ^. Config.letAddItemKeys)
                 (E.Doc ["Edit", "Let clause", "Add"])
             & pure

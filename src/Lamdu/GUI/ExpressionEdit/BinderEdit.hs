@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderEdit
-    , Parts(..), makeParts, makeFunctionParts
+    , Parts(..), makeFunctionParts
     ) where
 
 import           Control.Applicative ((<|>), liftA2)
@@ -46,7 +46,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
-import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.Styled as Styled
@@ -55,29 +55,18 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
+import           Lamdu.Sugar.NearestHoles (NearestHoles(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-makeBinderNameEdit ::
-    (Monad i, Applicative o) =>
-    Widget.Id -> Sugar.AddFirstParam (Name o) i o ->
-    Gui EventMap o ->
-    Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    ExprGuiM i o (TextWidget o)
-makeBinderNameEdit binderId addFirstParam rhsJumperEquals tag color =
-    do
-        addFirstParamEventMap <- ParamEdit.eventMapAddFirstParam binderId addFirstParam
-        let eventMap = rhsJumperEquals <> addFirstParamEventMap
-        TagEdit.makeBinderTagEdit color tag
-            <&> Align.tValue %~ Widget.weakerEvents eventMap
 
 data Parts o = Parts
     { pMParamsEdit :: Maybe (Gui Responsive o)
     , pMScopesEdit :: Maybe (Gui Widget o)
     , pBodyEdit :: Gui Responsive o
     , pEventMap :: Gui EventMap o
+    , pWrap :: Gui Responsive o -> Gui Responsive o
+    , pRhsId :: Widget.Id
     }
 
 data ScopeCursor = ScopeCursor
@@ -278,21 +267,14 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             (mCurCursor >>= sMNextParamScope)
             & Annotation.WithNeighbouringEvalAnnotations
 
-binderNearestHoles ::
-    Sugar.Binder name i o (Sugar.Payload name i o ExprGui.Payload) ->
-    NearestHoles
-binderNearestHoles body =
-    body ^? SugarLens.binderExprs
-    & fromMaybe (error "We have at least a body expression inside the binder")
-    & ExprGui.nextHolesBefore
-
 makeFunctionParts ::
     (Monad i, Monad o) =>
     Sugar.FuncApplyLimit ->
     Sugar.Function (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    Widget.Id -> Widget.Id ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Widget.Id ->
     ExprGuiM i o (Parts o)
-makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
+makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
         let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . sBinderScope
@@ -304,7 +286,7 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
                     Lens.nullOf (Sugar.fParams . Sugar._NullParam) func ||
                     Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope scope, sMNextParamScope scope]
                 Just scope
-            & maybe (pure (mempty, Nothing)) (makeScopeNavEdit func scopesNavId)
+                & maybe (pure (mempty, Nothing)) (makeScopeNavEdit func scopesNavId)
         let isScopeNavFocused =
                 case mScopeNavEdit of
                 Just edit | Widget.isFocused edit -> ScopeNavIsFocused
@@ -312,71 +294,57 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
         do
             paramsEdit <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
-                (binderNearestHoles bodyContent) bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
+                (funcPl ^. Sugar.plData . ExprGui.plNearestHoles)
+                bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
             rhs <- makeBinderEdit (func ^. Sugar.fBody)
-            Parts paramsEdit mScopeNavEdit rhs scopeEventMap & pure
+            wrap <- stdWrap pl
+            Parts paramsEdit mScopeNavEdit rhs scopeEventMap wrap bodyId & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
             & ExprGuiM.withLocalMScopeId binderScopeId
     where
+        myId = WidgetIds.fromExprPayload pl
         destId =
             case func ^. Sugar.fParams of
             Sugar.NullParam{} -> bodyId
             Sugar.Params ps ->
                 ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
-        bodyId = bodyContent ^. SugarLens.binderEntityId & WidgetIds.fromEntityId
-        bodyContent = func ^. Sugar.fBody
+        funcPl = func ^. Sugar.fBody . Sugar._PNode . Sugar.ann
+        bodyId = WidgetIds.fromExprPayload funcPl
 
 makePlainParts ::
     (Monad i, Monad o) =>
     Sugar.AssignPlain (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    Widget.Id -> Widget.Id ->
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Widget.Id ->
     ExprGuiM i o (Parts o)
-makePlainParts binder delVarBackwardsId myId =
+makePlainParts assignPlain pl delVarBackwardsId =
     do
         mParamsEdit <-
             makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId
-            (binderNearestHoles bodyContent) bodyId (binder ^. Sugar.apAddFirstParam) Nothing
-        rhs <- makeBinderEdit (binder ^. Sugar.apBody)
-        Parts mParamsEdit Nothing rhs mempty & pure
+            (NearestHoles Nothing Nothing) myId
+            (assignPlain ^. Sugar.apAddFirstParam) Nothing
+        rhs <-
+            assignPlain ^. Sugar.apBody & Sugar.Node pl & Sugar.PNode
+            & makeBinderEdit
+        Parts mParamsEdit Nothing rhs mempty id myId & pure
     where
-        bodyId = bodyContent ^. SugarLens.binderEntityId & WidgetIds.fromEntityId
-        bodyContent = binder ^. Sugar.apBody
+        myId = WidgetIds.fromExprPayload pl
 
 makeParts ::
     (Monad i, Monad o) =>
     Sugar.FuncApplyLimit ->
     Sugar.Assignment (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    Widget.Id -> Widget.Id ->
+    Widget.Id ->
     ExprGuiM i o (Parts o)
-makeParts funcApplyLimit binder =
-    case binder ^. Sugar.aBody of
-    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (x ^. Sugar.afFunction)
-    Sugar.BodyPlain x -> makePlainParts x
-
-maybeAddNodeActions ::
-    (Monad i, Monad o) =>
-    Widget.Id -> NearestHoles -> Sugar.NodeActions name i o ->
-    ExprGuiM i o (Gui Responsive o -> Gui Responsive o)
-maybeAddNodeActions partId nearestHoles nodeActions =
-    do
-        isSelected <- Lens.view GuiState.cursor <&> (== partId)
-        if isSelected
-            then
-                ExprEventMap.addWith ExprEventMap.defaultOptions
-                ExprEventMap.ExprInfo
-                { ExprEventMap.exprInfoActions = nodeActions
-                , ExprEventMap.exprInfoNearestHoles = nearestHoles
-                , ExprEventMap.exprInfoIsHoleResult = False
-                , ExprEventMap.exprInfoMinOpPrec = 0
-                , ExprEventMap.exprInfoIsSelected = True
-                }
-            else
-                pure id
+makeParts funcApplyLimit (Sugar.PNode (Sugar.Node pl assignmentBody)) =
+    case assignmentBody of
+    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
+    Sugar.BodyPlain x -> makePlainParts x pl
 
 make ::
     (Monad i, Monad o) =>
@@ -385,27 +353,30 @@ make ::
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Sugar.Assignment (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    Widget.Id ->
     ExprGuiM i o (Gui Responsive o)
-make pMode defEventMap tag color assignment myId =
+make pMode defEventMap tag color assignment =
     do
-        Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
-            makeParts Sugar.UnlimitedFuncApply assignment myId myId
-        rhsJumperEquals <- jumpToRHS bodyId
+        Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-
+            makeParts Sugar.UnlimitedFuncApply assignment myId
+        rhsJumperEquals <-
+            ExprGuiM.mkPrejumpPosSaver
+            <&> Lens.mapped .~ rhsId
+            <&> E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
+                (E.Doc ["Navigation", "Jump to Def Body"])
         mPresentationEdit <-
-            case assignment ^. Sugar.aBody of
+            case assignmentBody of
             Sugar.BodyPlain{} -> pure Nothing
             Sugar.BodyFunction x ->
                 pMode & sequenceA & ExprGuiM.im
                 >>= traverse
-                    (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.afFunction . Sugar.fParams))
-        jumpHolesEventMap <- ExprEventMap.jumpHolesEventMap nearestHoles
+                    (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
+        addFirstParamEventMap <-
+            ParamEdit.eventMapAddFirstParam myId (assignmentBody ^. SugarLens.assignmentBodyAddFirstParam)
         defNameEdit <-
-            makeBinderNameEdit myId (assignment ^. SugarLens.assignmentAddFirstParam) rhsJumperEquals
-            tag color
+            TagEdit.makeBinderTagEdit color tag
+            <&> Align.tValue %~ Widget.weakerEvents (rhsJumperEquals <> addFirstParamEventMap)
             <&> (/-/ fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
-            <&> Widget.weakerEvents jumpHolesEventMap
         mParamEdit <-
             case mParamsEdit of
             Nothing -> pure Nothing
@@ -415,34 +386,21 @@ make pMode defEventMap tag color assignment myId =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- TextView.makeLabel "="
-        addWholeBinderActions <-
-            maybeAddNodeActions wholeBinderId nearestHoles (assignment ^. Sugar.aNodeActions)
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
-        let layout =
-                hbox
-                [ defNameEdit :
-                    (mParamEdit ^.. Lens._Just) ++
-                    [Responsive.fromTextView equals]
-                    & hbox
-                , bodyEdit
-                ]
-        parentDelegator wholeBinderId ?? layout
-            <&> Widget.weakerEvents (defEventMap <> eventMap)
-            <&> addWholeBinderActions
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
-    & case assignment ^? Sugar.aBody . Sugar._BodyFunction . Sugar.afLamId of
-        Nothing -> id
-        Just lamId ->
-            GuiState.assignCursorPrefix (WidgetIds.fromEntityId lamId) (const bodyId)
-    & GuiState.assignCursor (WidgetIds.newDest myId) (WidgetIds.tagHoleId nameId)
-    & GuiState.assignCursor myId nameId
+        hbox [ defNameEdit :
+                (mParamEdit ^.. Lens._Just) ++
+                [Responsive.fromTextView equals]
+                & hbox
+            , bodyEdit
+            ]
+            & wrap
+            & Widget.weakerEvents (defEventMap <> eventMap)
+            & pure
+        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
-        wholeBinderId = Widget.joinId myId ["whole binder"]
-        nameId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        myId = WidgetIds.fromExprPayload pl
+        Sugar.PNode (Sugar.Node pl assignmentBody) = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]
-        body = assignment ^. SugarLens.assignmentBody
-        bodyId = body ^. SugarLens.binderEntityId & WidgetIds.fromEntityId
-        nearestHoles = binderNearestHoles body
 
 makeLetEdit ::
     (Monad i, Monad o) =>
@@ -457,11 +415,11 @@ makeLetEdit item =
                 ( E.keysEventMapMovesCursor (config ^. Config.extractKeys)
                     (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
                     . fmap ExprEventMap.extractCursor
-                ) (item ^? Sugar.lValue . Sugar.aNodeActions . Sugar.extract)
+                ) (item ^? Sugar.lValue . Sugar._PNode . Sugar.ann . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Let clause", "Delete"])
-                (bodyId <$ item ^. Sugar.lActions . Sugar.laDelete)
+                (bodyId <$ item ^. Sugar.lDelete)
                 <>
                 foldMap
                 ( E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
@@ -471,52 +429,35 @@ makeLetEdit item =
         letLabel <- Styled.grammarLabel "let"
         space <- Spacer.stdHSpace
         letEquation <-
-            make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder letId
+            make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder
             <&> Widget.weakerEvents eventMap
             <&> Element.pad (theme ^. Theme.letItemPadding)
         letLabel /|/ space /|/ letEquation & pure
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where
-        bodyId =
-            item ^. Sugar.lBody . SugarLens.binderEntityId
-            & WidgetIds.fromEntityId
-        letId =
-            item ^. Sugar.lEntityId & WidgetIds.fromEntityId
-            & WidgetIds.letBinderId
+        bodyId = item ^. Sugar.lBody . Sugar._PNode . Sugar.ann & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
-
-jumpToRHS ::
-    (Monad i, Monad o) =>
-    Widget.Id -> ExprGuiM i o (Gui EventMap o)
-jumpToRHS rhsId =
-    ExprGuiM.mkPrejumpPosSaver
-    <&> Lens.mapped .~ rhsId
-    <&> E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
-        (E.Doc ["Navigation", "Jump to Def Body"])
 
 makeBinderEdit ::
     (Monad i, Monad o) =>
-    Sugar.Binder (Name o) i o
+    Sugar.ParentNode (Sugar.Binder (Name o) i o)
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Gui Responsive o)
-makeBinderEdit (Sugar.BinderExpr assignmentBody) =
-    ExprGuiM.makeSubexpression assignmentBody
-makeBinderEdit content@(Sugar.BinderLet l) =
+makeBinderEdit (Sugar.PNode (Sugar.Node pl (Sugar.BinderExpr assignmentBody))) =
+    Sugar.Node pl assignmentBody & Sugar.PNode & ExprGuiM.makeSubexpression
+makeBinderEdit (Sugar.PNode (Sugar.Node pl (Sugar.BinderLet l))) =
     do
         config <- Lens.view Config.config
         let moveToInnerEventMap =
                 body
-                ^? Sugar._BinderLet . Sugar.lActions . Sugar.laNodeActions .
-                Sugar.extract
+                ^? Sugar._PNode . Sugar.val . Sugar._BinderLet
+                . Sugar.lValue . Sugar._PNode . Sugar.ann . Sugar.plActions
+                . Sugar.extract
                 & foldMap
                 (E.keysEventMap (config ^. Config.moveLetInwardKeys)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
-        mAddNodeActions <-
-            maybeAddNodeActions letEntityId (binderNearestHoles content)
-            (l ^. Sugar.lActions . Sugar.laNodeActions)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
-        parentDelegator letEntityId
+        stdWrapParentExpr pl
             <*>
             ( Responsive.vboxSpaced
                 <*>
@@ -526,9 +467,9 @@ makeBinderEdit content@(Sugar.BinderLet l) =
                 & ExprGuiM.withLocalMScopeId letBodyScope
                 ]
             )
-            <&> mAddNodeActions
+        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
-        letEntityId = l ^. Sugar.lEntityId & WidgetIds.fromEntityId
+        myId = WidgetIds.fromExprPayload pl
         body = l ^. Sugar.lBody
 
 namedParamEditInfo ::

@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -24,9 +24,9 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderEdit)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -62,7 +62,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Sugar.Binder (Name o) i o
+    Sugar.ParentNode (Sugar.Binder (Name o) i o)
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (TextWidget o)
 makeWidget resultId holeResultConverted =
@@ -85,7 +85,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Sugar.Binder (Name o) i o
+    Sugar.ParentNode (Sugar.Binder (Name o) i o)
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Menu.RenderedOption o)
 make mNextEntry ctx resultId pick holeResultConverted =
@@ -110,8 +110,10 @@ make mNextEntry ctx resultId pick holeResultConverted =
             holeResultConverted ^. SugarLens.binderResultExpr . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
-            holeResultConverted ^? SugarLens.binderExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
-            <&> WidgetIds.fromEntityId
+            holeResultConverted ^?
+            SugarLens.binderPayloads .
+            Lens.filteredByIndex (SugarLens._OfExpr . SugarLens.bodyUnfinished) .
+            Sugar.plEntityId <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of
             Nothing ->

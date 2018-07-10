@@ -13,7 +13,7 @@ import           GUI.Momentu.Glue ((/-/), (/|/))
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
+import           GUI.Momentu.State (Gui, assignCursor)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -52,10 +52,10 @@ makeExprDefinition ::
 makeExprDefinition defEventMap def bodyExpr =
     BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
-    (bodyExpr ^. Sugar.deContent) myId
+    (bodyExpr ^. Sugar.deContent)
+    & assignCursor myId (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagInfo . Sugar.tagInstance))
     where
-        entityId = def ^. Sugar.drEntityId
-        myId = WidgetIds.fromEntityId entityId
+        myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 makeBuiltinDefinition ::
     (Monad i, Monad o) =>

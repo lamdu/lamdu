@@ -15,7 +15,6 @@ module Lamdu.Sugar.Types.Parts
         , mNewLet
     , -- Let
       ExtractDestination(..)
-    , LetActions(..), laDelete, laNodeActions
     , -- Binders
       BinderParams(..), _NullParam, _Params
     , BinderBodyScope(..)
@@ -112,11 +111,6 @@ data NodeActions name i o = NodeActions
     , _mNewLet :: Maybe (o EntityId)
     } deriving Generic
 
-data LetActions name i o = LetActions
-    { _laDelete :: o ()
-    , _laNodeActions :: NodeActions name i o
-    } deriving Generic
-
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
       AddInitialParam (o EntityId)
@@ -126,6 +120,7 @@ data AddFirstParam name i o
       NeedToPickTagToAddFirst EntityId
     deriving Generic
 
+-- TODO: rename BinderParams -> Params
 data BinderParams name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
@@ -194,7 +189,6 @@ Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''HoleResultScore
-Lens.makeLenses ''LetActions
 Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullaryVal
 Lens.makeLenses ''NullParamActions

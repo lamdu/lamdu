@@ -281,8 +281,7 @@ prepareUnstoredPayloads v =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (Binder InternalName (T m) (T m)
-            (Payload InternalName (T m) (T m) a))
+    T m (ParentNode (Binder InternalName (T m) (T m)) (Payload InternalName (T m) (T m) a))
 sugar sugarContext holePl v =
     v
     <&> mkPayload

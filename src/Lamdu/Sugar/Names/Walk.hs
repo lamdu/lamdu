@@ -172,6 +172,14 @@ toAnnotation AnnotationNone = pure AnnotationNone
 toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
 
+toParentNode ::
+    MonadNaming m =>
+    (a (Payload (OldName m) (IM m) o p) ->
+        m (b (Payload (NewName m) (IM m) o p))) ->
+    ParentNode a (Payload (OldName m) (IM m) o p) ->
+    m (ParentNode b (Payload (NewName m) (IM m) o p))
+toParentNode = _PNode . toNode
+
 toLet ::
     MonadNaming m =>
     Let (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
@@ -179,9 +187,9 @@ toLet ::
 toLet Let{..} =
     do
         (_lName, _lBody) <-
-            unCPS (withTag TaggedVar _lVarInfo _lName) (toBinder _lBody)
+            unCPS (withTag TaggedVar _lVarInfo _lName)
+            (toParentNode toBinder _lBody)
         _lValue <- toAssignment _lValue
-        _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
 
 toBinder ::
@@ -189,7 +197,7 @@ toBinder ::
     Binder (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Binder (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinder (BinderLet l) = toLet l <&> BinderLet
-toBinder (BinderExpr e) = toExpression e <&> BinderExpr
+toBinder (BinderExpr e) = toBody e <&> BinderExpr
 
 toAddFirstParam ::
     MonadNaming m =>
@@ -203,7 +211,7 @@ toFunction ::
     m (Function (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toFunction Function{..} =
     (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
-    <$> unCPS (withBinderParams _fParams) (toBinder _fBody)
+    <$> unCPS (withBinderParams _fParams) (toParentNode toBinder _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
 toBinderPlain ::
@@ -220,16 +228,14 @@ toAssignmentBody ::
     AssignmentBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (AssignmentBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toAssignmentBody (BodyPlain x) = toBinderPlain x <&> BodyPlain
-toAssignmentBody (BodyFunction x) = afFunction toFunction x <&> BodyFunction
+toAssignmentBody (BodyFunction x) = toFunction x <&> BodyFunction
 
 toAssignment ::
     MonadNaming m =>
     Assignment (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Assignment (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toAssignment Assignment{..} =
-    (\_aBody _aNodeActions -> Assignment{..})
-    <$> toAssignmentBody _aBody
-    <*> toNodeActions _aNodeActions
+toAssignment = toParentNode toAssignmentBody
+
 
 toLam ::
     MonadNaming m =>
@@ -308,7 +314,7 @@ toHole hole =
     opRun
     <&>
     \run ->
-    SugarLens.holeTransformExprs (run . toBinder) hole
+    SugarLens.holeTransformExprs (run . toParentNode toBinder) hole
 
 toFragment ::
     MonadNaming m =>
@@ -325,7 +331,7 @@ toFragment Fragment{..} =
                  _fOptions
                  <&> Lens.mapped %~
                      SugarLens.holeOptionTransformExprs
-                     (run . toBinder)
+                     (run . toParentNode toBinder)
             }
 
 toComposite ::
@@ -360,32 +366,22 @@ toInject ::
 toInject (Inject t v) =
     Inject <$> toTagOf Tag t <*> toInjectVal v
 
-toElseIfContent ::
-    MonadNaming m =>
-    ElseIfContent (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (ElseIfContent (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toElseIfContent ElseIfContent{..} =
-    (\_eiContent _eiNodeActions -> ElseIfContent{..})
-    <$> toIfElse _eiContent
-    <*> toNodeActions _eiNodeActions
-
 toElse ::
     MonadNaming m =>
     Else (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Else (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toElse (SimpleElse x) = toExpression x <&> SimpleElse
-toElse (ElseIf x) = toElseIfContent x <&> ElseIf
+toElse (SimpleElse x) = toBody x <&> SimpleElse
+toElse (ElseIf x) = eiContent toIfElse x <&> ElseIf
 
 toIfElse ::
     MonadNaming m =>
     IfElse (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (IfElse (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toIfElse (IfElse i t d e) =
+toIfElse (IfElse i t e) =
     IfElse
     <$> toExpression i
     <*> toExpression t
-    <*> pure d
-    <*> toElse e
+    <*> toParentNode toElse e
 
 toBody ::
     MonadNaming m =>
@@ -402,7 +398,7 @@ toBody =
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom
-    BodyToNom        x -> x & traverse toBinder >>= nTId toTId <&> BodyToNom
+    BodyToNom        x -> x & (traverse . _PNode) (toNode toBinder) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam <&> BodyLam
@@ -431,7 +427,7 @@ toExpression ::
     MonadNaming m =>
     Expression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Expression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toExpression = _PNode (toNode toBody)
+toExpression = toParentNode toBody
 
 withParamInfo ::
     MonadNaming m =>
@@ -502,7 +498,7 @@ toRepl ::
     m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toRepl (Repl bod varInfo res) =
     Repl
-    <$> toBinder bod
+    <$> toParentNode toBinder bod
     <*> pure varInfo
     <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 

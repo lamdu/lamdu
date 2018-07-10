@@ -25,7 +25,7 @@ import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Sugar.Annotations (markAnnotationsToDisplay)
+import           Lamdu.Sugar.Annotations (markAssignmentAnnotations, markBinderAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
@@ -136,8 +136,7 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentExprs %~
-                markAnnotationsToDisplay
+            <&> _DefinitionBodyExpression . deContent %~ markAssignmentAnnotations
             >>= traverse (convertPayload annMode)
             & ConvertM.run context
             <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentSubExprParams .
@@ -206,12 +205,12 @@ loadRepl cache monitors annMode evalRes cp =
                 <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
             convertBinder valInferred
-            <&> SugarLens.binderExprs %~ markAnnotationsToDisplay
+            <&> markBinderAnnotations
             >>= traverse (convertPayload annMode)
             & ConvertM.run context
             <&> SugarLens.binderSubExprParams . SugarLens.paramsAnnotations %~
                 trimParamAnnotation annMode
-            >>= SugarLens.binderExprs OrderTags.orderExpr
+            >>= OrderTags.orderBinder
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
         pure Repl
             { _replExpr = expr

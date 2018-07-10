@@ -70,8 +70,7 @@ makeRenderedResult pl ctx result =
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & ExprGuiM.im
         res ^. Sugar.holeResultConverted
-            & SugarLens.binderExprs %~
-                postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ResultWidget.make mNextEntry ctx (rId result)
                 (res ^. Sugar.holeResultPick)
     where
@@ -80,13 +79,11 @@ makeRenderedResult pl ctx result =
             <&> WidgetIds.fromEntityId
 
 postProcessSugar ::
-    Int ->
-    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ()) ->
-    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload)
-postProcessSugar minOpPrec expr =
-    expr
-    & AddParens.addToExprWith minOpPrec
-    <&> pl
+    AddParens.MinOpPrec ->
+    Sugar.ParentNode (Sugar.Binder (Name o) i o) (Sugar.Payload (Name o) i o ()) ->
+    Sugar.ParentNode (Sugar.Binder (Name o) i o) (Sugar.Payload (Name o) i o ExprGui.Payload)
+postProcessSugar minOpPrec binder =
+    AddParens.addToBinderWith minOpPrec binder <&> pl
     where
         pl (x, needParens, sugarPl) =
             ExprGui.Payload

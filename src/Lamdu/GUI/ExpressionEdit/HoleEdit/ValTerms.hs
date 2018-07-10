@@ -100,7 +100,7 @@ ofBody =
 
 binder :: Binder (Name o) i o a -> [Text]
 binder BinderLet{} = ["let"]
-binder (BinderExpr x) = expr x
+binder (BinderExpr x) = ofBody x
 
 type Suffix = Char
 

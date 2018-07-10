@@ -131,9 +131,8 @@ instance Eq (a -> Unit b) where _ == _ = True
 instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
 
+deriving instance (Eq a, Eq (f a)) => Eq (Sugar.ParentNode f a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.AssignFunction n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.Assignment n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.AssignmentBody n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.AssignPlain n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Binder n Unit Unit a)
@@ -147,7 +146,6 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.DefinitionExpression n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.DefinitionOutdatedType n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Else n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ElseIfContent n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.Expression n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Fragment n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.FuncParam n Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Function n Unit Unit a)
@@ -200,7 +198,6 @@ deriving instance Eq n => Eq (Sugar.EvalCompletionResult n Unit)
 deriving instance Eq n => Eq (Sugar.FuncParamActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.GetVar n Unit)
 deriving instance Eq n => Eq (Sugar.HoleResult n Unit Unit)
-deriving instance Eq n => Eq (Sugar.LetActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.NameRef n Unit)
 deriving instance Eq n => Eq (Sugar.NodeActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.NullaryVal n Unit Unit)
@@ -215,8 +212,6 @@ deriving instance Eq n => Eq (Sugar.Type n)
 deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
 
 instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.AssignFunction n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Assignment n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.AssignmentBody n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.AssignPlain n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Binder n (T i) (T o) a) where rnf = genericRnf
@@ -264,7 +259,6 @@ instance NFData (Sugar.EvalException (T o)) where rnf = genericRnf
 instance NFData (Sugar.FuncParamActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Heal (Transaction o)) where rnf = genericRnf
 instance NFData (Sugar.Hole n (T i) (T o)) where rnf = genericRnf
-instance NFData (Sugar.LetActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Literal (Property (T o))) where rnf = genericRnf
 instance NFData (Sugar.NodeActions n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.NullaryVal n (T i) (T o)) where rnf = genericRnf

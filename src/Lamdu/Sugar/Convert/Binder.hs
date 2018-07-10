@@ -1,10 +1,10 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields, TupleSections #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
@@ -23,7 +23,7 @@ import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), conv
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions, subexprPayloads)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -43,26 +43,6 @@ lamParamToHole ::
     V.Lam (Val (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x <&> (^. Input.stored))
-
-mkLetItemActions ::
-    Monad m =>
-    Input.Payload m a -> Redex (Input.Payload m a) ->
-    ConvertM m (LetActions InternalName (T m) (T m))
-mkLetItemActions topLevelPl redex =
-    do
-        postProcess <- ConvertM.postProcessAssert
-        nodeActions <- makeActions topLevelPl
-        pure LetActions
-            { _laDelete =
-                do
-                    lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
-                        & replaceWith topLevelProp & void
-                <* postProcess
-            , _laNodeActions = nodeActions
-            }
-    where
-        topLevelProp = topLevelPl ^. Input.stored
 
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
@@ -87,15 +67,6 @@ makeInline stored redex useId
         uses = redex ^. Redex.paramRefs
         (before, after) = break (== useId) uses
 
--- Differs from SugarLens version by Payload type
--- TODO: cleanup
-binderEntityId ::
-    Lens' (Binder name i o (ConvertPayload m a)) EntityId
-binderEntityId f (BinderExpr e) =
-    e & _PNode . ann . pInput . Input.entityId %%~ f <&> BinderExpr
-binderEntityId f (BinderLet l) =
-    l & lEntityId %%~ f <&> BinderLet
-
 convertRedex ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
@@ -107,12 +78,10 @@ convertRedex expr redex =
         (_pMode, value) <-
             convertAssignment binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
-        actions <-
-            mkLetItemActions (expr ^. Val.payload) redex
-            & localNewExtractDestPos expr
+            <&> _2 . _PNode . ann . pInput . Input.entityId .~
+                EntityId.ofBinder (redex ^. Redex.lam . V.lamParamId)
         letBody <-
             convertBinder bod
-            & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
         float <- makeFloatLetToOuterScope (stored ^. Property.pSet) redex
@@ -125,19 +94,23 @@ convertRedex expr redex =
                         (redex ^. Redex.arg . Val.payload . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
+        postProcess <- ConvertM.postProcessAssert
+        let del =
+                do
+                    lamParamToHole (redex ^. Redex.lam)
+                    redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
+                        & replaceWith stored & void
+                <* postProcess
         pure Let
-            { _lEntityId = EntityId.ofBinder param
-            , _lVarInfo = redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plType & mkVarInfo
-            , _lValue = value & aNodeActions %~ fixValueNodeActions
-            , _lActions = actions
+            { _lVarInfo = redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plType & mkVarInfo
+            , _lValue = value & _PNode . ann . pActions %~ fixValueNodeActions
+            , _lDelete = del
             , _lName = tag
             , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody =
                 letBody
-                & Lens.failing
-                    (_BinderExpr . _PNode . ann . pActions)
-                    (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
-                    (letBody ^. binderEntityId <$ actions ^. laDelete)
+                & _PNode . ann . pActions . mReplaceParent ?~
+                    (letBody ^. _PNode . ann . pInput . Input.entityId <$ del)
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
@@ -148,16 +121,48 @@ convertRedex expr redex =
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
+convertBinderBody ::
+    (Monad m, Monoid a) =>
+    Val (Input.Payload m a) ->
+    ConvertM m (Binder InternalName (T m) (T m) (ConvertPayload m a), a)
+convertBinderBody expr =
+    case Redex.check expr of
+    Nothing ->
+        ConvertM.convertSubexpression expr
+        & localNewExtractDestPos expr
+        <&> (^. _PNode . val)
+        <&>
+        \body ->
+        ( BinderExpr body
+        , subexprPayloads (expr ^. Val.body) (body ^.. SugarLens.bodyChildPayloads) & mconcat
+        )
+    Just redex ->
+        convertRedex expr redex
+        <&>
+        \l ->
+        ( BinderLet l
+        , redex ^. Redex.lamPl . Input.userData <>
+            redex ^. Redex.arg . Val.payload . Input.userData
+        )
+
 convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (Binder InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m (ParentNode (Binder InternalName (T m) (T m)) (ConvertPayload m a))
 convertBinder expr =
-    case Redex.check expr of
-    Nothing ->
-        ConvertM.convertSubexpression expr & localNewExtractDestPos expr
-        <&> BinderExpr
-    Just redex -> convertRedex expr redex <&> BinderLet
+    do
+        actions <-
+            makeActions (expr ^. Val.payload)
+            & localNewExtractDestPos expr
+        (b, hiddenPls) <- convertBinderBody expr
+        PNode Node
+            { _val = b
+            , _ann =
+                ConvertPayload
+                { _pInput = expr ^. Val.payload & Input.userData .~ hiddenPls
+                , _pActions = actions
+                }
+            } & pure
 
 makeFunction ::
     (Monad m, Monoid a) =>
@@ -194,25 +199,26 @@ makeAssignment ::
     ConvertM m (Assignment InternalName (T m) (T m) (ConvertPayload m a))
 makeAssignment chosenScopeProp params funcBody pl =
     do
-        bod <-
+        (bod, hiddenEntityIds) <-
             case params ^. cpParams of
             Nothing ->
-                convertBinder funcBody
-                <&> AssignPlain (params ^. cpAddFirstParam)
-                <&> BodyPlain
+                convertBinderBody funcBody
+                <&> _1 %~ BodyPlain . AssignPlain (params ^. cpAddFirstParam)
             Just{} ->
-                makeFunction chosenScopeProp params funcBody
-                <&> AssignFunction (cpMLamParam params ^?! Lens._Just . _1)
-                <&> BodyFunction
+                makeFunction chosenScopeProp params funcBody <&> BodyFunction <&> (, mempty)
         nodeActions <- makeActions pl
         let mRemoveSetToHole
-                | Lens.has (_BodyPlain . apBody . _BinderExpr . _PNode . val . _BodyHole) bod =
+                | Lens.has (_BodyPlain . apBody . _BinderExpr . _BodyHole) bod =
                     mSetToHole .~ Nothing
                 | otherwise = id
-        pure Assignment
-            { _aNodeActions = mRemoveSetToHole nodeActions
-            , _aBody = bod
-            }
+        PNode Node
+            { _ann =
+                ConvertPayload
+                { _pInput = pl & Input.userData .~ hiddenEntityIds
+                , _pActions = mRemoveSetToHole nodeActions
+                }
+            , _val = bod
+            } & pure
 
 convertLam ::
     (Monad m, Monoid a) =>
@@ -233,7 +239,7 @@ convertLam lam exprPl =
                     Lambda NormalBinder UnlimitedFuncApply func
                 | otherwise =
                     func
-                    & SugarLens.funcExprs %~ markLightParams paramNames
+                    & fBody %~ markBinderLightParams paramNames
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions lam exprPl
@@ -245,8 +251,9 @@ useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
         any (func &)
-        [ Lens.has (fBody . _BinderLet)
-        , Lens.has (fBody . SugarLens.binderExprs . SugarLens.payloadsOf forbiddenLightLamSubExprs)
+        [ Lens.has (fBody . _PNode . val . _BinderLet)
+        , Lens.has (fBody . SugarLens.binderPayloads . Lens.filteredByIndex
+            (SugarLens._OfExpr . forbiddenLightLamSubExprs))
         , not . allParamsUsed paramNames
         ]
     where
@@ -260,12 +267,44 @@ allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            func ^.. SugarLens.funcExprs . SugarLens.exprPayloads . Lens.asIndex .
+            func ^.. fBody . SugarLens.binderPayloads . Lens.asIndex .
             SugarLens._OfExpr . _BodyGetVar . _GetParam . pNameRef . nrName
             & Set.fromList
 
+markBinderLightParams ::
+    Set InternalName ->
+    ParentNode (Binder InternalName (T m) (T m)) a ->
+    ParentNode (Binder InternalName (T m) (T m)) a
+markBinderLightParams paramNames (PNode (Node pl bod)) =
+    SugarLens.overBinderChildren id id id
+    (markElseLightParams paramNames) (markBinderLightParams paramNames)
+    (markLightParams paramNames) fixAssignments
+    bod
+    & Node pl & PNode
+    where
+        fixAssignments =
+            -- No assignments inside light lambdas. Consider asserting?
+            id
+
+markElseLightParams ::
+    Set InternalName ->
+    ParentNode (Else InternalName (T m) (T m)) a ->
+    ParentNode (Else InternalName (T m) (T m)) a
+markElseLightParams paramNames =
+    _PNode . val %~
+    \case
+    SimpleElse body -> markBodyLightParams paramNames body & SimpleElse
+    ElseIf elseIf ->
+        elseIf
+        & eiContent %~
+            SugarLens.overIfElseChildren
+            (markElseLightParams paramNames)
+            (markLightParams paramNames)
+        & ElseIf
+
 markLightParams ::
-    Set InternalName -> Expression InternalName (T m) (T m) a ->
+    Set InternalName ->
+    Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
 markLightParams paramNames = _PNode . val %~ markBodyLightParams paramNames
 
@@ -280,7 +319,9 @@ markBodyLightParams paramNames =
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
     BodyFragment w -> w & fExpr %~ markLightParams paramNames & BodyFragment
-    bod -> SugarLens.overBodyChildren id id id (markLightParams paramNames) bod
+    bod ->
+        SugarLens.overBodyChildren id id id (markElseLightParams paramNames)
+        (markBinderLightParams paramNames) (markLightParams paramNames) bod
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::

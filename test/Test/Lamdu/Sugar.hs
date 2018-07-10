@@ -34,13 +34,6 @@ allEntityIds ::
 allEntityIds workArea =
     pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
-    <>
-        -- TODO: When Assignments will contains proper payloads,
-        -- there will be no need for this temporary workaround:
-        workArea ^..
-        waPanes . traverse . paneDefinition .
-        drBody . _DefinitionBodyExpression . deContent .
-        aBody . _BodyFunction . afLamId
     where
         pls = workArea ^.. traverse
 

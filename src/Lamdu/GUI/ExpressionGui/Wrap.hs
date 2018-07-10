@@ -1,7 +1,6 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
-    , parentDelegator
     , stdWrapParentExpr
     ) where
 

@@ -1,7 +1,7 @@
 -- | "if" sugar/guards conversion
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
@@ -40,49 +40,38 @@ convertIfElse setToVal caseBody =
             _ -> Nothing
         tagOf alt = alt ^. ciTag . tagInfo . tagVal
         convIfElse cond altTrue altFalse =
-            case mAltFalseBinder of
-            Just binder ->
-                case binder ^? fBody . _BinderExpr of
-                Just altFalseBinderExpr ->
-                    case altFalseBinderExpr ^. _PNode . val of
-                    BodyIfElse innerIfElse ->
-                        ElseIf ElseIfContent
-                        { _eiScopes =
-                            case binder ^. fBodyScopes of
-                            SameAsParentScope -> error "lambda body should have scopes"
-                            BinderBodyScope x -> x <&> Lens.mapped %~ getScope
-                        , _eiEntityId = altFalseBinderExpr ^. _PNode . ann . pInput . Input.entityId
-                        , _eiContent = innerIfElse
-                        , _eiNodeActions = altFalseBinderExpr ^. _PNode . ann . pActions
-                        }
-                        & makeRes
-                        where
-                            getScope [x] = x ^. bParamScopeId
-                            getScope _ = error "if-else evaluated more than once in same scope?"
-                    _ -> simpleIfElse
-                Nothing -> simpleIfElse
-            Nothing -> simpleIfElse
-            & Just
-            where
-                mAltFalseBinder = altFalse ^? ciExpr . _PNode . val . _BodyLam . lamFunc
-                simpleIfElse =
-                    altFalse ^. ciExpr
-                    & _PNode . val . _BodyHole . holeMDelete ?~ elseDel
-                    & _PNode . val . _BodyLam . lamFunc . fBody . _BinderExpr
-                        . _PNode . val . _BodyHole . holeMDelete ?~ elseDel
+            Just IfElse
+            { _iIf = cond
+            , _iThen = altTrue ^. ciExpr
+            , _iElse =
+                case altFalse ^@?
+                     ciExpr . _PNode . val . _BodyLam . lamFunc . Lens.selfIndex
+                     <. (fBody . _PNode . val . _BinderExpr . _BodyIfElse)
+                of
+                Just (binder, innerIfElse) ->
+                    ElseIf ElseIfContent
+                    { _eiScopes =
+                        case binder ^. fBodyScopes of
+                        SameAsParentScope -> error "lambda body should have scopes"
+                        BinderBodyScope x -> x <&> Lens.mapped %~ getScope
+                    , _eiContent = innerIfElse
+                    }
+                    where
+                        getScope [x] = x ^. bParamScopeId
+                        getScope _ = error "if-else evaluated more than once in same scope?"
+                Nothing ->
+                    altFalse ^. ciExpr . _PNode . val
+                    & _BodyHole . holeMDelete ?~ elseDel
+                    & _BodyLam . lamFunc . fBody . _PNode . val . _BinderExpr .
+                        _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
-                    & makeRes
+                & Node (altFalse ^. ciExpr . _PNode . ann)
+                & PNode
+            }
+            where
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
                     alt ^? ciExpr . _PNode . val . _BodyLam . lamFunc . fBody
-                    . _BinderExpr
-                    & fromMaybe (alt ^. ciExpr)
-                    & (^. _PNode . ann . pInput . Input.stored . Property.pVal)
-                makeRes els =
-                    IfElse
-                    { _iIf = cond
-                    , _iThen = altTrue ^. ciExpr
-                    , _iDeleteIfThen = delTarget altFalse & setToVal <&> EntityId.ofValI
-                    , _iElse = els
-                    }
-
+                    . _PNode . Lens.filteredBy (val . _BinderExpr) . ann
+                    & fromMaybe (alt ^. ciExpr . _PNode . ann)
+                    & (^. pInput . Input.stored . Property.pVal)

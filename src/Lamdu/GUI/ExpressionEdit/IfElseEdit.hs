@@ -22,7 +22,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.EventMap (addLetEventMap)
+import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -56,46 +56,57 @@ makeIfThen prefixLabel animId ifElse =
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
-                ifElse ^. Sugar.iDeleteIfThen <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
+                foldMap
+                (E.keysEventMapMovesCursor (Config.delKeys config)
+                 (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
+                (ifElse ^. Sugar.iElse . Sugar._PNode . Sugar.ann .
+                 Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap (ifGui /|/ colon))
             (Widget.weakerEvents eventMap thenGui)
             & pure
 
-makeElse ::
+makeElseBody ::
     (Monad i, Monad o) =>
+    Sugar.Payload (Name o) i o ExprGui.Payload ->
     Sugar.Else (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o [Row (Gui Responsive o)]
-makeElse (Sugar.SimpleElse expr) =
+makeElseBody ann (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
         <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression expr
+    ) <*> ExprGuiM.makeSubexpression (Sugar.PNode (Sugar.Node ann expr))
     <&> pure
     where
-        elseAnimId = Widget.toAnimId elseId <> ["else"]
-        elseId = WidgetIds.fromExprPayload (expr ^. Sugar._PNode . Sugar.ann)
-makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content nodeActions)) =
-    -- TODO: use nodeActions
+        elseAnimId = WidgetIds.fromExprPayload ann & Widget.toAnimId
+makeElseBody ann (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- Styled.grammarLabel "el"
-        letEventMap <- foldMap addLetEventMap (nodeActions ^. Sugar.mNewLet)
+        letEventMap <-
+            foldMap ExprEventMap.addLetEventMap (ann ^. Sugar.plActions . Sugar.mNewLet)
         (:)
-            <$>
-            ( makeIfThen elseLabel animId content
-                <&> Lens.mapped %~ Widget.weakerEvents letEventMap
-            )
+            <$> ( makeIfThen elseLabel animId content
+                  <&> Lens.mapped %~ Widget.weakerEvents letEventMap
+                )
             <*> makeElse (content ^. Sugar.iElse)
             & Reader.local (Element.animIdPrefix .~ animId)
             & ExprGuiM.withLocalMScopeId mInnerScope
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
+        entityId = ann ^. Sugar.plEntityId
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
+
+-- TODO inline and use "case"
+makeElse ::
+    (Monad i, Monad o) =>
+    Sugar.ParentNode (Sugar.Else (Name o) i o)
+    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    ExprGuiM i o [Row (Gui Responsive o)]
+makeElse (Sugar.PNode (Sugar.Node ann x)) = makeElseBody ann x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env

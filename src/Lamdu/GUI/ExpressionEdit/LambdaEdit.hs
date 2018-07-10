@@ -32,7 +32,6 @@ import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -126,9 +125,9 @@ make ::
     ExprGuiM i o (Gui Responsive o)
 make lam pl =
     do
-        BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap <-
+        BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap _rhsId <-
             BinderEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
-            func (WidgetIds.fromEntityId bodyId) myId
+            func pl (WidgetIds.fromEntityId bodyId)
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & pure
@@ -144,4 +143,4 @@ make lam pl =
         myId = WidgetIds.fromExprPayload pl
         params = func ^. Sugar.fParams
         func = lam ^. Sugar.lamFunc
-        bodyId = func ^. Sugar.fBody . SugarLens.binderEntityId
+        bodyId = func ^. Sugar.fBody . Sugar._PNode . Sugar.ann . Sugar.plEntityId

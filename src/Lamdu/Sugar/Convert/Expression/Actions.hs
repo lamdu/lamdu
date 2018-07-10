@@ -74,12 +74,12 @@ mkExtractToLet ::
     Monad m => ExprIRef.ValP m -> ExprIRef.ValP m -> T m EntityId
 mkExtractToLet outerScope stored =
     do
-        (newParam, lamI) <-
+        lamI <-
             if Property.value stored == extractPosI
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
-                DataOps.newIdentityLambda
+                DataOps.newIdentityLambda <&> snd
             else
                 -- Give some subexpr in binder body a name (replace
                 -- binder body with "(\x -> assignmentBody) stored", and
@@ -91,10 +91,10 @@ mkExtractToLet outerScope stored =
                         & ExprIRef.newValBody
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
                     (stored ^. Property.pSet) getVarI
-                    pure (newParam, lamI)
+                    pure lamI
         V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
             >>= outerScope ^. Property.pSet
-        EntityId.ofBinder newParam & pure
+        EntityId.ofValI oldStored & pure
     where
         extractPosI = Property.value outerScope
         oldStored = Property.value stored
@@ -133,10 +133,21 @@ makeActions exprPl =
             , _extract = ext
             , _mReplaceParent = Nothing
             , _wrapInRecord = wrapInRec
-            , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofBinder
+            , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofValI
             }
     where
         stored = exprPl ^. Input.stored
+
+fragmentAnnIndex ::
+    (Applicative f, Lens.Indexable j p) =>
+    p a (f a) -> Lens.Indexed (Body name i o j) a (f a)
+fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . _PNode . ann)
+
+body :: Lens' (ParentNode f a) (f a)
+body = _PNode . val
+
+bodyIndex :: Lens.IndexedTraversal' (f a) (ParentNode f a) (ParentNode f a)
+bodyIndex = Lens.filteredBy body
 
 setChildReplaceParentActions ::
     Monad m =>
@@ -157,19 +168,26 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     case bod of
-    BodyLam lam | Lens.has (lamFunc . fBody . _BinderLet) lam -> bod
+    BodyLam lam | Lens.has (lamFunc . fBody . _PNode . val . _BinderLet) lam -> bod
     _ ->
         bod
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
         . bodyChildPayloads %~ join setToExpr
         -- Replace-parent with fragment sets directly to fragment expression
         & overBodyChildren id id id
-            (Lens.filteredBy (_PNode . val . _BodyFragment . fExpr . _PNode . ann) <. _PNode . ann %@~ setToExpr)
+            ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. _PNode . ann %@~ setToExpr)
+            ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. _PNode . ann %@~ setToExpr)
+            ((bodyIndex . fragmentAnnIndex) <. _PNode . ann %@~ setToExpr)
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
         & overBodyChildren id id id
-            (_PNode . val . _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) .
-                fExpr . _PNode . ann %~ join setToExpr)
+            (body . _SimpleElse . typeMismatchPayloads %~ join setToExpr)
+            (body . _BinderExpr . typeMismatchPayloads %~ join setToExpr)
+            (body . typeMismatchPayloads %~ join setToExpr)
+    where
+        typeMismatchPayloads =
+            _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr .
+            _PNode . ann
 
 subexprPayloads ::
     Foldable f =>

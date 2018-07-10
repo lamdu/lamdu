@@ -59,8 +59,8 @@ test =
     ]
 
 replExpr ::
-    Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Expression name i o a)
-replExpr = Sugar.waRepl . Sugar.replExpr . Sugar._BinderExpr
+    Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Body name i o a)
+replExpr = Sugar.waRepl . Sugar.replExpr . Sugar._PNode . Sugar.val . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -155,7 +155,7 @@ testLambdaDelete =
     do
         paramCursor <-
             fromWorkArea cache
-            (replExpr . Sugar._PNode . Sugar.val. Sugar._BodyLam . Sugar.lamFunc .
+            (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
@@ -176,7 +176,9 @@ testFragmentSize =
     testProgram "simple-fragment.json" $
     \cache ->
     do
-        frag <- fromWorkArea cache (replExpr . Sugar._PNode . Sugar.ann)
+        frag <-
+            fromWorkArea cache
+            (Sugar.waRepl . Sugar.replExpr . Sugar._PNode . Sugar.ann)
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
@@ -198,9 +200,8 @@ testOpPrec =
     do
         holeId <-
             fromWorkArea cache
-            (replExpr . Sugar._PNode . Sugar.val . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . Sugar._BinderExpr .
-             Sugar._PNode . Sugar.ann . Sugar.plEntityId)
+            (replExpr . Sugar._BodyLam . Sugar.lamFunc .
+             Sugar.fBody . Sugar._PNode . Sugar.ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache

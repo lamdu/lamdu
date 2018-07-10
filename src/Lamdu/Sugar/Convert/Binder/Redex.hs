@@ -1,11 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Convert.Binder.Redex
-    ( Redex(..)
-      , bodyScope
-      , lam
-      , paramRefs
-      , arg
+    ( Redex(..) , bodyScope, lam, lamPl, paramRefs, arg
     , check
     ) where
 
@@ -23,6 +19,7 @@ import           Lamdu.Prelude
 data Redex a = Redex
     { _bodyScope :: EvalScopes ScopeId
     , _lam :: V.Lam (Val a)
+    , _lamPl :: a
     , _paramRefs :: [EntityId]
     , _arg :: Val a
     } deriving (Functor, Foldable, Traversable)
@@ -34,6 +31,7 @@ check expr = do
     l <- func ^? Val.body . V._BLam
     Just Redex
         { _lam = l
+        , _lamPl = func ^. Val.payload
         , _bodyScope =
             func ^. Val.payload . Input.evalResults
             <&> (^. Input.eAppliesOfLam)
