@@ -15,12 +15,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 markStoredHoles ::
-    Sugar.Expression name i o a ->
-    Sugar.Expression name i o (Bool, a)
-markStoredHoles expr =
-    expr
-    <&> (,) False
-    & SugarLens.unfinishedExprPayloads . _1 .~ True
+    Lens.AnIndexedTraversal (SugarLens.PayloadOf name i o) s t a (Bool, a) ->
+    s -> t
+markStoredHoles pls =
+    Lens.cloneIndexedTraversal pls %@~
+    \i pl -> (Lens.has (SugarLens._OfExpr . SugarLens.bodyUnfinished) i, pl)
 
 data NearestHoles = NearestHoles
     { _prev :: Maybe Sugar.EntityId
@@ -34,18 +33,14 @@ none = NearestHoles Nothing Nothing
 add ::
     Functor f =>
     (forall a b.
-      Lens.Traversal
-      (f a)
-      (f b)
-      (Sugar.Expression name i o a)
-      (Sugar.Expression name i o b)) ->
+      Lens.IndexedTraversal (SugarLens.PayloadOf name i o) (f a) (f b) a b) ->
     f (Sugar.Payload name i o c) ->
     f (Sugar.Payload name i o (c, NearestHoles))
 add exprs s =
     s
-    & exprs %~ markStoredHoles
-    & passAll (exprs . SugarLens.exprPayloads)
-    & passAll (Lens.backwards (exprs . SugarLens.exprPayloads))
+    & markStoredHoles exprs
+    & passAll exprs
+    & passAll (Lens.backwards exprs)
     <&> snd
     <&> Sugar.plData %~ toNearestHoles
     where
