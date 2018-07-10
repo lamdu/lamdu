@@ -21,10 +21,7 @@ import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (addLetEventMap)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -46,13 +43,13 @@ data Row a = Row
 Lens.makeLenses ''Row
 
 makeIfThen ::
-    ( Monad o, MonadReader env f, HasTheme env, HasConfig env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    ) =>
-    WithTextPos View -> Sugar.EntityId -> Sugar.IfThen o (Gui Responsive o) ->
-    f (Row (Gui Responsive o))
-makeIfThen prefixLabel entityId ifThen =
+    (Monad i, Monad o) =>
+    WithTextPos View -> Sugar.EntityId ->
+    Sugar.IfThen o (ExprGui.SugarExpr i o) ->
+    ExprGuiM i o (Row (Gui Responsive o))
+makeIfThen prefixLabel entityId ifThenExprs =
     do
+        ifThen <- traverse ExprGuiM.makeSubexpression ifThenExprs
         label <- Styled.grammarLabel "if "
         colon <- Styled.grammarLabel ": "
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
@@ -90,9 +87,8 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _node
         letEventMap <- addLetEventMap addLet
         (:)
             <$>
-            ( traverse ExprGuiM.makeSubexpression ifThen
-                <&> Sugar.itIf %~ Widget.weakerEvents letEventMap
-                >>= makeIfThen elseLabel entityId
+            ( makeIfThen elseLabel entityId ifThen
+                <&> rPredicate %~ Widget.weakerEvents letEventMap
             )
             <*> makeElse els
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
@@ -155,12 +151,8 @@ make ifElse pl =
     <*> ( renderRows (ExprGui.mParensId pl)
             <*>
             ( (:)
-                <$> makeIf
+                <$> makeIfThen Element.empty (pl ^. Sugar.plEntityId)
+                    (ifElse ^. Sugar.iIfThen)
                 <*> makeElse (ifElse ^. Sugar.iElse)
             )
         )
-    where
-        makeIf =
-            ifElse ^. Sugar.iIfThen
-            & traverse ExprGuiM.makeSubexpression
-            >>= makeIfThen Element.empty (pl ^. Sugar.plEntityId)
