@@ -119,12 +119,12 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
                 { _scInferContext = newInferContext
                 , _scCodeAnchors = cp
                 , _scScopeInfo =
-                        emptyScopeInfo
-                        ( Just RecursiveRef
-                          { _rrDefI = defI
-                          , _rrDefType = defType
-                          }
-                        )
+                    emptyScopeInfo
+                    ( Just RecursiveRef
+                      { _rrDefI = defI
+                      , _rrDefType = defType
+                      }
+                    )
                 , _scDebugMonitors = monitors
                 , _scCacheFunctions = cache
                 , _scPostProcessRoot = postProcess
