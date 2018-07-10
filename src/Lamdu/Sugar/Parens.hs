@@ -148,7 +148,7 @@ loopExprBody minOpPrec parentPrec body_ =
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
         ifElse x =
-            x <&> loop 0 unambiguous
+            x & SugarLens.ifElseChildren %~ loop 0 unambiguous
             & BodyIfElse
             & result needParens
             where

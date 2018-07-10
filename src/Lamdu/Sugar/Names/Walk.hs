@@ -368,31 +368,38 @@ toInject (Inject t v) =
 
 toElseIfContent ::
     MonadNaming m =>
-    (a -> m b) ->
-    ElseIfContent (OldName m) (IM m) o a ->
-    m (ElseIfContent (NewName m) (IM m) o b)
-toElseIfContent expr ElseIfContent{..} =
+    ElseIfContent (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (ElseIfContent (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toElseIfContent ElseIfContent{..} =
     (\_eiContent _eiNodeActions -> ElseIfContent{..})
-    <$> toIfElse expr _eiContent
+    <$> toIfElse _eiContent
     <*> toNodeActions _eiNodeActions
 
 toElse ::
     MonadNaming m =>
-    (a -> m b) ->
-    Else (OldName m) (IM m) o a ->
-    m (Else (NewName m) (IM m) o b)
-toElse expr (SimpleElse x) = expr x <&> SimpleElse
-toElse expr (ElseIf x) = toElseIfContent expr x <&> ElseIf
+    Else (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Else (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toElse (SimpleElse x) = toExpression x <&> SimpleElse
+toElse (ElseIf x) = toElseIfContent x <&> ElseIf
+
+toIfThen ::
+    MonadNaming m =>
+    IfThen (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (IfThen (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toIfThen (IfThen i t d) =
+    IfThen
+    <$> toExpression i
+    <*> toExpression t
+    ?? d
 
 toIfElse ::
     MonadNaming m =>
-    (a -> m b) ->
-    IfElse (OldName m) (IM m) o a ->
-    m (IfElse (NewName m) (IM m) o b)
-toIfElse expr (IfElse ifThen els_) =
+    IfElse (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (IfElse (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+toIfElse (IfElse ifThen els_) =
     IfElse
-    <$> traverse expr ifThen
-    <*> toElse expr els_
+    <$> toIfThen ifThen
+    <*> toElse els_
 
 toBody ::
     MonadNaming m =>
@@ -404,7 +411,7 @@ toBody =
     BodyInject       x -> x & toInject <&> BodyInject
     BodyRecord       x -> x & toComposite toExpression <&> BodyRecord
     BodyCase         x -> x & toCase toExpression <&> BodyCase
-    BodyIfElse       x -> x & toIfElse toExpression <&> BodyIfElse
+    BodyIfElse       x -> x & toIfElse <&> BodyIfElse
     BodySimpleApply  x -> x & traverse toExpression <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole

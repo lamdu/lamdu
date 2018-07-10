@@ -45,11 +45,12 @@ Lens.makeLenses ''Row
 makeIfThen ::
     (Monad i, Monad o) =>
     WithTextPos View -> Sugar.EntityId ->
-    Sugar.IfThen o (ExprGui.SugarExpr i o) ->
+    Sugar.IfThen (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Row (Gui Responsive o))
-makeIfThen prefixLabel entityId ifThenExprs =
+makeIfThen prefixLabel entityId ifThen =
     do
-        ifThen <- traverse ExprGuiM.makeSubexpression ifThenExprs
+        ifGui <- ExprGuiM.makeSubexpression (ifThen ^. Sugar.itIf)
+        thenGui <- ExprGuiM.makeSubexpression (ifThen ^. Sugar.itThen)
         label <- Styled.grammarLabel "if "
         colon <- Styled.grammarLabel ": "
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
@@ -58,15 +59,15 @@ makeIfThen prefixLabel entityId ifThenExprs =
                 ifThen ^. Sugar.itDelete <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         Row indentAnimId keyword
-            (Widget.weakerEvents eventMap ((ifThen ^. Sugar.itIf) /|/ colon))
-            (Widget.weakerEvents eventMap (ifThen ^. Sugar.itThen))
+            (Widget.weakerEvents eventMap (ifGui /|/ colon))
+            (Widget.weakerEvents eventMap thenGui)
             & pure
     where
         indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 makeElse ::
     (Monad i, Monad o) =>
-    Sugar.Else name i o (ExprGui.SugarExpr i o) ->
+    Sugar.Else (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElse (Sugar.SimpleElse expr) =
     ( Row elseAnimId
@@ -143,7 +144,7 @@ renderRows mParensId =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.IfElse name i o (ExprGui.SugarExpr i o) ->
+    Sugar.IfElse (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make ifElse pl =

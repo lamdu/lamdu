@@ -140,27 +140,29 @@ data Hole name i o = Hole
     } deriving Generic
 
 -- An "if/elif <cond>: <then>" clause in an IfElse expression
-data IfThen o expr = IfThen
-    { _itIf :: expr
-    , _itThen :: expr
+data IfThen name i o a = IfThen
+    { _itIf :: Expression name i o a
+    , _itThen :: Expression name i o a
     , _itDelete :: o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)
 
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
-data ElseIfContent name i o expr = ElseIfContent
+data ElseIfContent name i o a = ElseIfContent
     { _eiScopes :: ChildScopes
     , _eiEntityId :: EntityId
-    , _eiContent :: IfElse name i o expr
+    , _eiContent :: IfElse name i o a
     , _eiCondAddLet :: o EntityId
     , _eiNodeActions :: NodeActions name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Else name i o expr = SimpleElse expr | ElseIf (ElseIfContent name i o expr)
+data Else name i o a
+    = SimpleElse (Expression name i o a)
+    | ElseIf (ElseIfContent name i o a)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data IfElse name i o expr = IfElse
-    { _iIfThen :: IfThen o expr
-    , _iElse :: Else name i o expr
+data IfElse name i o a = IfElse
+    { _iIfThen :: IfThen name i o a
+    , _iElse :: Else name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Body name i o a
@@ -172,7 +174,7 @@ data Body name i o a
     | BodyRecord (Composite name i o (Expression name i o a))
     | BodyGetField (GetField name i o (Expression name i o a))
     | BodyCase (Case name i o (Expression name i o a))
-    | BodyIfElse (IfElse name i o (Expression name i o a))
+    | BodyIfElse (IfElse name i o a)
     | BodyInject (Inject name i o a)
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal name (Binder name i o a))

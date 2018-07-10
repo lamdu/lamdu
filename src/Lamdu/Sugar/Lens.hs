@@ -3,6 +3,7 @@ module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
     , bodyChildren, overBodyChildren, bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
+    , ifElseChildren
     , binderExprs, binderContentExprs, funcExprs, assignmentExprs
     , exprPayloads
     , payloadsOf
@@ -102,6 +103,25 @@ overLabeledApplyChildren ::
 overLabeledApplyChildren l r e =
     Lens.runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
+ifThenChildren ::
+    Lens.Traversal (IfThen name i o a) (IfThen name i o b)
+    (Expression name i o a) (Expression name i o b)
+ifThenChildren f (IfThen i t d) = IfThen <$> f i <*> f t ?? d
+
+elseChildren ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    Else name i o a -> f (Else name i o b)
+elseChildren f (SimpleElse x) = f x <&> SimpleElse
+elseChildren f (ElseIf x) = (eiContent . ifElseChildren) f x <&> ElseIf
+
+ifElseChildren ::
+    Applicative f =>
+    (Expression name i o a -> f (Expression name i o b)) ->
+    IfElse name i o a -> f (IfElse name i o b)
+ifElseChildren f (IfElse t e) =
+    IfElse <$> ifThenChildren f t <*> elseChildren f e
+
 injectContentChildren ::
     Applicative f =>
     (Node (NullaryVal name i o) a -> f (Node (NullaryVal name i o) b)) ->
@@ -129,7 +149,7 @@ bodyChildren n l r f =
     BodyRecord       x -> traverse f x <&> BodyRecord
     BodyGetField     x -> traverse f x <&> BodyGetField
     BodyCase         x -> traverse f x <&> BodyCase
-    BodyIfElse       x -> traverse f x <&> BodyIfElse
+    BodyIfElse       x -> ifElseChildren f x <&> BodyIfElse
     BodyInject       x -> iContent (injectContentChildren n f) x <&> BodyInject
     BodyFromNom      x -> traverse f x <&> BodyFromNom
     BodyFragment     x -> fExpr f x <&> BodyFragment
