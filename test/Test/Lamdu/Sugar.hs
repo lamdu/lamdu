@@ -101,6 +101,7 @@ validate workArea =
             & either fail (\() -> pure workArea)
 
 convertWorkArea ::
+    HasCallStack =>
     Cache.Functions ->
     T ViewM
     (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)

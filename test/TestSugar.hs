@@ -41,6 +41,7 @@ simpleConvertTest progName =
 
 -- | Verify that a sugar action does not result in a crash
 testSugarActions ::
+    HasCallStack =>
     FilePath ->
     [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) ->
