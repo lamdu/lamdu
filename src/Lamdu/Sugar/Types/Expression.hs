@@ -21,7 +21,7 @@ module Lamdu.Sugar.Types.Expression
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
-    , Binder(..), bAddOuterLet, bContent
+    , Binder(..), bContent
     , BinderContent(..), _BinderLet, _BinderExpr
     , Function(..)
         , fChosenScopeProp, fParams, fBody
@@ -36,7 +36,7 @@ module Lamdu.Sugar.Types.Expression
     , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
-    , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiCondAddLet, eiNodeActions
+    , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiNodeActions
     , Else(..), _SimpleElse, _ElseIf
     , IfElse(..), iIf, iThen, iDeleteIfThen, iElse
     ) where
@@ -143,7 +143,6 @@ data ElseIfContent name i o a = ElseIfContent
     { _eiScopes :: ChildScopes
     , _eiEntityId :: EntityId
     , _eiContent :: IfElse name i o a
-    , _eiCondAddLet :: o EntityId
     , _eiNodeActions :: NodeActions name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -199,9 +198,8 @@ data BinderContent name i o a
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-data Binder name i o a = Binder
-    { _bAddOuterLet :: o EntityId
-    , _bContent :: BinderContent name i o a
+newtype Binder name i o a = Binder
+    { _bContent :: BinderContent name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Function name i o a = Function

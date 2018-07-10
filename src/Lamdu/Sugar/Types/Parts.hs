@@ -12,6 +12,7 @@ module Lamdu.Sugar.Types.Parts
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, extract, mReplaceParent, wrapInRecord
+        , mNewLet
     , -- Let
       ExtractDestination(..)
     , LetActions(..), laDelete, laNodeActions
@@ -108,6 +109,7 @@ data NodeActions name i o = NodeActions
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
     , _wrapInRecord :: TagSelection name i o ()
+    , _mNewLet :: Maybe (o EntityId)
     } deriving Generic
 
 data LetActions name i o = LetActions

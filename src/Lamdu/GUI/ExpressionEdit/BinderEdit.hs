@@ -2,7 +2,6 @@
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     , makeBinderBodyEdit, makeBinderContentEdit
-    , addLetEventMap
     , Parts(..), makeParts, makeFunctionParts
     ) where
 
@@ -360,9 +359,9 @@ makeParts funcApplyLimit binder =
     Sugar.BodyPlain x -> makePlainParts x
 
 maybeAddNodeActions ::
-    (MonadReader env m, GuiState.HasCursor env, Config.HasConfig env, Applicative o) =>
+    (Monad i, Monad o) =>
     Widget.Id -> NearestHoles -> Sugar.NodeActions name i o ->
-    m (Gui Responsive o -> Gui Responsive o)
+    ExprGuiM i o (Gui Responsive o -> Gui Responsive o)
 maybeAddNodeActions partId nearestHoles nodeActions =
     do
         isSelected <- Lens.view GuiState.cursor <&> (== partId)
@@ -495,28 +494,13 @@ jumpToRHS rhsId =
     <&> E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 
-addLetEventMap ::
-    (Monad i, Monad o) =>
-    o Sugar.EntityId -> ExprGuiM i o (Gui EventMap o)
-addLetEventMap addLet =
-    do
-        config <- Lens.view Config.config
-        savePos <- ExprGuiM.mkPrejumpPosSaver
-        savePos >> addLet
-            <&> WidgetIds.fromEntityId <&> WidgetIds.letBinderId
-            & E.keysEventMapMovesCursor (config ^. Config.letAddItemKeys)
-                (E.Doc ["Edit", "Let clause", "Add"])
-            & pure
-
 makeBinderBodyEdit ::
     (Monad i, Monad o) =>
     Sugar.Binder (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Gui Responsive o)
-makeBinderBodyEdit (Sugar.Binder addOuterLet content) =
-    do
-        newLetEventMap <- addLetEventMap addOuterLet
-        makeBinderContentEdit content <&> Widget.weakerEvents newLetEventMap
+makeBinderBodyEdit (Sugar.Binder content) =
+    makeBinderContentEdit content
 
 makeBinderContentEdit ::
     (Monad i, Monad o) =>

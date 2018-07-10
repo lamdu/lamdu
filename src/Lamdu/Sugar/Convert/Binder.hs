@@ -13,7 +13,6 @@ import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -165,15 +164,7 @@ convertBinderBody ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (Binder InternalName (T m) (T m) (ConvertPayload m a))
-convertBinderBody expr =
-    convertBinderContent expr
-    <&>
-    \content ->
-    Binder
-    { _bAddOuterLet =
-        expr ^. Val.payload . Input.stored & DataOps.redexWrap <&> EntityId.ofBinder
-    , _bContent = content
-    }
+convertBinderBody expr = convertBinderContent expr <&> Binder
 
 makeFunction ::
     (Monad m, Monoid a) =>

@@ -22,10 +22,10 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.BinderEdit (addLetEventMap)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import           Lamdu.GUI.ExpressionEdit.EventMap (addLetEventMap)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -78,14 +78,14 @@ makeElse (Sugar.SimpleElse expr) =
     where
         elseAnimId = Widget.toAnimId elseId <> ["else"]
         elseId = WidgetIds.fromExprPayload (expr ^. Sugar._PNode . Sugar.ann)
-makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _nodeActions)) =
+makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content nodeActions)) =
     -- TODO: use nodeActions
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- Styled.grammarLabel "el"
-        letEventMap <- addLetEventMap addLet
+        letEventMap <- foldMap addLetEventMap (nodeActions ^. Sugar.mNewLet)
         (:)
             <$>
             ( makeIfThen elseLabel entityId content

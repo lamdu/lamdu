@@ -124,12 +124,16 @@ makeActions exprPl =
         ext <- mkExtract exprPl
         wrapInRec <- mkWrapInRecord exprPl
         postProcess <- ConvertM.postProcessAssert
+        outerPos <-
+            Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
+            <&> (^? Lens._Just . ConvertM.osiPos)
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
             , _extract = ext
             , _mReplaceParent = Nothing
             , _wrapInRecord = wrapInRec
+            , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofBinder
             }
     where
         stored = exprPl ^. Input.stored

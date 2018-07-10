@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , jumpHolesEventMap
     , extractCursor
     , detachEventMap
+    , addLetEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -66,14 +67,14 @@ exprInfoFromPl pl =
             }
 
 add ::
-    (Monad i, HasWidget w, Applicative o0) =>
-    Options -> Sugar.Payload name i0 o0 ExprGui.Payload ->
-    ExprGuiM i o (Gui w o0 -> Gui w o0)
+    (HasWidget w, Monad i, Monad o) =>
+    Options -> Sugar.Payload name i o ExprGui.Payload ->
+    ExprGuiM i o (Gui w o -> Gui w o)
 add options pl = exprInfoFromPl pl >>= addWith options
 
 addWith ::
-    (MonadReader env m, Config.HasConfig env, HasWidget w, Applicative o) =>
-    Options -> ExprInfo name i o -> m (Gui w o -> Gui w o)
+    (HasWidget w, Monad i, Monad o) =>
+    Options -> ExprInfo name i o -> ExprGuiM i o (Gui w o -> Gui w o)
 addWith options exprInfo =
     do
         actions <- actionsEventMap options exprInfo
@@ -117,28 +118,43 @@ extractEventMap actions =
     where
         doc = E.Doc ["Edit", "Extract"]
 
+addLetEventMap ::
+    (Monad i, Monad o) =>
+    o Sugar.EntityId -> ExprGuiM i o (Gui EventMap o)
+addLetEventMap addLet =
+    do
+        config <- Lens.view Config.config
+        savePos <- ExprGuiM.mkPrejumpPosSaver
+        savePos >> addLet
+            <&> WidgetIds.fromEntityId <&> WidgetIds.letBinderId
+            & E.keysEventMapMovesCursor (config ^. Config.letAddItemKeys)
+                (E.Doc ["Edit", "Let clause", "Add"])
+            & pure
+
 actionsEventMap ::
-    (MonadReader env m, Config.HasConfig env, Applicative o) =>
+    (Monad i, Monad o) =>
     Options -> ExprInfo name i o ->
-    m (EventContext -> Gui EventMap o)
+    ExprGuiM i o (EventContext -> Gui EventMap o)
 actionsEventMap options exprInfo =
     sequence
-    [ case exprInfoActions exprInfo ^. Sugar.detach of
+    [ case actions ^. Sugar.detach of
       Sugar.DetachAction act | exprInfoIsSelected exprInfo -> detachEventMap act
       _ -> pure mempty
     , if exprInfoIsHoleResult exprInfo
         then pure mempty
         else
             sequence
-            [ extractEventMap (exprInfoActions exprInfo)
+            [ extractEventMap (actions)
             , Lens.view (Config.config . Config.replaceParentKeys) <&> mkReplaceParent
             ] <&> mconcat
-    , maybe (pure mempty) replaceEventMap (exprInfoActions exprInfo ^. Sugar.mSetToHole)
+    , foldMap replaceEventMap (actions ^. Sugar.mSetToHole)
+    , foldMap addLetEventMap (actions ^. Sugar.mNewLet)
     ] <&> mconcat <&> const
     <&> mappend (transformEventMap options exprInfo)
     where
+        actions = exprInfoActions exprInfo
         mkReplaceParent replaceKeys =
-            exprInfoActions exprInfo ^. Sugar.mReplaceParent
+            actions ^. Sugar.mReplaceParent
             & foldMap
                 (E.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"])
                 . fmap WidgetIds.fromEntityId)

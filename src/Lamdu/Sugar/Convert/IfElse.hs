@@ -53,7 +53,6 @@ convertIfElse setToVal caseBody =
                             BinderBodyScope x -> x <&> Lens.mapped %~ getScope
                         , _eiEntityId = altFalseBinderExpr ^. _PNode . ann . pInput . Input.entityId
                         , _eiContent = innerIfElse
-                        , _eiCondAddLet = binder ^. fBody . bAddOuterLet
                         , _eiNodeActions = altFalseBinderExpr ^. _PNode . ann . pActions
                         }
                         & makeRes

@@ -156,7 +156,6 @@ repl x =
     { Sugar._replExpr =
         Sugar.Binder
         { Sugar._bContent = Sugar.BinderExpr x
-        , Sugar._bAddOuterLet = error "not implemented"
         }
     , Sugar._replVarInfo = Sugar.VarNormal
     , Sugar._replResult = CurAndPrev Nothing Nothing
@@ -194,8 +193,7 @@ funcExpr params body =
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._fBody =
         Sugar.Binder
-        { Sugar._bAddOuterLet = Unit
-        , Sugar._bContent = Sugar.BinderExpr body
+        { Sugar._bContent = Sugar.BinderExpr body
         }
     }
 
@@ -244,6 +242,7 @@ nodeActions =
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
     , Sugar._wrapInRecord = tagSelection
+    , Sugar._mNewLet = Nothing
     }
 
 taggedEntityName :: UUID -> T.Tag -> InternalName
