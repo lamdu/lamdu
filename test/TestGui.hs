@@ -220,8 +220,11 @@ workAreaEq x y =
 
 testConsistentKeyboardNavigation ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
-testConsistentKeyboardNavigation cache posEnv posVirt =
-    traverse_ testDir dirs
+testConsistentKeyboardNavigation cache posEnv posVirt
+    | Widget.toAnimId (posEnv ^. cursor) ^? Lens.ix 1 == Just "literal edit" =
+        -- TODO: Handle literal edits properly
+        pure ()
+    | otherwise = traverse_ testDir dirs
     where
         dirs =
             [ (GLFW.Key'Up, GLFW.Key'Down)
@@ -285,7 +288,7 @@ testPrograms =
     & buildTest
     where
         skipped =
-            [ -- These tests import a program without first importing freshdb.
+            [ -- The tests import a program without first importing freshdb.
               -- This program, saved with an old codec (the first version),
               -- is not compatible with that
               "old-codec-factorial.json"
