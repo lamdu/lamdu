@@ -103,11 +103,6 @@ overLabeledApplyChildren ::
 overLabeledApplyChildren l r e =
     Lens.runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
-ifThenChildren ::
-    Lens.Traversal (IfThen name i o a) (IfThen name i o b)
-    (Expression name i o a) (Expression name i o b)
-ifThenChildren f (IfThen i t d) = IfThen <$> f i <*> f t ?? d
-
 elseChildren ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
@@ -119,8 +114,8 @@ ifElseChildren ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
     IfElse name i o a -> f (IfElse name i o b)
-ifElseChildren f (IfElse t e) =
-    IfElse <$> ifThenChildren f t <*> elseChildren f e
+ifElseChildren f (IfElse i t d e) =
+    IfElse <$> f i <*> f t <*> pure d <*> elseChildren f e
 
 injectContentChildren ::
     Applicative f =>

@@ -45,18 +45,18 @@ Lens.makeLenses ''Row
 makeIfThen ::
     (Monad i, Monad o) =>
     WithTextPos View -> Sugar.EntityId ->
-    Sugar.IfThen (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.IfElse (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Row (Gui Responsive o))
-makeIfThen prefixLabel entityId ifThen =
+makeIfThen prefixLabel entityId ifElse =
     do
-        ifGui <- ExprGuiM.makeSubexpression (ifThen ^. Sugar.itIf)
-        thenGui <- ExprGuiM.makeSubexpression (ifThen ^. Sugar.itThen)
+        ifGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
+        thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         label <- Styled.grammarLabel "if "
         colon <- Styled.grammarLabel ": "
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
-                ifThen ^. Sugar.itDelete <&> WidgetIds.fromEntityId
+                ifElse ^. Sugar.iDeleteIfThen <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         Row indentAnimId keyword
             (Widget.weakerEvents eventMap (ifGui /|/ colon))
@@ -88,14 +88,13 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _node
         letEventMap <- addLetEventMap addLet
         (:)
             <$>
-            ( makeIfThen elseLabel entityId ifThen
+            ( makeIfThen elseLabel entityId content
                 <&> Lens.mapped %~ Widget.weakerEvents letEventMap
             )
-            <*> makeElse els
+            <*> makeElse (content ^. Sugar.iElse)
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
             & ExprGuiM.withLocalMScopeId mInnerScope
     where
-        Sugar.IfElse ifThen els = content
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
@@ -152,8 +151,7 @@ make ifElse pl =
     <*> ( renderRows (ExprGui.mParensId pl)
             <*>
             ( (:)
-                <$> makeIfThen Element.empty (pl ^. Sugar.plEntityId)
-                    (ifElse ^. Sugar.iIfThen)
+                <$> makeIfThen Element.empty (pl ^. Sugar.plEntityId) ifElse
                 <*> makeElse (ifElse ^. Sugar.iElse)
             )
         )

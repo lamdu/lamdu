@@ -382,24 +382,16 @@ toElse ::
 toElse (SimpleElse x) = toExpression x <&> SimpleElse
 toElse (ElseIf x) = toElseIfContent x <&> ElseIf
 
-toIfThen ::
-    MonadNaming m =>
-    IfThen (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (IfThen (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toIfThen (IfThen i t d) =
-    IfThen
-    <$> toExpression i
-    <*> toExpression t
-    ?? d
-
 toIfElse ::
     MonadNaming m =>
     IfElse (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (IfElse (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toIfElse (IfElse ifThen els_) =
+toIfElse (IfElse i t d e) =
     IfElse
-    <$> toIfThen ifThen
-    <*> toElse els_
+    <$> toExpression i
+    <*> toExpression t
+    <*> pure d
+    <*> toElse e
 
 toBody ::
     MonadNaming m =>

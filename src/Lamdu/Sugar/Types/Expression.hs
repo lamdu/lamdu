@@ -38,8 +38,7 @@ module Lamdu.Sugar.Types.Expression
     -- If/else
     , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiCondAddLet, eiNodeActions
     , Else(..), _SimpleElse, _ElseIf
-    , IfThen(..), itIf, itThen, itDelete
-    , IfElse(..), iIfThen, iElse
+    , IfElse(..), iIf, iThen, iDeleteIfThen, iElse
     ) where
 
 import qualified Control.Lens as Lens
@@ -139,13 +138,6 @@ data Hole name i o = Hole
       _holeMDelete :: Maybe (o EntityId)
     } deriving Generic
 
--- An "if/elif <cond>: <then>" clause in an IfElse expression
-data IfThen name i o a = IfThen
-    { _itIf :: Expression name i o a
-    , _itThen :: Expression name i o a
-    , _itDelete :: o EntityId
-    } deriving (Functor, Foldable, Traversable, Generic)
-
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
 data ElseIfContent name i o a = ElseIfContent
     { _eiScopes :: ChildScopes
@@ -161,7 +153,9 @@ data Else name i o a
     deriving (Functor, Foldable, Traversable, Generic)
 
 data IfElse name i o a = IfElse
-    { _iIfThen :: IfThen name i o a
+    { _iIf :: Expression name i o a
+    , _iThen :: Expression name i o a
+    , _iDeleteIfThen :: o EntityId
     , _iElse :: Else name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -251,7 +245,6 @@ Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''IfElse
-Lens.makeLenses ''IfThen
 Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda

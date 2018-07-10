@@ -80,12 +80,9 @@ convertIfElse setToVal caseBody =
                     & (^. _PNode . ann . pInput . Input.stored . Property.pVal)
                 makeRes els =
                     IfElse
-                    { _iIfThen =
-                        IfThen
-                        { _itIf = cond
-                        , _itThen = altTrue ^. ciExpr
-                        , _itDelete = delTarget altFalse & setToVal <&> EntityId.ofValI
-                        }
+                    { _iIf = cond
+                    , _iThen = altTrue ^. ciExpr
+                    , _iDeleteIfThen = delTarget altFalse & setToVal <&> EntityId.ofValI
                     , _iElse = els
                     }
 

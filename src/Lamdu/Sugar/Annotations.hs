@@ -94,7 +94,7 @@ markBodyAnnotations oldBody =
     BodyIfElse i ->
         ( showAnnotationWhenVerbose
         , i
-            & iIfThen . itThen %~ onCaseAlt
+            & iThen %~ onCaseAlt
             & iElse %~ onElse
             & BodyIfElse
         )
@@ -134,6 +134,6 @@ markBodyAnnotations oldBody =
         onElse (SimpleElse x) = onCaseAlt x & SimpleElse
         onElse (ElseIf elseIf) =
             elseIf
-            & eiContent . iIfThen . itThen %~ onCaseAlt
+            & eiContent . iThen %~ onCaseAlt
             & eiContent . iElse %~ onElse
             & ElseIf
