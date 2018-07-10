@@ -267,16 +267,20 @@ allParamsUsed paramNames func =
 markLightParams ::
     Set InternalName -> Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
-markLightParams paramNames (PNode (Node pl bod)) =
-    case bod of
+markLightParams paramNames = _PNode . val %~ markBodyLightParams paramNames
+
+markBodyLightParams ::
+    Set InternalName -> Body InternalName (T m) (T m) b ->
+    Body InternalName (T m) (T m) b
+markBodyLightParams paramNames =
+    \case
     BodyGetVar (GetParam n)
         | Set.member (n ^. pNameRef . nrName) paramNames ->
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
     BodyFragment w -> w & fExpr %~ markLightParams paramNames & BodyFragment
-    _ -> SugarLens.overBodyChildren id id id (markLightParams paramNames) bod
-    & Node pl & PNode
+    bod -> SugarLens.overBodyChildren id id id (markLightParams paramNames) bod
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::
