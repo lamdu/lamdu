@@ -144,4 +144,4 @@ make lam pl =
         myId = WidgetIds.fromExprPayload pl
         params = func ^. Sugar.fParams
         func = lam ^. Sugar.lamFunc
-        bodyId = func ^. Sugar.fBody . Sugar.bContent . SugarLens.binderContentEntityId
+        bodyId = func ^. Sugar.fBody . SugarLens.binderEntityId

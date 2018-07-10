@@ -44,10 +44,10 @@ makeToNom ::
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
-    nom <&> BinderEdit.makeBinderBodyEdit
+    nom <&> BinderEdit.makeBinderEdit
     & mkNomGui id "ToNominal" "«" mDel pl
     where
-        bContent = nom ^. Sugar.nVal . Sugar.bContent
+        bContent = nom ^. Sugar.nVal
         mDel = bContent ^? Sugar._BinderExpr . mReplaceParent
 
 makeFromNom ::

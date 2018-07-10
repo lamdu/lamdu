@@ -24,7 +24,7 @@ import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderEdit)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -56,7 +56,7 @@ test =
 
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Expression name i o a)
-replExpr = Sugar.waRepl . Sugar.replExpr . Sugar.bContent . Sugar._BinderExpr
+replExpr = Sugar.waRepl . Sugar.replExpr . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -72,7 +72,7 @@ makeReplGui cache env =
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         gui <-
-            makeBinderBodyEdit repl
+            makeBinderEdit repl
             & GuiState.assignCursor WidgetIds.replId replExprId
             & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
         unless (Lens.has wideFocused gui) (fail "Red cursor!")
@@ -185,7 +185,7 @@ testOpPrec =
         holeId <-
             fromWorkArea cache
             (replExpr . Sugar._PNode . Sugar.val . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . Sugar.bContent . Sugar._BinderExpr .
+             Sugar.fBody . Sugar._BinderExpr .
              Sugar._PNode . Sugar.ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed

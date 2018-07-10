@@ -179,23 +179,17 @@ toLet ::
 toLet Let{..} =
     do
         (_lName, _lBody) <-
-            unCPS (withTag TaggedVar _lVarInfo _lName) (toBinderBody _lBody)
+            unCPS (withTag TaggedVar _lVarInfo _lName) (toBinder _lBody)
         _lValue <- toAssignment _lValue
         _lActions <- laNodeActions toNodeActions _lActions
         pure Let{..}
 
-toBinderContent ::
-    MonadNaming m =>
-    BinderContent (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (BinderContent (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toBinderContent (BinderLet l) = toLet l <&> BinderLet
-toBinderContent (BinderExpr e) = toExpression e <&> BinderExpr
-
-toBinderBody ::
+toBinder ::
     MonadNaming m =>
     Binder (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Binder (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toBinderBody = bContent toBinderContent
+toBinder (BinderLet l) = toLet l <&> BinderLet
+toBinder (BinderExpr e) = toExpression e <&> BinderExpr
 
 toAddFirstParam ::
     MonadNaming m =>
@@ -209,7 +203,7 @@ toFunction ::
     m (Function (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toFunction Function{..} =
     (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
-    <$> unCPS (withBinderParams _fParams) (toBinderBody _fBody)
+    <$> unCPS (withBinderParams _fParams) (toBinder _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
 toBinderPlain ::
@@ -218,7 +212,7 @@ toBinderPlain ::
     m (AssignPlain (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toBinderPlain AssignPlain{..} =
     (\_apBody _apAddFirstParam -> AssignPlain{..})
-    <$> toBinderBody _apBody
+    <$> toBinder _apBody
     <*> toAddFirstParam _apAddFirstParam
 
 toAssignmentBody ::
@@ -314,7 +308,7 @@ toHole hole =
     opRun
     <&>
     \run ->
-    SugarLens.holeTransformExprs (run . toBinderBody) hole
+    SugarLens.holeTransformExprs (run . toBinder) hole
 
 toFragment ::
     MonadNaming m =>
@@ -331,7 +325,7 @@ toFragment Fragment{..} =
                  _fOptions
                  <&> Lens.mapped %~
                      SugarLens.holeOptionTransformExprs
-                     (run . toBinderBody)
+                     (run . toBinder)
             }
 
 toComposite ::
@@ -408,7 +402,7 @@ toBody =
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom
-    BodyToNom        x -> x & traverse toBinderBody >>= nTId toTId <&> BodyToNom
+    BodyToNom        x -> x & traverse toBinder >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam <&> BodyLam
@@ -508,7 +502,7 @@ toRepl ::
     m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toRepl (Repl bod varInfo res) =
     Repl
-    <$> toBinderBody bod
+    <$> toBinder bod
     <*> pure varInfo
     <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 

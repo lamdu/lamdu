@@ -42,7 +42,7 @@ convertToNom ::
 convertToNom nom pl =
     do
         ConvertText.text nom pl & justToLeft
-        traverse ConvertBinder.convertBinderBody nom
+        traverse ConvertBinder.convertBinder nom
             >>= convertNom <&> BodyToNom
             >>= addActions nom pl
             & lift

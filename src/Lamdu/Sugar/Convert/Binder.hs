@@ -1,7 +1,7 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
-    , convertBinderBody, convertBinderContent
+    , convertBinder
     ) where
 
 import qualified Control.Lens as Lens
@@ -89,11 +89,11 @@ makeInline stored redex useId
 
 -- Differs from SugarLens version by Payload type
 -- TODO: cleanup
-binderContentEntityId ::
-    Lens' (BinderContent name i o (ConvertPayload m a)) EntityId
-binderContentEntityId f (BinderExpr e) =
+binderEntityId ::
+    Lens' (Binder name i o (ConvertPayload m a)) EntityId
+binderEntityId f (BinderExpr e) =
     e & _PNode . ann . pInput . Input.entityId %%~ f <&> BinderExpr
-binderContentEntityId f (BinderLet l) =
+binderEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
 convertRedex ::
@@ -111,7 +111,7 @@ convertRedex expr redex =
             mkLetItemActions (expr ^. Val.payload) redex
             & localNewExtractDestPos expr
         letBody <-
-            convertBinderBody bod
+            convertBinder bod
             & localNewExtractDestPos expr
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
@@ -134,11 +134,10 @@ convertRedex expr redex =
             , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody =
                 letBody
-                & bContent .
-                    Lens.failing
+                & Lens.failing
                     (_BinderExpr . _PNode . ann . pActions)
                     (_BinderLet . lActions . laNodeActions) . mReplaceParent ?~
-                    (letBody ^. bContent . binderContentEntityId <$ actions ^. laDelete)
+                    (letBody ^. binderEntityId <$ actions ^. laDelete)
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
@@ -149,22 +148,16 @@ convertRedex expr redex =
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
-convertBinderContent ::
+convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (BinderContent InternalName (T m) (T m) (ConvertPayload m a))
-convertBinderContent expr =
+    ConvertM m (Binder InternalName (T m) (T m) (ConvertPayload m a))
+convertBinder expr =
     case Redex.check expr of
     Nothing ->
         ConvertM.convertSubexpression expr & localNewExtractDestPos expr
         <&> BinderExpr
     Just redex -> convertRedex expr redex <&> BinderLet
-
-convertBinderBody ::
-    (Monad m, Monoid a) =>
-    Val (Input.Payload m a) ->
-    ConvertM m (Binder InternalName (T m) (T m) (ConvertPayload m a))
-convertBinderBody expr = convertBinderContent expr <&> Binder
 
 makeFunction ::
     (Monad m, Monoid a) =>
@@ -172,7 +165,7 @@ makeFunction ::
     ConventionalParams m -> Val (Input.Payload m a) ->
     ConvertM m (Function InternalName (T m) (T m) (ConvertPayload m a))
 makeFunction chosenScopeProp params funcBody =
-    convertBinderBody funcBody
+    convertBinder funcBody
     <&> mkRes
     & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
     where
@@ -204,7 +197,7 @@ makeAssignment chosenScopeProp params funcBody pl =
         bod <-
             case params ^. cpParams of
             Nothing ->
-                convertBinderBody funcBody
+                convertBinder funcBody
                 <&> AssignPlain (params ^. cpAddFirstParam)
                 <&> BodyPlain
             Just{} ->
@@ -213,7 +206,7 @@ makeAssignment chosenScopeProp params funcBody pl =
                 <&> BodyFunction
         nodeActions <- makeActions pl
         let mRemoveSetToHole
-                | Lens.has (_BodyPlain . apBody . bContent . _BinderExpr . _PNode . val . _BodyHole) bod =
+                | Lens.has (_BodyPlain . apBody . _BinderExpr . _PNode . val . _BodyHole) bod =
                     mSetToHole .~ Nothing
                 | otherwise = id
         pure Assignment
@@ -252,7 +245,7 @@ useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
         any (func &)
-        [ Lens.has (fBody . bContent . _BinderLet)
+        [ Lens.has (fBody . _BinderLet)
         , Lens.has (fBody . SugarLens.binderExprs . SugarLens.payloadsOf forbiddenLightLamSubExprs)
         , not . allParamsUsed paramNames
         ]

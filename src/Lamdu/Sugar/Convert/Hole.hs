@@ -52,7 +52,7 @@ import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Annotations (neverShowAnnotations)
-import           Lamdu.Sugar.Convert.Binder (convertBinderBody)
+import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
@@ -289,7 +289,7 @@ sugar sugarContext holePl v =
     & (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
-    & convertBinderBody
+    & convertBinder
     <&> Lens.mapped %~ (,) neverShowAnnotations
     >>= traverse (convertPayload Input.None)
     & ConvertM.run sugarContext
@@ -491,7 +491,7 @@ mkResult preConversion sugarContext updateDeps stored x =
     do
         updateDeps
         writeResult preConversion stored x
-        <&> (convertBinderBody >=> traverse (convertPayload Input.None) . fmap ((,) neverShowAnnotations))
+        <&> (convertBinder >=> traverse (convertPayload Input.None) . fmap ((,) neverShowAnnotations))
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->

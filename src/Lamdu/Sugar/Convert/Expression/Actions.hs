@@ -157,7 +157,7 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     case bod of
-    BodyLam lam | Lens.has (lamFunc . fBody . bContent . _BinderLet) lam -> bod
+    BodyLam lam | Lens.has (lamFunc . fBody . _BinderLet) lam -> bod
     _ ->
         bod
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))

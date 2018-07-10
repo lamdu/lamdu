@@ -21,8 +21,7 @@ module Lamdu.Sugar.Types.Expression
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
-    , Binder(..), bContent
-    , BinderContent(..), _BinderLet, _BinderExpr
+    , Binder(..), _BinderLet, _BinderExpr
     , Function(..)
         , fChosenScopeProp, fParams, fBody
         , fAddFirstParam, fBodyScopes
@@ -187,20 +186,16 @@ data Let name i o a = Let
     , _lBody :: Binder name i o a -- "let foo = bar in [[x]]"
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data BinderContent name i o a
-    = BinderLet (Let name i o a)
-    | BinderExpr (Expression name i o a)
-    deriving (Functor, Foldable, Traversable, Generic)
-
 -- An expression with 0 or more let items,
 -- Appear in a:
 -- * Function: "\x -> [[THIS]]"
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-newtype Binder name i o a = Binder
-    { _bContent :: BinderContent name i o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+data Binder name i o a
+    = BinderLet (Let name i o a)
+    | BinderExpr (Expression name i o a)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data Function name i o a = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
@@ -235,7 +230,6 @@ Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignFunction
 Lens.makeLenses ''AssignPlain
 Lens.makeLenses ''Assignment
-Lens.makeLenses ''Binder
 Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
@@ -249,7 +243,7 @@ Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
 Lens.makeLenses ''Node
 Lens.makePrisms ''AssignmentBody
-Lens.makePrisms ''BinderContent
+Lens.makePrisms ''Binder
 Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent

@@ -153,10 +153,7 @@ def typ var tag body =
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
 repl x =
     Sugar.Repl
-    { Sugar._replExpr =
-        Sugar.Binder
-        { Sugar._bContent = Sugar.BinderExpr x
-        }
+    { Sugar._replExpr = Sugar.BinderExpr x
     , Sugar._replVarInfo = Sugar.VarNormal
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
@@ -191,10 +188,7 @@ funcExpr params body =
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
     , Sugar._fAddFirstParam = Sugar.PrependParam tagSelection
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
-    , Sugar._fBody =
-        Sugar.Binder
-        { Sugar._bContent = Sugar.BinderExpr body
-        }
+    , Sugar._fBody = Sugar.BinderExpr body
     }
 
 binderExpr ::

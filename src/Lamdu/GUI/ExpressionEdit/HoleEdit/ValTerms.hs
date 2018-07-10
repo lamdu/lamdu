@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     ( expr
-    , binderContent
+    , binder
     , allowedSearchTermCommon
     , allowedFragmentSearchTerm
     , getSearchStringRemainder
@@ -85,9 +85,9 @@ ofBody =
     BodyGetVar GetParamsRecord {} -> ["Params"]
     BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
-    BodyToNom (Nominal tid binder) ->
+    BodyToNom (Nominal tid b) ->
         ofName (tid ^. tidName)
-        ++ binder ^. SugarLens.binderResultExpr . Lens.asIndex . SugarLens._OfExpr . Lens.to ofBody
+        ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . SugarLens._OfExpr . Lens.to ofBody
     BodyFromNom (Nominal tid _) ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an
@@ -98,9 +98,9 @@ ofBody =
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
 
-binderContent :: BinderContent (Name o) i o a -> [Text]
-binderContent BinderLet{} = ["let"]
-binderContent (BinderExpr x) = expr x
+binder :: Binder (Name o) i o a -> [Text]
+binder BinderLet{} = ["let"]
+binder (BinderExpr x) = expr x
 
 type Suffix = Char
 

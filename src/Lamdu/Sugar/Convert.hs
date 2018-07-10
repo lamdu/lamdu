@@ -26,7 +26,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Sugar.Annotations (markAnnotationsToDisplay)
-import           Lamdu.Sugar.Convert.Binder (convertBinderBody)
+import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
@@ -205,7 +205,7 @@ loadRepl cache monitors annMode evalRes cp =
                 <&> (^. ER.erCompleted)
                 <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
-            convertBinderBody valInferred
+            convertBinder valInferred
             <&> SugarLens.binderExprs %~ markAnnotationsToDisplay
             >>= traverse (convertPayload annMode)
             & ConvertM.run context

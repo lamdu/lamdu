@@ -4,7 +4,7 @@ module Lamdu.Sugar.Lens
     , bodyChildren, overBodyChildren, bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
     , ifElseChildren
-    , binderExprs, binderContentExprs, funcExprs, assignmentExprs
+    , binderExprs, funcExprs, assignmentExprs
     , exprPayloads
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads
@@ -13,7 +13,7 @@ module Lamdu.Sugar.Lens
     , assignmentAddFirstParam
     , binderFuncParamActions
     , binderResultExpr
-    , binderContentEntityId
+    , binderEntityId
     , definitionExprs
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
@@ -46,23 +46,17 @@ assignmentExprs ::
     Assignment name i o a -> f (Assignment name i o b)
 assignmentExprs = aBody . assignmentBodyExprs
 
-binderContentExprs ::
-    Applicative f =>
-    (Expression name i o a -> f (Expression name i o b)) ->
-    BinderContent name i o a -> f (BinderContent name i o b)
-binderContentExprs f (BinderExpr x) =
-    f x <&> BinderExpr
-binderContentExprs f (BinderLet x) =
-    (\v bod -> x{_lValue=v, _lBody=bod})
-    <$> assignmentExprs f (x ^. lValue)
-    <*> binderExprs f (x ^. lBody)
-    <&> BinderLet
-
 binderExprs ::
     Applicative f =>
     (Expression name i o a -> f (Expression name i o b)) ->
     Binder name i o a -> f (Binder name i o b)
-binderExprs = bContent . binderContentExprs
+binderExprs f (BinderExpr x) =
+    f x <&> BinderExpr
+binderExprs f (BinderLet x) =
+    (\v bod -> x{_lValue=v, _lBody=bod})
+    <$> assignmentExprs f (x ^. lValue)
+    <*> binderExprs f (x ^. lBody)
+    <&> BinderLet
 
 funcExprs ::
     Applicative f =>
@@ -273,18 +267,15 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderContentResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (BinderContent name i o a) a
-binderContentResultExpr f (BinderLet l) = (lBody . bContent) (binderContentResultExpr f) l <&> BinderLet
-binderContentResultExpr f (BinderExpr e) = parentNodePayload (OfExpr . void) f e <&> BinderExpr
-
 binderResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (Binder name i o a) a
-binderResultExpr = bContent . binderContentResultExpr
+binderResultExpr f (BinderLet l) = lBody (binderResultExpr f) l <&> BinderLet
+binderResultExpr f (BinderExpr e) = parentNodePayload (OfExpr . void) f e <&> BinderExpr
 
-binderContentEntityId ::
-    Lens' (BinderContent name i o (Payload name i o a)) EntityId
-binderContentEntityId f (BinderExpr e) =
+binderEntityId ::
+    Lens' (Binder name i o (Payload name i o a)) EntityId
+binderEntityId f (BinderExpr e) =
     e & _PNode . ann . plEntityId %%~ f <&> BinderExpr
-binderContentEntityId f (BinderLet l) =
+binderEntityId f (BinderLet l) =
     l & lEntityId %%~ f <&> BinderLet
 
 definitionExprs ::
@@ -359,16 +350,13 @@ bodySubExprParams :: Lens.Traversal' (Body name i o a) (BinderParams name i o)
 bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
 bodySubExprParams f x = bodyChildren pure pure pure ((_PNode . val . bodySubExprParams) f) x
 
-binderContentSubExprParams :: Lens.Traversal' (BinderContent name i o a) (BinderParams name i o)
-binderContentSubExprParams f (BinderExpr x) =
+binderSubExprParams :: Lens.Traversal' (Binder name i o a) (BinderParams name i o)
+binderSubExprParams f (BinderExpr x) =
     (_PNode . val . bodySubExprParams) f x <&> BinderExpr
-binderContentSubExprParams f (BinderLet x) =
+binderSubExprParams f (BinderLet x) =
     (\v b -> BinderLet x{_lValue = v, _lBody = b})
     <$> assignmentSubExprParams f (x ^. lValue)
     <*> binderSubExprParams f (x ^. lBody)
-
-binderSubExprParams :: Lens.Traversal' (Binder name i o a) (BinderParams name i o)
-binderSubExprParams = bContent . binderContentSubExprParams
 
 assignmentBodySubExprParams :: Lens.Traversal' (AssignmentBody name i o a) (BinderParams name i o)
 assignmentBodySubExprParams f (BodyPlain x) = (apBody . binderSubExprParams) f x <&> BodyPlain

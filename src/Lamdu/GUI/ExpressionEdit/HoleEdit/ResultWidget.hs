@@ -22,7 +22,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderEdit)
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -71,7 +71,7 @@ makeWidget resultId holeResultConverted =
         theme <- Lens.view (Theme.theme . Theme.hole)
         stdSpacing <- Spacer.getSpaceSize
         let padding = theme ^. Theme.holeResultPadding & (* stdSpacing)
-        makeBinderBodyEdit holeResultConverted
+        makeBinderEdit holeResultConverted
             <&> Widget.enterResultCursor .~ resultId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
@@ -110,7 +110,7 @@ make mNextEntry ctx resultId pick holeResultConverted =
             holeResultConverted ^. SugarLens.binderResultExpr . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
-            holeResultConverted ^? Sugar.bContent . SugarLens.binderContentExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
+            holeResultConverted ^? SugarLens.binderExprs . SugarLens.unfinishedExprPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of

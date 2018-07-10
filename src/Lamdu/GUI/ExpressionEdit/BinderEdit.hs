@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns, FlexibleContexts, NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
-    , makeBinderBodyEdit, makeBinderContentEdit
+    , makeBinderEdit
     , Parts(..), makeParts, makeFunctionParts
     ) where
 
@@ -278,11 +278,11 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId nearestHol
             (mCurCursor >>= sMNextParamScope)
             & Annotation.WithNeighbouringEvalAnnotations
 
-binderContentNearestHoles ::
-    Sugar.BinderContent name i o (Sugar.Payload name i o ExprGui.Payload) ->
+binderNearestHoles ::
+    Sugar.Binder name i o (Sugar.Payload name i o ExprGui.Payload) ->
     NearestHoles
-binderContentNearestHoles body =
-    body ^? SugarLens.binderContentExprs
+binderNearestHoles body =
+    body ^? SugarLens.binderExprs
     & fromMaybe (error "We have at least a body expression inside the binder")
     & ExprGui.nextHolesBefore
 
@@ -312,8 +312,8 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
         do
             paramsEdit <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
-                (binderContentNearestHoles bodyContent) bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
-            rhs <- makeBinderBodyEdit (func ^. Sugar.fBody)
+                (binderNearestHoles bodyContent) bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
+            rhs <- makeBinderEdit (func ^. Sugar.fBody)
             Parts paramsEdit mScopeNavEdit rhs scopeEventMap & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
@@ -326,8 +326,8 @@ makeFunctionParts funcApplyLimit func delVarBackwardsId myId =
             Sugar.Params ps ->
                 ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
-        bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
-        bodyContent = func ^. Sugar.fBody . Sugar.bContent
+        bodyId = bodyContent ^. SugarLens.binderEntityId & WidgetIds.fromEntityId
+        bodyContent = func ^. Sugar.fBody
 
 makePlainParts ::
     (Monad i, Monad o) =>
@@ -339,12 +339,12 @@ makePlainParts binder delVarBackwardsId myId =
     do
         mParamsEdit <-
             makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId
-            (binderContentNearestHoles bodyContent) bodyId (binder ^. Sugar.apAddFirstParam) Nothing
-        rhs <- makeBinderBodyEdit (binder ^. Sugar.apBody)
+            (binderNearestHoles bodyContent) bodyId (binder ^. Sugar.apAddFirstParam) Nothing
+        rhs <- makeBinderEdit (binder ^. Sugar.apBody)
         Parts mParamsEdit Nothing rhs mempty & pure
     where
-        bodyId = bodyContent ^. SugarLens.binderContentEntityId & WidgetIds.fromEntityId
-        bodyContent = binder ^. Sugar.apBody . Sugar.bContent
+        bodyId = bodyContent ^. SugarLens.binderEntityId & WidgetIds.fromEntityId
+        bodyContent = binder ^. Sugar.apBody
 
 makeParts ::
     (Monad i, Monad o) =>
@@ -441,8 +441,8 @@ make pMode defEventMap tag color assignment myId =
         nameId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
         body = assignment ^. SugarLens.assignmentBody
-        bodyId = body ^. Sugar.bContent . SugarLens.binderContentEntityId & WidgetIds.fromEntityId
-        nearestHoles = binderContentNearestHoles (body ^. Sugar.bContent)
+        bodyId = body ^. SugarLens.binderEntityId & WidgetIds.fromEntityId
+        nearestHoles = binderNearestHoles body
 
 makeLetEdit ::
     (Monad i, Monad o) =>
@@ -478,7 +478,7 @@ makeLetEdit item =
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId letId)
     where
         bodyId =
-            item ^. Sugar.lBody . Sugar.bContent . SugarLens.binderContentEntityId
+            item ^. Sugar.lBody . SugarLens.binderEntityId
             & WidgetIds.fromEntityId
         letId =
             item ^. Sugar.lEntityId & WidgetIds.fromEntityId
@@ -494,33 +494,25 @@ jumpToRHS rhsId =
     <&> E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
         (E.Doc ["Navigation", "Jump to Def Body"])
 
-makeBinderBodyEdit ::
+makeBinderEdit ::
     (Monad i, Monad o) =>
     Sugar.Binder (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Gui Responsive o)
-makeBinderBodyEdit (Sugar.Binder content) =
-    makeBinderContentEdit content
-
-makeBinderContentEdit ::
-    (Monad i, Monad o) =>
-    Sugar.BinderContent (Name o) i o
-    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM i o (Gui Responsive o)
-makeBinderContentEdit (Sugar.BinderExpr assignmentBody) =
+makeBinderEdit (Sugar.BinderExpr assignmentBody) =
     ExprGuiM.makeSubexpression assignmentBody
-makeBinderContentEdit content@(Sugar.BinderLet l) =
+makeBinderEdit content@(Sugar.BinderLet l) =
     do
         config <- Lens.view Config.config
         let moveToInnerEventMap =
                 body
-                ^? Sugar.bContent . Sugar._BinderLet
-                . Sugar.lActions . Sugar.laNodeActions . Sugar.extract
+                ^? Sugar._BinderLet . Sugar.lActions . Sugar.laNodeActions .
+                Sugar.extract
                 & foldMap
                 (E.keysEventMap (config ^. Config.moveLetInwardKeys)
                 (E.Doc ["Edit", "Let clause", "Move inwards"]) . void)
         mAddNodeActions <-
-            maybeAddNodeActions letEntityId (binderContentNearestHoles content)
+            maybeAddNodeActions letEntityId (binderNearestHoles content)
             (l ^. Sugar.lActions . Sugar.laNodeActions)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
@@ -530,7 +522,7 @@ makeBinderContentEdit content@(Sugar.BinderLet l) =
                 <*>
                 sequence
                 [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
-                , makeBinderBodyEdit body
+                , makeBinderEdit body
                 & ExprGuiM.withLocalMScopeId letBodyScope
                 ]
             )

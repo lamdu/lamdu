@@ -42,7 +42,7 @@ convertIfElse setToVal caseBody =
         convIfElse cond altTrue altFalse =
             case mAltFalseBinder of
             Just binder ->
-                case binder ^? fBody . bContent . _BinderExpr of
+                case binder ^? fBody . _BinderExpr of
                 Just altFalseBinderExpr ->
                     case altFalseBinderExpr ^. _PNode . val of
                     BodyIfElse innerIfElse ->
@@ -68,13 +68,14 @@ convertIfElse setToVal caseBody =
                 simpleIfElse =
                     altFalse ^. ciExpr
                     & _PNode . val . _BodyHole . holeMDelete ?~ elseDel
-                    & _PNode . val . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
+                    & _PNode . val . _BodyLam . lamFunc . fBody . _BinderExpr
                         . _PNode . val . _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
                     & makeRes
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . _PNode . val . _BodyLam . lamFunc . fBody . bContent . _BinderExpr
+                    alt ^? ciExpr . _PNode . val . _BodyLam . lamFunc . fBody
+                    . _BinderExpr
                     & fromMaybe (alt ^. ciExpr)
                     & (^. _PNode . ann . pInput . Input.stored . Property.pVal)
                 makeRes els =

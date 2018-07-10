@@ -70,7 +70,7 @@ makeRenderedResult pl ctx result =
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & ExprGuiM.im
         res ^. Sugar.holeResultConverted
-            & Sugar.bContent . SugarLens.binderContentExprs %~
+            & SugarLens.binderExprs %~
                 postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ResultWidget.make mNextEntry ctx (rId result)
                 (res ^. Sugar.holeResultPick)

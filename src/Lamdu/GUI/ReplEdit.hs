@@ -31,7 +31,7 @@ import           Lamdu.Config (Config, HasConfig(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderBodyEdit)
+import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderEdit)
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -207,7 +207,7 @@ make exportRepl (Sugar.Repl replExpr _varInfo replResult) =
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
-            , makeBinderBodyEdit replExpr
+            , makeBinderEdit replExpr
                 <&> Lens.mapped %~ IOTrans.liftTrans
             ]
             <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExprPl)

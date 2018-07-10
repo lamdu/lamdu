@@ -51,7 +51,7 @@ testSugarActions program actions =
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
 replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o a)
-replBody = waRepl . replExpr . bContent . _BinderExpr . _PNode . val
+replBody = waRepl . replExpr . _BinderExpr . _PNode . val
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
@@ -85,8 +85,8 @@ testReorderLets =
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             replBody . _BodyLam . lamFunc . fBody .
-            bContent . _BinderLet . lBody .
-            bContent . _BinderLet . lValue .
+            _BinderLet . lBody .
+            _BinderLet . lValue .
             aNodeActions . extract
 
 -- Test for issue #395
@@ -98,7 +98,7 @@ testExtract =
     where
         action =
             replBody . _BodyLam . lamFunc . fBody .
-            bContent . _BinderLet . lActions . laNodeActions . extract
+            _BinderLet . lActions . laNodeActions . extract
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
@@ -110,28 +110,27 @@ testInline =
         inline workArea =
             do
                 Just yOption <-
-                    letItem ^. lBody . bContent . _BinderExpr . _PNode . val . _BodyHole . holeOptions
+                    letItem ^. lBody . _BinderExpr . _PNode . val . _BodyHole . holeOptions
                     >>= findM isY
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
-                _ <- result ^?! holeResultConverted . bContent . _BinderExpr . _PNode . val . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                _ <- result ^?! holeResultConverted . _BinderExpr . _PNode . val . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
                 letItem =
                     workArea ^?!
                     replBody . _BodyLam . lamFunc . fBody .
-                    bContent . _BinderLet
+                    _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
-                    <&> Lens.has (bContent . _BinderExpr . _PNode . val . _BodyGetVar . _GetBinder . bvForm . _GetLet)
+                    <&> Lens.has (_BinderExpr . _PNode . val . _BodyGetVar . _GetBinder . bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
-            bContent . _BinderExpr .
-            _PNode . val . _BodyLiteral . _LiteralNum
+            _BinderExpr . _PNode . val . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
