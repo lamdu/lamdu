@@ -141,7 +141,7 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
             >>= traverse (convertPayload annMode)
             & ConvertM.run context
             <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentSubExprParams .
-                SugarLens.binderParamsAnnotations %~ trimParamAnnotation annMode
+                SugarLens.paramsAnnotations %~ trimParamAnnotation annMode
     where
         cachedInfer = Cache.infer cache
         postProcess = PostProcess.def cachedInfer monitors defI
@@ -209,7 +209,7 @@ loadRepl cache monitors annMode evalRes cp =
             <&> SugarLens.binderExprs %~ markAnnotationsToDisplay
             >>= traverse (convertPayload annMode)
             & ConvertM.run context
-            <&> SugarLens.binderSubExprParams . SugarLens.binderParamsAnnotations %~
+            <&> SugarLens.binderSubExprParams . SugarLens.paramsAnnotations %~
                 trimParamAnnotation annMode
             >>= SugarLens.binderExprs OrderTags.orderExpr
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId

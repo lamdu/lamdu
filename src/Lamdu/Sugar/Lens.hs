@@ -18,7 +18,7 @@ module Lamdu.Sugar.Lens
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
     , assignmentSubExprParams, binderSubExprParams
-    , binderParamsAnnotations
+    , paramsAnnotations
     ) where
 
 import qualified Control.Lens as Lens
@@ -336,9 +336,9 @@ annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal
 
-binderParamsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
-binderParamsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
-binderParamsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
+paramsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
+paramsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
+paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 
 funcSubExprParams :: Lens.Traversal' (Function name i o a) (BinderParams name i o)
 funcSubExprParams f x =
