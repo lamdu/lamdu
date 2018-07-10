@@ -62,7 +62,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 ) ^? Lens.traversed
         labelJumpHoleEventMap <-
             mExprAfterHeader <&> ExprGui.nextHolesBefore
-            & maybe (pure mempty) ExprEventMap.jumpHolesEventMap
+            & foldMap ExprEventMap.jumpHolesEventMap
         let responsiveLabel text =
                 Styled.grammarLabel text <&> Responsive.fromTextView
         caseLabel <-
