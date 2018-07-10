@@ -44,10 +44,10 @@ Lens.makeLenses ''Row
 
 makeIfThen ::
     (Monad i, Monad o) =>
-    WithTextPos View -> Sugar.EntityId ->
+    WithTextPos View -> AnimId ->
     Sugar.IfElse (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Row (Gui Responsive o))
-makeIfThen prefixLabel entityId ifElse =
+makeIfThen prefixLabel animId ifElse =
     do
         ifGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
@@ -58,12 +58,10 @@ makeIfThen prefixLabel entityId ifElse =
         let eventMap =
                 ifElse ^. Sugar.iDeleteIfThen <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
-        Row indentAnimId keyword
+        Row animId keyword
             (Widget.weakerEvents eventMap (ifGui /|/ colon))
             (Widget.weakerEvents eventMap thenGui)
             & pure
-    where
-        indentAnimId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
 makeElse ::
     (Monad i, Monad o) =>
@@ -88,13 +86,14 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content nodeActions)
         letEventMap <- foldMap addLetEventMap (nodeActions ^. Sugar.mNewLet)
         (:)
             <$>
-            ( makeIfThen elseLabel entityId content
+            ( makeIfThen elseLabel animId content
                 <&> Lens.mapped %~ Widget.weakerEvents letEventMap
             )
             <*> makeElse (content ^. Sugar.iElse)
-            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
+            & Reader.local (Element.animIdPrefix .~ animId)
             & ExprGuiM.withLocalMScopeId mInnerScope
     where
+        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
@@ -151,7 +150,9 @@ make ifElse pl =
     <*> ( renderRows (ExprGui.mParensId pl)
             <*>
             ( (:)
-                <$> makeIfThen Element.empty (pl ^. Sugar.plEntityId) ifElse
+                <$> makeIfThen Element.empty animId ifElse
                 <*> makeElse (ifElse ^. Sugar.iElse)
             )
         )
+    where
+        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
