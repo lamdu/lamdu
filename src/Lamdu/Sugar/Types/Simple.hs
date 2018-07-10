@@ -11,10 +11,6 @@ module Lamdu.Sugar.Types.Simple
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Case(..), cKind, cBody
-    , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiCondAddLet, eiNodeActions
-    , Else(..), _SimpleElse, _ElseIf
-    , IfThen(..), itIf, itThen, itDelete
-    , IfElse(..), iIfThen, iElse
     , Nominal(..), nTId, nVal
     --
     , GetField(..), gfRecord, gfTag
@@ -24,7 +20,6 @@ module Lamdu.Sugar.Types.Simple
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
-import           Lamdu.Sugar.Types.Eval (ChildScopes)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
@@ -60,30 +55,6 @@ data Case name i o expr = Case
     } deriving (Functor, Foldable, Traversable, Generic)
 {- Composites end -}
 
--- An "if/elif <cond>: <then>" clause in an IfElse expression
-data IfThen o expr = IfThen
-    { _itIf :: expr
-    , _itThen :: expr
-    , _itDelete :: o EntityId
-    } deriving (Functor, Foldable, Traversable, Generic)
-
--- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
-data ElseIfContent name i o expr = ElseIfContent
-    { _eiScopes :: ChildScopes
-    , _eiEntityId :: EntityId
-    , _eiContent :: IfElse name i o expr
-    , _eiCondAddLet :: o EntityId
-    , _eiNodeActions :: NodeActions name i o
-    } deriving (Functor, Foldable, Traversable, Generic)
-
-data Else name i o expr = SimpleElse expr | ElseIf (ElseIfContent name i o expr)
-    deriving (Functor, Foldable, Traversable, Generic)
-
-data IfElse name i o expr = IfElse
-    { _iIfThen :: IfThen o expr
-    , _iElse :: Else name i o expr
-    } deriving (Functor, Foldable, Traversable, Generic)
-
 data GetField name i o expr = GetField
     { _gfRecord :: expr
     , _gfTag :: Tag name i o
@@ -98,10 +69,6 @@ Lens.makeLenses ''Case
 Lens.makeLenses ''CaseArg
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeItem
-Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''GetField
-Lens.makeLenses ''IfElse
-Lens.makeLenses ''IfThen
 Lens.makeLenses ''Nominal
 Lens.makePrisms ''CaseKind
-Lens.makePrisms ''Else

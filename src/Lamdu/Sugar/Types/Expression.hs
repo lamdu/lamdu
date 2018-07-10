@@ -35,6 +35,11 @@ module Lamdu.Sugar.Types.Expression
     , OptionLiteral
     , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
+    -- If/else
+    , ElseIfContent(..), eiScopes, eiEntityId, eiContent, eiCondAddLet, eiNodeActions
+    , Else(..), _SimpleElse, _ElseIf
+    , IfThen(..), itIf, itThen, itDelete
+    , IfElse(..), iIfThen, iElse
     ) where
 
 import qualified Control.Lens as Lens
@@ -134,6 +139,30 @@ data Hole name i o = Hole
       _holeMDelete :: Maybe (o EntityId)
     } deriving Generic
 
+-- An "if/elif <cond>: <then>" clause in an IfElse expression
+data IfThen o expr = IfThen
+    { _itIf :: expr
+    , _itThen :: expr
+    , _itDelete :: o EntityId
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+-- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
+data ElseIfContent name i o expr = ElseIfContent
+    { _eiScopes :: ChildScopes
+    , _eiEntityId :: EntityId
+    , _eiContent :: IfElse name i o expr
+    , _eiCondAddLet :: o EntityId
+    , _eiNodeActions :: NodeActions name i o
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data Else name i o expr = SimpleElse expr | ElseIf (ElseIfContent name i o expr)
+    deriving (Functor, Foldable, Traversable, Generic)
+
+data IfElse name i o expr = IfElse
+    { _iIfThen :: IfThen o expr
+    , _iElse :: Else name i o expr
+    } deriving (Functor, Foldable, Traversable, Generic)
+
 data Body name i o a
     = BodyLam (Lambda name i o a)
     | BodySimpleApply (V.Apply (Expression name i o a))
@@ -210,16 +239,18 @@ data Assignment name i o a = Assignment
 
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignFunction
-Lens.makeLenses ''Assignment
 Lens.makeLenses ''AssignPlain
+Lens.makeLenses ''Assignment
 Lens.makeLenses ''Binder
+Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
+Lens.makeLenses ''IfElse
+Lens.makeLenses ''IfThen
 Lens.makeLenses ''Inject
-Lens.makePrisms ''InjectContent
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
@@ -227,4 +258,6 @@ Lens.makeLenses ''Node
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''BinderContent
 Lens.makePrisms ''Body
+Lens.makePrisms ''Else
+Lens.makePrisms ''InjectContent
 Lens.makePrisms ''ParentNode
