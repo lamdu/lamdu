@@ -88,7 +88,7 @@ makeElse (Sugar.ElseIf (Sugar.ElseIfContent scopes entityId content addLet _node
         (:)
             <$>
             ( makeIfThen elseLabel entityId ifThen
-                <&> rPredicate %~ Widget.weakerEvents letEventMap
+                <&> Lens.mapped %~ Widget.weakerEvents letEventMap
             )
             <*> makeElse els
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId entityId))
