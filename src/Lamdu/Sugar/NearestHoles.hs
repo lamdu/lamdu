@@ -43,30 +43,30 @@ add ::
     f (Sugar.Payload name i o (c, NearestHoles))
 add exprs s =
     s
-    <&> Sugar.plData %~ toNearestHoles
     & exprs %~ markStoredHoles
     & passAll (exprs . SugarLens.exprPayloads)
     & passAll (Lens.backwards (exprs . SugarLens.exprPayloads))
     <&> snd
+    <&> Sugar.plData %~ toNearestHoles
     where
-        toNearestHoles x prevHole nextHole = (x, NearestHoles prevHole nextHole)
+        toNearestHoles (prevHole, (nextHole, x)) = (x, NearestHoles prevHole nextHole)
 
 type M = State (Maybe Sugar.EntityId)
 
 passAll ::
     LensLike M s t
-    (Bool, Sugar.Payload name i o (Maybe Sugar.EntityId -> a))
-    (Bool, Sugar.Payload name i o a) -> s -> t
+    (Bool, Sugar.Payload name i o a)
+    (Bool, Sugar.Payload name i o (Maybe Sugar.EntityId, a)) -> s -> t
 passAll sugarPls s =
     s
     & sugarPls %%~ setEntityId
     & (`evalState` Nothing)
 
 setEntityId ::
-    (Bool, Sugar.Payload name i o (Maybe Sugar.EntityId -> a)) ->
-    M (Bool, Sugar.Payload name i o a)
+    (Bool, Sugar.Payload name i o a) ->
+    M (Bool, Sugar.Payload name i o (Maybe Sugar.EntityId, a))
 setEntityId (isStoredHole, pl) =
     do
         oldEntityId <- State.get
         when isStoredHole (State.put (Just (pl ^. Sugar.plEntityId)))
-        pure (isStoredHole, pl & Sugar.plData %~ (oldEntityId &))
+        pure (isStoredHole, pl & Sugar.plData %~ (,) oldEntityId)
