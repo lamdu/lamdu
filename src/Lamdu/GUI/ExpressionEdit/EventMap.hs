@@ -144,7 +144,7 @@ actionsEventMap options exprInfo =
         then pure mempty
         else
             sequence
-            [ extractEventMap (actions)
+            [ extractEventMap actions
             , Lens.view (Config.config . Config.replaceParentKeys) <&> mkReplaceParent
             ] <&> mconcat
     , foldMap replaceEventMap (actions ^. Sugar.mSetToHole)
