@@ -44,7 +44,7 @@ add exprs s =
     <&> snd
     <&> Sugar.plData %~ toNearestHoles
     where
-        toNearestHoles (prevHole, (nextHole, x)) = (x, NearestHoles prevHole nextHole)
+        toNearestHoles (nextHole, (prevHole, x)) = (x, NearestHoles prevHole nextHole)
 
 type M = State (Maybe Sugar.EntityId)
 
