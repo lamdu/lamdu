@@ -21,7 +21,7 @@ import           Test.Lamdu.Prelude
 
 main :: IO ()
 main =
-    defaultMainWithOpts tests mempty
+    defaultMain tests
     where
         tests =
             [ TestAnimIdClash.test
