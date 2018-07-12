@@ -217,16 +217,11 @@ workAreaEq x y =
                 Sugar.WorkArea (Name Unit) Unit Unit
                 (Sugar.Payload (Name Unit) Unit Unit a)
 
-testProgramGuiAtPos ::
-    Cache.Functions -> GuiEnv.Env -> Widget.EnterResult (T ViewM GuiState.Update) ->
-    T ViewM ()
-testProgramGuiAtPos cache baseEnv enter =
-    do
-        upd <- enter ^. Widget.enterResultEvent
-        let newEnv = GuiState.update upd baseEnv
-        traverse_ (testDir newEnv virtCursor) dirs
+testConsistentKeyboardNavigation ::
+    Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
+testConsistentKeyboardNavigation cache newEnv virtCursor =
+    traverse_ (testDir newEnv virtCursor) dirs
     where
-        virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
         dirs =
             [ (GLFW.Key'Up, GLFW.Key'Down)
             , (GLFW.Key'Down, GLFW.Key'Up)
@@ -253,6 +248,17 @@ testProgramGuiAtPos cache baseEnv enter =
                 Just{} -> pure ()
             where
                 baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
+
+testProgramGuiAtPos ::
+    Cache.Functions -> GuiEnv.Env -> Widget.EnterResult (T ViewM GuiState.Update) ->
+    T ViewM ()
+testProgramGuiAtPos cache baseEnv enter =
+    do
+        upd <- enter ^. Widget.enterResultEvent
+        let newEnv = GuiState.update upd baseEnv
+        testConsistentKeyboardNavigation cache newEnv virtCursor
+    where
+        virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
 
 programTest :: GuiEnv.Env -> FilePath -> Test
 programTest baseEnv filename =
