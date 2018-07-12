@@ -52,7 +52,7 @@ test =
     [ testOpPrec
     , testFragmentSize
     , testLambdaDelete
-    , testConsistentNavigation
+    , testPrograms
     ]
 
 replExpr ::
@@ -217,10 +217,9 @@ workAreaEq x y =
                 Sugar.WorkArea (Name Unit) Unit Unit
                 (Sugar.Payload (Name Unit) Unit Unit a)
 
-testConsistentNavigationForProg :: FilePath -> IO ()
-testConsistentNavigationForProg filename =
-    GuiEnv.make >>=
-    \baseEnv ->
+testConsistentNavigationForProg :: GuiEnv.Env -> FilePath -> Test
+testConsistentNavigationForProg baseEnv filename =
+    testCase filename $
     testProgram filename $
     \cache ->
     do
@@ -268,12 +267,15 @@ testConsistentNavigationForProg filename =
             , (GLFW.Key'Right, GLFW.Key'Left)
             ]
 
-testConsistentNavigation :: Test
-testConsistentNavigation =
-    listDirectory "test/programs"
-    <&> filter (`notElem` skipped)
-    >>= traverse testConsistentNavigationForProg & void
-    & testCase "consistent-navigation"
+testPrograms :: Test
+testPrograms =
+    do
+        baseEnv <- GuiEnv.make
+        listDirectory "test/programs"
+            <&> filter (`notElem` skipped)
+            <&> Lens.mapped %~ testConsistentNavigationForProg baseEnv
+            <&> testGroup "program-tests"
+    & buildTest
     where
         skipped =
             [ -- These tests import a program without first importing freshdb.
