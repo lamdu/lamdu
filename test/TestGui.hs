@@ -219,8 +219,8 @@ workAreaEq x y =
 
 testConsistentKeyboardNavigation ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
-testConsistentKeyboardNavigation cache newEnv virtCursor =
-    traverse_ (testDir newEnv virtCursor) dirs
+testConsistentKeyboardNavigation cache posEnv posVirt =
+    traverse_ testDir dirs
     where
         dirs =
             [ (GLFW.Key'Up, GLFW.Key'Down)
@@ -228,7 +228,7 @@ testConsistentKeyboardNavigation cache newEnv virtCursor =
             , (GLFW.Key'Left, GLFW.Key'Right)
             , (GLFW.Key'Right, GLFW.Key'Left)
             ]
-        testDir posEnv posVirt (way, back) =
+        testDir (way, back) =
             mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
             >>=
             \case
