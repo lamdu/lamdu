@@ -217,55 +217,55 @@ workAreaEq x y =
                 Sugar.WorkArea (Name Unit) Unit Unit
                 (Sugar.Payload (Name Unit) Unit Unit a)
 
-testConsistentNavigationForProg :: GuiEnv.Env -> FilePath -> Test
-testConsistentNavigationForProg baseEnv filename =
-    testCase filename $
-    testProgram filename $
-    \cache ->
+testProgramGuiAtPos ::
+    Cache.Functions -> GuiEnv.Env -> Widget.EnterResult (T ViewM GuiState.Update) ->
+    T ViewM ()
+testProgramGuiAtPos cache baseEnv enter =
     do
-        let testDir posEnv posVirt (way, back) =
-                mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
-                >>=
-                \case
-                Nothing -> pure ()
-                Just updThere ->
-                    mApplyEvent cache
-                    (GuiState.update updThere posEnv)
-                    (updThere ^?! GuiState.uVirtualCursor . traverse)
-                    (simpleKeyEvent back)
-                    >>=
-                    \case
-                    Nothing -> fail (baseInfo <> "can't move back with cursor keys")
-                    Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
-                        baseInfo <> "moving back with cursor keys goes to different place: " <>
-                        show (updBack ^. GuiState.uCursor)
-                        & fail
-                    Just{} -> pure ()
-                where
-                    baseInfo =
-                        filename <> "/" <> show (posEnv ^. GuiState.cursor, way, back) <> ": "
-        baseGui <- makeReplGui cache baseEnv
-        let focused = focusedWidget baseGui
-        let testProgPos enter =
-                do
-                    upd <- enter ^. Widget.enterResultEvent
-                    let newEnv = GuiState.update upd baseEnv
-                    traverse_ (testDir newEnv virtCursor) dirs
-                where
-                    virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
-        let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
-        Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
-            <&> (focused ^?! Widget.fMEnterPoint . Lens._Just)
-            <&> (\x -> (x ^. Widget.enterResultRect, x))
-            & Map.fromList
-            & traverse_ testProgPos
+        upd <- enter ^. Widget.enterResultEvent
+        let newEnv = GuiState.update upd baseEnv
+        traverse_ (testDir newEnv virtCursor) dirs
     where
+        virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
         dirs =
             [ (GLFW.Key'Up, GLFW.Key'Down)
             , (GLFW.Key'Down, GLFW.Key'Up)
             , (GLFW.Key'Left, GLFW.Key'Right)
             , (GLFW.Key'Right, GLFW.Key'Left)
             ]
+        testDir posEnv posVirt (way, back) =
+            mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
+            >>=
+            \case
+            Nothing -> pure ()
+            Just updThere ->
+                mApplyEvent cache
+                (GuiState.update updThere posEnv)
+                (updThere ^?! GuiState.uVirtualCursor . traverse)
+                (simpleKeyEvent back)
+                >>=
+                \case
+                Nothing -> fail (baseInfo <> "can't move back with cursor keys")
+                Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
+                    baseInfo <> "moving back with cursor keys goes to different place: " <>
+                    show (updBack ^. GuiState.uCursor)
+                    & fail
+                Just{} -> pure ()
+            where
+                baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
+
+programTest :: GuiEnv.Env -> FilePath -> Test
+programTest baseEnv filename =
+    testCase filename . testProgram filename $
+    \cache ->
+    do
+        baseGui <- makeReplGui cache baseEnv
+        let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
+        Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
+            <&> (focusedWidget baseGui ^?! Widget.fMEnterPoint . Lens._Just)
+            <&> (\x -> (x ^. Widget.enterResultRect, x))
+            & Map.fromList
+            & traverse_ (testProgramGuiAtPos cache baseEnv)
 
 testPrograms :: Test
 testPrograms =
@@ -273,7 +273,7 @@ testPrograms =
         baseEnv <- GuiEnv.make
         listDirectory "test/programs"
             <&> filter (`notElem` skipped)
-            <&> Lens.mapped %~ testConsistentNavigationForProg baseEnv
+            <&> Lens.mapped %~ programTest baseEnv
             <&> testGroup "program-tests"
     & buildTest
     where
