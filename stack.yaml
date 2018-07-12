@@ -33,14 +33,8 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - language-ecmascript-0.17.2.0
 - stb-image-0.2.1
-- GLFW-b-3.2.1.0
-- tagshare-0.0
 - wl-pprint-1.2.1
-- size-based-0.1.1.0
-- testing-feat-1.0.1.0
-- testing-type-modifiers-0.1.0.1
-- dictionary-sharing-0.1.0.0
 
-resolver: nightly-2018-05-17
+resolver: lts-12.0
 
 allow-newer: true
