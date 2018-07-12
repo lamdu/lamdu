@@ -76,8 +76,9 @@ makeReplGui cache env =
             makeBinderEdit repl
             & GuiState.assignCursor WidgetIds.replId replExprId
             & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
-        unless (Lens.has wideFocused gui) (fail "Red cursor!")
-        pure gui
+        if Lens.has wideFocused gui
+            then pure gui
+            else fail ("Red cursor: " ++ show (env ^. cursor))
 
 focusedWidget :: Responsive a -> Widget.Focused a
 focusedWidget gui = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
