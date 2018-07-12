@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- What to do when "verify-nix-stack" fails -
 --
 -- Update of .nix files is requiried:
@@ -26,7 +28,7 @@ import           Test.Lamdu.Prelude
 -- instead of quick & dirty string manipulations
 
 test :: Test
-test = testGroup "Nix" [stackDepsTest, cabalDepsTest]
+test = testGroup "Nix" [stackDepsTest, cabalDepsTest, ghcVersionTest]
 
 stackDepsTest :: Test
 stackDepsTest =
@@ -45,7 +47,7 @@ stackDepsTest =
                 & filter (`notElem` knownMissingNixFiles)
         nixFiles <- listDirectory "nix"
         assertSetEquals "Nix files" (Set.fromList expectedNixFiles) (Set.fromList nixFiles)
-        & testCase "verify-nix-stack"
+        & testCase "verify-stack"
     where
         -- Nix files that don't reflect stack.yaml dependencies
         extraNixFiles = ["lamdu.nix"]
@@ -99,7 +101,7 @@ cabalDepsTest =
         checkMissing cabalDeps nixHaskellDeps "Missing nix deps"
         checkMissing nixHaskellDeps nixVars "Undeclared nix vars"
         checkMissing nixHaskellDeps cabalDeps "Unneccesary nix deps"
-    & testCase "verify-nix-cabal"
+    & testCase "verify-cabal"
 
 checkMissing :: Set String -> Set String -> String -> IO ()
 checkMissing whole part msg
@@ -125,3 +127,14 @@ parseCabalDeps cabal =
             & Set.fromList
         -- Specifically check for one indentation level, to avoid conditional "build-depends: ekg".
         buildDepsPrefix = "  build-depends:"
+
+ghcVersionTest :: Test
+ghcVersionTest =
+    do
+        nixFile <- readFile "default.nix"
+        let nixGhcVer = read (take 2 (splitOn "ghc" nixFile ^?! Lens.ix 1))
+        assertEqual "ghc version" ghcVer nixGhcVer
+    & testCase "verify-ghc-version"
+    where
+        ghcVer :: Int
+        ghcVer = __GLASGOW_HASKELL__ `div` 10 + __GLASGOW_HASKELL__ `mod` 10
