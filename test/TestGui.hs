@@ -2,7 +2,7 @@
 
 module TestGui where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Vector.Vector2 (Vector2(..))
@@ -24,6 +24,7 @@ import           Lamdu.Config (HasConfig)
 import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderEdit)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -36,6 +37,7 @@ import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 import           System.Directory (listDirectory)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
 import           Test.Lamdu.Instances ()
@@ -62,23 +64,29 @@ replExpr = Sugar.waRepl . Sugar.replExpr . Sugar._BinderExpr
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
-makeReplGui ::
+makeGui ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
-    Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
-makeReplGui cache env =
+    String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
+makeGui afterDoc cache env =
     do
         workArea <- convertWorkArea cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         gui <-
-            makeBinderEdit repl
-            & GuiState.assignCursor WidgetIds.replId replExprId
+            do
+                replGui <-
+                    makeBinderEdit repl
+                    & GuiState.assignCursor WidgetIds.replId replExprId
+                paneGuis <-
+                    workArea ^.. Sugar.waPanes . traverse . Sugar.paneDefinition
+                    & traverse (DefinitionEdit.make mempty)
+                Responsive.vbox (replGui : paneGuis) & pure
             & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui
             then pure gui
-            else fail ("Red cursor: " ++ show (env ^. cursor))
+            else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
 focusedWidget :: Responsive a -> Widget.Focused a
 focusedWidget gui = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
@@ -91,7 +99,7 @@ mApplyEvent ::
     T ViewM (Maybe GuiState.Update)
 mApplyEvent cache env virtCursor event =
     do
-        gui <- makeReplGui cache env
+        gui <- makeGui "mApplyEvent" cache env
         let eventMap =
                 (focusedWidget gui ^. Widget.fEventMap)
                 Widget.EventContext
@@ -151,7 +159,7 @@ testLambdaDelete =
         env0 <- applyEvent cache (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent cache env0 dummyVirt delEvent
-        _ <- makeReplGui cache env1
+        _ <- makeGui "" cache env1
         pure ()
 
 -- | Test for issue #410
@@ -168,8 +176,8 @@ testFragmentSize =
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
-            & makeReplGui cache
-        guiCursorElseWhere <- makeReplGui cache baseEnv
+            & makeGui "" cache
+        guiCursorElseWhere <- makeGui "" cache baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (fail "fragment size inconsistent")
     where
         sz = Responsive.rWide . Align.tValue . Element.size
@@ -253,6 +261,29 @@ testConsistentKeyboardNavigation cache posEnv posVirt
             where
                 baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
 
+testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
+testActions cache env virtCursor =
+    do
+        gui <- makeGui "" cache env
+        (focusedWidget gui ^. Widget.fEventMap)
+            Widget.EventContext
+            { Widget._eVirtualCursor = virtCursor
+            , Widget._ePrevTextRemainder = ""
+            }
+            ^.. (E.emKeyMap . traverse . Lens.filteredBy E.dhDoc <. (E.dhHandler . E._Doesn'tWantClipboard)) . Lens.withIndex
+            & traverse_ testEvent
+    where
+        testEvent (doc, event)
+            | doc == E.Doc ["Edit", "Literal Text"] =
+                -- We ignore the literal text event,
+                -- because text programs don't have its nominal declared.
+                -- TODO: cleaner solution?
+                pure ()
+            | otherwise =
+                event <&> (`GuiState.update` env)
+                >>= makeGui (show doc <> " from " <> show (env ^. cursor)) cache
+                & Transaction.fork & void
+
 testProgramGuiAtPos ::
     Cache.Functions -> GuiEnv.Env -> Widget.EnterResult (T ViewM GuiState.Update) ->
     T ViewM ()
@@ -261,6 +292,7 @@ testProgramGuiAtPos cache baseEnv enter =
         upd <- enter ^. Widget.enterResultEvent
         let newEnv = GuiState.update upd baseEnv
         testConsistentKeyboardNavigation cache newEnv virtCursor
+        testActions cache newEnv virtCursor
     where
         virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
 
@@ -269,7 +301,7 @@ programTest baseEnv filename =
     testCase filename . testProgram filename $
     \cache ->
     do
-        baseGui <- makeReplGui cache baseEnv
+        baseGui <- makeGui "" cache baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
         Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
             <&> (focusedWidget baseGui ^?! Widget.fMEnterPoint . Lens._Just)
@@ -292,4 +324,12 @@ testPrograms =
               -- This program, saved with an old codec (the first version),
               -- is not compatible with that
               "old-codec-factorial.json"
+            , -- Known bug (will be fixed):
+              -- inlining applied definition in repl top level results in red cursor.
+              -- should be fixed in "wip" branch.
+              "relayed-arg.json"
+            , -- Known bug (will be fixed):
+              -- Replace-parent when standing on lambda parameters may invalidate parameters sugar.
+              -- Parameters widget id should be based on lambda
+              "apply-id-of-lambda.json"
             ]

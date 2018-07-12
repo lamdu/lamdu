@@ -2,7 +2,8 @@
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
-    , Clipboard, MaybeWantsClipboard(..)
+    , Clipboard
+    , MaybeWantsClipboard(..), _Doesn'tWantClipboard, _WantsClipboard
     , EventMap, lookup
     , emDocs
     , charEventMap, allChars
@@ -14,6 +15,8 @@ module GUI.Momentu.EventMap
     , dropEventMap
     , deleteKey, deleteKeys
     , filterChars, filter, mapMaybe
+    , -- exported for Tests
+      emKeyMap, dhDoc, dhHandler
     ) where
 
 import qualified Control.Lens.Extended as Lens
@@ -104,6 +107,7 @@ data MaybeWantsClipboard a
     = Doesn'tWantClipboard a
     | WantsClipboard (Clipboard -> Maybe a)
     deriving (Functor)
+Lens.makePrisms ''MaybeWantsClipboard
 
 type KeyMap a = Map KeyEvent (DocHandler (MaybeWantsClipboard a))
 
