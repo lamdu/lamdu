@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified Data.Map as Map
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -246,16 +247,18 @@ testConsistentNavigationForProg filename =
                         filename <> "/" <> show (posEnv ^. GuiState.cursor, way, back) <> ": "
         baseGui <- makeReplGui cache baseEnv
         let focused = focusedWidget baseGui
-        let testProgPos pos =
+        let testProgPos enter =
                 do
                     upd <- enter ^. Widget.enterResultEvent
                     let newEnv = GuiState.update upd baseEnv
                     traverse_ (testDir newEnv virtCursor) dirs
                 where
-                    enter = (focused ^?! Widget.fMEnterPoint . Lens._Just) pos
                     virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
         Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
+            <&> (focused ^?! Widget.fMEnterPoint . Lens._Just)
+            <&> (\x -> (x ^. Widget.enterResultRect, x))
+            & Map.fromList
             & traverse_ testProgPos
     where
         dirs =

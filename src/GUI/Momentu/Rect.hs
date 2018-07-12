@@ -27,7 +27,7 @@ type R = Double
 data Rect = Rect
     { _topLeft :: !(Vector2 R)
     , _size :: !(Vector2 R)
-    } deriving (Show, Generic)
+    } deriving (Show, Generic, Eq, Ord)
 Lens.makeLenses ''Rect
 
 instance NFData Rect where rnf = genericRnf
