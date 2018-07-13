@@ -94,11 +94,7 @@ validate workArea
         do
             wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
             let missing = wallEntityIds `Set.difference` sugarEntityIdsSet
-            let sugarAstChangeDone = False
-            unless (Set.null missing) $
-                -- Currently we don't yet enumerate all entityIds in Sugar
-                when sugarAstChangeDone $
-                fail $
+            unless (Set.null missing) $ fail $
                 show missing ++ " do not appear in any sugar entity ids"
             deepseq workArea -- make sure no "error" clauses are hiding within
                 (validateHiddenEntityIds workArea)
