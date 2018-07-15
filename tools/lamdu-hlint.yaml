@@ -29,7 +29,7 @@
     - warn: {lhs: "head (a ++ [b])", rhs: "fromMaybe b (a ^? traverse)"}
     - warn: {lhs: "mconcat [a | x <- take 1 b]", rhs: "foldMap (\\x -> a) (b ^? traverse)"}
     # standard rules using lens operators & and <&>
-    - warn: {lhs: "pure a <&> b", rhs: "pure (a b)"}
+    - warn: {lhs: "pure a <&> b", rhs: "pure (b a)"}
     - warn: {lhs: "lift a >>= lift . b", rhs: "a >>= b & lift"}
     - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
     - warn: {lhs: "[a] & sequenceA", rhs: "a <&> pure"}
