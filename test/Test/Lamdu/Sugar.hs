@@ -92,7 +92,6 @@ validate ::
 validate workArea =
     do
         wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
-        let sugarEntityIds = allEntityIds workArea
         let missing = wallEntityIds `Set.difference` sugarEntityIds
         let sugarAstChangeDone = False
         unless (Set.null missing) $
@@ -103,6 +102,8 @@ validate workArea =
         deepseq workArea -- make sure no "error" clauses are hiding within
             (validateHiddenEntityIds workArea)
             & either fail (\() -> pure workArea)
+    where
+        sugarEntityIds = allEntityIds workArea
 
 convertWorkArea ::
     HasCallStack =>
