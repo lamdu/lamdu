@@ -65,6 +65,7 @@ Test-Suite Tests
                , TestValUtils
                , Test.Lamdu.Db
                , Test.Lamdu.FreshDb
+               , Test.Lamdu.Gui
                , Test.Lamdu.GuiEnv
                , Test.Lamdu.Instances
                , Test.Lamdu.Prelude

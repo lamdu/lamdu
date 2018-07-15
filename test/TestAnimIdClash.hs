@@ -2,10 +2,7 @@ module TestAnimIdClash (test) where
 
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
-import           Data.List (group, sort)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))
 import qualified GUI.Momentu.View as View
@@ -19,6 +16,7 @@ import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.NearestHoles (NearestHoles)
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
+import           Test.Lamdu.Gui (verifyLayers)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
 import           Test.Lamdu.Instances ()
 import qualified Test.Lamdu.SugarStubs as Stub
@@ -31,15 +29,6 @@ test =
     [ testTypeView
     , testFragment
     ]
-
-verifyLayers :: Element.Layers -> IO ()
-verifyLayers view =
-    case clashingIds of
-    [] -> pure ()
-    _ -> assertString ("Clashing anim ids: " <> show clashingIds)
-    where
-        animIds = view ^.. Element.layers . traverse . Anim.frameImages . traverse . Anim.iAnimId
-        clashingIds = sort animIds & group >>= tail
 
 testTypeView :: Test
 testTypeView =
