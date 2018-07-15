@@ -62,7 +62,7 @@ modifyEntry myId fullChildRect target mChildEnter =
             }
 
 make ::
-    (MonadReader env m, State.HasCursor env, Applicative f, Widget.HasWidget w) =>
+    (HasCallStack, MonadReader env m, State.HasCursor env, Applicative f, Widget.HasWidget w) =>
     m (Config -> FocusEntryTarget -> Widget.Id -> Gui w f -> Gui w f)
 make =
     Lens.view State.cursor <&>

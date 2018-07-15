@@ -47,7 +47,7 @@ stdWrap pl =
         (<<<) = liftA2 (.)
 
 parentDelegator ::
-    ( MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative o
+    ( HasCallStack, MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative o
     ) => Widget.Id ->
     m (Gui Responsive o -> Gui Responsive o)
 parentDelegator myId =
