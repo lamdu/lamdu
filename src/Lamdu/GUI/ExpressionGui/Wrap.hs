@@ -11,7 +11,9 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive(..))
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -40,7 +42,8 @@ stdWrap ::
     ExprGuiM i o
     (Gui Responsive o -> Gui Responsive o)
 stdWrap pl =
-    (maybeAddAnnotationPl pl <&> (Widget.widget %~))
+    (takeFocusIfNeeded pl <&> (Widget.widget %~))
+    <<< (maybeAddAnnotationPl pl <&> (Widget.widget %~))
     <<< Dotter.with pl
     <<< ExprEventMap.add ExprEventMap.defaultOptions pl
     where
@@ -62,3 +65,20 @@ stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl
     <*> parentDelegator (WidgetIds.fromExprPayload pl)
+
+takeFocusIfNeeded ::
+    Monad i =>
+    Sugar.Payload name i o ExprGui.Payload ->
+    ExprGuiM i o (Gui Widget o -> Gui Widget o)
+takeFocusIfNeeded pl =
+    Lens.view GuiState.cursor
+    <&>
+    \cursor widget ->
+    if not (Widget.isFocused widget)
+        && any (Lens.has Lens._Just . (`subId` cursor)) entityWidgetIds
+    then Widget.setFocused widget
+    else widget
+    where
+        entityWidgetIds =
+            pl ^. Sugar.plEntityId : pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
+            <&> WidgetIds.fromEntityId

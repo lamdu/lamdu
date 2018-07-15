@@ -147,9 +147,8 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
         jumpDoc = E.Doc ["Navigation", "Jump to error"]
         anchor = fmap Hover.anchor
 
-indicatorId :: Sugar.Payload name i o a -> Widget.Id
-indicatorId pl =
-    WidgetIds.fromEntityId (pl ^. Sugar.plEntityId) `Widget.joinId` ["result indicator"]
+indicatorId :: Widget.Id
+indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
 
 isExecutableType :: Sugar.Type name -> Bool
 isExecutableType t =
@@ -175,12 +174,12 @@ resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
                             executeIOProcess exportRepl
                             & IOTrans.liftIO
                             & E.keysEventMap actionKeys (E.Doc ["Execute"])
-                    (Widget.makeFocusableView ?? indicatorId pl <&> (Align.tValue %~)) ?? view
+                    (Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~)) ?? view
                         <&> Align.tValue %~ Widget.weakerEvents executeEventMap
             else
                 view & Align.tValue %~ Widget.fromView & pure
-resultWidget _ pl tag (Sugar.EvalError err) =
-    errorIndicator (indicatorId pl) tag err
+resultWidget _ _ tag (Sugar.EvalError err) =
+    errorIndicator indicatorId tag err
     <&> Align.tValue . Lens.mapped %~ IOTrans.liftTrans
 
 make ::
