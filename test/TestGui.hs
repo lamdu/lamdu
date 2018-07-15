@@ -39,6 +39,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Directory (listDirectory)
+import           Test.Lamdu.Gui (verifyLayers)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
 import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
@@ -88,8 +89,11 @@ makeGui afterDoc cache env =
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
-focusedWidget :: Responsive a -> Widget.Focused a
-focusedWidget gui = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
+focusedWidget :: Monad m => Responsive a -> m (Widget.Focused a)
+focusedWidget gui =
+    widget <$ verifyLayers (widget ^. Widget.fLayers)
+    where
+        widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
 mApplyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
@@ -99,9 +103,9 @@ mApplyEvent ::
     T ViewM (Maybe GuiState.Update)
 mApplyEvent cache env virtCursor event =
     do
-        gui <- makeGui "mApplyEvent" cache env
+        w <- makeGui "mApplyEvent" cache env >>= focusedWidget
         let eventMap =
-                (focusedWidget gui ^. Widget.fEventMap)
+                (w ^. Widget.fEventMap)
                 Widget.EventContext
                 { Widget._eVirtualCursor = virtCursor
                 , Widget._ePrevTextRemainder = ""
@@ -264,8 +268,8 @@ testConsistentKeyboardNavigation cache posEnv posVirt
 testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testActions cache env virtCursor =
     do
-        gui <- makeGui "" cache env
-        (focusedWidget gui ^. Widget.fEventMap)
+        w <- makeGui "" cache env >>= focusedWidget
+        (w ^. Widget.fEventMap)
             Widget.EventContext
             { Widget._eVirtualCursor = virtCursor
             , Widget._ePrevTextRemainder = ""
@@ -303,8 +307,9 @@ programTest baseEnv filename =
     do
         baseGui <- makeGui "" cache baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
+        w <- focusedWidget baseGui
         Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
-            <&> (focusedWidget baseGui ^?! Widget.fMEnterPoint . Lens._Just)
+            <&> (w ^?! Widget.fMEnterPoint . Lens._Just)
             <&> (\x -> (x ^. Widget.enterResultRect, x))
             & Map.fromList
             & traverse_ (testProgramGuiAtPos cache baseEnv)
