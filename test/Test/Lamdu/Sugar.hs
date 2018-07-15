@@ -3,6 +3,7 @@ module Test.Lamdu.Sugar where
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
+import qualified Data.List as List
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Cache as Cache
@@ -29,7 +30,7 @@ import           Test.Lamdu.Prelude
 type T = Transaction
 
 allEntityIds ::
-    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Set EntityId
+    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> [EntityId]
 allEntityIds workArea =
     pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
     <> pls ^.. Lens.folded . plEntityId
@@ -40,7 +41,6 @@ allEntityIds workArea =
         waPanes . traverse . paneDefinition .
         drBody . _DefinitionBodyExpression . deContent .
         aBody . _BodyFunction . afLamId
-    & Set.fromList
     where
         pls = workArea ^.. traverse
 
@@ -89,21 +89,26 @@ validate ::
     T ViewM
     (WorkArea name (T fa) (T fb)
         (Sugar.Payload name (T fa) (T fb) ExprGui.Payload))
-validate workArea =
-    do
-        wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
-        let missing = wallEntityIds `Set.difference` sugarEntityIds
-        let sugarAstChangeDone = False
-        unless (Set.null missing) $
-            -- Currently we don't yet enumerate all entityIds in Sugar
-            when sugarAstChangeDone $
-            fail $
-            show missing ++ " do not appear in any sugar entity ids"
-        deepseq workArea -- make sure no "error" clauses are hiding within
-            (validateHiddenEntityIds workArea)
-            & either fail (\() -> pure workArea)
+validate workArea
+    | null duplicateEntityIds =
+        do
+            wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
+            let missing = wallEntityIds `Set.difference` sugarEntityIdsSet
+            let sugarAstChangeDone = False
+            unless (Set.null missing) $
+                -- Currently we don't yet enumerate all entityIds in Sugar
+                when sugarAstChangeDone $
+                fail $
+                show missing ++ " do not appear in any sugar entity ids"
+            deepseq workArea -- make sure no "error" clauses are hiding within
+                (validateHiddenEntityIds workArea)
+                & either fail (\() -> pure workArea)
+    | otherwise =
+        fail ("duplicate entityIds: " <> show duplicateEntityIds)
     where
+        duplicateEntityIds = List.sort sugarEntityIds & List.group >>= tail
         sugarEntityIds = allEntityIds workArea
+        sugarEntityIdsSet = Set.fromList sugarEntityIds
 
 convertWorkArea ::
     HasCallStack =>
