@@ -329,12 +329,4 @@ testPrograms =
               -- This program, saved with an old codec (the first version),
               -- is not compatible with that
               "old-codec-factorial.json"
-            , -- Known bug (will be fixed):
-              -- inlining applied definition in repl top level results in red cursor.
-              -- should be fixed in "wip" branch.
-              "relayed-arg.json"
-            , -- Known bug (will be fixed):
-              -- Replace-parent when standing on lambda parameters may invalidate parameters sugar.
-              -- Parameters widget id should be based on lambda
-              "apply-id-of-lambda.json"
             ]
