@@ -27,6 +27,7 @@ test =
     , testLightLambda
     , testInline
     , testReorderLets
+    , testReplaceParent
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -182,3 +183,12 @@ delDefParam =
             _Node . val . _BodyFunction .
             fParams . _Params . traverse .
             fpInfo . piActions . fpDelete
+
+testReplaceParent :: Test
+testReplaceParent =
+    testSugarActions "let-item-inline.json" [(^?! action)]
+    & testCase "replace-parent"
+    where
+        action =
+            replBody . _BodyLam . lamFunc . fBody .
+            _Node . ann . plActions . mReplaceParent . Lens._Just
