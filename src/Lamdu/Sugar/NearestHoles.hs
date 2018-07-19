@@ -31,7 +31,6 @@ none :: NearestHoles
 none = NearestHoles Nothing Nothing
 
 add ::
-    Functor f =>
     (forall a b.
       Lens.IndexedTraversal (SugarLens.PayloadOf name i o) (f a) (f b) a b) ->
     f (Sugar.Payload name i o c) ->
@@ -41,8 +40,8 @@ add exprs s =
     & markStoredHoles exprs
     & passAll exprs
     & passAll (Lens.backwards exprs)
-    <&> snd
-    <&> Sugar.plData %~ toNearestHoles
+    & exprs %~ snd
+    & exprs . Sugar.plData %~ toNearestHoles
     where
         toNearestHoles (nextHole, (prevHole, x)) = (x, NearestHoles prevHole nextHole)
 
