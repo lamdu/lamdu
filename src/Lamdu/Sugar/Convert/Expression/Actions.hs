@@ -167,23 +167,20 @@ setChildReplaceParentActions =
                 (srcPl ^. pInput . Input.stored . Property.pVal)
                 <&> EntityId.ofValI)
     in
-    case bod of
-    BodyLam lam | Lens.has (lamFunc . fBody . _Node . val . _BinderLet) lam -> bod
-    _ ->
-        bod
-        & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
-        . bodyChildPayloads %~ join setToExpr
-        -- Replace-parent with fragment sets directly to fragment expression
-        & overBodyChildren id id id
-            ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
-            ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
-            ((bodyIndex . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
-        -- Replace-parent of fragment expr without "heal" available -
-        -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-        & overBodyChildren id id id
-            (body . _SimpleElse . typeMismatchPayloads %~ join setToExpr)
-            (body . _BinderExpr . typeMismatchPayloads %~ join setToExpr)
-            (body . typeMismatchPayloads %~ join setToExpr)
+    bod
+    & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
+    . bodyChildPayloads %~ join setToExpr
+    -- Replace-parent with fragment sets directly to fragment expression
+    & overBodyChildren id id id
+        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
+        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
+        ((bodyIndex . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
+    -- Replace-parent of fragment expr without "heal" available -
+    -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
+    & overBodyChildren id id id
+        (body . _SimpleElse . typeMismatchPayloads %~ join setToExpr)
+        (body . _BinderExpr . typeMismatchPayloads %~ join setToExpr)
+        (body . typeMismatchPayloads %~ join setToExpr)
     where
         typeMismatchPayloads =
             _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr .
