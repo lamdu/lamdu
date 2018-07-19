@@ -10,7 +10,6 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
-import           System.FilePath (takeBaseName)
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 
 import           Test.Lamdu.Prelude
@@ -28,16 +27,7 @@ test =
     , testLightLambda
     , testInline
     , testReorderLets
-    , simpleConvertTest "open-lambda-case.json"
-    , simpleConvertTest "applied-case.json"
     ]
-
--- | This is meant to just let convertWorkArea validation check that
--- entity ids are OK
-simpleConvertTest :: FilePath -> Test
-simpleConvertTest progName =
-    testProgram progName (void . convertWorkArea)
-    & testCase (takeBaseName progName)
 
 -- | Verify that a sugar action does not result in a crash
 testSugarActions ::
