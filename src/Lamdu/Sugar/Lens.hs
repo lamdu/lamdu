@@ -13,7 +13,6 @@ module Lamdu.Sugar.Lens
     , assignmentBodyAddFirstParam
     , binderFuncParamActions
     , binderResultExpr
-    , definitionAssignments
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
     , assignmentSubExprParams, assignmentPayloads
@@ -377,13 +376,6 @@ binderResultExpr f (PNode (Node pl x)) =
         lBody (binderResultExpr f) l
         <&> BinderLet
         <&> Node pl <&> PNode
-
-definitionAssignments ::
-    Lens.Traversal
-    (Definition name i o a) (Definition name i o b)
-    (ParentNode (AssignmentBody name i o) a)
-    (ParentNode (AssignmentBody name i o) b)
-definitionAssignments = drBody . _DefinitionBodyExpression . deContent
 
 holeOptionTransformExprs ::
     Monad i =>
