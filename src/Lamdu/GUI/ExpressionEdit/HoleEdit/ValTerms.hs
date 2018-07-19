@@ -50,9 +50,9 @@ formatLiteral (LiteralText i) = formatProp i
 formatLiteral (LiteralBytes i) = formatProp i
 
 expr :: Expression (Name o) i o a -> [Text]
-expr = ofBody . (^. _PNode . val)
+expr = ofBody . (^. _Node . val)
 
-ofBody :: Body (Name o) i o a -> [Text]
+ofBody :: Body (Name o) i o (Ann a) -> [Text]
 ofBody =
     \case
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
@@ -98,7 +98,7 @@ ofBody =
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
 
-binder :: Binder (Name o) i o a -> [Text]
+binder :: Binder (Name o) i o (Ann a) -> [Text]
 binder BinderLet{} = ["let"]
 binder (BinderExpr x) = ofBody x
 
@@ -130,7 +130,7 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Body name i o a -> Text
+    SearchMenu.ResultsContext -> Body name i o (Ann a) -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
@@ -145,7 +145,7 @@ getSearchStringRemainder ctx holeResult
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
         fragmentExpr = _BodyFragment . fExpr
-        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . _PNode . val . x]
+        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . _Node . val . x]
 
 verifyInjectSuffix :: Text -> SugarLens.PayloadOf name i o -> Bool
 verifyInjectSuffix searchTerm x =

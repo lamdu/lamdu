@@ -43,26 +43,27 @@ forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
     ShowAnnotation
-topLevelAnn = _PNode . ann . _1
+topLevelAnn = _Node . ann . _1
 
 markAnnotationsToDisplay ::
     Expression name i o a ->
     Expression name i o (ShowAnnotation, a)
-markAnnotationsToDisplay (PNode (Node pl oldBody)) =
-    Node (showAnn, pl) newBody & PNode
+markAnnotationsToDisplay (Node (Ann pl oldBody)) =
+    Ann (showAnn, pl) newBody & Node
     where
         (showAnn, newBody) = markBodyAnnotations oldBody
 
 markBinderAnnotations ::
-    ParentNode (Binder name i o) a ->
-    ParentNode (Binder name i o) (ShowAnnotation, a)
-markBinderAnnotations (PNode (Node pl x)) =
-    Node (showAnn, pl) newBody & PNode
+    Node (Ann a) (Binder name i o) ->
+    Node (Ann (ShowAnnotation, a)) (Binder name i o)
+markBinderAnnotations (Node (Ann pl x)) =
+    Ann (showAnn, pl) newBody & Node
     where
         (showAnn, newBody) = markBinderBodyAnnotations x
 
 markBinderBodyAnnotations ::
-    Binder name i o a -> (ShowAnnotation, Binder name i o (ShowAnnotation, a))
+    Binder name i o (Ann a) ->
+    (ShowAnnotation, Binder name i o (Ann (ShowAnnotation, a)))
 markBinderBodyAnnotations =
     \case
     BinderExpr body -> markBodyAnnotations body & _2 %~ BinderExpr
@@ -75,10 +76,10 @@ markBinderBodyAnnotations =
         )
 
 markAssignmentAnnotations ::
-    ParentNode (AssignmentBody name i o) a ->
-    ParentNode (AssignmentBody name i o) (ShowAnnotation, a)
-markAssignmentAnnotations (PNode (Node pl x)) =
-    Node (showAnn, pl) newBody & PNode
+    Node (Ann a) (AssignmentBody name i o) ->
+    Node (Ann (ShowAnnotation, a)) (AssignmentBody name i o)
+markAssignmentAnnotations (Node (Ann pl x)) =
+    Ann (showAnn, pl) newBody & Node
     where
         (showAnn, newBody) =
             case x of
@@ -91,10 +92,10 @@ markAssignmentAnnotations (PNode (Node pl x)) =
                 )
 
 markElseAnnotations ::
-    ParentNode (Else name i o) a ->
-    ParentNode (Else name i o) (ShowAnnotation, a)
-markElseAnnotations (PNode (Node pl x)) =
-    Node (showAnn, pl) newBody & PNode
+    Node (Ann a) (Else name i o) ->
+    Node (Ann (ShowAnnotation, a)) (Else name i o)
+markElseAnnotations (Node (Ann pl x)) =
+    Ann (showAnn, pl) newBody & Node
     where
         (showAnn, newBody) =
             case x of
@@ -109,8 +110,8 @@ markElseAnnotations (PNode (Node pl x)) =
                 )
 
 markBodyAnnotations ::
-    Body name i o a ->
-    (ShowAnnotation, Body name i o (ShowAnnotation, a))
+    Body name i o (Ann a) ->
+    (ShowAnnotation, Body name i o (Ann (ShowAnnotation, a)))
 markBodyAnnotations oldBody =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations
@@ -164,7 +165,7 @@ markBodyAnnotations oldBody =
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
             & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . Lens.mapped . _PNode . val %~ onHandler
+            & cBody . cItems . Lens.mapped . Lens.mapped . _Node . val %~ onHandler
             & BodyCase
         )
     where
@@ -180,7 +181,10 @@ markBodyAnnotations oldBody =
             markBinderAnnotations
             markAnnotationsToDisplay
             oldBody
-        nonHoleAnn = Lens.filtered (Lens.nullOf (_PNode . val . SugarLens.bodyUnfinished)) . topLevelAnn
+        nonHoleAnn =
+            Lens.filtered
+            (Lens.nullOf (_Node . val . Lens.to SugarLens.stripAnnotations . SugarLens.bodyUnfinished))
+            . topLevelAnn
         onHandler a =
             a
             & _BodyLam . lamFunc . fBody .
@@ -189,5 +193,5 @@ markBodyAnnotations oldBody =
         onElse (ElseIf elseIf) = elseIf & eiContent %~ onIfElse & ElseIf
         onIfElse x =
             x
-            & iThen . _PNode . val %~ onHandler
-            & iElse . _PNode . val %~ onElse
+            & iThen . _Node . val %~ onHandler
+            & iElse . _Node . val %~ onElse

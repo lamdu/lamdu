@@ -62,8 +62,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Sugar.ParentNode (Sugar.Binder (Name o) i o)
-    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Node (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
@@ -85,8 +84,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Sugar.ParentNode (Sugar.Binder (Name o) i o)
-    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Node (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (Menu.RenderedOption o)
 make mNextEntry ctx resultId pick holeResultConverted =
     makeWidget resultId holeResultConverted

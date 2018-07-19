@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (annotations)
 import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Align as Align
@@ -80,10 +81,11 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Sugar.ParentNode (Sugar.Binder (Name o) i o) (Sugar.Payload (Name o) i o ()) ->
-    Sugar.ParentNode (Sugar.Binder (Name o) i o) (Sugar.Payload (Name o) i o ExprGui.Payload)
+    Sugar.Node (Sugar.Ann (Sugar.Payload (Name o) i o ())) (Sugar.Binder (Name o) i o) ->
+    Sugar.Node (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o)
 postProcessSugar minOpPrec binder =
-    AddParens.addToBinderWith minOpPrec binder <&> pl
+    AddParens.addToBinderWith minOpPrec binder
+    & annotations %~ pl
     where
         pl (x, needParens, sugarPl) =
             ExprGui.Payload

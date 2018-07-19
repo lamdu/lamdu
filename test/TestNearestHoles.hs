@@ -18,9 +18,9 @@ test =
         expr =
             Stub.litNum 1 `Stub.plus` hole `Stub.plus` Stub.litNum 2
             & NearestHoles.add SugarLens.exprPayloads
-            <&> (^. Sugar.plData . _2)
+            & SugarLens.exprPayloads %~ (^. Sugar.plData . _2)
         result = expr ^.. SugarLens.exprPayloads . Lens.filteredByIndex (SugarLens._OfExpr . Sugar._BodyLiteral)
-        holeId = hole ^. Sugar._PNode . Sugar.ann . Sugar.plEntityId
+        holeId = hole ^. Sugar._Node . Sugar.ann . Sugar.plEntityId
         expected =
             [ NearestHoles Nothing (Just holeId)
             , NearestHoles (Just holeId) Nothing

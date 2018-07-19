@@ -32,9 +32,12 @@ none = NearestHoles Nothing Nothing
 
 add ::
     (forall a b.
-      Lens.IndexedTraversal (SugarLens.PayloadOf name i o) (f a) (f b) a b) ->
-    f (Sugar.Payload name i o c) ->
-    f (Sugar.Payload name i o (c, NearestHoles))
+        Lens.IndexedTraversal (SugarLens.PayloadOf name i o)
+        (Sugar.Node (Sugar.Ann a) e)
+        (Sugar.Node (Sugar.Ann b) e)
+        a b) ->
+    Sugar.Node (Sugar.Ann (Sugar.Payload name i o c)) e ->
+    Sugar.Node (Sugar.Ann (Sugar.Payload name i o (c, NearestHoles))) e
 add exprs s =
     s
     & markStoredHoles exprs

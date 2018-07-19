@@ -22,13 +22,13 @@ convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
     Case InternalName (T m) (T m) (ExpressionU m a) ->
-    Maybe (IfElse InternalName (T m) (T m) (ConvertPayload m a))
+    Maybe (IfElse InternalName (T m) (T m) (Ann (ConvertPayload m a)))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
-        case arg ^. _PNode . val of
+        case arg ^. _Node . val of
             BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
-            _ | arg ^? _PNode . ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
+            _ | arg ^? _Node . ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
     where
@@ -45,8 +45,8 @@ convertIfElse setToVal caseBody =
             , _iThen = altTrue ^. ciExpr
             , _iElse =
                 case altFalse ^@?
-                     ciExpr . _PNode . val . _BodyLam . lamFunc . Lens.selfIndex
-                     <. (fBody . _PNode . val . _BinderExpr . _BodyIfElse)
+                     ciExpr . _Node . val . _BodyLam . lamFunc . Lens.selfIndex
+                     <. (fBody . _Node . val . _BinderExpr . _BodyIfElse)
                 of
                 Just (binder, innerIfElse) ->
                     ElseIf ElseIfContent
@@ -60,18 +60,18 @@ convertIfElse setToVal caseBody =
                         getScope [x] = x ^. bParamScopeId
                         getScope _ = error "if-else evaluated more than once in same scope?"
                 Nothing ->
-                    altFalse ^. ciExpr . _PNode . val
+                    altFalse ^. ciExpr . _Node . val
                     & _BodyHole . holeMDelete ?~ elseDel
-                    & _BodyLam . lamFunc . fBody . _PNode . val . _BinderExpr .
+                    & _BodyLam . lamFunc . fBody . _Node . val . _BinderExpr .
                         _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
-                & Node (altFalse ^. ciExpr . _PNode . ann)
-                & PNode
+                & Ann (altFalse ^. ciExpr . _Node . ann)
+                & Node
             }
             where
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . _PNode . val . _BodyLam . lamFunc . fBody
-                    . _PNode . Lens.filteredBy (val . _BinderExpr) . ann
-                    & fromMaybe (alt ^. ciExpr . _PNode . ann)
+                    alt ^? ciExpr . _Node . val . _BodyLam . lamFunc . fBody
+                    . _Node . Lens.filteredBy (val . _BinderExpr) . ann
+                    & fromMaybe (alt ^. ciExpr . _Node . ann)
                     & (^. pInput . Input.stored . Property.pVal)

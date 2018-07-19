@@ -61,10 +61,8 @@ loadWorkArea cache monitors annMode  theEvalResults cp =
     Sugar.WorkArea
     { _waPanes =
         _waPanes
-        <&> Sugar.paneDefinition %~
-        NearestHoles.add
-        (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent .
-            SugarLens.assignmentPayloads)
+        <&> Sugar.paneDefinition . Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent %~
+            NearestHoles.add SugarLens.assignmentPayloads
     , _waRepl =
         _waRepl
         & Sugar.replExpr %~ NearestHoles.add SugarLens.binderPayloads

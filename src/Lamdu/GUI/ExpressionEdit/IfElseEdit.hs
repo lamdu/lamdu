@@ -45,7 +45,7 @@ Lens.makeLenses ''Row
 makeIfThen ::
     (Monad i, Monad o) =>
     WithTextPos View -> AnimId ->
-    Sugar.IfElse (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.IfElse (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Row (Gui Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
@@ -59,7 +59,7 @@ makeIfThen prefixLabel animId ifElse =
                 foldMap
                 (E.keysEventMapMovesCursor (Config.delKeys config)
                  (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . Sugar._PNode . Sugar.ann .
+                (ifElse ^. Sugar.iElse . Sugar._Node . Sugar.ann .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap (ifGui /|/ colon))
@@ -69,13 +69,13 @@ makeIfThen prefixLabel animId ifElse =
 makeElseBody ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Else (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Else (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElseBody ann (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
         <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression (Sugar.PNode (Sugar.Node ann expr))
+    ) <*> ExprGuiM.makeSubexpression (Sugar.Node (Sugar.Ann ann expr))
     <&> pure
     where
         elseAnimId = WidgetIds.fromExprPayload ann & Widget.toAnimId
@@ -103,10 +103,9 @@ makeElseBody ann (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
 -- TODO inline and use "case"
 makeElse ::
     (Monad i, Monad o) =>
-    Sugar.ParentNode (Sugar.Else (Name o) i o)
-    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Node (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
     ExprGuiM i o [Row (Gui Responsive o)]
-makeElse (Sugar.PNode (Sugar.Node ann x)) = makeElseBody ann x
+makeElse (Sugar.Node (Sugar.Ann ann x)) = makeElseBody ann x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
@@ -153,7 +152,7 @@ renderRows mParensId =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.IfElse (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.IfElse (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make ifElse pl =

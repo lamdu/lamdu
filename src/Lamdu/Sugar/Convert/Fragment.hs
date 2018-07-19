@@ -14,6 +14,7 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (annotations)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))
@@ -64,7 +65,7 @@ mkOptions sugarContext argI argS exprPl =
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
-            [ P.app P.hole P.hole | Lens.nullOf (_PNode . val . _BodyLam) argS ]
+            [ P.app P.hole P.hole | Lens.nullOf (_Node . val . _BodyLam) argS ]
             <&> Hole.SeedExpr
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
@@ -108,14 +109,15 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         do
             sugarContext <- Lens.view id
             options <-
-                argS <&> (,) neverShowAnnotations
-                & traverse (convertPayload Input.None)
+                argS
+                & annotations %~ (,) neverShowAnnotations
+                & annotations (convertPayload Input.None)
                 >>= (mkOptions sugarContext argI ?? exprPl)
             BodyFragment Fragment
                 { _fExpr =
                       argS
-                      & _PNode . ann . pActions . detach .~ FragmentExprAlready storedEntityId
-                      & _PNode . ann . pActions . mSetToHole ?~
+                      & _Node . ann . pActions . detach .~ FragmentExprAlready storedEntityId
+                      & _Node . ann . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                       if isTypeMatch
@@ -129,7 +131,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-            <&> _PNode . ann . pActions . detach .~ FragmentAlready storedEntityId
+            <&> _Node . ann . pActions . detach .~ FragmentAlready storedEntityId
     where
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI

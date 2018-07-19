@@ -140,21 +140,21 @@ makeActions exprPl =
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
-    p a (f a) -> Lens.Indexed (Body name i o j) a (f a)
-fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . _PNode . ann)
+    p a (f a) -> Lens.Indexed (Body name i o (Ann j)) a (f a)
+fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . _Node . ann)
 
-body :: Lens' (ParentNode f a) (f a)
-body = _PNode . val
+body :: Lens' (Node (Ann a) e) (e (Ann a))
+body = _Node . val
 
-bodyIndex :: Lens.IndexedTraversal' (f a) (ParentNode f a) (ParentNode f a)
+bodyIndex :: Lens.IndexedTraversal' (e (Ann a)) (Node (Ann a) e) (Node (Ann a) e)
 bodyIndex = Lens.filteredBy body
 
 setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValP m ->
-        Body name (T m) (T m) (ConvertPayload m a) ->
-        Body name (T m) (T m) (ConvertPayload m a)
+        Body name (T m) (T m) (Ann (ConvertPayload m a)) ->
+        Body name (T m) (T m) (Ann (ConvertPayload m a))
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -168,16 +168,16 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     case bod of
-    BodyLam lam | Lens.has (lamFunc . fBody . _PNode . val . _BinderLet) lam -> bod
+    BodyLam lam | Lens.has (lamFunc . fBody . _Node . val . _BinderLet) lam -> bod
     _ ->
         bod
         & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
         . bodyChildPayloads %~ join setToExpr
         -- Replace-parent with fragment sets directly to fragment expression
         & overBodyChildren id id id
-            ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. _PNode . ann %@~ setToExpr)
-            ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. _PNode . ann %@~ setToExpr)
-            ((bodyIndex . fragmentAnnIndex) <. _PNode . ann %@~ setToExpr)
+            ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
+            ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
+            ((bodyIndex . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
         -- Replace-parent of fragment expr without "heal" available -
         -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
         & overBodyChildren id id id
@@ -187,7 +187,7 @@ setChildReplaceParentActions =
     where
         typeMismatchPayloads =
             _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr .
-            _PNode . ann
+            _Node . ann
 
 subexprPayloads ::
     Foldable f =>
@@ -205,13 +205,13 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m b ->
-    Body InternalName (T m) (T m) (ConvertPayload m a) ->
+    Body InternalName (T m) (T m) (Ann (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
         actions <- makeActions exprPl
         addReplaceParents <- setChildReplaceParentActions
-        PNode Node
+        Node Ann
             { _val = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _ann =
                 ConvertPayload
@@ -223,7 +223,7 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
     f (Val (Input.Payload m a)) -> Input.Payload m a ->
-    Body InternalName (T m) (T m) (ConvertPayload m a) ->
+    Body InternalName (T m) (T m) (Ann (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS

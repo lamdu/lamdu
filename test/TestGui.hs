@@ -59,8 +59,8 @@ test =
     ]
 
 replExpr ::
-    Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Body name i o a)
-replExpr = Sugar.waRepl . Sugar.replExpr . Sugar._PNode . Sugar.val . Sugar._BinderExpr
+    Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Body name i o (Sugar.Ann a))
+replExpr = Sugar.waRepl . Sugar.replExpr . Sugar._Node . Sugar.val . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -178,7 +178,7 @@ testFragmentSize =
     do
         frag <-
             fromWorkArea cache
-            (Sugar.waRepl . Sugar.replExpr . Sugar._PNode . Sugar.ann)
+            (Sugar.waRepl . Sugar.replExpr . Sugar._Node . Sugar.ann)
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
@@ -201,7 +201,7 @@ testOpPrec =
         holeId <-
             fromWorkArea cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . Sugar._PNode . Sugar.ann . Sugar.plEntityId)
+             Sugar.fBody . Sugar._Node . Sugar.ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Expression
-    ( Node(..), ann, val
-    , ParentNode(..), _PNode
+    ( Node(..), _Node
+    , Ann(..), ann, val
     , Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
@@ -43,6 +43,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
+import           Data.Tree.Diverse
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
@@ -56,21 +57,7 @@ import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
 
-data Node v a = Node
-    { _ann :: a
-    , _val :: v
-    } deriving (Functor, Foldable, Traversable, Generic)
-
-newtype ParentNode f a = PNode (Node (f a) a)
-    deriving Generic
-instance Functor f => Functor (ParentNode f) where
-    fmap f (PNode (Node a b)) = Node (f a) (b <&> f) & PNode
-instance Foldable f => Foldable (ParentNode f) where
-    foldMap f (PNode (Node a b)) = f a <> foldMap f b
-instance Traversable f => Traversable (ParentNode f) where
-    traverse f (PNode (Node a b)) = (Node <$> f a <*> traverse f b) <&> PNode
-
-type Expression name i o a = ParentNode (Body name i o) a
+type Expression name i o a = Node (Ann a) (Body name i o)
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo name
@@ -79,45 +66,45 @@ data AnnotatedArg name expr = AnnotatedArg
 
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
-data LabeledApply name i o a = LabeledApply
-    { _aFunc :: Node (BinderVarRef name o) a
-    , _aSpecialArgs :: Meta.SpecialArgs (Expression name i o a)
-    , _aAnnotatedArgs :: [AnnotatedArg name (Expression name i o a)]
-    , _aRelayedArgs :: [Node (GetVar name o) a]
-    } deriving (Functor, Foldable, Traversable, Generic)
+data LabeledApply name i o f = LabeledApply
+    { _aFunc :: f (BinderVarRef name o)
+    , _aSpecialArgs :: Meta.SpecialArgs (Node f (Body name i o))
+    , _aAnnotatedArgs :: [AnnotatedArg name (Node f (Body name i o))]
+    , _aRelayedArgs :: [f (GetVar name o)]
+    } deriving Generic
 
-data InjectContent name i o a
-    = InjectNullary (Node (NullaryVal name i o) a)
-    | InjectVal (Expression name i o a)
-    deriving (Functor, Foldable, Traversable, Generic)
+data InjectContent name i o f
+    = InjectNullary (f (NullaryVal name i o))
+    | InjectVal (Node f (Body name i o))
+    deriving Generic
 
-data Inject name i o a = Inject
+data Inject name i o f = Inject
     { _iTag :: Tag name i o
-    , _iContent :: InjectContent name i o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _iContent :: InjectContent name i o f
+    } deriving Generic
 
-data Lambda name i o a = Lambda
+data Lambda name i o f = Lambda
     { _lamMode :: BinderMode
     , _lamApplyLimit :: FuncApplyLimit
-    , _lamFunc :: Function name i o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _lamFunc :: Function name i o f
+    } deriving Generic
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
-data Fragment name i o a = Fragment
-    { _fExpr :: Expression name i o a
+data Fragment name i o f = Fragment
+    { _fExpr :: Node f (Body name i o)
     , _fHeal :: Heal o
     , _fOptions :: i [HoleOption name i o]
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: ParentNode (Binder name i o) (Payload name i o ())
+    { _holeResultConverted :: Node (Ann (Payload name i o ())) (Binder name i o)
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i (ParentNode (Binder name i o) (Payload name i o ()))
+    , _hoSugaredBaseExpr :: i (Node (Ann (Payload name i o ())) (Binder name i o))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic
@@ -137,49 +124,49 @@ data Hole name i o = Hole
     } deriving Generic
 
 -- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
-data ElseIfContent name i o a = ElseIfContent
+data ElseIfContent name i o f = ElseIfContent
     { _eiScopes :: ChildScopes
-    , _eiContent :: IfElse name i o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _eiContent :: IfElse name i o f
+    } deriving Generic
 
-data Else name i o a
-    = SimpleElse (Body name i o a)
-    | ElseIf (ElseIfContent name i o a)
-    deriving (Functor, Foldable, Traversable, Generic)
+data Else name i o f
+    = SimpleElse (Body name i o f)
+    | ElseIf (ElseIfContent name i o f)
+    deriving Generic
 
-data IfElse name i o a = IfElse
-    { _iIf :: Expression name i o a
-    , _iThen :: Expression name i o a
-    , _iElse :: ParentNode (Else name i o) a
-    } deriving (Functor, Foldable, Traversable, Generic)
+data IfElse name i o f = IfElse
+    { _iIf :: Node f (Body name i o)
+    , _iThen :: Node f (Body name i o)
+    , _iElse :: Node f (Else name i o)
+    } deriving Generic
 
-data Body name i o a
-    = BodyLam (Lambda name i o a)
-    | BodySimpleApply (V.Apply (Expression name i o a))
-    | BodyLabeledApply (LabeledApply name i o a)
+data Body name i o f
+    = BodyLam (Lambda name i o f)
+    | BodySimpleApply (V.Apply (Node f (Body name i o)))
+    | BodyLabeledApply (LabeledApply name i o f)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
-    | BodyRecord (Composite name i o (Expression name i o a))
-    | BodyGetField (GetField name i o (Expression name i o a))
-    | BodyCase (Case name i o (Expression name i o a))
-    | BodyIfElse (IfElse name i o a)
-    | BodyInject (Inject name i o a)
+    | BodyRecord (Composite name i o (Node f (Body name i o)))
+    | BodyGetField (GetField name i o (Node f (Body name i o)))
+    | BodyCase (Case name i o (Node f (Body name i o)))
+    | BodyIfElse (IfElse name i o f)
+    | BodyInject (Inject name i o f)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (ParentNode (Binder name i o) a))
-    | BodyFromNom (Nominal name (Expression name i o a))
-    | BodyFragment (Fragment name i o a)
+    | BodyToNom (Nominal name (Node f (Binder name i o)))
+    | BodyFromNom (Nominal name (Node f (Body name i o)))
+    | BodyFragment (Fragment name i o f)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
-    deriving (Functor, Foldable, Traversable, Generic)
+    deriving Generic
 
-data Let name i o a = Let
-    { _lValue :: ParentNode (AssignmentBody name i o) a -- "let foo = [[bar]] in x"
+data Let name i o f = Let
+    { _lValue :: Node f (AssignmentBody name i o) -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: Tag name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
     , _lBodyScope :: ChildScopes
-    , _lBody :: ParentNode (Binder name i o) a -- "let foo = bar in [[x]]"
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _lBody :: Node f (Binder name i o) -- "let foo = bar in [[x]]"
+    } deriving Generic
 
 -- An expression with 0 or more let items,
 -- Appear in a:
@@ -187,32 +174,31 @@ data Let name i o a = Let
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-data Binder name i o a
-    = BinderLet (Let name i o a)
-    | BinderExpr (Body name i o a)
-    deriving (Functor, Foldable, Traversable, Generic)
+data Binder name i o f
+    = BinderLet (Let name i o f)
+    | BinderExpr (Body name i o f)
+    deriving Generic
 
-
-data Function name i o a = Function
+data Function name i o f = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: ParentNode (Binder name i o) a
+    , _fBody :: Node f (Binder name i o)
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
-data AssignPlain name i o a = AssignPlain
+data AssignPlain name i o f = AssignPlain
     { _apAddFirstParam :: AddFirstParam name i o
-    , _apBody :: Binder name i o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _apBody :: Binder name i o f
+    } deriving Generic
 
-data AssignmentBody name i o a
-    = BodyFunction (Function name i o a)
-    | BodyPlain (AssignPlain name i o a)
-    deriving (Functor, Foldable, Traversable, Generic)
+data AssignmentBody name i o f
+    = BodyFunction (Function name i o f)
+    | BodyPlain (AssignPlain name i o f)
+    deriving Generic
 
-type Assignment name i o a = ParentNode (AssignmentBody name i o) a
+type Assignment name i o a = Node (Ann a) (AssignmentBody name i o)
 
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignPlain
@@ -227,10 +213,62 @@ Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
-Lens.makeLenses ''Node
 Lens.makePrisms ''AssignmentBody
 Lens.makePrisms ''Binder
 Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
-Lens.makePrisms ''ParentNode
+
+instance Children (AssignmentBody name i o) where
+    children f (BodyPlain x) = apBody (children f) x <&> BodyPlain
+    children f (BodyFunction x) = fBody f x <&> BodyFunction
+
+instance Children (Body name i o) where
+    children f (BodyLam x) = (lamFunc . fBody) f x <&> BodyLam
+    children f (BodySimpleApply x) = traverse f x <&> BodySimpleApply
+    children f (BodyLabeledApply x) = children f x <&> BodyLabeledApply
+    children _ (BodyHole x) = BodyHole x & pure
+    children _ (BodyLiteral x) = BodyLiteral x & pure
+    children f (BodyRecord x) = traverse f x <&> BodyRecord
+    children f (BodyGetField x) = traverse f x <&> BodyGetField
+    children f (BodyCase x) = traverse f x <&> BodyCase
+    children f (BodyIfElse x) = children f x <&> BodyIfElse
+    children f (BodyInject x) = iContent (children f) x <&> BodyInject
+    children _ (BodyGetVar x) = BodyGetVar x & pure
+    children f (BodyToNom x) = traverse f x <&> BodyToNom
+    children f (BodyFromNom x) = traverse f x <&> BodyFromNom
+    children f (BodyFragment x) = fExpr f x <&> BodyFragment
+    children _ BodyPlaceHolder = pure BodyPlaceHolder
+
+instance Children (Binder name i o) where
+    children f (BinderExpr x) = children f x <&> BinderExpr
+    children f (BinderLet x) = children f x <&> BinderLet
+
+instance Children (Else name i o) where
+    children f (SimpleElse x) = children f x <&> SimpleElse
+    children f (ElseIf x) = eiContent (children f) x <&> ElseIf
+
+instance Children (Function name i o) where
+    children = fBody
+
+instance Children (IfElse name i o) where
+    children f (IfElse cond then_ else_) =
+        IfElse <$> f cond <*> f then_ <*> f else_
+
+instance Children (InjectContent name i o) where
+    children f (InjectVal x) = f x <&> InjectVal
+    children f (InjectNullary x) = leaf f x <&> InjectNullary
+
+instance Children (LabeledApply name i o) where
+    children f (LabeledApply func spec norm rel) =
+        LabeledApply
+        <$> leaf f func
+        <*> traverse f spec
+        <*> (traverse . aaExpr) f norm
+        <*> (traverse . leaf) f rel
+
+instance Children (Let name i o) where
+    children f x =
+        (\v b -> x { _lValue = v, _lBody = b} )
+        <$> f (x ^. lValue)
+        <*> f (x ^. lBody)

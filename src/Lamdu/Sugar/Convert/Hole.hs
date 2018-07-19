@@ -28,6 +28,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
+import           Data.Tree.Diverse (annotations)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -88,7 +89,7 @@ convert holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> _PNode . ann . pActions . mSetToHole .~ Nothing
+    <&> _Node . ann . pActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
 
@@ -281,7 +282,7 @@ prepareUnstoredPayloads v =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (ParentNode (Binder InternalName (T m) (T m)) (Payload InternalName (T m) (T m) a))
+    T m (Node (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
     v
     <&> mkPayload
@@ -289,8 +290,8 @@ sugar sugarContext holePl v =
         (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
     & convertBinder
-    <&> Lens.mapped %~ (,) neverShowAnnotations
-    >>= traverse (convertPayload Input.None)
+    <&> annotations %~ (,) neverShowAnnotations
+    >>= annotations (convertPayload Input.None)
     & ConvertM.run sugarContext
     where
         mkPayload x entityId = (fakeInferPayload, entityId, x)
@@ -490,7 +491,7 @@ mkResult preConversion sugarContext updateDeps stored x =
     do
         updateDeps
         writeResult preConversion stored x
-        <&> (convertBinder >=> traverse (convertPayload Input.None) . fmap ((,) neverShowAnnotations))
+        <&> (convertBinder >=> annotations (convertPayload Input.None) . (annotations %~ (,) neverShowAnnotations))
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->

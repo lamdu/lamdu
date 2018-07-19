@@ -15,6 +15,7 @@ module Lamdu.Sugar.Types
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
+import           Data.Tree.Diverse (annotations)
 import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
@@ -32,8 +33,19 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: ParentNode (AssignmentBody name i o) a
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _deContent :: Assignment name i o a
+    } deriving Generic
+
+Lens.makeLenses ''DefinitionExpression
+
+instance Functor (DefinitionExpression name i o) where
+    fmap = (deContent . annotations %~)
+
+instance Foldable (DefinitionExpression name i o) where
+    foldMap f = (^. deContent . annotations . Lens.to f)
+
+instance Traversable (DefinitionExpression name i o) where
+    traverse = deContent . annotations
 
 data DefinitionBuiltin name o = DefinitionBuiltin
     { _biName :: Definition.FFIName
@@ -62,10 +74,21 @@ data Pane name i o a = Pane
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
-    { _replExpr :: ParentNode (Binder name i o) a
+    { _replExpr :: Node (Ann a) (Binder name i o)
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
+
+Lens.makeLenses ''Repl
+
+instance Functor (Repl name i o) where
+    fmap = (replExpr . annotations %~)
+
+instance Foldable (Repl name i o) where
+    foldMap f = (^. replExpr . annotations . Lens.to f)
+
+instance Traversable (Repl name i o) where
+    traverse = replExpr . annotations
 
 data WorkArea name i o a = WorkArea
     { _waPanes :: [Pane name i o a]
@@ -75,8 +98,6 @@ data WorkArea name i o a = WorkArea
 
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionBuiltin
-Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''Pane
-Lens.makeLenses ''Repl
 Lens.makeLenses ''WorkArea
 Lens.makePrisms ''DefinitionBody

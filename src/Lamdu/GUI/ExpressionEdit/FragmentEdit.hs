@@ -49,7 +49,7 @@ responsiveLiftA3 f x y z =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Fragment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Fragment (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make fragment pl =
@@ -61,7 +61,7 @@ make fragment pl =
         config <- Lens.view Config.config
         fragmentExprGui <-
             fragment
-            & Sugar.fExpr . Sugar._PNode . Sugar.ann . Sugar.plData %~ mRemoveNextHoles
+            & Sugar.fExpr . Sugar._Node . Sugar.ann . Sugar.plData %~ mRemoveNextHoles
             & makeFragmentExprEdit & GuiState.assignCursor myId innerId
         hover <- Hover.hover
         searchAreaGui <-
@@ -107,12 +107,12 @@ make fragment pl =
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents healEventMap
     where
-        innerId = fragment ^. Sugar.fExpr . Sugar._PNode . Sugar.ann & WidgetIds.fromExprPayload
+        innerId = fragment ^. Sugar.fExpr . Sugar._Node . Sugar.ann & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Sugar.Fragment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Fragment (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Gui Responsive o)
 makeFragmentExprEdit fragment =
     do

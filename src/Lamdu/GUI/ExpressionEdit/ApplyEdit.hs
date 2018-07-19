@@ -58,7 +58,7 @@ addInfixMarker widgetId =
 
 makeFunc ::
     (Monad i, Monad o) =>
-    Sugar.Node (Sugar.BinderVarRef (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.BinderVarRef (Name o) o) ->
     ExprGuiM i o (Gui Responsive o)
 makeFunc func =
     stdWrap pl <*>
@@ -71,7 +71,7 @@ makeFunc func =
 
 makeInfixFunc ::
     (Monad i, Monad o) =>
-    Sugar.Node (Sugar.BinderVarRef (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.BinderVarRef (Name o) o) ->
     ExprGuiM i o (Gui Responsive o)
 makeInfixFunc func =
     makeFunc func <&> mAddMarker
@@ -92,7 +92,7 @@ isBoxed apply =
 makeFuncRow ::
     (Monad i, Monad o) =>
     Maybe AnimId ->
-    Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.LabeledApply (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Gui Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
@@ -118,7 +118,7 @@ makeFuncRow mParensId apply =
 
 makeLabeled ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.LabeledApply (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeLabeled apply pl =
@@ -146,7 +146,7 @@ makeArgRow arg =
 
 mkRelayedArgs ::
     (Monad i, Monad o) =>
-    [Sugar.Node (Sugar.GetVar (Name o) o) (Sugar.Payload (Name o) i o ExprGui.Payload)] ->
+    [Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.GetVar (Name o) o)] ->
     ExprGuiM i o (Gui Responsive o)
 mkRelayedArgs args =
     do
@@ -158,7 +158,7 @@ mkRelayedArgs args =
 
 mkBoxed ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApply (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.LabeledApply (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 mkBoxed apply funcRow =
     do

@@ -33,16 +33,16 @@ convert (V.Inject tag injected) exprPl =
                         >>= ExprIRef.writeValBody valI
                     typeProtect <&> EntityId.ofValI
         let inj =
-                case injectedS ^. _PNode of
-                Node pl
+                case injectedS ^. _Node of
+                Ann pl
                     (BodyRecord
                      (Composite []
                       (ClosedComposite closedCompositeActions) addItem)) ->
-                    Node pl (NullaryVal closedCompositeActions addItem)
+                    Ann pl (NullaryVal closedCompositeActions addItem)
                     & InjectNullary
                 _ ->
                     injectedS
-                    & _PNode . val . _BodyHole . holeMDelete ?~ toNullary
+                    & _Node . val . _BodyHole . holeMDelete ?~ toNullary
                     & InjectVal
         let setTag newTag =
                 do

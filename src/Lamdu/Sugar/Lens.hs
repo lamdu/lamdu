@@ -18,18 +18,20 @@ module Lamdu.Sugar.Lens
     , assignmentSubExprParams, assignmentPayloads
     , binderSubExprParams
     , paramsAnnotations
+    , stripAnnotations
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse (Children(..), hoist)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
 data PayloadOf name i o
-    = OfExpr (Body name i o ())
-    | OfElseIf (ElseIfContent name i o ())
-    | OfLet (Let name i o ())
-    | OfAssignFunction (Function name i o ())
+    = OfExpr (Body name i o (Ann ()))
+    | OfElseIf (ElseIfContent name i o (Ann ()))
+    | OfLet (Let name i o (Ann ()))
+    | OfAssignFunction (Function name i o (Ann ()))
     | OfLabeledApplyFunc (BinderVarRef name o)
     | OfRelayedArg (GetVar name o)
     | OfNullaryVal (NullaryVal name i o)
@@ -37,44 +39,44 @@ Lens.makePrisms ''PayloadOf
 
 letChildren ::
     Applicative f =>
-    (ParentNode (Binder name i o) a -> f (ParentNode (Binder name i o) b)) ->
-    (Assignment name i o a -> f (Assignment name i o b)) ->
-    Let name i o a -> f (Let name i o b)
+    (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
+    (Node n (AssignmentBody name i o) -> f (Node m (AssignmentBody name i o))) ->
+    Let name i o n -> f (Let name i o m)
 letChildren b a x =
     (\v bod -> x{_lValue=v, _lBody=bod})
     <$> a (x ^. lValue)
     <*> b (x ^. lBody)
 
 overLetChildren ::
-    (ParentNode (Binder name i o) a -> ParentNode (Binder name i o) b) ->
-    (Assignment name i o a -> Assignment name i o b) ->
-    Let name i o a -> Let name i o b
+    (Node f (Binder name i o) -> Node g (Binder name i o)) ->
+    (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
+    Let name i o f -> Let name i o g
 overLetChildren b a = Lens.runIdentity . letChildren (pure . b) (pure . a)
 
 binderChildren ::
     Applicative f =>
-    (Node (NullaryVal name i o) a -> f (Node (NullaryVal name i o) b)) ->
-    (Node (BinderVarRef name o) a -> f (Node (BinderVarRef name o) b)) ->
-    (Node (GetVar name o) a -> f (Node (GetVar name o) b)) ->
-    (ParentNode (Else name i o) a -> f (ParentNode (Else name i o) b)) ->
-    (ParentNode (Binder name i o) a -> f (ParentNode (Binder name i o) b)) ->
-    (Expression name i o a -> f (Expression name i o b)) ->
-    (Assignment name i o a -> f (Assignment name i o b)) ->
-    Binder name i o a -> f (Binder name i o b)
+    (n (NullaryVal name i o) -> f (m (NullaryVal name i o))) ->
+    (n (BinderVarRef name o) -> f (m (BinderVarRef name o))) ->
+    (n (GetVar name o) -> f (m (GetVar name o))) ->
+    (Node n (Else name i o) -> f (Node m (Else name i o))) ->
+    (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
+    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
+    (Node n (AssignmentBody name i o) -> f (Node m (AssignmentBody name i o))) ->
+    Binder name i o n -> f (Binder name i o m)
 binderChildren n l r e b f _a (BinderExpr x) =
     bodyChildren n l r e b f x <&> BinderExpr
 binderChildren _n _l _r _e b _f a (BinderLet x) =
     letChildren b a x <&> BinderLet
 
 overBinderChildren ::
-    (Node (NullaryVal name i o) a -> Node (NullaryVal name i o) b) ->
-    (Node (BinderVarRef name o) a -> Node (BinderVarRef name o) b) ->
-    (Node (GetVar name o) a -> Node (GetVar name o) b) ->
-    (ParentNode (Else name i o) a -> ParentNode (Else name i o) b) ->
-    (ParentNode (Binder name i o) a -> ParentNode (Binder name i o) b) ->
-    (Expression name i o a -> Expression name i o b) ->
-    (Assignment name i o a -> Assignment name i o b) ->
-    Binder name i o a -> Binder name i o b
+    (f (NullaryVal name i o) -> g (NullaryVal name i o)) ->
+    (f (BinderVarRef name o) -> g (BinderVarRef name o)) ->
+    (f (GetVar name o) -> g (GetVar name o)) ->
+    (Node f (Else name i o) -> Node g (Else name i o)) ->
+    (Node f (Binder name i o) -> Node g (Binder name i o)) ->
+    (Node f (Body name i o) -> Node g (Body name i o)) ->
+    (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
+    Binder name i o f -> Binder name i o g
 overBinderChildren n v r e b f a =
     Lens.runIdentity .
     binderChildren
@@ -82,10 +84,10 @@ overBinderChildren n v r e b f a =
 
 labeledApplyChildren ::
     Applicative f =>
-    (Node (BinderVarRef name o) a -> f (Node (BinderVarRef name o) b)) ->
-    (Node (GetVar name o) a -> f (Node (GetVar name o) b)) ->
-    (Expression name i o a -> f (Expression name i o b)) ->
-    LabeledApply name i o a -> f (LabeledApply name i o b)
+    (n (BinderVarRef name o) -> f (m (BinderVarRef name o))) ->
+    (n (GetVar name o) -> f (m (GetVar name o))) ->
+    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
+    LabeledApply name i o n -> f (LabeledApply name i o m)
 labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
     uncurry LabeledApply
     <$> funcAndSpecial
@@ -106,45 +108,45 @@ labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
                 <*> traverse e special
 
 overLabeledApplyChildren ::
-    (Node (BinderVarRef name o) a -> Node (BinderVarRef name o) b) ->
-    (Node (GetVar name o) a -> Node (GetVar name o) b) ->
-    (Expression name i o a -> Expression name i o b) ->
-    LabeledApply name i o a -> LabeledApply name i o b
+    (f (BinderVarRef name o) -> g (BinderVarRef name o)) ->
+    (f (GetVar name o) -> g (GetVar name o)) ->
+    (Node f (Body name i o) -> Node g (Body name i o)) ->
+    LabeledApply name i o f -> LabeledApply name i o g
 overLabeledApplyChildren l r e =
     Lens.runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
 ifElseChildren ::
     Applicative f =>
-    (ParentNode (Else name i o) a -> f (ParentNode (Else name i o) b)) ->
-    (Expression name i o a -> f (Expression name i o b)) ->
-    IfElse name i o a -> f (IfElse name i o b)
+    (Node n (Else name i o) -> f (Node m (Else name i o))) ->
+    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
+    IfElse name i o n -> f (IfElse name i o m)
 ifElseChildren onElse onExpr (IfElse if_ then_ else_) =
     IfElse <$> onExpr if_ <*> onExpr then_ <*> onElse else_
 
 overIfElseChildren ::
-    (ParentNode (Else name i o) a -> ParentNode (Else name i o) b) ->
-    (Expression name i o a -> Expression name i o b) ->
-    IfElse name i o a -> IfElse name i o b
+    (Node f (Else name i o) -> Node g (Else name i o)) ->
+    (Node f (Body name i o) -> Node g (Body name i o)) ->
+    IfElse name i o f -> IfElse name i o g
 overIfElseChildren onElse onExpr =
     Lens.runIdentity . ifElseChildren (pure . onElse) (pure . onExpr)
 
 injectContentChildren ::
     Applicative f =>
-    (Node (NullaryVal name i o) a -> f (Node (NullaryVal name i o) b)) ->
-    (Expression name i o a -> f (Expression name i o b)) ->
-    InjectContent name i o a -> f (InjectContent name i o b)
+    (n (NullaryVal name i o) -> f (m (NullaryVal name i o))) ->
+    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
+    InjectContent name i o n -> f (InjectContent name i o m)
 injectContentChildren _ e (InjectVal x) = e x <&> InjectVal
 injectContentChildren n _ (InjectNullary x) = n x <&> InjectNullary
 
 bodyChildren ::
     Applicative f =>
-    (Node (NullaryVal name i o) a -> f (Node (NullaryVal name i o) b)) ->
-    (Node (BinderVarRef name o) a -> f (Node (BinderVarRef name o) b)) ->
-    (Node (GetVar name o) a -> f (Node (GetVar name o) b)) ->
-    (ParentNode (Else name i o) a -> f (ParentNode (Else name i o) b)) ->
-    (ParentNode (Binder name i o) a -> f (ParentNode (Binder name i o) b)) ->
-    (Expression name i o a -> f (Expression name i o b)) ->
-    Body name i o a -> f (Body name i o b)
+    (n (NullaryVal name i o) -> f (m (NullaryVal name i o))) ->
+    (n (BinderVarRef name o) -> f (m (BinderVarRef name o))) ->
+    (n (GetVar name o) -> f (m (GetVar name o))) ->
+    (Node n (Else name i o) -> f (Node m (Else name i o))) ->
+    (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
+    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
+    Body name i o n -> f (Body name i o m)
 bodyChildren n l r e b f =
     \case
     BodyPlaceHolder -> pure BodyPlaceHolder
@@ -164,26 +166,29 @@ bodyChildren n l r e b f =
     BodyToNom        x -> traverse b x <&> BodyToNom
 
 parentNodePayload ::
-    (f a -> p) ->
-    Lens.IndexedLens' p (ParentNode f a) a
-parentNodePayload c f (PNode (Node pl x)) =
-    Lens.indexed f (c x) pl <&> (`Node` x) <&> PNode
+    (expr (Ann a) -> p) ->
+    Lens.IndexedLens' p (Node (Ann a) expr) a
+parentNodePayload c f (Node (Ann pl x)) =
+    Lens.indexed f (c x) pl <&> (`Ann` x) <&> Node
 
-binderIndex :: Binder name i o a -> PayloadOf name i o
-binderIndex (BinderLet x) = void x & OfLet
-binderIndex (BinderExpr x) = void x & OfExpr
+stripAnnotations :: Children expr => expr (Ann a) -> expr (Ann ())
+stripAnnotations = hoist (ann .~ ())
 
-elseIndex :: Else name i o a -> PayloadOf name i o
-elseIndex (ElseIf x) = void x & OfElseIf
-elseIndex (SimpleElse x) = void x & OfExpr
+binderIndex :: Binder name i o (Ann a) -> PayloadOf name i o
+binderIndex (BinderLet x) = stripAnnotations x & OfLet
+binderIndex (BinderExpr x) = stripAnnotations x & OfExpr
 
-assignmentBodyIndex :: AssignmentBody name i o a -> PayloadOf name i o
-assignmentBodyIndex (BodyFunction x) = void x & OfAssignFunction
+elseIndex :: Else name i o (Ann a) -> PayloadOf name i o
+elseIndex (ElseIf x) = x & eiContent %~ stripAnnotations & OfElseIf
+elseIndex (SimpleElse x) = stripAnnotations x & OfExpr
+
+assignmentBodyIndex :: AssignmentBody name i o (Ann a) -> PayloadOf name i o
+assignmentBodyIndex (BodyFunction x) = stripAnnotations x & OfAssignFunction
 assignmentBodyIndex (BodyPlain x) = binderIndex (x ^. apBody)
 
 bodyChildPayloads ::
     forall name i o a.
-    Lens.IndexedTraversal' (PayloadOf name i o) (Body name i o a) a
+    Lens.IndexedTraversal' (PayloadOf name i o) (Body name i o (Ann a)) a
 bodyChildPayloads f =
     bodyChildren
     (leafNodePayload OfNullaryVal f)
@@ -191,57 +196,57 @@ bodyChildPayloads f =
     (Lens.cloneIndexedLens relayedPayloads f)
     (parentNodePayload elseIndex f)
     (parentNodePayload binderIndex f)
-    (parentNodePayload (OfExpr . void) f)
+    (parentNodePayload (OfExpr . stripAnnotations) f)
     where
         labeledFuncPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (Node (BinderVarRef name o) a) a
+            Lens.AnIndexedLens' (PayloadOf name i o) (Ann a (BinderVarRef name o)) a
         labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
         relayedPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (Node (GetVar name o) a) a
+            Lens.AnIndexedLens' (PayloadOf name i o) (Ann a (GetVar name o)) a
         relayedPayloads = leafNodePayload OfRelayedArg
 
 overBodyChildren ::
-    (Node (NullaryVal name i o) a -> Node (NullaryVal name i o) b) ->
-    (Node (BinderVarRef name o) a -> Node (BinderVarRef name o) b) ->
-    (Node (GetVar name o) a -> Node (GetVar name o) b) ->
-    (ParentNode (Else name i o) a -> ParentNode (Else name i o) b) ->
-    (ParentNode (Binder name i o) a -> ParentNode (Binder name i o) b) ->
-    (Expression name i o a -> Expression name i o b) ->
-    Body name i o a -> Body name i o b
+    (f (NullaryVal name i o) -> g (NullaryVal name i o)) ->
+    (f (BinderVarRef name o) -> g (BinderVarRef name o)) ->
+    (f (GetVar name o) -> g (GetVar name o)) ->
+    (Node f (Else name i o) -> Node g (Else name i o)) ->
+    (Node f (Binder name i o) -> Node g (Binder name i o)) ->
+    (Node f (Body name i o) -> Node g (Body name i o)) ->
+    Body name i o f -> Body name i o g
 overBodyChildren n v r e b f =
     Lens.runIdentity .
     bodyChildren (pure . n) (pure . v) (pure . r) (pure . e) (pure . b) (pure . f)
 
 leafNodePayload ::
     (l -> p) ->
-    Lens.IndexedLens p (Node l a) (Node l b) a b
-leafNodePayload c f (Node pl x) =
-    Lens.indexed f (c x) pl <&> (`Node` x)
+    Lens.IndexedLens p (Ann a l) (Ann b l) a b
+leafNodePayload c f (Ann pl x) =
+    Lens.indexed f (c x) pl <&> (`Ann` x)
 
 parentNodePayloads ::
-    Lens.AnIndexedTraversal i (f a) (f b) a b ->
-    (f a -> i) ->
+    Lens.AnIndexedTraversal i (e (Ann a)) (e (Ann b)) a b ->
+    (e (Ann a) -> i) ->
     Lens.IndexedTraversal i
-    (ParentNode f a)
-    (ParentNode f b)
+    (Node (Ann a) e)
+    (Node (Ann b) e)
     a b
-parentNodePayloads b i f (PNode (Node pl x)) =
-    flip Node
+parentNodePayloads b i f (Node (Ann pl x)) =
+    flip Ann
     <$> Lens.cloneIndexedTraversal b f x
     <*> Lens.indexed f (i x) pl
-    <&> PNode
+    <&> Node
 
 binderPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (ParentNode (Binder name i o) a)
-    (ParentNode (Binder name i o) b)
+    (Node (Ann a) (Binder name i o))
+    (Node (Ann b) (Binder name i o))
     a b
 binderPayloads = parentNodePayloads binderBodyPayloads binderIndex
 
 assignmentBodyPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (AssignmentBody name i o a)
-    (AssignmentBody name i o b)
+    (AssignmentBody name i o (Ann a))
+    (AssignmentBody name i o (Ann b))
     a b
 assignmentBodyPayloads f (BodyFunction x) =
     (fBody . binderPayloads) f x <&> BodyFunction
@@ -250,39 +255,39 @@ assignmentBodyPayloads f (BodyPlain x) =
 
 assignmentPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (ParentNode (AssignmentBody name i o) a)
-    (ParentNode (AssignmentBody name i o) b)
+    (Assignment name i o a)
+    (Assignment name i o b)
     a b
 assignmentPayloads = parentNodePayloads assignmentBodyPayloads assignmentBodyIndex
 
 letPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (Let name i o a)
-    (Let name i o b)
+    (Let name i o (Ann a))
+    (Let name i o (Ann b))
     a b
 letPayloads f =
     letChildren (binderPayloads f) (assignmentPayloads f)
 
 binderBodyPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (Binder name i o a)
-    (Binder name i o b)
+    (Binder name i o (Ann a))
+    (Binder name i o (Ann b))
     a b
 binderBodyPayloads f (BinderExpr x) = bodyPayloads f x <&> BinderExpr
 binderBodyPayloads f (BinderLet x) = letPayloads f x <&> BinderLet
 
 elseIfContentPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (ElseIfContent name i o a)
-    (ElseIfContent name i o b)
+    (ElseIfContent name i o (Ann a))
+    (ElseIfContent name i o (Ann b))
     a b
 elseIfContentPayloads f =
     eiContent (ifElseChildren (elsePayloads f) (exprPayloads f))
 
 elseBodyPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (Else name i o a)
-    (Else name i o b)
+    (Else name i o (Ann a))
+    (Else name i o (Ann b))
     a b
 elseBodyPayloads f (SimpleElse x) = bodyPayloads f x <&> SimpleElse
 elseBodyPayloads f (ElseIf x) = elseIfContentPayloads f x <&> ElseIf
@@ -292,20 +297,20 @@ exprPayloads ::
     (Expression name i o a)
     (Expression name i o b)
     a b
-exprPayloads = parentNodePayloads bodyPayloads (OfExpr . void)
+exprPayloads = parentNodePayloads bodyPayloads (OfExpr . stripAnnotations)
 
 elsePayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
-    (ParentNode (Else name i o) a)
-    (ParentNode (Else name i o) b)
+    (Node (Ann a) (Else name i o))
+    (Node (Ann b) (Else name i o))
     a b
 elsePayloads = parentNodePayloads elseBodyPayloads elseIndex
 
 bodyPayloads ::
     forall name i o a b.
     Lens.IndexedTraversal (PayloadOf name i o)
-    (Body name i o a)
-    (Body name i o b)
+    (Body name i o (Ann a))
+    (Body name i o (Ann b))
     a b
 bodyPayloads f =
     bodyChildren
@@ -318,19 +323,19 @@ bodyPayloads f =
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
-            (Node (BinderVarRef name o) a)
-            (Node (BinderVarRef name o) b)
+            (Ann a (BinderVarRef name o))
+            (Ann b (BinderVarRef name o))
             a b
         labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
         relayedPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
-            (Node (GetVar name o) a)
-            (Node (GetVar name o) b)
+            (Ann a (GetVar name o))
+            (Ann b (GetVar name o))
             a b
         relayedPayloads = leafNodePayload OfRelayedArg
 
 payloadsOf ::
-    Lens.Fold (Body name i o ()) a ->
+    Lens.Fold (Body name i o (Ann ())) a ->
     Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o b) b
 payloadsOf x =
     exprPayloads . Lens.ifiltered predicate
@@ -341,7 +346,7 @@ binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
-bodyUnfinished :: Lens.Traversal' (Body name i o a) ()
+bodyUnfinished :: Lens.Traversal' (Body name i o (Ann a)) ()
 bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
@@ -368,19 +373,21 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (ParentNode (Binder name i o) a) a
-binderResultExpr f (PNode (Node pl x)) =
+binderResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (Node (Ann a) (Binder name i o)) a
+binderResultExpr f (Node (Ann pl x)) =
     case x of
-    BinderExpr e -> Lens.indexed f (OfExpr (void e)) pl <&> (`Node` x) <&> PNode
+    BinderExpr e ->
+        Lens.indexed f (OfExpr (stripAnnotations e)) pl
+        <&> (`Ann` x) <&> Node
     BinderLet l ->
         lBody (binderResultExpr f) l
         <&> BinderLet
-        <&> Node pl <&> PNode
+        <&> Ann pl <&> Node
 
 holeOptionTransformExprs ::
     Monad i =>
-    (ParentNode (Binder n0 i o) (Payload n0 i o ()) ->
-     i (ParentNode (Binder n1 i o) (Payload n1 i o ()))) ->
+    (Node (Ann (Payload n0 i o ())) (Binder n0 i o) ->
+        i (Node (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -390,8 +397,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (ParentNode (Binder n0 i o) (Payload n0 i o ()) ->
-        i (ParentNode (Binder n1 i o) (Payload n1 i o ()))) ->
+    (Node (Ann (Payload n0 i o ())) (Binder n0 i o) ->
+        i (Node (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr hole =
     hole
@@ -414,30 +421,30 @@ paramsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
 paramsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
 paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 
-funcSubExprParams :: Lens.Traversal' (Function name i o a) (BinderParams name i o)
+funcSubExprParams :: Lens.Traversal' (Function name i o (Ann a)) (BinderParams name i o)
 funcSubExprParams f x =
     (\p b -> x{_fParams = p, _fBody = b})
     <$> f (x ^. fParams)
     <*> binderSubExprParams f (x ^. fBody)
 
-elseSubExprParams :: Lens.Traversal' (Else name i o a) (BinderParams name i o)
+elseSubExprParams :: Lens.Traversal' (Else name i o (Ann a)) (BinderParams name i o)
 elseSubExprParams f (SimpleElse x) = bodySubExprParams f x <&> SimpleElse
 elseSubExprParams f (ElseIf x) =
     eiContent
     (ifElseChildren
-        ((_PNode . val . elseSubExprParams) f)
-        ((_PNode . val . bodySubExprParams) f))
+        ((_Node . val . elseSubExprParams) f)
+        ((_Node . val . bodySubExprParams) f))
     x <&> ElseIf
 
-bodySubExprParams :: Lens.Traversal' (Body name i o a) (BinderParams name i o)
+bodySubExprParams :: Lens.Traversal' (Body name i o (Ann a)) (BinderParams name i o)
 bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
 bodySubExprParams f x =
     bodyChildren pure pure pure
-    ((_PNode . val . elseSubExprParams) f)
+    ((_Node . val . elseSubExprParams) f)
     (binderSubExprParams f)
-    ((_PNode . val . bodySubExprParams) f) x
+    ((_Node . val . bodySubExprParams) f) x
 
-binderBodySubExprParams :: Lens.Traversal' (Binder name i o a) (BinderParams name i o)
+binderBodySubExprParams :: Lens.Traversal' (Binder name i o (Ann a)) (BinderParams name i o)
 binderBodySubExprParams f (BinderExpr x) =
     bodySubExprParams f x <&> BinderExpr
 binderBodySubExprParams f (BinderLet x) =
@@ -445,13 +452,13 @@ binderBodySubExprParams f (BinderLet x) =
     <$> assignmentSubExprParams f (x ^. lValue)
     <*> binderSubExprParams f (x ^. lBody)
 
-binderSubExprParams :: Lens.Traversal' (ParentNode (Binder name i o) a) (BinderParams name i o)
-binderSubExprParams = _PNode . val . binderBodySubExprParams
+binderSubExprParams :: Lens.Traversal' (Node (Ann a) (Binder name i o)) (BinderParams name i o)
+binderSubExprParams = _Node . val . binderBodySubExprParams
 
 assignmentBodySubExprParams ::
-    Lens.Traversal' (AssignmentBody name i o a) (BinderParams name i o)
+    Lens.Traversal' (AssignmentBody name i o (Ann a)) (BinderParams name i o)
 assignmentBodySubExprParams f (BodyPlain x) = (apBody . binderBodySubExprParams) f x <&> BodyPlain
 assignmentBodySubExprParams f (BodyFunction x) = funcSubExprParams f x <&> BodyFunction
 
 assignmentSubExprParams :: Lens.Traversal' (Assignment name i o a) (BinderParams name i o)
-assignmentSubExprParams = _PNode . val . assignmentBodySubExprParams
+assignmentSubExprParams = _Node . val . assignmentBodySubExprParams

@@ -69,17 +69,17 @@ makeInject val tag pl =
     where
         nearestHoles = ExprGui.nextHolesBefore val
         delDoc = E.Doc ["Edit", "Delete"]
-        mReplaceParent = val ^. Sugar._PNode . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. Sugar._Node . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent
 
-emptyRec :: Sugar.Node (Sugar.NullaryVal name i o) a -> Sugar.Expression name i o a
-emptyRec (Sugar.Node pl (Sugar.NullaryVal closedActions addItem)) =
+emptyRec :: Sugar.Ann a (Sugar.NullaryVal name i o) -> Sugar.Expression name i o a
+emptyRec (Sugar.Ann pl (Sugar.NullaryVal closedActions addItem)) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & Sugar.Node pl & Sugar.PNode
+    & Sugar.Ann pl & Sugar.Node
 
 makeNullaryInject ::
     (Monad i, Monad o) =>
-    Sugar.Node (Sugar.NullaryVal (Name o) i o) (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.NullaryVal (Name o) i o) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
@@ -105,7 +105,7 @@ makeNullaryInject nullary tag pl =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Inject (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Inject (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make (Sugar.Inject tag mVal) =

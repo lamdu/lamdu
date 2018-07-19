@@ -10,6 +10,7 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Tree.Diverse (annotations)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Calc.Val as V
@@ -137,7 +138,7 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             <&> _DefinitionBodyExpression . deContent %~ markAssignmentAnnotations
-            >>= traverse (convertPayload annMode)
+            >>= (_DefinitionBodyExpression . deContent . annotations) (convertPayload annMode)
             & ConvertM.run context
             <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentSubExprParams .
                 SugarLens.paramsAnnotations %~ trimParamAnnotation annMode
@@ -206,7 +207,7 @@ loadRepl cache monitors annMode evalRes cp =
         expr <-
             convertBinder valInferred
             <&> markBinderAnnotations
-            >>= traverse (convertPayload annMode)
+            >>= annotations (convertPayload annMode)
             & ConvertM.run context
             <&> SugarLens.binderSubExprParams . SugarLens.paramsAnnotations %~
                 trimParamAnnotation annMode

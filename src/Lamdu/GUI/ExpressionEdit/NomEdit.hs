@@ -34,13 +34,14 @@ mReplaceParent ::
     Lens.Traversal'
     (Sugar.Expression name i o (Sugar.Payload name i o a))
     (o Sugar.EntityId)
-mReplaceParent = Sugar._PNode . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
+mReplaceParent = Sugar._Node . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o)
-    (Sugar.ParentNode (Sugar.Binder (Name o) i o)
-        (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+        (Sugar.Node
+            (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+            (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
@@ -48,7 +49,7 @@ makeToNom nom pl =
     & mkNomGui id "ToNominal" "«" mDel pl
     where
         mDel =
-            nom ^. Sugar.nVal . Sugar._PNode . Sugar.ann . Sugar.plActions .
+            nom ^. Sugar.nVal . Sugar._Node . Sugar.ann . Sugar.plActions .
             Sugar.mReplaceParent
 
 

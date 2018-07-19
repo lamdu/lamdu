@@ -53,7 +53,7 @@ convert caseV exprPl =
     do
         V.Case tag valS restS <-
             traverse ConvertM.convertSubexpression caseV
-            <&> V.caseMatch . _PNode . val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+            <&> V.caseMatch . _Node . val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
@@ -72,7 +72,7 @@ convertAppliedCase ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
     do
-        caseB <- funcS ^? _PNode . val . _BodyCase & maybeToMPlus
+        caseB <- funcS ^? _Node . val . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setTo = protectedSetToVal (exprPl ^. Input.stored)
@@ -82,19 +82,19 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
                     CaseArg
                     { _caVal = simplifyCaseArg argS
                     , _caToLambdaCase =
-                        setTo (funcS ^. _PNode . ann . pInput . Input.stored . Property.pVal)
+                        setTo (funcS ^. _Node . ann . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     }
         convertIfElse setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
-            <&> _PNode . ann . pInput . Input.entityId .~ funcS ^. _PNode . ann . pInput . Input.entityId
-            <&> _PNode . ann . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> funcS ^. _PNode . ann . pInput . Input.userData)
+            <&> _Node . ann . pInput . Input.entityId .~ funcS ^. _Node . ann . pInput . Input.entityId
+            <&> _Node . ann . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> funcS ^. _Node . ann . pInput . Input.userData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
-    case argS ^. _PNode . val of
-    BodyFromNom nom | Lens.nullOf (nVal . _PNode . val . SugarLens.bodyUnfinished) nom -> nom ^. nVal
+    case argS ^. _Node . val of
+    BodyFromNom nom | Lens.nullOf (nVal . _Node . val . SugarLens.bodyUnfinished) nom -> nom ^. nVal
     _ -> argS

@@ -51,8 +51,8 @@ testSugarActions program actions =
     testProgram program $ \cache ->
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
-replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o a)
-replBody = waRepl . replExpr . _PNode . val . _BinderExpr
+replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o (Ann a))
+replBody = waRepl . replExpr . _Node . val . _BinderExpr
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
@@ -68,8 +68,8 @@ testChangeParam =
             "new" &
             workArea ^?!
             replBody . _BodySimpleApply . V.applyFunc .
-            _PNode . val . _BodySimpleApply . V.applyArg .
-            _PNode . val . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
+            _Node . val . _BodySimpleApply . V.applyArg .
+            _Node . val . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -86,9 +86,9 @@ testReorderLets =
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             replBody . _BodyLam . lamFunc . fBody .
-            _PNode . val . _BinderLet . lBody .
-            _PNode . val . _BinderLet . lValue .
-            _PNode . ann . plActions . extract
+            _Node . val . _BinderLet . lBody .
+            _Node . val . _BinderLet . lValue .
+            _Node . ann . plActions . extract
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
@@ -98,7 +98,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            replBody . _BodyLam . lamFunc . fBody . _PNode . ann . plActions .
+            replBody . _BodyLam . lamFunc . fBody . _Node . ann . plActions .
             extract
 
 -- Test for issue #402
@@ -111,32 +111,32 @@ testInline =
         inline workArea =
             do
                 Just yOption <-
-                    letItem ^. lBody . _PNode . val . _BinderExpr . _BodyHole
+                    letItem ^. lBody . _Node . val . _BinderExpr . _BodyHole
                     . holeOptions
                     >>= findM isY
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
                 _ <-
-                    result ^?! holeResultConverted . _PNode . val . _BinderExpr
+                    result ^?! holeResultConverted . _Node . val . _BinderExpr
                     . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
                 letItem =
                     workArea ^?!
                     replBody . _BodyLam . lamFunc . fBody .
-                    _PNode . val . _BinderLet
+                    _Node . val . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
                     <&> Lens.has
-                    (_PNode . val . _BinderExpr . _BodyGetVar . _GetBinder .
+                    (_Node . val . _BinderExpr . _BodyGetVar . _GetBinder .
                         bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
-            _PNode . val . _BinderExpr . _BodyLiteral . _LiteralNum
+            _Node . val . _BinderExpr . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
@@ -178,7 +178,7 @@ testLightLambda =
             | otherwise = fail "Expected light lambda sugar!"
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
-            _PNode . val . _BodyLam . lamMode . _LightLambda
+            _Node . val . _BodyLam . lamMode . _LightLambda
 
 delDefParam :: Test
 delDefParam =
@@ -189,6 +189,6 @@ delDefParam =
         action =
             waPanes . traverse . paneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
-            _PNode . val . _BodyFunction .
+            _Node . val . _BodyFunction .
             fParams . _Params . traverse .
             fpInfo . piActions . fpDelete

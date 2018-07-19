@@ -86,7 +86,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         ExprGuiM.makeSubexpression arg
                         <&> Widget.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
                     mTag <-
-                        Annotation.evaluationResult (arg ^. Sugar._PNode . Sugar.ann)
+                        Annotation.evaluationResult (arg ^. Sugar._Node . Sugar.ann)
                         <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
                     Options.boxSpaced
                         ?? Options.disambiguationNone

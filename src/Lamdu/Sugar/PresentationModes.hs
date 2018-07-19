@@ -16,9 +16,9 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Sugar.Node (Sugar.BinderVarRef InternalName (T m)) (ConvertPayload m a) ->
+    Sugar.Ann (ConvertPayload m a) (Sugar.BinderVarRef InternalName (T m)) ->
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
-    T m (Sugar.LabeledApply InternalName (T m) (T m) (ConvertPayload m a))
+    T m (Sugar.LabeledApply InternalName (T m) (T m) (Sugar.Ann (ConvertPayload m a)))
 makeLabeledApply func args =
     func ^. Sugar.val . Sugar.bvVar
     & Anchors.assocPresentationMode & Property.getP
@@ -52,19 +52,19 @@ makeLabeledApply func args =
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
         mkInfixArg arg other =
             arg
-            & Sugar._PNode . Sugar.val . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. Sugar._PNode . Sugar.ann . pActions . Sugar.mReplaceParent
+            & Sugar._Node . Sugar.val . Sugar._BodyHole . Sugar.holeMDelete .~
+                other ^. Sugar._Node . Sugar.ann . pActions . Sugar.mReplaceParent
         processArg arg =
             do
-                getVar <- arg ^? Sugar.aaExpr . Sugar._PNode . Sugar.val . Sugar._BodyGetVar
+                getVar <- arg ^? Sugar.aaExpr . Sugar._Node . Sugar.val . Sugar._BodyGetVar
                 name <-
                     case getVar of
                     Sugar.GetParam x -> x ^. Sugar.pNameRef . Sugar.nrName & Just
                     Sugar.GetBinder x -> x ^. Sugar.bvNameRef . Sugar.nrName & Just
                     Sugar.GetParamsRecord _ -> Nothing
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
-                Right Sugar.Node
+                Right Sugar.Ann
                     { Sugar._val = getVar
-                    , Sugar._ann = arg ^. Sugar.aaExpr . Sugar._PNode . Sugar.ann
+                    , Sugar._ann = arg ^. Sugar.aaExpr . Sugar._Node . Sugar.ann
                     } & Just
             & fromMaybe (Left arg)

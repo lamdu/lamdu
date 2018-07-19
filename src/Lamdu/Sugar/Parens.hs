@@ -41,38 +41,39 @@ addToWorkArea w =
 
 addToAssignment ::
     HasPrecedence name =>
-    ParentNode (AssignmentBody name i o) a ->
-    ParentNode (AssignmentBody name i o) (MinOpPrec, NeedsParens, a)
-addToAssignment (PNode (Node pl b)) =
-    PNode (Node (0, NoNeedForParens, pl) (addToAssignmentBody b))
+    Node (Ann a) (AssignmentBody name i o) ->
+    Node (Ann (MinOpPrec, NeedsParens, a)) (AssignmentBody name i o)
+addToAssignment (Node (Ann pl b)) =
+    Node (Ann (0, NoNeedForParens, pl) (addToAssignmentBody b))
 
 addToAssignmentBody ::
     HasPrecedence name =>
-    AssignmentBody name i o a ->
-    AssignmentBody name i o (MinOpPrec, NeedsParens, a)
+    AssignmentBody name i o (Ann a) ->
+    AssignmentBody name i o (Ann (MinOpPrec, NeedsParens, a))
 addToAssignmentBody (BodyFunction x) = x & fBody %~ addToBinder & BodyFunction
 addToAssignmentBody (BodyPlain x) =
     x & apBody %~ addToBinderBody & BodyPlain
 
 addToBinder ::
     HasPrecedence name =>
-    ParentNode (Binder name i o) a ->
-    ParentNode (Binder name i o) (MinOpPrec, NeedsParens, a)
+    Node (Ann a) (Binder name i o) ->
+    Node (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
 addToBinder = addToBinderWith 0
 
 addToBinderWith ::
     HasPrecedence name =>
     Prec ->
-    ParentNode (Binder name i o) a ->
-    ParentNode (Binder name i o) (MinOpPrec, NeedsParens, a)
-addToBinderWith minOpPrec (PNode (Node pl x)) =
+    Node (Ann a) (Binder name i o) ->
+    Node (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
+addToBinderWith minOpPrec (Node (Ann pl x)) =
     addToBinderBody x
-    & Node (minOpPrec, NoNeedForParens, pl)
-    & PNode
+    & Ann (minOpPrec, NoNeedForParens, pl)
+    & Node
 
 unambiguousBody ::
     HasPrecedence name =>
-    Body name i o a -> Body name i o (MinOpPrec, NeedsParens, a)
+    Body name i o (Ann a) ->
+    Body name i o (Ann (MinOpPrec, NeedsParens, a))
 unambiguousBody x =
     -- NOTE: In "0 unambiguous" case, the expr body is necessarily
     -- without parens and cannot reduce minOpPrec further, so ignore
@@ -81,9 +82,9 @@ unambiguousBody x =
 
 addToElse ::
     HasPrecedence name =>
-    ParentNode (Else name i o) a ->
-    ParentNode (Else name i o) (MinOpPrec, NeedsParens, a)
-addToElse (PNode (Node pl x)) =
+    Node (Ann a) (Else name i o) ->
+    Node (Ann (MinOpPrec, NeedsParens, a)) (Else name i o)
+addToElse (Node (Ann pl x)) =
     case x of
     SimpleElse expr -> unambiguousBody expr & SimpleElse
     ElseIf elseIf ->
@@ -91,13 +92,13 @@ addToElse (PNode (Node pl x)) =
         & eiContent %~
         SugarLens.overIfElseChildren addToElse (loopExpr 0 unambiguous)
         & ElseIf
-    & Node (0, NoNeedForParens, pl)
-    & PNode
+    & Ann (0, NoNeedForParens, pl)
+    & Node
 
 addToBinderBody ::
     HasPrecedence name =>
-    Binder name i o a ->
-    Binder name i o (MinOpPrec, NeedsParens, a)
+    Binder name i o (Ann a) ->
+    Binder name i o (Ann (MinOpPrec, NeedsParens, a))
 addToBinderBody (BinderExpr x) = unambiguousBody x & BinderExpr
 addToBinderBody (BinderLet x) =
     BinderLet x
@@ -113,14 +114,15 @@ addToExpr = addToExprWith 0
 
 addToExprWith ::
     HasPrecedence name =>
-    Prec -> Expression name i o a ->
+    Prec ->
+    Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
-    Lens.Prism' (LabeledApply name i o a)
+    Lens.Prism' (LabeledApply name i o (Ann a))
     ( Expression name i o a
-    , Node (BinderVarRef name o) a
+    , Ann a (BinderVarRef name o)
     , Expression name i o a
     )
 bareInfix =
@@ -134,15 +136,15 @@ loopExpr ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-loopExpr minOpPrec parentPrec (PNode (Node pl body_)) =
-    Node (resPrec, parens, pl) newBody & PNode
+loopExpr minOpPrec parentPrec (Node (Ann pl body_)) =
+    Ann (resPrec, parens, pl) newBody & Node
     where
         (resPrec, parens, newBody) = loopExprBody minOpPrec parentPrec body_
 
 loopExprBody ::
     HasPrecedence name =>
-    MinOpPrec -> Precedence Prec -> Body name i o a ->
-    (MinOpPrec, NeedsParens, Body name i o (MinOpPrec, NeedsParens, a))
+    MinOpPrec -> Precedence Prec -> Body name i o (Ann a) ->
+    (MinOpPrec, NeedsParens, Body name i o (Ann (MinOpPrec, NeedsParens, a)))
 loopExprBody minOpPrec parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
@@ -177,7 +179,7 @@ loopExprBody minOpPrec parentPrec body_ =
         neverParen = (,,) (maxNamePrec + 1) NoNeedForParens
         inject (Inject t v) =
             case v of
-            InjectNullary x -> x <&> neverParen & InjectNullary
+            InjectNullary x -> x & ann %~ neverParen & InjectNullary
             InjectVal x -> loopExpr 0 (childPrec (before .~ 0) needParens) x & InjectVal
             & Inject t & BodyInject
             & result needParens
@@ -199,13 +201,13 @@ loopExprBody minOpPrec parentPrec body_ =
             case x ^? bareInfix of
             Nothing ->
                 SugarLens.overLabeledApplyChildren
-                (<&> neverParen) (<&> neverParen) (loopExpr 0 unambiguous) x
+                (ann %~ neverParen) (ann %~ neverParen) (loopExpr 0 unambiguous) x
                 & BodyLabeledApply & result False
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #
             ( loopExpr 0 (childPrec (after .~ prec) needParens) l
-            , func <&> neverParen
+            , func & ann %~ neverParen
             , loopExpr (prec+1) (childPrec (before .~ prec) needParens) r
             ) & BodyLabeledApply & result needParens
             where

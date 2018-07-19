@@ -35,7 +35,7 @@ import           Lamdu.Prelude
 make ::
     (Monad i, Monad o) =>
     ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)
-make (Sugar.PNode (Sugar.Node pl body)) =
+make (Sugar.Node (Sugar.Ann pl body)) =
     makeEditor body pl & assignCursor
     where
         exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
@@ -55,7 +55,7 @@ placeHolder pl =
 
 makeEditor ::
     (Monad i, Monad o) =>
-    Sugar.Body (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Body (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeEditor body pl =
