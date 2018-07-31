@@ -76,15 +76,10 @@ convertRedex expr redex =
     do
         tag <- convertTaggedEntity param
         (_pMode, value) <-
-            let onAssignmentPl pl =
-                    pl
-                    & Input.entityId .~
-                        EntityId.ofBinder (redex ^. Redex.lam . V.lamParamId)
-                    & Input.userData <>~ redex ^. Redex.arg . Val.payload . Input.userData
-            in
             convertAssignment binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
-            <&> _2 . _Node . ann . pInput %~ onAssignmentPl
+            <&> _2 . _Node . ann . pInput . Input.entityId .~
+                EntityId.ofValI (redex ^. Redex.arg . Val.payload . Input.stored . Property.pVal)
         letBody <-
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~

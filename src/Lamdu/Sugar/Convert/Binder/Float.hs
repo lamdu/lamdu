@@ -249,7 +249,7 @@ makeFloatLetToOuterScope setTopLevel redex =
                         & Definition.Expr (redex ^. Redex.arg)
                         & Definition.pruneDefExprDeps
             Just outerScopeInfo ->
-                EntityId.ofBinder param <$
+                EntityId.ofValI (redex ^. Redex.arg . Val.payload . Input.stored . Property.pVal) <$
                 DataOps.redexWrapWithGivenParam param
                 (Property.value newLetP) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
