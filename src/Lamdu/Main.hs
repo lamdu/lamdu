@@ -402,6 +402,8 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
         let makeWidget env =
                 do
                     sample <- ConfigSampler.getSample configSampler
+                    when (sample ^. sConfig . Config.debug . Config.printCursor)
+                        (putStrLn ("Cursor: " <> show (env ^. M.cursor)))
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
                     iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
         let mkFontInfo zoom =

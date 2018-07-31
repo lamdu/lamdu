@@ -3,6 +3,7 @@
     "debug": {
         "showFPS": false,
         "virtualCursorShown": false,
+        "printCursor": false,
         "breakpoints": {
             "inference": false,
             "sugaring": false,

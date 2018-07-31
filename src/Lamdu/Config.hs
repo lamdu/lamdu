@@ -86,6 +86,7 @@ Lens.makeLenses ''Literal
 
 data Debug = Debug
     { _debugShowFPS :: Bool
+    , _printCursor :: Bool
     , _virtualCursorShown :: Bool
     , _breakpoints :: Debug.Tasks Bool
     } deriving (Eq, Show)
