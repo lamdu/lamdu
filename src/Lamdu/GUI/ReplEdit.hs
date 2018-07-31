@@ -161,13 +161,13 @@ resultWidget ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
     , HasTheme env, HasConfig env
     ) =>
-    ExportRepl o -> Sugar.Payload name i (T o) a -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
+    ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))
-resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
+resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
-        if Lens.anyOf (Sugar.plAnnotation . SugarLens.annotationTypes) isExecutableType pl
-            then
+        case varInfo of
+            Sugar.VarAction ->
                 do
                     actionKeys <- Lens.view (Config.config . Config.actionKeys)
                     let executeEventMap =
@@ -176,8 +176,7 @@ resultWidget exportRepl pl tag Sugar.EvalSuccess {} =
                             & E.keysEventMap actionKeys (E.Doc ["Execute"])
                     (Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~)) ?? view
                         <&> Align.tValue %~ Widget.weakerEvents executeEventMap
-            else
-                view & Align.tValue %~ Widget.fromView & pure
+            _ -> view & Align.tValue %~ Widget.fromView & pure
 resultWidget _ _ tag (Sugar.EvalError err) =
     errorIndicator indicatorId tag err
     <&> Align.tValue . Lens.mapped %~ IOTrans.liftTrans
@@ -188,12 +187,12 @@ make ::
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
     ExprGuiM (T m) (T m) (Gui Responsive (IOTrans m))
-make exportRepl (Sugar.Repl replExpr _varInfo replResult) =
+make exportRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         theConfig <- Lens.view config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
-            (resultWidget exportRepl replExprPl <$> curPrevTag <&> fmap) <*> replResult
+            (resultWidget exportRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
