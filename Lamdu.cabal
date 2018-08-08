@@ -84,7 +84,7 @@ Test-Suite Tests
 
 Library
   hs-source-dirs: src
-  extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
+  default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   build-depends:    AlgoW
                   , aeson >= 1.1
                   , aeson-pretty
