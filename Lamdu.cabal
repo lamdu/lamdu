@@ -9,7 +9,7 @@ Maintainer:          eyal.lotem@gmail.com, yairchu@gmail.com
 Homepage:            http://www.lamdu.org
 Category:            Graphics
 Build-type:          Simple
-Cabal-version:       >= 1.8
+Cabal-version:       >= 1.10
 Data-files:          fonts/DejaVuSans.ttf
                    , fonts/DejaVuSansMono.ttf
                    , fonts/DejaVuSerif.ttf
