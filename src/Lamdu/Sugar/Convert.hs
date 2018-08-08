@@ -114,7 +114,6 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
             <&> Load.assertInferSuccess
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr postProcess
-            <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcess)
         let context =
                 Context
                 { _scInferContext = newInferContext
