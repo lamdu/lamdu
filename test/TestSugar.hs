@@ -4,6 +4,7 @@ module TestSugar where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
+import qualified Data.Property as Property
 import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
@@ -33,6 +34,7 @@ test =
     , testReplaceParent
     , setHoleToHole
     , testCreateLetInLetVal
+    , testFloatToRepl
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -47,8 +49,14 @@ testSugarActions program actions =
     testProgram program $ \cache ->
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
+replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o (Ann a))
+replBinder = waRepl . replExpr . val
+
 replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o (Ann a))
-replBody = waRepl . replExpr . val . _BinderExpr
+replBody = replBinder . _BinderExpr
+
+replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o (Ann a))
+replLet = replBinder . _BinderLet
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
@@ -228,6 +236,37 @@ setHoleToHole =
             replBody . _BodyLam . lamFunc . fBody .
             val . _BinderLet . lValue .
             ann . plActions . mSetToHole . Lens._Just
+
+assertEq :: (Monad m, Show a, Eq a) => String -> a -> a -> m ()
+assertEq msg expected got
+    | expected == got = pure ()
+    | otherwise =
+          "Assertion failed: " ++ msg ++
+          "\n  expected to be: " ++ show expected ++
+          "\n  but was:        " ++ show got
+          & fail
+
+testFloatToRepl :: Test
+testFloatToRepl =
+    testCase "float-to-repl" $
+    testProgram "repl-2-lets.json" $ \cache ->
+    do
+        workArea <- convertWorkArea cache
+        assertLetVals workArea 1 2
+        void $ workArea ^?! innerLet . ann . plActions . extract
+        newWorkArea <- convertWorkArea cache
+        assertLetVals newWorkArea 2 1
+    where
+        assertLetVals workArea outer inner =
+            do
+                assertEq "Outer let val" outer
+                    (workArea ^?! replLet . lValue . literalVal)
+                assertEq "Inner let val" inner
+                    (workArea ^?! innerLet . literalVal)
+
+        innerLet :: Lens.Traversal' (WorkArea name i o a) (Ann a (AssignmentBody name i o (Ann a)))
+        innerLet = replLet . lBody . val . _BinderLet . lValue
+        literalVal = val . _BodyPlain . apBody . _BinderExpr . _BodyLiteral . _LiteralNum . Property.pVal
 
 testCreateLetInLetVal :: Test
 testCreateLetInLetVal =
