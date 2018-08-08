@@ -23,10 +23,11 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.NearestHoles as NearestHoles
@@ -97,12 +98,17 @@ make fragment pl =
                             | otherwise = w
         let healEventMap =
                 case fragment ^. Sugar.fHeal of
-                Sugar.TypeMismatch -> mempty
+                Sugar.TypeMismatch ->
+                    pl ^. Sugar.plEntityId & HoleWidgetIds.make
+                    & HoleWidgetIds.hidOpen & pure
+                    & E.keysEventMapMovesCursor
+                    (config ^. Config.healKeys)
+                    (E.Doc ["Edit", "Fragment", "Show Results"])
                 Sugar.HealAction heal ->
                     heal <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
                         (Config.delKeys config <> config ^. Config.healKeys)
-                        (E.Doc ["Edit", "Heal"])
+                        (E.Doc ["Edit", "Fragment", "Heal"])
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents healEventMap
