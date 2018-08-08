@@ -166,14 +166,14 @@ convertDefBody cache monitors annMode evalRes cp (Definition.Definition bod defT
     Definition.BodyExpr defExpr -> convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
-loadRepl ::
+convertRepl ::
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
     Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m
     (Repl InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
-loadRepl cache monitors annMode evalRes cp =
+convertRepl cache monitors annMode evalRes cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
@@ -270,8 +270,6 @@ loadPanes cache monitors annMode evalRes cp replEntityId =
                         def
                         <&> Anchors.paneDef
                         & convertDefBody cache monitors annMode evalRes cp
-                    let defI = def ^. Definition.defPayload & Anchors.paneDef
-                    let defVar = ExprIRef.globalId defI
                     tag <- Anchors.tags cp & convertTaggedEntityWith defVar
                     defS <-
                         OrderTags.orderDef Definition
@@ -288,6 +286,9 @@ loadPanes cache monitors annMode evalRes cp replEntityId =
                         , _paneMoveDown = mkMMovePaneDown i
                         , _paneMoveUp = mkMMovePaneUp i
                         }
+                where
+                    defVar = ExprIRef.globalId defI
+                    defI = def ^. Definition.defPayload & Anchors.paneDef
         paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
@@ -300,7 +301,7 @@ loadWorkArea ::
         (Payload InternalName (T m) (T m) [EntityId]))
 loadWorkArea cache monitors annMode evalRes cp =
     do
-        repl <- loadRepl cache monitors annMode evalRes cp
+        repl <- convertRepl cache monitors annMode evalRes cp
         panes <-
             loadPanes cache monitors annMode evalRes cp
             (repl ^. replExpr . SugarLens.binderResultExpr . plEntityId)

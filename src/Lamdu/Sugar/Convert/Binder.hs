@@ -151,8 +151,7 @@ convertBinder ::
 convertBinder expr =
     do
         actions <-
-            makeActions (expr ^. Val.payload)
-            & localNewExtractDestPos expr
+            makeActions (expr ^. Val.payload) & localNewExtractDestPos expr
         (b, hiddenPls) <- convertBinderBody expr
         Node Ann
             { _val = b

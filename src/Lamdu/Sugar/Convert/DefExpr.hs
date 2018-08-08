@@ -12,7 +12,7 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
+import           Lamdu.Sugar.Convert.Binder (convertDefinitionBinder)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -33,7 +33,7 @@ convert ::
 convert defType defExpr defI =
     do
         (presMode, content) <-
-            ConvertBinder.convertDefinitionBinder defI (defExpr ^. Definition.expr)
+            convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
                 defExpr ^. Definition.expr . Val.payload . Input.inferredType
