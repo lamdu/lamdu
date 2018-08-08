@@ -11,6 +11,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
+import           Test.HUnit (assertBool)
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 
 import           Test.Lamdu.Prelude
@@ -31,6 +32,7 @@ test =
     , testReorderLets
     , testReplaceParent
     , setHoleToHole
+    , testCreateLetInLetVal
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -226,3 +228,28 @@ setHoleToHole =
             replBody . _BodyLam . lamFunc . fBody .
             val . _BinderLet . lValue .
             ann . plActions . mSetToHole . Lens._Just
+
+testCreateLetInLetVal :: Test
+testCreateLetInLetVal =
+    testCase "create-let-in-let-val" $
+    do
+        result <-
+            testProgram "let-item-inline.json" $ \cache ->
+                do
+                    workArea <- convertWorkArea cache
+                    _ <-
+                        workArea ^?!
+                        theLet . lValue . ann . plActions . mNewLet .
+                        Lens._Just
+                    newWorkArea <- convertWorkArea cache
+                    Lens.has
+                        ( theLet . lValue . val . _BodyPlain
+                        . apBody . _BinderLet
+                        ) newWorkArea & pure
+        assertBool "Let was not created inside the let-value" result
+    where
+        -- | Extract from:
+        -- >>> \x -> let y = 0 in <hole>
+        --           ^^^^^^^^^^^^^^^^^^^
+        theLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o (Ann a))
+        theLet = replBody . _BodyLam . lamFunc . fBody . val . _BinderLet
