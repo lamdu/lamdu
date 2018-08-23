@@ -95,6 +95,15 @@ focusedWidget gui =
     where
         widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
+makeFocusedWidget ::
+    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    , HasSettings env, HasStyle env
+    ) =>
+    String -> Cache.Functions -> env ->
+    T ViewM (Widget.Focused (T ViewM GuiState.Update))
+makeFocusedWidget afterDoc cache env =
+    makeGui afterDoc cache env >>= focusedWidget
+
 mApplyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
@@ -103,7 +112,7 @@ mApplyEvent ::
     T ViewM (Maybe GuiState.Update)
 mApplyEvent cache env virtCursor event =
     do
-        w <- makeGui "mApplyEvent" cache env >>= focusedWidget
+        w <- makeFocusedWidget "mApplyEvent" cache env
         let eventMap =
                 (w ^. Widget.fEventMap)
                 Widget.EventContext
@@ -272,7 +281,7 @@ testConsistentKeyboardNavigation cache posEnv posVirt
 testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testActions cache env virtCursor =
     do
-        w <- makeGui "" cache env >>= focusedWidget
+        w <- makeFocusedWidget "" cache env
         (w ^. Widget.fEventMap)
             Widget.EventContext
             { Widget._eVirtualCursor = virtCursor
