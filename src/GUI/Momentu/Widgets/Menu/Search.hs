@@ -150,6 +150,8 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (_tcTextEdit . allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
+            <&> Align.tValue . Widget.wState . Widget._StateUnfocused .
+                Widget.uMStroll ?~ (myId ^. Lens._Unwrapped, myId ^. Lens._Unwrapped)
         pure Term
             { _termWidget = widget
             , _termEditEventMap =

@@ -9,7 +9,6 @@ import qualified TestJsExport
 import qualified TestJsRtsTags
 import qualified TestMomentu
 import qualified TestNames
-import qualified TestNearestHoles
 import qualified TestNix
 import qualified TestPrecedence
 import qualified TestReadme
@@ -33,7 +32,6 @@ main =
             , TestJsRtsTags.test
             , TestMomentu.test
             , TestNames.test
-            , TestNearestHoles.test
             , TestNix.test
             , TestPrecedence.test
             , TestReadme.test

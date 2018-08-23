@@ -14,8 +14,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Name as Name
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.Gui (verifyLayers)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
@@ -53,10 +51,10 @@ testTypeView =
             & Sugar.TRecord
             & Sugar.Type entityId
 
-adhocPayload :: NearestHoles -> ExprGui.Payload
-adhocPayload nearestHoles = ExprGui.Payload
+adhocPayload :: ExprGui.Payload
+adhocPayload =
+    ExprGui.Payload
     { ExprGui._plHiddenEntityIds = []
-    , ExprGui._plNearestHoles = nearestHoles
     , ExprGui._plNeedParens = False
     , ExprGui._plMinOpPrec = 13
     }
@@ -87,5 +85,5 @@ testFragment =
             )
             & Sugar._Node . Sugar.ann . Sugar.plEntityId .~ fragEntityId
             & Stub.addNamesToExpr
-            & annotations . Sugar.plData .~ adhocPayload NearestHoles.none
+            & annotations . Sugar.plData .~ adhocPayload
         fragEntityId = "frag"

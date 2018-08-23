@@ -87,8 +87,8 @@ mkParamPickResult :: Sugar.EntityId -> a -> Menu.PickResult
 mkParamPickResult tagInstance _ =
     Menu.PickResult
     { Menu._pickDest = WidgetIds.fromEntityId tagInstance
-    , Menu._pickNextEntryPoint =
-        WidgetIds.fromEntityId tagInstance & TagEdit.addParamId
+    , Menu._pickMNextEntry =
+        WidgetIds.fromEntityId tagInstance & TagEdit.addParamId & Just
     }
 
 -- exported for use in definition sugaring.

@@ -9,7 +9,7 @@ module GUI.Momentu.Widgets.Menu
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), _TooMany, _FullList, _Truncated
         , olOptions, olIsTruncated, toOptionList
-    , PickResult(..), pickDest, pickNextEntryPoint
+    , PickResult(..), pickDest, pickMNextEntry
     , PickFirstResult(..)
     , RenderedOption(..), rWidget, rPick
     , Option(..), oId, oRender, oSubmenuWidgets
@@ -95,17 +95,12 @@ configLens keys style f env =
 
 
 -- | Menu supports picking results and setting cursor directly to it
--- (return), or picking and going to the next "entry point" (space).
---
--- When going to the next entry point, we want to go to an entry point
--- inside the picked result if it exists, or to an "outer" entry point
--- if it doesn't (and the "outer" entry point exists).
---
--- When the inner dest is an entry point, pickDest and pickNextEntryPoint
--- should both point to it.
+-- (return), or picking it and strolling (space).
+-- When pickMNextEntry has a value, strolling would go to that value
+-- rather than the normal stroll.
 data PickResult = PickResult
     { _pickDest :: Widget.Id
-    , _pickNextEntryPoint :: Widget.Id
+    , _pickMNextEntry :: Maybe Widget.Id
     }
 Lens.makeLenses ''PickResult
 
@@ -276,8 +271,16 @@ makePickEventMap =
     Lens.view (config . configKeys)
     <&>
     \keys pick ->
-    E.keysEventMapMovesCursor (keys ^. keysPickOptionAndGotoNext)
-    (E.Doc [pick ^. Widget.pDesc <> ", Next entry"]) (pick ^. Widget.pAction <&> (^. pickNextEntryPoint))
+    E.keyPresses (keys ^. keysPickOptionAndGotoNext <&> MetaKey.toModKey)
+    (E.Doc [pick ^. Widget.pDesc <> ", Next entry"])
+    (pick ^. Widget.pAction <&>
+        \result ->
+        case result ^. pickMNextEntry of
+        Just nextEntry -> State.updateCursor nextEntry
+        Nothing ->
+            State.updateCursor (result ^. pickDest)
+            & State.uPreferStroll .~ (True ^. Lens._Unwrapped)
+        )
     <>
     E.keysEventMapMovesCursor (keys ^. keysPickOption)
     (E.Doc [pick ^. Widget.pDesc]) (pick ^. Widget.pAction <&> (^. pickDest))

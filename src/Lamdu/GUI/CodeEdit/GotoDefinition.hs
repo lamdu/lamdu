@@ -73,7 +73,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
             , Menu._oRender = mkRenedered
             , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
             }
-        toPickResult = join Menu.PickResult
+        toPickResult x = Menu.PickResult x (Just x)
         toRenderedOption nameRef widget =
             Menu.RenderedOption
             { Menu._rWidget = widget

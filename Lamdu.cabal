@@ -59,7 +59,6 @@ Test-Suite Tests
                , TestJsRtsTags
                , TestMomentu
                , TestNames
-               , TestNearestHoles
                , TestNix
                , TestPrecedence
                , TestReadme
@@ -360,7 +359,6 @@ Library
                   , Lamdu.Sugar.Names.Map
                   , Lamdu.Sugar.Names.NameGen
                   , Lamdu.Sugar.Names.Walk
-                  , Lamdu.Sugar.NearestHoles
                   , Lamdu.Sugar.OrderTags
                   , Lamdu.Sugar.PresentationModes
                   , Lamdu.Sugar.Types

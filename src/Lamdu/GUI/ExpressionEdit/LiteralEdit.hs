@@ -40,7 +40,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -166,15 +165,13 @@ numEdit prop pl =
                     & const
                     & E.charGroup Nothing (E.Doc ["Edit", "Literal", "Negate"]) "-"
                 | otherwise = mempty
-        nextEntryEvent <-
-            case pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next of
-            Nothing -> pure mempty
-            Just nextEntry ->
-                Lens.view (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
-                <&>
-                \keys ->
-                WidgetIds.fromEntityId nextEntry & pure
-                & E.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Next entry"])
+        strollEvent <-
+            Lens.view (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
+            <&>
+            \keys ->
+            E.keysEventMap keys (E.Doc ["Navigation", "Next entry"])
+            (pure ())
+            <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
         let delEvent =
                 case pl ^. Sugar.plActions . Sugar.mSetToHole of
                 -- Allow to delete when text is empty
@@ -195,7 +192,7 @@ numEdit prop pl =
                 -- so weakerEvents with them will work.
                 E.filter (Lens.has Lens._Just . parseNum . fst)
             <&> Align.tValue . Lens.mapped %~ event
-            <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> nextEntryEvent)
+            <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> strollEvent)
             <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
     & withStyle Style.num
     where

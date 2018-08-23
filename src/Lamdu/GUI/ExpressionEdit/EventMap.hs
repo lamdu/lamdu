@@ -2,7 +2,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ( add
     , Options(..), defaultOptions
     , ExprInfo(..), addWith
-    , jumpHolesEventMap
     , extractCursor
     , detachEventMap
     , addLetEventMap
@@ -26,8 +25,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Precedence (precedence)
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import           Lamdu.Sugar.Parens (MinOpPrec)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -35,7 +32,6 @@ import           Lamdu.Prelude
 
 data ExprInfo name i o = ExprInfo
     { exprInfoIsHoleResult :: Bool
-    , exprInfoNearestHoles :: NearestHoles
     , exprInfoActions :: Sugar.NodeActions name i o
     , exprInfoMinOpPrec :: MinOpPrec
     , exprInfoIsSelected :: Bool
@@ -60,7 +56,6 @@ exprInfoFromPl pl =
         isHoleResult <- ExprGuiM.isHoleResult
         pure ExprInfo
             { exprInfoIsHoleResult = isHoleResult
-            , exprInfoNearestHoles = pl ^. Sugar.plData . ExprGui.plNearestHoles
             , exprInfoActions = pl ^. Sugar.plActions
             , exprInfoMinOpPrec = pl ^. Sugar.plData . ExprGui.plMinOpPrec
             , exprInfoIsSelected = isSelected
@@ -76,28 +71,7 @@ addWith ::
     (HasWidget w, Monad i, Monad o) =>
     Options -> ExprInfo name i o -> ExprGuiM i o (Gui w o -> Gui w o)
 addWith options exprInfo =
-    do
-        actions <- actionsEventMap options exprInfo
-        nav <- jumpHolesEventMap (exprInfoNearestHoles exprInfo)
-        (widget . Widget.eventMapMaker . Lens.mapped <>~ nav)
-            . Widget.weakerEventsWithContext actions
-            & pure
-
-jumpHolesEventMap ::
-    (MonadReader env m, Config.HasConfig env, Applicative f) =>
-    NearestHoles -> m (Gui EventMap f)
-jumpHolesEventMap hg =
-    Lens.view (Config.config . Config.completion)
-    <&>
-    \config ->
-    let jumpEventMap keys dirStr dest =
-            WidgetIds.fromEntityId dest & pure
-            & E.keysEventMapMovesCursor (config ^. keys)
-                (E.Doc ["Navigation", "Jump to " <> dirStr <> " hole"])
-    in
-    foldMap (jumpEventMap Config.completionJumpToNextKeys "next") (hg ^. NearestHoles.next)
-    <>
-    foldMap (jumpEventMap Config.completionJumpToPrevKeys "previous") (hg ^. NearestHoles.prev)
+    actionsEventMap options exprInfo <&> Widget.weakerEventsWithContext
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId

@@ -28,7 +28,6 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
@@ -56,20 +55,12 @@ make ::
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
-        let mExprAfterHeader =
-                ( alts ^.. Lens.traversed . Lens.traversed
-                ++ caseTail ^.. Lens.traversed
-                ) ^? Lens.traversed
-        labelJumpHoleEventMap <-
-            mExprAfterHeader <&> ExprGui.nextHolesBefore
-            & foldMap ExprEventMap.jumpHolesEventMap
         let responsiveLabel text =
                 Styled.grammarLabel text <&> Responsive.fromTextView
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
             <*> Styled.grammarLabel "case"
             <&> Responsive.fromWithTextPos
-            <&> Widget.weakerEvents labelJumpHoleEventMap
         ofLabel <- responsiveLabel "of"
         (mActiveTag, header) <-
             case mArg of
@@ -123,7 +114,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap config delete
         tagLabel <-
-            TagEdit.makeVariantTag (ExprGui.nextHolesBefore altExpr) tag
+            TagEdit.makeVariantTag tag
             <&> Align.tValue %~ Widget.weakerEvents itemEventMap
             <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                 then addBg
@@ -181,7 +172,7 @@ makeAddAltRow addAlt myId =
         mkPickResult _ dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId dst
-            , Menu._pickNextEntryPoint = WidgetIds.fromEntityId dst
+            , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
             }
 
 separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View

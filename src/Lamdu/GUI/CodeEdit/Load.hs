@@ -5,6 +5,7 @@ module Lamdu.GUI.CodeEdit.Load
     ( loadWorkArea
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Property (MkProperty')
@@ -19,10 +20,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import           Lamdu.Sugar.Convert.Input (AnnotationMode)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
-import           Lamdu.Sugar.NearestHoles (NearestHoles)
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -33,12 +31,12 @@ type T = Transaction
 
 toExprGuiMPayload ::
     ( AddParens.MinOpPrec, AddParens.NeedsParens
-    , Sugar.Payload name i o ([Sugar.EntityId], NearestHoles)
+    , Sugar.Payload name i o [Sugar.EntityId]
     ) -> Sugar.Payload name i o ExprGui.Payload
 toExprGuiMPayload (minOpPrec, needParens, pl) =
     pl <&>
-    \(entityIds, nearestHoles) ->
-    ExprGui.Payload entityIds nearestHoles
+    \entityIds ->
+    ExprGui.Payload entityIds
     (needParens == AddParens.NeedsParens)
     minOpPrec
 
@@ -56,19 +54,7 @@ loadWorkArea ::
 loadWorkArea cache monitors annMode  theEvalResults cp =
     SugarConvert.loadWorkArea cache monitors annMode theEvalResults cp
     >>= report . AddNames.addToWorkArea (getNameProp cp)
-    <&>
-    \Sugar.WorkArea { _waPanes, _waRepl, _waGlobals } ->
-    Sugar.WorkArea
-    { _waPanes =
-        _waPanes
-        <&> Sugar.paneDefinition . Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent %~
-            NearestHoles.add SugarLens.assignmentPayloads
-    , _waRepl =
-        _waRepl
-        & Sugar.replExpr %~ NearestHoles.add SugarLens.binderPayloads
-    , _waGlobals = _waGlobals
-    }
-    & AddParens.addToWorkArea
-    <&> toExprGuiMPayload
+    <&> AddParens.addToWorkArea
+    <&> Lens.mapped %~ toExprGuiMPayload
     where
         Debug.EvaluatorM report = monitors ^. Debug.naming . Debug.mAction

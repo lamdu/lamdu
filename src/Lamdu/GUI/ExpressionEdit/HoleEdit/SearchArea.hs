@@ -43,10 +43,8 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
-import qualified Lamdu.Sugar.NearestHoles as NearestHoles
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -72,12 +70,8 @@ makeRenderedResult pl ctx result =
         res <- rHoleResult result & ExprGuiM.im
         res ^. Sugar.holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
-            & ResultWidget.make mNextEntry ctx (rId result)
+            & ResultWidget.make ctx (rId result)
                 (res ^. Sugar.holeResultPick)
-    where
-        mNextEntry =
-            pl ^. Sugar.plData . ExprGui.plNearestHoles . NearestHoles.next
-            <&> WidgetIds.fromEntityId
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
@@ -90,7 +84,6 @@ postProcessSugar minOpPrec binder =
         pl (x, needParens, sugarPl) =
             ExprGui.Payload
             { ExprGui._plHiddenEntityIds = []
-            , ExprGui._plNearestHoles = NearestHoles.none
             , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
             , ExprGui._plMinOpPrec = x
             }
@@ -183,8 +176,16 @@ make mkOptions mOptionLiteral pl allowedTerms =
                             (filteredOptions options) annotation searchMenuId
                         <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
             else
-                (if isActive then Widget.setFocused else id)
                 closedSearchTermGui
+                & (if isActive
+                    then Widget.setFocused
+                    else id
+                    )
+                & (if isAHoleInHole
+                    then
+                        Widget.widget . Widget.wState .
+                        Widget._StateUnfocused . Widget.uMStroll .~ Nothing
+                    else id)
                 & Widget.weakerEvents
                   (-- Editing search term of a closed hole opens it:
                       term ^. SearchMenu.termEditEventMap
