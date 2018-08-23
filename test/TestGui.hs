@@ -231,40 +231,43 @@ workAreaEq x y =
                 Sugar.WorkArea (Name Unit) Unit Unit
                 (Sugar.Payload (Name Unit) Unit Unit a)
 
+testKeyboardDirAndBack ::
+    Cache.Functions -> GuiEnv.Env -> VirtualCursor ->
+    GLFW.Key -> GLFW.Key -> T ViewM ()
+testKeyboardDirAndBack cache posEnv posVirt way back =
+    mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
+    >>=
+    \case
+    Nothing -> pure ()
+    Just updThere ->
+        mApplyEvent cache
+        (GuiState.update updThere posEnv)
+        (updThere ^?! GuiState.uVirtualCursor . traverse)
+        (simpleKeyEvent back)
+        >>=
+        \case
+        Nothing -> fail (baseInfo <> "can't move back with cursor keys")
+        Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
+            baseInfo <> "moving back with cursor keys goes to different place: " <>
+            show (updBack ^. GuiState.uCursor)
+            & fail
+        Just{} -> pure ()
+    where
+        baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
+
 testConsistentKeyboardNavigation ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testConsistentKeyboardNavigation cache posEnv posVirt
     | Widget.toAnimId (posEnv ^. cursor) ^? Lens.ix 1 == Just "literal edit" =
         -- TODO: Handle literal edits properly
         pure ()
-    | otherwise = traverse_ testDir dirs
-    where
-        dirs =
-            [ (GLFW.Key'Up, GLFW.Key'Down)
-            , (GLFW.Key'Down, GLFW.Key'Up)
-            , (GLFW.Key'Left, GLFW.Key'Right)
-            , (GLFW.Key'Right, GLFW.Key'Left)
-            ]
-        testDir (way, back) =
-            mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
-            >>=
-            \case
-            Nothing -> pure ()
-            Just updThere ->
-                mApplyEvent cache
-                (GuiState.update updThere posEnv)
-                (updThere ^?! GuiState.uVirtualCursor . traverse)
-                (simpleKeyEvent back)
-                >>=
-                \case
-                Nothing -> fail (baseInfo <> "can't move back with cursor keys")
-                Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
-                    baseInfo <> "moving back with cursor keys goes to different place: " <>
-                    show (updBack ^. GuiState.uCursor)
-                    & fail
-                Just{} -> pure ()
-            where
-                baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
+    | otherwise =
+        traverse_ (uncurry (testKeyboardDirAndBack cache posEnv posVirt))
+        [ (GLFW.Key'Up, GLFW.Key'Down)
+        , (GLFW.Key'Down, GLFW.Key'Up)
+        , (GLFW.Key'Left, GLFW.Key'Right)
+        , (GLFW.Key'Right, GLFW.Key'Left)
+        ]
 
 testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testActions cache env virtCursor =
