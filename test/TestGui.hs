@@ -264,19 +264,75 @@ testKeyboardDirAndBack cache posEnv posVirt way back =
     where
         baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
 
+comparePositions :: Rect -> Rect -> Ordering
+comparePositions (Rect p0 s0) (Rect p1 s1) =
+    compare (p0 ^. _2) (p1 ^. _2) <> compare (p0 ^. _1) (p1 ^. _1) <>
+    compare (s0 ^. _2) (s1 ^. _2) <> compare (s0 ^. _1) (s1 ^. _1)
+
+rectWithin :: Rect -> Rect -> Bool
+rectWithin (Rect (Vector2 x0 y0) (Vector2 w0 h0)) (Rect (Vector2 x1 y1) (Vector2 w1 h1)) =
+    x0 >= x1 && y0 >= y1 && x0 + w0 <= x1 + w1 && y0 + h0 <= h1 + h1
+
+testTabNavigation ::
+    Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
+testTabNavigation cache env virtCursor =
+    do
+        w0 <- makeFocusedWidget "mApplyEvent" cache env
+        let eventMap =
+                (w0 ^. Widget.fEventMap)
+                Widget.EventContext
+                { Widget._eVirtualCursor = virtCursor
+                , Widget._ePrevTextRemainder = ""
+                }
+        let testDir (name, event, expected) =
+                runIdentity (E.lookup (Identity Nothing) event eventMap) & sequenceA
+                >>=
+                \case
+                Nothing -> pure ()
+                Just upd ->
+                    do
+                        w1 <- makeFocusedWidget "testTabNavigation" cache (GuiState.update upd env)
+                        let p0 = w0 ^?! pos
+                        let p1 = w1 ^?! pos
+                        if comparePositions p1 p0 == expected || rectWithin p0 p1 || rectWithin p1 p0
+                            then
+                                -- TODO: Is/when-is it ok that tab goes to an outer/inner rect?
+                                pure ()
+                            else
+                                show (env ^. GuiState.cursor) <> ": " <> name <>
+                                " did not move to expected direction"
+                                & fail
+        traverse_ testDir dirs
+    where
+        pos = Widget.fFocalAreas . traverse
+        dirs =
+            [ ("tab", simpleKeyEvent GLFW.Key'Tab, GT)
+            , ( "shift-tab"
+                , EventKey KeyEvent
+                    { keKey = GLFW.Key'Tab
+                    , keScanCode = 0 -- dummy
+                    , keModKeys = mempty { GLFW.modifierKeysShift = True }
+                    , keState = GLFW.KeyState'Pressed
+                    , keChar = Nothing
+                    }
+                , LT
+                )
+            ]
+
 testConsistentKeyboardNavigation ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
-testConsistentKeyboardNavigation cache posEnv posVirt
-    | Widget.toAnimId (posEnv ^. cursor) ^? Lens.ix 1 == Just "literal edit" =
-        -- TODO: Handle literal edits properly
-        pure ()
-    | otherwise =
-        traverse_ (uncurry (testKeyboardDirAndBack cache posEnv posVirt))
-        [ (GLFW.Key'Up, GLFW.Key'Down)
-        , (GLFW.Key'Down, GLFW.Key'Up)
-        , (GLFW.Key'Left, GLFW.Key'Right)
-        , (GLFW.Key'Right, GLFW.Key'Left)
-        ]
+testConsistentKeyboardNavigation cache posEnv posVirt =
+    do
+        when (Widget.toAnimId (posEnv ^. cursor) ^? Lens.ix 1 /= Just "literal edit")
+            -- TODO: Handle literal edits properly
+            ( traverse_ (uncurry (testKeyboardDirAndBack cache posEnv posVirt))
+            [ (GLFW.Key'Up, GLFW.Key'Down)
+            , (GLFW.Key'Down, GLFW.Key'Up)
+            , (GLFW.Key'Left, GLFW.Key'Right)
+            , (GLFW.Key'Right, GLFW.Key'Left)
+            ]
+            )
+        testTabNavigation cache posEnv posVirt
 
 testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testActions cache env virtCursor =
