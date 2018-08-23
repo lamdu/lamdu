@@ -173,6 +173,7 @@ toWidgetWithKeys keys size sChildren =
         Nothing ->
             Widget.StateUnfocused Widget.Unfocused
             { _uLayers = unfocusedLayers
+            , _uMStroll = mconcat (unfocused ^.. each2d . Lens._Just . Widget.uMStroll)
             , _uMEnter = combineMEnters unfocusedMEnters
             }
         Just (cursor, makeFocusedChild) ->

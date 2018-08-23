@@ -199,7 +199,7 @@ verticalLayout vert items =
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
-    Functor f =>
+    Applicative f =>
     [Gui Responsive f] -> Gui Responsive f
 vbox =
     verticalLayout VerticalLayout
@@ -214,7 +214,7 @@ vbox =
             }
 
 vboxSpaced ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    (MonadReader env m, Spacer.HasStdSpacing env, Applicative f) =>
     m ([Gui Responsive f] -> Gui Responsive f)
 vboxSpaced =
     Spacer.stdVSpace
@@ -223,7 +223,7 @@ vboxSpaced =
     <&> Lens.mapped %~ vbox
 
 vboxWithSeparator ::
-    Functor f =>
+    Applicative f =>
     Bool -> (Widget.R -> View) ->
     Gui Responsive f -> Gui Responsive f ->
     Gui Responsive f
@@ -255,7 +255,7 @@ data TaggedItem a = TaggedItem
 Lens.makeLenses ''TaggedItem
 
 taggedList ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    (MonadReader env m, Spacer.HasStdSpacing env, Applicative f) =>
     m ([Gui TaggedItem f] -> Gui Responsive f)
 taggedList =
     Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0

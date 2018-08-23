@@ -159,7 +159,7 @@ hspacer = do
     Spacer.getSpaceSize <&> (^. _1) <&> (* hSpaceCount) <&> Spacer.makeHorizontal
 
 combine ::
-    ( MonadReader env m, Functor f
+    ( MonadReader env m, Applicative f
     , HasStdSpacing env, HasTheme env
     ) => m ([StatusWidget f] -> StatusWidget f)
 combine =
@@ -179,7 +179,7 @@ combine =
     }
 
 combineEdges ::
-    Functor f =>
+    Applicative f =>
     R -> StatusWidget f -> StatusWidget f -> StatusWidget f
 combineEdges width (StatusWidget xw xe) (StatusWidget yw ye) =
     StatusWidget

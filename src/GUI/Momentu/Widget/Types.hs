@@ -2,7 +2,7 @@
 module GUI.Momentu.Widget.Types
     ( Widget(..), wState, wSize
     , State(..), _StateFocused, _StateUnfocused
-    , Unfocused(..), uMEnter, uLayers
+    , Unfocused(..), uMEnter, uMStroll, uLayers
     , EnterResult(..), enterResultEvent, enterResultRect, enterResultLayer
     , Surrounding(..), sLeft, sTop, sRight, sBottom
     , Focused(..), fFocalAreas, fEventMap, fMEnterPoint, fLayers, fPreEvents
@@ -12,6 +12,7 @@ module GUI.Momentu.Widget.Types
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Animation (R, Size)
 import           GUI.Momentu.Direction (Direction)
@@ -19,6 +20,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap, Subtitle)
 import           GUI.Momentu.Rect (Rect)
 import           GUI.Momentu.State (VirtualCursor)
+import           GUI.Momentu.Widget.Id (Id)
 
 import           Lamdu.Prelude
 
@@ -34,6 +36,10 @@ data State a
 
 data Unfocused a = Unfocused
     { _uMEnter :: Maybe (Direction -> EnterResult a)
+    , _uMStroll ::
+        -- "Strolling" is navigating using "Tab"/"Shift-Tab"
+        -- to form entry fields or other points of interest.
+        Maybe (Semigroup.First Id, Semigroup.Last Id)
     , _uLayers :: Element.Layers
     } deriving Functor
 

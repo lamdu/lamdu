@@ -100,12 +100,12 @@ indentBar =
             in  bar /|/ Spacer.make (Vector2 gapWidth 0)
 
 boxSpacedDisambiguated ::
-    (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
+    (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Applicative f) =>
     m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
-    (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Functor f) =>
+    (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env, Applicative f) =>
     m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedMDisamb =
     do

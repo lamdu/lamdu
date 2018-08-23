@@ -366,7 +366,7 @@ data Placement = Above | Below | AnyPlace
 
 hoverOptions ::
     ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Functor f
+    , Applicative f
     ) =>
     m ( Placement ->
         View ->

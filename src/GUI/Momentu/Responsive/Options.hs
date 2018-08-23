@@ -79,7 +79,7 @@ makeWideLayouts disamb w =
     }
 
 hbox ::
-    Functor f =>
+    Applicative f =>
     HorizDisambiguator (f State.Update) ->
     ([TextWidget f] -> [TextWidget f]) ->
     Gui (WideLayoutOption []) f
@@ -125,7 +125,7 @@ disambiguationNone :: Disambiguators a
 disambiguationNone = Disambiguators id id
 
 boxH ::
-    Functor f =>
+    Applicative f =>
     ([TextWidget f] -> [TextWidget f]) ->
     ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
     [Gui Responsive f] -> Gui Responsive f
@@ -135,14 +135,14 @@ boxH onHGuis onVGuis disamb guis =
     & tryWideLayout (hbox (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
-    Functor f =>
+    Applicative f =>
     Gui Disambiguators f ->
     [Gui Responsive f] ->
     Gui Responsive f
 box = boxH id id
 
 boxSpaced ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    (MonadReader env m, Spacer.HasStdSpacing env, Applicative f) =>
     m (Gui Disambiguators f -> [Gui Responsive f] -> Gui Responsive f)
 boxSpaced =
     do

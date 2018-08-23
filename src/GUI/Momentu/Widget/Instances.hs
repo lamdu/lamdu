@@ -12,6 +12,7 @@ module GUI.Momentu.Widget.Instances
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
 import           Data.Maybe.Extended (unionMaybeWith)
+import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
@@ -23,6 +24,8 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue (Glue(..), Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.MetaKey (MetaKey(..))
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
@@ -81,7 +84,7 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
     type Glued View (Widget a) = Widget a
     glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance (Functor f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
+instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
     glue orientation = Glue.glueH (glueStates orientation) orientation
 
@@ -92,11 +95,12 @@ data NavDir = NavDir
     }
 
 glueStates ::
-    Functor f =>
+    Applicative f =>
     Orientation -> Gui Widget f -> Gui Widget f -> Gui Widget f
 glueStates orientation w0 w1 =
     w0
-    & wState .~ combineStates orientation dirPrev dirNext (w0 ^. wState) (w1 ^. wState)
+    & wState .~
+        combineStates orientation dirPrev dirNext False (w0 ^. wState) (w1 ^. wState)
     where
         (dirPrev, dirNext) =
             case orientation of
@@ -110,15 +114,15 @@ glueStates orientation w0 w1 =
                 )
 
 combineStates ::
-    Functor f =>
-    Orientation -> NavDir -> NavDir ->
+    Applicative f =>
+    Orientation -> NavDir -> NavDir -> Bool ->
     Gui State f -> Gui State f -> Gui State f
-combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates o _ _ (StateUnfocused u0) (StateUnfocused u1) =
-    Unfocused e (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
+combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates o _ _ _ (StateUnfocused u0) (StateUnfocused u1) =
+    Unfocused e (u0 ^. uMStroll <> u1 ^. uMStroll) (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
         e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates orientation _ nextDir (StateFocused f) (StateUnfocused u) =
+combineStates orientation _ nextDir flipStroll (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~ unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Direction.Point))
     <&> fEventMap . Lens.imapped %@~ addEvents
@@ -129,15 +133,33 @@ combineStates orientation _ nextDir (StateFocused f) (StateUnfocused u) =
             case orientation of
             Horizontal -> Rect.verticalRange
             Vertical   -> Rect.horizontalRange
-        addEvents eventContext =
-            foldMap (enterEvents eventContext) (u ^. uMEnter)
-            & flip mappend
+        addEvents eventContext events =
+            ( case u ^. uMStroll of
+                Just (Semigroup.First fwd, _) | not flipStroll ->
+                    events <&> Lens.mapped %~
+                    \e ->
+                    if e ^. State.uPreferStroll . Lens._Wrapped
+                    then e & State.uCursor .~ (Just fwd ^. Lens._Unwrapped)
+                    else e
+                _ -> events
+            )
+            <> foldMap (enterEvents eventContext) (u ^. uMEnter)
+            <> foldMap strollEvents (u ^. uMStroll)
         enterEvents eventContext enter =
             enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.vcRect . chooseRange))
             ^. enterResultEvent
             & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
-combineStates orientation dirPrev dirNext (StateUnfocused u) (StateFocused f) =
-    combineStates orientation dirNext dirPrev (StateFocused f) (StateUnfocused u)
+        strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
+            | flipStroll =
+                EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
+                (EventMap.Doc ["Navigation", "Stroll", "Back"])
+                (pure bwd)
+            | otherwise =
+                EventMap.keysEventMapMovesCursor [MetaKey MetaKey.noMods MetaKey.Key'Tab]
+                (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
+                (pure fwd)
+combineStates orientation dirPrev dirNext flipStroll (StateUnfocused u) (StateFocused f) =
+    combineStates orientation dirNext dirPrev (not flipStroll) (StateFocused f) (StateUnfocused u)
 
 combineMEnters ::
     Orientation ->
@@ -277,6 +299,7 @@ fromView (View size mkLayers) =
     , _wState =
         StateUnfocused Unfocused
         { _uMEnter = Nothing
+        , _uMStroll = Nothing
         , _uLayers = mkLayers
         }
     }

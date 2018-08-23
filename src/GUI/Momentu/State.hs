@@ -7,7 +7,7 @@
 module GUI.Momentu.State
     ( VirtualCursor(..), vcRect
     , GUIState(..), sCursor, sWidgetStates
-    , Update(..), uCursor, uWidgetStateUpdates, uVirtualCursor
+    , Update(..), uCursor, uPreferStroll, uWidgetStateUpdates, uVirtualCursor
     , Gui
     , update
     , updateCursor, fullUpdate
@@ -48,6 +48,7 @@ Lens.makeLenses ''GUIState
 
 data Update = Update
     { _uCursor :: Monoid.Last Id
+    , _uPreferStroll :: Monoid.Any
     , _uWidgetStateUpdates :: Map Id ByteString
     , _uVirtualCursor :: Monoid.Last VirtualCursor
     } deriving Generic
@@ -70,7 +71,7 @@ fullUpdate (GUIState c s) = updateCursor c & uWidgetStateUpdates .~ s
 
 update :: HasState env => Update -> env -> env
 update u s =
-    case u ^. uCursor . Lens._Wrapped of
+    case u ^? uCursor . Lens._Wrapped . Lens._Just of
     Nothing -> s
     Just c ->
         s

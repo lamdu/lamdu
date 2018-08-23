@@ -37,11 +37,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 addScopeEdit ::
-    Functor o => Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o
+    Applicative o => Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o
 addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
 
 mkLhsEdits ::
-    Functor o =>
+    Applicative o =>
     Maybe (Gui Responsive o) ->
     Maybe (Gui Widget o) -> [Gui Responsive o]
 mkLhsEdits mParamsEdit mScopeEdit =
