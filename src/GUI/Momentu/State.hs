@@ -66,7 +66,7 @@ updateCursor :: Id -> Update
 updateCursor c = mempty { _uCursor = Just c & Monoid.Last }
 
 fullUpdate :: GUIState -> Update
-fullUpdate (GUIState c s) = Update (Monoid.Last (Just c)) s mempty
+fullUpdate (GUIState c s) = updateCursor c & uWidgetStateUpdates .~ s
 
 update :: HasState env => Update -> env -> env
 update u s =
