@@ -32,12 +32,12 @@ make (Sugar.GetField recExpr tag) pl =
         recExprEdit <- ExprGuiM.makeSubexpression recExpr
         dotLabel <- Styled.grammarLabel "."
         config <- Lens.view Config.config
+        let mkDelEventMap del =
+                del <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         let delEventMap =
-                case recExpr ^. Sugar._Node . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent of
-                Nothing -> mempty
-                Just del ->
-                    del <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
+                recExpr ^. Sugar._Node . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent
+                & foldMap mkDelEventMap
         tagEdit <-
             TagEdit.makeRecordTag (pl ^. Sugar.plData . ExprGui.plNearestHoles) tag
             <&> Lens.mapped %~ Widget.weakerEvents delEventMap

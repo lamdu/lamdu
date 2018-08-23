@@ -90,17 +90,14 @@ jumpHolesEventMap hg =
     Lens.view (Config.config . Config.completion)
     <&>
     \config ->
-    let jumpEventMap keys dirStr lens =
-            case hg ^. lens of
-            Nothing -> mempty
-            Just dest ->
-                WidgetIds.fromEntityId dest & pure
-                & E.keysEventMapMovesCursor (config ^. keys)
-                    (E.Doc ["Navigation", "Jump to " <> dirStr <> " hole"])
+    let jumpEventMap keys dirStr dest =
+            WidgetIds.fromEntityId dest & pure
+            & E.keysEventMapMovesCursor (config ^. keys)
+                (E.Doc ["Navigation", "Jump to " <> dirStr <> " hole"])
     in
-    jumpEventMap Config.completionJumpToNextKeys "next" NearestHoles.next
+    foldMap (jumpEventMap Config.completionJumpToNextKeys "next") (hg ^. NearestHoles.next)
     <>
-    jumpEventMap Config.completionJumpToPrevKeys "previous" NearestHoles.prev
+    foldMap (jumpEventMap Config.completionJumpToPrevKeys "previous") (hg ^. NearestHoles.prev)
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId

@@ -28,16 +28,16 @@ data Config = Config
     }
 
 focusChildEventMap :: Config -> Maybe (Direction -> Widget.EnterResult a) -> EventMap a
-focusChildEventMap config mEnter =
+focusChildEventMap config =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
     -- nothing (if it is not):
-    case mEnter of
-    Nothing -> mempty
-    Just childEnter ->
-        E.keyPresses (focusChildKeys config <&> toModKey)
-        (focusChildDoc config) $
-        childEnter Direction.Outside ^. Widget.enterResultEvent
+    foldMap f
+    where
+        f childEnter =
+            childEnter Direction.Outside ^. Widget.enterResultEvent
+            & E.keyPresses (focusChildKeys config <&> toModKey)
+                (focusChildDoc config)
 
 modifyEntry ::
     Applicative f =>

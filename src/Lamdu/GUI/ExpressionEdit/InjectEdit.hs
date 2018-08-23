@@ -49,20 +49,17 @@ makeInject val tag pl =
         arg <- ExprGuiM.makeSubexpression val
         colon <- injectIndicator ":"
         config <- Lens.view Config.config
-        let replaceParentEventMap =
+        let replaceParentEventMap replaceParent =
                 -- Deleting the inject is replacing the whole expr
                 -- with the injected value "child"
-                case mReplaceParent of
-                Nothing -> mempty
-                Just replaceParent ->
-                    replaceParent <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys config) delDoc
+                replaceParent <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor (Config.delKeys config) delDoc
 
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
             ( TagEdit.makeVariantTag nearestHoles tag
                 <&> (/|/ colon)
-                <&> Lens.mapped %~ Widget.weakerEvents replaceParentEventMap
+                <&> Lens.mapped %~ Widget.weakerEvents (foldMap replaceParentEventMap mReplaceParent)
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
             )
