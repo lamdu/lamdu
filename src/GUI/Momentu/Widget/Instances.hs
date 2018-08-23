@@ -130,13 +130,12 @@ combineStates orientation _ nextDir (StateFocused f) (StateUnfocused u) =
             Horizontal -> Rect.verticalRange
             Vertical   -> Rect.horizontalRange
         addEvents eventContext =
-            case u ^. uMEnter of
-            Nothing -> mempty
-            Just enter ->
-                enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.vcRect . chooseRange))
-                ^. enterResultEvent
-                & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
+            foldMap (enterEvents eventContext) (u ^. uMEnter)
             & flip mappend
+        enterEvents eventContext enter =
+            enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.vcRect . chooseRange))
+            ^. enterResultEvent
+            & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
 combineStates orientation dirPrev dirNext (StateUnfocused u) (StateFocused f) =
     combineStates orientation dirNext dirPrev (StateFocused f) (StateUnfocused u)
 
