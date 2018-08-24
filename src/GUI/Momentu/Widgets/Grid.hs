@@ -136,13 +136,13 @@ addNavEventmap keys navDests eMap =
                 (EventMap.Doc ["Navigation", "Move", dirName])
 
 make ::
-    (Traversable vert, Traversable horiz, Functor f) =>
+    (Traversable vert, Traversable horiz, Applicative f) =>
     vert (horiz (Aligned (Gui Widget f))) ->
     (vert (horiz (Aligned ())), Gui Widget f)
 make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
-    (Traversable vert, Traversable horiz, Functor f) =>
+    (Traversable vert, Traversable horiz, Applicative f) =>
     Keys ModKey ->
     vert (horiz (Aligned (Gui Widget f))) ->
     (vert (horiz (Aligned ())), Gui Widget f)
@@ -161,7 +161,7 @@ each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vecto
 -- TODO: We assume that the given Cursor selects a focused
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
-    Functor f =>
+    Applicative f =>
     Keys ModKey -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f
@@ -183,6 +183,31 @@ toWidgetWithKeys keys size sChildren =
                 addNavDests eventContext =
                     mkNavDests cursor (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
                     & addNavEventmap keys
+                (before, after) = break ((>= cursor) . fst) (unfocused ^@.. each2d)
+                -- TODO: DRY with Widget's Glue instance
+                addEventStroll events =
+                    case strollAheadDst of
+                    Nothing -> events
+                    Just (dst, _) ->
+                        events <&> Lens.mapped %~
+                        \e ->
+                        if e ^. State.uPreferStroll . Lens._Wrapped
+                        then e & State.uCursor .~ (Just (dst ^. Lens._Wrapped) ^. Lens._Unwrapped)
+                        else e
+                strollAheadDst = after ^. traverse . _2 . Lens._Just . Widget.uMStroll
+                strollBefore =
+                    before ^. traverse . _2 . Lens._Just . Widget.uMStroll
+                    & foldMap
+                        ( EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
+                            (EventMap.Doc ["Navigation", "Stroll", "Back"])
+                            . pure . (^. _2 . Lens._Wrapped)
+                        )
+                strollAfter =
+                    foldMap
+                    ( EventMap.keysEventMapMovesCursor [MetaKey MetaKey.noMods MetaKey.Key'Tab]
+                        (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
+                        . pure . (^. _1 . Lens._Wrapped)
+                    ) strollAheadDst
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
@@ -191,7 +216,11 @@ toWidgetWithKeys keys size sChildren =
             , Widget._fMEnterPoint =
                 focusedChild ^. Widget.fMEnterPoint
                 & unionMaybeWith Widget.combineEnterPoints (combineMEnters unfocusedMEnters <&> (. Point))
-            , Widget._fEventMap = focusedChild ^. Widget.fEventMap & Lens.imapped %@~ addNavDests
+            , Widget._fEventMap =
+                (focusedChild ^. Widget.fEventMap
+                    <&> addEventStroll
+                    & Lens.imapped %@~ addNavDests)
+                <&> (<> (strollBefore <> strollAfter))
             }
     }
     where

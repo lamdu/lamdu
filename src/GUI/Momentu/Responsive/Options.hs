@@ -92,7 +92,7 @@ hbox disamb spacer =
     }
 
 table ::
-    (Traversable t0, Traversable t1, Functor f) =>
+    (Traversable t0, Traversable t1, Applicative f) =>
     Gui (WideLayoutOption (Compose t0 t1)) f
 table =
     WideLayoutOption
