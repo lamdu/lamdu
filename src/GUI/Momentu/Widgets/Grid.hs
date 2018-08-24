@@ -192,7 +192,10 @@ toWidgetWithKeys keys size sChildren =
                         events <&> Lens.mapped %~
                         \e ->
                         if e ^. State.uPreferStroll . Lens._Wrapped
-                        then e & State.uCursor .~ (Just (dst ^. Lens._Wrapped) ^. Lens._Unwrapped)
+                        then
+                            e
+                            & State.uCursor .~ (Just (dst ^. Lens._Wrapped) ^. Lens._Unwrapped)
+                            & State.uPreferStroll .~ mempty
                         else e
                 strollAheadDst = after ^. traverse . _2 . Lens._Just . Widget.uMStroll
                 strollBefore =

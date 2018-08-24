@@ -139,8 +139,12 @@ combineStates orientation _ nextDir flipStroll (StateFocused f) (StateUnfocused 
                     events <&> Lens.mapped %~
                     \e ->
                     if e ^. State.uPreferStroll . Lens._Wrapped
-                    then e & State.uCursor .~ (Just fwd ^. Lens._Unwrapped)
-                    else e
+                    then
+                        e
+                        & State.uCursor .~ (Just fwd ^. Lens._Unwrapped)
+                        & State.uPreferStroll .~ mempty
+                    else
+                        e
                 _ -> events
             )
             <> foldMap (enterEvents eventContext) (u ^. uMEnter)
