@@ -9,8 +9,8 @@ import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValBody, ValI, ValP)

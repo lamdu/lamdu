@@ -2,17 +2,17 @@
 {-# LANGUAGE TypeApplications #-}
 module TestValUtils where
 
-import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Lamdu.Calc.Val.Annotated (Val)
-import           Lamdu.Calc.Val.Annotated.Arbitrary ()
+import           Data.Tree.Diverse (annotations)
+import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term.Arbitrary ()
 import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
 
 import           Test.Lamdu.Prelude
 
 prop_allPayloads :: Ord a => Val a -> Bool
 prop_allPayloads val =
-    Set.fromList (val ^.. Lens.folded) ==
+    Set.fromList (val ^.. annotations) ==
     Set.fromList (culledSubexprPayloads (const False) val)
 
 test :: Test

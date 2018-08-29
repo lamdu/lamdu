@@ -17,11 +17,12 @@ module Lamdu.Sugar.Internal.EntityId
 import           Data.Binary.Extended (encodeS)
 import qualified Data.ByteString as BS
 import           Data.Hashable (Hashable)
+import           Data.Tree.Diverse (annotations)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -40,7 +41,7 @@ bs (EntityId uuid) = UUIDUtils.toSBS16 uuid
 randomizeExprAndParams ::
     RandomGen gen => gen -> Val (EntityId -> a) -> Val a
 randomizeExprAndParams gen =
-    GenIds.randomizeExprAndParams gen . fmap (. EntityId)
+    GenIds.randomizeExprAndParams gen . (annotations %~ (. EntityId))
 
 augment :: ByteString -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ UUIDUtils.augment str x

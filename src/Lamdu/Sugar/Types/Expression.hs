@@ -42,8 +42,8 @@ import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
 import           Data.Tree.Diverse (Node, Ann, Children(..), leaf)
-import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Calc.Val as V
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)

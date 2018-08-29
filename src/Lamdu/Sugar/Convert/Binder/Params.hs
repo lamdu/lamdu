@@ -19,11 +19,11 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val, ann, annotations)
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -80,7 +80,7 @@ mkStoredLam ::
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam <&> Lens.mapped %~ (^. Input.stored))
+    (lam <&> annotations %~ (^. Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -177,13 +177,13 @@ mkCpScopesOfLam lamPl =
     <&> (fmap . map) BinderParamScopeId
 
 getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
-getFieldOnVar = Val.body . V._BGetField . inGetField
+getFieldOnVar = _Node . val . V._BGetField . inGetField
     where
-        inGetField f (V.GetField (Val pl (V.BLeaf (V.LVar v))) t) =
+        inGetField f (V.GetField (Node (Ann pl (V.BLeaf (V.LVar v)))) t) =
             f (v, t) <&> pack pl
         inGetField _ other = pure other
         pack pl (v, t) =
-            V.GetField (Val pl (V.BLeaf (V.LVar v))) t
+            V.GetField (Node (Ann pl (V.BLeaf (V.LVar v)))) t
 
 getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Val (ValP m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
@@ -302,15 +302,18 @@ mkParamInfo param fp =
 changeGetFieldTags ::
     Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValP m) -> T m ()
 changeGetFieldTags param prevTag chosenTag x =
-    case x ^. Val.body of
-    V.BGetField (V.GetField getVar@(Val _ (V.BLeaf (V.LVar v))) t)
+    case x ^. _Node . val of
+    V.BGetField (V.GetField getVar@(Node (Ann _ (V.BLeaf (V.LVar v)))) t)
         | v == param && t == prevTag ->
-            V.GetField (getVar ^. Val.payload . Property.pVal) chosenTag & V.BGetField
-            & ExprIRef.writeValBody (x ^. Val.payload . Property.pVal)
+            V.GetField (getVar ^. _Node . ann . Property.pVal) chosenTag & V.BGetField
+            & ExprIRef.writeValBody (x ^. _Node . ann . Property.pVal)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
-        | v == param -> DataOps.applyHoleTo (x ^. Val.payload) & void
-    b -> traverse_ (changeGetFieldTags param prevTag chosenTag) b
+        | v == param -> DataOps.applyHoleTo (x ^. _Node . ann) & void
+    b ->
+        traverse_
+        (changeGetFieldTags param prevTag chosenTag)
+        (b ^.. V.termChildren)
 
 setFieldParamTag ::
     Monad m =>
@@ -412,7 +415,7 @@ removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 removeCallsToVar funcVar x =
     do
         SubExprs.onMatchingSubexprs changeRecursion
-            ( Val.body . V._BApp . V.applyFunc . ExprLens.valVar
+            ( _Node . val . V._BApp . V.applyFunc . ExprLens.valVar
             . Lens.only funcVar
             ) x
         wrapUnappliedUsesOfVar funcVar x
@@ -437,7 +440,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 removeCallsToVar
                 (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
             BinderKindLambda -> pure ()
-        let lamBodyI = Property.value (lamBodyStored ^. Val.payload)
+        let lamBodyI = Property.value (lamBodyStored ^. _Node . ann)
         protectedSetToVal lambdaProp lamBodyI & void
 
 convertVarToGetField ::
@@ -601,10 +604,10 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
     go False bod
     where
         go isGetFieldChild expr =
-            case expr ^. Val.body of
+            case expr ^. _Node . val of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
-            x -> all (go False) (x ^.. Lens.traverse)
+            x -> all (go False) (x ^.. V.termChildren)
 
 -- Post process param add and delete actions to detach lambda.
 -- This isn't done for all actions as some already perform this function.
@@ -683,7 +686,7 @@ convertBinderToFunction ::
     T m (V.Var, ValP m)
 convertBinderToFunction mkArg binderKind x =
     do
-        (newParam, newValP) <- DataOps.lambdaWrap (x ^. Val.payload)
+        (newParam, newValP) <- DataOps.lambdaWrap (x ^. _Node . ann)
         case binderKind of
             BinderKindDef defI ->
                 convertVarToCalls mkArg (ExprIRef.globalId defI) x
@@ -707,7 +710,7 @@ convertEmptyParams binderKind x =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                x <&> (^. Input.stored)
+                x & annotations %~ (^. Input.stored)
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure
@@ -727,9 +730,9 @@ convertParams ::
 convertParams binderKind defVar expr =
     do
         postProcess <- ConvertM.postProcessAssert
-        case expr ^. Val.body of
+        case expr ^. _Node . val of
             V.BLam lambda ->
-                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. Val.payload)
+                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. _Node . ann)
                 <&> f
                 where
                     f convParams =

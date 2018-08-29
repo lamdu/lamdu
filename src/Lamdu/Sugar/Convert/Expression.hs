@@ -5,10 +5,10 @@ module Lamdu.Sugar.Convert.Expression
 
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (_Node, ann, val)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
+import qualified Lamdu.Calc.Term as V
+import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
@@ -59,8 +59,8 @@ convert ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
-    v ^. Val.payload
-    & case v ^. Val.body of
+    v ^. _Node . ann
+    & case v ^. _Node . val of
       V.BLam x -> ConvertBinder.convertLam x
       V.BApp x -> ConvertApply.convert x
       V.BRecExtend x -> ConvertRecord.convertExtend x

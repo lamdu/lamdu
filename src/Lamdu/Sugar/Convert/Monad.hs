@@ -25,10 +25,10 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified Lamdu.Cache as Cache
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug

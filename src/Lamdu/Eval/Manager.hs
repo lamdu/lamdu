@@ -15,8 +15,9 @@ import           Data.IORef.Extended
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Tree.Diverse (Node(..), _Node, annotations)
 import           Data.UUID.Types (UUID)
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -112,7 +113,7 @@ evalActions evaluator =
         loadGlobal globalId =
             ExprIRef.defI globalId
             & loadDef evaluator
-            <&> Def.defBody . Lens.mapped . Lens.mapped %~ Property.value
+            <&> Def.defBody . Lens.mapped . annotations %~ Property.value
             <&> Lens.mapped .~ ()
 
 replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
@@ -121,8 +122,8 @@ replIRef = DbLayout.repl DbLayout.codeIRefs
 startBG :: Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) -> IO (Eval.Evaluator (ValI m))
 startBG =
     Eval.start
-    (IRef.uuid . ExprIRef.unValI)
-    (ExprIRef.ValI . IRef.unsafeFromUUID)
+    (IRef.uuid . (^. _Node))
+    (Node . IRef.unsafeFromUUID)
 
 start :: Evaluator -> IO ()
 start evaluator =
@@ -133,7 +134,7 @@ start evaluator =
         DbLayout.repl DbLayout.codeAnchors
         & Load.defExpr
         & runViewTransactionInIO (eDb evaluator)
-        <&> Lens.mapped . Lens.mapped %~ Property.value
+        <&> Lens.mapped . annotations %~ Property.value
         >>= startBG
             (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)
@@ -157,7 +158,7 @@ executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
 sumDependency :: Eval.Dependencies (ValI m) -> Set UUID
 sumDependency (Eval.Dependencies subexprs globals) =
     mconcat
-    [ Set.map (IRef.uuid . ExprIRef.unValI) subexprs
+    [ Set.map (IRef.uuid . (^. _Node)) subexprs
     , Set.map (IRef.uuid . ExprIRef.defI) globals
     ]
 

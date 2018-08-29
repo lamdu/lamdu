@@ -20,17 +20,17 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (identHex)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Compiler.Flatten as Flatten
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
@@ -343,8 +343,8 @@ withLocalVar v act =
         pure (varName, res)
 
 compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
-compileDefExpr (Definition.Expr val frozenDeps) =
-    compileVal val & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
+compileDefExpr (Definition.Expr x frozenDeps) =
+    compileVal x & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
 
 compileGlobal :: Monad m => V.Var -> M m CodeGen
 compileGlobal globalId =
@@ -603,7 +603,7 @@ compileAppliedFunc :: Monad m => ValId -> Val ValId -> JSS.Expression () -> M m 
 compileAppliedFunc valId func arg' =
     do
         mode <- Lens.view envMode
-        case (func ^. Val.body, mode) of
+        case (func ^. _Node . val, mode) of
             (V.BCase case_, FastSilent) ->
                 compileCaseOnVar valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
@@ -657,8 +657,8 @@ optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.Call
 optimizeExpr x = x
 
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
-compileLeaf leaf valId =
-    case leaf of
+compileLeaf x valId =
+    case x of
     V.LHole -> throwErr valId "ReachedHole" "Reached a hole"
     V.LRecEmpty -> JS.object [] & codeGenFromExpr & pure
     V.LAbsurd -> throwErr valId "LamduBug" "Reached absurd"
@@ -666,27 +666,27 @@ compileLeaf leaf valId =
     V.LLiteral literal -> compileLiteral literal & pure
 
 compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
-compileToNom (V.Nom tId val) valId =
-    case val ^? ExprLens.valLiteral <&> PrimVal.toKnown of
+compileToNom (V.Nom tId x) valId =
+    case x ^? ExprLens.valLiteral <&> PrimVal.toKnown of
     Just (PrimVal.Bytes bytes)
         | tId == Builtins.textTid
         && all (< 128) (BS.unpack bytes) ->
             -- The JS is more readable with string constants
             rts "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
             & codeGenFromExpr & pure
-    _ -> compileVal val >>= maybeLogSubexprResult valId
+    _ -> compileVal x >>= maybeLogSubexprResult valId
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
-compileVal (Val valId body) =
+compileVal (Node (Ann valId body)) =
     case body of
-    V.BLeaf leaf                -> compileLeaf leaf valId
+    V.BLeaf x                   -> compileLeaf x valId
     V.BApp x                    -> compileApply valId x    >>= maybeLog
     V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x   >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase valId x
-    V.BFromNom (V.Nom _tId val) -> compileVal val    >>= maybeLog
+    V.BFromNom (V.Nom _tId x)   -> compileVal x      >>= maybeLog
     V.BToNom x                  -> compileToNom x valId
     where
         maybeLog = maybeLogSubexprResult valId

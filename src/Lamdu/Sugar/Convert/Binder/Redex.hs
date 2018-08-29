@@ -6,9 +6,9 @@ module Lamdu.Sugar.Convert.Binder.Redex
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Data.Tree.Diverse (Node(..), annotations, ann, val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Eval.Results (ScopeId)
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -22,23 +22,32 @@ data Redex a = Redex
     , _lamPl :: a
     , _paramRefs :: [EntityId]
     , _arg :: Val a
-    } deriving (Functor, Foldable, Traversable)
+    }
 Lens.makeLenses ''Redex
 
-check :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
-check expr = do
-    V.Apply func a <- expr ^? ExprLens.valApply
-    l <- func ^? Val.body . V._BLam
-    Just Redex
-        { _lam = l
-        , _lamPl = func ^. Val.payload
-        , _bodyScope =
-            func ^. Val.payload . Input.evalResults
-            <&> (^. Input.eAppliesOfLam)
-            <&> Lens.traversed %~ getRedexApplies
-        , _arg = a
-        , _paramRefs = func ^. Val.payload . Input.varRefsOfLambda
+instance Functor Redex where
+    fmap f r =
+        r
+        { _lam = r ^. lam & V.lamResult . annotations %~ f
+        , _lamPl = r ^. lamPl & f
+        , _arg = r ^. arg & annotations %~ f
         }
+
+check :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
+check expr =
+    do
+        V.Apply (Node func) a <- expr ^? ExprLens.valApply
+        l <- func ^? val . V._BLam
+        Just Redex
+            { _lam = l
+            , _lamPl = func ^. ann
+            , _bodyScope =
+                func ^. ann . Input.evalResults
+                <&> (^. Input.eAppliesOfLam)
+                <&> Lens.traversed %~ getRedexApplies
+            , _arg = a
+            , _paramRefs = func ^. ann . Input.varRefsOfLambda
+            }
     where
         getRedexApplies [(scopeId, _)] = scopeId
         getRedexApplies _ =

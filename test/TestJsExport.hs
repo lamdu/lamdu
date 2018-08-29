@@ -1,9 +1,11 @@
 -- | Test export of JS programs
 
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 module TestJsExport where
 
 import qualified Data.ByteString as BS
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def

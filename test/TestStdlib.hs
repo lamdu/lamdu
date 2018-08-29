@@ -9,9 +9,9 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lamdu.Calc.Identifier (identHex)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec

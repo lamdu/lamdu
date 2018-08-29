@@ -18,10 +18,11 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
+import           Data.Tree.Diverse (Node(..), Ann(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (Random, RandomGen, random)
@@ -47,12 +48,12 @@ randomTag :: RandomGen g => g -> (T.Tag, g)
 randomTag g = randomIdentifier g & _1 %~ T.Tag
 
 randomizeExpr :: (RandomGen gen, Random r) => gen -> Val (r -> a) -> Val a
-randomizeExpr gen (Val pl body) =
+randomizeExpr gen (Node (Ann pl body)) =
     (`evalState` gen) $
     do
         r <- state random
-        newBody <- body & traverse %%~ randomizeSubexpr
-        Val (pl r) newBody & pure
+        newBody <- body & V.termChildren %%~ randomizeSubexpr
+        Ann (pl r) newBody & Node & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 
@@ -97,12 +98,11 @@ randomizeParamIdsG ::
 randomizeParamIdsG preNG gen initMap convertPL =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where
-        go (Val s v) =
+        go (Node (Ann s v)) =
             do
                 parMap <- Reader.ask
                 newGen <- lift $ state ngSplit
-                Val (convertPL newGen parMap s) <$>
-                    case v of
+                case v of
                     V.BLam (V.Lam oldParamId body) ->
                         do
                             newParamId <- lift . state $ makeName oldParamId s
@@ -112,14 +112,16 @@ randomizeParamIdsG preNG gen initMap convertPL =
                                 <&> V.BLam
                     V.BLeaf (V.LVar par) ->
                         pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
-                    x@V.BLeaf {}      -> traverse go x
-                    x@V.BApp {}       -> traverse go x
-                    x@V.BGetField {}  -> traverse go x
-                    x@V.BRecExtend {} -> traverse go x
-                    x@V.BCase {}      -> traverse go x
-                    x@V.BInject {}    -> traverse go x
-                    x@V.BFromNom {}   -> traverse go x
-                    x@V.BToNom {}     -> traverse go x
+                    x@V.BLeaf {}      -> V.termChildren go x
+                    x@V.BApp {}       -> V.termChildren go x
+                    x@V.BGetField {}  -> V.termChildren go x
+                    x@V.BRecExtend {} -> V.termChildren go x
+                    x@V.BCase {}      -> V.termChildren go x
+                    x@V.BInject {}    -> V.termChildren go x
+                    x@V.BFromNom {}   -> V.termChildren go x
+                    x@V.BToNom {}     -> V.termChildren go x
+                    <&> Ann (convertPL newGen parMap s)
+                    <&> Node
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 

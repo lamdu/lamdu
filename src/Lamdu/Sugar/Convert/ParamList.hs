@@ -7,10 +7,11 @@ module Lamdu.Sugar.Convert.ParamList
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (Node(..), Ann(..), annotations)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Anchors (assocFieldParamList)
 import           Lamdu.Data.Meta (ParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -56,15 +57,15 @@ mkFuncType scope paramList =
 
 loadForLambdas ::
     ParamListPayload a => Val a -> InferT.M (T (M a)) (Val a)
-loadForLambdas val =
+loadForLambdas x =
     do
-        Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList val
-        val
-            & traverse . inferPl . Infer.plType %%~ update
-            >>= traverse . inferPl . Infer.plScope %%~ update
+        Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList x
+        x
+            & annotations . inferPl . Infer.plType %%~ update
+            >>= annotations . inferPl . Infer.plScope %%~ update
             & Update.run & State.gets
     where
-        loadLambdaParamList (Val _ V.BLam {}) pl = loadUnifyParamList pl
+        loadLambdaParamList (Node (Ann _ V.BLam {})) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = pure ()
 
         loadUnifyParamList pl =

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleContexts, TypeFamilies #-}
 module GUI.Momentu.Align
     ( Aligned(..), alignmentRatio, value

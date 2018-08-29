@@ -6,8 +6,9 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.List as List
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Tree.Diverse (annotations)
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Anchors (Code(..), paneDef)
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
 import qualified Lamdu.Data.Definition as Def
@@ -59,7 +60,7 @@ data WorkAreaLowLevel = WorkAreaLowLevel
 
 workAreaLowLevelValProps :: WorkAreaLowLevel -> [ValP ViewM]
 workAreaLowLevelValProps (WorkAreaLowLevel r p) =
-    defExprs ^.. Lens.folded . Def.expr . Lens.folded
+    defExprs ^.. Lens.folded . Def.expr . annotations
     where
         defExprs = r : p ^.. Lens.folded . Def.defBody . Def._BodyExpr
 

@@ -13,7 +13,7 @@ module Lamdu.Sugar.Types.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Type
 

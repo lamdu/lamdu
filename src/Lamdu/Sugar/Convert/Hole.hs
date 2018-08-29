@@ -32,17 +32,17 @@ import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, annotations)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
+import           Lamdu.Calc.Term.Eq (couldEq)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (mono)
 import qualified Lamdu.Calc.Type.Scheme as CalcScheme
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (ValP, ValI(..), DefI)
+import           Lamdu.Expr.IRef (ValP, ValI, DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
@@ -94,7 +94,7 @@ convert holePl =
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
 
 getBaseExprVal :: BaseExpr -> Val ()
-getBaseExprVal (SuggestedExpr v) = void v
+getBaseExprVal (SuggestedExpr v) = v & annotations .~ ()
 getBaseExprVal (SeedExpr v) = v
 
 data ResultProcessor m = forall a. ResultProcessor
@@ -141,7 +141,7 @@ addWithoutDups new old
     | otherwise = nonHoleNew ++ filter (not . equivalentToNew) old
     where
         equivalentToNew x =
-            any (Val.couldEq (x ^. hoVal)) (nonHoleNew ^.. Lens.traverse . hoVal)
+            any (couldEq (x ^. hoVal)) (nonHoleNew ^.. Lens.traverse . hoVal)
         nonHoleNew = filter (Lens.nullOf (hoVal . ExprLens.valHole)) new
 
 isLiveGlobal :: Monad m => DefI m -> T m Bool
@@ -192,15 +192,15 @@ mkNominalOptions nominals =
         mkDirectNoms tid =
             do
                 f <- [V.BFromNom, V.BToNom]
-                [ V.Nom tid P.hole & f & Val () ]
+                [ V.Nom tid P.hole & f & Ann () & Node ]
         mkToNomInjections tid nominal =
             do
                 (tag, _typ) <-
                     nominal ^..
                     N.nomType . N._NominalType . CalcScheme.schemeType . T._TVariant .
                     ExprLens.compositeFields
-                let inject = V.Inject tag P.hole & V.BInject & Val ()
-                [ inject & V.Nom tid & V.BToNom & Val () ]
+                let inject = V.Inject tag P.hole & V.BInject & Ann () & Node
+                [ inject & V.Nom tid & V.BToNom & Ann () & Node ]
 
 mkOptions ::
     Monad m =>
@@ -263,7 +263,7 @@ prepareUnstoredPayloads ::
     Val (Infer.Payload, EntityId, a) ->
     Val (Input.Payload m a)
 prepareUnstoredPayloads v =
-    v <&> mk & Input.preparePayloads
+    v & annotations %~ mk & Input.preparePayloads
     where
         mk (inferPl, eId, x) =
             ( eId
@@ -285,7 +285,7 @@ sugar ::
     T m (Node (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
     v
-    <&> mkPayload
+    & annotations %~ mkPayload
     & (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (holePl ^. Input.entityId)
     & prepareUnstoredPayloads
@@ -315,17 +315,17 @@ mkLiteralOptions holePl =
     let mk updateDeps x =
             pure
             ( HoleResultScore 0 []
-            , fixedVal <&> convPl
+            , fixedVal & annotations %~ convPl
                 & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
             )
             where
-                typ = x ^. Val.payload
+                typ = x ^. _Node . ann
                 fixedVal
                     | inferredType == typ || Lens.has T._TVar inferredType = x
                     | otherwise =
-                        V.Apply (Val (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
+                        V.Apply (Node (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole))) x
                         & V.BApp
-                        & Val inferredType
+                        & Ann inferredType & Node
         addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
     in
     \case
@@ -337,11 +337,12 @@ mkLiteralOptions holePl =
         & literalExpr
         & V.Nom Builtins.textTid
         & V.BToNom
-        & Val (T.TInst Builtins.textTid mempty)
+        & Ann (T.TInst Builtins.textTid mempty)
+        & Node
         & mk addTextDep
     where
         literalExpr v =
-            V.LLiteral prim & V.BLeaf & Val (T.TInst (prim ^. V.primType) mempty)
+            V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty) & Node
             where
                 prim = PrimVal.fromKnown v
         emptyPl = (Nothing, ())
@@ -362,7 +363,7 @@ getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = map mkFieldParam fieldTags ++ [var]
     where
-        var = Val () (V.BLeaf (V.LVar par))
+        var = V.LVar par & V.BLeaf & Ann () & Node
         fieldTags =
             ( sugarContext ^@..
                 ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
@@ -370,7 +371,7 @@ getLocalScopeGetVars sugarContext par
                     ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
             ) <&> fst
-        mkFieldParam tag = V.GetField var tag & V.BGetField & Val ()
+        mkFieldParam tag = V.GetField var tag & V.BGetField & Ann () & Node
 
 -- | Runs inside a forked transaction
 writeResult ::
@@ -381,12 +382,14 @@ writeResult preConversion holeStored inferredVal =
     do
         writtenExpr <-
             inferredVal
-            <&> intoStorePoint
+            & annotations %~ intoStorePoint
             & writeExprMStored (Property.value holeStored)
             <&> ExprIRef.addProperties (holeStored ^. Property.pSet)
-            <&> fmap snd . Input.preparePayloads . fmap toPayload
-        (holeStored ^. Property.pSet) (writtenExpr ^. Val.payload . _1 . Property.pVal)
-        writtenExpr <&> snd & preConversion & pure
+            <&> annotations %~ toPayload
+            <&> Input.preparePayloads
+            <&> annotations %~ snd
+        (holeStored ^. Property.pSet) (writtenExpr ^. _Node . ann . _1 . Property.pVal)
+        writtenExpr & annotations %~ snd & preConversion & pure
     where
         intoStorePoint (inferred, (mStorePoint, a)) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
@@ -421,7 +424,7 @@ detachValIfNeeded ::
 detachValIfNeeded emptyPl holeType x =
     do
         unifyResult <-
-            unify holeType (x ^. Val.payload . _1 . Infer.plType) & liftInfer
+            unify holeType (x ^. _Node . ann . _1 . Infer.plType) & liftInfer
         updated <- Update.inferredVal x & liftUpdate
         case unifyResult of
             Right{} -> pure updated
@@ -438,10 +441,10 @@ detachVal emptyPl resultType x =
     where
         mk updatedType =
             V.Apply func x & V.BApp
-            & Val (plSameScope updatedType, emptyPl)
+            & Ann (plSameScope updatedType, emptyPl) & Node
         plSameScope typ = inferPl & Infer.plType .~ typ
-        inferPl = x ^. Val.payload . _1
-        func = Val (plSameScope funcType, emptyPl) $ V.BLeaf V.LHole
+        inferPl = x ^. _Node . ann . _1
+        func = V.BLeaf V.LHole & Ann (plSameScope funcType, emptyPl) & Node
         funcType = T.TFun (inferPl ^. Infer.plType) resultType
 
 stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
@@ -465,7 +468,7 @@ mkResultVals sugarContext scope base =
                     seedDeps <- loadTheNewDeps seed
                     inferResult <-
                         Infer.infer seedDeps scope seed & InferT.liftInfer
-                        <&> Lens.traversed . _2 %~ \() -> emptyPl
+                        <&> annotations . _2 %~ \() -> emptyPl
                     pure (seedDeps, inferResult)
                 & mapStateT exceptTtoListT
             form <- Suggest.applyForms (transaction . Load.nominal) emptyPl inferResult
@@ -474,7 +477,7 @@ mkResultVals sugarContext scope base =
     SuggestedExpr sugg ->
         (,)
         <$> mapStateT exceptTtoListT (loadTheNewDeps sugg)
-        ?? (sugg & Lens.traversed %~ (, (Nothing, ())))
+        ?? (sugg & annotations %~ (, (Nothing, ())))
     where
         transaction = lift . lift
         emptyPl = (Nothing, ())
@@ -522,7 +525,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scInferContext .~ inferContext
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( resultScore (x <&> fst)
+    in  ( resultScore (x & annotations %~ fst)
         , mkResult preConversion newSugarContext updateDeps stored x
         )
     where
@@ -556,7 +559,7 @@ randomizeNonStoredParamIds gen =
 randomizeNonStoredRefs ::
     ByteString -> Random.StdGen -> Val (StorePoint m a) -> Val (StorePoint m a)
 randomizeNonStoredRefs uniqueIdent gen v =
-    evalState ((traverse . _1) f v) gen
+    evalState ((annotations . _1) f v) gen
     where
         f Nothing =
             state random
@@ -564,7 +567,7 @@ randomizeNonStoredRefs uniqueIdent gen v =
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> ValI <&> Just
+            <&> IRef.unsafeFromUUID <&> Node <&> Just
         f (Just x) = Just x & pure
 
 writeExprMStored ::
@@ -577,7 +580,7 @@ writeExprMStored exprIRef exprMStorePoint =
     where
         uniqueIdent =
             Binary.encode
-            ( exprMStorePoint <&> fst
+            ( exprMStorePoint & annotations %~ fst
             , exprIRef
             )
             & SHA256.hashlazy

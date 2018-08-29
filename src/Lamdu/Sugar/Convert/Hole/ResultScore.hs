@@ -4,10 +4,10 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import           Data.Tree.Diverse (Node(..), Ann(..), val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type(..), Composite(..))
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
@@ -28,11 +28,11 @@ compositeTypeScore (CExtend _ t r) =
     max (resultTypeScore t) (compositeTypeScore r)
 
 score :: Val Infer.Payload -> [Int]
-score (Val pl body) =
+score (Node (Ann pl body)) =
     (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
     resultScopeScore :
     resultTypeScore (pl ^. Infer.plType) ++
-    (body ^.. Lens.traversed >>= score)
+    (body ^.. V.termChildren >>= score)
     where
         resultScopeScore =
             case body ^? ExprLens.valBodyVar <&> (`Map.member` Infer.scopeToTypeMap (pl ^. Infer.plScope)) of
@@ -40,16 +40,16 @@ score (Val pl body) =
             _ -> 0
 
 resultScore :: Val Infer.Payload -> HoleResultScore
-resultScore val =
+resultScore x =
     HoleResultScore
-    { _hrsNumFragments = numFragments val
-    , _hrsScore = score val
+    { _hrsNumFragments = numFragments x
+    , _hrsScore = score x
     }
 
 numFragments :: Val a -> Int
-numFragments val =
-    sum (val ^.. Val.body . traverse <&> numFragments) +
-    if Lens.has appliedHole val
+numFragments n@(Node x) =
+    sum (x ^.. val . V.termChildren <&> numFragments) +
+    if Lens.has appliedHole n
     then 1
     else 0
 

@@ -9,9 +9,8 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import           Data.Tree.Diverse (_Node, ann, val)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Composite as Composite
@@ -58,8 +57,8 @@ convert caseV exprPl =
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = caseV ^. V.caseMatch . Val.payload . plValI
-                , Composite._extendRest = caseV ^. V.caseMismatch . Val.payload
+                , Composite._extendValI = caseV ^. V.caseMatch . _Node . ann . plValI
+                , Composite._extendRest = caseV ^. V.caseMismatch . _Node . ann
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP

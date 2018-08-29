@@ -5,9 +5,10 @@ module Lamdu.Expr.Load
 
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (annotations)
+import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI, ValP)
@@ -22,9 +23,9 @@ type T = Transaction
 expr :: Monad m => ValP m -> T m (Val (ValP m))
 expr (Property valI writeRoot) =
     ExprIRef.readVal valI
-    <&> fmap (, ())
+    <&> annotations %~ (, ())
     <&> ExprIRef.addProperties writeRoot
-    <&> fmap fst
+    <&> annotations %~ fst
 
 defExprH ::
     Monad m =>

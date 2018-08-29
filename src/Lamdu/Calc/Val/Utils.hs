@@ -3,7 +3,8 @@ module Lamdu.Calc.Val.Utils
     ) where
 
 import qualified Control.Lens as Lens
-import           Lamdu.Calc.Val.Annotated (Val(Val))
+import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Lamdu.Calc.Term (Val, termChildren)
 
 import           Lamdu.Prelude
 
@@ -12,6 +13,6 @@ culledSubexprPayloads :: (a -> Bool) -> Val a -> [a]
 culledSubexprPayloads cut =
     go
     where
-        go (Val pl body)
+        go (Node (Ann pl body))
             | cut pl = []
-            | otherwise = pl : body ^. Lens.folded . Lens.to go
+            | otherwise = pl : body ^. termChildren . Lens.to go

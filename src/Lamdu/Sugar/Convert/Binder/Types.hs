@@ -2,8 +2,8 @@ module Lamdu.Sugar.Convert.Binder.Types
     ( BinderKind(..)
     ) where
 
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (DefI, ValP)
 
 data BinderKind m

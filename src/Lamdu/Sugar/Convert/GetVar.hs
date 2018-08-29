@@ -9,9 +9,9 @@ import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps

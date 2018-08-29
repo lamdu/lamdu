@@ -25,8 +25,8 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme

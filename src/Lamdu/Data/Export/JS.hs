@@ -14,10 +14,10 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
+import           Data.Tree.Diverse (_Node, ann, annotations)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -44,12 +44,12 @@ removeReadmeMeta =
 
 compile :: Monad m => Def.Expr (Val (ValP m)) -> T m String
 compile repl =
-    repl <&> Lens.mapped %~ valId
+    repl <&> annotations %~ valId
     & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
     where
-        valId = Compiler.ValId . IRef.uuid . ExprIRef.unValI . Property.value
+        valId = Compiler.ValId . IRef.uuid . (^. Property.pVal . _Node)
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])
@@ -59,7 +59,7 @@ compile repl =
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def
-                <&> Def.defBody . Lens.mapped . Lens.mapped %~ valId
+                <&> Def.defBody . Lens.mapped . annotations %~ valId
                 <&> void
                 & lift
             , Compiler.readGlobalType =
@@ -92,7 +92,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . Val.payload . Property.pVal)
+                . Lens.ix (repl ^. Def.expr . _Node . ann . Property.pVal)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

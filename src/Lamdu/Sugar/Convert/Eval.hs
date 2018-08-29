@@ -14,8 +14,8 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results as ER

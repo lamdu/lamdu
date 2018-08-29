@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle

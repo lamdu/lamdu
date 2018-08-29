@@ -9,8 +9,8 @@ import           Data.Property (Property(..), MkProperty(..))
 import           Data.String (IsString(..))
 import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val)
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Internal (nameWithoutContext)
 import           Lamdu.Sugar.Names.Add (InternalName(..))

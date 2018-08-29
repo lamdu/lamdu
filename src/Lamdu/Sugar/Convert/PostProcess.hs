@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.PostProcess
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Data.Tree.Diverse (_Node, ann)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
@@ -47,11 +47,11 @@ def infer monitors defI =
                                 Definition.exprFrozenDeps .~
                                 Definition.pruneDefExprDeps defExpr
                             & Definition.defBody . Lens.mapped %~
-                                (^. Val.payload . Property.pVal)
+                                (^. _Node . ann . Property.pVal)
                             & Transaction.writeIRef defI
                             )
                             where
-                                inferredType = inferredVal ^. Val.payload . Input.inferred . Infer.plType
+                                inferredType = inferredVal ^. _Node . ann . Input.inferred . Infer.plType
 
 expr ::
     Monad m =>

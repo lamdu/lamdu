@@ -9,12 +9,12 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Scheme (Scheme, schemeType, alphaEq)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -54,19 +54,19 @@ recursivelyFixExpr mFix =
             case mFix isHoleArg expr of
             Just fix -> fix go
             Nothing -> recurse expr
-        recurse val =
-            case val ^? argToHoleFunc of
+        recurse x =
+            case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (val ^. Val.body)
+            Nothing -> traverse_ (go NotHoleArg) (x ^.. _Node . val . V.termChildren)
 
 changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Val pl (V.BLeaf (V.LVar v)))
+        mFix NotHoleArg (Node (Ann pl (V.BLeaf (V.LVar v))))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix isHoleArg
-            (Val pl (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)))
+            (Node (Ann pl (V.BApp (V.Apply (Node (Ann _ (V.BLeaf (V.LVar v)))) arg))))
             | v == usedDefVar =
             Just $
             \go ->
@@ -77,10 +77,10 @@ changeFuncRes usedDefVar =
 
 -- | Only if hole not already applied to it
 applyHoleTo :: Monad m => Val (ValP m) -> T m ()
-applyHoleTo val
-    | Lens.has argToHoleFunc val
-    || Lens.has ExprLens.valHole val = pure ()
-    | otherwise = val ^. Val.payload & DataOps.applyHoleTo & void
+applyHoleTo x
+    | Lens.has argToHoleFunc x
+    || Lens.has ExprLens.valHole x = pure ()
+    | otherwise = x ^. _Node . ann & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
     { fieldsAdded :: Set T.Tag
@@ -102,19 +102,19 @@ fixArg ArgChange arg go =
 fixArg (ArgRecordChange recChange) arg go =
     ( if Set.null (fieldsRemoved recChange)
         then
-            arg ^. Val.payload . Property.pVal
+            arg ^. _Node . ann . Property.pVal
             <$ changeFields (fieldsChanged recChange) arg go
         else
             do
                 go IsHoleArg arg
                 V.Apply
                     <$> DataOps.newHole
-                    ?? arg ^. Val.payload . Property.pVal
+                    ?? arg ^. _Node . ann . Property.pVal
                     <&> V.BApp
                     >>= ExprIRef.newValBody
     )
     >>= addFields (fieldsAdded recChange)
-    >>= arg ^. Val.payload . Property.pSet
+    >>= arg ^. _Node . ann . Property.pSet
 
 addFields :: Monad m => Set T.Tag -> ValI m -> Transaction m (ValI m)
 addFields fields src =
@@ -133,7 +133,7 @@ changeFields ::
 changeFields changes arg go
     | Map.null changes = go NotHoleArg arg
     | otherwise =
-        case arg ^. Val.body of
+        case arg ^. _Node . val of
         V.BRecExtend (V.RecExtend tag fieldVal rest) ->
             case Map.lookup tag changes of
             Nothing ->
@@ -150,9 +150,9 @@ changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValP m) -> T m ()
 changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Val pl (V.BLeaf (V.LVar v)))
+        mFix NotHoleArg (Node (Ann pl (V.BLeaf (V.LVar v))))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
-        mFix _ (Val _ (V.BApp (V.Apply (Val _ (V.BLeaf (V.LVar v))) arg)))
+        mFix _ (Node (Ann _ (V.BApp (V.Apply (Node (Ann _ (V.BLeaf (V.LVar v)))) arg))))
             | v == usedDefVar = fixArg change arg & Just
         mFix _ _ = Nothing
 
@@ -218,7 +218,7 @@ updateDefType ::
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
         defExpr
-            <&> (^. Val.payload . Property.pVal)
+            <&> (^. _Node . ann . Property.pVal)
             & Def.exprFrozenDeps . Infer.depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
         x <- typeCheck

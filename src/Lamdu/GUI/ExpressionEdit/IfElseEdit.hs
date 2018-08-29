@@ -7,8 +7,8 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.Map as Map
-import           Data.Vector.Vector2 (Vector2(..))
 import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann)
+import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element

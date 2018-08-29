@@ -19,9 +19,12 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import           Data.Tree.Diverse
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type, Composite)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Constraints (Constraints(..), CompositeVarConstraints(..))
@@ -30,8 +33,6 @@ import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Nominal (Nominal(..), NominalType(..))
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
@@ -58,7 +59,7 @@ Lens.makePrisms ''Entity
 
 instance AesonTypes.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
-    toJSON (EntityRepl val) = encodeRepl val
+    toJSON (EntityRepl x) = encodeRepl x
     toJSON (EntityDef def) = encodeDef def
     toJSON (EntityTag tagOrder mName tag) = encodeNamedTag (tagOrder, mName, tag)
     toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
@@ -154,9 +155,9 @@ decodeIdentMap fromIdent decode json =
 
 encodeSquash ::
     Aeson.ToJSON j => (a -> Bool) -> Text -> (a -> j) -> a -> [AesonTypes.Pair]
-encodeSquash isEmpty name encode val
-    | isEmpty val = []
-    | otherwise = [name .= encode val]
+encodeSquash isEmpty name encode x
+    | isEmpty x = []
+    | otherwise = [name .= encode x]
 
 jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
 jsum parsers =
@@ -327,9 +328,9 @@ decodeScheme =
 encodeLeaf :: V.Leaf -> AesonTypes.Object
 encodeLeaf =
     \case
-    V.LHole -> leaf "hole"
-    V.LRecEmpty -> leaf "recEmpty"
-    V.LAbsurd -> leaf "absurd"
+    V.LHole -> l "hole"
+    V.LRecEmpty -> l "recEmpty"
+    V.LAbsurd -> l "absurd"
     V.LVar (V.Var var) -> HashMap.fromList ["var" .= encodeIdent var]
     V.LLiteral (V.PrimVal (T.NominalId primId) primBytes) ->
         HashMap.fromList
@@ -337,14 +338,14 @@ encodeLeaf =
         , "primBytes" .= BS.unpack (Hex.encode primBytes)
         ]
     where
-        leaf x = HashMap.fromList [x .= Aeson.object []]
+        l x = HashMap.fromList [x .= Aeson.object []]
 
 decodeLeaf :: ExhaustiveDecoder V.Leaf
 decodeLeaf obj =
     jsum'
-    [ leaf "hole" V.LHole
-    , leaf "recEmpty" V.LRecEmpty
-    , leaf "absurd" V.LAbsurd
+    [ l "hole" V.LHole
+    , l "recEmpty" V.LRecEmpty
+    , l "absurd" V.LAbsurd
     , obj .: "var" >>= lift . decodeIdent <&> V.Var <&> V.LVar
     , do
           primId <- obj .: "primId" >>= lift . decodeIdent <&> T.NominalId
@@ -355,14 +356,14 @@ decodeLeaf obj =
       <&> V.LLiteral
     ]
     where
-        leaf key val =
+        l key v =
             obj .: key >>=
             \case
-            AesonTypes.Object x | HashMap.null x -> pure val
+            AesonTypes.Object x | HashMap.null x -> pure v
             x -> fail ("bad val for leaf " ++ show x)
 
 encodeVal :: Encoder (Val UUID)
-encodeVal (Val uuid body) =
+encodeVal (Node (Ann uuid body)) =
     encodeValBody body
     & insertField "id" uuid
     & AesonTypes.Object
@@ -370,67 +371,80 @@ encodeVal (Val uuid body) =
 decodeVal :: Decoder (Val UUID)
 decodeVal =
     withObject "val" $ \obj ->
-    Val
+    Ann
     <$> (obj .: "id")
     <*> decodeValBody obj
+    <&> Node
 
-encodeValBody :: V.Body (Val UUID) -> AesonTypes.Object
+encodeValBody :: V.Term (Ann UUID) -> AesonTypes.Object
 encodeValBody body =
-    case body <&> encodeVal of
+    case body & V.termChildren %~ Node . Lens.Const . encodeVal of
     V.BApp (V.Apply func arg) ->
-        HashMap.fromList ["applyFunc" .= func, "applyArg" .= arg]
+        HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
     V.BLam (V.Lam (V.Var varId) res) ->
-        HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= res]
+        HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= c res]
     V.BGetField (V.GetField reco tag) ->
-        HashMap.fromList ["getFieldRec" .= reco, "getFieldName" .= encodeTagId tag]
-    V.BRecExtend (V.RecExtend tag val rest) ->
+        HashMap.fromList ["getFieldRec" .= c reco, "getFieldName" .= encodeTagId tag]
+    V.BRecExtend (V.RecExtend tag x rest) ->
         HashMap.fromList
-        ["extendTag" .= encodeTagId tag, "extendVal" .= val, "extendRest" .= rest]
-    V.BInject (V.Inject tag val) ->
-        HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= val]
+        ["extendTag" .= encodeTagId tag, "extendVal" .= c x, "extendRest" .= c rest]
+    V.BInject (V.Inject tag x) ->
+        HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= c x]
     V.BCase (V.Case tag handler restHandler) ->
-        HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= handler, "caseRest" .= restHandler]
-    V.BToNom (V.Nom (T.NominalId nomId) val) ->
-        HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= val]
-    V.BFromNom (V.Nom (T.NominalId nomId) val) ->
-        HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= val]
-    V.BLeaf leaf -> encodeLeaf leaf
+        HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= c handler, "caseRest" .= c restHandler]
+    V.BToNom (V.Nom (T.NominalId nomId) x) ->
+        HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
+    V.BFromNom (V.Nom (T.NominalId nomId) x) ->
+        HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= c x]
+    V.BLeaf x -> encodeLeaf x
+    where
+        c x = x ^. _Node . Lens._Wrapped
 
-decodeValBody :: ExhaustiveDecoder (V.Body (Val UUID))
+decodeValBody :: ExhaustiveDecoder (V.Term (Ann UUID))
 decodeValBody obj =
     jsum'
-    [ V.Apply <$> obj .: "applyFunc" <*> obj .: "applyArg" <&> V.BApp
-    , V.Lam <$> (obj .: "lamVar" >>= lift . decodeIdent <&> V.Var) <*> (obj .: "lamBody")
+    [ V.Apply
+      <$> (obj .: "applyFunc" <&> c)
+      <*> (obj .: "applyArg" <&> c)
+      <&> V.BApp
+    , V.Lam
+      <$> (obj .: "lamVar" >>= lift . decodeIdent <&> V.Var)
+      <*> (obj .: "lamBody" <&> c)
       <&> V.BLam
-    , V.GetField <$> obj .: "getFieldRec" <*> (obj .: "getFieldName" >>= lift . decodeTagId)
+    , V.GetField
+      <$> (obj .: "getFieldRec" <&> c)
+      <*> (obj .: "getFieldName" >>= lift . decodeTagId)
       <&> V.BGetField
     , V.RecExtend
       <$> (obj .: "extendTag" >>= lift . decodeTagId)
-      <*> obj .: "extendVal" <*> obj .: "extendRest"
+      <*> (obj .: "extendVal" <&> c)
+      <*> (obj .: "extendRest" <&> c)
       <&> V.BRecExtend
     , V.Inject
       <$> (obj .: "injectTag" >>= lift . decodeTagId)
-      <*> obj .: "injectVal"
+      <*> (obj .: "injectVal" <&> c)
       <&> V.BInject
     , V.Case
       <$> (obj .: "caseTag" >>= lift . decodeTagId)
-      <*> obj .: "caseHandler"
-      <*> obj .: "caseRest"
+      <*> (obj .: "caseHandler" <&> c)
+      <*> (obj .: "caseRest" <&> c)
       <&> V.BCase
     , V.Nom
       <$> (obj .: "toNomId" >>= lift . decodeIdent <&> T.NominalId)
-      <*> obj .: "toNomVal"
+      <*> (obj .: "toNomVal" <&> c)
       <&> V.BToNom
     , V.Nom
       <$> (obj .: "fromNomId" >>= lift . decodeIdent <&> T.NominalId)
-      <*> obj .: "fromNomVal"
+      <*> (obj .: "fromNomVal" <&> c)
       <&> V.BFromNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= traverse (lift . decodeVal)
+    ] >>= V.termChildren (lift . decodeVal . (^. _Node . Lens._Wrapped))
+    where
+        c = Node . Lens.Const
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
-encodeDefExpr (Definition.Expr val frozenDeps) =
-    ( "val" .= encodeVal val
+encodeDefExpr (Definition.Expr x frozenDeps) =
+    ( "val" .= encodeVal x
     ) :
     encodeSquash null "frozenDeps" HashMap.fromList encodedDeps
     & HashMap.fromList

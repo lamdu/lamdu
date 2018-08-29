@@ -10,12 +10,11 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (annotations)
+import           Data.Tree.Diverse (_Node, ann, annotations)
 import qualified Lamdu.Cache as Cache
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
@@ -197,8 +196,8 @@ convertRepl cache monitors annMode evalRes cp =
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         nomsMap <-
-            valInferred ^.. Lens.folded . Input.inferredType & Load.makeNominalsMap
-        let typ = valInferred ^. Val.payload . Input.inferredType
+            valInferred ^.. annotations . Input.inferredType & Load.makeNominalsMap
+        let typ = valInferred ^. _Node . ann . Input.inferredType
         let completion =
                 evalRes
                 <&> (^. ER.erCompleted)

@@ -19,12 +19,13 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, annotations)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -115,7 +116,7 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 exportSubexpr :: Monad m => Val (ValP m) -> Export m ()
-exportSubexpr (Val lamP (V.BLam (V.Lam lamVar _))) =
+exportSubexpr (Node (Ann lamP (V.BLam (V.Lam lamVar _)))) =
     do
         tag <- readAssocTag lamVar & trans
         mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
@@ -125,15 +126,15 @@ exportSubexpr (Val lamP (V.BLam (V.Lam lamVar _))) =
 exportSubexpr _ = pure ()
 
 exportVal :: Monad m => Val (ValP m) -> Export m ()
-exportVal val =
+exportVal x =
     do
-        val ^.. ExprLens.valGlobals mempty & traverse_ exportDef
-        val ^.. ExprLens.valTags & traverse_ exportTag
-        val ^.. ExprLens.valNominals & traverse_ exportNominal
-        val ^.. ExprLens.subExprs & traverse_ exportSubexpr
+        x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
+        x ^.. ExprLens.valTags & traverse_ exportTag
+        x ^.. ExprLens.valNominals & traverse_ exportNominal
+        x ^.. ExprLens.subExprs & traverse_ exportSubexpr
 
 valIToUUID :: ValI m -> UUID
-valIToUUID = IRef.uuid . ExprIRef.unValI
+valIToUUID = IRef.uuid . (^. _Node)
 
 exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =
@@ -145,7 +146,7 @@ exportDef globalId =
         def ^. Definition.defBody & traverse_ exportVal
         let def' =
                 def
-                & Definition.defBody . Lens.mapped . Lens.mapped %~
+                & Definition.defBody . Lens.mapped . annotations %~
                     valIToUUID . Property.value
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
@@ -157,7 +158,7 @@ exportRepl =
     do
         repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
-        repl <&> Lens.mapped %~ valIToUUID . Property.value & Codec.EntityRepl & tell
+        repl <&> annotations %~ valIToUUID . Property.value & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -198,11 +199,11 @@ export msg act exportPath =
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
-writeValAt (Val valI body) =
-    valI <$ (traverse writeValAt body >>= ExprIRef.writeValBody valI)
+writeValAt (Node (Ann valI body)) =
+    valI <$ (V.termChildren writeValAt body >>= ExprIRef.writeValBody valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
-writeValAtUUID val = val <&> IRef.unsafeFromUUID <&> ExprIRef.ValI & writeValAt
+writeValAtUUID x = x & annotations %~ Node . IRef.unsafeFromUUID & writeValAt
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>
@@ -243,7 +244,7 @@ importLamVar paramList tag lamUUID var =
         Property.setP (Anchors.assocFieldParamList lamI) paramList
         Property.setP (Anchors.assocTag var) tag
     where
-        lamI = IRef.unsafeFromUUID lamUUID & ExprIRef.ValI
+        lamI = IRef.unsafeFromUUID lamUUID & Node
 
 importNominal :: T.Tag -> T.NominalId -> Nominal -> T ViewM ()
 importNominal tag nomId nominal =
@@ -254,7 +255,7 @@ importNominal tag nomId nominal =
 
 importOne :: Codec.Entity -> T ViewM ()
 importOne (Codec.EntityDef def) = importDef def
-importOne (Codec.EntityRepl val) = importRepl val
+importOne (Codec.EntityRepl x) = importRepl x
 importOne (Codec.EntityTag tagOrder mName tag) = importTag tagOrder mName tag
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar paramList tag lamUUID var) = importLamVar paramList tag lamUUID var

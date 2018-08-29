@@ -3,8 +3,8 @@ module Lamdu.Sugar.Convert.Nominal
     ) where
 
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input

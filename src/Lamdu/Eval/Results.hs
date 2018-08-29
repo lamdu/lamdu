@@ -20,8 +20,8 @@ import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
 
 import           Lamdu.Prelude
 

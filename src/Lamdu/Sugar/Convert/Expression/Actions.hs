@@ -7,8 +7,8 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
 import qualified Lamdu.Cache as Cache
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps

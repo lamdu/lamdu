@@ -9,10 +9,9 @@ import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val, annotations)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValP)
@@ -43,15 +42,15 @@ lamParamToHole ::
     Monad m =>
     V.Lam (Val (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param x) =
-    SubExprs.getVarsToHole param (x <&> (^. Input.stored))
+    SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
 
 localNewExtractDestPos ::
     Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
-    { _osiPos = x ^. Val.payload . Input.stored
-    , _osiScope = x ^. Val.payload . Input.inferred . Infer.plScope
+    { _osiPos = x ^. _Node . ann . Input.stored
+    , _osiScope = x ^. _Node . ann . Input.inferred . Infer.plScope
     }
     & ConvertM.local
 
@@ -80,7 +79,7 @@ convertRedex expr redex =
             convertAssignment binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
             <&> _2 . _Node . ann . pInput . Input.entityId .~
-                EntityId.ofValI (redex ^. Redex.arg . Val.payload . Input.stored . Property.pVal)
+                EntityId.ofValI (redex ^. Redex.arg . _Node . ann . Input.stored . Property.pVal)
         letBody <-
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -92,18 +91,18 @@ convertRedex expr redex =
                 & extract .~ float
                 & mReplaceParent ?~
                     ( protectedSetToVal stored
-                        (redex ^. Redex.arg . Val.payload . Input.stored . Property.pVal)
+                        (redex ^. Redex.arg . _Node . ann . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
         postProcess <- ConvertM.postProcessAssert
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamResult . Val.payload . Input.stored
+                    redex ^. Redex.lam . V.lamResult . _Node . ann . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         pure Let
-            { _lVarInfo = redex ^. Redex.arg . Val.payload . Input.inferred . Infer.plType & mkVarInfo
+            { _lVarInfo = redex ^. Redex.arg . _Node . ann . Input.inferred . Infer.plType & mkVarInfo
             , _lValue = value & _Node . ann . pActions %~ fixValueNodeActions
             , _lDelete = del
             , _lName = tag
@@ -115,10 +114,10 @@ convertRedex expr redex =
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
-        stored = expr ^. Val.payload . Input.stored
+        stored = expr ^. _Node . ann . Input.stored
         binderKind =
             redex ^. Redex.lam
-            <&> Lens.mapped %~ (^. Input.stored)
+            <&> annotations %~ (^. Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
@@ -135,7 +134,10 @@ convertBinderBody expr =
         <&>
         \body ->
         ( BinderExpr body
-        , subexprPayloads (expr ^. Val.body) (body ^.. SugarLens.bodyChildPayloads) & mconcat
+        , subexprPayloads
+            (expr ^.. _Node . val . V.termChildren)
+            (body ^.. SugarLens.bodyChildPayloads)
+            & mconcat
         )
     Just redex ->
         convertRedex expr redex
@@ -152,13 +154,13 @@ convertBinder ::
 convertBinder expr =
     do
         actions <-
-            makeActions (expr ^. Val.payload) & localNewExtractDestPos expr
+            makeActions (expr ^. _Node . ann) & localNewExtractDestPos expr
         (b, hiddenPls) <- convertBinderBody expr
         Node Ann
             { _val = b
             , _ann =
                 ConvertPayload
-                { _pInput = expr ^. Val.payload & Input.userData .~ hiddenPls
+                { _pInput = expr ^. _Node . ann & Input.userData .~ hiddenPls
                 , _pActions = actions
                 }
             } & pure
@@ -336,7 +338,7 @@ convertAssignment binderKind defVar expr =
         (mPresentationModeProp, convParams, funcBody) <-
             convertParams binderKind defVar expr
         makeAssignment (Anchors.assocScopeRef defVar) convParams
-            funcBody (expr ^. Val.payload)
+            funcBody (expr ^. _Node . ann)
             <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::

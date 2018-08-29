@@ -23,8 +23,8 @@ import           Data.Property (MkProperty, MkProperty')
 import           Data.UUID.Types (nil)
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode, ParamList)
 import           Lamdu.Eval.Results (ScopeId)

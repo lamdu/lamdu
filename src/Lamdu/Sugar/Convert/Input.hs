@@ -12,9 +12,10 @@ module Lamdu.Sugar.Convert.Input
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValP)
 import qualified Lamdu.Infer as Infer
@@ -58,20 +59,21 @@ preparePayloads =
     snd . go
     where
         go :: Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], Val pl)
-        go (Val (x, mkPayload) body) =
+        go (Node (Ann (x, mkPayload) body)) =
             ( childrenVars
               & case body of
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
                 V.BLam (V.Lam var _) -> Lens.at var .~ Nothing
                 _ -> id
-            , b <&> snd
-              & Val
+            , b & V.termChildren %~ (^. _Node . Lens._Wrapped . _2)
+              & Ann
                 ( case body of
                   V.BLam (V.Lam var _) -> childrenVars ^. Lens.ix var
                   _ -> []
                   & mkPayload
                 )
+              & Node
             )
             where
-                childrenVars = Map.unionsWith (++) (b ^.. Lens.traverse . Lens._1)
-                b = body <&> go
+                childrenVars = Map.unionsWith (++) (b ^.. V.termChildren . _Node . Lens._Wrapped . _1)
+                b = body & V.termChildren %~ Node . Lens.Const . go

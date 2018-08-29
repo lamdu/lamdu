@@ -5,7 +5,7 @@ module Lamdu.Builtins.PrimVal
 
 import           Data.Binary.Extended (encodeS, decodeS)
 import           Lamdu.Builtins.Anchors (bytesTid, floatTid)
-import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Calc.Term as V
 
 import           Lamdu.Prelude
 

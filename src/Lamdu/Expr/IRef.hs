@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Expr.IRef
-    ( ValI(..)
+    ( ValI
     , ValBody
     , ValP
     , Lam, Apply
@@ -14,18 +14,16 @@ module Lamdu.Expr.IRef
 
     ) where
 
-import           Control.DeepSeq (NFData)
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary(..))
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
 import           Lamdu.Calc.Identifier (Identifier(..))
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
 import           Lamdu.Data.Definition (Definition)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
@@ -48,27 +46,25 @@ defI (V.Var (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 nominalI :: T.NominalId -> IRef m Nominal
 nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
-newtype ValI m = ValI
-    { unValI :: IRef m (V.Body (ValI m))
-    } deriving (Eq, Ord, Show, Binary, NFData)
+type ValI m = Node (IRef m) V.Term
 
 type ValP m = Property (T m) (ValI m)
-type ValBody m = V.Body (ValI m)
+type ValBody m = V.Term (IRef m)
 type Lam m = V.Lam (ValI m)
 type Apply m = V.Apply (ValI m)
 
 newValBody :: Monad m => ValBody m -> T m (ValI m)
-newValBody = fmap ValI . Transaction.newIRef
+newValBody = fmap Node . Transaction.newIRef
 
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
 
 readValBody :: Monad m => ValI m -> T m (ValBody m)
-readValBody = Transaction.readIRef . unValI
+readValBody = Transaction.readIRef . (^. _Node)
 
 writeValBody ::
     Monad m => ValI m -> ValBody m -> T m ()
-writeValBody = Transaction.writeIRef . unValI
+writeValBody = Transaction.writeIRef . (^. _Node)
 
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =
@@ -77,39 +73,39 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> readValBody valI >>= traverse go <&> Val valI
+            Just go -> readValBody valI >>= V.termChildren go <&> Ann valI <&> Node
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
-    T m (V.Body (Val (ValI m, a)))
-expressionBodyFrom = traverse writeValWithStoredSubexpressions . (^. Val.body)
+    T m (V.Term (Ann (ValI m, a)))
+expressionBodyFrom = V.termChildren writeValWithStoredSubexpressions . (^. _Node . val)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body <&> (^. Val.payload . _1)
+        let bodyWithRefs = body & V.termChildren %~ (^. _Node . ann . _1)
         case mIRef of
             Just iref ->
-                Val (iref, pl) body <$
+                Node (Ann (iref, pl) body) <$
                 writeValBody iref bodyWithRefs
             Nothing ->
                 Transaction.newIRef bodyWithRefs
-                <&> \exprI -> Val (ValI exprI, pl) body
+                <&> \exprI -> Node (Ann (Node exprI, pl) body)
     where
-        (mIRef, pl) = expr ^. Val.payload
+        (mIRef, pl) = expr ^. _Node . ann
 
 addProperties ::
     Monad m =>
     (ValI m -> T m ()) ->
     Val (ValI m, a) ->
     Val (ValP m, a)
-addProperties setIRef (Val (iref, a) body) =
-    Val (Property iref setIRef, a) (body & Lens.traversed %@~ f)
+addProperties setIRef (Node (Ann (iref, a) body)) =
+    Ann (Property iref setIRef, a) (body & Lens.indexing V.termChildren %@~ f) & Node
     where
         f index =
             addProperties $ \newIRef ->
             readValBody iref
-            <&> Lens.element index .~ newIRef
+            <&> Lens.indexing V.termChildren . Lens.index index .~ newIRef
             >>= writeValBody iref

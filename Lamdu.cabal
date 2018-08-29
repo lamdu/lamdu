@@ -145,7 +145,6 @@ Library
                   , Control.Monad.Transaction
                   , Control.Monad.Unit
                   , Data.Aeson.Config
-                  , Data.Tree.Diverse
                   , Data.Binary.Extended
                   , Data.ByteString.Extended
                   , Data.Cache.Fenced

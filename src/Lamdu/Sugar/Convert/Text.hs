@@ -9,10 +9,11 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
+import           Data.Tree.Diverse (Node(..), Ann(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -27,7 +28,7 @@ text ::
     (Monad m, Monoid a) =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-text n@(V.Nom tid (Val litPl bod)) toNomPl =
+text n@(V.Nom tid (Node (Ann litPl bod))) toNomPl =
     do
         guard $ tid == Builtins.textTid
         lit <- bod ^? ExprLens.valBodyLiteral & maybeToMPlus

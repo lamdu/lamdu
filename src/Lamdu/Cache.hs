@@ -11,7 +11,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad.State (StateT(..))
 import           Data.Cache.Fenced (Decl, function)
 import qualified Data.Cache.Fenced as FencedCache
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Data.Tree.Diverse (annotations)
+import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer (InferCtx(..))
@@ -44,18 +45,18 @@ infer :: Functions -> InferFunc a
 infer funcs defExpr scope =
     fmap unvoid . Infer . StateT $
     \ctx ->
-    inferMemoized funcs (defExpr <&> void, scope, ctx)
+    inferMemoized funcs (defExpr <&> annotations .~ (), scope, ctx)
     where
         unvoid resExpr =
             defExpr ^. Definition.expr
-            & Lens.unsafePartsOf traverse %~ zip (resExpr ^.. Lens.folded)
+            & Lens.unsafePartsOf annotations %~ zip (resExpr ^.. annotations)
 
 memoableInfer :: MemoableInferFunc
 memoableInfer (expr, scope, ctx) =
     unmemoizedInfer expr scope
     & Infer.run
     & (`runStateT` ctx)
-    & Lens._Right . _1 . Lens.mapped %~ \(x, ~()) -> x
+    & Lens._Right . _1 . annotations %~ \(x, ~()) -> x
 
 decl :: Decl Functions
 decl =

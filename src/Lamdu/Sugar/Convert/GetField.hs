@@ -4,9 +4,9 @@ module Lamdu.Sugar.Convert.GetField
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Data.Tree.Diverse (_Node, ann)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -58,7 +58,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     >>= addActions [recExpr] exprPl
     where
         valI = exprPl ^. Input.stored . Property.pVal
-        recExprStored = recExpr ^. Val.payload . Input.stored
+        recExprStored = recExpr ^. _Node . ann . Input.stored
         recExprI = recExprStored ^. Property.pVal
 
 convert ::

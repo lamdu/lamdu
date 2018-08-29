@@ -18,8 +18,8 @@ import           Data.Tree.Diverse (_Node, val)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Formatting (Format(..))

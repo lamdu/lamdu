@@ -1,14 +1,14 @@
+{-# LANGUAGE UndecidableInstances #-}
 module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
+import           Data.Tree.Diverse (Node, _Node)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Calc.Identifier (Identifier(..))
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Expr.IRef (ValI(..))
-import qualified Lamdu.Expr.IRef as ExprIRef
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Rev.Branch (Branch)
@@ -33,8 +33,8 @@ instance ToUUID T.Tag       where toUUID = toUUID . T.tagName
 instance ToUUID T.NominalId where toUUID = toUUID . T.nomId
 instance ToUUID T.ParamId   where toUUID = toUUID . T.typeParamId
 instance ToUUID (IRef m a)  where toUUID = IRef.uuid
-instance ToUUID (ValI m)    where toUUID = toUUID . ExprIRef.unValI
 instance ToUUID (Branch m)  where toUUID = Branch.uuid
+instance ToUUID (f (a f)) => ToUUID (Node f a) where toUUID = toUUID . (^. _Node)
 
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id

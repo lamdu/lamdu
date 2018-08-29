@@ -7,9 +7,10 @@ module Lamdu.Compiler.Flatten
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val(..))
 
 import           Lamdu.Prelude
 
@@ -27,19 +28,19 @@ case_ (V.Case tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
     where
-        caseVal val@(Val _ body) =
+        caseVal v@(Node (Ann _ body)) =
             case body of
             V.BLeaf V.LAbsurd -> Composite mempty Nothing
             V.BCase x -> case_ x
-            _ -> Composite mempty (Just val)
+            _ -> Composite mempty (Just v)
 
 recExtend :: V.RecExtend (Val pl) -> Record (Val pl)
 recExtend (V.RecExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field
     where
-        recExtendVal val@(Val _ body) =
+        recExtendVal v@(Node (Ann _ body)) =
             case body of
             V.BLeaf V.LRecEmpty -> Composite mempty Nothing
             V.BRecExtend x -> recExtend x
-            _ -> Composite mempty (Just val)
+            _ -> Composite mempty (Just v)

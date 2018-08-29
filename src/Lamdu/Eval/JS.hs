@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
@@ -30,15 +31,16 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (annotations)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (Identifier(..), identHex)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Tag(..))
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
 import           Lamdu.Data.Anchors (anonTag)
 import           Lamdu.Data.Definition (Definition)
 import qualified Lamdu.Data.Definition as Def
@@ -172,11 +174,11 @@ parseResult (Json.Object obj) =
     Just cacheId -> Lens.use (Lens.singular (Lens.ix cacheId))
     Nothing ->
         do
-            val <- parseObj obj
+            x <- parseObj obj
             case obj .? "cacheId" <|> obj .? "func" of
                 Nothing -> pure ()
-                Just cacheId -> Lens.at cacheId ?= val
-            pure val
+                Just cacheId -> Lens.at cacheId ?= x
+            pure x
 parseResult x = "Unsupported encoded JS output: " ++ show x & fail
 
 fromDouble :: Double -> ER.Val ()
@@ -300,10 +302,10 @@ compilerActions toUUID depsMVar actions output =
         readGlobal $
         \def ->
         ( Dependencies
-          { subExprDeps = def ^.. Def.defBody . Lens.folded . Lens.folded & Set.fromList
+          { subExprDeps = def ^.. Def.defBody . Lens.folded . annotations & Set.fromList
           , globalDeps = mempty
           }
-        , def & Def.defBody . Lens.mapped . Lens.mapped %~ Compiler.ValId . toUUID
+        , def & Def.defBody . Lens.mapped . annotations %~ Compiler.ValId . toUUID
         )
     , Compiler.readGlobalType = readGlobal ((^. Def.defType) <&> (,) mempty)
     , Compiler.output = output
@@ -374,7 +376,7 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
                 let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
                 withForkedIO processOutput $
                     do
-                        replVal <&> Lens.mapped %~ Compiler.ValId . toUUID
+                        replVal <&> annotations %~ Compiler.ValId . toUUID
                             & Compiler.compileRepl
                                 (compilerActions toUUID depsMVar actions outputJS)
                         flushJS
@@ -411,7 +413,7 @@ start toUUID fromUUID actions replExpr =
         depsMVar <-
             newMVar Dependencies
             { globalDeps = Set.empty
-            , subExprDeps = replExpr ^.. Lens.folded . Lens.folded & Set.fromList
+            , subExprDeps = replExpr ^.. Lens.folded . annotations & Set.fromList
             }
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar

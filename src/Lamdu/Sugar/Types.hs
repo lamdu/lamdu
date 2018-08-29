@@ -16,7 +16,7 @@ module Lamdu.Sugar.Types
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import           Data.Tree.Diverse (Node, Ann, annotations)
-import qualified Lamdu.Calc.Val as V
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)

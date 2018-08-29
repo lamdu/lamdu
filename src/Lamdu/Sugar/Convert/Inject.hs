@@ -3,10 +3,9 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), _Node, val)
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Calc.Val.Annotated as Val
+import           Data.Tree.Diverse (Ann(..), _Node, val, ann)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -55,4 +54,4 @@ convert (V.Inject tag injected) exprPl =
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . Property.pVal
-        injectedI = injected ^. Val.payload . Input.stored . Property.pVal
+        injectedI = injected ^. _Node . ann . Input.stored . Property.pVal

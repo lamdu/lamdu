@@ -14,12 +14,11 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Scheme as CalcScheme
-import qualified Lamdu.Calc.Val as V
-import           Lamdu.Calc.Val.Annotated (Val)
-import qualified Lamdu.Calc.Val.Annotated as Val
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
@@ -50,7 +49,7 @@ convert app@(V.Apply funcI argI) exprPl =
                 pure
                     ( if Lens.has (_Node . val . _BodyHole) argS
                       then
-                          let dst = argI ^. Val.payload . Input.stored . Property.pVal
+                          let dst = argI ^. _Node . ann . Input.stored . Property.pVal
                               deleteAction =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst

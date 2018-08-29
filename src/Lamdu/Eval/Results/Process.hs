@@ -6,11 +6,11 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (schemeType)
-import qualified Lamdu.Calc.Val as V
 import           Lamdu.Eval.Results (Val(..), Body(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Infer (applyNominal)
