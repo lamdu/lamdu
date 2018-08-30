@@ -8,6 +8,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element
@@ -45,7 +46,7 @@ Lens.makeLenses ''Row
 makeIfThen ::
     (Monad i, Monad o) =>
     WithTextPos View -> AnimId ->
-    Sugar.IfElse (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.IfElse (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Row (Gui Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
@@ -59,7 +60,7 @@ makeIfThen prefixLabel animId ifElse =
                 foldMap
                 (E.keysEventMapMovesCursor (Config.delKeys config)
                  (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . Sugar._Node . Sugar.ann .
+                (ifElse ^. Sugar.iElse . _Node . ann .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap (ifGui /|/ colon))
@@ -69,24 +70,24 @@ makeIfThen prefixLabel animId ifElse =
 makeElseBody ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Else (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.Else (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o [Row (Gui Responsive o)]
-makeElseBody ann (Sugar.SimpleElse expr) =
+makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
         <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression (Sugar.Node (Sugar.Ann ann expr))
+    ) <*> ExprGuiM.makeSubexpression (Node (Ann pl expr))
     <&> pure
     where
-        elseAnimId = WidgetIds.fromExprPayload ann & Widget.toAnimId
-makeElseBody ann (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
+        elseAnimId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- Styled.grammarLabel "el"
         letEventMap <-
-            foldMap ExprEventMap.addLetEventMap (ann ^. Sugar.plActions . Sugar.mNewLet)
+            foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
         (:)
             <$> ( makeIfThen elseLabel animId content
                   <&> Lens.mapped %~ Widget.weakerEvents letEventMap
@@ -96,16 +97,16 @@ makeElseBody ann (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
             & ExprGuiM.withLocalMScopeId mInnerScope
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
-        entityId = ann ^. Sugar.plEntityId
+        entityId = pl ^. Sugar.plEntityId
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
 -- TODO inline and use "case"
 makeElse ::
     (Monad i, Monad o) =>
-    Sugar.Node (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
+    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
     ExprGuiM i o [Row (Gui Responsive o)]
-makeElse (Sugar.Node (Sugar.Ann ann x)) = makeElseBody ann x
+makeElse (Node (Ann pl x)) = makeElseBody pl x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
@@ -152,7 +153,7 @@ renderRows mParensId =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.IfElse (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.IfElse (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make ifElse pl =

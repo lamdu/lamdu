@@ -14,6 +14,7 @@ import           Data.List (sortOn, nubBy)
 import qualified Data.List.Class as ListClass
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (_Node, val)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -195,7 +196,7 @@ mkGroup option =
     \sugaredBaseExpr ->
     Group
     { _groupSearchTerms =
-        sugaredBaseExpr ^. Sugar._Node . Sugar.val & ValTerms.binder
+        sugaredBaseExpr ^. _Node . val & ValTerms.binder
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }

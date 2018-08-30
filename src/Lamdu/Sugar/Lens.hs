@@ -22,7 +22,7 @@ module Lamdu.Sugar.Lens
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Children(..), hoist)
+import           Data.Tree.Diverse (Node(..), Ann(..), Children(..), _Node, ann, val, hoist)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude

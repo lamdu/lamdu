@@ -14,7 +14,7 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (annotations)
+import           Data.Tree.Diverse (_Node, ann, val, annotations)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val(..))

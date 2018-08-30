@@ -8,6 +8,7 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
+import           Data.Tree.Diverse (_Node, val)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Animation.Id (augmentId)
@@ -249,7 +250,7 @@ openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
         & E.keysEventMapMovesCursor keys (doc "Close")
     | otherwise = pure mempty
     where
-        isHole = Lens.has (Sugar._Node . Sugar.val . Sugar._BodyHole)
+        isHole = Lens.has (_Node . val . Sugar._BodyHole)
 
 closedRecordEventMap ::
     (MonadReader env m, HasConfig env, Functor o) =>

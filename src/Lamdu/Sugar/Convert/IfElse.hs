@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)

@@ -14,6 +14,7 @@ import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (Ann(..), _Node, val)
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars

@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Tree.Diverse (_Node, ann)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
@@ -77,7 +78,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                         ExprGuiM.makeSubexpression arg
                         <&> Widget.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
                     mTag <-
-                        Annotation.evaluationResult (arg ^. Sugar._Node . Sugar.ann)
+                        Annotation.evaluationResult (arg ^. _Node . ann)
                         <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
                     Options.boxSpaced
                         ?? Options.disambiguationNone

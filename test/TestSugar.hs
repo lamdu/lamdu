@@ -4,6 +4,7 @@ module TestSugar where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
+import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

@@ -5,6 +5,7 @@ module Lamdu.Sugar.PresentationModes
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
@@ -16,11 +17,11 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Sugar.Ann (ConvertPayload m a) (Sugar.BinderVarRef InternalName (T m)) ->
+    Ann (ConvertPayload m a) (Sugar.BinderVarRef InternalName (T m)) ->
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
-    T m (Sugar.LabeledApply InternalName (T m) (T m) (Sugar.Ann (ConvertPayload m a)))
+    T m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
 makeLabeledApply func args =
-    func ^. Sugar.val . Sugar.bvVar
+    func ^. val . Sugar.bvVar
     & Anchors.assocPresentationMode & Property.getP
     <&> \presentationMode ->
     let (specialArgs, otherArgs) =
@@ -52,19 +53,19 @@ makeLabeledApply func args =
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
         mkInfixArg arg other =
             arg
-            & Sugar._Node . Sugar.val . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. Sugar._Node . Sugar.ann . pActions . Sugar.mReplaceParent
+            & _Node . val . Sugar._BodyHole . Sugar.holeMDelete .~
+                other ^. _Node . ann . pActions . Sugar.mReplaceParent
         processArg arg =
             do
-                getVar <- arg ^? Sugar.aaExpr . Sugar._Node . Sugar.val . Sugar._BodyGetVar
+                getVar <- arg ^? Sugar.aaExpr . _Node . val . Sugar._BodyGetVar
                 name <-
                     case getVar of
                     Sugar.GetParam x -> x ^. Sugar.pNameRef . Sugar.nrName & Just
                     Sugar.GetBinder x -> x ^. Sugar.bvNameRef . Sugar.nrName & Just
                     Sugar.GetParamsRecord _ -> Nothing
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
-                Right Sugar.Ann
-                    { Sugar._val = getVar
-                    , Sugar._ann = arg ^. Sugar.aaExpr . Sugar._Node . Sugar.ann
+                Right Ann
+                    { _val = getVar
+                    , _ann = arg ^. Sugar.aaExpr . _Node . ann
                     } & Just
             & fromMaybe (Left arg)

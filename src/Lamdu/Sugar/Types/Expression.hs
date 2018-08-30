@@ -1,8 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Expression
-    ( Node(..), _Node
-    , Ann(..), ann, val
-    , Body(..)
+    ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
@@ -43,7 +41,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
-import           Data.Tree.Diverse
+import           Data.Tree.Diverse (Node, Ann, Children(..), leaf)
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)

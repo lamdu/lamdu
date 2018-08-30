@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
 
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse (Ann(..), _Node, ann)
 import qualified GUI.Momentu as Momentu
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -49,7 +50,7 @@ responsiveLiftA3 f x y z =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Fragment (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.Fragment (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make fragment pl =
@@ -107,12 +108,12 @@ make fragment pl =
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents healEventMap
     where
-        innerId = fragment ^. Sugar.fExpr . Sugar._Node . Sugar.ann & WidgetIds.fromExprPayload
+        innerId = fragment ^. Sugar.fExpr . _Node . ann & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Sugar.Fragment (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.Fragment (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Gui Responsive o)
 makeFragmentExprEdit fragment =
     do

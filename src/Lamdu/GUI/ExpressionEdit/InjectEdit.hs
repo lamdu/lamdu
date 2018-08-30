@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -65,17 +66,17 @@ makeInject val tag pl =
             )
     where
         delDoc = E.Doc ["Edit", "Delete"]
-        mReplaceParent = val ^. Sugar._Node . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. _Node . ann . Sugar.plActions . Sugar.mReplaceParent
 
-emptyRec :: Sugar.Ann a (Sugar.NullaryVal name i o) -> Sugar.Expression name i o a
-emptyRec (Sugar.Ann pl (Sugar.NullaryVal closedActions addItem)) =
+emptyRec :: Ann a (Sugar.NullaryVal name i o) -> Sugar.Expression name i o a
+emptyRec (Ann pl (Sugar.NullaryVal closedActions addItem)) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & Sugar.Ann pl & Sugar.Node
+    & Ann pl & Node
 
 makeNullaryInject ::
     (Monad i, Monad o) =>
-    Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.NullaryVal (Name o) i o) ->
+    Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.NullaryVal (Name o) i o) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
@@ -95,12 +96,12 @@ makeNullaryInject nullary tag pl =
             GuiState.updateCursor nullaryRecEntityId & pure & const
             & E.charGroup Nothing (E.Doc ["Edit", "Inject", "Value"]) ":"
         nullaryRecEntityId =
-            nullary ^. Sugar.ann . Sugar.plEntityId
+            nullary ^. ann . Sugar.plEntityId
             & WidgetIds.fromEntityId
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Inject (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.Inject (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make (Sugar.Inject tag mVal) =

@@ -2,6 +2,7 @@
 module TestPrecedence where
 
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse (_Node, ann, val)
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.SugarStubs (($$), ($.))
@@ -15,7 +16,7 @@ infixArgs ::
     ( Sugar.Expression name i o a
     , Sugar.Expression name i o a
     )
-infixArgs = Sugar._Node . Sugar.val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
+infixArgs = _Node . val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
 
 test :: Test
 test =
@@ -27,7 +28,7 @@ test =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    Sugar._Node . Sugar.val . Sugar._BodyGetField . Sugar.gfRecord . Sugar._Node . Sugar.ann . _2
+    _Node . val . Sugar._BodyGetField . Sugar.gfRecord . _Node . ann . _2
     & assertEqual "get field should disambiguate compound expression"
         Parens.NeedsParens
     & testCase "get-field-of-apply"
@@ -41,6 +42,6 @@ testMinOpPrecInfix =
         assertEqual "Parens minOpPrec is not 0?!" 0 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . Sugar._Node . Sugar.ann
+        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . _Node . ann
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExpr
         i = Stub.litNum

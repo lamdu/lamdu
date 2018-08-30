@@ -9,6 +9,7 @@ module Lamdu.Sugar.Parens
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse (Node(..), Ann(..), ann, val)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Precedence
     (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)

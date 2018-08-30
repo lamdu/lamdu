@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)

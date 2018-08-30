@@ -7,6 +7,7 @@ import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property(..), MkProperty(..))
 import           Data.String (IsString(..))
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Val as V
@@ -45,17 +46,17 @@ defRef var tag =
     , Sugar._bvInline = Sugar.CannotInline
     }
 
-node :: v -> Sugar.Ann (Sugar.Payload name Identity Unit ()) v
-node = Sugar.Ann payload
+node :: v -> Ann (Sugar.Payload name Identity Unit ()) v
+node = Ann payload
 
 pNode ::
-    f (Sugar.Ann (Sugar.Payload name Identity Unit ())) ->
-    Sugar.Node (Sugar.Ann (Sugar.Payload name Identity Unit ())) f
-pNode = Sugar.Node . node
+    f (Ann (Sugar.Payload name Identity Unit ())) ->
+    Node (Ann (Sugar.Payload name Identity Unit ())) f
+pNode = Node . node
 
 labeledApplyFunc ::
     Sugar.BinderVarRef name Unit ->
-    Sugar.Ann (Sugar.Payload name Identity Unit ()) (Sugar.BinderVarRef name Unit)
+    Ann (Sugar.Payload name Identity Unit ()) (Sugar.BinderVarRef name Unit)
 labeledApplyFunc = node
 
 type Infix2 = Expr -> Expr -> Expr
@@ -155,9 +156,9 @@ def typ var tag body =
     }
 
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
-repl (Sugar.Node (Sugar.Ann pl x)) =
+repl (Node (Ann pl x)) =
     Sugar.Repl
-    { Sugar._replExpr = Sugar.Node (Sugar.Ann pl (Sugar.BinderExpr x))
+    { Sugar._replExpr = Node (Ann pl (Sugar.BinderExpr x))
     , Sugar._replVarInfo = Sugar.VarNormal
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
@@ -185,14 +186,14 @@ mkFuncParam (paramVar, paramTag) =
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
     Sugar.Function InternalName Identity Unit
-    (Sugar.Ann (Sugar.Payload InternalName Identity Unit ()))
+    (Ann (Sugar.Payload InternalName Identity Unit ()))
 funcExpr params pn =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
     , Sugar._fAddFirstParam = Sugar.PrependParam tagSelection
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
-    , Sugar._fBody = pn & Sugar._Node . Sugar.val %~ Sugar.BinderExpr
+    , Sugar._fBody = pn & _Node . val %~ Sugar.BinderExpr
     }
 
 binderExpr ::
@@ -202,7 +203,7 @@ binderExpr ::
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & pNode
 
 expr ::
-    Sugar.Body name Identity Unit (Sugar.Ann (Sugar.Payload name Identity Unit ())) ->
+    Sugar.Body name Identity Unit (Ann (Sugar.Payload name Identity Unit ())) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr = pNode
 

@@ -2,7 +2,7 @@ module TestAnimIdClash (test) where
 
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
-import           Data.Tree.Diverse (annotations)
+import           Data.Tree.Diverse (_Node, ann, annotations)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))
@@ -83,7 +83,7 @@ testFragment =
                 , Sugar._fOptions = pure []
                 } & Stub.expr
             )
-            & Sugar._Node . Sugar.ann . Sugar.plEntityId .~ fragEntityId
+            & _Node . ann . Sugar.plEntityId .~ fragEntityId
             & Stub.addNamesToExpr
             & annotations . Sugar.plData .~ adhocPayload
         fragEntityId = "frag"

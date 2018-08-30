@@ -7,6 +7,7 @@ module Lamdu.Sugar.Annotations
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types

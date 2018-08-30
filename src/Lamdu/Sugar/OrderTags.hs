@@ -6,6 +6,7 @@ module Lamdu.Sugar.OrderTags
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -50,7 +51,7 @@ orderRecord r =
     & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagInfo))
     >>= traverse orderExpr
 
-orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+orderLabeledApply :: Monad m => Order m (Sugar.LabeledApply name (T m) o (Ann (Sugar.Payload name i o a)))
 orderLabeledApply a =
     a
     & Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
@@ -63,12 +64,12 @@ orderCase = Sugar.cBody %%~ orderRecord
 
 orderLam ::
     Monad m =>
-    Order m (Sugar.Lambda name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+    Order m (Sugar.Lambda name (T m) o (Ann (Sugar.Payload name i o a)))
 orderLam = Sugar.lamFunc orderFunction
 
 orderBinderBody ::
     Monad m =>
-    Order m (Sugar.Binder name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+    Order m (Sugar.Binder name (T m) o (Ann (Sugar.Payload name i o a)))
 orderBinderBody (Sugar.BinderExpr x) = orderBody x <&> Sugar.BinderExpr
 orderBinderBody (Sugar.BinderLet x) =
     x
@@ -78,27 +79,27 @@ orderBinderBody (Sugar.BinderLet x) =
 
 orderBinder ::
     Monad m =>
-    Order m (Sugar.Node (Sugar.Ann (Sugar.Payload name i o a)) (Sugar.Binder name (T m) o))
-orderBinder = (Sugar._Node . Sugar.val) orderBinderBody
+    Order m (Node (Ann (Sugar.Payload name i o a)) (Sugar.Binder name (T m) o))
+orderBinder = (_Node . val) orderBinderBody
 
 orderElse ::
     Monad m =>
-    Order m (Sugar.Else name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+    Order m (Sugar.Else name (T m) o (Ann (Sugar.Payload name i o a)))
 orderElse (Sugar.SimpleElse x) = orderBody x <&> Sugar.SimpleElse
 orderElse (Sugar.ElseIf x) = Sugar.eiContent orderIfElse x <&> Sugar.ElseIf
 
 orderIfElse ::
     Monad m =>
-    Order m (Sugar.IfElse name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+    Order m (Sugar.IfElse name (T m) o (Ann (Sugar.Payload name i o a)))
 orderIfElse x =
     x
     & Sugar.iIf orderExpr
     >>= Sugar.iThen orderExpr
-    >>= (Sugar.iElse . Sugar._Node . Sugar.val) orderElse
+    >>= (Sugar.iElse . _Node . val) orderElse
 
 orderBody ::
     Monad m =>
-    Order m (Sugar.Body name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+    Order m (Sugar.Body name (T m) o (Ann (Sugar.Payload name i o a)))
 orderBody (Sugar.BodyLam l) = orderLam l <&> Sugar.BodyLam
 orderBody (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
 orderBody (Sugar.BodyLabeledApply a) = orderLabeledApply a <&> Sugar.BodyLabeledApply
@@ -123,21 +124,21 @@ orderExpr ::
     Monad m => Order m (Sugar.Expression name (T m) o (Sugar.Payload name i o a))
 orderExpr e =
     e
-    & Sugar._Node . Sugar.ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
-    >>= Sugar._Node . Sugar.val %%~ orderBody
+    & _Node . ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
+    >>= _Node . val %%~ orderBody
     -- TODO: Skipping ordering of "if"
-    >>= (Sugar._Node . Sugar.val) (SugarLens.bodyChildren pure pure pure pure orderBinder orderExpr)
+    >>= (_Node . val) (SugarLens.bodyChildren pure pure pure pure orderBinder orderExpr)
 
 orderFunction ::
     Monad m =>
-    Order m (Sugar.Function name (T m) o (Sugar.Ann (Sugar.Payload name i o a)))
+    Order m (Sugar.Function name (T m) o (Ann (Sugar.Payload name i o a)))
 orderFunction =
     -- The ordering for binder params already occurs at the Assignment's conversion,
     -- because it needs to be consistent with the presentation mode.
     Sugar.fBody orderBinder
 
 orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o (Sugar.Payload name i o a))
-orderAssignment = (Sugar._Node . Sugar.val . Sugar._BodyFunction) orderFunction
+orderAssignment = (_Node . val . Sugar._BodyFunction) orderFunction
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))

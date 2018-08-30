@@ -28,7 +28,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
-import           Data.Tree.Diverse (annotations)
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, annotations)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal

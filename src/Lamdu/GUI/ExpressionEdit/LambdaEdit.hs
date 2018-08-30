@@ -4,6 +4,7 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Tree.Diverse (Ann(..), _Node, ann)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -120,7 +121,7 @@ mkLightLambda params myId =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Lambda (Name o) i o (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Sugar.Lambda (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make lam pl =
@@ -143,4 +144,4 @@ make lam pl =
         myId = WidgetIds.fromExprPayload pl
         params = func ^. Sugar.fParams
         func = lam ^. Sugar.lamFunc
-        bodyId = func ^. Sugar.fBody . Sugar._Node . Sugar.ann . Sugar.plEntityId
+        bodyId = func ^. Sugar.fBody . _Node . ann . Sugar.plEntityId

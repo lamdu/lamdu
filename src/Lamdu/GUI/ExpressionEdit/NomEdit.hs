@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -34,13 +35,13 @@ mReplaceParent ::
     Lens.Traversal'
     (Sugar.Expression name i o (Sugar.Payload name i o a))
     (o Sugar.EntityId)
-mReplaceParent = Sugar._Node . Sugar.ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
+mReplaceParent = _Node . ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o)
-        (Sugar.Node
-            (Sugar.Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Node
+            (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
             (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
@@ -49,7 +50,7 @@ makeToNom nom pl =
     & mkNomGui id "ToNominal" "«" mDel pl
     where
         mDel =
-            nom ^. Sugar.nVal . Sugar._Node . Sugar.ann . Sugar.plActions .
+            nom ^. Sugar.nVal . _Node . ann . Sugar.plActions .
             Sugar.mReplaceParent
 
 

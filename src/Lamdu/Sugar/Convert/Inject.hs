@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Data.Property as Property
+import           Data.Tree.Diverse (Ann(..), _Node, val)
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
 import qualified Lamdu.Calc.Val.Annotated as Val
