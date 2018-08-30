@@ -5,13 +5,14 @@ module Lamdu.Eval.Results.Process
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (Node(..), Ann(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Nominal as N
 import           Lamdu.Calc.Type.Scheme (schemeType)
-import           Lamdu.Eval.Results (Val(..), Body(..))
+import           Lamdu.Eval.Results (Val, Body(..))
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Infer (applyNominal)
 
@@ -36,12 +37,12 @@ extractVariantTypeField tag typ =
         comp <- typ ^? T._TVariant
         FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
 
-type AddTypes val res = (T.Type -> val -> res) -> T.Type -> Body res
+type AddTypes val f = (T.Type -> val -> Node f Body) -> T.Type -> Body f
 
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack
 
-addTypesRecExtend :: V.RecExtend val -> AddTypes val res
+addTypesRecExtend :: V.RecExtend val -> AddTypes val f
 addTypesRecExtend (V.RecExtend tag val rest) go typ =
     case extractRecordTypeField tag typ of
     Nothing ->
@@ -63,7 +64,7 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
         (go restType rest)
         & RRecExtend
 
-addTypesInject :: V.Inject val -> AddTypes val res
+addTypesInject :: V.Inject val -> AddTypes val f
 addTypesInject (V.Inject tag val) go typ =
     case extractVariantTypeField tag typ of
     Nothing ->
@@ -74,7 +75,7 @@ addTypesInject (V.Inject tag val) go typ =
         _ -> "addTypesInject got " ++ show typ & typeError
     Just valType -> go valType val & V.Inject tag & RInject
 
-addTypesArray :: [val] -> AddTypes val res
+addTypesArray :: [val] -> AddTypes val f
 addTypesArray items go typ =
     case typ ^? T._TInst . _2 . Lens.ix Builtins.valTypeParamId of
     Nothing ->
@@ -86,7 +87,7 @@ addTypesArray items go typ =
     Just paramType -> items <&> go paramType & RArray
 
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
-addTypes nomsMap typ (Val () b) =
+addTypes nomsMap typ (Node (Ann () b)) =
     case b of
     RRecExtend recExtend -> recurse (addTypesRecExtend recExtend)
     RInject inject -> recurse (addTypesInject inject)
@@ -95,7 +96,7 @@ addTypes nomsMap typ (Val () b) =
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l
     RError e -> RError e
-    & Val typ
+    & Ann typ & Node
     where
         recurse f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 

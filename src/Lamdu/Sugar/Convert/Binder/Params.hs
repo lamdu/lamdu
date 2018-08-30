@@ -636,7 +636,7 @@ makeFieldParam lambdaPl (tag, typeExpr) =
         <&> (^. Input.eAppliesOfLam)
         <&> Lens.mapped . Lens.mapped . _2 %~ ER.extractField typeExpr tag
         <&> Lens.mapped %~
-            filter (Lens.nullOf (_2 . ER.body . ER._RError))
+            filter (Lens.nullOf (_2 . _Node . val . ER._RError))
     }
 
 convertNonEmptyParams ::

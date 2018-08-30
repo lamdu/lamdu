@@ -31,7 +31,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (annotations)
+import           Data.Tree.Diverse (Node(..), Ann(..), annotations)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
@@ -115,7 +115,7 @@ parseUUID = UUIDUtils.fromSBS16 . parseHexNameBs
 
 parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
 parseRecord obj =
-    HashMap.toList obj & foldM step (ER.Val () ER.RRecEmpty)
+    HashMap.toList obj & foldM step (Node (Ann () ER.RRecEmpty))
     where
         step r ("cacheId", _) = pure r -- TODO: Explain/fix this
         step r (k, v) =
@@ -125,7 +125,7 @@ parseRecord obj =
             { V._recTag = parseHexNameBs k & Identifier & Tag
             , V._recFieldVal = pv
             , V._recRest = r
-            } & ER.Val ()
+            } & Ann () & Node
 
 parseWord8 :: Json.Value -> Word8
 parseWord8 (Json.Number x)
@@ -138,19 +138,19 @@ parseBytes :: Json.Value -> ER.Val ()
 parseBytes (Json.Array vals) =
     Vec.toList vals
     <&> parseWord8
-    & BS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & ER.Val ()
+    & BS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & Ann () & Node
 parseBytes _ = error "Bytes with non-array data"
 
 parseInject :: Text -> Maybe Json.Value -> Parse (ER.Val ())
 parseInject tag mData =
     case mData of
-    Nothing -> ER.Val () ER.RRecEmpty & pure
+    Nothing -> Ann () ER.RRecEmpty & Node & pure
     Just v -> parseResult v
     <&> \iv ->
     ER.RInject V.Inject
     { V._injectTag = parseHexNameBs tag & Identifier & Tag
     , V._injectVal = iv
-    } & ER.Val ()
+    } & Ann () & Node
 
 (.?) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a
 obj .? tag = Json.parseEither (.: tag) obj & either fail pure
@@ -160,11 +160,11 @@ parseObj obj =
     msum
     [ obj .? "array"
       <&> \(Json.Array arr) ->
-            Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> ER.Val ()
+            Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> Ann () <&> Node
     , obj .? "bytes" <&> parseBytes <&> pure
     , obj .? "number" <&> read <&> fromDouble <&> pure
     , obj .? "tag" <&> (`parseInject` (obj .? "data"))
-    , obj .? "func" <&> (\(Json.Number x) -> round x & ER.RFunc & ER.Val () & pure)
+    , obj .? "func" <&> (\(Json.Number x) -> round x & ER.RFunc & Ann () & Node & pure)
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
@@ -182,7 +182,7 @@ parseResult (Json.Object obj) =
 parseResult x = "Unsupported encoded JS output: " ++ show x & fail
 
 fromDouble :: Double -> ER.Val ()
-fromDouble = ER.Val () . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
+fromDouble = Node . Ann () . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
 
 addVal ::
     Ord srcId =>

@@ -12,6 +12,7 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
+import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
@@ -50,12 +51,12 @@ convertPrimVal _ p =
 type ERV = ER.Val T.Type
 
 flattenRecord :: ERV -> Either EvalTypeError ([(T.Tag, ERV)], Map T.Tag ERV)
-flattenRecord (ER.Val _ ER.RRecEmpty) = Right ([], Map.empty)
-flattenRecord (ER.Val _ (ER.RRecExtend (V.RecExtend tag v rest))) =
+flattenRecord (Node (Ann _ ER.RRecEmpty)) = Right ([], Map.empty)
+flattenRecord (Node (Ann _ (ER.RRecExtend (V.RecExtend tag v rest)))) =
     flattenRecord rest
     <&> _1 %~ ((tag, v) :)
     <&> _2 . Lens.at tag ?~ v
-flattenRecord (ER.Val _ (ER.RError err)) = Left err
+flattenRecord (Node (Ann _ (ER.RError err))) = Left err
 flattenRecord _ = Left (EvalTypeError "Record extents non-record")
 
 mkTagInfo :: EntityId -> T.Tag -> TagInfo InternalName
@@ -67,7 +68,7 @@ mkTagInfo entityId tag =
     }
 
 convertNullaryInject :: EntityId -> V.Inject (ER.Val pl) -> Maybe (ResVal InternalName)
-convertNullaryInject entityId (V.Inject tag (ER.Val _ ER.RRecEmpty)) =
+convertNullaryInject entityId (V.Inject tag (Node (Ann _ ER.RRecEmpty))) =
     RInject (ResInject (mkTagInfo entityId tag) Nothing) & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
@@ -78,7 +79,7 @@ convertStream entityId typ (V.Inject _ x) =
         guard (tid == Builtins.streamTid)
         (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
-        ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . ER.body & maybeToMPlus
+        ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . _Node . val & maybeToMPlus
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
             & ResStream & RStream & ResVal entityId & Just
 
@@ -121,7 +122,7 @@ convertTree entityId typ fr =
         RTree ResTree
             { _rtRoot = convertVal (EntityId.ofEvalField Builtins.rootTag entityId) root
             , _rtSubtrees =
-                subtrees ^.. (ER.body . ER._RArray) .> Lens.folded
+                subtrees ^.. (_Node . val . ER._RArray) .> Lens.folded
                 & Lens.imapped %@~ convertSubtree
             } & ResVal entityId & Just
     where
@@ -172,13 +173,13 @@ convertArray entityId _typ vs =
         convertElem idx = convertVal (EntityId.ofEvalArrayIdx idx entityId)
 
 convertVal :: EntityId -> ERV -> ResVal InternalName
-convertVal entityId (ER.Val _ (ER.RError err)) = RError err & ResVal entityId
-convertVal entityId (ER.Val _ (ER.RFunc i)) = RFunc i & ResVal entityId
-convertVal entityId (ER.Val _ ER.RRecEmpty) = ResRecord [] & RRecord & ResVal entityId
-convertVal entityId v@(ER.Val typ ER.RRecExtend{}) = convertRecord entityId typ v
-convertVal entityId (ER.Val typ (ER.RPrimVal p)) = convertPrimVal typ p & ResVal entityId
-convertVal entityId (ER.Val typ (ER.RInject x)) = convertInject entityId typ x
-convertVal entityId (ER.Val typ (ER.RArray x)) = convertArray entityId typ x
+convertVal entityId (Node (Ann _ (ER.RError err))) = RError err & ResVal entityId
+convertVal entityId (Node (Ann _ (ER.RFunc i))) = RFunc i & ResVal entityId
+convertVal entityId (Node (Ann _ ER.RRecEmpty)) = ResRecord [] & RRecord & ResVal entityId
+convertVal entityId v@(Node (Ann typ ER.RRecExtend{})) = convertRecord entityId typ v
+convertVal entityId (Node (Ann typ (ER.RPrimVal p))) = convertPrimVal typ p & ResVal entityId
+convertVal entityId (Node (Ann typ (ER.RInject x))) = convertInject entityId typ x
+convertVal entityId (Node (Ann typ (ER.RArray x))) = convertArray entityId typ x
 
 -- When we can scroll between eval view results we
 -- must encode the scope into the entityID for smooth

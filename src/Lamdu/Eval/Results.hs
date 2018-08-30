@@ -1,7 +1,7 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
-    , Val(..), payload, body
+    , Val
     , ScopeId(..), topLevelScopeId
     , EvalTypeError(..)
     , WhichGlobal(..), encodeWhichGlobal, decodeWhichGlobal
@@ -19,6 +19,7 @@ import qualified Data.IntMap as IntMap
 import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           Data.Tree.Diverse (Node(..), Ann(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -34,20 +35,17 @@ newtype EvalTypeError = EvalTypeError Text
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
-data Body val
-    = RRecExtend (V.RecExtend val)
-    | RInject (V.Inject val)
+data Body f
+    = RRecExtend (V.RecExtend (Node f Body))
+    | RInject (V.Inject (Node f Body))
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
-    | RArray [val]
+    | RArray [(Node f Body)]
     | RError EvalTypeError
-    deriving (Show, Functor, Foldable, Traversable)
+deriving instance Show (f (Body f)) => Show (Body f)
 
-data Val pl = Val
-    { _payload :: pl
-    , _body :: Body (Val pl)
-    } deriving (Show, Functor, Foldable, Traversable)
+type Val pl = Node (Ann pl) Body
 
 data ErrorType = LamduBug | BrokenDef | ReachedHole | RuntimeError
     deriving (Read, Show, Generic, Eq)
@@ -82,13 +80,13 @@ instance Show srcId => Show (EvalException srcId) where
         Just (g, e) -> encodeWhichGlobal g ++ ":" ++ show e
 
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
-extractField errPl tag (Val _ (RRecExtend (V.RecExtend vt vv vr)))
+extractField errPl tag (Node (Ann _ (RRecExtend (V.RecExtend vt vv vr))))
     | vt == tag = vv
     | otherwise = extractField errPl tag vr
-extractField _ _ v@(Val _ RError {}) = v
+extractField _ _ v@(Node (Ann _ RError{})) = v
 extractField errPl tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & Text.pack & EvalTypeError & RError & Val errPl
+    & Text.pack & EvalTypeError & RError & Ann errPl & Node
 
 data EvalResults srcId =
     EvalResults
@@ -108,5 +106,4 @@ empty =
     }
 
 Lens.makeLenses ''EvalResults
-Lens.makeLenses ''Val
 Lens.makePrisms ''Body
