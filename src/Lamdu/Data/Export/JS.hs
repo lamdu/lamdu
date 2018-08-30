@@ -5,7 +5,6 @@ module Lamdu.Data.Export.JS
     ) where
 
 import qualified Codec.Archive.Zip as Zip
-import           Codec.Picture (Image, PixelRGB8(..), withImage)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (execWriterT, tell)
 import           Control.Monad.Transaction (getP)
@@ -15,8 +14,6 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
-import qualified Foreign as F
-import qualified Graphics.Rendering.OpenGL as GL
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Val as V
 import           Lamdu.Calc.Val.Annotated (Val)
@@ -40,26 +37,6 @@ import qualified Revision.Deltum.Transaction as Transaction
 import           Lamdu.Prelude
 
 type T = Transaction
-
-_takeScreenshot :: IO (Image PixelRGB8)
-_takeScreenshot =
-    do
-        (pos, size@(GL.Size wGl hGl)) <- GL.get GL.viewport
-        let width = fromIntegral wGl
-        let height = fromIntegral hGl
-        let pixelSize = 3
-        -- glY converts top-origin coordinates to OpenGL's bottom-origin system
-        let glY y = height - 1 - y
-        let pixelOffset x y = (glY y * width + x) * pixelSize
-        F.allocaBytes (pixelSize * width * height) $
-            \ptr ->
-            do
-                GL.readPixels pos size (GL.PixelData GL.RGB GL.UnsignedByte ptr)
-                let readPixel x y =
-                        F.plusPtr ptr (pixelOffset x y)
-                        & F.peekArray pixelSize
-                        <&> (\[r, g, b] -> PixelRGB8 r g b)
-                withImage width height readPixel
 
 removeReadmeMeta :: String -> String
 removeReadmeMeta =

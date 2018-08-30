@@ -2,7 +2,7 @@
 , base-orphans, base16-bytestring, binary, bytestring, containers
 , cryptohash-sha256, data-default, deepseq, deepseq-generics
 , directory, edit-distance, ekg-core, filepath, GLFW-b, graphics-drawingcombinators
-, hashable, JuicyPixels, lamdu-calculus, language-ecmascript, lens, lens-aeson
+, hashable, lamdu-calculus, language-ecmascript, lens, lens-aeson
 , leveldb-haskell, List, mtl, nodejs-exec, OpenGL
 , optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
 , split, StateVar, stdenv, stm, temporary, test-framework, test-framework-hunit
@@ -20,7 +20,7 @@ mkDerivation {
     aeson aeson-diff aeson-pretty AlgoW base base-compat base-orphans
     base16-bytestring binary bytestring containers cryptohash-sha256
     data-default deepseq deepseq-generics directory edit-distance ekg-core filepath GLFW-b
-    graphics-drawingcombinators hashable HUnit JuicyPixels lamdu-calculus
+    graphics-drawingcombinators hashable HUnit lamdu-calculus
     language-ecmascript lens lens-aeson leveldb-haskell List mtl nodejs-exec
     OpenGL optparse-applicative pretty process random QuickCheck safe-exceptions
     split StateVar stm temporary test-framework test-framework-hunit test-framework-quickcheck2
