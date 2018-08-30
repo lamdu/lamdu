@@ -22,8 +22,7 @@ instance Semigroup a => Semigroup (CurAndPrev a) where
     CurAndPrev c0 p0 <> CurAndPrev c1 p1 = CurAndPrev (c0 <> c1) (p0 <> p1)
 instance Monoid a => Monoid (CurAndPrev a) where
     mempty = CurAndPrev mempty mempty
-    mappend (CurAndPrev c0 p0) (CurAndPrev c1 p1) =
-        CurAndPrev (mappend c0 c1) (mappend p0 p1)
+    mappend = (<>)
 
 instance Applicative CurAndPrev where
     pure x = CurAndPrev x x

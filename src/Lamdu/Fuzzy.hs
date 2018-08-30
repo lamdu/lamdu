@@ -37,8 +37,7 @@ instance Semigroup a => Semigroup (Fuzzy a) where
 
 instance Semigroup a => Monoid (Fuzzy a) where
     mempty = Fuzzy mempty mempty
-    Fuzzy xs xmore `mappend` Fuzzy ys ymore =
-        Fuzzy (xs <> ys) (xmore <> ymore)
+    mappend = (<>)
 
 instance Pretty a => Pretty (Fuzzy a) where
     pPrint (Fuzzy xs m) =

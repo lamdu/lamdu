@@ -72,7 +72,7 @@ instance (Monad m, Semigroup a) => Semigroup (Transaction m a) where
     (<>) = liftA2 (<>)
 instance (Monad m, Monoid a) => Monoid (Transaction m a) where
     mempty = pure mempty
-    mappend = liftA2 mappend
+    mappend = (<>)
 
 type T = Transaction
 

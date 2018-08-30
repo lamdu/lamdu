@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
-import           Data.Monoid.Generic (def_mempty, def_mappend)
+import           Data.Monoid.Generic (def_mempty)
 import           Data.Semigroup (Semigroup((<>)))
 import qualified Data.Tuple as Tuple
 import           GHC.Generics (Generic)
@@ -79,7 +79,7 @@ instance Semigroup a => Semigroup (Vector2 a) where
 
 instance Monoid a => Monoid (Vector2 a) where
     mempty = def_mempty
-    mappend = def_mappend
+    mappend = (<>)
 
 -- An improper Num instance, for convenience
 instance Num a => Num (Vector2 a) where
