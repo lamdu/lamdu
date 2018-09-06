@@ -5,10 +5,14 @@ module Lamdu.Sugar.PresentationModes
 import           Control.Monad.Transaction (getP)
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
+import qualified Data.Property as Property
 import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -20,10 +24,20 @@ makeLabeledApply ::
     Monad m =>
     Ann (ConvertPayload m a) (Sugar.BinderVarRef InternalName (T m)) ->
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
+    Input.Payload m a ->
     ConvertM m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
-makeLabeledApply func args =
+makeLabeledApply func args exprPl =
     do
         presentationMode <- func ^. val . Sugar.bvVar & Anchors.assocPresentationMode & getP
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let mkInfixArg arg other =
+                arg
+                & val . Sugar._BodyHole . Sugar.holeMDelete ?~
+                    (protectedSetToVal
+                        (exprPl ^. Input.stored)
+                        (other ^. ann . pInput . Input.stored . Property.pVal)
+                        <&> EntityId.ofValI
+                    )
         let (specialArgs, otherArgs) =
                 case traverse argExpr presentationMode of
                 Just (Sugar.Infix (l, la) (r, ra)) ->
@@ -51,10 +65,6 @@ makeLabeledApply func args =
             <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x))
             & Map.fromList
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
-        mkInfixArg arg other =
-            arg
-            & val . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. ann . pActions . Sugar.mReplaceParent
         processArg arg =
             do
                 getVar <- arg ^? Sugar.aaExpr . val . Sugar._BodyGetVar

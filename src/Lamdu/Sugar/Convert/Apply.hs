@@ -116,7 +116,7 @@ convertLabeled subexprs funcS argS exprPl =
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (funcS ^. ann) sBinderVar) args
+            (Ann (funcS ^. ann) sBinderVar) args exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. bodyChildPayloads)
