@@ -22,6 +22,7 @@ test =
     testGroup "sugar-tests"
     [ delDefParam
     , delParam
+    , delInfixArg
     , paramAnnotations
     , testChangeParam
     , testExtract
@@ -158,6 +159,21 @@ delParam =
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
+        afterDel = replBody . _BodyLiteral . _LiteralNum
+
+delInfixArg :: Test
+delInfixArg =
+    testSugarActions "one-plus-one.json" [argDel, holeDel, verify]
+    & testCase "del-infix-arg"
+    where
+        argDel workArea =
+            workArea ^?! arg . ann . plActions . mSetToHole . Lens._Just & void
+        holeDel workArea =
+            workArea ^?! arg . val . _BodyHole . holeMDelete . Lens._Just & void
+        arg = replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _2
+        verify workArea
+            | Lens.has afterDel workArea = pure ()
+            | otherwise = fail "Expected 1"
         afterDel = replBody . _BodyLiteral . _LiteralNum
 
 testLightLambda :: Test
