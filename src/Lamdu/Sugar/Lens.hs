@@ -334,12 +334,10 @@ bodyPayloads f =
         relayedPayloads = leafNodePayload OfRelayedArg
 
 payloadsOf ::
-    Lens.Fold (Body name i o (Ann ())) a ->
-    Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o b) b
-payloadsOf x =
-    exprPayloads . Lens.ifiltered predicate
-    where
-        predicate idx _ = Lens.has (_OfExpr . x) idx
+    Lens.Fold (Body name i o (Ann ())) dummy ->
+    Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a
+payloadsOf predicate =
+    exprPayloads . Lens.ifiltered (const . Lens.has (_OfExpr . predicate))
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
