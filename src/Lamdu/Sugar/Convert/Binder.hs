@@ -121,49 +121,37 @@ convertRedex expr redex =
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
-convertBinderBody ::
-    (Monad m, Monoid a) =>
-    Val (Input.Payload m a) ->
-    ConvertM m (Binder InternalName (T m) (T m) (Ann (ConvertPayload m a)), a)
-convertBinderBody expr =
-    case Redex.check expr of
-    Nothing ->
-        ConvertM.convertSubexpression expr
-        & localNewExtractDestPos expr
-        <&> (^. val)
-        <&>
-        \body ->
-        ( BinderExpr body
-        , subexprPayloads
-            (expr ^.. val . V.termChildren)
-            (body ^.. SugarLens.bodyChildPayloads)
-            & mconcat
-        )
-    Just redex ->
-        convertRedex expr redex
-        <&>
-        \l ->
-        ( BinderLet l
-        , redex ^. Redex.lamPl . Input.userData
-        )
-
 convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (Node (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertBinder expr =
-    do
-        actions <-
-            makeActions (expr ^. ann) & localNewExtractDestPos expr
-        (b, hiddenPls) <- convertBinderBody expr
-        Ann
-            { _val = b
-            , _ann =
-                ConvertPayload
-                { _pInput = expr ^. ann & Input.userData .~ hiddenPls
-                , _pActions = actions
+    case Redex.check expr of
+    Nothing ->
+        ConvertM.convertSubexpression expr & localNewExtractDestPos expr
+        <&> \exprS ->
+        exprS
+        & val %~ BinderExpr
+        & ann . pInput .~ expr ^. ann -- TODO: <-- why is this necessary?
+        & ann . pInput . Input.userData .~
+            mconcat
+            (subexprPayloads
+             (expr ^.. val . V.termChildren)
+             (exprS ^.. val . SugarLens.bodyChildPayloads))
+    Just redex ->
+        do
+            bodyS <- convertRedex expr redex
+            actions <- makeActions (expr ^. ann) & localNewExtractDestPos expr
+            pure Ann
+                { _val = BinderLet bodyS
+                , _ann =
+                    ConvertPayload
+                    { _pInput =
+                        expr ^. ann
+                        & Input.userData .~ redex ^. Redex.lamPl . Input.userData
+                    , _pActions = actions
+                    }
                 }
-            } & pure
 
 makeFunction ::
     (Monad m, Monoid a) =>
@@ -199,27 +187,25 @@ makeAssignment ::
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m (Assignment InternalName (T m) (T m) (ConvertPayload m a))
 makeAssignment chosenScopeProp params funcBody pl =
-    do
-        (bod, hiddenEntityIds) <-
-            case params ^. cpParams of
-            Nothing ->
-                convertBinderBody funcBody
-                <&> _1 %~ BodyPlain . AssignPlain (params ^. cpAddFirstParam)
-            Just{} ->
-                makeFunction chosenScopeProp params funcBody <&> BodyFunction <&> (, mempty)
-        nodeActions <- makeActions pl
-        let mRemoveSetToHole
-                | Lens.has (_BodyPlain . apBody . _BinderExpr . _BodyHole) bod =
-                    mSetToHole .~ Nothing
-                | otherwise = id
-        Ann
-            { _ann =
-                ConvertPayload
-                { _pInput = pl & Input.userData .~ hiddenEntityIds
-                , _pActions = mRemoveSetToHole nodeActions
+    case params ^. cpParams of
+    Nothing ->
+        convertBinder funcBody
+        <&> val %~ BodyPlain . AssignPlain (params ^. cpAddFirstParam)
+    Just{} ->
+        do
+            funcS <- makeFunction chosenScopeProp params funcBody
+            nodeActions <- makeActions pl
+            pure Ann
+                { _ann =
+                    ConvertPayload
+                    { _pInput =
+                        -- TODO: Why are redundant hidden entity ids
+                        -- returned here?
+                        pl & Input.userData .~ mempty
+                    , _pActions = nodeActions
+                    }
+                , _val = BodyFunction funcS
                 }
-            , _val = bod
-            } & pure
 
 convertLam ::
     (Monad m, Monoid a) =>
