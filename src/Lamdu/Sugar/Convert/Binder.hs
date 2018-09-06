@@ -84,6 +84,7 @@ convertRedex expr redex =
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
+            & localNewExtractDestPos expr
         float <- makeFloatLetToOuterScope (stored ^. Property.pSet) redex
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
