@@ -1,4 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields, TupleSections #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
