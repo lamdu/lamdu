@@ -22,30 +22,29 @@ makeLabeledApply ::
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
     ConvertM m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
 makeLabeledApply func args =
-    func ^. val . Sugar.bvVar
-    & Anchors.assocPresentationMode & getP
-    <&> \presentationMode ->
-    let (specialArgs, otherArgs) =
-            case traverse argExpr presentationMode of
-            Just (Sugar.Infix (l, la) (r, ra)) ->
-                ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
-                , argsMap
-                    & Map.delete l
-                    & Map.delete r
-                    & Map.elems
-                )
-            Just (Sugar.Object (o, oa)) ->
-                ( Sugar.Object oa
-                , Map.delete o argsMap & Map.elems
-                )
-            _ -> (Sugar.Verbose, args)
-        (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
-    in  Sugar.LabeledApply
-        { Sugar._aFunc = func
-        , Sugar._aSpecialArgs = specialArgs
-        , Sugar._aAnnotatedArgs = annotatedArgs
-        , Sugar._aRelayedArgs = relayedArgs
-        }
+    do
+        presentationMode <- func ^. val . Sugar.bvVar & Anchors.assocPresentationMode & getP
+        let (specialArgs, otherArgs) =
+                case traverse argExpr presentationMode of
+                Just (Sugar.Infix (l, la) (r, ra)) ->
+                    ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
+                    , argsMap
+                        & Map.delete l
+                        & Map.delete r
+                        & Map.elems
+                    )
+                Just (Sugar.Object (o, oa)) ->
+                    ( Sugar.Object oa
+                    , Map.delete o argsMap & Map.elems
+                    )
+                _ -> (Sugar.Verbose, args)
+            (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
+        pure Sugar.LabeledApply
+            { Sugar._aFunc = func
+            , Sugar._aSpecialArgs = specialArgs
+            , Sugar._aAnnotatedArgs = annotatedArgs
+            , Sugar._aRelayedArgs = relayedArgs
+            }
     where
         argsMap =
             args
