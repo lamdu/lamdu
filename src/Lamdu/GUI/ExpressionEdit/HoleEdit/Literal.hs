@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
     ) where
 
 import           Data.Functor.Identity (Identity(..))
-import           Data.Tree.Diverse (_Node, ann, val)
+import           Data.Tree.Diverse (ann, val)
 import           GUI.Momentu (MetaKey(..), WidgetId)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -39,8 +39,8 @@ makeLiteral io optionLiteral lit =
                 mkResult
             & io
         result ^. Sugar.holeResultPick
-        case result ^? Sugar.holeResultConverted . _Node . val . Sugar._BinderExpr . Sugar._BodyFragment . Sugar.fExpr of
-            Just arg -> arg ^. _Node . ann
+        case result ^? Sugar.holeResultConverted . val . Sugar._BinderExpr . Sugar._BodyFragment . Sugar.fExpr of
+            Just arg -> arg ^. ann
             _ -> result ^. Sugar.holeResultConverted . SugarLens.binderResultExpr
             ^. Sugar.plEntityId
             & WidgetIds.fromEntityId

@@ -363,7 +363,7 @@ decodeLeaf obj =
             x -> fail ("bad val for leaf " ++ show x)
 
 encodeVal :: Encoder (Val UUID)
-encodeVal (Node (Ann uuid body)) =
+encodeVal (Ann uuid body) =
     encodeValBody body
     & insertField "id" uuid
     & AesonTypes.Object
@@ -374,11 +374,10 @@ decodeVal =
     Ann
     <$> (obj .: "id")
     <*> decodeValBody obj
-    <&> Node
 
 encodeValBody :: V.Term (Ann UUID) -> AesonTypes.Object
 encodeValBody body =
-    case body & V.termChildren %~ Node . Lens.Const . encodeVal of
+    case body & V.termChildren %~ Lens.Const . encodeVal of
     V.BApp (V.Apply func arg) ->
         HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
     V.BLam (V.Lam (V.Var varId) res) ->
@@ -398,7 +397,7 @@ encodeValBody body =
         HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= c x]
     V.BLeaf x -> encodeLeaf x
     where
-        c x = x ^. _Node . Lens._Wrapped
+        c x = x ^. Lens._Wrapped
 
 decodeValBody :: ExhaustiveDecoder (V.Term (Ann UUID))
 decodeValBody obj =
@@ -438,9 +437,9 @@ decodeValBody obj =
       <*> (obj .: "fromNomVal" <&> c)
       <&> V.BFromNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= V.termChildren (lift . decodeVal . (^. _Node . Lens._Wrapped))
+    ] >>= V.termChildren (lift . decodeVal . (^. Lens._Wrapped))
     where
-        c = Node . Lens.Const
+        c = Lens.Const
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =

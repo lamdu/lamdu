@@ -10,7 +10,7 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node)
+import           Data.Tree.Diverse (Node, Ann(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
@@ -179,7 +179,7 @@ toParentNode ::
         m (b (Ann (Payload (NewName m) (IM m) o p)))) ->
     Node (Ann (Payload (OldName m) (IM m) o p)) a ->
     m (Node (Ann (Payload (NewName m) (IM m) o p)) b)
-toParentNode = _Node . toNode
+toParentNode = toNode
 
 toLet ::
     MonadNaming m =>
@@ -399,7 +399,7 @@ toBody =
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom
-    BodyToNom        x -> x & (traverse . _Node) (toNode toBinder) >>= nTId toTId <&> BodyToNom
+    BodyToNom        x -> x & traverse (toNode toBinder) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam <&> BodyLam

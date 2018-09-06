@@ -22,7 +22,7 @@ module Lamdu.Sugar.Lens
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node(..), Ann(..), Children(..), _Node, ann, val, hoist)
+import           Data.Tree.Diverse (Node, Ann(..), Children(..), ann, val, hoist)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -168,8 +168,8 @@ bodyChildren n l r e b f =
 parentNodePayload ::
     (expr (Ann a) -> p) ->
     Lens.IndexedLens' p (Node (Ann a) expr) a
-parentNodePayload c f (Node (Ann pl x)) =
-    Lens.indexed f (c x) pl <&> (`Ann` x) <&> Node
+parentNodePayload c f (Ann pl x) =
+    Lens.indexed f (c x) pl <&> (`Ann` x)
 
 stripAnnotations :: Children expr => expr (Ann a) -> expr (Ann ())
 stripAnnotations = hoist (ann .~ ())
@@ -230,11 +230,10 @@ parentNodePayloads ::
     (Node (Ann a) e)
     (Node (Ann b) e)
     a b
-parentNodePayloads b i f (Node (Ann pl x)) =
+parentNodePayloads b i f (Ann pl x) =
     flip Ann
     <$> Lens.cloneIndexedTraversal b f x
     <*> Lens.indexed f (i x) pl
-    <&> Node
 
 binderPayloads ::
     Lens.IndexedTraversal (PayloadOf name i o)
@@ -374,15 +373,15 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
 binderResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (Node (Ann a) (Binder name i o)) a
-binderResultExpr f (Node (Ann pl x)) =
+binderResultExpr f (Ann pl x) =
     case x of
     BinderExpr e ->
         Lens.indexed f (OfExpr (stripAnnotations e)) pl
-        <&> (`Ann` x) <&> Node
+        <&> (`Ann` x)
     BinderLet l ->
         lBody (binderResultExpr f) l
         <&> BinderLet
-        <&> Ann pl <&> Node
+        <&> Ann pl
 
 holeOptionTransformExprs ::
     Monad i =>
@@ -432,17 +431,17 @@ elseSubExprParams f (SimpleElse x) = bodySubExprParams f x <&> SimpleElse
 elseSubExprParams f (ElseIf x) =
     eiContent
     (ifElseChildren
-        ((_Node . val . elseSubExprParams) f)
-        ((_Node . val . bodySubExprParams) f))
+        ((val . elseSubExprParams) f)
+        ((val . bodySubExprParams) f))
     x <&> ElseIf
 
 bodySubExprParams :: Lens.Traversal' (Body name i o (Ann a)) (BinderParams name i o)
 bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
 bodySubExprParams f x =
     bodyChildren pure pure pure
-    ((_Node . val . elseSubExprParams) f)
+    ((val . elseSubExprParams) f)
     (binderSubExprParams f)
-    ((_Node . val . bodySubExprParams) f) x
+    ((val . bodySubExprParams) f) x
 
 binderBodySubExprParams :: Lens.Traversal' (Binder name i o (Ann a)) (BinderParams name i o)
 binderBodySubExprParams f (BinderExpr x) =
@@ -453,7 +452,7 @@ binderBodySubExprParams f (BinderLet x) =
     <*> binderSubExprParams f (x ^. lBody)
 
 binderSubExprParams :: Lens.Traversal' (Node (Ann a) (Binder name i o)) (BinderParams name i o)
-binderSubExprParams = _Node . val . binderBodySubExprParams
+binderSubExprParams = val . binderBodySubExprParams
 
 assignmentBodySubExprParams ::
     Lens.Traversal' (AssignmentBody name i o (Ann a)) (BinderParams name i o)
@@ -461,4 +460,4 @@ assignmentBodySubExprParams f (BodyPlain x) = (apBody . binderBodySubExprParams)
 assignmentBodySubExprParams f (BodyFunction x) = funcSubExprParams f x <&> BodyFunction
 
 assignmentSubExprParams :: Lens.Traversal' (Assignment name i o a) (BinderParams name i o)
-assignmentSubExprParams = _Node . val . assignmentBodySubExprParams
+assignmentSubExprParams = val . assignmentBodySubExprParams

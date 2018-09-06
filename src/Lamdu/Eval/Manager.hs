@@ -15,7 +15,7 @@ import           Data.IORef.Extended
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), _Node, annotations)
+import           Data.Tree.Diverse (annotations)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -120,10 +120,7 @@ replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
 replIRef = DbLayout.repl DbLayout.codeIRefs
 
 startBG :: Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) -> IO (Eval.Evaluator (ValI m))
-startBG =
-    Eval.start
-    (IRef.uuid . (^. _Node))
-    (Node . IRef.unsafeFromUUID)
+startBG = Eval.start IRef.uuid IRef.unsafeFromUUID
 
 start :: Evaluator -> IO ()
 start evaluator =
@@ -158,7 +155,7 @@ executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
 sumDependency :: Eval.Dependencies (ValI m) -> Set UUID
 sumDependency (Eval.Dependencies subexprs globals) =
     mconcat
-    [ Set.map (IRef.uuid . (^. _Node)) subexprs
+    [ Set.map IRef.uuid subexprs
     , Set.map (IRef.uuid . ExprIRef.defI) globals
     ]
 

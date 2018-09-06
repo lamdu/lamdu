@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import qualified Control.Lens.Extended as Lens
-import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Data.Tree.Diverse (Node, Ann(..))
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element

@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -57,16 +57,16 @@ recursivelyFixExpr mFix =
         recurse x =
             case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (x ^.. _Node . val . V.termChildren)
+            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . V.termChildren)
 
 changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Node (Ann pl (V.BLeaf (V.LVar v))))
+        mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix isHoleArg
-            (Node (Ann pl (V.BApp (V.Apply (Node (Ann _ (V.BLeaf (V.LVar v)))) arg))))
+            (Ann pl (V.BApp (V.Apply (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar =
             Just $
             \go ->
@@ -80,7 +80,7 @@ applyHoleTo :: Monad m => Val (ValP m) -> T m ()
 applyHoleTo x
     | Lens.has argToHoleFunc x
     || Lens.has ExprLens.valHole x = pure ()
-    | otherwise = x ^. _Node . ann & DataOps.applyHoleTo & void
+    | otherwise = x ^. ann & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
     { fieldsAdded :: Set T.Tag
@@ -102,19 +102,19 @@ fixArg ArgChange arg go =
 fixArg (ArgRecordChange recChange) arg go =
     ( if Set.null (fieldsRemoved recChange)
         then
-            arg ^. _Node . ann . Property.pVal
+            arg ^. ann . Property.pVal
             <$ changeFields (fieldsChanged recChange) arg go
         else
             do
                 go IsHoleArg arg
                 V.Apply
                     <$> DataOps.newHole
-                    ?? arg ^. _Node . ann . Property.pVal
+                    ?? arg ^. ann . Property.pVal
                     <&> V.BApp
-                    >>= ExprIRef.newValBody
+                    >>= Transaction.newIRef
     )
     >>= addFields (fieldsAdded recChange)
-    >>= arg ^. _Node . ann . Property.pSet
+    >>= arg ^. ann . Property.pSet
 
 addFields :: Monad m => Set T.Tag -> ValI m -> Transaction m (ValI m)
 addFields fields src =
@@ -123,7 +123,7 @@ addFields fields src =
         addField x tag =
             V.RecExtend tag <$> DataOps.newHole ?? x
             <&> V.BRecExtend
-            >>= ExprIRef.newValBody
+            >>= Transaction.newIRef
 
 changeFields ::
     Monad m =>
@@ -133,7 +133,7 @@ changeFields ::
 changeFields changes arg go
     | Map.null changes = go NotHoleArg arg
     | otherwise =
-        case arg ^. _Node . val of
+        case arg ^. val of
         V.BRecExtend (V.RecExtend tag fieldVal rest) ->
             case Map.lookup tag changes of
             Nothing ->
@@ -150,9 +150,9 @@ changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValP m) -> T m ()
 changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Node (Ann pl (V.BLeaf (V.LVar v))))
+        mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
-        mFix _ (Node (Ann _ (V.BApp (V.Apply (Node (Ann _ (V.BLeaf (V.LVar v)))) arg))))
+        mFix _ (Ann _ (V.BApp (V.Apply (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar = fixArg change arg & Just
         mFix _ _ = Nothing
 
@@ -218,7 +218,7 @@ updateDefType ::
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
         defExpr
-            <&> (^. _Node . ann . Property.pVal)
+            <&> (^. ann . Property.pVal)
             & Def.exprFrozenDeps . Infer.depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
         x <- typeCheck

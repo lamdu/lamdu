@@ -7,7 +7,7 @@ import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property(..), MkProperty(..))
 import           Data.String (IsString(..))
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val)
+import           Data.Tree.Diverse (Ann(..), val)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -48,11 +48,6 @@ defRef var tag =
 
 node :: v -> Ann (Sugar.Payload name Identity Unit ()) v
 node = Ann payload
-
-pNode ::
-    f (Ann (Sugar.Payload name Identity Unit ())) ->
-    Node (Ann (Sugar.Payload name Identity Unit ())) f
-pNode = Node . node
 
 labeledApplyFunc ::
     Sugar.BinderVarRef name Unit ->
@@ -156,9 +151,9 @@ def typ var tag body =
     }
 
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
-repl (Node (Ann pl x)) =
+repl (Ann pl x) =
     Sugar.Repl
-    { Sugar._replExpr = Node (Ann pl (Sugar.BinderExpr x))
+    { Sugar._replExpr = Ann pl (Sugar.BinderExpr x)
     , Sugar._replVarInfo = Sugar.VarNormal
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
@@ -193,19 +188,19 @@ funcExpr params pn =
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
     , Sugar._fAddFirstParam = Sugar.PrependParam tagSelection
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
-    , Sugar._fBody = pn & _Node . val %~ Sugar.BinderExpr
+    , Sugar._fBody = pn & val %~ Sugar.BinderExpr
     }
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
     Sugar.Assignment InternalName Identity Unit
     (Sugar.Payload InternalName Identity Unit ())
-binderExpr params body = funcExpr params body & Sugar.BodyFunction & pNode
+binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
     Sugar.Body name Identity Unit (Ann (Sugar.Payload name Identity Unit ())) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
-expr = pNode
+expr = node
 
 numType :: Sugar.Type InternalName
 numType =

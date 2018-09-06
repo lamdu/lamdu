@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.ParamList
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Node(..), Ann(..), annotations)
+import           Data.Tree.Diverse (Ann(..), annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
@@ -65,7 +65,7 @@ loadForLambdas x =
             >>= annotations . inferPl . Infer.plScope %%~ update
             & Update.run & State.gets
     where
-        loadLambdaParamList (Node (Ann _ V.BLam {})) pl = loadUnifyParamList pl
+        loadLambdaParamList (Ann _ V.BLam {}) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = pure ()
 
         loadUnifyParamList pl =

@@ -24,7 +24,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
-import           Data.Tree.Diverse (_Node, ann)
+import           Data.Tree.Diverse (ann)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
@@ -158,7 +158,7 @@ makeSubexpression expr =
     & advanceDepth (pure . Responsive.fromTextView)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
-        animId = expr ^. _Node . ann & WidgetIds.fromExprPayload & toAnimId
+        animId = expr ^. ann & WidgetIds.fromExprPayload & toAnimId
 
 isHoleResult :: MonadReader (Askable i o) m => m Bool
 isHoleResult = Lens.view aIsHoleResult

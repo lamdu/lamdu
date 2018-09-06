@@ -4,10 +4,9 @@ module Lamdu.Sugar.Convert.GetField
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (_Node, ann)
+import           Data.Tree.Diverse (ann)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -17,6 +16,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTag)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -51,14 +51,14 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
             protectedSetToVal <- ConvertM.typeProtectedSetToVal
             let setTag newTag =
                     do
-                        V.GetField recExprI newTag & V.BGetField & ExprIRef.writeValBody valI
+                        V.GetField recExprI newTag & V.BGetField & Transaction.writeIRef valI
                         protectedSetToVal recExprStored recExprI & void
             convertTag tag nameWithoutContext mempty (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
     <&> BodyGetField
     >>= addActions [recExpr] exprPl
     where
         valI = exprPl ^. Input.stored . Property.pVal
-        recExprStored = recExpr ^. _Node . ann . Input.stored
+        recExprStored = recExpr ^. ann . Input.stored
         recExprI = recExprStored ^. Property.pVal
 
 convert ::

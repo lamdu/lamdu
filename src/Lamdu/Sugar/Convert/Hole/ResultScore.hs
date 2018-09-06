@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Node(..), Ann(..), val)
+import           Data.Tree.Diverse (Ann(..), val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type(..), Composite(..))
@@ -28,7 +28,7 @@ compositeTypeScore (CExtend _ t r) =
     max (resultTypeScore t) (compositeTypeScore r)
 
 score :: Val Infer.Payload -> [Int]
-score (Node (Ann pl body)) =
+score (Ann pl body) =
     (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
     resultScopeScore :
     resultTypeScore (pl ^. Infer.plType) ++
@@ -47,9 +47,9 @@ resultScore x =
     }
 
 numFragments :: Val a -> Int
-numFragments n@(Node x) =
+numFragments x =
     sum (x ^.. val . V.termChildren <&> numFragments) +
-    if Lens.has appliedHole n
+    if Lens.has appliedHole x
     then 1
     else 0
 

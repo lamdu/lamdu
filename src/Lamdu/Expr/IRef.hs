@@ -3,7 +3,6 @@ module Lamdu.Expr.IRef
     , ValBody
     , ValP
     , Lam, Apply
-    , newValBody, readValBody, writeValBody
     , newVar, readVal
     , writeValWithStoredSubexpressions
     , DefI
@@ -17,7 +16,7 @@ import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -52,18 +51,8 @@ type ValBody m = V.Term (IRef m)
 type Lam m = V.Lam (ValI m)
 type Apply m = V.Apply (ValI m)
 
-newValBody :: Monad m => ValBody m -> T m (ValI m)
-newValBody = fmap Node . Transaction.newIRef
-
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
-
-readValBody :: Monad m => ValI m -> T m (ValBody m)
-readValBody = Transaction.readIRef . (^. _Node)
-
-writeValBody ::
-    Monad m => ValI m -> ValBody m -> T m ()
-writeValBody = Transaction.writeIRef . (^. _Node)
 
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =
@@ -72,39 +61,39 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> readValBody valI >>= V.termChildren go <&> Ann valI <&> Node
+            Just go -> Transaction.readIRef valI >>= V.termChildren go <&> Ann valI
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
     T m (V.Term (Ann (ValI m, a)))
-expressionBodyFrom = V.termChildren writeValWithStoredSubexpressions . (^. _Node . val)
+expressionBodyFrom = V.termChildren writeValWithStoredSubexpressions . (^. val)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & V.termChildren %~ (^. _Node . ann . _1)
+        let bodyWithRefs = body & V.termChildren %~ (^. ann . _1)
         case mIRef of
             Just iref ->
-                Node (Ann (iref, pl) body) <$
-                writeValBody iref bodyWithRefs
+                Ann (iref, pl) body <$
+                Transaction.writeIRef iref bodyWithRefs
             Nothing ->
                 Transaction.newIRef bodyWithRefs
-                <&> \exprI -> Node (Ann (Node exprI, pl) body)
+                <&> \exprI -> Ann (exprI, pl) body
     where
-        (mIRef, pl) = expr ^. _Node . ann
+        (mIRef, pl) = expr ^. ann
 
 addProperties ::
     Monad m =>
     (ValI m -> T m ()) ->
     Val (ValI m, a) ->
     Val (ValP m, a)
-addProperties setIRef (Node (Ann (iref, a) body)) =
-    Ann (Property iref setIRef, a) (body & Lens.indexing V.termChildren %@~ f) & Node
+addProperties setIRef (Ann (iref, a) body) =
+    Ann (Property iref setIRef, a) (body & Lens.indexing V.termChildren %@~ f)
     where
         f index =
             addProperties $ \newIRef ->
-            readValBody iref
+            Transaction.readIRef iref
             <&> Lens.indexing V.termChildren . Lens.index index .~ newIRef
-            >>= writeValBody iref
+            >>= Transaction.writeIRef iref

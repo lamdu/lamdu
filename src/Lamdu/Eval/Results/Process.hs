@@ -5,7 +5,7 @@ module Lamdu.Eval.Results.Process
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Data.Tree.Diverse (Node, Ann(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -87,7 +87,7 @@ addTypesArray items go typ =
     Just paramType -> items <&> go paramType & RArray
 
 addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
-addTypes nomsMap typ (Node (Ann () b)) =
+addTypes nomsMap typ (Ann () b) =
     case b of
     RRecExtend recExtend -> recurse (addTypesRecExtend recExtend)
     RInject inject -> recurse (addTypesInject inject)
@@ -96,7 +96,7 @@ addTypes nomsMap typ (Node (Ann () b)) =
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l
     RError e -> RError e
-    & Ann typ & Node
+    & Ann typ
     where
         recurse f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 

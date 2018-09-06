@@ -10,7 +10,7 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (_Node, ann, annotations)
+import           Data.Tree.Diverse (ann, annotations)
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -197,7 +197,7 @@ convertRepl cache monitors annMode evalRes cp =
                 }
         nomsMap <-
             valInferred ^.. annotations . Input.inferredType & Load.makeNominalsMap
-        let typ = valInferred ^. _Node . ann . Input.inferredType
+        let typ = valInferred ^. ann . Input.inferredType
         let completion =
                 evalRes
                 <&> (^. ER.erCompleted)

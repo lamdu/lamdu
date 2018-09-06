@@ -13,7 +13,7 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -47,14 +47,14 @@ convert app@(V.Apply funcI argI) exprPl =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure
-                    ( if Lens.has (_Node . val . _BodyHole) argS
+                    ( if Lens.has (val . _BodyHole) argS
                       then
-                          let dst = argI ^. _Node . ann . Input.stored . Property.pVal
+                          let dst = argI ^. ann . Input.stored . Property.pVal
                               deleteAction =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & _Node . ann . pActions . mSetToHole ?~ deleteAction
+                              & ann . pActions . mSetToHole ?~ deleteAction
                       else funcS
                     , argS
                     )
@@ -90,11 +90,11 @@ convertLabeled ::
 convertLabeled subexprs funcS argS exprPl =
     do
         -- Make sure it's a not a param, get the var
-        sBinderVar <- funcS ^? _Node . val . _BodyGetVar . _GetBinder & maybeToMPlus
+        sBinderVar <- funcS ^? val . _BodyGetVar . _GetBinder & maybeToMPlus
         -- Make sure it is not a "let" but a "def" (recursive or external)
         _ <- sBinderVar ^? bvForm . _GetDefinition & maybeToMPlus
         -- Make sure the argument is a record
-        record <- argS ^? _Node . val . _BodyRecord & maybeToMPlus
+        record <- argS ^? val . _BodyRecord & maybeToMPlus
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
@@ -117,7 +117,7 @@ convertLabeled subexprs funcS argS exprPl =
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (funcS ^. _Node . ann) sBinderVar) args
+            (Ann (funcS ^. ann) sBinderVar) args
             <&> BodyLabeledApply & transaction
         let userPayload =
                 subexprPayloads subexprs (bod ^.. bodyChildPayloads)
@@ -134,9 +134,9 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. _Node . ann . pInput . Input.stored & Property.value)
+                (funcS ^. ann . pInput . Input.stored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply Apply
             { _applyFunc = funcS
-            , _applyArg = argS & _Node . val . _BodyHole . holeMDelete ?~ del
+            , _applyArg = argS & val . _BodyHole . holeMDelete ?~ del
             } & addActions subexprs applyPl

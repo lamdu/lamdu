@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Binder.Redex
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node(..), annotations, ann, val)
+import           Data.Tree.Diverse (annotations, ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Eval.Results (ScopeId)
@@ -36,7 +36,7 @@ instance Functor Redex where
 check :: Val (Input.Payload m a) -> Maybe (Redex (Input.Payload m a))
 check expr =
     do
-        V.Apply (Node func) a <- expr ^? ExprLens.valApply
+        V.Apply func a <- expr ^? ExprLens.valApply
         l <- func ^? val . V._BLam
         Just Redex
             { _lam = l

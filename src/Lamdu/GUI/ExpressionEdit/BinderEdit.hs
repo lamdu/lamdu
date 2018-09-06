@@ -13,7 +13,7 @@ import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Direction
@@ -310,7 +310,7 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
             Sugar.Params ps ->
                 ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
-        funcPl = func ^. Sugar.fBody . _Node . ann
+        funcPl = func ^. Sugar.fBody . ann
         bodyId = WidgetIds.fromExprPayload funcPl
 
 makePlainParts ::
@@ -325,7 +325,7 @@ makePlainParts assignPlain pl delVarBackwardsId =
             makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId myId
             (assignPlain ^. Sugar.apAddFirstParam) Nothing
         rhs <-
-            assignPlain ^. Sugar.apBody & Ann pl & Node
+            assignPlain ^. Sugar.apBody & Ann pl
             & makeBinderEdit
         Parts mParamsEdit Nothing rhs mempty id myId & pure
     where
@@ -337,7 +337,7 @@ makeParts ::
     Sugar.Assignment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Widget.Id ->
     ExprGuiM i o (Parts o)
-makeParts funcApplyLimit (Node (Ann pl assignmentBody)) =
+makeParts funcApplyLimit (Ann pl assignmentBody) =
     case assignmentBody of
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
     Sugar.BodyPlain x -> makePlainParts x pl
@@ -395,7 +395,7 @@ make pMode defEventMap tag color assignment =
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
-        Node (Ann pl assignmentBody) = assignment
+        Ann pl assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]
 
 makeLetEdit ::
@@ -411,7 +411,7 @@ makeLetEdit item =
                 ( E.keysEventMapMovesCursor (config ^. Config.extractKeys)
                     (E.Doc ["Edit", "Let clause", "Extract to outer scope"])
                     . fmap ExprEventMap.extractCursor
-                ) (item ^? Sugar.lValue . _Node . ann . Sugar.plActions . Sugar.extract)
+                ) (item ^? Sugar.lValue . ann . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys config)
                 (E.Doc ["Edit", "Let clause", "Delete"])
@@ -430,22 +430,22 @@ makeLetEdit item =
             <&> Element.pad (theme ^. Theme.letItemPadding)
         letLabel /|/ space /|/ letEquation & pure
     where
-        bodyId = item ^. Sugar.lBody . _Node . ann & WidgetIds.fromExprPayload
+        bodyId = item ^. Sugar.lBody . ann & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
 makeBinderEdit ::
     (Monad i, Monad o) =>
     Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (Gui Responsive o)
-makeBinderEdit (Node (Ann pl (Sugar.BinderExpr assignmentBody))) =
-    Ann pl assignmentBody & Node & ExprGuiM.makeSubexpression
-makeBinderEdit (Node (Ann pl (Sugar.BinderLet l))) =
+makeBinderEdit (Ann pl (Sugar.BinderExpr assignmentBody)) =
+    Ann pl assignmentBody & ExprGuiM.makeSubexpression
+makeBinderEdit (Ann pl (Sugar.BinderLet l)) =
     do
         config <- Lens.view Config.config
         let moveToInnerEventMap =
                 body
-                ^? _Node . val . Sugar._BinderLet
-                . Sugar.lValue . _Node . ann . Sugar.plActions
+                ^? val . Sugar._BinderLet
+                . Sugar.lValue . ann . Sugar.plActions
                 . Sugar.extract
                 & foldMap
                 (E.keysEventMap (config ^. Config.moveLetInwardKeys)

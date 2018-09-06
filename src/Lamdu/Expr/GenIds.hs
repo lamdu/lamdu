@@ -18,7 +18,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Data.Tree.Diverse (Ann(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -48,12 +48,12 @@ randomTag :: RandomGen g => g -> (T.Tag, g)
 randomTag g = randomIdentifier g & _1 %~ T.Tag
 
 randomizeExpr :: (RandomGen gen, Random r) => gen -> Val (r -> a) -> Val a
-randomizeExpr gen (Node (Ann pl body)) =
+randomizeExpr gen (Ann pl body) =
     (`evalState` gen) $
     do
         r <- state random
         newBody <- body & V.termChildren %%~ randomizeSubexpr
-        Ann (pl r) newBody & Node & pure
+        Ann (pl r) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 
@@ -98,7 +98,7 @@ randomizeParamIdsG ::
 randomizeParamIdsG preNG gen initMap convertPL =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where
-        go (Node (Ann s v)) =
+        go (Ann s v) =
             do
                 parMap <- Reader.ask
                 newGen <- lift $ state ngSplit
@@ -121,7 +121,6 @@ randomizeParamIdsG preNG gen initMap convertPL =
                     x@V.BFromNom {}   -> V.termChildren go x
                     x@V.BToNom {}     -> V.termChildren go x
                     <&> Ann (convertPL newGen parMap s)
-                    <&> Node
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 

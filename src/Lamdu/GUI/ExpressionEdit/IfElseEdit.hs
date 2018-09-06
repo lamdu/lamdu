@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann)
+import           Data.Tree.Diverse (Node, Ann(..), ann)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation (AnimId)
@@ -60,7 +60,7 @@ makeIfThen prefixLabel animId ifElse =
                 foldMap
                 (E.keysEventMapMovesCursor (Config.delKeys config)
                  (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . _Node . ann .
+                (ifElse ^. Sugar.iElse . ann .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap (ifGui /|/ colon))
@@ -76,7 +76,7 @@ makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (Styled.grammarLabel "else" <&> Responsive.fromTextView)
         <*> (Styled.grammarLabel ": " & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression (Node (Ann pl expr))
+    ) <*> ExprGuiM.makeSubexpression (Ann pl expr)
     <&> pure
     where
         elseAnimId = WidgetIds.fromExprPayload pl & Widget.toAnimId
@@ -106,7 +106,7 @@ makeElse ::
     (Monad i, Monad o) =>
     Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
     ExprGuiM i o [Row (Gui Responsive o)]
-makeElse (Node (Ann pl x)) = makeElseBody pl x
+makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env

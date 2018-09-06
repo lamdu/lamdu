@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Composite
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -24,6 +24,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -114,7 +115,7 @@ convertOpenCompositeActions leaf stored =
     \protectedSetToVal ->
     OpenCompositeActions
     { _openCompositeClose =
-        ExprIRef.newValBody (V.BLeaf leaf)
+        Transaction.newIRef (V.BLeaf leaf)
         >>= protectedSetToVal stored
         <&> EntityId.ofValI
     }
@@ -157,7 +158,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
-                    cons newTag exprI restI & ExprIRef.writeValBody valI
+                    cons newTag exprI restI & Transaction.writeIRef valI
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. Property.pVal
@@ -184,7 +185,7 @@ convert ::
     ExtendVal m (Input.Payload m a) ->
     ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
-    case restS ^? _Node . val . prism of
+    case restS ^? val . prism of
     Just r ->
         convertExtend cons op valS exprPl extendV r
         <&> (prism #)
@@ -195,9 +196,9 @@ convert op empty cons prism valS restS exprPl extendV =
         -- subexprs given will add no hidden payloads. Then we add the
         -- extend only to pUserData as the hidden payload
         >>= addActions [] exprPl
-        <&> _Node . ann . pInput . Input.entityId .~ restS ^. _Node . ann . pInput . Input.entityId
-        <&> _Node . ann . pInput . Input.userData <>~
-            (exprPl ^. Input.userData <> restS ^. _Node . ann . pInput . Input.userData)
+        <&> ann . pInput . Input.entityId .~ restS ^. ann . pInput . Input.entityId
+        <&> ann . pInput . Input.userData <>~
+            (exprPl ^. Input.userData <> restS ^. ann . pInput . Input.userData)
     Nothing ->
         convertOneItemOpenComposite empty cons op valS restS exprPl extendV
         <&> (prism #)

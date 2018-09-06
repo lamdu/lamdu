@@ -6,7 +6,7 @@ import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -61,7 +61,7 @@ test =
 
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Body name i o (Ann a))
-replExpr = Sugar.waRepl . Sugar.replExpr . _Node . val . Sugar._BinderExpr
+replExpr = Sugar.waRepl . Sugar.replExpr . val . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -188,7 +188,7 @@ testFragmentSize =
     do
         frag <-
             fromWorkArea cache
-            (Sugar.waRepl . Sugar.replExpr . _Node . ann)
+            (Sugar.waRepl . Sugar.replExpr . ann)
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
@@ -211,7 +211,7 @@ testOpPrec =
         holeId <-
             fromWorkArea cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . _Node . ann . Sugar.plEntityId)
+             Sugar.fBody . ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache

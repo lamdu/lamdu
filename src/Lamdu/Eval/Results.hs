@@ -19,7 +19,7 @@ import qualified Data.IntMap as IntMap
 import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Data.Tree.Diverse (Node, Ann(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -80,13 +80,13 @@ instance Show srcId => Show (EvalException srcId) where
         Just (g, e) -> encodeWhichGlobal g ++ ":" ++ show e
 
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
-extractField errPl tag (Node (Ann _ (RRecExtend (V.RecExtend vt vv vr))))
+extractField errPl tag (Ann _ (RRecExtend (V.RecExtend vt vv vr)))
     | vt == tag = vv
     | otherwise = extractField errPl tag vr
-extractField _ _ v@(Node (Ann _ RError{})) = v
+extractField _ _ v@(Ann _ RError{}) = v
 extractField errPl tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & Text.pack & EvalTypeError & RError & Ann errPl & Node
+    & Text.pack & EvalTypeError & RError & Ann errPl
 
 data EvalResults srcId =
     EvalResults

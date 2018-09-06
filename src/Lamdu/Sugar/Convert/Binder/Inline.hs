@@ -21,7 +21,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
-redexes (Node (Ann _ (V.BApp (V.Apply (Node (Ann _ (V.BLam lam))) arg)))) =
+redexes (Ann _ (V.BApp (V.Apply (Ann _ (V.BLam lam)) arg))) =
     redexes (lam ^. V.lamResult)
     & _1 %~ (:) (lam ^. V.lamParamId, arg)
 redexes v = ([], v)
@@ -31,18 +31,18 @@ wrapWithRedexes rs x =
     foldr wrapWithRedex x rs
     where
         wrapWithRedex (v, a) b =
-            V.Apply (Node (Ann Nothing (V.BLam (V.Lam v b)))) a
+            V.Apply (Ann Nothing (V.BLam (V.Lam v b))) a
             & V.BApp
-            & Ann Nothing & Node
+            & Ann Nothing
 
 inlineLetH :: V.Var -> Val (Maybe a) -> Val (Maybe a) -> Val (Maybe a)
 inlineLetH var arg bod =
     go bod & uncurry wrapWithRedexes
     where
-        go (Node (Ann stored b)) =
-            case (b, arg ^. _Node . val) of
+        go (Ann stored b) =
+            case (b, arg ^. val) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
-            (V.BApp (V.Apply (Node (Ann _ (V.BLeaf (V.LVar v)))) a)
+            (V.BApp (V.Apply (Ann _ (V.BLeaf (V.LVar v))) a)
               , V.BLam (V.Lam param lamBody))
               | v == var ->
                 redexes lamBody
@@ -50,28 +50,28 @@ inlineLetH var arg bod =
             (V.BLam (V.Lam param lamBody), _) ->
                 ( []
                 , go lamBody & uncurry wrapWithRedexes
-                  & V.Lam param & V.BLam & Ann stored & Node
+                  & V.Lam param & V.BLam & Ann stored
                 )
             _ ->
-                ( r ^.. V.termChildren . _Node . Lens._Wrapped . _1 . traverse
-                , r & V.termChildren %~ (^. _Node . Lens._Wrapped . _2) & Ann stored & Node
+                ( r ^.. V.termChildren . Lens._Wrapped . _1 . traverse
+                , r & V.termChildren %~ (^. Lens._Wrapped . _2) & Ann stored
                 )
                 where
-                    r = b & V.termChildren %~ Node . Lens.Const . go
+                    r = b & V.termChildren %~ Lens.Const . go
 
 cursorDest :: Val a -> a
 cursorDest x =
-    case x ^. _Node . val of
+    case x ^. val of
     V.BLam lam -> lam ^. V.lamResult
     _ -> x
     & redexes
-    & (^. _2 . _Node . ann)
+    & (^. _2 . ann)
 
 inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
-    <&> (^? _Node . val . V._BApp . V.applyFunc . _Node . val . V._BLam . V.lamResult . _Node . ann)
+    <&> (^? val . V._BApp . V.applyFunc . val . V._BLam . V.lamResult . ann)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readVal
     <&> annotations %~ Just
@@ -80,6 +80,6 @@ inlineLet topLevelProp redex =
         (redex ^. Redex.arg & annotations %~ Just)
     <&> annotations %~ (, ())
     >>= ExprIRef.writeValWithStoredSubexpressions
-    <&> (^. _Node . ann . _1)
+    <&> (^. ann . _1)
     >>= Property.set topLevelProp
     <&> const (cursorDest (redex ^. Redex.arg & annotations %~ EntityId.ofValI))

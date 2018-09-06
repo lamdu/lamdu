@@ -5,11 +5,10 @@ module Lamdu.Sugar.Convert.Expression
 
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (_Node, ann, val)
+import           Data.Tree.Diverse (ann, val)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Case as ConvertCase
@@ -25,6 +24,7 @@ import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -39,7 +39,7 @@ convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
     , _pSet =
-      ExprIRef.writeValBody iref . V.BLeaf . V.LLiteral .
+      Transaction.writeIRef iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
     } & mkLit & BodyLiteral & addActions [] exprPl
     where
@@ -59,8 +59,8 @@ convert ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convert v =
-    v ^. _Node . ann
-    & case v ^. _Node . val of
+    v ^. ann
+    & case v ^. val of
       V.BLam x -> ConvertBinder.convertLam x
       V.BApp x -> ConvertApply.convert x
       V.BRecExtend x -> ConvertRecord.convertExtend x

@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Node(..), Ann(..), annotations)
+import           Data.Tree.Diverse (Node, Ann(..), annotations)
 import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Align as Align

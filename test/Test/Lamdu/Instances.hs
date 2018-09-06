@@ -12,7 +12,7 @@ import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
-import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Data.Tree.Diverse (Ann(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Data.Vector.Vector2 (Vector2(..))
@@ -245,7 +245,6 @@ instance (NFData a, NFData n) => NFData (Sugar.ResRecord n a) where rnf = generi
 instance (NFData a, NFData n) => NFData (Sugar.ResTable n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.TBody n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.WorkArea n (T i) (T o) a) where rnf = genericRnf
-instance NFData (f (e f)) => NFData (Node f e) where rnf = genericRnf
 instance NFData (Name (T o)) where rnf = genericRnf
 instance NFData (Name.StoredName (T o)) where rnf = genericRnf
 instance NFData (Sugar.AddFirstParam n (T i) (T o)) where rnf = genericRnf

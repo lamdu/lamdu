@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val, annotations)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
@@ -49,8 +49,8 @@ localNewExtractDestPos ::
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
-    { _osiPos = x ^. _Node . ann . Input.stored
-    , _osiScope = x ^. _Node . ann . Input.inferred . Infer.plScope
+    { _osiPos = x ^. ann . Input.stored
+    , _osiScope = x ^. ann . Input.inferred . Infer.plScope
     }
     & ConvertM.local
 
@@ -78,8 +78,8 @@ convertRedex expr redex =
         (_pMode, value) <-
             convertAssignment binderKind param (redex ^. Redex.arg)
             & localNewExtractDestPos expr
-            <&> _2 . _Node . ann . pInput . Input.entityId .~
-                EntityId.ofValI (redex ^. Redex.arg . _Node . ann . Input.stored . Property.pVal)
+            <&> _2 . ann . pInput . Input.entityId .~
+                EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
         letBody <-
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -91,30 +91,30 @@ convertRedex expr redex =
                 & extract .~ float
                 & mReplaceParent ?~
                     ( protectedSetToVal stored
-                        (redex ^. Redex.arg . _Node . ann . Input.stored . Property.pVal)
+                        (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
         postProcess <- ConvertM.postProcessAssert
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamResult . _Node . ann . Input.stored
+                    redex ^. Redex.lam . V.lamResult . ann . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         pure Let
-            { _lVarInfo = redex ^. Redex.arg . _Node . ann . Input.inferred . Infer.plType & mkVarInfo
-            , _lValue = value & _Node . ann . pActions %~ fixValueNodeActions
+            { _lVarInfo = redex ^. Redex.arg . ann . Input.inferred . Infer.plType & mkVarInfo
+            , _lValue = value & ann . pActions %~ fixValueNodeActions
             , _lDelete = del
             , _lName = tag
             , _lBodyScope = redex ^. Redex.bodyScope
             , _lBody =
                 letBody
-                & _Node . ann . pActions . mReplaceParent ?~
-                    (letBody ^. _Node . ann . pInput . Input.entityId <$ del)
+                & ann . pActions . mReplaceParent ?~
+                    (letBody ^. ann . pInput . Input.entityId <$ del)
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
-        stored = expr ^. _Node . ann . Input.stored
+        stored = expr ^. ann . Input.stored
         binderKind =
             redex ^. Redex.lam
             <&> annotations %~ (^. Input.stored)
@@ -130,12 +130,12 @@ convertBinderBody expr =
     Nothing ->
         ConvertM.convertSubexpression expr
         & localNewExtractDestPos expr
-        <&> (^. _Node . val)
+        <&> (^. val)
         <&>
         \body ->
         ( BinderExpr body
         , subexprPayloads
-            (expr ^.. _Node . val . V.termChildren)
+            (expr ^.. val . V.termChildren)
             (body ^.. SugarLens.bodyChildPayloads)
             & mconcat
         )
@@ -154,13 +154,13 @@ convertBinder ::
 convertBinder expr =
     do
         actions <-
-            makeActions (expr ^. _Node . ann) & localNewExtractDestPos expr
+            makeActions (expr ^. ann) & localNewExtractDestPos expr
         (b, hiddenPls) <- convertBinderBody expr
-        Node Ann
+        Ann
             { _val = b
             , _ann =
                 ConvertPayload
-                { _pInput = expr ^. _Node . ann & Input.userData .~ hiddenPls
+                { _pInput = expr ^. ann & Input.userData .~ hiddenPls
                 , _pActions = actions
                 }
             } & pure
@@ -212,7 +212,7 @@ makeAssignment chosenScopeProp params funcBody pl =
                 | Lens.has (_BodyPlain . apBody . _BinderExpr . _BodyHole) bod =
                     mSetToHole .~ Nothing
                 | otherwise = id
-        Node Ann
+        Ann
             { _ann =
                 ConvertPayload
                 { _pInput = pl & Input.userData .~ hiddenEntityIds
@@ -244,7 +244,7 @@ convertLam lam exprPl =
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions lam exprPl
-            <&> _Node . val . SugarLens.bodyChildPayloads .
+            <&> val . SugarLens.bodyChildPayloads .
                 pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
 useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
@@ -252,7 +252,7 @@ useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
         any (func &)
-        [ Lens.has (fBody . _Node . val . _BinderLet)
+        [ Lens.has (fBody . val . _BinderLet)
         , Lens.has (fBody . SugarLens.binderPayloads . Lens.filteredByIndex
             (SugarLens._OfExpr . forbiddenLightLamSubExprs))
         , not . allParamsUsed paramNames
@@ -276,12 +276,12 @@ markBinderLightParams ::
     Set InternalName ->
     Node (Ann a) (Binder InternalName (T m) (T m)) ->
     Node (Ann a) (Binder InternalName (T m) (T m))
-markBinderLightParams paramNames (Node (Ann pl bod)) =
+markBinderLightParams paramNames (Ann pl bod) =
     SugarLens.overBinderChildren id id id
     (markElseLightParams paramNames) (markBinderLightParams paramNames)
     (markLightParams paramNames) fixAssignments
     bod
-    & Ann pl & Node
+    & Ann pl
     where
         fixAssignments =
             -- No assignments inside light lambdas. Consider asserting?
@@ -292,7 +292,7 @@ markElseLightParams ::
     Node (Ann a) (Else InternalName (T m) (T m)) ->
     Node (Ann a) (Else InternalName (T m) (T m))
 markElseLightParams paramNames =
-    _Node . val %~
+    val %~
     \case
     SimpleElse body -> markBodyLightParams paramNames body & SimpleElse
     ElseIf elseIf ->
@@ -307,7 +307,7 @@ markLightParams ::
     Set InternalName ->
     Expression InternalName (T m) (T m) a ->
     Expression InternalName (T m) (T m) a
-markLightParams paramNames = _Node . val %~ markBodyLightParams paramNames
+markLightParams paramNames = val %~ markBodyLightParams paramNames
 
 markBodyLightParams ::
     Set InternalName ->
@@ -338,7 +338,7 @@ convertAssignment binderKind defVar expr =
         (mPresentationModeProp, convParams, funcBody) <-
             convertParams binderKind defVar expr
         makeAssignment (Anchors.assocScopeRef defVar) convParams
-            funcBody (expr ^. _Node . ann)
+            funcBody (expr ^. ann)
             <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::

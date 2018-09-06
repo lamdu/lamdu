@@ -5,7 +5,7 @@ module Lamdu.Sugar.PresentationModes
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
@@ -53,11 +53,11 @@ makeLabeledApply func args =
         argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
         mkInfixArg arg other =
             arg
-            & _Node . val . Sugar._BodyHole . Sugar.holeMDelete .~
-                other ^. _Node . ann . pActions . Sugar.mReplaceParent
+            & val . Sugar._BodyHole . Sugar.holeMDelete .~
+                other ^. ann . pActions . Sugar.mReplaceParent
         processArg arg =
             do
-                getVar <- arg ^? Sugar.aaExpr . _Node . val . Sugar._BodyGetVar
+                getVar <- arg ^? Sugar.aaExpr . val . Sugar._BodyGetVar
                 name <-
                     case getVar of
                     Sugar.GetParam x -> x ^. Sugar.pNameRef . Sugar.nrName & Just
@@ -66,6 +66,6 @@ makeLabeledApply func args =
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Ann
                     { _val = getVar
-                    , _ann = arg ^. Sugar.aaExpr . _Node . ann
+                    , _ann = arg ^. Sugar.aaExpr . ann
                     } & Just
             & fromMaybe (Left arg)

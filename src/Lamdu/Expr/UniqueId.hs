@@ -3,7 +3,6 @@ module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
-import           Data.Tree.Diverse (Node, _Node)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Calc.Identifier (Identifier(..))
@@ -34,7 +33,6 @@ instance ToUUID T.NominalId where toUUID = toUUID . T.nomId
 instance ToUUID T.ParamId   where toUUID = toUUID . T.typeParamId
 instance ToUUID (IRef m a)  where toUUID = IRef.uuid
 instance ToUUID (Branch m)  where toUUID = Branch.uuid
-instance ToUUID (f (a f)) => ToUUID (Node f a) where toUUID = toUUID . (^. _Node)
 
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id

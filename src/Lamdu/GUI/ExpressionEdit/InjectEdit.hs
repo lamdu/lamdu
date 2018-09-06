@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann)
+import           Data.Tree.Diverse (Ann(..), ann)
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -66,13 +66,13 @@ makeInject val tag pl =
             )
     where
         delDoc = E.Doc ["Edit", "Delete"]
-        mReplaceParent = val ^. _Node . ann . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. ann . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec :: Ann a (Sugar.NullaryVal name i o) -> Sugar.Expression name i o a
 emptyRec (Ann pl (Sugar.NullaryVal closedActions addItem)) =
     Sugar.Composite [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & Ann pl & Node
+    & Ann pl
 
 makeNullaryInject ::
     (Monad i, Monad o) =>

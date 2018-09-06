@@ -20,7 +20,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, val)
+import           Data.Tree.Diverse (Ann(..), val)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -603,7 +603,7 @@ compileAppliedFunc :: Monad m => ValId -> Val ValId -> JSS.Expression () -> M m 
 compileAppliedFunc valId func arg' =
     do
         mode <- Lens.view envMode
-        case (func ^. _Node . val, mode) of
+        case (func ^. val, mode) of
             (V.BCase case_, FastSilent) ->
                 compileCaseOnVar valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
@@ -677,7 +677,7 @@ compileToNom (V.Nom tId x) valId =
     _ -> compileVal x >>= maybeLogSubexprResult valId
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
-compileVal (Node (Ann valId body)) =
+compileVal (Ann valId body) =
     case body of
     V.BLeaf x                   -> compileLeaf x valId
     V.BApp x                    -> compileApply valId x    >>= maybeLog

@@ -9,7 +9,7 @@ module Lamdu.Sugar.Parens
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node(..), Ann(..), ann, val)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence
     (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)
@@ -44,8 +44,8 @@ addToAssignment ::
     HasPrecedence name =>
     Node (Ann a) (AssignmentBody name i o) ->
     Node (Ann (MinOpPrec, NeedsParens, a)) (AssignmentBody name i o)
-addToAssignment (Node (Ann pl b)) =
-    Node (Ann (0, NoNeedForParens, pl) (addToAssignmentBody b))
+addToAssignment (Ann pl b) =
+    Ann (0, NoNeedForParens, pl) (addToAssignmentBody b)
 
 addToAssignmentBody ::
     HasPrecedence name =>
@@ -66,10 +66,9 @@ addToBinderWith ::
     Prec ->
     Node (Ann a) (Binder name i o) ->
     Node (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
-addToBinderWith minOpPrec (Node (Ann pl x)) =
+addToBinderWith minOpPrec (Ann pl x) =
     addToBinderBody x
     & Ann (minOpPrec, NoNeedForParens, pl)
-    & Node
 
 unambiguousBody ::
     HasPrecedence name =>
@@ -85,7 +84,7 @@ addToElse ::
     HasPrecedence name =>
     Node (Ann a) (Else name i o) ->
     Node (Ann (MinOpPrec, NeedsParens, a)) (Else name i o)
-addToElse (Node (Ann pl x)) =
+addToElse (Ann pl x) =
     case x of
     SimpleElse expr -> unambiguousBody expr & SimpleElse
     ElseIf elseIf ->
@@ -94,7 +93,6 @@ addToElse (Node (Ann pl x)) =
         SugarLens.overIfElseChildren addToElse (loopExpr 0 unambiguous)
         & ElseIf
     & Ann (0, NoNeedForParens, pl)
-    & Node
 
 addToBinderBody ::
     HasPrecedence name =>
@@ -137,8 +135,8 @@ loopExpr ::
     HasPrecedence name =>
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
-loopExpr minOpPrec parentPrec (Node (Ann pl body_)) =
-    Ann (resPrec, parens, pl) newBody & Node
+loopExpr minOpPrec parentPrec (Ann pl body_) =
+    Ann (resPrec, parens, pl) newBody
     where
         (resPrec, parens, newBody) = loopExprBody minOpPrec parentPrec body_
 

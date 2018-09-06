@@ -15,7 +15,7 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val, annotations)
+import           Data.Tree.Diverse (Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
@@ -72,7 +72,7 @@ valueConversion ::
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     loadNominalsForType loadNominal
-    (src ^. _Node . ann . _1 . Infer.plType)
+    (src ^. ann . _1 . Infer.plType)
     <&>
     \nominals ->
     runReaderT (valueConversionH nominals empty src) emptyOptions
@@ -85,7 +85,7 @@ valueConversionH ::
 valueConversionH nominals empty src =
     case srcInferPl ^. Infer.plType of
     T.TRecord composite
-        | Lens.nullOf (_Node . val . V._BRecExtend) src ->
+        | Lens.nullOf (val . V._BRecExtend) src ->
         composite ^.. ExprLens.compositeFields
         <&> getField & lift & lift
         & prependOpt src
@@ -94,10 +94,9 @@ valueConversionH nominals empty src =
                 V.GetField src tag
                 & V.BGetField
                 & Ann (Payload typ (srcInferPl ^. Infer.plScope), empty)
-                & Node
     _ -> valueConversionNoSplit nominals empty src
     where
-        srcInferPl = src ^. _Node . ann . _1
+        srcInferPl = src ^. ann . _1
 
 prependOpt :: a -> SuggestM a -> SuggestM a
 prependOpt opt = Lens._Wrapped . Lens.mapped . Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
@@ -114,7 +113,7 @@ valueConversionNoSplit nominals empty src =
         do
             (_, resType) <-
                 Infer.inferFromNom nominals (V.Nom name ())
-                (\_ () -> pure (srcType, Node (Ann () (V.BLeaf V.LHole))))
+                (\_ () -> pure (srcType, Ann () (V.BLeaf V.LHole)))
                 srcScope
             updated <-
                 src & annotations . _1 . Infer.plType %%~ update
@@ -150,18 +149,18 @@ valueConversionNoSplit nominals empty src =
                 <&> (`V.Apply` src) <&> V.BApp <&> mkRes dstType
     _ -> mzero
     where
-        srcInferPl = src ^. _Node . ann . _1
+        srcInferPl = src ^. ann . _1
         srcType = srcInferPl ^. Infer.plType
         srcScope = srcInferPl ^. Infer.plScope
-        mkRes typ = Node . Ann (Payload typ srcScope, empty)
-        bodyNot f = Lens.nullOf (_Node . val . f) src
+        mkRes typ = Ann (Payload typ srcScope, empty)
+        bodyNot f = Lens.nullOf (val . f) src
 
 value :: Payload -> [Val Payload]
 value pl@(Payload (T.TVariant comp) scope) =
     case comp of
     T.CVar{} -> [V.BLeaf V.LHole]
     _ -> comp ^.. ExprLens.compositeFields <&> inject
-    <&> Ann pl <&> Node
+    <&> Ann pl
     where
         inject (tag, innerTyp) =
             valueNoSplit (Payload innerTyp scope) emptyOptions & V.Inject tag & V.BInject
@@ -178,7 +177,7 @@ valueNoSplit pl@(Payload typ scope) =
         -- TODO: add var to the scope?
         valueNoSplit (Payload r scope) <&> V.Lam "var" <&> V.BLam
     _ -> V.BLeaf V.LHole & pure
-    <&> Ann pl <&> Node
+    <&> Ann pl
 
 suggestRecordWith :: MonadReader Options m => T.Record -> Infer.Scope -> m (Val Payload)
 suggestRecordWith recordType scope =
@@ -195,7 +194,7 @@ suggestRecordWith recordType scope =
                     <$> Reader.local (avoidRecord .~ True) (valueNoSplit (Payload t scope))
                     <*> suggestRecordWith r scope
                     <&> V.BRecExtend
-    <&> Ann (Payload (T.TRecord recordType) scope) <&> Node
+    <&> Ann (Payload (T.TRecord recordType) scope)
 
 suggestCaseWith :: MonadReader Options m => T.Variant -> Payload -> m (Val Payload)
 suggestCaseWith variantType resultPl@(Payload resultType scope) =
@@ -207,28 +206,28 @@ suggestCaseWith variantType resultPl@(Payload resultType scope) =
         <$> valueNoSplit (Payload (T.TFun fieldType resultType) scope)
         <*> suggestCaseWith rest resultPl
         <&> V.BCase
-    <&> Ann (Payload (T.TFun (T.TVariant variantType) resultType) scope) <&> Node
+    <&> Ann (Payload (T.TFun (T.TVariant variantType) resultType) scope)
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
-fillHoles empty (Node (Ann pl (V.BLeaf V.LHole))) =
+fillHoles empty (Ann pl (V.BLeaf V.LHole)) =
     valueNoSplit (pl ^. _1) emptyOptions
     & annotations %~ (, empty)
-    & _Node . ann . _2 .~ (pl ^. _2)
-fillHoles empty (Node (Ann pl (V.BApp (V.Apply func arg)))) =
+    & ann . _2 .~ (pl ^. _2)
+fillHoles empty (Ann pl (V.BApp (V.Apply func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
-    fillHoles empty arg & V.Apply func & V.BApp & Ann pl & Node
-fillHoles _ v@(Node (Ann _ (V.BGetField (V.GetField (Node (Ann _ (V.BLeaf V.LHole))) _)))) =
+    fillHoles empty arg & V.Apply func & V.BApp & Ann pl
+fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     v
-fillHoles empty x = x & _Node . val . V.termChildren %~ fillHoles empty
+fillHoles empty x = x & val . V.termChildren %~ fillHoles empty
 
 applyForms ::
     ListClass.List m =>
     (T.NominalId -> StateT Context m Nominal) -> a -> Val (Payload, a) ->
     StateT Context m (Val (Payload, a))
-applyForms _ _ v@(Node (Ann _ V.BLam {})) = pure v
-applyForms _ _ v@(Node (Ann pl0 (V.BInject (V.Inject tag (Node (Ann pl1 (V.BLeaf V.LHole))))))) =
-    pure (Node (Ann pl0 (V.BInject (V.Inject tag (Node (Ann pl1 (V.BLeaf V.LRecEmpty)))))))
+applyForms _ _ v@(Ann _ V.BLam {}) = pure v
+applyForms _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+    pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
 applyForms loadNominal empty x =
     case inferPl ^. Infer.plType of
@@ -246,9 +245,9 @@ applyForms loadNominal empty x =
                 unify varTyp (T.TVar tv)
                     & Infer.run & mapStateT assertSuccess
                 V.BLeaf V.LHole
-                    & Ann (plSameScope arg) & Node
+                    & Ann (plSameScope arg)
                     & V.Apply x & V.BApp
-                    & Ann (plSameScope res) & Node
+                    & Ann (plSameScope res)
                     & pure
         where
             assertSuccess (Left err) =
@@ -269,4 +268,4 @@ applyForms loadNominal empty x =
         <&> mapStateT ListClass.fromList
         & join
     where
-        inferPl = x ^. _Node . ann . _1
+        inferPl = x ^. ann . _1

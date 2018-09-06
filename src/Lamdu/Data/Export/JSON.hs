@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, annotations)
+import           Data.Tree.Diverse (Ann(..), annotations)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
 import           Lamdu.Calc.Term (Val)
@@ -116,11 +116,11 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 exportSubexpr :: Monad m => Val (ValP m) -> Export m ()
-exportSubexpr (Node (Ann lamP (V.BLam (V.Lam lamVar _)))) =
+exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
         mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
-        Codec.EntityLamVar mParamList tag (valIToUUID lamI) lamVar & tell
+        Codec.EntityLamVar mParamList tag (IRef.uuid lamI) lamVar & tell
     where
         lamI = lamP ^. Property.pVal
 exportSubexpr _ = pure ()
@@ -133,9 +133,6 @@ exportVal x =
         x ^.. ExprLens.valNominals & traverse_ exportNominal
         x ^.. ExprLens.subExprs & traverse_ exportSubexpr
 
-valIToUUID :: ValI m -> UUID
-valIToUUID = IRef.uuid . (^. _Node)
-
 exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =
     do
@@ -147,7 +144,7 @@ exportDef globalId =
         let def' =
                 def
                 & Definition.defBody . Lens.mapped . annotations %~
-                    valIToUUID . Property.value
+                    IRef.uuid . Property.value
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
@@ -158,7 +155,7 @@ exportRepl =
     do
         repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
-        repl <&> annotations %~ valIToUUID . Property.value & Codec.EntityRepl & tell
+        repl <&> annotations %~ IRef.uuid . Property.value & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -199,11 +196,11 @@ export msg act exportPath =
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
-writeValAt (Node (Ann valI body)) =
-    valI <$ (V.termChildren writeValAt body >>= ExprIRef.writeValBody valI)
+writeValAt (Ann valI body) =
+    valI <$ (V.termChildren writeValAt body >>= Transaction.writeIRef valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
-writeValAtUUID x = x & annotations %~ Node . IRef.unsafeFromUUID & writeValAt
+writeValAtUUID x = x & annotations %~ IRef.unsafeFromUUID & writeValAt
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>
@@ -244,7 +241,7 @@ importLamVar paramList tag lamUUID var =
         Property.setP (Anchors.assocFieldParamList lamI) paramList
         Property.setP (Anchors.assocTag var) tag
     where
-        lamI = IRef.unsafeFromUUID lamUUID & Node
+        lamI = IRef.unsafeFromUUID lamUUID
 
 importNominal :: T.Tag -> T.NominalId -> Nominal -> T ViewM ()
 importNominal tag nomId nominal =

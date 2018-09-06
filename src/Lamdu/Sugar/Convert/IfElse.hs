@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
@@ -27,9 +27,9 @@ convertIfElse ::
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
-        case arg ^. _Node . val of
+        case arg ^. val of
             BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
-            _ | arg ^? _Node . ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
+            _ | arg ^? ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
     where
@@ -46,8 +46,8 @@ convertIfElse setToVal caseBody =
             , _iThen = altTrue ^. ciExpr
             , _iElse =
                 case altFalse ^@?
-                     ciExpr . _Node . val . _BodyLam . lamFunc . Lens.selfIndex
-                     <. (fBody . _Node . val . _BinderExpr . _BodyIfElse)
+                     ciExpr . val . _BodyLam . lamFunc . Lens.selfIndex
+                     <. (fBody . val . _BinderExpr . _BodyIfElse)
                 of
                 Just (binder, innerIfElse) ->
                     ElseIf ElseIfContent
@@ -61,18 +61,17 @@ convertIfElse setToVal caseBody =
                         getScope [x] = x ^. bParamScopeId
                         getScope _ = error "if-else evaluated more than once in same scope?"
                 Nothing ->
-                    altFalse ^. ciExpr . _Node . val
+                    altFalse ^. ciExpr . val
                     & _BodyHole . holeMDelete ?~ elseDel
-                    & _BodyLam . lamFunc . fBody . _Node . val . _BinderExpr .
+                    & _BodyLam . lamFunc . fBody . val . _BinderExpr .
                         _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
-                & Ann (altFalse ^. ciExpr . _Node . ann)
-                & Node
+                & Ann (altFalse ^. ciExpr . ann)
             }
             where
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . _Node . val . _BodyLam . lamFunc . fBody
-                    . _Node . Lens.filteredBy (val . _BinderExpr) . ann
-                    & fromMaybe (alt ^. ciExpr . _Node . ann)
+                    alt ^? ciExpr . val . _BodyLam . lamFunc . fBody
+                    . Lens.filteredBy (val . _BinderExpr) . ann
+                    & fromMaybe (alt ^. ciExpr . ann)
                     & (^. pInput . Input.stored . Property.pVal)

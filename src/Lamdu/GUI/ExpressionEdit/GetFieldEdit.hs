@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (_Node, ann)
+import           Data.Tree.Diverse (ann)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -37,7 +37,7 @@ make (Sugar.GetField recExpr tag) pl =
                 del <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
         let delEventMap =
-                recExpr ^. _Node . ann . Sugar.plActions . Sugar.mReplaceParent
+                recExpr ^. ann . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
         tagEdit <-
             TagEdit.makeRecordTag tag

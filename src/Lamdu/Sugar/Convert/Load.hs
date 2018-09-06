@@ -19,7 +19,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (_Node, ann, annotations)
+import           Data.Tree.Diverse (ann, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -173,7 +173,7 @@ inferDef infer monitors results defExpr defVar =
         defTv <- Infer.freshInferredVar Infer.emptyScope "r"
         let scope = Infer.insertTypeOf defVar defTv Infer.emptyScope
         inferredVal <- infer defExpr scope
-        let inferredType = inferredVal ^. _Node . ann . _1 . Infer.plType
+        let inferredType = inferredVal ^. ann . _1 . Infer.plType
         unify inferredType defTv
         Update.inferredVal inferredVal & Update.liftInfer
     & runInferResult monitors results

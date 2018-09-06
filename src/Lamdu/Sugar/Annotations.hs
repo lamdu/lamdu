@@ -7,7 +7,7 @@ module Lamdu.Sugar.Annotations
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
@@ -44,21 +44,21 @@ forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
     ShowAnnotation
-topLevelAnn = _Node . ann . _1
+topLevelAnn = ann . _1
 
 markAnnotationsToDisplay ::
     Expression name i o a ->
     Expression name i o (ShowAnnotation, a)
-markAnnotationsToDisplay (Node (Ann pl oldBody)) =
-    Ann (showAnn, pl) newBody & Node
+markAnnotationsToDisplay (Ann pl oldBody) =
+    Ann (showAnn, pl) newBody
     where
         (showAnn, newBody) = markBodyAnnotations oldBody
 
 markBinderAnnotations ::
     Node (Ann a) (Binder name i o) ->
     Node (Ann (ShowAnnotation, a)) (Binder name i o)
-markBinderAnnotations (Node (Ann pl x)) =
-    Ann (showAnn, pl) newBody & Node
+markBinderAnnotations (Ann pl x) =
+    Ann (showAnn, pl) newBody
     where
         (showAnn, newBody) = markBinderBodyAnnotations x
 
@@ -79,8 +79,8 @@ markBinderBodyAnnotations =
 markAssignmentAnnotations ::
     Node (Ann a) (AssignmentBody name i o) ->
     Node (Ann (ShowAnnotation, a)) (AssignmentBody name i o)
-markAssignmentAnnotations (Node (Ann pl x)) =
-    Ann (showAnn, pl) newBody & Node
+markAssignmentAnnotations (Ann pl x) =
+    Ann (showAnn, pl) newBody
     where
         (showAnn, newBody) =
             case x of
@@ -95,8 +95,8 @@ markAssignmentAnnotations (Node (Ann pl x)) =
 markElseAnnotations ::
     Node (Ann a) (Else name i o) ->
     Node (Ann (ShowAnnotation, a)) (Else name i o)
-markElseAnnotations (Node (Ann pl x)) =
-    Ann (showAnn, pl) newBody & Node
+markElseAnnotations (Ann pl x) =
+    Ann (showAnn, pl) newBody
     where
         (showAnn, newBody) =
             case x of
@@ -166,7 +166,7 @@ markBodyAnnotations oldBody =
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
             & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . Lens.mapped . _Node . val %~ onHandler
+            & cBody . cItems . Lens.mapped . Lens.mapped . val %~ onHandler
             & BodyCase
         )
     where
@@ -184,7 +184,7 @@ markBodyAnnotations oldBody =
             oldBody
         nonHoleAnn =
             Lens.filtered
-            (Lens.nullOf (_Node . val . Lens.to SugarLens.stripAnnotations . SugarLens.bodyUnfinished))
+            (Lens.nullOf (val . Lens.to SugarLens.stripAnnotations . SugarLens.bodyUnfinished))
             . topLevelAnn
         onHandler a =
             a
@@ -194,5 +194,5 @@ markBodyAnnotations oldBody =
         onElse (ElseIf elseIf) = elseIf & eiContent %~ onIfElse & ElseIf
         onIfElse x =
             x
-            & iThen . _Node . val %~ onHandler
-            & iElse . _Node . val %~ onElse
+            & iThen . val %~ onHandler
+            & iElse . val %~ onElse

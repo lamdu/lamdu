@@ -6,7 +6,7 @@ module Lamdu.Sugar.OrderTags
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (assocTagOrder)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -80,7 +80,7 @@ orderBinderBody (Sugar.BinderLet x) =
 orderBinder ::
     Monad m =>
     Order m (Node (Ann (Sugar.Payload name i o a)) (Sugar.Binder name (T m) o))
-orderBinder = (_Node . val) orderBinderBody
+orderBinder = val orderBinderBody
 
 orderElse ::
     Monad m =>
@@ -95,7 +95,7 @@ orderIfElse x =
     x
     & Sugar.iIf orderExpr
     >>= Sugar.iThen orderExpr
-    >>= (Sugar.iElse . _Node . val) orderElse
+    >>= (Sugar.iElse . val) orderElse
 
 orderBody ::
     Monad m =>
@@ -124,10 +124,10 @@ orderExpr ::
     Monad m => Order m (Sugar.Expression name (T m) o (Sugar.Payload name i o a))
 orderExpr e =
     e
-    & _Node . ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
-    >>= _Node . val %%~ orderBody
+    & ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
+    >>= val %%~ orderBody
     -- TODO: Skipping ordering of "if"
-    >>= (_Node . val) (SugarLens.bodyChildren pure pure pure pure orderBinder orderExpr)
+    >>= val (SugarLens.bodyChildren pure pure pure pure orderBinder orderExpr)
 
 orderFunction ::
     Monad m =>
@@ -138,7 +138,7 @@ orderFunction =
     Sugar.fBody orderBinder
 
 orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o (Sugar.Payload name i o a))
-orderAssignment = (_Node . val . Sugar._BodyFunction) orderFunction
+orderAssignment = (val . Sugar._BodyFunction) orderFunction
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))

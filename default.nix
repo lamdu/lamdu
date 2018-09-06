@@ -18,7 +18,7 @@ let config = {
         };
     };
 };
-in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/b8ffd2459d6.tar.gz") { 
+in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/b8ffd2459d6.tar.gz") {
     inherit config;
 };
 

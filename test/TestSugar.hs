@@ -4,7 +4,7 @@ module TestSugar where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
-import           Data.Tree.Diverse (Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -44,7 +44,7 @@ testSugarActions program actions =
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
 replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o (Ann a))
-replBody = waRepl . replExpr . _Node . val . _BinderExpr
+replBody = waRepl . replExpr . val . _BinderExpr
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
@@ -60,8 +60,8 @@ testChangeParam =
             "new" &
             workArea ^?!
             replBody . _BodySimpleApply . V.applyFunc .
-            _Node . val . _BodySimpleApply . V.applyArg .
-            _Node . val . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
+            val . _BodySimpleApply . V.applyArg .
+            val . lamFirstParam . fpInfo . piTag . tagSelection . tsNewTag
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -78,9 +78,9 @@ testReorderLets =
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             replBody . _BodyLam . lamFunc . fBody .
-            _Node . val . _BinderLet . lBody .
-            _Node . val . _BinderLet . lValue .
-            _Node . ann . plActions . extract
+            val . _BinderLet . lBody .
+            val . _BinderLet . lValue .
+            ann . plActions . extract
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
@@ -90,7 +90,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            replBody . _BodyLam . lamFunc . fBody . _Node . ann . plActions .
+            replBody . _BodyLam . lamFunc . fBody . ann . plActions .
             extract
 
 -- Test for issue #402
@@ -103,32 +103,32 @@ testInline =
         inline workArea =
             do
                 Just yOption <-
-                    letItem ^. lBody . _Node . val . _BinderExpr . _BodyHole
+                    letItem ^. lBody . val . _BinderExpr . _BodyHole
                     . holeOptions
                     >>= findM isY
                 List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
                 _ <-
-                    result ^?! holeResultConverted . _Node . val . _BinderExpr
+                    result ^?! holeResultConverted . val . _BinderExpr
                     . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
                 letItem =
                     workArea ^?!
                     replBody . _BodyLam . lamFunc . fBody .
-                    _Node . val . _BinderLet
+                    val . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
                     <&> Lens.has
-                    (_Node . val . _BinderExpr . _BodyGetVar . _GetBinder .
+                    (val . _BinderExpr . _BodyGetVar . _GetBinder .
                         bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
-            _Node . val . _BinderExpr . _BodyLiteral . _LiteralNum
+            val . _BinderExpr . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
@@ -170,7 +170,7 @@ testLightLambda =
             | otherwise = fail "Expected light lambda sugar!"
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
-            _Node . val . _BodyLam . lamMode . _LightLambda
+            val . _BodyLam . lamMode . _LightLambda
 
 delDefParam :: Test
 delDefParam =
@@ -181,7 +181,7 @@ delDefParam =
         action =
             waPanes . traverse . paneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
-            _Node . val . _BodyFunction .
+            val . _BodyFunction .
             fParams . _Params . traverse .
             fpInfo . piActions . fpDelete
 
@@ -192,4 +192,4 @@ testReplaceParent =
     where
         action =
             replBody . _BodyLam . lamFunc . fBody .
-            _Node . ann . plActions . mReplaceParent . Lens._Just
+            ann . plActions . mReplaceParent . Lens._Just

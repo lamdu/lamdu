@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (_Node, ann, val)
+import           Data.Tree.Diverse (ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
@@ -53,12 +53,12 @@ convert caseV exprPl =
     do
         V.Case tag valS restS <-
             traverse ConvertM.convertSubexpression caseV
-            <&> V.caseMatch . _Node . val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+            <&> V.caseMatch . val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = caseV ^. V.caseMatch . _Node . ann . plValI
-                , Composite._extendRest = caseV ^. V.caseMismatch . _Node . ann
+                , Composite._extendValI = caseV ^. V.caseMatch . ann . plValI
+                , Composite._extendRest = caseV ^. V.caseMismatch . ann
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
@@ -72,7 +72,7 @@ convertAppliedCase ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
     do
-        caseB <- funcS ^? _Node . val . _BodyCase & maybeToMPlus
+        caseB <- funcS ^? val . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setTo = protectedSetToVal (exprPl ^. Input.stored)
@@ -82,19 +82,19 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
                     CaseArg
                     { _caVal = simplifyCaseArg argS
                     , _caToLambdaCase =
-                        setTo (funcS ^. _Node . ann . pInput . Input.stored . Property.pVal)
+                        setTo (funcS ^. ann . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     }
         convertIfElse setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
-            <&> _Node . ann . pInput . Input.entityId .~ funcS ^. _Node . ann . pInput . Input.entityId
-            <&> _Node . ann . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> funcS ^. _Node . ann . pInput . Input.userData)
+            <&> ann . pInput . Input.entityId .~ funcS ^. ann . pInput . Input.entityId
+            <&> ann . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> funcS ^. ann . pInput . Input.userData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
-    case argS ^. _Node . val of
-    BodyFromNom nom | Lens.nullOf (nVal . _Node . val . SugarLens.bodyUnfinished) nom -> nom ^. nVal
+    case argS ^. val of
+    BodyFromNom nom | Lens.nullOf (nVal . val . SugarLens.bodyUnfinished) nom -> nom ^. nVal
     _ -> argS

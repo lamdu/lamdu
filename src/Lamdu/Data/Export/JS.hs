@@ -14,7 +14,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, annotations)
+import           Data.Tree.Diverse (Ann(..), ann, annotations)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -49,7 +49,7 @@ compile repl =
     & execWriterT
     <&> unlines
     where
-        valId = Compiler.ValId . IRef.uuid . (^. Property.pVal . _Node)
+        valId = Compiler.ValId . IRef.uuid . (^. Property.pVal)
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])
@@ -69,7 +69,7 @@ compile repl =
             }
 
 formatResult :: EV.Val a -> ByteString
-formatResult (Node (Ann _ b)) =
+formatResult (Ann _ b) =
     case b of
     EV.RPrimVal prim ->
         case PrimVal.toKnown prim of
@@ -92,7 +92,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . _Node . ann . Property.pVal)
+                . Lens.ix (repl ^. Def.expr . ann . Property.pVal)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

@@ -28,7 +28,7 @@ case_ (V.Case tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
     where
-        caseVal v@(Node (Ann _ body)) =
+        caseVal v@(Ann _ body) =
             case body of
             V.BLeaf V.LAbsurd -> Composite mempty Nothing
             V.BCase x -> case_ x
@@ -39,7 +39,7 @@ recExtend (V.RecExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field
     where
-        recExtendVal v@(Node (Ann _ body)) =
+        recExtendVal v@(Ann _ body) =
             case body of
             V.BLeaf V.LRecEmpty -> Composite mempty Nothing
             V.BRecExtend x -> recExtend x

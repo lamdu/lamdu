@@ -3,10 +3,9 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), _Node, val, ann)
+import           Data.Tree.Diverse (Ann(..), val, ann)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -15,6 +14,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTag)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -28,12 +28,12 @@ convert (V.Inject tag injected) exprPl =
         injectedS <- ConvertM.convertSubexpression injected
         let toNullary =
                 do
-                    V.BLeaf V.LRecEmpty & ExprIRef.newValBody
+                    V.BLeaf V.LRecEmpty & Transaction.newIRef
                         <&> V.Inject tag <&> V.BInject
-                        >>= ExprIRef.writeValBody valI
+                        >>= Transaction.writeIRef valI
                     typeProtect <&> EntityId.ofValI
         let inj =
-                case injectedS ^. _Node of
+                case injectedS of
                 Ann pl
                     (BodyRecord
                      (Composite []
@@ -42,11 +42,11 @@ convert (V.Inject tag injected) exprPl =
                     & InjectNullary
                 _ ->
                     injectedS
-                    & _Node . val . _BodyHole . holeMDelete ?~ toNullary
+                    & val . _BodyHole . holeMDelete ?~ toNullary
                     & InjectVal
         let setTag newTag =
                 do
-                    V.Inject newTag injectedI & V.BInject & ExprIRef.writeValBody valI
+                    V.Inject newTag injectedI & V.BInject & Transaction.writeIRef valI
                     void typeProtect
         convertTag tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
             <&> (`Inject` inj) <&> BodyInject
@@ -54,4 +54,4 @@ convert (V.Inject tag injected) exprPl =
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . Property.pVal
-        injectedI = injected ^. _Node . ann . Input.stored . Property.pVal
+        injectedI = injected ^. ann . Input.stored . Property.pVal

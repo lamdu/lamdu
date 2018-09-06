@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Record
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (_Node, ann)
+import           Data.Tree.Diverse (ann)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
@@ -38,8 +38,8 @@ convertExtend recExtend exprPl =
         let recP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = recExtend ^. V.recFieldVal . _Node . ann . plValI
-                , Composite._extendRest = recExtend ^. V.recRest . _Node . ann
+                , Composite._extendValI = recExtend ^. V.recFieldVal . ann . plValI
+                , Composite._extendRest = recExtend ^. V.recRest . ann
                 }
         Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where

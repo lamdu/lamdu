@@ -28,7 +28,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, annotations)
+import           Data.Tree.Diverse (Node, Ann(..), ann, annotations)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -89,7 +89,7 @@ convert holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> _Node . ann . pActions . mSetToHole .~ Nothing
+    <&> ann . pActions . mSetToHole .~ Nothing
 
 data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
 
@@ -192,15 +192,15 @@ mkNominalOptions nominals =
         mkDirectNoms tid =
             do
                 f <- [V.BFromNom, V.BToNom]
-                [ V.Nom tid P.hole & f & Ann () & Node ]
+                [ V.Nom tid P.hole & f & Ann () ]
         mkToNomInjections tid nominal =
             do
                 (tag, _typ) <-
                     nominal ^..
                     N.nomType . N._NominalType . CalcScheme.schemeType . T._TVariant .
                     ExprLens.compositeFields
-                let inject = V.Inject tag P.hole & V.BInject & Ann () & Node
-                [ inject & V.Nom tid & V.BToNom & Ann () & Node ]
+                let inject = V.Inject tag P.hole & V.BInject & Ann ()
+                [ inject & V.Nom tid & V.BToNom & Ann () ]
 
 mkOptions ::
     Monad m =>
@@ -319,13 +319,13 @@ mkLiteralOptions holePl =
                 & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
             )
             where
-                typ = x ^. _Node . ann
+                typ = x ^. ann
                 fixedVal
                     | inferredType == typ || Lens.has T._TVar inferredType = x
                     | otherwise =
-                        V.Apply (Node (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole))) x
+                        V.Apply (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
                         & V.BApp
-                        & Ann inferredType & Node
+                        & Ann inferredType
         addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
     in
     \case
@@ -338,11 +338,10 @@ mkLiteralOptions holePl =
         & V.Nom Builtins.textTid
         & V.BToNom
         & Ann (T.TInst Builtins.textTid mempty)
-        & Node
         & mk addTextDep
     where
         literalExpr v =
-            V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty) & Node
+            V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty)
             where
                 prim = PrimVal.fromKnown v
         emptyPl = (Nothing, ())
@@ -363,7 +362,7 @@ getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = map mkFieldParam fieldTags ++ [var]
     where
-        var = V.LVar par & V.BLeaf & Ann () & Node
+        var = V.LVar par & V.BLeaf & Ann ()
         fieldTags =
             ( sugarContext ^@..
                 ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
@@ -371,7 +370,7 @@ getLocalScopeGetVars sugarContext par
                     ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
             ) <&> fst
-        mkFieldParam tag = V.GetField var tag & V.BGetField & Ann () & Node
+        mkFieldParam tag = V.GetField var tag & V.BGetField & Ann ()
 
 -- | Runs inside a forked transaction
 writeResult ::
@@ -388,7 +387,7 @@ writeResult preConversion holeStored inferredVal =
             <&> annotations %~ toPayload
             <&> Input.preparePayloads
             <&> annotations %~ snd
-        (holeStored ^. Property.pSet) (writtenExpr ^. _Node . ann . _1 . Property.pVal)
+        (holeStored ^. Property.pSet) (writtenExpr ^. ann . _1 . Property.pVal)
         writtenExpr & annotations %~ snd & preConversion & pure
     where
         intoStorePoint (inferred, (mStorePoint, a)) =
@@ -424,7 +423,7 @@ detachValIfNeeded ::
 detachValIfNeeded emptyPl holeType x =
     do
         unifyResult <-
-            unify holeType (x ^. _Node . ann . _1 . Infer.plType) & liftInfer
+            unify holeType (x ^. ann . _1 . Infer.plType) & liftInfer
         updated <- Update.inferredVal x & liftUpdate
         case unifyResult of
             Right{} -> pure updated
@@ -441,10 +440,10 @@ detachVal emptyPl resultType x =
     where
         mk updatedType =
             V.Apply func x & V.BApp
-            & Ann (plSameScope updatedType, emptyPl) & Node
+            & Ann (plSameScope updatedType, emptyPl)
         plSameScope typ = inferPl & Infer.plType .~ typ
-        inferPl = x ^. _Node . ann . _1
-        func = V.BLeaf V.LHole & Ann (plSameScope funcType, emptyPl) & Node
+        inferPl = x ^. ann . _1
+        func = V.BLeaf V.LHole & Ann (plSameScope funcType, emptyPl)
         funcType = T.TFun (inferPl ^. Infer.plType) resultType
 
 stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
@@ -567,7 +566,7 @@ randomizeNonStoredRefs uniqueIdent gen v =
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> Node <&> Just
+            <&> IRef.unsafeFromUUID <&> Just
         f (Just x) = Just x & pure
 
 writeExprMStored ::

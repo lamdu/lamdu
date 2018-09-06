@@ -35,7 +35,7 @@ setToAppliedHole :: Monad m => ValI m -> ValP m -> T m (ValI m)
 setToAppliedHole innerI destP =
     do
         newFuncI <- newHole
-        resI <- ExprIRef.newValBody . V.BApp $ V.Apply newFuncI innerI
+        resI <- Transaction.newIRef . V.BApp $ V.Apply newFuncI innerI
         (destP ^. Property.pSet) resI
         pure resI
 
@@ -43,7 +43,7 @@ applyHoleTo :: Monad m => ValP m -> T m (ValI m)
 applyHoleTo exprP = setToAppliedHole (exprP ^. Property.pVal) exprP
 
 newHole :: Monad m => T m (ValI m)
-newHole = ExprIRef.newValBody $ V.BLeaf V.LHole
+newHole = Transaction.newIRef $ V.BLeaf V.LHole
 
 replace :: Monad m => ValP m -> ValI m -> T m (ValI m)
 replace exprP newExprI = newExprI <$ Property.set exprP newExprI
@@ -53,7 +53,7 @@ replaceWithHole exprP = replace exprP =<< newHole
 
 setToHole :: Monad m => ValP m -> T m (ValI m)
 setToHole exprP =
-    exprI <$ ExprIRef.writeValBody exprI hole
+    exprI <$ Transaction.writeIRef exprI hole
     where
         hole = V.BLeaf V.LHole
         exprI = Property.value exprP
@@ -64,18 +64,18 @@ lambdaWrap exprP =
         newParam <- ExprIRef.newVar
         newExprI <-
             Property.value exprP & V.Lam newParam & V.BLam
-            & ExprIRef.newValBody
+            & Transaction.newIRef
         Property.set exprP newExprI
             <&> (,) newParam
 
 redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValP m -> T m (ValP m)
 redexWrapWithGivenParam param newValueI exprP =
     do
-        newLambdaI <- ExprIRef.newValBody $ mkLam $ Property.value exprP
-        newApplyI <- ExprIRef.newValBody . V.BApp $ V.Apply newLambdaI newValueI
+        newLambdaI <- Transaction.newIRef $ mkLam $ Property.value exprP
+        newApplyI <- Transaction.newIRef . V.BApp $ V.Apply newLambdaI newValueI
         (exprP ^. Property.pSet) newApplyI
         Property (Property.value exprP)
-            (ExprIRef.writeValBody newLambdaI . mkLam)
+            (Transaction.writeIRef newLambdaI . mkLam)
             & pure
     where
         mkLam = V.BLam . V.Lam param
@@ -100,14 +100,14 @@ recExtend :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
 recExtend tag valI =
     do
         newValueI <- newHole
-        V.RecExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValBody
+        V.RecExtend tag newValueI valI & V.BRecExtend & Transaction.newIRef
             <&> CompositeExtendResult newValueI
 
 case_ :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
 case_ tag tailI =
     do
         newValueI <- newHole
-        V.Case tag newValueI tailI & V.BCase & ExprIRef.newValBody
+        V.Case tag newValueI tailI & V.BCase & Transaction.newIRef
             <&> CompositeExtendResult newValueI
 
 -- | assocTagNameRef that publishes/unpublishes upon setting a
@@ -162,6 +162,6 @@ newIdentityLambda :: Monad m => T m (V.Var, ValI m)
 newIdentityLambda =
     do
         paramId <- ExprIRef.newVar
-        getVar <- V.LVar paramId & V.BLeaf & ExprIRef.newValBody
-        lamI <- V.Lam paramId getVar & V.BLam & ExprIRef.newValBody
+        getVar <- V.LVar paramId & V.BLeaf & Transaction.newIRef
+        lamI <- V.Lam paramId getVar & V.BLam & Transaction.newIRef
         pure (paramId, lamI)

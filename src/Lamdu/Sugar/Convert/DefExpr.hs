@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.DefExpr
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (_Node, ann)
+import           Data.Tree.Diverse (ann)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Data.Definition as Definition
@@ -36,7 +36,7 @@ convert defType defExpr defI =
             convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
-                defExpr ^. Definition.expr . _Node . ann . Input.inferredType
+                defExpr ^. Definition.expr . ann . Input.inferredType
                 & Infer.makeScheme inferContext
         unless (Scheme.alphaEq defType inferredType) $
             fail "Def type mismatches its inferred type!"

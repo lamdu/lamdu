@@ -14,7 +14,7 @@ import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Ann(..), _Node, val)
+import           Data.Tree.Diverse (Ann(..), val)
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
@@ -51,7 +51,7 @@ formatLiteral (LiteralText i) = formatProp i
 formatLiteral (LiteralBytes i) = formatProp i
 
 expr :: Expression (Name o) i o a -> [Text]
-expr = ofBody . (^. _Node . val)
+expr = ofBody . (^. val)
 
 ofBody :: Body (Name o) i o (Ann a) -> [Text]
 ofBody =
@@ -146,7 +146,7 @@ getSearchStringRemainder ctx holeResult
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
         fragmentExpr = _BodyFragment . fExpr
-        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . _Node . val . x]
+        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . val . x]
 
 verifyInjectSuffix :: Text -> SugarLens.PayloadOf name i o -> Bool
 verifyInjectSuffix searchTerm x =

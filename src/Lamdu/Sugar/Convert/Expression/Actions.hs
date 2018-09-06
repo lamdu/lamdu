@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -27,6 +27,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (overBodyChildren, bodyChildPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -62,7 +63,7 @@ mkExtractToDef exprPl =
         PostProcess.GoodExpr <-
             PostProcess.def infer (ctx ^. ConvertM.scDebugMonitors) newDefI
         let param = ExprIRef.globalId newDefI
-        getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValBody
+        getVarI <- V.LVar param & V.BLeaf & Transaction.newIRef
         (exprPl ^. Input.stored . Property.pSet) getVarI
         Infer.depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
@@ -89,11 +90,11 @@ mkExtractToLet outerScope stored =
                     newParam <- ExprIRef.newVar
                     lamI <-
                         V.Lam newParam extractPosI & V.BLam
-                        & ExprIRef.newValBody
-                    getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValBody
+                        & Transaction.newIRef
+                    getVarI <- V.LVar newParam & V.BLeaf & Transaction.newIRef
                     (stored ^. Property.pSet) getVarI
                     pure lamI
-        V.Apply lamI oldStored & V.BApp & ExprIRef.newValBody
+        V.Apply lamI oldStored & V.BApp & Transaction.newIRef
             >>= outerScope ^. Property.pSet
         EntityId.ofValI oldStored & pure
     where
@@ -107,8 +108,8 @@ mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
         let recWrap tag =
-                V.BLeaf V.LRecEmpty & ExprIRef.newValBody
-                >>= ExprIRef.newValBody . V.BRecExtend . V.RecExtend tag (stored ^. Property.pVal)
+                V.BLeaf V.LRecEmpty & Transaction.newIRef
+                >>= Transaction.newIRef . V.BRecExtend . V.RecExtend tag (stored ^. Property.pVal)
                 >>= typeProtectedSetToVal stored
                 & void
         convertTagSelection nameWithoutContext mempty RequireTag tempMkEntityId recWrap
@@ -142,10 +143,10 @@ makeActions exprPl =
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
     p a (f a) -> Lens.Indexed (Body name i o (Ann j)) a (f a)
-fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . _Node . ann)
+fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . ann)
 
 body :: Lens' (Node (Ann a) e) (e (Ann a))
-body = _Node . val
+body = val
 
 bodyIndex :: Lens.IndexedTraversal' (e (Ann a)) (Node (Ann a) e) (Node (Ann a) e)
 bodyIndex = Lens.filteredBy body
@@ -173,9 +174,9 @@ setChildReplaceParentActions =
     . bodyChildPayloads %~ join setToExpr
     -- Replace-parent with fragment sets directly to fragment expression
     & overBodyChildren id id id
-        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
-        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
-        ((bodyIndex . fragmentAnnIndex) <. _Node . ann %@~ setToExpr)
+        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. ann %@~ setToExpr)
+        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. ann %@~ setToExpr)
+        ((bodyIndex . fragmentAnnIndex) <. ann %@~ setToExpr)
     -- Replace-parent of fragment expr without "heal" available -
     -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
     & overBodyChildren id id id
@@ -185,7 +186,7 @@ setChildReplaceParentActions =
     where
         typeMismatchPayloads =
             _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr .
-            _Node . ann
+            ann
 
 subexprPayloads ::
     Foldable f =>
@@ -209,7 +210,7 @@ addActionsWith userData exprPl bodyS =
     do
         actions <- makeActions exprPl
         addReplaceParents <- setChildReplaceParentActions
-        Node Ann
+        Ann
             { _val = addReplaceParents (exprPl ^. Input.stored) bodyS
             , _ann =
                 ConvertPayload

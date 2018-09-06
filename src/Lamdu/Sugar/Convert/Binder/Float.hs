@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node(..), Ann(..), _Node, ann, val)
+import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -36,6 +36,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
+import qualified Revision.Deltum.Transaction as Transaction
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -60,7 +61,7 @@ moveToGlobalScope =
             case inferRes of
             Left err -> fail ("extract to global scope failed inference: " ++ show (prettyShow err))
             Right (Load.InferResult inferredVal inferContext) ->
-                inferredVal ^. _Node . ann . Input.inferred . Infer.plType
+                inferredVal ^. ann . Input.inferred . Infer.plType
                 & Infer.makeScheme inferContext
                 & pure
         let defExprI = defExpr <&> Property.value
@@ -79,9 +80,9 @@ isVarAlwaysApplied :: V.Lam (Val a) -> Bool
 isVarAlwaysApplied (V.Lam var x) =
     go False x
     where
-        go isApplied (Node (Ann _ (V.BLeaf (V.LVar v)))) | v == var = isApplied
-        go _ (Node (Ann _ (V.BApp (V.Apply f a)))) = go True f && go False a
-        go _ v = all (go False) (v ^.. _Node . val . V.termChildren)
+        go isApplied (Ann _ (V.BLeaf (V.LVar v))) | v == var = isApplied
+        go _ (Ann _ (V.BApp (V.Apply f a))) = go True f && go False a
+        go _ v = all (go False) (v ^.. val . V.termChildren)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValP m) -> T m (ValP m)
@@ -92,11 +93,11 @@ convertLetToLam var redex =
             (BinderKindLet (redex ^. Redex.lam)) (redex ^. Redex.arg)
         let toNewParam prop =
                 V.LVar newParam & V.BLeaf &
-                ExprIRef.writeValBody (Property.value prop)
+                Transaction.writeIRef (Property.value prop)
         SubExprs.onGetVars toNewParam var (redex ^. Redex.arg)
         pure newValP
     where
-        mkArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
+        mkArg = V.LVar var & V.BLeaf & Transaction.newIRef
 
 convertVarToGetFieldParam ::
     Monad m =>
@@ -106,9 +107,9 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     where
         toNewParam prop =
             V.LVar lamVar & V.BLeaf
-            & ExprIRef.newValBody
+            & Transaction.newIRef
             <&> (`V.GetField` paramTag) <&> V.BGetField
-            >>= ExprIRef.writeValBody (Property.value prop)
+            >>= Transaction.writeIRef (Property.value prop)
 
 convertLetParamToRecord ::
     Monad m =>
@@ -130,7 +131,7 @@ convertLetParamToRecord var letLam storedLam =
         convertVarToGetFieldParam var addAsTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp & pure
     where
-        mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
+        mkNewArg = V.LVar var & V.BLeaf & Transaction.newIRef
 
 addFieldToLetParamsRecord ::
     Monad m =>
@@ -146,15 +147,15 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
         convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp & pure
     where
-        mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValBody
+        mkNewArg = V.LVar var & V.BLeaf & Transaction.newIRef
 
 addLetParam ::
     Monad m =>
     V.Var -> Redex (Input.Payload m a) -> ConvertM m (T m (ValP m))
 addLetParam var redex =
-    case storedRedex ^. Redex.arg . _Node . val of
+    case storedRedex ^. Redex.arg . val of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.arg . _Node . ann . Input.inferred . Infer.plType of
+        case redex ^. Redex.arg . ann . Input.inferred . Infer.plType of
         T.TFun (T.TRecord composite) _
             | Just fields <- composite ^? orderedClosedFlatComposite
             , Params.isParamAlwaysUsedWithGetField lam ->
@@ -162,13 +163,13 @@ addLetParam var redex =
                 (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam
         _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
         where
-            storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . _Node . ann)
+            storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . ann)
     _ -> convertLetToLam var storedRedex & pure
     where
         storedRedex = redex <&> (^. Input.stored)
 
 sameLet :: Redex (ValP m) -> ValP m
-sameLet redex = redex ^. Redex.arg . _Node . ann
+sameLet redex = redex ^. Redex.arg . ann
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
@@ -198,7 +199,7 @@ processLet redex =
         let maybeDetach
                 | TV.null skolemsExitingScope = pure ()
                 | otherwise =
-                    Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . _Node . ann . Input.stored)
+                    Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . ann . Input.stored)
                     >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamParamId)
         case varsExitingScope of
             [] -> sameLet (redex <&> (^. Input.stored)) & pure & pure
@@ -207,7 +208,7 @@ processLet redex =
             <&> (<* maybeDetach)
     where
         innerScope =
-            redex ^. Redex.arg . _Node . ann . Input.inferred . Infer.plScope
+            redex ^. Redex.arg . ann . Input.inferred . Infer.plScope
         innerSkolems = Infer.skolems innerScope ^. Infer.skolemScopeVars
 
 makeFloatLetToOuterScope ::
@@ -219,7 +220,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     (,,)
     <$>
     ( redex
-    & Redex.lam . V.lamResult . _Node . ann . Input.stored . Property.pSet .~
+    & Redex.lam . V.lamResult . ann . Input.stored . Property.pSet .~
         setTopLevel
     & processLet
     )
@@ -228,7 +229,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     <&>
     \(makeNewLet, ctx, floatToGlobal) ->
     do
-        redex ^. Redex.lam . V.lamResult . _Node . ann . Input.stored .
+        redex ^. Redex.lam . V.lamResult . ann . Input.stored .
             Property.pVal & setTopLevel
         newLetP <- makeNewLet
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
@@ -249,7 +250,7 @@ makeFloatLetToOuterScope setTopLevel redex =
                         & Definition.Expr (redex ^. Redex.arg)
                         & Definition.pruneDefExprDeps
             Just outerScopeInfo ->
-                EntityId.ofValI (redex ^. Redex.arg . _Node . ann . Input.stored . Property.pVal) <$
+                EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal) <$
                 DataOps.redexWrapWithGivenParam param
                 (Property.value newLetP) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet

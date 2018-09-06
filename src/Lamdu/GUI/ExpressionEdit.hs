@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit
     ) where
 
 import qualified Control.Monad.Reader as Reader
-import           Data.Tree.Diverse (Node(..), Ann(..))
+import           Data.Tree.Diverse (Ann(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -36,7 +36,7 @@ import           Lamdu.Prelude
 make ::
     (Monad i, Monad o) =>
     ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)
-make (Node (Ann pl body)) =
+make (Ann pl body) =
     makeEditor body pl & assignCursor
     where
         exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
