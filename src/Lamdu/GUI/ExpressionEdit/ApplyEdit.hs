@@ -15,7 +15,6 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -25,38 +24,23 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 makeFunc ::
     (Monad i, Monad o) =>
+    GetVarEdit.Role ->
     Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.BinderVarRef (Name o) o) ->
     ExprGuiM i o (Gui Responsive o)
-makeFunc func =
+makeFunc role func =
     stdWrap pl <*>
-    ( GetVarEdit.makeGetBinder (func ^. val) myId
+    ( GetVarEdit.makeGetBinder role (func ^. val) myId
         <&> Responsive.fromWithTextPos
     )
     where
         pl = func ^. ann
         myId = WidgetIds.fromExprPayload pl
-
-makeInfixFunc ::
-    (Monad i, Monad o) =>
-    Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.BinderVarRef (Name o) o) ->
-    ExprGuiM i o (Gui Responsive o)
-makeInfixFunc func =
-    makeFunc func <&> mAddMarker
-    where
-        nameText =
-            Name.visible (func ^. val . Sugar.bvNameRef . Sugar.nrName)
-            ^. _1 . Name.ttText
-        mAddMarker
-            | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
-            | otherwise = GetVarEdit.addInfixMarker myId
-        myId = func ^. ann & WidgetIds.fromExprPayload
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
 isBoxed apply =
@@ -70,11 +54,11 @@ makeFuncRow ::
     ExprGuiM i o (Gui Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
-    Sugar.Verbose -> makeFunc func
+    Sugar.Verbose -> makeFunc GetVarEdit.Normal func
     Sugar.Object arg ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
-        [ makeFunc func
+        [ makeFunc GetVarEdit.Normal func
         , ExprGuiM.makeSubexpression arg
         ]
     Sugar.Infix l r ->
@@ -83,7 +67,7 @@ makeFuncRow mParensId apply =
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ ExprGuiM.makeSubexpression l
-            , makeInfixFunc func
+            , makeFunc GetVarEdit.Infix func
             ]
         , ExprGuiM.makeSubexpression r
         ]

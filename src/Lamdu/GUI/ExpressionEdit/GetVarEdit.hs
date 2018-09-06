@@ -1,5 +1,6 @@
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
+    , Role(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -28,6 +29,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
@@ -44,6 +46,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -111,12 +114,15 @@ addInfixMarker widgetId =
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
+data Role = Normal | Infix deriving Eq
+
 makeNameRef ::
     (Monad i, Monad o) =>
+    Role ->
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
     Sugar.NameRef (Name x) o ->
     ExprGuiM i o (TextWidget o)
-makeNameRef color myId nameRef =
+makeNameRef role color myId nameRef =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
         config <- Lens.view Config.config
@@ -128,12 +134,18 @@ makeNameRef color myId nameRef =
                 do
                     savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
-        makeSimpleView color (nameRef ^. Sugar.nrName) nameId
+        makeSimpleView color name nameId
+            <&> mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
     where
+        name = nameRef ^. Sugar.nrName
         nameId = Widget.joinId myId ["name"]
+        nameText = Name.visible name ^. _1 . Name.ttText
+        mAddMarker
+            | (role == Infix) == Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
+            | otherwise = addInfixMarker nameId
 
 makeInlineEventMap ::
     Applicative f =>
@@ -232,9 +244,9 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 
 makeGetBinder ::
     (Monad i, Monad o) =>
-    Sugar.BinderVarRef (Name x) o -> Widget.Id ->
+    Role -> Sugar.BinderVarRef (Name x) o -> Widget.Id ->
     ExprGuiM i o (TextWidget o)
-makeGetBinder binderVar myId =
+makeGetBinder role binderVar myId =
     do
         config <- Lens.view Config.config
         let (color, processDef) =
@@ -244,7 +256,7 @@ makeGetBinder binderVar myId =
                     ( TextColors.definitionColor
                     , processDefinitionWidget defForm myId
                     )
-        makeNameRef color myId (binderVar ^. Sugar.bvNameRef)
+        makeNameRef role color myId (binderVar ^. Sugar.bvNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
             & processDef
@@ -256,7 +268,7 @@ makeGetParam ::
 makeGetParam param myId =
     do
         theme <- Lens.view Theme.theme
-        let mk = makeNameRef TextColors.parameterColor myId (param ^. Sugar.pNameRef)
+        let mk = makeNameRef Normal TextColors.parameterColor myId (param ^. Sugar.pNameRef)
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->
                 mk
@@ -274,7 +286,7 @@ makeNoActions ::
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
-        makeGetBinder binderVar myId <&> Responsive.fromWithTextPos
+        makeGetBinder Normal binderVar myId <&> Responsive.fromWithTextPos
     Sugar.GetParamsRecord paramsRecordVar ->
         makeParamsRecord myId paramsRecordVar
     Sugar.GetParam param ->
