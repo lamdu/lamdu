@@ -5,11 +5,7 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
 
 import qualified Control.Lens as Lens
 import           Data.Tree.Diverse (Ann(..), ann, val)
-import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.Responsive (Responsive)
@@ -33,29 +29,6 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-infixMarker :: Vector2 Anim.R -> Draw.Image
-infixMarker (Vector2 w h) =
-    mconcat
-    [ Draw.line (x, 0) (0,x)
-    , Draw.line (w-x, 0) (w,x)
-    , Draw.line (w-x, h) (w,h-x)
-    , Draw.line (x, h) (0,h-x)
-    , Draw.line (0, x) (0, h-x)
-    , Draw.line (w, x) (w, h-x)
-    , Draw.line (x, 0) (w-x, 0)
-    , Draw.line (x, h) (w-x, h)
-    ]
-    <&> const ()
-    where
-        x = min w h / 4
-
-addInfixMarker :: Element a => Widget.Id -> a -> a
-addInfixMarker widgetId =
-    Element.bottomLayer %@~
-    \size -> Anim.singletonFrame 1 frameId (infixMarker size) & flip mappend
-    where
-        frameId = Widget.toAnimId widgetId ++ ["infix"]
 
 makeFunc ::
     (Monad i, Monad o) =>
@@ -82,7 +55,7 @@ makeInfixFunc func =
             ^. _1 . Name.ttText
         mAddMarker
             | Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
-            | otherwise = addInfixMarker myId
+            | otherwise = GetVarEdit.addInfixMarker myId
         myId = func ^. ann & WidgetIds.fromExprPayload
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
