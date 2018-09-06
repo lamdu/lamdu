@@ -2,11 +2,12 @@ module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
 
+import           Control.Monad.Transaction (getP)
 import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
-import qualified Data.Property as Property
 import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -19,10 +20,10 @@ makeLabeledApply ::
     Monad m =>
     Ann (ConvertPayload m a) (Sugar.BinderVarRef InternalName (T m)) ->
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
-    T m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
+    ConvertM m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
 makeLabeledApply func args =
     func ^. val . Sugar.bvVar
-    & Anchors.assocPresentationMode & Property.getP
+    & Anchors.assocPresentationMode & getP
     <&> \presentationMode ->
     let (specialArgs, otherArgs) =
             case traverse argExpr presentationMode of

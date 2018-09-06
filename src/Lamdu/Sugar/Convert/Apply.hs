@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Transaction (transaction)
 import           Data.List.Extended (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
@@ -118,7 +117,7 @@ convertLabeled subexprs funcS argS exprPl =
         bod <-
             PresentationModes.makeLabeledApply
             (Ann (funcS ^. ann) sBinderVar) args
-            <&> BodyLabeledApply & transaction
+            <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. bodyChildPayloads)
                 & mconcat
