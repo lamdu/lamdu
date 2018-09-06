@@ -41,7 +41,7 @@ data Body f
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
-    | RArray [(Node f Body)]
+    | RArray [Node f Body]
     | RError EvalTypeError
 deriving instance Show (f (Body f)) => Show (Body f)
 

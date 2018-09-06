@@ -1,4 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody
