@@ -30,6 +30,7 @@ test =
     , testInline
     , testReorderLets
     , testReplaceParent
+    , setHoleToHole
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -209,3 +210,19 @@ testReplaceParent =
         action =
             replBody . _BodyLam . lamFunc . fBody .
             ann . plActions . mReplaceParent . Lens._Just
+
+setHoleToHole :: Test
+setHoleToHole =
+    testSugarActions "let-item-inline.json" [action, verify]
+    & testCase "set-hole-to-hole"
+    where
+        action workArea = workArea ^?! setToHole & void
+        verify workArea
+            | Lens.has setToHole workArea =
+                fail "hole has set to hole?"
+            | otherwise = pure ()
+        setToHole :: Lens.Traversal' (WorkArea name i o (Payload name i o a)) (o EntityId)
+        setToHole =
+            replBody . _BodyLam . lamFunc . fBody .
+            val . _BinderLet . lValue .
+            ann . plActions . mSetToHole . Lens._Just
