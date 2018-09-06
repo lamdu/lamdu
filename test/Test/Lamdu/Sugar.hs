@@ -1,9 +1,10 @@
+{-# LANGUAGE TupleSections #-}
 module Test.Lamdu.Sugar where
 
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
-import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (annotations)
@@ -30,11 +31,15 @@ import           Test.Lamdu.Prelude
 
 type T = Transaction
 
+data IsHidden = NotHidden | Hidden deriving (Show)
+
 allEntityIds ::
-    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> [EntityId]
+    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) ->
+    [(EntityId, IsHidden)]
 allEntityIds workArea =
-    pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
-    <> pls ^.. Lens.folded . plEntityId
+    (pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
+     <&> (, Hidden))
+    <> (pls ^.. Lens.folded . plEntityId <&> (, NotHidden))
     where
         pls = workArea ^.. traverse
 
@@ -84,7 +89,7 @@ validate ::
     (WorkArea name (T fa) (T fb)
         (Sugar.Payload name (T fa) (T fb) ExprGui.Payload))
 validate workArea
-    | null duplicateEntityIds =
+    | Map.null duplicateEntityIds =
         do
             wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
             let missing = wallEntityIds `Set.difference` sugarEntityIdsSet
@@ -96,9 +101,11 @@ validate workArea
     | otherwise =
         fail ("duplicate entityIds: " <> show duplicateEntityIds)
     where
-        duplicateEntityIds = List.sort sugarEntityIds & List.group >>= tail
+        duplicateEntityIds =
+            sugarEntityIds <&> _2 %~ (:[])
+            & Map.fromListWith (++) & Map.filter (not . null . tail)
         sugarEntityIds = allEntityIds workArea
-        sugarEntityIdsSet = Set.fromList sugarEntityIds
+        sugarEntityIdsSet = Set.fromList (sugarEntityIds <&> fst)
 
 convertWorkArea ::
     HasCallStack =>
