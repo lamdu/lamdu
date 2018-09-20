@@ -214,7 +214,7 @@ makeTagTexts p1texts =
     where
         mkTagTexts text tags
             | isCollidingName text tags =
-                zipWith (mkCollision text) [0..] (Set.toList tags) & Map.fromList
+                tags ^.. Lens.folded & Lens.imap (mkCollision text) & Map.fromList
             | otherwise =
                 Map.fromSet (const (tagText text NoCollision)) tags
         mkCollision text idx tag = (tag, tagText text (Collision idx))
@@ -240,7 +240,7 @@ toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId CollisionSuffix
 toSuffixMap tagContexts =
     tagContexts & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
     where
-        eachTag tag contexts = zipWith (item tag) [0..] (Set.toList contexts) & Map.fromList
+        eachTag tag contexts = contexts ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
 initialP2Env :: P1Out -> P2Env
@@ -248,8 +248,7 @@ initialP2Env (P1Out globals locals contexts texts) =
     P2Env
     { _p2NameGen = NameGen.initial
     , _p2AnonSuffixes =
-        contexts ^.. Lens.ix anonTag . Lens.folded & (`zip` [0..])
-        & Map.fromList
+        contexts ^@.. Lens.ix anonTag . Lens.folded <&> Tuple.swap & Map.fromList
     , _p2TagTexts = tagTexts
     , _p2Texts = MMap.keysSet texts
     , _p2TagSuffixes = toSuffixMap collisions
