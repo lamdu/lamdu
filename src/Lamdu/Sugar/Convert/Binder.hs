@@ -44,15 +44,6 @@ lamParamToHole ::
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
 
-localNewExtractDestPos :: Input.Payload m x -> ConvertM m a -> ConvertM m a
-localNewExtractDestPos x =
-    ConvertM.scScopeInfo . ConvertM.siMOuter ?~
-    ConvertM.OuterScopeInfo
-    { _osiPos = x ^. Input.stored
-    , _osiScope = x ^. Input.inferred . Infer.plScope
-    }
-    & ConvertM.local
-
 makeInline ::
     Monad m =>
     ValP m -> Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
@@ -136,7 +127,7 @@ convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
     ConvertM m (Node (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
-convertBinder expr =
+convertBinder expr@(Ann pl body) =
     case Redex.check body of
     Nothing ->
         ConvertM.convertSubexpression expr & localNewExtractDestPos pl
@@ -155,7 +146,13 @@ convertBinder expr =
                 makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
             convertLet float pl redex & localNewExtractDestPos pl
     where
-        Ann pl body = expr
+        localNewExtractDestPos x =
+            ConvertM.scScopeInfo . ConvertM.siMOuter ?~
+            ConvertM.OuterScopeInfo
+            { _osiPos = x ^. Input.stored
+            , _osiScope = x ^. Input.inferred . Infer.plScope
+            }
+            & ConvertM.local
 
 makeFunction ::
     (Monad m, Monoid a) =>
