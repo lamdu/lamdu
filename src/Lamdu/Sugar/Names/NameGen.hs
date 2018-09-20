@@ -39,9 +39,19 @@ existingName g =
     Lens.uses ngUsedNames (Map.lookup g)
 
 newName :: Ord g => VarInfo -> (Text -> Bool) -> g -> State (NameGen g) Text
-newName varInfo acceptName g =
+newName varInfo =
+    case varInfo of
+    VarNormal -> ngUnusedNames
+    VarFunction -> ngUnusedFuncNames
+    VarAction -> ngUnusedActionNames
+    & newNameOf
+
+newNameOf ::
+    Ord g =>
+    Lens.ALens' (NameGen g) [Text] -> (Text -> Bool) -> g -> State (NameGen g) Text
+newNameOf names acceptName g =
     do
-        name <- Lens.zoom names loop
+        name <- Lens.zoom (Lens.cloneLens names) loop
         ngUsedNames %= Map.insert g name
         pure name
     where
@@ -51,8 +61,3 @@ newName varInfo acceptName g =
                 if acceptName name
                     then pure name
                     else loop
-        names =
-            case varInfo of
-            VarNormal -> ngUnusedNames
-            VarFunction -> ngUnusedFuncNames
-            VarAction -> ngUnusedActionNames
