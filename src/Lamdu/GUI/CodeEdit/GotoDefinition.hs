@@ -59,7 +59,7 @@ makeOptions ::
 makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
-        readGlobals <&> zip [(0::Int)..]
+        readGlobals <&> zip [0::Int ..]
         <&> map withText
         <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
         <&> map (makeOption . snd)
