@@ -80,7 +80,7 @@ modP (MkProperty mkProp) f = do
     p <- mkProp
     pureModify p f
 
-fromIORef :: IORef a -> MkProperty IO IO a
+fromIORef :: IORef a -> MkProperty' IO a
 fromIORef ref =
     MkProperty $
     readIORef ref
