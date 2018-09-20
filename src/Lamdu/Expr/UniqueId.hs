@@ -3,6 +3,7 @@ module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
+import qualified Data.ByteString as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Calc.Identifier (Identifier(..))
@@ -28,11 +29,14 @@ varOfUUID = V.Var . identifierOfUUID
 class    ToUUID a           where toUUID :: a -> UUID
 instance ToUUID Identifier  where toUUID (Identifier bs) = UUIDUtils.fromSBS16 bs
 instance ToUUID V.Var       where toUUID = toUUID . V.vvName
-instance ToUUID T.Tag       where toUUID = toUUID . T.tagName
 instance ToUUID T.NominalId where toUUID = toUUID . T.nomId
 instance ToUUID T.ParamId   where toUUID = toUUID . T.typeParamId
+instance ToUUID T.Tag       where toUUID = toUUID . T.tagName
 instance ToUUID (IRef m a)  where toUUID = IRef.uuid
 instance ToUUID (Branch m)  where toUUID = Branch.uuid
+instance ToUUID (T.Var a) where
+    toUUID (T.Var (Identifier x)) =
+        x <> BS.replicate (16 - BS.length x) 0 & UUIDUtils.fromSBS16
 
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id

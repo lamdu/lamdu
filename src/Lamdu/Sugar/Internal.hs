@@ -78,7 +78,6 @@ nameWithContext param tag =
 taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => a -> m InternalName
 taggedName x = Anchors.assocTag x & getP <&> nameWithContext x
 
-
 type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
 
 replaceWith ::

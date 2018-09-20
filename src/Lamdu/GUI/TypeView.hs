@@ -98,11 +98,6 @@ parens parent my view
     | parent > my = parensAround view
     | otherwise = pure view
 
-makeTVar ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    Sugar.TVar p -> m (WithTextPos View)
-makeTVar (T.Var name) = showIdentifier name
-
 makeTFun ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
@@ -243,7 +238,7 @@ makeComposite o c mkPre mkPost mkField composite =
                         let sqr =
                                 View.unitSquare sqrId
                                 & Element.scale (Vector2 barWidth 10)
-                        varView <- makeTVar var
+                        varView <- NameView.make var
                         pre <- mkPre
                         let lastLine = (pre /|/ varView) ^. Align.tValue
                         pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
@@ -267,7 +262,7 @@ makeInternal ::
     Prec -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeInternal parentPrecedence (Sugar.Type entityId tbody) =
     case tbody of
-    Sugar.TVar var -> makeTVar var
+    Sugar.TVar var -> NameView.make var
     Sugar.TFun a b -> makeTFun parentPrecedence a b
     Sugar.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     Sugar.TRecord composite -> makeComposite "{" "}" (pure Element.empty) (grammar ",") makeField composite

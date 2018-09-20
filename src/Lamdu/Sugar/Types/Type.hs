@@ -4,7 +4,6 @@ module Lamdu.Sugar.Types.Type
     ( Scheme(..), schemeForAll, schemeConstraints, schemeType
     , TypeVars(..), Constraints(..)
     , RecordTag, VariantTag
-    , T.RecordVar, T.VariantVar, T.TypeVar, TVar
     , RecordType, VariantType
     , NominalId, ParamId
     , CompositeFields(..), compositeFields, compositeExtension
@@ -15,7 +14,6 @@ module Lamdu.Sugar.Types.Type
 
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Type (NominalId, RecordTag, VariantTag, ParamId)
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Constraints (Constraints(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import           Lamdu.Sugar.EntityId (EntityId)
@@ -26,13 +24,9 @@ import           Lamdu.Prelude
 type RecordType = CompositeFields RecordTag
 type VariantType = CompositeFields VariantTag
 
-type TVar = T.Var
-
-type CompositeVar p = TVar (T.Composite p)
-
 data CompositeFields p name a = CompositeFields
     { _compositeFields :: [(TagInfo name, a)]
-    , _compositeExtension :: Maybe (CompositeVar p) -- TyVar of more possible fields
+    , _compositeExtension :: Maybe name -- TyVar of more possible fields
     } deriving (Show, Functor, Foldable, Traversable, Generic)
 
 data TId name = TId
@@ -41,7 +35,7 @@ data TId name = TId
     } deriving (Eq, Ord, Show, Generic)
 
 data TBody name a
-    = TVar T.TypeVar
+    = TVar name
       -- ^ A type variable
     | TFun a a
       -- ^ A (non-dependent) function of the given parameter and result types

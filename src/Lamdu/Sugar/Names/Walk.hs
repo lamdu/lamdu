@@ -20,7 +20,7 @@ import           Lamdu.Sugar.Types hiding (Tag)
 import           Lamdu.Prelude
 
 -- TODO: Maybe remove "TaggedNominal", make it a disambiguation context?
-data NameType = GlobalDef | TaggedVar | TaggedNominal | Tag
+data NameType = GlobalDef | TaggedVar | TaggedNominal | Tag | TypeVar
     deriving (Eq, Ord, Show)
 
 Lens.makePrisms ''NameType
@@ -73,8 +73,10 @@ toCompositeFields ::
     MonadNaming m =>
     CompositeFields p (OldName m) (Type (OldName m)) ->
     m (CompositeFields p (NewName m) (Type (NewName m)))
-toCompositeFields =
-    compositeFields . traverse %%~ toField
+toCompositeFields (CompositeFields fields mExt) =
+    CompositeFields
+    <$> traverse toField fields
+    <*> Lens._Just (opGetName Nothing TypeVar) mExt
     where
         toField (tag, typ) = (,) <$> toTagInfoOf Tag tag <*> toType typ
 
@@ -85,7 +87,7 @@ toTBody ::
     MonadNaming m =>
     TBody (OldName m) (Type (OldName m)) ->
     m (TBody (NewName m) (Type (NewName m)))
-toTBody (TVar tv) = TVar tv & pure
+toTBody (TVar tv) = opGetName Nothing TypeVar tv <&> TVar
 toTBody (TFun a b) = TFun <$> toType a <*> toType b
 toTBody (TInst tid params) = TInst <$> toTId tid <*> traverse toType params
 toTBody (TRecord composite) = TRecord <$> toCompositeFields composite

@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
+import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId
@@ -32,13 +33,14 @@ convertComposite entityId (T.CExtend tag typ rest) =
             , _tagInstance = EntityId.ofTag entityId tag
             , _tagVal = tag
             }
+convertComposite _ (T.CVar v) =
+    CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
 convertComposite _ T.CEmpty = CompositeFields mempty Nothing & pure
-convertComposite _ (T.CVar v) = CompositeFields mempty (Just v) & pure
 
 convertType :: MonadTransaction n m => EntityId -> T.Type -> m (Type InternalName)
 convertType entityId typ =
     case typ of
-    T.TVar tv -> TVar tv & pure
+    T.TVar tv -> nameWithContext tv anonTag & TVar & pure
     T.TFun param res ->
         TFun
         <$> convertType (ofFunParam entityId) param

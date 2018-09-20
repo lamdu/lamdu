@@ -2,6 +2,7 @@
 module Lamdu.Sugar.Names.NameGen
     ( NameGen, initial
     , existingName, newName
+    , numberCycle
     ) where
 
 import           Control.Arrow ((&&&))
@@ -26,11 +27,14 @@ initial =
     NameGen
     { _ngUnusedNames = numberCycle ["x", "y", "z", "w", "u", "v"]
     , _ngUnusedFuncNames = numberCycle ["f", "g", "h"]
-    , _ngUnusedActionNames = numberCycle ["a", "b", "c"]
+    , _ngUnusedActionNames = numberCycle ["act"]
     , _ngUsedNames = Map.empty
     }
+
+numberCycle :: [Text] -> [Text]
+numberCycle s =
+    (s <>) . mconcat . Lens.imap appendAll $ repeat s
     where
-        numberCycle s = (s <>) . mconcat . Lens.imap appendAll $ repeat s
         appendAll num = map (<> Text.pack (show num))
 
 existingName :: (Ord g, Show g) => g -> State (NameGen g) Text
