@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
+import qualified Lamdu.Paths as LamduPaths
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (FontInfo(..))
@@ -75,15 +76,12 @@ defaultFontPath sample =
     where
         configDir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
 
-getLamduDir :: IO FilePath
-getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
-
 main :: HasCallStack => IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
         Opts.Parsed{_pLamduDB,_pCommand} <- Opts.get
-        lamduDir <- maybe getLamduDir pure _pLamduDB
+        lamduDir <- maybe LamduPaths.getLamduDir pure _pLamduDB
         let withDB = Db.withDB lamduDir
         case _pCommand of
             Opts.DeleteDb -> deleteDB lamduDir
