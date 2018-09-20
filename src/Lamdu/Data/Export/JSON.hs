@@ -17,11 +17,13 @@ import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
+import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Tree.Diverse (Ann(..), annotations)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -36,12 +38,10 @@ import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
-import qualified Data.Property as Property
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 

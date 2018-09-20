@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Property as Property
 import           Data.Tree.Diverse (Ann(..), annotations)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
@@ -15,7 +16,6 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (assocFieldParamList)
 import           Lamdu.Data.Meta (ParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Trans as InferT

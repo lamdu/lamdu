@@ -16,6 +16,7 @@ import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), ann, val, annotations)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
@@ -23,7 +24,6 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal, _NominalType)
 import qualified Lamdu.Calc.Type.Nominal as Nominal
 import           Lamdu.Calc.Type.Scheme (schemeType)
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Infer (Context, Payload(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)

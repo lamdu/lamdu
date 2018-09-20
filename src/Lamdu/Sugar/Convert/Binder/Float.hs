@@ -10,6 +10,7 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -21,7 +22,6 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params

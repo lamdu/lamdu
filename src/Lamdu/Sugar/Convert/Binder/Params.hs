@@ -21,6 +21,7 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), val, ann, annotations)
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -30,7 +31,6 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input

@@ -9,6 +9,7 @@ import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
+import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Scheme as Scheme
@@ -17,7 +18,6 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Fragment as ConvertFragment

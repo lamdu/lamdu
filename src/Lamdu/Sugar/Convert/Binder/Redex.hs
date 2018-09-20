@@ -7,10 +7,10 @@ module Lamdu.Sugar.Convert.Binder.Redex
 
 import qualified Control.Lens as Lens
 import           Data.Tree.Diverse (annotations, ann, val)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Eval.Results (ScopeId)
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Types
 

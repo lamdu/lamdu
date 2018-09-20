@@ -26,6 +26,7 @@ import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (identHex)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -35,7 +36,6 @@ import qualified Lamdu.Compiler.Flatten as Flatten
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (WhichGlobal(..), encodeWhichGlobal)
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Infer as Infer
 import qualified Language.ECMAScript3.PrettyPrint as JSPP

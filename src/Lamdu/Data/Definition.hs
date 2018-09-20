@@ -12,9 +12,9 @@ import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Lamdu.Calc.Type.Scheme (Scheme)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Expr.Lens as ExprLens
+import           Lamdu.Calc.Type.Scheme (Scheme)
 import           Lamdu.Infer (Dependencies)
 import qualified Lamdu.Infer as Infer
 

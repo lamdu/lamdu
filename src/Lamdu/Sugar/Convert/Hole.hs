@@ -32,6 +32,8 @@ import           Data.Tree.Diverse (Node, Ann(..), ann, annotations)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import qualified Lamdu.Calc.Lens as ExprLens
+import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Eq (couldEq)
@@ -44,9 +46,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValP, ValI, DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Expr.Pure as P
 import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)

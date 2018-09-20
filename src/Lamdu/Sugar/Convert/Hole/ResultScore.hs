@@ -5,10 +5,10 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Data.Tree.Diverse (Ann(..), val)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type(..), Composite(..))
-import qualified Lamdu.Expr.Lens as ExprLens
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
 

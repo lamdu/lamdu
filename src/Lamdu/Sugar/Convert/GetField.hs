@@ -5,9 +5,9 @@ module Lamdu.Sugar.Convert.GetField
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Data.Tree.Diverse (ann)
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)

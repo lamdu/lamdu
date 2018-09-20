@@ -9,11 +9,11 @@ module Lamdu.Data.Ops.Subexprs
 
 
 import qualified Control.Lens as Lens
+import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValP)
-import qualified Lamdu.Expr.Lens as ExprLens
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
