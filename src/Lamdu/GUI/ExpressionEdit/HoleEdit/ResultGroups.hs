@@ -80,7 +80,7 @@ mResultGroupOf prefixId (x:xs) = Just
     { _rgExactMatch = NotExactMatch
     , _rgPrefixId = prefixId
     , _rgMain = mkResult prefixId x
-    , _rgExtra = zipWith mkExtra [0::Int ..] xs
+    , _rgExtra = Lens.imap mkExtra xs
     }
     where
         mkExtra = mkResult . extraResultId

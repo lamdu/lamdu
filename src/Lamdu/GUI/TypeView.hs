@@ -226,7 +226,7 @@ makeComposite o c mkPre mkPost mkField composite =
                 <&> map toRow
                 <&> Lens.ix 0 . crPre .~ pure opener
                 <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
-                <&> zipWith addAnimIdPrefix [0::Int ..]
+                <&> Lens.imap addAnimIdPrefix
                 >>= traverse sequenceA
                 <&> map horizSetCompositeRow
                 <&> gridViewTopLeftAlign

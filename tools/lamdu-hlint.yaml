@@ -15,6 +15,7 @@
     - hint: {lhs: "case a of {Nothing -> mempty; Just b -> c}", rhs: foldMap (\b -> c) a }
     - hint: {lhs: "Data.Set.member a b", rhs: "b ^. Control.Lens.contains a"}
     - hint: {lhs: "zipWith a [0..]", rhs: "Control.Lens.imap a"}
+    - hint: {lhs: "zipWith a [0::Int ..]", rhs: "Control.Lens.imap a"}
 
 - group:
     name: generalise-for-conciseness

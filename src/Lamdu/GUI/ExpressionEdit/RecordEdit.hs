@@ -155,9 +155,7 @@ addPostTags ::
     (MonadReader env m, Theme.HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
 addPostTags items =
-    items
-    & zipWith f [0 :: Int ..]
-    & sequenceA
+    Lens.itraverse f items
     where
         f idx item =
             Styled.grammarLabel txt

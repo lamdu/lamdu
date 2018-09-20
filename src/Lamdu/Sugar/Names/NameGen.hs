@@ -30,7 +30,7 @@ initial =
     , _ngUsedNames = Map.empty
     }
     where
-        numberCycle s = (s <>) . mconcat . zipWith appendAll [0::Int ..] $ repeat s
+        numberCycle s = (s <>) . mconcat . Lens.imap appendAll $ repeat s
         appendAll num = map (<> Text.pack (show num))
 
 existingName :: (Ord g, Show g) => g -> State (NameGen g) Text
