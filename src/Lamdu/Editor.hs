@@ -61,10 +61,10 @@ import           Lamdu.Prelude
 type T = Transaction
 
 newtype RefreshScheduler = RefreshScheduler (IORef Bool)
-newRefreshScheduler :: IO RefreshScheduler
-newRefreshScheduler = newIORef False <&> RefreshScheduler
-isRefreshScheduled :: RefreshScheduler -> IO Bool
-isRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref ((,) False)
+
+getRefreshScheduled :: RefreshScheduler -> IO Bool
+getRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref ((,) False)
+
 scheduleRefresh :: RefreshScheduler -> IO ()
 scheduleRefresh (RefreshScheduler ref) =
     do
@@ -128,7 +128,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
         reportPerfCounters <- traverse makeReportPerfCounters ekg
-        M.mainLoopWidget win makeWidget MainLoop.Options
+        MainLoop.mainLoopWidget win makeWidget MainLoop.Options
             { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
             , tickHandler =
                 do
@@ -139,7 +139,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
                         (curVersionNum, lastVersionNum /= curVersionNum)
                     if configChanged
                         then pure True
-                        else isRefreshScheduled refreshScheduler
+                        else getRefreshScheduled refreshScheduler
             , stateStorage = stateStorage
             , debug = MainLoop.DebugOptions
                 { fpsFont =
@@ -271,7 +271,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme main
 run :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 run opts rawDb =
     do
-        refreshScheduler <- newRefreshScheduler
+        refreshScheduler <- newIORef False <&> RefreshScheduler
         let refresh = scheduleRefresh refreshScheduler
         ekg <- traverse Ekg.start (opts ^. Opts.eoEkgPort)
         monitors <-
