@@ -2,7 +2,6 @@
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig
-    , defaultFontPath
     , sThemePath, sTheme, setTheme
     , getSample
     ) where
@@ -19,7 +18,6 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
-import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
@@ -108,9 +106,3 @@ new sampleUpdated initialTheme =
             }
     where
         getConfigPath = Paths.getDataFileName "config.json"
-
-defaultFontPath :: Sample -> FilePath
-defaultFontPath sample =
-    configDir </> "fonts/Purisa.ttf"
-    where
-        configDir = FilePath.takeDirectory (sample ^. sConfigPath)

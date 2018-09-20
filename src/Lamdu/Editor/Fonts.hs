@@ -40,6 +40,12 @@ curSampleFonts sample =
     & prependConfigPath sample
     & assignFontSizes (sample ^. sTheme)
 
+defaultFontPath :: FilePath -> FilePath
+defaultFontPath configPath =
+    configDir </> "fonts/Purisa.ttf"
+    where
+        configDir = FilePath.takeDirectory configPath
+
 makeGetFonts ::
     Font.LCDSubPixelEnabled ->
     IO (M.Zoom -> ConfigSampler.Sample -> IO (Fonts M.Font))
@@ -51,6 +57,6 @@ makeGetFonts subpixel =
             do
                 sizeFactor <- M.getZoomFactor zoom
                 cachedLoadFonts
-                    ( ConfigSampler.defaultFontPath sample
+                    ( defaultFontPath (sample ^. ConfigSampler.sConfigPath)
                     , curSampleFonts sample <&> _1 *~ sizeFactor
                     )
