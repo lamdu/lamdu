@@ -11,7 +11,7 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           Data.Property (Property(..), MkProperty')
+import           Data.Property (Property(..), MkProperty', MkProperty(..), mkProperty)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
@@ -106,7 +106,7 @@ settingsChangeHandler configSampler evaluator mOld new =
             Just old -> when (old ^. lens /= new ^. lens) $ f (new ^. lens)
 
 newSettingsProp ::
-    Settings -> Sampler -> EvalManager.Evaluator -> IO (IO (Property IO Settings))
+    Settings -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
 newSettingsProp initial configSampler evaluator =
     do
         settingsRef <- newIORef initial
@@ -116,7 +116,7 @@ newSettingsProp initial configSampler evaluator =
                     writeIORef settingsRef val
                     settingsChangeHandler configSampler evaluator (Just oldVal) val
         settingsChangeHandler configSampler evaluator Nothing initial
-        readIORef settingsRef <&> (`Property` setSettings) & pure
+        readIORef settingsRef <&> (`Property` setSettings) & MkProperty & pure
 
 createWindow :: String -> Opts.WindowMode -> IO M.Window
 createWindow title mode =
@@ -381,7 +381,7 @@ run opts rawDb =
                     mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
                         Cache.fence cache *>
-                        mkSettingsProp
+                        mkSettingsProp ^. mkProperty
                         >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
     where
         subpixel
