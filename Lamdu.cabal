@@ -241,6 +241,7 @@ Library
                   , Lamdu.Data.Ops.Subexprs
                   , Lamdu.Debug
                   , Lamdu.Debug.Tasks
+                  , Lamdu.Editor
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Manager
