@@ -2,6 +2,7 @@
 module Lamdu.Font
     ( FontSize, Fonts(..)
     , Font.LCDSubPixelEnabled(..), new
+    , defaultFontFile
     , fontDefault, fontHelp, fontLiteralText, fontAutoName, fontLiteralBytes, fontBinders, fontDebugInfo
     , Font.height
     ) where
@@ -60,3 +61,6 @@ new subpixel fallbackFontPath =
             `E.catch` \E.SomeException{} ->
             open fontSize fallbackFontPath
         open = openFont subpixel
+
+defaultFontFile :: FilePath
+defaultFontFile = "fonts/Purisa.ttf"

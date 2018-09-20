@@ -2,6 +2,7 @@
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig
+    , defaultFontPath
     , sThemePath, sTheme, setTheme
     , getSample
     ) where
@@ -15,9 +16,11 @@ import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Font as Font
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
+import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
@@ -106,3 +109,9 @@ new sampleUpdated initialTheme =
             }
     where
         getConfigPath = Paths.getDataFileName "config.json"
+
+defaultFontPath :: Sample -> FilePath
+defaultFontPath sample =
+    configDir </> Font.defaultFontFile
+    where
+        configDir = FilePath.takeDirectory (sample ^. sConfigPath)

@@ -70,12 +70,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-defaultFontPath :: ConfigSampler.Sample -> FilePath
-defaultFontPath sample =
-    configDir </> "fonts/Purisa.ttf"
-    where
-        configDir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
-
 main :: HasCallStack => IO ()
 main =
     do
@@ -331,7 +325,7 @@ makeGetFonts subpixel =
             do
                 sizeFactor <- M.getZoomFactor zoom
                 cachedLoadFonts
-                    ( defaultFontPath sample
+                    ( ConfigSampler.defaultFontPath sample
                     , curSampleFonts sample <&> _1 *~ sizeFactor
                     )
 
