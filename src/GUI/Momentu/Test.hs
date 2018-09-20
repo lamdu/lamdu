@@ -18,7 +18,6 @@ import qualified GUI.Momentu.Widget as Widget
 import           Graphics.UI.GLFW.Events (Event(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Control.Monad (foldM)
-import           Control.Monad.Trans.FastWriter (runWriterT)
 
 import           Lamdu.Prelude hiding (lookup)
 
@@ -28,8 +27,6 @@ data TestEvent m a = TestEvent
     , _teValidateNewGUIState :: GUIState -> m ()
     }
 Lens.makeLenses ''TestEvent
-
-type Update m = Main.M m State.Update
 
 surrounding :: Vector2 R -> Vector2 R -> Widget.Surrounding
 surrounding winSize widgetSize =
@@ -55,22 +52,21 @@ mkEventCtx focused virtCursor =
             & fromMaybe (error "No focal areas in focused widget!")
 
 applyUpdate ::
-    (Monoid (m ()), Monad m) =>
-    Update m -> Main.Env -> m (Main.Env, Maybe State.VirtualCursor)
+    Monad m =>
+    m State.Update -> Main.Env -> m (Main.Env, Maybe State.VirtualCursor)
 applyUpdate act env =
-    do
-        (update, Main.ExecuteInMainThread inMainThread) <- runWriterT act
-        inMainThread
-        pure
-            ( State.update update env
-            , update ^. State.uVirtualCursor . Lens._Wrapped
-            )
+    act
+    <&>
+    \update ->
+    ( State.update update env
+    , update ^. State.uVirtualCursor . Lens._Wrapped
+    )
 
 mainLoop ::
     forall m.
-    (Monoid (m ()), MonadFail m) =>
-    Main.Env -> (Main.Env -> m (Widget (Update m))) ->
-    [TestEvent m (Update m)] -> m ()
+    MonadFail m =>
+    Main.Env -> (Main.Env -> m (Widget (m State.Update))) ->
+    [TestEvent m (m State.Update)] -> m ()
 mainLoop initEnv mkWidget =
     foldM step (initEnv, Nothing)
     <&> void

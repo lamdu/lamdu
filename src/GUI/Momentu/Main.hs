@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances #-}
 module GUI.Momentu.Main
     ( mainLoopWidget
-    , ExecuteInMainThread(..), M
     , Config(..)
     , Env(..), eWindowSize, eZoom, eState
     , HasMainLoopEnv(..)
@@ -13,8 +12,6 @@ module GUI.Momentu.Main
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (MkProperty')
@@ -50,13 +47,6 @@ data Config = Config
     , cZoom :: IO Zoom.Config
     , cHelpEnv :: Maybe (Zoom -> IO EventMapHelp.Env)
     }
-
-newtype ExecuteInMainThread m = ExecuteInMainThread (m ())
-
-deriving instance Semigroup (m ()) => Semigroup (ExecuteInMainThread m)
-deriving instance Monoid (m ()) => Monoid (ExecuteInMainThread m)
-
-type M m = WriterT (ExecuteInMainThread m) m
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -170,7 +160,7 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
 
 mainLoopWidget ::
     GLFW.Window ->
-    (Env -> IO (Gui Widget (M IO))) ->
+    (Env -> IO (Gui Widget IO)) ->
     Options ->
     IO ()
 mainLoopWidget win mkWidgetUnmemod options =
@@ -181,7 +171,7 @@ mainLoopWidget win mkWidgetUnmemod options =
         let mkW =
                 memoIO $ \size ->
                 do
-                    zoomEventMap <- cZoom config <&> Zoom.eventMap zoom <&> fmap liftIO
+                    zoomEventMap <- cZoom config <&> Zoom.eventMap zoom
                     s <- Property.getP stateStorage_
                     helpEnv <- cHelpEnv config ?? zoom & sequenceA
                     mkWidgetUnmemod
@@ -211,13 +201,12 @@ mainLoopWidget win mkWidgetUnmemod options =
                     when anyUpdate newWidget
                     pure MainAnim.EventResult
                         { MainAnim.erUpdate = anyUpdate ^. Lens._Unwrapped
-                        , MainAnim.erExecuteInMainThread = pure ()
                         }
             , MainAnim.eventHandler = \event ->
                 do
                     (_, mEnter, mFocus) <- renderWidget size
                     mWidgetRes <- lookupEvent getClipboard virtCursorRef mEnter mFocus event
-                    (mRes, ExecuteInMainThread act) <- sequenceA mWidgetRes & runWriterT
+                    mRes <- sequenceA mWidgetRes
                     case mRes of
                         Nothing -> pure ()
                         Just res ->
@@ -227,7 +216,6 @@ mainLoopWidget win mkWidgetUnmemod options =
                                 newWidget
                     pure MainAnim.EventResult
                         { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
-                        , MainAnim.erExecuteInMainThread = act
                         }
             , MainAnim.makeFrame =
                 (renderWidget size <&> (^. _1))

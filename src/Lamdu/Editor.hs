@@ -8,13 +8,11 @@ import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Monad.Trans.FastWriter (writerT)
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (Property(..), MkProperty')
 import qualified Data.Property as Property
-import qualified Data.Tuple as Tuple
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
@@ -192,7 +190,7 @@ mainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
-    IO (M.Widget (MainLoop.M IO M.Update))) -> IO ()
+    IO (M.Widget (IO M.Update))) -> IO ()
 mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration =
     do
         getFonts <- makeGetFonts subpixel
@@ -248,7 +246,7 @@ makeMainGui ::
     HasCallStack =>
     [Themes.Selection] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> T DbLayout.DbM (M.Widget (MainLoop.M IO M.Update))
+    Env -> T DbLayout.DbM (M.Widget (IO M.Update))
 makeMainGui themeNames settingsProp dbToIO env =
     GUIMain.make themeNames settingsProp env
     <&> Lens.mapped %~
@@ -257,14 +255,15 @@ makeMainGui themeNames settingsProp dbToIO env =
     <&> (^. Lens._Wrapped)
     <&> dbToIO
     & join
-    <&> Tuple.swap
-    & writerT
+    >>= runExtraIO
+    where
+        runExtraIO (extraAct, res) = res <$ extraAct
 
 mkWidgetWithFallback ::
     HasCallStack =>
     Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> IO (M.Widget (MainLoop.M IO M.Update))
+    Env -> IO (M.Widget (IO M.Update))
 mkWidgetWithFallback settingsProp dbToIO env =
     do
         themeNames <- Themes.getNames
@@ -298,7 +297,7 @@ exportActions config evalResults executeIOProcess =
     { GUIMain.exportReplActions =
         GUIMain.ExportRepl
         { GUIMain.exportRepl = fileExport Export.fileExportRepl
-        , GUIMain.exportFancy = exportFancy evalResults & execTIO
+        , GUIMain.exportFancy = exportFancy evalResults & IOTrans.liftTIO
         , GUIMain.executeIOProcess = executeIOProcess
         }
     , GUIMain.exportAll = fileExport Export.fileExportAll
@@ -307,8 +306,7 @@ exportActions config evalResults executeIOProcess =
     }
     where
         exportPath = config ^. Config.export . Config.exportPath
-        execTIO = IOTrans.liftTExecInMain . fmap MainLoop.ExecuteInMainThread
-        fileExport exporter = exporter exportPath & execTIO
+        fileExport exporter = exporter exportPath & IOTrans.liftTIO
         importAll path = Export.fileImportAll path & IOTrans.liftIOT
 
 makeRootWidget ::
@@ -316,7 +314,7 @@ makeRootWidget ::
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
     Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
     MainLoop.Env -> Property IO Settings ->
-    IO (M.Widget (MainLoop.M IO M.Update))
+    IO (M.Widget (IO M.Update))
 makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator

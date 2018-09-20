@@ -73,15 +73,14 @@ data AnimConfig = AnimConfig
     , acRemainingRatioInPeriod :: Anim.R
     }
 
-data EventResult = EventResult
+newtype EventResult = EventResult
     { erUpdate :: Monoid.Any
-    , erExecuteInMainThread :: IO ()
     }
 
 instance Semigroup EventResult where
-    EventResult am ar <> EventResult bm br = EventResult (am <> bm) (ar >> br)
+    EventResult am <> EventResult bm = EventResult (am <> bm)
 instance Monoid EventResult where
-    mempty = EventResult mempty (pure ())
+    mempty = EventResult mempty
     mappend = (<>)
 
 data Handlers = Handlers
@@ -187,7 +186,6 @@ animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig w
             do
                 tick size
                 fromEvents <- swapTVar (toAnimVar tvars) mempty & STM.atomically
-                taEventResult fromEvents & erExecuteInMainThread
                 AnimConfig timePeriod ratio <- getAnimationConfig
                 curTime <- getCurrentTime
                 mNewState <-
