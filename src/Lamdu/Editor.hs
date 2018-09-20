@@ -94,9 +94,7 @@ newEvaluator refresh dbMVar opts =
 createWindow :: String -> Opts.WindowMode -> IO M.Window
 createWindow title mode =
     do
-        monitor <-
-            M.getPrimaryMonitor
-            >>= maybe (fail "GLFW: Can't get primary monitor") pure
+        monitor <- M.getPrimaryMonitor
         videoModeSize <- M.getVideoModeSize monitor
         let createWin = M.createWindow title
         case mode of

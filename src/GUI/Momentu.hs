@@ -53,7 +53,7 @@ module GUI.Momentu
     , Spacer.HasStdSpacing(..)
 
     -- | Setup
-    , GLFW.getPrimaryMonitor
+    , GLFWUtils.getPrimaryMonitor
     , GLFWUtils.getVideoModeSize
     , GLFWUtils.withGLFW
     , GLFWUtils.createWindow, GLFW.Window

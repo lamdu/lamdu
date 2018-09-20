@@ -2,6 +2,7 @@ module Graphics.UI.GLFW.Utils
     ( withGLFW
     , printGLVersion
     , createWindow
+    , getPrimaryMonitor
     , getVideoModeSize
     , getDisplayScale
     , charOfKey
@@ -60,14 +61,16 @@ getVideoModeSize monitor =
     <&> \videoMode ->
     Vector2 (GLFW.videoModeWidth videoMode) (GLFW.videoModeHeight videoMode)
 
+getPrimaryMonitor :: IO GLFW.Monitor
+getPrimaryMonitor =
+    GLFW.getPrimaryMonitor >>= maybe (fail "Cannot get primary monitor") pure
+
 guessMonitor :: GLFW.Window -> IO GLFW.Monitor
 guessMonitor window =
     GLFW.getWindowMonitor window
     >>= \case
     Just monitor -> pure monitor
-    Nothing ->
-        GLFW.getPrimaryMonitor
-        >>= maybe (fail "Cannot get primary monitor") pure
+    Nothing -> getPrimaryMonitor
 
 stdPixelsPerInch :: Num a => Vector2 a
 stdPixelsPerInch = Vector2 96 96

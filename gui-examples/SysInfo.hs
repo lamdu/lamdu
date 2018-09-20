@@ -11,9 +11,7 @@ main :: IO ()
 main =
     do
         putStrLn ""
-        monitor <-
-            GLFW.getPrimaryMonitor
-            >>= maybe (fail "Cannot get primary monitor") return
+        monitor <- GLFWUtils.getPrimaryMonitor
         GLFW.getMonitorPhysicalSize monitor
             <&> (\(x,y) -> "Monitor physical size: " ++ show x ++ "mm x " ++ show y ++ "mm")
             >>= putStrLn
