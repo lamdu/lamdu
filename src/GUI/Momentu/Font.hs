@@ -17,19 +17,19 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Graphics.DrawingCombinators ((%%))
+import           Graphics.DrawingCombinators ((%%), R)
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
 import           Lamdu.Prelude
 
 data Font
     = Font Draw.Font
-    | FontDebug Draw.R
+    | FontDebug R
 Lens.makePrisms ''Font
 
 data Underline = Underline
     { _underlineColor :: Draw.Color
-    , _underlineWidth :: Draw.R
+    , _underlineWidth :: R
     }
 Lens.makeLenses ''Underline
 
@@ -51,16 +51,16 @@ instance Num a => Num (TextSize a) where
     negate = fmap negate
 
 data RenderedText a = RenderedText
-    { _renderedTextSize :: TextSize (Vector2 Draw.R)
+    { _renderedTextSize :: TextSize (Vector2 R)
     , _renderedText :: a
     }
 Lens.makeLenses ''RenderedText
 
-height :: Font -> Draw.R
+height :: Font -> R
 height (Font f) = Draw.fontHeight f
 height (FontDebug x) = x
 
-descender :: Font -> Draw.R
+descender :: Font -> R
 descender (Font f) = Draw.fontDescender f
 descender (FontDebug x) = x * 0.75
 
@@ -79,7 +79,7 @@ render font color mUnderline str =
             , Draw.foregroundColor = color
             }
 
-drawUnderline :: Font -> Vector2 Draw.R -> Underline -> Draw.Image ()
+drawUnderline :: Font -> Vector2 R -> Underline -> Draw.Image ()
 drawUnderline font size (Underline color relativeWidth) =
     Draw.square
     & (Draw.scale (size ^. _1) width %%)
@@ -88,7 +88,7 @@ drawUnderline font size (Underline color relativeWidth) =
     where
         width = relativeWidth * height font
 
-textWidth :: Font -> Text -> TextSize Draw.R
+textWidth :: Font -> Text -> TextSize R
 textWidth (Font font) str =
     TextSize
     { _bounding =
@@ -108,7 +108,7 @@ textWidth (FontDebug x) text =
     where
         r = x * fromIntegral (maximum (0 : (Text.lines text <&> Text.length)))
 
-textSize :: Font -> Text -> TextSize (Vector2 Draw.R)
+textSize :: Font -> Text -> TextSize (Vector2 R)
 textSize font str =
     (`Vector2` totalHeight) <$> textWidth font str
     where
