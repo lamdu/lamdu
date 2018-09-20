@@ -20,6 +20,8 @@ import qualified Data.Map as Map
 import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Set.Ordered (OrderedSet)
+import qualified Data.Set.Ordered as OrderedSet
 import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
@@ -92,7 +94,7 @@ data P1Out = P1Out
         -- ^ Used in P2 to check against global hole results
     , _p1Contexts :: MMap T.Tag (Set UUID)
         -- ^ Needed to generate suffixes
-    , _p1TypeVars :: Set UUID
+    , _p1TypeVars :: OrderedSet UUID
         -- ^ Type vars met
     , _p1Texts :: MMap DisplayText (Set T.Tag)
     }
@@ -201,10 +203,8 @@ p1Name mDisambiguator nameType p0Name =
         else p1Tagged mDisambiguator nameType p0Name
     where
         tellCtx x =
-            tellSome p1Contexts (Lens.singletonAt tag s) *>
-            when (nameType == Walk.TypeVar) (tellSome p1TypeVars s)
-            where
-                s = Set.singleton x
+            tellSome p1Contexts (Lens.singletonAt tag (Set.singleton x)) *>
+            when (nameType == Walk.TypeVar) (tellSome p1TypeVars (OrderedSet.singleton x))
         InternalName ctx tag = p0Name ^. p0InternalName
 
 -------------------------------------
