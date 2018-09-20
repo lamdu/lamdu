@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Settings
-    ( AnnotationMode(..), IsHelpShown(..)
-    , Settings(..), sAnnotationMode, sSelectedTheme, sHelpShown
+    ( Settings(..), sAnnotationMode, sSelectedTheme, sHelpShown
     , HasSettings(..)
     , initial
     ) where

@@ -11,6 +11,7 @@ import           Data.Property (Property, composeLens)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
@@ -53,8 +54,8 @@ makeStatusWidgets themeNames prop =
     <*> StatusBar.makeSwitchStatusWidget "Help" Config.helpKeys helpProp helpVals
     where
         helpVals =
-            [ ("hidden", Settings.HelpNotShown)
-            , ("shown", Settings.HelpShown)
+            [ ("hidden", HelpNotShown)
+            , ("shown", HelpShown)
             ]
         themeVals = themeNames <&> join (,)
         themeProp = composeLens Settings.sSelectedTheme prop

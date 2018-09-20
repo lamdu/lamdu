@@ -26,6 +26,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -140,8 +141,8 @@ layout themeNames settingsProp =
     where
         maybeAddHelp size =
             case settingsProp ^. Property.pVal . Settings.sHelpShown of
-            Settings.HelpShown -> addHelp size
-            Settings.HelpNotShown -> pure id
+            HelpShown -> addHelp size
+            HelpNotShown -> pure id
 
 make ::
     Ctx env =>
