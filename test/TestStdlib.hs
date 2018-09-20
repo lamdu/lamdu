@@ -46,8 +46,8 @@ verifyTagNames names =
             | x == y = assertString ("duplicate tag name:" <> show x)
             | not (Text.isPrefixOf x y) = pure ()
             | Text.length x == 1 = pure ()
-            | Set.member x prefixesWhitelist = pure ()
-            | Set.member suffix suffixesWhitelist = pure ()
+            | prefixesWhitelist ^. Lens.contains x = pure ()
+            | suffixesWhitelist ^. Lens.contains suffix = pure ()
             | Lens.allOf (Lens.ix 0) Char.isUpper suffix = pure ()
             | otherwise =
                 assertString ("inconsistent abbreviation detected: " <> show x <> ", " <> show y)

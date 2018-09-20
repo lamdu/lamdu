@@ -181,7 +181,7 @@ jsAllReserved = jsReservedNamespace <> jsReservedKeywords
 
 isReservedName :: Text -> Bool
 isReservedName name =
-    name `Set.member` jsAllReserved
+    jsAllReserved ^. Lens.contains name
     || any (`Text.isPrefixOf` name)
     [ "global_"
     , "local_"

@@ -303,7 +303,7 @@ markBodyLightParams ::
 markBodyLightParams paramNames =
     \case
     BodyGetVar (GetParam n)
-        | Set.member (n ^. pNameRef . nrName) paramNames ->
+        | paramNames ^. Lens.contains (n ^. pNameRef . nrName) ->
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar

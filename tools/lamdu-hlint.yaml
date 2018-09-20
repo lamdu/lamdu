@@ -13,6 +13,7 @@
     - hint: {lhs: \x -> a $ b x, rhs: a . b}
     - ignore: {name: Use tuple-section}
     - hint: {lhs: "case a of {Nothing -> mempty; Just b -> c}", rhs: foldMap (\b -> c) a }
+    - hint: {lhs: "Data.Set.member a b", rhs: "b ^. Lens.contains a"}
 
 - group:
     name: generalise-for-conciseness

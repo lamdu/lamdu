@@ -199,7 +199,7 @@ subexprPayloads subexprs cullPoints =
             cullPoints ^.. Lens.folded . pInput . Input.stored . Property.pVal
             <&> EntityId.ofValI
             & Set.fromList
-        toCull pl = (pl ^. Input.entityId) `Set.member` cullSet
+        toCull pl = cullSet ^. Lens.contains (pl ^. Input.entityId)
 
 addActionsWith ::
     Monad m =>

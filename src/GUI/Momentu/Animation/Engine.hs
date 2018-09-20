@@ -87,7 +87,7 @@ setNewDest destFrame state =
             | c ^. iAnimId == d ^. iAnimId =
                 modifying d (c ^. iRect) : go cs ds
         go (c:cs) ds
-            | (c ^. iAnimId) `Set.member` destIds =
+            | destIds ^. Lens.contains (c ^. iAnimId) =
                 go cs ds -- c will be treated in its new position
             | otherwise =
                 Deleting c : go cs ds
@@ -100,7 +100,7 @@ setNewDest destFrame state =
             Modifying (rImg & iRect .~ prevRect) (destImage ^. iRect)
             where
                 rImg
-                    | (destImage ^. iAnimId) `Set.member` duplicateDestIds
+                    | duplicateDestIds ^. Lens.contains (destImage ^. iAnimId)
                         = destImage & iUnitImage %~ mappend redX
                     | otherwise = destImage
                 redX = Draw.tint red unitX

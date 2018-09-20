@@ -223,7 +223,7 @@ makeTagTexts p1texts =
 
 isReserved :: DisplayText -> Bool
 isReserved (DisplayText name) =
-    name `Set.member` reservedWords
+    reservedWords ^. Lens.contains name
     || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
     where
         reservedWords =
@@ -367,7 +367,7 @@ getTagText tag prop =
     where
         displayText = displayOf prop
         checkCollision env
-            | Set.member displayText (env ^. p2Texts) = UnknownCollision
+            | env ^. p2Texts . Lens.contains displayText = UnknownCollision
             | otherwise = NoCollision
 
 storedName ::
