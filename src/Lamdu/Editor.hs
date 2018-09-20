@@ -25,19 +25,15 @@ import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
-import           Lamdu.Data.Db.Layout (DbM, ViewM)
+import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import           Lamdu.Data.Export.JS (exportFancy)
-import qualified Lamdu.Data.Export.JSON as Export
 import qualified Lamdu.Debug as Debug
-import qualified Lamdu.Editor.Settings as EditorSettings
+import           Lamdu.Editor.Exports (exportActions)
 import qualified Lamdu.Editor.Fonts as EditorFonts
+import qualified Lamdu.Editor.Settings as EditorSettings
 import qualified Lamdu.Eval.Manager as EvalManager
-import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
-import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Main.Env (Env(..))
@@ -207,25 +203,6 @@ mkWidgetWithFallback settingsProp dbToIO env =
         bgColor False = Theme.invalidCursorBGColor
         bgColor True = Theme.backgroundColor
 
-exportActions ::
-    Config -> EvalResults (ValI ViewM) -> IO () -> GUIMain.ExportActions ViewM
-exportActions config evalResults executeIOProcess =
-    GUIMain.ExportActions
-    { GUIMain.exportReplActions =
-        GUIMain.ExportRepl
-        { GUIMain.exportRepl = fileExport Export.fileExportRepl
-        , GUIMain.exportFancy = exportFancy evalResults & IOTrans.liftTIO
-        , GUIMain.executeIOProcess = executeIOProcess
-        }
-    , GUIMain.exportAll = fileExport Export.fileExportAll
-    , GUIMain.exportDef = fileExport . Export.fileExportDef
-    , GUIMain.importAll = importAll
-    }
-    where
-        exportPath = config ^. Config.export . Config.exportPath
-        fileExport exporter = exporter exportPath & IOTrans.liftTIO
-        importAll path = Export.fileImportAll path & IOTrans.liftIOT
-
 makeRootWidget ::
     HasCallStack =>
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
@@ -277,6 +254,7 @@ run opts rawDb =
         monitors <-
             traverse Debug.makeCounters ekg
             >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
+        -- Load config as early as possible, before we open any windows/etc
         configSampler <-
             ConfigSampler.new (const refresh) (EditorSettings.initial ^. Settings.sSelectedTheme)
         (cache, cachedFunctions) <- Cache.make
@@ -286,15 +264,14 @@ run opts rawDb =
         withMVarProtection db $
             \dbMVar ->
             do
-                -- Load config as early as possible, before we open any windows/etc
-                evaluator <- newEvaluator refresh dbMVar opts
-                mkSettingsProp <- EditorSettings.newProp configSampler evaluator
                 M.withGLFW $ do
                     win <-
                         M.createWindow
                         (opts ^. Opts.eoWindowTitle)
                         (opts ^. Opts.eoWindowMode)
                     printGLVersion
+                    evaluator <- newEvaluator refresh dbMVar opts
+                    mkSettingsProp <- EditorSettings.newProp configSampler evaluator
                     mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
                         \fonts config theme env ->
                         Cache.fence cache *>

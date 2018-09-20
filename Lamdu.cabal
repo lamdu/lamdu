@@ -243,6 +243,7 @@ Library
                   , Lamdu.Debug
                   , Lamdu.Debug.Tasks
                   , Lamdu.Editor
+                  , Lamdu.Editor.Exports
                   , Lamdu.Editor.Fonts
                   , Lamdu.Editor.Settings
                   , Lamdu.Eval.JS
