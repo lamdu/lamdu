@@ -7,11 +7,11 @@ module Lamdu.Editor
 import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           Data.Property (Property(..), MkProperty', MkProperty(..), mkProperty)
+import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
@@ -109,14 +109,13 @@ newSettingsProp ::
     Settings -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
 newSettingsProp initial configSampler evaluator =
     do
-        settingsRef <- newIORef initial
-        let setSettings val =
-                do
-                    oldVal <- readIORef settingsRef
-                    writeIORef settingsRef val
-                    settingsChangeHandler configSampler evaluator (Just oldVal) val
         settingsChangeHandler configSampler evaluator Nothing initial
-        readIORef settingsRef <&> (`Property` setSettings) & MkProperty & pure
+        newIORef initial <&> Property.fromIORef
+            <&> Property.mkProperty . Lens.mapped .
+                Lens.filteredBy Property.pVal <.> Property.pSet . Lens.imapped %@~
+                \(oldVal, newVal) ->
+                    -- Callback to notify update  AFTER we set the property:
+                    (*> settingsChangeHandler configSampler evaluator (Just oldVal) newVal)
 
 createWindow :: String -> Opts.WindowMode -> IO M.Window
 createWindow title mode =
