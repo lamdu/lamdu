@@ -3,7 +3,7 @@
     "animationTimePeriodSec": 0,
     "animationRemainInPeriod": 0.2,
     "fonts": {
-        "default"     : "fonts/DejaVuSansMono.ttf",
+        "base"        : "fonts/DejaVuSansMono.ttf",
         "help"        : "fonts/DejaVuSansMono.ttf",
         "autoName"    : "fonts/DejaVuSansMono.ttf",
         "binders"     : "fonts/DejaVuSansMono.ttf",

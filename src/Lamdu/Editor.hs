@@ -26,6 +26,7 @@ import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.Fonts as Fonts
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JS (exportFancy)
@@ -149,7 +150,7 @@ assignFontSizes :: Theme -> Fonts FilePath -> Fonts (FontSize, FilePath)
 assignFontSizes theme fonts =
     fonts
     <&> (,) baseTextSize
-    & Font.fontHelp . _1 .~ helpTextSize
+    & Fonts.help . _1 .~ helpTextSize
     where
         baseTextSize = theme ^. Theme.baseTextSize
         helpTextSize = theme ^. Theme.help . Theme.helpTextSize
@@ -207,7 +208,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
                 do
                     sample <- ConfigSampler.getSample configSampler
                     getFonts zoom sample
-                        <&> (^. Font.fontDefault) <&> Font.height <&> FontInfo
+                        <&> (^. Fonts.base) <&> Font.height <&> FontInfo
         let mkConfigTheme =
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
@@ -231,7 +232,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
                   do
                       sample <- ConfigSampler.getSample configSampler
                       if sample ^. sConfig . Config.debug . Config.debugShowFPS
-                          then getFonts zoom sample <&> (^. Font.fontDebugInfo) <&> Just
+                          then getFonts zoom sample <&> (^. Fonts.debugInfo) <&> Just
                           else pure Nothing
                 , virtualCursorColor =
                     ConfigSampler.getSample configSampler

@@ -21,9 +21,9 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Font (Fonts(..))
-import qualified Lamdu.Font as Font
 
 import           Lamdu.Prelude
 
@@ -57,13 +57,13 @@ helpStyle font theme =
 make :: Fonts Font -> Theme -> Style
 make fonts theme =
     Style
-    { _base           = textEdit TextColors.baseColor    Font.fontDefault
-    , _autoNameOrigin = textEdit TextColors.baseColor    Font.fontAutoName
-    , _nameAtBinder   = textEdit TextColors.baseColor    Font.fontBinders
-    , _bytes          = textEdit TextColors.literalColor Font.fontLiteralBytes
-    , _text           = textEdit TextColors.literalColor Font.fontLiteralText
-    , _num            = textEdit TextColors.literalColor Font.fontDefault
-    , _help           = helpStyle (fonts ^. Font.fontHelp) (theme ^. Theme.help)
+    { _base           = textEdit TextColors.baseColor    Fonts.base
+    , _autoNameOrigin = textEdit TextColors.baseColor    Fonts.autoName
+    , _nameAtBinder   = textEdit TextColors.baseColor    Fonts.binders
+    , _bytes          = textEdit TextColors.literalColor Fonts.literalBytes
+    , _text           = textEdit TextColors.literalColor Fonts.literalText
+    , _num            = textEdit TextColors.literalColor Fonts.base
+    , _help           = helpStyle (fonts ^. Fonts.help) (theme ^. Theme.help)
     }
     where
         textEdit color font =

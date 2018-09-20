@@ -218,6 +218,7 @@ Library
                   , Lamdu.Config
                   , Lamdu.Config.Sampler
                   , Lamdu.Config.Theme
+                  , Lamdu.Config.Theme.Fonts
                   , Lamdu.Config.Theme.Name
                   , Lamdu.Config.Theme.TextColors
                   , Lamdu.Config.Theme.ValAnnotation

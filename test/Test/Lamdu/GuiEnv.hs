@@ -18,8 +18,8 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config, HasConfig(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
+import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Font (fontDefault)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings, initial)
@@ -58,7 +58,7 @@ make =
         testConfig <- Paths.getDataFileName "config.json" >>= AesonConfig.load
         testTheme <- TestTheme.load
         font <-
-            testTheme ^. fonts . fontDefault & Paths.getDataFileName
+            testTheme ^. fonts . Fonts.base & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)
         pure Env
             { _eTheme = testTheme

@@ -63,7 +63,7 @@
         "bgPadding": [7.0, 7.0]
     },
     "fonts": {
-        "default"     : "fonts/DejaVuSans.ttf",
+        "base"        : "fonts/DejaVuSans.ttf",
         "help"        : "fonts/DejaVuSans.ttf",
         "autoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
         "binders"     : "fonts/DejaVuSans-Bold.ttf",
