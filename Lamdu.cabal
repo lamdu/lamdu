@@ -243,6 +243,7 @@ Library
                   , Lamdu.Debug
                   , Lamdu.Debug.Tasks
                   , Lamdu.Editor
+                  , Lamdu.Editor.Settings
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
                   , Lamdu.Eval.Manager

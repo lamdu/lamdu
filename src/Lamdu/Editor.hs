@@ -30,6 +30,7 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import qualified Lamdu.Debug as Debug
+import qualified Lamdu.Editor.Settings as EditorSettings
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
@@ -91,31 +92,6 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.dbMVar = dbMVar
     , EvalManager.jsDebugPaths = opts ^. Opts.eoJSDebugPaths
     }
-
-settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Maybe Settings -> Settings -> IO ()
-settingsChangeHandler configSampler evaluator mOld new =
-    do
-        whenChanged Settings.sAnnotationMode $ \case
-            Evaluation -> EvalManager.start evaluator
-            _ -> EvalManager.stop evaluator
-        whenChanged Settings.sSelectedTheme $ ConfigSampler.setTheme configSampler
-    where
-        whenChanged lens f =
-            case mOld of
-            Nothing -> f (new ^. lens)
-            Just old -> when (old ^. lens /= new ^. lens) $ f (new ^. lens)
-
-newSettingsProp ::
-    Settings -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
-newSettingsProp initial configSampler evaluator =
-    do
-        settingsChangeHandler configSampler evaluator Nothing initial
-        newIORef initial <&> Property.fromIORef
-            <&> Property.mkProperty . Lens.mapped .
-                Lens.filteredBy Property.pVal <.> Property.pSet . Lens.imapped %@~
-                \(oldVal, newVal) ->
-                    -- Callback to notify update  AFTER we set the property:
-                    (*> settingsChangeHandler configSampler evaluator (Just oldVal) newVal)
 
 createWindow :: String -> Opts.WindowMode -> IO M.Window
 createWindow title mode =
@@ -360,7 +336,7 @@ run opts rawDb =
             traverse Debug.makeCounters ekg
             >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
         configSampler <-
-            ConfigSampler.new (const refresh) (Settings.initial ^. Settings.sSelectedTheme)
+            ConfigSampler.new (const refresh) (EditorSettings.initial ^. Settings.sSelectedTheme)
         (cache, cachedFunctions) <- Cache.make
         let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let db = Transaction.onStoreM reportDb rawDb
@@ -370,7 +346,7 @@ run opts rawDb =
             do
                 -- Load config as early as possible, before we open any windows/etc
                 evaluator <- newEvaluator refresh dbMVar opts
-                mkSettingsProp <- newSettingsProp Settings.initial configSampler evaluator
+                mkSettingsProp <- EditorSettings.newProp configSampler evaluator
                 M.withGLFW $ do
                     win <-
                         createWindow

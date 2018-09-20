@@ -20,9 +20,10 @@ import           Lamdu.Config (Config, HasConfig(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Paths as Paths
-import           Lamdu.Settings (HasSettings(..), Settings, initial)
+import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
 import qualified Lamdu.Style as Style
 import qualified Test.Lamdu.Theme as TestTheme
