@@ -7,7 +7,6 @@ module GUI.Momentu.Main
     , HasMainLoopEnv(..)
     , DebugOptions(..), defaultDebugOptions
     , PerfCounters(..)
-    , StateStorage(..)
     , Options(..), defaultOptions
     , MainAnim.wakeUp
     , quitEventMap
@@ -18,6 +17,8 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
+import           Data.Property (MkProperty')
+import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
@@ -25,8 +26,8 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
-import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Animation (PerfCounters(..))
+import qualified GUI.Momentu.Main.Animation as MainAnim
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
@@ -63,24 +64,14 @@ data DebugOptions = DebugOptions
     , reportPerfCounters :: PerfCounters -> IO ()
     }
 
-data StateStorage = StateStorage
-    { readState :: IO GUIState
-    , writeState :: GUIState -> IO ()
-    }
-
-iorefStateStorage :: Widget.Id -> IO StateStorage
+iorefStateStorage :: Widget.Id -> IO (MkProperty' IO GUIState)
 iorefStateStorage initialCursor =
-    newIORef (GUIState initialCursor mempty)
-    <&> \ref ->
-    StateStorage
-    { readState = readIORef ref
-    , writeState = writeIORef ref
-    }
+    newIORef (GUIState initialCursor mempty) <&> Property.fromIORef
 
 data Options = Options
     { tickHandler :: IO Bool
     , config :: Config
-    , stateStorage :: StateStorage
+    , stateStorage :: MkProperty' IO GUIState
     , debug :: DebugOptions
     }
 
@@ -191,7 +182,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                 memoIO $ \size ->
                 do
                     zoomEventMap <- cZoom config <&> Zoom.eventMap zoom <&> fmap liftIO
-                    s <- readState stateStorage_
+                    s <- Property.getP stateStorage_
                     helpEnv <- cHelpEnv config ?? zoom & sequenceA
                     mkWidgetUnmemod
                         Env
@@ -231,9 +222,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> pure ()
                         Just res ->
                             do
-                                readState stateStorage_
-                                    <&> State.update res
-                                    >>= writeState stateStorage_
+                                Property.modP stateStorage_ (State.update res)
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
                     pure MainAnim.EventResult

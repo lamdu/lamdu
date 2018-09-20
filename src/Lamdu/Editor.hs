@@ -12,7 +12,7 @@ import           Control.Monad.Trans.FastWriter (writerT)
 import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           Data.Property (Property(..))
+import           Data.Property (Property(..), MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Tuple as Tuple
 import qualified GUI.Momentu as M
@@ -74,12 +74,12 @@ scheduleRefresh (RefreshScheduler ref) =
         writeIORef ref True
         MainLoop.wakeUp
 
-stateStorageInIRef :: Transaction.Store DbM -> IRef DbLayout.DbM M.GUIState -> MainLoop.StateStorage
+stateStorageInIRef ::
+    Transaction.Store DbM -> IRef DbLayout.DbM M.GUIState ->
+    MkProperty' IO M.GUIState
 stateStorageInIRef db stateIRef =
-    MainLoop.StateStorage
-    { readState = DbLayout.runDbTransaction db (Transaction.readIRef stateIRef)
-    , writeState = DbLayout.runDbTransaction db . Transaction.writeIRef stateIRef
-    }
+    Transaction.mkPropertyFromIRef stateIRef
+    & Property.mkHoist' (DbLayout.runDbTransaction db)
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
@@ -189,7 +189,7 @@ makeReportPerfCounters ekg =
         store = Ekg.serverMetricStore ekg
 
 mainLoop ::
-    Maybe Ekg.Server -> MainLoop.StateStorage -> Font.LCDSubPixelEnabled ->
+    Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
     (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
     IO (M.Widget (MainLoop.M IO M.Update))) -> IO ()
