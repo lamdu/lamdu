@@ -29,7 +29,7 @@ backgroundColor =
     Element.subAnimId ["bg"] <&>
     \animId color -> Element.setLayers %@~ \sz x ->
     x
-    & Element.layers %~ addBg (Anim.coloredRectangle animId color sz)
+    & Element.layers %~ addBg (Anim.coloredRectangle animId color & Anim.scale sz)
     where
         addBg bg [] = [bg]
         addBg bg (x:xs) = x <> bg : xs

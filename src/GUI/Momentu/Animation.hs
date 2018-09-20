@@ -99,11 +99,10 @@ emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =
             & (Draw.scaleV size %%)
             & (Draw.translateV origin %%)
 
-coloredRectangle :: AnimId -> Draw.Color -> Vector2 R -> Frame
-coloredRectangle animId color size =
+coloredRectangle :: AnimId -> Draw.Color -> Frame
+coloredRectangle animId color =
     unitSquare animId
     & unitImages %~ Draw.tint color
-    & scale size
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos = images . iRect . Rect.topLeft +~ pos

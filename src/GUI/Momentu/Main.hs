@@ -175,7 +175,7 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
     Nothing -> mempty
     Just color ->
         Anim.coloredRectangle ["debug-virtual-cursor"] color
-        (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
+        & Anim.scale (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
 
 mainLoopWidget ::
     GLFW.Window ->
