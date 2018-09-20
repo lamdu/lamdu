@@ -66,25 +66,25 @@ makeInline stored redex useId
         uses = redex ^. Redex.paramRefs
         (before, after) = break (== useId) uses
 
-convertRedex ::
+convertLet ::
     (Monad m, Monoid a) =>
     T m ExtractDestination ->
     Input.Payload m a ->
     Redex (Input.Payload m a) ->
-    ConvertM m (Let InternalName (T m) (T m) (Ann (ConvertPayload m a)))
-convertRedex float pl redex =
+    ConvertM m
+    (Ann (ConvertPayload m a)
+     (Binder InternalName (T m) (T m) (Ann (ConvertPayload m a))))
+convertLet float pl redex =
     do
         tag <- convertTaggedEntity param
         (_pMode, value) <-
             convertAssignment binderKind param (redex ^. Redex.arg)
-            & localNewExtractDestPos pl
             <&> _2 . ann . pInput . Input.entityId .~
                 EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
         letBody <-
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
-            & localNewExtractDestPos pl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
                 nodeActions
@@ -101,17 +101,28 @@ convertRedex float pl redex =
                     redex ^. Redex.lam . V.lamResult . ann . Input.stored
                         & replaceWith stored & void
                 <* postProcess
-        pure Let
-            { _lVarInfo = redex ^. Redex.arg . ann . Input.inferred . Infer.plType & mkVarInfo
-            , _lValue = value & ann . pActions %~ fixValueNodeActions
-            , _lDelete = del
-            , _lName = tag
-            , _lBodyScope = redex ^. Redex.bodyScope
-            , _lBody =
-                letBody
-                & ann . pActions . mReplaceParent ?~
-                    (letBody ^. ann . pInput . Input.entityId <$ del)
-            , _lUsages = redex ^. Redex.paramRefs
+        actions <- makeActions pl
+        pure Ann
+            { _val =
+                BinderLet Let
+                { _lVarInfo = redex ^. Redex.arg . ann . Input.inferred . Infer.plType & mkVarInfo
+                , _lValue = value & ann . pActions %~ fixValueNodeActions
+                , _lDelete = del
+                , _lName = tag
+                , _lBodyScope = redex ^. Redex.bodyScope
+                , _lBody =
+                    letBody
+                    & ann . pActions . mReplaceParent ?~
+                        (letBody ^. ann . pInput . Input.entityId <$ del)
+                , _lUsages = redex ^. Redex.paramRefs
+                }
+            , _ann =
+                ConvertPayload
+                { _pInput =
+                    pl
+                    & Input.userData .~ redex ^. Redex.lamPl . Input.userData
+                , _pActions = actions
+                }
             }
     where
         stored = pl ^. Input.stored
@@ -142,18 +153,7 @@ convertBinder expr =
         do
             float <-
                 makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
-            bodyS <- convertRedex float pl redex & localNewExtractDestPos pl
-            actions <- makeActions pl & localNewExtractDestPos pl
-            pure Ann
-                { _val = BinderLet bodyS
-                , _ann =
-                    ConvertPayload
-                    { _pInput =
-                        pl
-                        & Input.userData .~ redex ^. Redex.lamPl . Input.userData
-                    , _pActions = actions
-                    }
-                }
+            convertLet float pl redex & localNewExtractDestPos pl
     where
         Ann pl body = expr
 
