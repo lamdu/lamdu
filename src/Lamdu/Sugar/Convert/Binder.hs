@@ -68,22 +68,22 @@ makeInline stored redex useId
 
 convertRedex ::
     (Monad m, Monoid a) =>
-    Val (Input.Payload m a) ->
+    Input.Payload m a ->
     Redex (Input.Payload m a) ->
     ConvertM m (Let InternalName (T m) (T m) (Ann (ConvertPayload m a)))
-convertRedex expr redex =
+convertRedex pl redex =
     do
         tag <- convertTaggedEntity param
         (_pMode, value) <-
             convertAssignment binderKind param (redex ^. Redex.arg)
-            & localNewExtractDestPos (expr ^. ann)
+            & localNewExtractDestPos pl
             <&> _2 . ann . pInput . Input.entityId .~
                 EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
         letBody <-
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
-            & localNewExtractDestPos (expr ^. ann)
+            & localNewExtractDestPos pl
         float <- makeFloatLetToOuterScope (stored ^. Property.pSet) redex
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
@@ -114,7 +114,7 @@ convertRedex expr redex =
             , _lUsages = redex ^. Redex.paramRefs
             }
     where
-        stored = expr ^. ann . Input.stored
+        stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
             <&> annotations %~ (^. Input.stored)
@@ -140,7 +140,7 @@ convertBinder expr =
              (exprS ^.. val . SugarLens.bodyChildPayloads))
     Just redex ->
         do
-            bodyS <- convertRedex expr redex
+            bodyS <- convertRedex (expr ^. ann) redex
             actions <- makeActions (expr ^. ann) & localNewExtractDestPos (expr ^. ann)
             pure Ann
                 { _val = BinderLet bodyS
