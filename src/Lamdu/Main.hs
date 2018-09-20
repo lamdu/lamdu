@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, Rank2Types, DisambiguateRecordFields, NamedFieldPuns, MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types, DisambiguateRecordFields, NamedFieldPuns #-}
 module Main
     ( main
     ) where
@@ -18,14 +18,8 @@ import qualified Data.Tuple as Tuple
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.Animation.Id (AnimId)
-import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
@@ -48,8 +42,9 @@ import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Main as GUIMain
-import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Main.Env (Env(..))
+import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
@@ -73,42 +68,6 @@ import qualified System.Remote.Monitoring.Shim as Ekg
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data Env = Env
-    { _envEvalRes :: GUIMain.EvalResults
-    , _envExportActions :: GUIMain.ExportActions ViewM
-    , _envConfig :: Config
-    , _envTheme :: Theme
-    , _envSettings :: Settings
-    , _envStyle :: Style.Style
-    , _envMainLoop :: MainLoop.Env
-    , _envAnimIdPrefix :: AnimId
-    , _envDebugMonitors :: Debug.Monitors
-    , _envCachedFunctions :: Cache.Functions
-    }
-Lens.makeLenses ''Env
-
-instance GUIMain.HasExportActions Env ViewM where exportActions = envExportActions
-instance GUIMain.HasEvalResults Env ViewM where evalResults = envEvalRes
-instance Settings.HasSettings Env where settings = envSettings
-instance Style.HasStyle Env where style = envStyle
-instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = envMainLoop
-instance M.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
-instance M.HasCursor Env
-instance M.HasState Env where state = envMainLoop . M.state
-instance TextEdit.HasStyle Env where style = envStyle . Style.base
-instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
-instance Theme.HasTheme Env where theme = envTheme
-instance Config.HasConfig Env where config = envConfig
-instance M.HasAnimIdPrefix Env where animIdPrefix = envAnimIdPrefix
-instance Hover.HasStyle Env where style = envTheme . Hover.style
-instance VCConfig.HasTheme Env where theme = envTheme . Theme.versionControl
-instance VCConfig.HasConfig Env where config = envConfig . Config.versionControl
-instance Menu.HasConfig Env where
-    config = Menu.configLens (envConfig . Config.menu) (envTheme . Theme.menu)
-instance SearchMenu.HasTermStyle Env where termStyle = envTheme . Theme.searchTerm
-instance Debug.HasMonitors Env where monitors = envDebugMonitors
-instance Cache.HasFunctions Env where functions = envCachedFunctions
 
 defaultFontPath :: ConfigSampler.Sample -> FilePath
 defaultFontPath sample =
@@ -221,19 +180,19 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme main
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
-                { _envEvalRes = evalResults
-                , _envExportActions =
+                { _evalRes = evalResults
+                , _exportActions =
                     exportActions config
                     (evalResults ^. current)
                     (EvalManager.executeReplIOProcess evaluator)
-                , _envConfig = config
-                , _envTheme = theme
-                , _envSettings = Property.value settingsProp
-                , _envStyle = Style.make fonts theme
-                , _envMainLoop = mainLoopEnv
-                , _envAnimIdPrefix = mempty
-                , _envDebugMonitors = monitors
-                , _envCachedFunctions = cachedFunctions
+                , _config = config
+                , _theme = theme
+                , _settings = Property.value settingsProp
+                , _style = Style.make fonts theme
+                , _mainLoop = mainLoopEnv
+                , _animIdPrefix = mempty
+                , _debugMonitors = monitors
+                , _cachedFunctions = cachedFunctions
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
@@ -473,7 +432,7 @@ mkWidgetWithFallback settingsProp dbToIO env =
             & M.backgroundColor (["background"] :: M.AnimId) (theme ^. bgColor isValid)
             & pure
     where
-        theme = env ^. envTheme
+        theme = env ^. Env.theme
         bgColor False = Theme.invalidCursorBGColor
         bgColor True = Theme.backgroundColor
 

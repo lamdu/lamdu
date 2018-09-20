@@ -303,6 +303,7 @@ Library
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.Infer.Trans
+                  , Lamdu.Main.Env
                   , Lamdu.Name
                   , Lamdu.Opts
                   , Lamdu.Paths
