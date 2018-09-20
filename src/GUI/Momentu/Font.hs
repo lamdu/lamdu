@@ -2,7 +2,7 @@
 -- | A font attached to its size
 
 module GUI.Momentu.Font
-    ( Font(..), _Font, _FontDebug
+    ( Font
     , Underline(..), underlineColor, underlineWidth
     , render
     , RenderedText(..), renderedTextSize, renderedText
