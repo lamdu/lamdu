@@ -3,7 +3,6 @@ module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
     , Command(..), _DeleteDb, _Undo, _Editor
     , Parsed(..), pCommand, pLamduDB
-    , WindowMode(..), _VideoModeSize, _FullScreen
     , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath, jsDebugInteractivePath
     , get
     ) where
@@ -12,12 +11,11 @@ import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Data.List.Split (splitOn)
 import           Data.Word (Word16)
+import           GUI.Momentu (WindowMode(..))
 import           Options.Applicative ((<|>))
 import qualified Options.Applicative as P
 
 import           Lamdu.Prelude
-
-data WindowMode = VideoModeSize | FullScreen
 
 data JSDebugPaths a = JSDebugPaths
     { _jsDebugCodePath :: Maybe a
@@ -49,7 +47,6 @@ Lens.makeLenses ''EditorOpts
 Lens.makeLenses ''JSDebugPaths
 Lens.makeLenses ''Parsed
 Lens.makePrisms ''Command
-Lens.makePrisms ''WindowMode
 
 subcommands :: P.Parser Command
 subcommands =
@@ -130,7 +127,7 @@ windowMode =
       <> P.short 'f'
       <> P.help "Run Lamdu in a fullscreen window"
     )
-    <|> pure VideoModeSize
+    <|> pure Maximized
 
 parser :: P.Parser Parsed
 parser =

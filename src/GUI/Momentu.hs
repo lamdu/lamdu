@@ -56,7 +56,9 @@ module GUI.Momentu
     , GLFWUtils.getPrimaryMonitor
     , GLFWUtils.getVideoModeSize
     , GLFWUtils.withGLFW
-    , GLFWUtils.createWindow, GLFW.Window
+
+    , WindowMode(..)
+    , createWindow, GLFW.Window
 
     -- | Main loop
     , Zoom, Zoom.getZoomFactor
@@ -94,6 +96,18 @@ import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import           Lamdu.Prelude
 
 type MainLoopEnv = MainLoop.Env
+
+data WindowMode = FullScreen | Maximized
+
+createWindow :: String -> WindowMode -> IO GLFW.Window
+createWindow title mode =
+    do
+        monitor <- GLFWUtils.getPrimaryMonitor
+        videoModeSize <- GLFWUtils.getVideoModeSize monitor
+        let createWin = GLFWUtils.createWindow title
+        case mode of
+            FullScreen -> createWin (Just monitor) videoModeSize
+            Maximized  -> createWin Nothing (videoModeSize - 1)
 
 type WidgetId = Widget.Id
 pattern WidgetId :: AnimId -> Widget.Id

@@ -91,16 +91,6 @@ newEvaluator refresh dbMVar opts =
     , EvalManager.jsDebugPaths = opts ^. Opts.eoJSDebugPaths
     }
 
-createWindow :: String -> Opts.WindowMode -> IO M.Window
-createWindow title mode =
-    do
-        monitor <- M.getPrimaryMonitor
-        videoModeSize <- M.getVideoModeSize monitor
-        let createWin = M.createWindow title
-        case mode of
-            Opts.FullScreen         -> createWin (Just monitor) videoModeSize
-            Opts.VideoModeSize      -> createWin Nothing (videoModeSize - 1)
-
 makeReportPerfCounters :: Ekg.Server -> IO (MainLoop.PerfCounters -> IO ())
 makeReportPerfCounters ekg =
     do
@@ -301,7 +291,7 @@ run opts rawDb =
                 mkSettingsProp <- EditorSettings.newProp configSampler evaluator
                 M.withGLFW $ do
                     win <-
-                        createWindow
+                        M.createWindow
                         (opts ^. Opts.eoWindowTitle)
                         (opts ^. Opts.eoWindowMode)
                     printGLVersion
