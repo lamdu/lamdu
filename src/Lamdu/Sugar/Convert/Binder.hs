@@ -44,13 +44,12 @@ lamParamToHole ::
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
 
-localNewExtractDestPos ::
-    Val (Input.Payload m x) -> ConvertM m a -> ConvertM m a
+localNewExtractDestPos :: Input.Payload m x -> ConvertM m a -> ConvertM m a
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
-    { _osiPos = x ^. ann . Input.stored
-    , _osiScope = x ^. ann . Input.inferred . Infer.plScope
+    { _osiPos = x ^. Input.stored
+    , _osiScope = x ^. Input.inferred . Infer.plScope
     }
     & ConvertM.local
 
@@ -77,14 +76,14 @@ convertRedex expr redex =
         tag <- convertTaggedEntity param
         (_pMode, value) <-
             convertAssignment binderKind param (redex ^. Redex.arg)
-            & localNewExtractDestPos expr
+            & localNewExtractDestPos (expr ^. ann)
             <&> _2 . ann . pInput . Input.entityId .~
                 EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
         letBody <-
             convertBinder bod
             & ConvertM.local (scScopeInfo . siLetItems <>~
                 Map.singleton param (makeInline stored redex))
-            & localNewExtractDestPos expr
+            & localNewExtractDestPos (expr ^. ann)
         float <- makeFloatLetToOuterScope (stored ^. Property.pSet) redex
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
@@ -129,7 +128,7 @@ convertBinder ::
 convertBinder expr =
     case Redex.check (expr ^. val) of
     Nothing ->
-        ConvertM.convertSubexpression expr & localNewExtractDestPos expr
+        ConvertM.convertSubexpression expr & localNewExtractDestPos (expr ^. ann)
         <&> \exprS ->
         exprS
         & val %~ BinderExpr
@@ -142,7 +141,7 @@ convertBinder expr =
     Just redex ->
         do
             bodyS <- convertRedex expr redex
-            actions <- makeActions (expr ^. ann) & localNewExtractDestPos expr
+            actions <- makeActions (expr ^. ann) & localNewExtractDestPos (expr ^. ann)
             pure Ann
                 { _val = BinderLet bodyS
                 , _ann =
