@@ -2,14 +2,17 @@
 module Data.Property
     ( Property(..), pVal, pSet, value, set
     , compose, pureCompose, composeLens
-    , modify_, pureModify
+    , modify_, pureModify, hoist
 
     , MkProperty(..), MkProperty', mkProperty, prop
-    , getP, setP, modP
+    , getP, setP, modP, mkHoist, mkHoist'
+
+    , fromIORef
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad ((<=<))
+import           Data.IORef (IORef, readIORef, writeIORef)
 
 import           Lamdu.Prelude
 
@@ -45,6 +48,9 @@ composeLens :: Lens' a b -> Property m a -> Property m b
 composeLens lens (Property val setter) =
     Property (val ^. lens) (setter . flip (lens .~) val)
 
+hoist :: (m () -> m' ()) -> Property m a -> Property m' a
+hoist f = pSet . Lens.mapped %~ f
+
 -- MkProperty:
 
 newtype MkProperty i o a = MkProperty { _mkProperty :: i (Property o a) }
@@ -74,3 +80,26 @@ modP (MkProperty mkProp) f = do
     p <- mkProp
     pureModify p f
 
+fromIORef :: IORef a -> MkProperty IO IO a
+fromIORef ref =
+    MkProperty $
+    readIORef ref
+    <&> \val ->
+        Property
+        { _pVal = val
+        , _pSet = writeIORef ref
+        }
+
+mkHoist ::
+    Functor i' =>
+    (forall x. i x -> i' x) -> (o () -> o' ()) ->
+    MkProperty i o a -> MkProperty i' o' a
+mkHoist i o x =
+    x
+    & mkProperty %~ i
+    & mkProperty . Lens.mapped %~ hoist o
+
+mkHoist' ::
+    Functor m' =>
+    (forall x. m x -> m' x) -> MkProperty m m a -> MkProperty m' m' a
+mkHoist' f = mkHoist f f
