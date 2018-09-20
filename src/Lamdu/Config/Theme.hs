@@ -35,7 +35,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
-import           Lamdu.Font (FontSize, Fonts)
+import           Lamdu.Config.Theme.Fonts (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 import           Lamdu.Prelude

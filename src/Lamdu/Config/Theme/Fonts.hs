@@ -1,7 +1,7 @@
 -- | The Fonts component of the Lamdu Theme
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Config.Theme.Fonts
-    ( Fonts(..)
+    ( Fonts(..), FontSize
     , base, help, literalText, autoName, literalBytes
     , binders, debugInfo
     ) where
@@ -30,3 +30,5 @@ deriveJSON Aeson.defaultOptions
     }
     ''Fonts
 Lens.makeLenses ''Fonts
+
+type FontSize = Float

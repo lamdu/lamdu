@@ -16,7 +16,6 @@ import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
-import qualified Lamdu.Font as Font
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
@@ -112,6 +111,6 @@ new sampleUpdated initialTheme =
 
 defaultFontPath :: Sample -> FilePath
 defaultFontPath sample =
-    configDir </> Font.defaultFontFile
+    configDir </> "fonts/Purisa.ttf"
     where
         configDir = FilePath.takeDirectory (sample ^. sConfigPath)

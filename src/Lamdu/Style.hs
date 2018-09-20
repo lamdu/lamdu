@@ -21,9 +21,9 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Fonts (Fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.Font (Fonts(..))
 
 import           Lamdu.Prelude
 
