@@ -38,8 +38,8 @@ existingName g =
     fromMaybe ("TodoError:" <> Text.pack (show g)) <$>
     Lens.uses ngUsedNames (Map.lookup g)
 
-newName :: Ord g => (Text -> Bool) -> VarInfo -> g -> State (NameGen g) Text
-newName acceptName isFunc g =
+newName :: Ord g => VarInfo -> (Text -> Bool) -> g -> State (NameGen g) Text
+newName varInfo acceptName g =
     do
         name <- Lens.zoom names loop
         ngUsedNames %= Map.insert g name
@@ -52,7 +52,7 @@ newName acceptName isFunc g =
                     then pure name
                     else loop
         names =
-            case isFunc of
+            case varInfo of
             VarNormal -> ngUnusedNames
             VarFunction -> ngUnusedFuncNames
             VarAction -> ngUnusedActionNames
