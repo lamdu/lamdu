@@ -10,7 +10,6 @@ import qualified Control.Exception as E
 import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
 import           Data.IORef
-import           Data.MRUMemo (memoIO)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
@@ -24,7 +23,7 @@ import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.Config.Theme.Fonts (FontSize, Fonts(..))
+import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -32,6 +31,7 @@ import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Editor.Settings as EditorSettings
+import qualified Lamdu.Editor.Fonts as EditorFonts
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
@@ -52,8 +52,6 @@ import qualified Lamdu.Themes as Themes
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           System.FilePath ((</>))
-import qualified System.FilePath as FilePath
 import qualified System.Metrics as Metrics
 import qualified System.Metrics.Distribution as Distribution
 import qualified System.Remote.Monitoring.Shim as Ekg
@@ -105,44 +103,6 @@ createWindow title mode =
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
             Opts.VideoModeSize      -> createWin Nothing (videoModeSize - 1)
 
-prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
-prependConfigPath sample =
-    Lens.mapped %~ f
-    where
-        dir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
-        f "" = "" -- Debug font!
-        f x = dir </> x
-
-assignFontSizes :: Theme -> Fonts FilePath -> Fonts (FontSize, FilePath)
-assignFontSizes theme fonts =
-    fonts
-    <&> (,) baseTextSize
-    & Fonts.help . _1 .~ helpTextSize
-    where
-        baseTextSize = theme ^. Theme.baseTextSize
-        helpTextSize = theme ^. Theme.help . Theme.helpTextSize
-
-curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
-curSampleFonts sample =
-    sample ^. sTheme . Theme.fonts
-    & prependConfigPath sample
-    & assignFontSizes (sample ^. sTheme)
-
-makeGetFonts ::
-    Font.LCDSubPixelEnabled ->
-    IO (M.Zoom -> ConfigSampler.Sample -> IO (Fonts M.Font))
-makeGetFonts subpixel =
-    Font.new subpixel & uncurry & memoIO
-    <&> f
-    where
-        f cachedLoadFonts zoom sample =
-            do
-                sizeFactor <- M.getZoomFactor zoom
-                cachedLoadFonts
-                    ( ConfigSampler.defaultFontPath sample
-                    , curSampleFonts sample <&> _1 *~ sizeFactor
-                    )
-
 makeReportPerfCounters :: Ekg.Server -> IO (MainLoop.PerfCounters -> IO ())
 makeReportPerfCounters ekg =
     do
@@ -162,7 +122,7 @@ mainLoop ::
     IO (M.Widget (IO M.Update))) -> IO ()
 mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration =
     do
-        getFonts <- makeGetFonts subpixel
+        getFonts <- EditorFonts.makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
         let makeWidget env =
                 do
