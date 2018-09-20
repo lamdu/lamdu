@@ -190,7 +190,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                     vcursorimg <- virtualCursorImage virtCursor debug
                     Cursor.render
                         <$> (readIORef mkWidgetRef >>= (size &))
-                        <&> _1 <>~ const vcursorimg
+                        <&> _1 . Lens.mapped %~ (vcursorimg <>)
         MainAnim.mainLoop (reportPerfCounters debug) win (fpsFont zoom)
             (cAnim config) $
             \size ->
