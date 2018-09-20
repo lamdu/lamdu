@@ -126,32 +126,34 @@ convertBinder ::
     Val (Input.Payload m a) ->
     ConvertM m (Node (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertBinder expr =
-    case Redex.check (expr ^. val) of
+    case Redex.check body of
     Nothing ->
-        ConvertM.convertSubexpression expr & localNewExtractDestPos (expr ^. ann)
+        ConvertM.convertSubexpression expr & localNewExtractDestPos pl
         <&> \exprS ->
         exprS
         & val %~ BinderExpr
-        & ann . pInput .~ expr ^. ann -- TODO: <-- why is this necessary?
+        & ann . pInput .~ pl -- TODO: <-- why is this necessary?
         & ann . pInput . Input.userData .~
             mconcat
             (subexprPayloads
-             (expr ^.. val . V.termChildren)
+             (body ^.. V.termChildren)
              (exprS ^.. val . SugarLens.bodyChildPayloads))
     Just redex ->
         do
-            bodyS <- convertRedex (expr ^. ann) redex
-            actions <- makeActions (expr ^. ann) & localNewExtractDestPos (expr ^. ann)
+            bodyS <- convertRedex pl redex
+            actions <- makeActions pl & localNewExtractDestPos pl
             pure Ann
                 { _val = BinderLet bodyS
                 , _ann =
                     ConvertPayload
                     { _pInput =
-                        expr ^. ann
+                        pl
                         & Input.userData .~ redex ^. Redex.lamPl . Input.userData
                     , _pActions = actions
                     }
                 }
+    where
+        Ann pl body = expr
 
 makeFunction ::
     (Monad m, Monoid a) =>
