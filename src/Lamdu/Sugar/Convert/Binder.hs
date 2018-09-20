@@ -127,7 +127,7 @@ convertBinder ::
     Val (Input.Payload m a) ->
     ConvertM m (Node (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertBinder expr =
-    case Redex.check expr of
+    case Redex.check (expr ^. val) of
     Nothing ->
         ConvertM.convertSubexpression expr & localNewExtractDestPos expr
         <&> \exprS ->
