@@ -16,7 +16,7 @@ import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
-import qualified Graphics.Rendering.OpenGL.GL as GL
+import           Graphics.UI.GLFW.Utils (printGLVersion)
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -104,12 +104,6 @@ createWindow title mode =
         case mode of
             Opts.FullScreen         -> createWin (Just monitor) videoModeSize
             Opts.VideoModeSize      -> createWin Nothing (videoModeSize - 1)
-
-printGLVersion :: IO ()
-printGLVersion =
-    do
-        ver <- GL.get GL.glVersion
-        putStrLn $ "Using GL version: " ++ show ver
 
 prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =

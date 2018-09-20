@@ -1,5 +1,6 @@
 module Graphics.UI.GLFW.Utils
     ( withGLFW
+    , printGLVersion
     , createWindow
     , getVideoModeSize
     , getDisplayScale
@@ -13,6 +14,7 @@ import           Control.Monad (unless)
 import           Data.Foldable (traverse_)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Stack (currentCallStack)
+import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import           System.IO (hPutStrLn, hFlush, stderr)
 
@@ -20,6 +22,12 @@ import           Prelude
 
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
+
+printGLVersion :: IO ()
+printGLVersion =
+    do
+        ver <- GL.get GL.glVersion
+        putStrLn $ "Using GL version: " ++ show ver
 
 printErrors :: GLFW.ErrorCallback
 printErrors err msg =
