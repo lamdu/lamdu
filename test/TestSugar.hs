@@ -28,6 +28,7 @@ test =
     , paramAnnotations
     , testChangeParam
     , testExtract
+    , testExtractForRecursion
     , testLightLambda
     , testInline
     , testReorderLets
@@ -186,6 +187,22 @@ delInfixArg =
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 1"
         afterDel = replBody . _BodyLiteral . _LiteralNum
+
+testExtractForRecursion :: Test
+testExtractForRecursion =
+    testSugarActions "fold.json"
+    [ void . (^?! openDef)
+    , void . (^?! extractDef)
+    ]
+    & testCase "no-extract-recursive"
+    where
+        openDef =
+            replBody . _BodyLabeledApply . aFunc .
+            val . bvNameRef . nrGotoDefinition
+        extractDef =
+            waPanes . traverse . paneDefinition .
+            drBody . _DefinitionBodyExpression . deContent .
+            ann . plActions . extract
 
 testLightLambda :: Test
 testLightLambda =
