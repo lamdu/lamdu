@@ -263,20 +263,20 @@ run opts rawDb =
         let stateStorage = stateStorageInIRef db DbLayout.guiState
         withMVarProtection db $
             \dbMVar ->
+            M.withGLFW $
             do
-                M.withGLFW $ do
-                    win <-
-                        M.createWindow
-                        (opts ^. Opts.eoWindowTitle)
-                        (opts ^. Opts.eoWindowMode)
-                    printGLVersion
-                    evaluator <- newEvaluator refresh dbMVar opts
-                    mkSettingsProp <- EditorSettings.newProp configSampler evaluator
-                    mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
-                        \fonts config theme env ->
-                        Cache.fence cache *>
-                        mkSettingsProp ^. mkProperty
-                        >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
+                win <-
+                    M.createWindow
+                    (opts ^. Opts.eoWindowTitle)
+                    (opts ^. Opts.eoWindowMode)
+                printGLVersion
+                evaluator <- newEvaluator refresh dbMVar opts
+                mkSettingsProp <- EditorSettings.newProp configSampler evaluator
+                mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
+                    \fonts config theme env ->
+                    Cache.fence cache *>
+                    mkSettingsProp ^. mkProperty
+                    >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
