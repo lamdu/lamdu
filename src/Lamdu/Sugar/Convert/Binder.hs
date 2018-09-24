@@ -145,14 +145,15 @@ convertBinder expr@(Ann pl body) =
             float <-
                 makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
             convertLet float pl redex & localNewExtractDestPos pl
-    where
-        localNewExtractDestPos x =
-            ConvertM.scScopeInfo . ConvertM.siMOuter ?~
-            ConvertM.OuterScopeInfo
-            { _osiPos = x ^. Input.stored
-            , _osiScope = x ^. Input.inferred . Infer.plScope
-            }
-            & ConvertM.local
+
+localNewExtractDestPos :: Input.Payload m a -> ConvertM m b -> ConvertM m b
+localNewExtractDestPos x =
+    ConvertM.scScopeInfo . ConvertM.siMOuter ?~
+    ConvertM.OuterScopeInfo
+    { _osiPos = x ^. Input.stored
+    , _osiScope = x ^. Input.inferred . Infer.plScope
+    }
+    & ConvertM.local
 
 makeFunction ::
     (Monad m, Monoid a) =>
@@ -195,7 +196,7 @@ makeAssignment chosenScopeProp params funcBody pl =
     Just{} ->
         do
             funcS <- makeFunction chosenScopeProp params funcBody
-            nodeActions <- makeActions pl
+            nodeActions <- makeActions pl & localNewExtractDestPos pl
             pure Ann
                 { _ann =
                     ConvertPayload
