@@ -471,8 +471,8 @@ convertToRecordParams ::
     (T m (ValI m) -> BinderKind m -> StoredLam m -> NewParamPosition -> T.Tag ->
         T m ())
 convertToRecordParams =
-    (,) <$> ConvertM.postProcessAssert <*> fixLamUsages <&>
-    \(postProcess, fixUsages) mkNewArg binderKind storedLam newParamPosition newParam ->
+    fixLamUsages <&>
+    \fixUsages mkNewArg binderKind storedLam newParamPosition newParam ->
     do
         let paramVar = storedLam ^. slLam . V.lamParamId
         oldParam <-
@@ -494,7 +494,6 @@ convertToRecordParams =
             (storedLam ^. slLam . V.lamResult)
         fixUsages (wrapArgWithRecord mkNewArg oldParam newParam)
             binderKind storedLam
-        postProcess
 
 lamParamType :: Input.Payload m a -> T.Type
 lamParamType lamExprPl =
@@ -508,9 +507,11 @@ makeNonRecordParamActions ::
 makeNonRecordParamActions binderKind storedLam =
     do
         del <- makeDeleteLambda binderKind storedLam
+        postProcess <- ConvertM.postProcessAssert
         addParamAfter <-
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
             ?? NewParamAfter
+            <&> Lens.mapped %~ (<* postProcess)
         oldParam <- Anchors.assocTag param & getP
         addNext <-
             if oldParam == Anchors.anonTag
@@ -580,9 +581,11 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                 <&> (:[])
                 <&> Params
         oldParam <- Anchors.assocTag param & getP
+        postProcess <- ConvertM.postProcessAssert
         addFirst <-
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
             ?? NewParamBefore
+            <&> Lens.mapped %~ (<* postProcess)
         addFirstSelection <-
             convertTagSelection (nameWithContext param) (Set.singleton oldParam)
             RequireTag (EntityId.ofTaggedEntity param) addFirst
