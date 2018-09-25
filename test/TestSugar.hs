@@ -36,6 +36,7 @@ test =
     , setHoleToHole
     , testCreateLetInLetVal
     , testFloatToRepl
+    , floatLetWithGlobalRef
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -237,6 +238,13 @@ testReplaceParent =
         action =
             replBody . _BodyLam . lamFunc . fBody .
             ann . plActions . mReplaceParent . Lens._Just
+
+floatLetWithGlobalRef :: Test
+floatLetWithGlobalRef =
+    testSugarActions "let-with-global-reference.json"
+    [ (^?! replLet . lBody . val . _BinderLet . lValue . ann . plActions . extract)
+    ]
+    & testCase "float-let-with-global-ref"
 
 setHoleToHole :: Test
 setHoleToHole =
