@@ -54,7 +54,7 @@ def infer monitors defI =
                                 inferredType = inferredVal ^. ann . Input.inferred . Infer.plType
 
 expr ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Load.InferFunc (ValP m) -> Debug.Monitors ->
     MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m Result
