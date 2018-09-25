@@ -16,12 +16,11 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
 import           Graphics.UI.GLFW.Utils (printGLVersion)
+import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
-import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
@@ -102,9 +101,11 @@ makeReportPerfCounters ekg =
 mainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
     M.Window -> RefreshScheduler -> Sampler ->
-    (Fonts M.Font -> Config -> Theme -> MainLoop.Env ->
-    IO (M.Widget (IO M.Update))) -> IO ()
-mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration =
+    EvalManager.Evaluator -> Transaction.Store DbM ->
+    MkProperty' IO Settings -> Cache -> Cache.Functions -> Debug.Monitors ->
+    IO ()
+mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
+    evaluator db mkSettingsProp cache cachedFunctions monitors =
     do
         getFonts <- EditorFonts.makeGetFonts subpixel
         lastVersionNumRef <- newIORef []
@@ -114,7 +115,9 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler iteration 
                     when (sample ^. sConfig . Config.debug . Config.printCursor)
                         (putStrLn ("Cursor: " <> show (env ^. M.cursor)))
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
-                    iteration fonts (sample ^. sConfig) (sample ^. sTheme) env
+                    Cache.fence cache
+                    mkSettingsProp ^. mkProperty
+                        >>= makeRootWidget cachedFunctions monitors fonts db evaluator sample env
         let mkFontInfo zoom =
                 do
                     sample <- ConfigSampler.getSample configSampler
@@ -206,22 +209,22 @@ mkWidgetWithFallback settingsProp dbToIO env =
 makeRootWidget ::
     HasCallStack =>
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
-    Transaction.Store DbM -> EvalManager.Evaluator -> Config -> Theme ->
+    Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
     MainLoop.Env -> Property IO Settings ->
     IO (M.Widget (IO M.Update))
-makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme mainLoopEnv settingsProp =
+makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
                 { _evalRes = evalResults
                 , _exportActions =
-                    exportActions config
+                    exportActions (sample ^. sConfig)
                     (evalResults ^. current)
                     (EvalManager.executeReplIOProcess evaluator)
-                , _config = config
-                , _theme = theme
+                , _config = sample ^. sConfig
+                , _theme = sample ^. sTheme
                 , _settings = Property.value settingsProp
-                , _style = Style.make fonts theme
+                , _style = Style.make fonts (sample ^. sTheme)
                 , _mainLoop = mainLoopEnv
                 , _animIdPrefix = mempty
                 , _debugMonitors = monitors
@@ -243,7 +246,10 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator config theme main
         mkWidgetWithFallback settingsProp dbToIO env
             <&> measureLayout
     where
-        monitors = Debug.addBreakPoints (config ^. Config.debug . Config.breakpoints) perfMonitors
+        monitors =
+            Debug.addBreakPoints
+            (sample ^. sConfig . Config.debug . Config.breakpoints)
+            perfMonitors
 
 run :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 run opts rawDb =
@@ -272,11 +278,8 @@ run opts rawDb =
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <- EditorSettings.newProp configSampler evaluator
-                mainLoop ekg stateStorage subpixel win refreshScheduler configSampler $
-                    \fonts config theme env ->
-                    Cache.fence cache *>
-                    mkSettingsProp ^. mkProperty
-                    >>= makeRootWidget cachedFunctions monitors fonts db evaluator config theme env
+                mainLoop ekg stateStorage subpixel win refreshScheduler
+                    configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
