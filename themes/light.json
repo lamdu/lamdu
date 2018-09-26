@@ -73,7 +73,7 @@
         }
     },
     "hole": {
-        "frameWidth": [3.0, 3.0],
+        "frameWidth": [0.06, 0.06],
         "frameColor": [0.0, 0.0, 0.0, 1.0]
     },
     "name": {

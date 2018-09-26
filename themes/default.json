@@ -101,7 +101,7 @@
     },
     "hole": {
         "resultPadding": [1.0, 0.5],
-        "frameWidth": [2.0, 2.0],
+        "frameWidth": [0.04, 0.04],
         "frameColor": [1.0, 1.0, 1.0, 1.0]
     },
     "name": {

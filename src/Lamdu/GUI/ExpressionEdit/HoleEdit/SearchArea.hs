@@ -197,7 +197,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
         makeTerm mPickFirst =
             do
                 theme <- Lens.view (Theme.theme . Theme.hole)
-                let frameWidth = theme ^. Theme.holeFrameWidth
+                frameWidth <- Spacer.stdFontHeight <&> pure <&> (* theme ^. Theme.holeFrameWidth)
                 addFrame <-
                     Momentu.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
                     & Reader.local (Element.animIdPrefix .~ animId <> ["hole-frame"])
