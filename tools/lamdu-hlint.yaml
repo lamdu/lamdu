@@ -9,11 +9,12 @@
     - hint: {lhs: mapM, rhs: traverse}
     - hint: {lhs: mapM_, rhs: traverse_}
     - hint: {lhs: a `mappend` b, rhs: a <> b}
+    - hint: {lhs: mappend a b, rhs: a <> b}
     - hint: {lhs: Control.Lens.filtered (Control.Lens.has a), rhs: filteredBy a}
     - hint: {lhs: \x -> a $ b x, rhs: a . b}
     - ignore: {name: Use tuple-section}
     - hint: {lhs: "case a of {Nothing -> mempty; Just b -> c}", rhs: foldMap (\b -> c) a }
-    - hint: {lhs: "Data.Set.member a b", rhs: "b ^. Control.Lens.contains a"}
+    - hint: {lhs: "Data.Set.member a", rhs: "(^. Control.Lens.contains a)"}
     - hint: {lhs: "zipWith a [0..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "zipWith a [0::Int ..]", rhs: "Control.Lens.imap a"}
 

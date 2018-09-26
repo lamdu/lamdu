@@ -57,7 +57,7 @@ loadNominalsForType loadNominal typ =
             | otherwise =
                 do
                     nominals <- Map.fromSet loadNominal toLoad & sequenceA
-                    let result = mappend res nominals
+                    let result = res <> nominals
                     let newTIds =
                             nominals
                             ^. Lens.traversed . Nominal.nomType

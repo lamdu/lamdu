@@ -40,7 +40,7 @@ instance GMonoid a => GMonoid (M1 i c a) where
 -- Monoid, which is what we should expect.
 instance Monoid a => GMonoid (K1 i a) where
     gmempty = K1 mempty
-    gmappend (K1 x) (K1 y) = K1 $ mappend x y
+    gmappend (K1 x) (K1 y) = K1 (x <> y)
 
 {-# ANN module ("HLint: ignore Use camelCase"::String) #-}
 
