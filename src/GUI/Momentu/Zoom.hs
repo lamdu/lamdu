@@ -64,7 +64,9 @@ make :: GLFW.Window -> IO Zoom
 make win =
     do
         displayScale <- GLFWUtils.getDisplayScale win
-        newIORef (displayScale ^. _2) <&> Zoom
+        winSize <- GLFW.getWindowSize win
+        let winSizeFactor = fromIntegral (winSize ^. _2) / 1080 & max 1
+        newIORef (displayScale ^. _2 * winSizeFactor) <&> Zoom
 
 -- | Useful mainly for tests
 makeUnscaled :: Widget.R -> IO Zoom
