@@ -412,7 +412,7 @@ make ::
 make pMode defEventMap tag color assignment =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-
-            makeParts Sugar.UnlimitedFuncApply assignment myId
+            makeParts Sugar.UnlimitedFuncApply assignment delParamDest
         rhsJumperEquals <-
             ExprGuiM.mkPrejumpPosSaver
             <&> Lens.mapped .~ rhsId
@@ -454,5 +454,6 @@ make pMode defEventMap tag color assignment =
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
+        delParamDest = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
         Ann pl assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]
