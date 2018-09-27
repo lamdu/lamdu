@@ -25,7 +25,7 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
@@ -126,8 +126,8 @@ make ::
     ExprGuiM i o (Gui Responsive o)
 make lam pl =
     do
-        BinderEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap _rhsId <-
-            BinderEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
+        AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap _rhsId <-
+            AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
             func pl (WidgetIds.fromEntityId bodyId)
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of

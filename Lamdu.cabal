@@ -265,6 +265,7 @@ Library
                   , Lamdu.GUI.EvalView
                   , Lamdu.GUI.ExpressionEdit
                   , Lamdu.GUI.ExpressionEdit.ApplyEdit
+                  , Lamdu.GUI.ExpressionEdit.AssignmentEdit
                   , Lamdu.GUI.ExpressionEdit.BinderEdit
                   , Lamdu.GUI.ExpressionEdit.BuiltinEdit
                   , Lamdu.GUI.ExpressionEdit.CaseEdit

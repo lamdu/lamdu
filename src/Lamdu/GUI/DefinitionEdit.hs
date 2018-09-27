@@ -18,7 +18,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -50,7 +50,7 @@ makeExprDefinition ::
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     ExprGuiM i o (Gui Responsive o)
 makeExprDefinition defEventMap def bodyExpr =
-    BinderEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
+    AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent)
     & assignCursor myId (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagInfo . Sugar.tagInstance))

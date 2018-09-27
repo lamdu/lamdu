@@ -27,7 +27,7 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import           Lamdu.GUI.ExpressionEdit.BinderEdit (makeBinderEdit)
+import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -79,13 +79,13 @@ makeGui afterDoc cache env =
         gui <-
             do
                 replGui <-
-                    makeBinderEdit repl
+                    ExprGuiM.makeBinder repl
                     & GuiState.assignCursor WidgetIds.replId replExprId
                 paneGuis <-
                     workArea ^.. Sugar.waPanes . traverse . Sugar.paneDefinition
                     & traverse (DefinitionEdit.make mempty)
                 Responsive.vbox (replGui : paneGuis) & pure
-            & ExprGuiM.run ExpressionEdit.make DbLayout.guiAnchors env id
+            & ExprGuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))

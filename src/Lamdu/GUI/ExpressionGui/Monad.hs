@@ -12,7 +12,9 @@ module Lamdu.GUI.ExpressionGui.Monad
     --
     , im
     , IOM(..), iom
-    , makeSubexpression
+
+    , makeSubexpression, makeBinder
+
     , ExprGuiM, run
     ) where
 
@@ -24,7 +26,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
-import           Data.Tree.Diverse (ann)
+import           Data.Tree.Diverse (Node, Ann, ann)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element
@@ -68,6 +70,9 @@ data Askable i o = Askable
     , _aConfig :: Config
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)
+    , _aMakeBinder ::
+        Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+        ExprGuiM i o (Gui Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -147,18 +152,32 @@ instance (Monad i, Monoid a) => Monoid (ExprGuiM i o a) where
 instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
     transaction = im . transaction
 
-makeSubexpression ::
+make ::
     Monad i =>
-    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Lens.Getter (Askable i o)
+        (Ann (Sugar.Payload name i o a) e -> ExprGuiM i o (Gui Responsive.Responsive o)) ->
+    Ann (Sugar.Payload name i o a) e ->
     ExprGuiM i o (Gui Responsive.Responsive o)
-makeSubexpression expr =
+make sub expr =
     do
-        maker <- Lens.view aMakeSubexpression
+        maker <- Lens.view sub
         maker expr
     & advanceDepth (pure . Responsive.fromTextView)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = expr ^. ann & WidgetIds.fromExprPayload & toAnimId
+
+makeSubexpression ::
+    Monad i =>
+    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    ExprGuiM i o (Gui Responsive.Responsive o)
+makeSubexpression = make aMakeSubexpression
+
+makeBinder ::
+    Monad i =>
+    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    ExprGuiM i o (Gui Responsive.Responsive o)
+makeBinder = make aMakeBinder
 
 isHoleResult :: MonadReader (Askable i o) m => m Bool
 isHoleResult = Lens.view aIsHoleResult
@@ -172,9 +191,11 @@ run ::
     , HasSettings env, HasStyle env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
+    (Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o)
+        -> ExprGuiM i o (Gui Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> ExprGuiM i o a -> i a
-run makeSubexpr theGuiAnchors env liftIom (ExprGuiM action) =
+run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     runReaderT action
     Askable
     { _aState = env ^. GuiState.state
@@ -185,6 +206,7 @@ run makeSubexpr theGuiAnchors env liftIom (ExprGuiM action) =
     , _aTheme = env ^. Theme.theme
     , _aSettings = env ^. settings
     , _aMakeSubexpression = makeSubexpr
+    , _aMakeBinder = mkBinder
     , _aGuiAnchors = theGuiAnchors
     , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure

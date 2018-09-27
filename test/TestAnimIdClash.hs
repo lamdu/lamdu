@@ -9,6 +9,7 @@ import           GUI.Momentu.State (HasCursor(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -67,7 +68,7 @@ testFragment =
             <&> cursor .~ WidgetIds.fromEntityId fragEntityId
         let gui =
                 ExpressionEdit.make expr
-                & ExprGuiM.run ExpressionEdit.make GuiEnv.dummyAnchors env (const Unit)
+                & ExprGuiM.run ExpressionEdit.make BinderEdit.make GuiEnv.dummyAnchors env (const Unit)
                 & runIdentity
         let widget = gui ^. Responsive.rWide . Align.tValue
         case widget ^. Widget.wState of
