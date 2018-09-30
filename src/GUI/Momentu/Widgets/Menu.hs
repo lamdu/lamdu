@@ -254,7 +254,7 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
                         (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                         (submenus <&> hover <&> Align.WithTextPos 0) anchored <&> (^. Align.tValue))
+                         (submenus <&> Align.tValue %~ hover) anchored <&> (^. Align.tValue))
                         & pure
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
@@ -315,14 +315,14 @@ make ::
     , Applicative f
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
-    m (PickFirstResult f, Hover.Ordered (Gui Widget f))
+    m (PickFirstResult f, Hover.Ordered (TextWidget f))
 make myId minWidth options =
     case options of
     TooMany -> pure (NoPickFirstResult, pure Element.empty)
     Truncated [] -> error "empty truncated list of options is not supported"
     FullList [] ->
-        (Widget.makeFocusableView ?? noResultsId myId)
-        <*> (makeNoResults <&> (^. Align.tValue))
+        (Widget.makeFocusableView ?? noResultsId myId <&> (Align.tValue %~))
+        <*> makeNoResults
         <&> pure
         <&> (,) NoPickFirstResult
     Truncated opts -> makeOpts opts
@@ -349,14 +349,13 @@ make myId minWidth options =
                     rendered
                     <&> snd
                     & traverse (layoutOption maxOptionWidth)
-                    <&> map (^. Align.tValue)
                 hiddenOptionsWidget <-
                     if olIsTruncated options
-                    then TextView.makeLabel "..." <&> (^. Align.tValue) <&> Widget.fromView
+                    then TextView.makeLabel "..." <&> Align.tValue %~ Widget.fromView
                     else pure Element.empty
                 pure
                     ( maybe NoPickFirstResult PickFirstResult mPickFirstResult
-                    , blockEvents <*>
+                    , (blockEvents <&> (Align.tValue %~)) <*>
                         ( Hover.Ordered
                             { _forward = id
                             , _backward = reverse
@@ -375,7 +374,7 @@ hoverOptions ::
     ) =>
     m ( Placement ->
         View ->
-        Hover.Ordered (Gui Widget f) ->
+        Hover.Ordered (TextWidget f) ->
         Gui Hover.AnchoredWidget f ->
         [Hover (Gui Hover.AnchoredWidget f)]
       )
@@ -383,23 +382,25 @@ hoverOptions =
     Hover.hover <&>
     \hover pos annotation results searchTerm ->
     let resultsAbove alignment =
-            results ^. Hover.backward & hover & Aligned alignment
+            results ^. Hover.backward
+            & Align.tValue %~ hover
+            & Align.fromWithTextPos alignment
         annotatedTerm alignment = searchTerm & Widget.widget %~ (/-/ annotation) & Aligned alignment
         aboveRight = resultsAbove 0 /-/ annotatedTerm 0
-        aboveLeft =
-            resultsAbove 1
-            /-/ annotatedTerm 1
-        annotatedResultsBelow = (results ^. Hover.forward) /-/ annotation & hover
-        resultsBelow = results ^. Hover.forward & hover
+        aboveLeft = resultsAbove 1 /-/ annotatedTerm 1
+        annotatedResultsBelow =
+            (results ^. Hover.forward) /-/ annotation
+            & Align.tValue %~ hover
+        resultsBelow = results ^. Hover.forward & Align.tValue %~ hover
         belowRight =
             Aligned 0 searchTerm
             /-/
-            Aligned 0 annotatedResultsBelow
+            Align.fromWithTextPos 0 annotatedResultsBelow
         belowLeft =
             Aligned 1 searchTerm
             /-/
-            Aligned 1 annotatedResultsBelow
-        centerRight = annotatedTerm 0.5 /|/ Aligned 0.5 resultsBelow
+            Align.fromWithTextPos 1 annotatedResultsBelow
+        centerRight = annotatedTerm 0.5 /|/ Align.fromWithTextPos 0.5 resultsBelow
         rightAbove = annotatedTerm 1 /|/ resultsAbove 1
         leftAbove = resultsAbove 1 /|/ annotatedTerm 1
     in
@@ -440,5 +441,5 @@ makeHovered myId annotation options =
         make myId (annotation ^. Element.width) options
             <&> _2 %~ \menu placement term ->
                 let a = Hover.anchor term
-                in  a
-                    & Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a)
+                in
+                Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
