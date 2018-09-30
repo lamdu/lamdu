@@ -6,7 +6,7 @@ module Revision.Deltum.Db
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (foldM)
+import           Control.Monad ((>=>), foldM)
 import qualified Control.Monad.Haskey as Haskey
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -15,6 +15,7 @@ import           Data.UUID.Types (UUID)
 import qualified Data.BTree.Impure as BTree
 import qualified Data.BTree.Primitives.Key as BTree
 import qualified Data.BTree.Primitives.Value as BTree
+import qualified Data.Map as Map
 import           Data.Typeable (Typeable)
 import qualified Database.Haskey.Alloc.Concurrent as Haskey hiding (transact, transactReadOnly)
 import qualified Database.Haskey.Store.File as Haskey
@@ -59,14 +60,25 @@ lookup (config, db) key =
         f schema =
             BTree.lookup key (schema ^. schemaData)
 
+partitionMaybes :: [(k, Maybe v)] -> ([k], [(k, v)])
+partitionMaybes =
+    foldr step ([], [])
+    where
+        step (k, Nothing) (ds, is) = (k : ds, is)
+        step (k, Just v) (ds, is) = (ds, (k, v) : is)
+
 transaction :: DB -> [(UUID, Maybe ByteString)] -> IO ()
 transaction (config, db) ops =
     Haskey.runHaskeyT (Haskey.transact f) db config
     where
         f schema =
-            schemaData (foldM op ?? ops) schema >>= Haskey.commit_
-        op schema (k, Nothing) = BTree.delete k schema
-        op schema (k, Just v) = BTree.insert k v schema
+            schemaData
+            ( (foldM (flip BTree.delete) ?? deletes)
+                >=> BTree.insertMany (Map.fromList inserts)
+            )
+            schema
+            >>= Haskey.commit_
+        (deletes, inserts) = partitionMaybes ops
 
 store :: DB -> Store IO
 store db =
