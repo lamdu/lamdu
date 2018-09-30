@@ -254,7 +254,7 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
                         (Hover.hoverBesideOptionsAxis Glue.Horizontal
-                         (submenus <&> Align.tValue %~ hover) anchored <&> (^. Align.tValue))
+                         (submenus <&> hover <&> Hover.sequenceHover) anchored <&> (^. Align.tValue))
                         & pure
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
