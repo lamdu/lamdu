@@ -165,7 +165,9 @@ Lens.makeLenses ''Option
 optionWidgets ::
     Functor m => Lens.Setter' (Option m f) (TextWidget f)
 optionWidgets f (Option i w s) =
-    Option i <$> (Lens.mapped . rWidget) f w <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
+    Option i
+    <$> (Lens.mapped . rWidget) f w
+    <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
 makeNoResults ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
