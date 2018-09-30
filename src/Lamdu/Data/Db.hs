@@ -25,12 +25,7 @@ withDB lamduDir body =
     do
         Directory.createDirectoryIfMissing False lamduDir
         alreadyExist <- Directory.doesDirectoryExist dbPath
-        let options =
-                Db.defaultOptions
-                { Db.createIfMissing = not alreadyExist
-                , Db.errorIfExists = not alreadyExist
-                }
-        Db.withDB dbPath options $
+        Db.withDB dbPath Db.defaultOptions $
             \ioDb ->
             do
                 let db = Transaction.onStoreM DbM ioDb

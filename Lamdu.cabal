@@ -107,6 +107,9 @@ Library
                   , GLFW-b >= 1.4.8.0
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
+                  , haskey
+                  , haskey-btree
+                  , haskey-mtl
                   , lamdu-calculus
                   , language-ecmascript >= 0.17 && < 0.18
                   , lens >= 4.1
