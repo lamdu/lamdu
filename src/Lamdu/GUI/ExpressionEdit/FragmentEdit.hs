@@ -104,12 +104,18 @@ make fragment pl =
                     & E.keysEventMapMovesCursor
                         (Config.delKeys config <> config ^. Config.healKeys)
                         (E.Doc ["Edit", "Fragment", "Heal"])
+        isInAHole <- ExprGuiM.isHoleResult
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents healEventMap
+            <&> Widget.widget . Widget.wState . Widget._StateUnfocused .
+                Widget.uMStroll .~
+                ((strollDest ^. Lens._Unwrapped, strollDest ^. Lens._Unwrapped)
+                    <$ guard (not isInAHole))
     where
         innerId = fragment ^. Sugar.fExpr . ann & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
+        strollDest = pl ^. Sugar.plEntityId & HoleWidgetIds.make & HoleWidgetIds.hidOpen
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
