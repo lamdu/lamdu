@@ -18,6 +18,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2)
+import           GHC.Stack (CallStack, getCallStack, SrcLoc)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.EventMap (EventMap)
@@ -25,6 +26,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.Main.Animation (PerfCounters(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
+import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
@@ -52,6 +54,8 @@ data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
     , virtualCursorColor :: IO (Maybe Draw.Color)
     , reportPerfCounters :: PerfCounters -> IO ()
+    , jumpToSourceKeys :: IO [MetaKey]
+    , jumpToSource :: SrcLoc -> IO ()
     }
 
 iorefStateStorage :: Widget.Id -> IO (MkProperty' IO GUIState)
@@ -71,6 +75,8 @@ defaultDebugOptions =
     { fpsFont = const (pure Nothing)
     , virtualCursorColor = pure Nothing
     , reportPerfCounters = const (pure ())
+    , jumpToSourceKeys = pure []
+    , jumpToSource = \_ -> pure ()
     }
 
 -- TODO: If moving GUI to lib,
@@ -111,6 +117,12 @@ quitEventMap :: Functor f => Gui EventMap f
 quitEventMap =
     E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
 
+mkJumpToSourceEventMap :: Functor f => DebugOptions -> f () -> IO (Gui EventMap f)
+mkJumpToSourceEventMap debug act =
+    jumpToSourceKeys debug
+    <&>
+    \keys -> E.keysEventMap keys (E.Doc ["Debug", "Jump to source"]) act
+
 data Env = Env
     { _eZoom :: Zoom
     , _eWindowSize :: Widget.Size
@@ -123,11 +135,20 @@ instance State.HasState Env where state = eState
 class State.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
 instance HasMainLoopEnv Env where mainLoopEnv = id
 
+jumpToTopOfCallStack :: DebugOptions -> CallStack -> IO ()
+jumpToTopOfCallStack debug callStack =
+    case getCallStack callStack of
+    [] -> pure ()
+    ((_func, topFrame):_) -> jumpToSource debug topFrame
+
+data LookupMode = ApplyEvent | JumpToSource
+
 lookupEvent ::
-    IO (Maybe E.Clipboard) -> IORef (Maybe State.VirtualCursor) ->
+    DebugOptions -> IORef LookupMode -> IO (Maybe E.Clipboard) ->
+    IORef (Maybe State.VirtualCursor) ->
     Maybe (Vector2 R -> Widget.EnterResult a) ->
     Maybe (Rect, State.VirtualCursor -> EventMap a) -> Event -> IO (Maybe a)
-lookupEvent getClipboard virtCursorRef mEnter mFocus event =
+lookupEvent debug lookupModeRef getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
     (Just enter, _
         , GLFWE.EventMouseButton
@@ -145,8 +166,19 @@ lookupEvent getClipboard virtCursorRef mEnter mFocus event =
                     res <$ writeIORef virtCursorRef (Just res)
                     where
                         res = State.VirtualCursor focalArea
-            E.lookup getClipboard event (mkEventMap virtCursor)
-                <&> fmap (^. E.dhHandler)
+            mDocHandler <- E.lookup getClipboard event (mkEventMap virtCursor)
+            case mDocHandler of
+                Nothing -> pure Nothing
+                Just docHandler ->
+                    do
+                        lookupMode <- readIORef lookupModeRef
+                        writeIORef lookupModeRef ApplyEvent
+                        case lookupMode of
+                            ApplyEvent -> docHandler ^. E.dhHandler & Just & pure
+                            JumpToSource ->
+                                docHandler ^. E.dhFileLocation
+                                & jumpToTopOfCallStack debug
+                                & (Nothing <$)
     _ -> pure Nothing
 
 virtualCursorImage :: Maybe State.VirtualCursor -> DebugOptions -> IO Anim.Frame
@@ -168,11 +200,16 @@ mainLoopWidget win mkWidgetUnmemod options =
     do
         addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown
         zoom <- Zoom.make win
+        lookupModeRef <- newIORef ApplyEvent
         virtCursorRef <- newIORef Nothing
         let mkW =
                 memoIO $ \size ->
                 do
                     zoomEventMap <- cZoom config <&> Zoom.eventMap zoom
+                    jumpToSourceEventMap <-
+                        writeIORef lookupModeRef JumpToSource
+                        & mkJumpToSourceEventMap debug
+                    let moreEvents = zoomEventMap <> jumpToSourceEventMap
                     s <- Property.getP stateStorage_
                     helpEnv <- cHelpEnv config ?? zoom & sequenceA
                     mkWidgetUnmemod
@@ -181,7 +218,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         , _eWindowSize = size
                         , _eState = s
                         }
-                        <&> Widget.eventMapMaker . Lens.mapped %~ (zoomEventMap <>)
+                        <&> Widget.eventMapMaker . Lens.mapped %~ (moreEvents <>)
                         >>= maybe pure (addHelp ?? size) helpEnv
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
@@ -206,7 +243,9 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.eventHandler = \event ->
                 do
                     (_, mEnter, mFocus) <- renderWidget size
-                    mWidgetRes <- lookupEvent getClipboard virtCursorRef mEnter mFocus event
+                    mWidgetRes <-
+                        lookupEvent debug lookupModeRef getClipboard virtCursorRef
+                        mEnter mFocus event
                     mRes <- sequenceA mWidgetRes
                     case mRes of
                         Nothing -> pure ()

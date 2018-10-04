@@ -1,5 +1,5 @@
 -- | The GUI editor
-{-# LANGUAGE RankNTypes, DisambiguateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns, RankNTypes, DisambiguateRecordFields #-}
 module Lamdu.Editor
     ( run
     ) where
@@ -12,6 +12,7 @@ import           Data.CurAndPrev (current)
 import           Data.IORef
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
+import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
@@ -47,8 +48,11 @@ import qualified Lamdu.Themes as Themes
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
+import qualified System.Environment as Env
+import           System.IO (hPutStrLn, hFlush, stderr)
 import qualified System.Metrics as Metrics
 import qualified System.Metrics.Distribution as Distribution
+import           System.Process (spawnProcess)
 import qualified System.Remote.Monitoring.Shim as Ekg
 
 import           Lamdu.Prelude
@@ -97,6 +101,20 @@ makeReportPerfCounters ekg =
                 Distribution.add swapDist swapBufferTime
     where
         store = Ekg.serverMetricStore ekg
+
+jumpToSource :: SrcLoc -> IO ()
+jumpToSource SrcLoc{srcLocFile, srcLocStartLine, srcLocStartCol} =
+    Env.lookupEnv "EDITOR"
+    >>= \case
+    Nothing ->
+        do
+            hPutStrLn stderr "EDITOR not defined"
+            hFlush stderr
+    Just editor ->
+        spawnProcess editor
+        [ "+" ++ show srcLocStartLine ++ ":" ++ show srcLocStartCol
+        , srcLocFile
+        ] & void
 
 mainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
@@ -155,6 +173,10 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
                         False -> Nothing
                         True -> Just (M.Color 1 1 0 0.5)
                 , reportPerfCounters = fromMaybe (const (pure ())) reportPerfCounters
+                , jumpToSource = jumpToSource
+                , jumpToSourceKeys =
+                    ConfigSampler.getSample configSampler
+                    <&> (^. sConfig . Config.debug . Config.jumpToSourceKeys)
                 }
             }
 

@@ -305,19 +305,19 @@ keyEventMap :: HasCallStack => KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler =
     keyEventMapH callStack eventType doc (Doesn'tWantClipboard handler)
 
-keysEventMap :: (Monoid a, Functor f) => [MetaKey] -> Doc -> f () -> EventMap (f a)
-keysEventMap keys doc act = keyPresses (keys <&> toModKey) doc (mempty <$ act)
+keysEventMap :: (HasCallStack, Monoid a, Functor f) => [MetaKey] -> Doc -> f () -> EventMap (f a)
+keysEventMap keys doc act = withFrozenCallStack $ keyPresses (keys <&> toModKey) doc (mempty <$ act)
 
 -- | Convenience method to just set the cursor
 keysEventMapMovesCursor ::
-    Functor f => [MetaKey] -> Doc -> f Id -> Gui EventMap f
-keysEventMapMovesCursor keys doc act = keyPresses (keys <&> toModKey) doc (act <&> State.updateCursor)
+    (HasCallStack, Functor f) => [MetaKey] -> Doc -> f Id -> Gui EventMap f
+keysEventMapMovesCursor keys doc act = withFrozenCallStack $ keyPresses (keys <&> toModKey) doc (act <&> State.updateCursor)
 
 keyPress :: HasCallStack => ModKey -> Doc -> a -> EventMap a
 keyPress key = withFrozenCallStack keyEventMap (KeyEvent ModKey.KeyState'Pressed key)
 
-keyPresses :: [ModKey] -> Doc -> a -> EventMap a
-keyPresses = mconcat . map keyPress
+keyPresses :: HasCallStack => [ModKey] -> Doc -> a -> EventMap a
+keyPresses = withFrozenCallStack $ mconcat . map keyPress
 
 keyPressOrRepeat :: HasCallStack => ModKey -> Doc -> a -> EventMap a
 keyPressOrRepeat key doc res =
