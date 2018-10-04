@@ -10,6 +10,7 @@ Homepage:            http://www.lamdu.org
 Category:            Graphics
 Build-type:          Simple
 Cabal-version:       >= 1.10
+Data-dir:            data
 Data-files:          fonts/DejaVuSans.ttf
                    , fonts/DejaVuSansMono.ttf
                    , fonts/DejaVuSerif.ttf

@@ -6,6 +6,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
+import           Lamdu.Paths (readDataFile)
 import           Test.Lamdu.FreshDb (readFreshDb)
 
 import           Test.Lamdu.Prelude
@@ -17,7 +18,7 @@ test =
             readFreshDb
             <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . Lens._Just)
             <&> Set.fromList
-        rtsConfig <- readFile "js/export/rtsConfig.js"
+        rtsConfig <- readDataFile "js/export/rtsConfig.js"
         let (_:nameMapAndMore:_) = splitOn "var nameMap = {" rtsConfig
         let (nameMapTxt, _) = break (== '}') nameMapAndMore
         let nameMapItemTxts = splitOn "," nameMapTxt
@@ -40,7 +41,7 @@ test =
                 where
                     displayName = Map.lookup name nameMap & fromMaybe name
         rtsTags <-
-            readFile "js/anchors.js"
+            readDataFile "js/anchors.js"
             <&> splitOn "conf.builtinTagName('"
             <&> tail
             <&> Lens.mapped %~ fromString . takeWhile (/= '\'')

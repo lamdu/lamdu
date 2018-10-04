@@ -78,9 +78,6 @@ formatResult (Ann _ b) =
     EV.RInject inj -> inj ^. V.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
-readDataFile :: FilePath -> IO String
-readDataFile path = Paths.getDataFileName path >>= readFile
-
 readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
 readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
@@ -102,11 +99,11 @@ exportFancy evalResults =
                 now <- getPOSIXTime <&> round
                 -- screenshot <- takeScreenshot <&> encodePng
                 readme <-
-                    readDataFile "doc/JSExportReadMe.md"
+                    Paths.readDataFile "doc/JSExportReadMe.md"
                     <&> removeReadmeMeta <&> fromString
-                rts <- readDataFile "js/rts.js" <&> fromString
-                rtsAnchors <- readDataFile "js/anchors.js" <&> fromString
-                rtsConf <- readDataFile "js/export/rtsConfig.js" <&> fromString
+                rts <- Paths.readDataFile "js/rts.js" <&> fromString
+                rtsAnchors <- Paths.readDataFile "js/anchors.js" <&> fromString
+                rtsConf <- Paths.readDataFile "js/export/rtsConfig.js" <&> fromString
                 let addFile archive (filename, contents) =
                         Zip.addEntryToArchive
                         (Zip.toEntry ("export/" ++ filename) now contents)
