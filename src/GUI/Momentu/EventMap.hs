@@ -16,7 +16,7 @@ module GUI.Momentu.EventMap
     , deleteKey, deleteKeys
     , filterChars, filter, mapMaybe
     , -- exported for Tests
-      emKeyMap, dhDoc, dhHandler
+      emKeyMap, dhDoc, dhFileLocation, dhHandler
     ) where
 
 import qualified Control.Lens.Extended as Lens
@@ -27,6 +27,7 @@ import           Data.Maybe (listToMaybe)
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
+import           GHC.Stack (CallStack, callStack, withFrozenCallStack)
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
@@ -56,6 +57,7 @@ Lens.makeLenses ''Doc
 
 data DocHandler a = DocHandler
     { _dhDoc :: Doc
+    , _dhFileLocation :: CallStack
     , _dhHandler :: a
     } deriving (Generic, Functor)
 Lens.makeLenses ''DocHandler
@@ -268,36 +270,37 @@ lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _mod
         AllCharsHandler _ handler <- allCharHandlers
         (handler ^. dhHandler) char ^.. Lens._Just
 
-charGroup :: Maybe InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
+charGroup :: HasCallStack => Maybe InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup miDoc oDoc chars func =
     mempty
-    { _emCharGroupHandlers = [CharGroupHandler miDoc (DocHandler oDoc handler)]
+    { _emCharGroupHandlers =
+        [CharGroupHandler miDoc (DocHandler oDoc callStack handler)]
     }
     where
         handler = Set.fromList chars & Map.fromSet func
 
 -- low-level "smart constructor" in case we need to enforce
 -- invariants:
-charEventMap
-    :: InputDoc -> Doc -> (Char -> Maybe a) -> EventMap a
+charEventMap :: HasCallStack => InputDoc -> Doc -> (Char -> Maybe a) -> EventMap a
 charEventMap iDoc oDoc handler =
     mempty
     { _emAllCharsHandler =
-        [AllCharsHandler iDoc (DocHandler oDoc handler)]
+        [AllCharsHandler iDoc (DocHandler oDoc callStack handler)]
     }
 
-allChars :: InputDoc -> Doc -> (Char -> a) -> EventMap a
-allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
+allChars :: HasCallStack => InputDoc -> Doc -> (Char -> a) -> EventMap a
+allChars iDoc oDoc f = withFrozenCallStack charEventMap iDoc oDoc $ Just . f
 
-keyEventMapH :: KeyEvent -> Doc -> MaybeWantsClipboard a -> EventMap a
-keyEventMapH eventType doc handler =
+keyEventMapH :: CallStack -> KeyEvent -> Doc -> MaybeWantsClipboard a -> EventMap a
+keyEventMapH tb eventType doc handler =
     mempty
     { _emKeyMap =
-      Map.singleton eventType (DocHandler doc handler)
+      Map.singleton eventType (DocHandler doc tb handler)
     }
 
-keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
-keyEventMap eventType doc handler = keyEventMapH eventType doc (Doesn'tWantClipboard handler)
+keyEventMap :: HasCallStack => KeyEvent -> Doc -> a -> EventMap a
+keyEventMap eventType doc handler =
+    keyEventMapH callStack eventType doc (Doesn'tWantClipboard handler)
 
 keysEventMap :: (Monoid a, Functor f) => [MetaKey] -> Doc -> f () -> EventMap (f a)
 keysEventMap keys doc act = keyPresses (keys <&> toModKey) doc (mempty <$ act)
@@ -307,22 +310,23 @@ keysEventMapMovesCursor ::
     Functor f => [MetaKey] -> Doc -> f Id -> Gui EventMap f
 keysEventMapMovesCursor keys doc act = keyPresses (keys <&> toModKey) doc (act <&> State.updateCursor)
 
-keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress key = keyEventMap (KeyEvent ModKey.KeyState'Pressed key)
+keyPress :: HasCallStack => ModKey -> Doc -> a -> EventMap a
+keyPress key = withFrozenCallStack keyEventMap (KeyEvent ModKey.KeyState'Pressed key)
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
 
-keyPressOrRepeat :: ModKey -> Doc -> a -> EventMap a
+keyPressOrRepeat :: HasCallStack => ModKey -> Doc -> a -> EventMap a
 keyPressOrRepeat key doc res =
+    withFrozenCallStack $
     keyEventMap (KeyEvent ModKey.KeyState'Pressed key) doc res <>
     keyEventMap (KeyEvent ModKey.KeyState'Repeating key) doc res
 
-dropEventMap :: InputDoc -> Doc -> ([FilePath] -> Maybe a) -> EventMap a
+dropEventMap :: HasCallStack => InputDoc -> Doc -> ([FilePath] -> Maybe a) -> EventMap a
 dropEventMap iDoc oDoc handler =
-    mempty { _emDropHandlers = [DropHandler iDoc (DocHandler oDoc handler)] }
+    mempty { _emDropHandlers = [DropHandler iDoc (DocHandler oDoc callStack handler)] }
 
-pasteOnKey :: ModKey -> Doc -> (Clipboard -> a) -> EventMap a
+pasteOnKey :: HasCallStack => ModKey -> Doc -> (Clipboard -> a) -> EventMap a
 pasteOnKey key doc handler =
     WantsClipboard (Just . handler)
-    & keyEventMapH (KeyEvent ModKey.KeyState'Pressed key) doc
+    & keyEventMapH callStack (KeyEvent ModKey.KeyState'Pressed key) doc
