@@ -12,8 +12,10 @@ Build-type:          Simple
 Cabal-version:       >= 1.10
 Data-dir:            data
 Data-files:          fonts/DejaVuSans.ttf
+                   , fonts/DejaVuSans-Bold.ttf
                    , fonts/DejaVuSansMono.ttf
                    , fonts/DejaVuSerif.ttf
+                   , fonts/DejaVuSerif-BoldItalic.ttf
                    , fonts/DejaVuSerif-Italic.ttf
                    , fonts/Purisa.ttf
                    , config.json
@@ -21,7 +23,9 @@ Data-files:          fonts/DejaVuSans.ttf
                    , themes/light.json
                    , themes/retro.json
                    , freshdb.json
+                   , js/README
                    , js/anchors.js
+                   , js/protocol.js
                    , js/rts.js
                    , js/rtsConfig.js
                    , js/export/rtsConfig.js
@@ -55,6 +59,7 @@ Test-Suite Tests
                , TestCodec
                , TestColorSchemes
                , TestConfig
+               , TestDataFiles
                , TestGui
                , TestJsExport
                , TestJsRtsTags
@@ -80,7 +85,7 @@ Test-Suite Tests
     , aeson-diff, deepseq, deepseq-generics, lens-aeson, QuickCheck, split, yaml
     , Lamdu, AlgoW, lamdu-calculus, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
-    , lens, List, mtl, pretty, process, random, text, uuid-types
+    , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 

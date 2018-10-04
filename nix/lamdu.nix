@@ -1,5 +1,5 @@
 { mkDerivation, aeson, aeson-diff, aeson-pretty, AlgoW, base, base-compat
-, base-orphans, base16-bytestring, binary, bytestring, containers
+, base-orphans, base16-bytestring, binary, bytestring, Cabal, containers
 , cryptohash-sha256, data-default, deepseq, deepseq-generics
 , directory, edit-distance, ekg-core, filepath, GLFW-b, graphics-drawingcombinators
 , hashable, lamdu-calculus, language-ecmascript, lens, lens-aeson
@@ -18,7 +18,7 @@ mkDerivation {
   enableSeparateDataOutput = true;
   executableHaskellDepends = [
     aeson aeson-diff aeson-pretty AlgoW base base-compat base-orphans
-    base16-bytestring binary bytestring containers cryptohash-sha256
+    base16-bytestring binary bytestring Cabal containers cryptohash-sha256
     data-default deepseq deepseq-generics directory edit-distance ekg-core filepath GLFW-b
     graphics-drawingcombinators hashable HUnit lamdu-calculus
     language-ecmascript lens lens-aeson leveldb-haskell List mtl nodejs-exec
