@@ -86,11 +86,19 @@ data Evaluator srcId = Evaluator
 
 type Parse = State (IntMap (ER.Val ()))
 
+getNodePath :: IO FilePath
+getNodePath =
+    -- prefer the relative-path bin/node
+    Paths.getDataFileNameMaybe "bin/node"
+    >>= \case
+    Just x -> pure x
+    Nothing -> NodeJS.path
+
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
     do
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
-        nodeExePath <- NodeJS.path
+        nodeExePath <- getNodePath
         pure (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
             { Proc.std_in = Proc.CreatePipe
             , Proc.std_out = Proc.CreatePipe

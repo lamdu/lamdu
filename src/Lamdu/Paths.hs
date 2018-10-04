@@ -1,5 +1,6 @@
 module Lamdu.Paths
     ( getDataFileName
+    , getDataFileNameMaybe
     , getLamduDir
     , readDataFile
     ) where
@@ -23,8 +24,8 @@ searchPaths path =
     , Paths_Lamdu.getDataFileName path
     ]
 
-getDataFileName :: FilePath -> IO FilePath
-getDataFileName fileName =
+getDataFileNameMaybe :: FilePath -> IO (Maybe FilePath)
+getDataFileNameMaybe fileName =
     flip traverse_ (searchPaths fileName)
         (\mkSearchPath ->
         do
@@ -33,7 +34,12 @@ getDataFileName fileName =
             when exists $ throwError path -- Early exit, not an error
         )
     & runExceptT
-    >>= either pure (const (fail ("Cannot find " ++ show fileName)))
+    <&> either Just (\() -> Nothing)
+
+getDataFileName :: FilePath -> IO FilePath
+getDataFileName fileName =
+    getDataFileNameMaybe fileName
+    <&> fromMaybe (fail ("Cannot find " ++ show fileName))
 
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
