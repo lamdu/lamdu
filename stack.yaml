@@ -34,7 +34,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-GLFW
-    commit: b1c31d136b6f5c6d0cc08c7670ef04e1a1e48215
+    commit: 1498d95a72d24d272a285ea64337bb907f8d89b2
   extra-dep: True
 extra-deps:
 - bitmap-0.0.2
