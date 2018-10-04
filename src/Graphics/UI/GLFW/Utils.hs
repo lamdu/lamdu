@@ -11,13 +11,14 @@ module Graphics.UI.GLFW.Utils
 import           Control.Exception (bracket_)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
-import           Control.Monad (unless)
+import           Control.Monad (when, unless)
 import           Data.Foldable (traverse_)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Stack (currentCallStack)
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import           System.IO (hPutStrLn, hFlush, stderr)
+import qualified System.Info as SysInfo
 
 import           Prelude
 
@@ -48,11 +49,18 @@ withGLFW act =
         act
 
 createWindow :: String -> Maybe GLFW.Monitor -> Vector2 Int -> IO GLFW.Window
-createWindow title mMonitor (Vector2 w h) = do
-    mWin <- GLFW.createWindow w h title mMonitor Nothing
-    case mWin of
-        Nothing -> fail "Open window failed"
-        Just win -> win <$ GLFW.makeContextCurrent (Just win)
+createWindow title mMonitor (Vector2 w h) =
+    do
+        -- Work around for https://github.com/glfw/glfw/issues/1334
+        -- (without it on macOS Mojave windows starts as black until resized or moved)
+        when (SysInfo.os == "darwin")
+            (GLFW.windowHint (GLFW.WindowHint'TransparentFrameBuffer True))
+
+        mWin <- GLFW.createWindow w h title mMonitor Nothing
+        case mWin of
+            Nothing -> fail "Open window failed"
+            Just win ->
+                win <$ GLFW.makeContextCurrent (Just win)
 
 getVideoModeSize :: GLFW.Monitor -> IO (Vector2 Int)
 getVideoModeSize monitor =

@@ -23,6 +23,7 @@ import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event, Next(..), eventLoop)
 import qualified Graphics.UI.GLFW.Events as GLFWEvents
+import qualified System.Info as SysInfo
 import           System.TimeIt (timeItT)
 import           Text.Printf (printf)
 
@@ -88,12 +89,26 @@ glDraw win (Vector2 winSizeX winSizeY) image =
         GL.matrixMode $= GL.Projection
         GL.loadIdentity
         GL.ortho 0 winSizeX winSizeY 0 (-1) 1
-        (timedRender, ()) <- timeItT (Draw.clearRender image)
+        (timedRender, ()) <-
+            do
+                Draw.clearRender image
+                platformWorkarounds
+            & timeItT
         (timedSwapBuffers, ()) <- timeItT (GLFW.swapBuffers win)
         pure PerfCounters
             { renderTime = timedRender
             , swapBuffersTime = timedSwapBuffers
             }
+    where
+        platformWorkarounds
+            | SysInfo.os == "darwin" =
+                do
+                    -- Work around for https://github.com/glfw/glfw/issues/1334
+                    GL.colorMask GL.$= GL.Color4 GL.Disabled GL.Disabled GL.Disabled GL.Enabled
+                    GL.clearColor GL.$= GL.Color4 1 1 1 1
+                    GL.clear [GL.ColorBuffer]
+                    GL.colorMask GL.$= GL.Color4 GL.Enabled GL.Enabled GL.Enabled GL.Enabled
+            | otherwise = pure ()
 
 mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
