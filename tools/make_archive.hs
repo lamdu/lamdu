@@ -1,5 +1,6 @@
 #!/usr/bin/env runhaskell
 
+import           Control.Exception (bracket_)
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
@@ -101,16 +102,23 @@ toPackageWith srcPath relPath =
 toPackage :: FilePath -> IO ()
 toPackage srcPath = toPackageWith srcPath (takeFileName srcPath)
 
+libToPackage :: FilePath -> IO ()
+libToPackage srcPath = toPackageWith srcPath ("lib" </> takeFileName srcPath)
+
+createTempDir :: FilePath -> IO a -> IO a
+createTempDir dir =
+    bracket_ (Dir.createDirectory dir) (Dir.removeDirectoryRecursive dir)
+
 main :: IO ()
 main =
     do
         [lamduExec] <- Env.getArgs
         dependencies <- readProcess "ldd" [lamduExec] "" <&> parseLddOut
-        Dir.createDirectory pkgDir
-        toPackage lamduExec
-        toPackage "data"
-        nodePath <- NodeJS.path
-        toPackageWith nodePath "data/bin/node"
-        filter isInteresting dependencies & mapM_ toPackage
-        callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
-        Dir.removeDirectoryRecursive pkgDir
+        createTempDir pkgDir $ do
+            toPackageWith lamduExec "bin/lamdu"
+            toPackage "data"
+            toPackage "tools/run-lamdu.sh"
+            nodePath <- NodeJS.path
+            toPackageWith nodePath "data/bin/node"
+            filter isInteresting dependencies & mapM_ libToPackage
+            callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
