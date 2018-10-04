@@ -378,7 +378,6 @@ Library
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
                   , Numeric.Extended
-                  , Paths.Utils
                   , Revision.Deltum.Db
                   , Revision.Deltum.IRef
                   , Revision.Deltum.Rev.Branch
