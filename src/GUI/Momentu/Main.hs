@@ -146,6 +146,7 @@ lookupEvent getClipboard virtCursorRef mEnter mFocus event =
                     where
                         res = State.VirtualCursor focalArea
             E.lookup getClipboard event (mkEventMap virtCursor)
+                <&> fmap (^. E.dhHandler)
     _ -> pure Nothing
 
 virtualCursorImage :: Maybe State.VirtualCursor -> DebugOptions -> IO Anim.Frame

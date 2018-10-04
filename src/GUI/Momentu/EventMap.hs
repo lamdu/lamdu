@@ -58,7 +58,7 @@ data DocHandler a = DocHandler
     { _dhDoc :: Doc
     , _dhFileLocation :: CallStack
     , _dhHandler :: a
-    } deriving (Generic, Functor)
+    } deriving (Generic, Functor, Foldable, Traversable)
 Lens.makeLenses ''DocHandler
 
 type InputDoc = Text
@@ -226,11 +226,14 @@ deleteKey key = emKeyMap %~ Map.delete key
 deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
-lookup :: Applicative f => f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe a)
+lookup ::
+    Applicative f =>
+    f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe (DocHandler a))
 lookup _ (Events.EventDropPaths paths) x =
     map applyHandler (x ^. emDropHandlers) & asum & pure
     where
-        applyHandler dh = dh ^. dropDocHandler . dhHandler $ paths
+        applyHandler dh =
+            dh ^. dropDocHandler & dhHandler %~ ($ paths) & sequenceA
 lookup getClipboard (Events.EventKey event) x
     | Just action <- lookupKeyMap getClipboard dict event = action
     | Just res <- lookupCharGroup charGroups event = pure (Just res)
@@ -242,30 +245,33 @@ lookup _ _ _ = pure Nothing
 
 lookupKeyMap ::
     Applicative f => f (Maybe Clipboard) -> KeyMap a -> Events.KeyEvent ->
-    Maybe (f (Maybe a))
+    Maybe (f (Maybe (DocHandler a)))
 lookupKeyMap getClipboard dict (Events.KeyEvent k _scanCode keyState modKeys _) =
       KeyEvent keyState modKey `Map.lookup` dict
-      <&> (^. dhHandler)
-      <&> \case
+      <&> dhHandler %~ \case
           Doesn'tWantClipboard x -> pure (Just x)
           WantsClipboard f -> getClipboard <&> (>>= f)
+      <&> sequenceA
+      <&> fmap sequenceA
     where
         modKey = ModKey modKeys k
 
-lookupCharGroup :: [CharGroupHandler a] -> Events.KeyEvent -> Maybe a
+lookupCharGroup :: [CharGroupHandler a] -> Events.KeyEvent -> Maybe (DocHandler a)
 lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
     do
         ModKey.KeyState'Pressed <- pure keyState
         char <- mchar
-        charGroups ^? Lens.traverse . cgDocHandler . dhHandler . Lens.ix char
+        charGroups ^? Lens.traverse . cgDocHandler
+            >>= dhHandler %%~ (^? Lens.ix char)
 
-lookupAllCharHandler :: [AllCharsHandler t] -> Events.KeyEvent -> Maybe t
+lookupAllCharHandler ::
+    [AllCharsHandler a] -> Events.KeyEvent -> Maybe (DocHandler a)
 lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
     do
         keyState == ModKey.KeyState'Pressed & guard
         char <- mchar
         AllCharsHandler _ handler <- allCharHandlers ^? traverse
-        (handler ^. dhHandler) char
+        handler & dhHandler %~ ($ char) & sequenceA
 
 charGroup :: HasCallStack => Maybe InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup miDoc oDoc chars func =

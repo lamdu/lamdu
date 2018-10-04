@@ -120,7 +120,10 @@ mApplyEvent cache env virtCursor event =
                 { Widget._eVirtualCursor = virtCursor
                 , Widget._ePrevTextRemainder = ""
                 }
-        runIdentity (E.lookup (Identity Nothing) event eventMap) & sequenceA
+        E.lookup (Identity Nothing) event eventMap
+            & runIdentity
+            <&> (^. E.dhHandler)
+            & sequenceA
 
 applyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
@@ -286,7 +289,8 @@ testTabNavigation cache env virtCursor =
                 , Widget._ePrevTextRemainder = ""
                 }
         let testDir (name, event, expected) =
-                runIdentity (E.lookup (Identity Nothing) event eventMap) & sequenceA
+                E.lookup (Identity Nothing) event eventMap
+                    & runIdentity <&> (^. E.dhHandler) & sequenceA
                 >>=
                 \case
                 Nothing -> pure ()
