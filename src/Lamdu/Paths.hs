@@ -4,8 +4,10 @@ module Lamdu.Paths
     , readDataFile
     ) where
 
+import           Control.Monad.Except (runExceptT, throwError)
 import qualified Paths_Lamdu
 import qualified System.Directory as Directory
+import           System.Environment.Executable (splitExecutablePath)
 import           System.FilePath ((</>))
 
 import           Lamdu.Prelude
@@ -14,13 +16,24 @@ import           Lamdu.Prelude
 dataDir :: FilePath
 dataDir = "data"
 
+searchPaths :: FilePath -> [IO FilePath]
+searchPaths path =
+    [ Directory.getCurrentDirectory <&> (</> dataDir </> path)
+    , splitExecutablePath <&> fst <&> (</> dataDir </> path)
+    , Paths_Lamdu.getDataFileName path
+    ]
+
 getDataFileName :: FilePath -> IO FilePath
 getDataFileName fileName =
-    do
-        currentDir <- Directory.getCurrentDirectory
-        let customPath = currentDir </> dataDir </> fileName
-        exists <- Directory.doesFileExist customPath
-        if exists then pure customPath else Paths_Lamdu.getDataFileName fileName
+    flip traverse_ (searchPaths fileName)
+        (\mkSearchPath ->
+        do
+            path <- lift mkSearchPath
+            exists <- Directory.doesFileExist path & lift
+            when exists $ throwError path -- Early exit, not an error
+        )
+    & runExceptT
+    >>= either pure (const (fail ("Cannot find " ++ show fileName)))
 
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")

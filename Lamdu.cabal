@@ -142,6 +142,7 @@ Library
                   , wl-pprint >= 1.2
                   , zip-archive
                   , cryptohash-sha256
+                  , executable-path
 
   exposed-modules:  Control.Concurrent.Extended
                   , Control.Lens.Extended
