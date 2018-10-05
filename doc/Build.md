@@ -133,6 +133,7 @@ Now, to build Lamdu, install [stack](https://haskellstack.org/). Then, find its 
     pacman -S git make mingw-w64-x86_64-{cmake,gcc}
 
     # Install LevelDB (a dependency)
+    # "fastogt" maintain a fork that is compatible with Haskell (builds with mingw-w64-x86_64)
     git clone https://github.com/fastogt/leveldb.git
     cd leveldb
     cmake -G "MSYS Makefiles" .
