@@ -5,8 +5,8 @@ mkDerivation {
   version = "3.2.1.2";
   src = fetchgit {
     url = "https://github.com/lamdu/bindings-GLFW";
-    sha256 = "0lnqaf5p1y6qxl9ik5pia9p39ipsgqipmxqkc6ih1ma488knl7rm";
-    rev = "1498d95a72d24d272a285ea64337bb907f8d89b2";
+    sha256 = "1kcgdc1f8b0r23zf3gy68ihlgxgjbdw15by99gwdb1w09sbjk02x";
+    rev = "216405c67dcc7783296ef0232d2936ac32341361";
   };
   postPatch = ''
     rm Setup.hs
