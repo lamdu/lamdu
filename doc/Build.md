@@ -116,3 +116,34 @@ git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 nix-env -f default.nix -iA lamdu
 ```
+
+### Windows
+
+Note: this instructions are work-in-progress and don't yet work :(
+
+Install NodeJS via [NVM for Windows](https://github.com/coreybutler/nvm-windows) (a NodeJS distribution), and then run in Windows' `cmd.exe` shell:
+
+    nvm install 7.10.1
+    nvm use 7.10.1
+
+Now, to build Lamdu, install [stack](https://haskellstack.org/). Then, find its bundled msys2 shell, at a location that looks like `C:\Users\$USERNAME\AppData\Local\Programs\stack\x86_64-windows\msys2-*\msys2.exe`, and run the `msys2 shell`. In the msys2 shell:
+
+    export PATH=$PATH:/mingw64/bin:/c/Program\ Files/nodejs:/c/Users/$USER/AppData/Roaming/local/bin
+
+    pacman -S git make mingw-w64-x86_64-{cmake,gcc}
+
+    # Install LevelDB (a dependency)
+    git clone https://github.com/fastogt/leveldb.git
+    cd leveldb
+    cmake -G "MSYS Makefiles" .
+    make
+    # Work around "make install" not working
+    cp libleveldb.a /usr/lib
+    cp -R include/* /usr/include/
+    cd ..
+
+    git clone https://github.com/lamdu/lamdu.git
+    cd lamdu
+    stack build
+
+    stack exec lamdu
