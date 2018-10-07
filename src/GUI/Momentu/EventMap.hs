@@ -23,6 +23,7 @@ import qualified Control.Lens.Extended as Lens
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
+import           Data.Maybe (listToMaybe)
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
@@ -258,20 +259,22 @@ lookupKeyMap getClipboard dict (Events.KeyEvent k _scanCode keyState modKeys _) 
 
 lookupCharGroup :: [CharGroupHandler a] -> Events.KeyEvent -> Maybe (DocHandler a)
 lookupCharGroup charGroups (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
+    listToMaybe $
     do
         ModKey.KeyState'Pressed <- pure keyState
-        char <- mchar
-        charGroups ^? Lens.traverse . cgDocHandler
-            >>= dhHandler %%~ (^? Lens.ix char)
+        char <- mchar ^.. Lens._Just
+        charGroups ^.. Lens.traverse . cgDocHandler
+            >>= dhHandler %%~ (^.. Lens.ix char)
 
 lookupAllCharHandler ::
     [AllCharsHandler a] -> Events.KeyEvent -> Maybe (DocHandler a)
 lookupAllCharHandler allCharHandlers (Events.KeyEvent _k _scanCode keyState _modKeys mchar) =
+    listToMaybe $
     do
         keyState == ModKey.KeyState'Pressed & guard
-        char <- mchar
-        AllCharsHandler _ handler <- allCharHandlers ^? traverse
-        handler & dhHandler %~ ($ char) & sequenceA
+        char <- mchar ^.. Lens._Just
+        AllCharsHandler _ handler <- allCharHandlers
+        (handler & dhHandler %~ ($ char) & sequenceA) ^.. Lens._Just
 
 charGroup :: HasCallStack => Maybe InputDoc -> Doc -> String -> (Char -> a) -> EventMap a
 charGroup miDoc oDoc chars func =
