@@ -9,7 +9,7 @@ See the [Main Page](http://lamdu.org/)
 
 ## Installation
 
-To Lamdu from source, [see the instructions for your platform](doc/Build.md)
+To build Lamdu from source, [see the instructions for your platform](doc/Build.md)
 
 ## Tutorial
 
