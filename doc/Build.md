@@ -119,7 +119,7 @@ nix-env -f default.nix -iA lamdu
 
 ### Windows
 
-Install (from the binary installers on their websites):
+Install:
 
 * [git](https://git-scm.com/)
 * [stack](https://haskellstack.org/)
@@ -153,4 +153,3 @@ In the Windows `cmd.exe` shell:
 Notes:
 
 * If `cmake` fails complaining about `sh` being in the path, remove its provider from the path (most likely OpenSSH) and try invoking `cmake` again.
-* At the moment evaluation of expressions doesn't work in Windows (problems with executing the NodeJS subprocess). We're looking into this.
