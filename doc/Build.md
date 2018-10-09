@@ -119,8 +119,6 @@ nix-env -f default.nix -iA lamdu
 
 ### Windows
 
-Note: this instructions are work-in-progress and don't yet work :(
-
 Install (from the binary installers on their websites):
 
 * [git](https://git-scm.com/)
