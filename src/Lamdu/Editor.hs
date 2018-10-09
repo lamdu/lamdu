@@ -201,19 +201,6 @@ makeMainGui themeNames settingsProp dbToIO env =
 backgroundId :: M.AnimId
 backgroundId = ["background"]
 
-mkWidgetWithFallback ::
-    HasCallStack =>
-    Property IO Settings ->
-    (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> IO (Gui Widget IO)
-mkWidgetWithFallback settingsProp dbToIO env =
-    do
-        themeNames <- Themes.getNames
-        dbToIO $ makeMainGui themeNames settingsProp dbToIO env
-            <&> M.backgroundColor backgroundId bgColor
-    where
-        bgColor = env ^. Env.theme . Theme.backgroundColor
-
 makeRootWidget ::
     HasCallStack =>
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
@@ -251,7 +238,10 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 where
                     Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                     f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
-        mkWidgetWithFallback settingsProp dbToIO env
+        themeNames <- Themes.getNames
+        let bgColor = env ^. Env.theme . Theme.backgroundColor
+        dbToIO $ makeMainGui themeNames settingsProp dbToIO env
+            <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where
         monitors =
