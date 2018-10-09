@@ -121,30 +121,38 @@ nix-env -f default.nix -iA lamdu
 
 Note: this instructions are work-in-progress and don't yet work :(
 
-Install NodeJS via [NVM for Windows](https://github.com/coreybutler/nvm-windows) (a NodeJS distribution), and then run in Windows' `cmd.exe` shell:
+Install (from the binary installers on their websites):
+
+* [git](https://git-scm.com/)
+* [stack](https://haskellstack.org/)
+* [msys2](http://msys2.org/)
+* [NVM for Windows](https://github.com/coreybutler/nvm-windows) (a NodeJS distribution)
+
+In the msys2 shell:
+
+    pacman -S mingw-w64-x86_64-{,c}make
+
+Add `c:\msys64\mingw64\bin` to your `PATH`.
+
+In the Windows `cmd.exe` shell:
 
     nvm install 7.10.1
     nvm use 7.10.1
 
-Now, to build Lamdu, install [stack](https://haskellstack.org/). Then, find its bundled msys2 shell, at a location that looks like `C:\Users\$USERNAME\AppData\Local\Programs\stack\x86_64-windows\msys2-*\msys2.exe`, and run the `msys2 shell`. In the msys2 shell:
+    stack setup
 
-    export PATH=$PATH:/mingw64/bin:/c/Program\ Files/nodejs:/c/Users/$USER/AppData/Roaming/local/bin
-
-    pacman -S git make mingw-w64-x86_64-{cmake,gcc}
-
-    # Install LevelDB (a dependency)
-    # "fastogt" maintain a fork that is compatible with Haskell (builds with mingw-w64-x86_64)
+    rem "fastogt" maintain a leveldb fork that is compatible with stack/Haskell (builds with mingw-w64-x86_64)
     git clone https://github.com/fastogt/leveldb.git
     cd leveldb
-    cmake -G "MSYS Makefiles" .
-    make
-    # Work around "make install" not working
-    cp libleveldb.a /usr/lib
-    cp -R include/* /usr/include/
+    cmake -G "MinGW Makefiles" . -DCMAKE_C_COMPILER=C:/Users/%username%/AppData/Local/Programs/stack/x86_64-windows/ghc-8.4.3/mingw/bin/gcc.exe
+    mingw32-make
     cd ..
 
     git clone https://github.com/lamdu/lamdu.git
-    cd lamdu
-    stack build
-
+    stack build --extra-lib-dirs=%cd%\..\leveldb --extra-include-dirs=%cd%\..\leveldb\include
     stack exec lamdu
+
+Notes:
+
+* If `cmake` fails complaining about `sh` being in the path, remove its provider from the path (most likely OpenSSH) and try invoking `cmake` again.
+* At the moment evaluation of expressions doesn't work in Windows (problems with executing the NodeJS subprocess). We're looking into this.
