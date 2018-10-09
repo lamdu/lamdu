@@ -21,6 +21,10 @@ packages:
     commit: 5a16cfb95490b3dbb019ff27a28ba4b63218d056
   extra-dep: True
 - location:
+    git: https://github.com/lamdu/leveldb-haskell
+    commit: 6f2f0b88fd7197e74cbff92bde94168adce3fb29
+  extra-dep: True
+- location:
     git: https://github.com/lamdu/FreetypeGL
     commit: 286b75894e51b08b7c63f8845f045f66d27e9849
   extra-dep: True
