@@ -11,7 +11,7 @@
     "successColor"                  : [0.525, 0.75, 0.525, 1.0],
     "disabledColor"                 : [0.4, 0.4, 0.4, 0.5],
     "backgroundColor"               : [1.0, 1.0, 1.0, 1.0],
-    "invalidCursorBGColor"          : [0.4, 0.2, 0.2, 1.0],
+    "invalidCursorOverlayColor"     : [1.0, 0.5, 0.5, 0.5],
     "statusBar": {
         "bgColor" : [0.5, 1.0, 0.9, 0.5]
     },

@@ -99,4 +99,8 @@ mainLoopConfig getFontInfo getConfig =
         }
     , cZoom = getConfig <&> (^. _1 . Config.zoom)
     , cHelpEnv = Nothing
+    , cInvalidCursorOverlayColor =
+        getConfig
+        <&> \(_config, theme) ->
+        theme ^. Theme.invalidCursorOverlayColor
     }

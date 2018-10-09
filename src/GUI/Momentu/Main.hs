@@ -19,8 +19,10 @@ import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2)
 import           GHC.Stack (CallStack, getCallStack, SrcLoc)
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
@@ -48,6 +50,7 @@ data Config = Config
     , cCursor :: Zoom -> IO Cursor.Config
     , cZoom :: IO Zoom.Config
     , cHelpEnv :: Maybe (Zoom -> IO EventMapHelp.Env)
+    , cInvalidCursorOverlayColor :: IO Draw.Color
     }
 
 data DebugOptions = DebugOptions
@@ -108,6 +111,7 @@ defaultOptions helpFontPath =
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
                         EventMapHelp.defaultEnv helpFont & pure
+                , cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
@@ -213,18 +217,35 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
             & mkJumpToSourceEventMap debug
         let moreEvents = zoomEventMap <> jumpToSourceEventMap
         helpEnv <- cHelpEnv config ?? env ^. eZoom & sequenceA
-        mkWidgetUnmemod
-            env
+        w <- mkWidgetUnmemod env
+        if Widget.isFocused w
+            then pure w
+            else env
+                & State.cursor .~ mempty
+                & mkWidgetUnmemod
+                >>= assertFocused
+                >>= showInvalidCursor (env ^. State.cursor)
             <&> Widget.eventMapMaker . Lens.mapped %~ (moreEvents <>)
             >>= maybe pure (addHelp ?? env ^. eWindowSize) helpEnv
     where
+        assertFocused w
+            | Widget.isFocused w = pure w
+            | otherwise = fail "Creating widget on the empty cursor failed"
+        bgColorAnimId :: AnimId
+        bgColorAnimId = ["invalid-cursor-background"]
+        showInvalidCursor :: Widget.Id -> Gui Widget IO -> IO (Gui Widget IO)
+        showInvalidCursor cursor widget =
+            do
+                putStrLn $ "Invalid cursor: " ++ show cursor
+                color <- cInvalidCursorOverlayColor
+                widget
+                    & Element.setLayers . Element.layers <. Lens.reversed . Lens.ix 0 %@~
+                    (<>) . (`Anim.scale` Anim.coloredRectangle bgColorAnimId color)
+                    & pure
+        Config{cInvalidCursorOverlayColor} = config
         Options{stateStorage, debug, config} = options
 
-mainLoopWidget ::
-    GLFW.Window ->
-    (Env -> IO (Gui Widget IO)) ->
-    Options ->
-    IO ()
+mainLoopWidget :: GLFW.Window -> (Env -> IO (Gui Widget IO)) -> Options -> IO ()
 mainLoopWidget win mkWidgetUnmemod options =
     do
         addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown

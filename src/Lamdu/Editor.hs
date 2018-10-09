@@ -15,6 +15,8 @@ import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
+import           GUI.Momentu.State (Gui)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Graphics.UI.GLFW.Utils (printGLVersion)
 import           Lamdu.Cache (Cache)
@@ -183,7 +185,7 @@ makeMainGui ::
     HasCallStack =>
     [Themes.Selection] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> T DbLayout.DbM (M.Widget (IO M.Update))
+    Env -> T DbLayout.DbM (Gui Widget IO)
 makeMainGui themeNames settingsProp dbToIO env =
     GUIMain.make themeNames settingsProp env
     <&> Lens.mapped %~
@@ -196,43 +198,28 @@ makeMainGui themeNames settingsProp dbToIO env =
     where
         runExtraIO (extraAct, res) = res <$ extraAct
 
+backgroundId :: M.AnimId
+backgroundId = ["background"]
+
 mkWidgetWithFallback ::
     HasCallStack =>
     Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> IO (M.Widget (IO M.Update))
+    Env -> IO (Gui Widget IO)
 mkWidgetWithFallback settingsProp dbToIO env =
     do
         themeNames <- Themes.getNames
-        let tryMakeGui = makeMainGui themeNames settingsProp dbToIO
-        (isValid, widget) <-
-            dbToIO $
-            do
-                candidateWidget <- tryMakeGui env
-                (isValid, widget) <-
-                    if M.isFocused candidateWidget
-                    then pure (True, candidateWidget)
-                    else
-                        env & M.cursor .~ mempty
-                        & tryMakeGui <&> (,) False
-                unless (M.isFocused widget) $
-                    fail "Root cursor did not match"
-                pure (isValid, widget)
-        unless isValid $ putStrLn $ "Invalid cursor: " ++ show (env ^. M.cursor)
-        widget
-            & M.backgroundColor (["background"] :: M.AnimId) (theme ^. bgColor isValid)
-            & pure
+        dbToIO $ makeMainGui themeNames settingsProp dbToIO env
+            <&> M.backgroundColor backgroundId bgColor
     where
-        theme = env ^. Env.theme
-        bgColor False = Theme.invalidCursorBGColor
-        bgColor True = Theme.backgroundColor
+        bgColor = env ^. Env.theme . Theme.backgroundColor
 
 makeRootWidget ::
     HasCallStack =>
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
     Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
     MainLoop.Env -> Property IO Settings ->
-    IO (M.Widget (IO M.Update))
+    IO (Gui Widget IO)
 makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator

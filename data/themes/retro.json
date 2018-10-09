@@ -105,5 +105,5 @@
     "letItemPadding": [0, 0],
     "backgroundColor": [0, 0, 0.5, 0.5],
     "presentationChoiceScaleFactor": [1.0, 1.0],
-    "invalidCursorBGColor": [0.5, 0.0, 0.0, 1.0]
+    "invalidCursorOverlayColor": [1.0, 0, 0, 0.5]
 }
