@@ -5,6 +5,7 @@ import qualified Tests.Codec
 import qualified Tests.ColorSchemes
 import qualified Tests.Config
 import qualified Tests.DataFiles
+import qualified Tests.EventMap
 import qualified Tests.Gui
 import qualified Tests.JsExport
 import qualified Tests.JsRtsTags
@@ -29,6 +30,7 @@ main =
             , Tests.ColorSchemes.test
             , Tests.Config.test
             , Tests.DataFiles.test
+            , Tests.EventMap.test
             , Tests.Gui.test
             , Tests.JsExport.test
             , Tests.JsRtsTags.test

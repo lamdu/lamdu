@@ -69,6 +69,7 @@ Test-Suite Tests
                , Tests.ColorSchemes
                , Tests.Config
                , Tests.DataFiles
+               , Tests.EventMap
                , Tests.Gui
                , Tests.JsExport
                , Tests.JsRtsTags
