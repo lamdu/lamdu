@@ -191,6 +191,35 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
         Anim.coloredRectangle ["debug-virtual-cursor"] color
         & Anim.scale (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
 
+type AddHelp =
+    EventMapHelp.Env -> Widget.Size -> Widget (IO State.Update) ->
+    IO (Widget (IO State.Update))
+
+wrapMakeWidget ::
+    Zoom -> AddHelp -> Options -> IORef LookupMode ->
+    (Env -> IO (Gui Widget IO)) ->
+    Widget.Size -> IO (Gui Widget IO)
+wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
+    do
+        s <- Property.getP stateStorage
+        let env = Env
+                { _eZoom = zoom
+                , _eWindowSize = size
+                , _eState = s
+                }
+        zoomEventMap <- cZoom config <&> Zoom.eventMap (env ^. eZoom)
+        jumpToSourceEventMap <-
+            writeIORef lookupModeRef JumpToSource
+            & mkJumpToSourceEventMap debug
+        let moreEvents = zoomEventMap <> jumpToSourceEventMap
+        helpEnv <- cHelpEnv config ?? env ^. eZoom & sequenceA
+        mkWidgetUnmemod
+            env
+            <&> Widget.eventMapMaker . Lens.mapped %~ (moreEvents <>)
+            >>= maybe pure (addHelp ?? env ^. eWindowSize) helpEnv
+    where
+        Options{stateStorage, debug, config} = options
+
 mainLoopWidget ::
     GLFW.Window ->
     (Env -> IO (Gui Widget IO)) ->
@@ -203,23 +232,8 @@ mainLoopWidget win mkWidgetUnmemod options =
         lookupModeRef <- newIORef ApplyEvent
         virtCursorRef <- newIORef Nothing
         let mkW =
-                memoIO $ \size ->
-                do
-                    zoomEventMap <- cZoom config <&> Zoom.eventMap zoom
-                    jumpToSourceEventMap <-
-                        writeIORef lookupModeRef JumpToSource
-                        & mkJumpToSourceEventMap debug
-                    let moreEvents = zoomEventMap <> jumpToSourceEventMap
-                    s <- Property.getP stateStorage_
-                    helpEnv <- cHelpEnv config ?? zoom & sequenceA
-                    mkWidgetUnmemod
-                        Env
-                        { _eZoom = zoom
-                        , _eWindowSize = size
-                        , _eState = s
-                        }
-                        <&> Widget.eventMapMaker . Lens.mapped %~ (moreEvents <>)
-                        >>= maybe pure (addHelp ?? size) helpEnv
+                wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod
+                & memoIO
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
         let renderWidget size =
@@ -251,7 +265,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> pure ()
                         Just res ->
                             do
-                                Property.modP stateStorage_ (State.update res)
+                                Property.modP stateStorage (State.update res)
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
                     pure MainAnim.EventResult
@@ -262,7 +276,6 @@ mainLoopWidget win mkWidgetUnmemod options =
                 <*> cCursor config zoom
             }
     where
-        stateStorage_ = stateStorage options
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{tickHandler, debug, config} = options
+        Options{stateStorage, tickHandler, debug, config} = options
         DebugOptions{fpsFont} = debug
