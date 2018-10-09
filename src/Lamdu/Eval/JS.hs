@@ -50,6 +50,7 @@ import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Paths as Paths
 import           Numeric (readHex)
+import           System.Environment (getEnvironment)
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hIsEOF, hPutStrLn, hFlush, withFile)
 import           System.IO.Temp (withSystemTempFile)
@@ -99,10 +100,11 @@ nodeRepl =
     do
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
         nodeExePath <- getNodePath
+        env <- getEnvironment
         pure (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
             { Proc.std_in = Proc.CreatePipe
             , Proc.std_out = Proc.CreatePipe
-            , Proc.env = Just [("NODE_PATH", rtsPath)]
+            , Proc.env = Just (("NODE_PATH", rtsPath):env)
             }
 
 parseHexBs :: Text -> ByteString
