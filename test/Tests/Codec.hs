@@ -1,4 +1,4 @@
-module TestCodec where
+module Tests.Codec where
 
 import qualified Lamdu.Data.Export.JSON as JsonFormat
 

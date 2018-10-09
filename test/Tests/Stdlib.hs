@@ -1,4 +1,4 @@
-module TestStdlib (test) where
+module Tests.Stdlib (test) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)

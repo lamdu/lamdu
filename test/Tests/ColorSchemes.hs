@@ -1,4 +1,4 @@
-module TestColorSchemes (test) where
+module Tests.ColorSchemes (test) where
 
 import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)

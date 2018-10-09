@@ -1,4 +1,4 @@
-module TestAnimIdClash (test) where
+module Tests.AnimIdClash (test) where
 
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))

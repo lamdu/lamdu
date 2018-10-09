@@ -1,4 +1,4 @@
-module TestMomentu (test) where
+module Tests.Momentu (test) where
 
 import qualified Control.Lens as Lens
 import           Data.List.NonEmpty (NonEmpty(..))

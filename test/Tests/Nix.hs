@@ -11,7 +11,7 @@
 -- Make sure to do these steps and not just make the test pass by changing the "rev" value,
 -- otherwise the nix build will be broken!
 
-module TestNix (test) where
+module Tests.Nix (test) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.Lens as LensAeson

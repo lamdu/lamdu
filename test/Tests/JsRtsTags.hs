@@ -1,4 +1,4 @@
-module TestJsRtsTags (test) where
+module Tests.JsRtsTags (test) where
 
 import qualified Control.Lens as Lens
 import           Data.List.Split (splitOn)

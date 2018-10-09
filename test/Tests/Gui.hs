@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
-module TestGui where
+module Tests.Gui where
 
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))

@@ -1,4 +1,4 @@
-module TestReadme (test) where
+module Tests.Readme (test) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.Lens as LensAeson

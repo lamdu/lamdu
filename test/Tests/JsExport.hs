@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module TestJsExport where
+module Tests.JsExport where
 
 import qualified Data.ByteString as BS
 import           Lamdu.Calc.Term (Val)

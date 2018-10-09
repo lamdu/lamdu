@@ -1,5 +1,5 @@
 -- | Test precedences
-module TestPrecedence where
+module Tests.Precedence where
 
 import qualified Control.Lens as Lens
 import           Data.Tree.Diverse (ann, val)

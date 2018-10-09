@@ -1,4 +1,4 @@
-module TestConfig (test) where
+module Tests.Config (test) where
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Config (load)

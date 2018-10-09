@@ -1,6 +1,6 @@
 -- | Test sugar convert results (including its actions)
 
-module TestSugar where
+module Tests.Sugar where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List

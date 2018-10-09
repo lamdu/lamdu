@@ -1,6 +1,6 @@
 -- | Test Lamdu.Calc.Val.Utils
 {-# LANGUAGE TypeApplications #-}
-module TestValUtils where
+module Tests.ValUtils where
 
 import qualified Data.Set as Set
 import           Data.Tree.Diverse (annotations)
