@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
+import           Lamdu.GUI.WidgetIds (defaultCursor)
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
@@ -148,4 +149,7 @@ make ::
     Ctx env =>
     [Themes.Selection] -> Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
-make themeNames settingsProp env = layout themeNames settingsProp & (`runReaderT` env)
+make themeNames settingsProp env =
+    layout themeNames settingsProp
+    & GuiState.assignCursor mempty defaultCursor
+    & (`runReaderT` env)

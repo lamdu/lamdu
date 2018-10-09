@@ -35,7 +35,6 @@ import qualified Lamdu.Eval.Manager as EvalManager
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
@@ -214,7 +213,7 @@ mkWidgetWithFallback settingsProp dbToIO env =
                     if M.isFocused candidateWidget
                     then pure (True, candidateWidget)
                     else
-                        env & M.cursor .~ WidgetIds.defaultCursor
+                        env & M.cursor .~ mempty
                         & tryMakeGui <&> (,) False
                 unless (M.isFocused widget) $
                     fail "Root cursor did not match"
