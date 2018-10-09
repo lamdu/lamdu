@@ -27,9 +27,8 @@ backgroundColor ::
     m (Draw.Color -> a -> a)
 backgroundColor =
     Element.subAnimId ["bg"] <&>
-    \animId color -> Element.setLayers %@~ \sz x ->
-    x
-    & Element.layers %~ addBg (Anim.coloredRectangle animId color & Anim.scale sz)
+    \animId color -> Element.setLayers . Element.layers %@~ \sz ->
+    addBg (Anim.coloredRectangle animId color & Anim.scale sz)
     where
         addBg bg [] = [bg]
         addBg bg (x:xs) = x <> bg : xs
