@@ -180,6 +180,11 @@ main =
             when (SysInfo.os == "darwin") $ do
                 toPackage "tools/data/Info.plist"
                 traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
+                callProcess "sh"
+                    [ "tools/data/macos_icon.sh"
+                    , "tools/data/Lamdu.png"
+                    , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
+                    ]
             if SysInfo.os == "linux"
                 then callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
                 else
