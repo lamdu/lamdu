@@ -162,14 +162,14 @@ main =
         bracket_ (Dir.createDirectory pkgDir) cleanup $ do
             toPackageWith lamduExec destPath
             toPackage "data"
-            when (SysInfo.os /= "minw32") (toPackage "tools/run-lamdu.sh")
+            when (SysInfo.os /= "mingw32") (toPackage "tools/run-lamdu.sh")
             nodePath <- NodeJS.path
             toPackageWith nodePath "data/bin/node.exe"
             mapM_ libToPackage dependencies
             finalize
     where
         destPath
-            | SysInfo.os == "minw32" = "lamdu.exe"
+            | SysInfo.os == "mingw32" = "lamdu.exe"
             | otherwise = "bin/lamdu"
         (finalize, cleanup)
             | SysInfo.os == "mingw32" = (pure (), pure ())
