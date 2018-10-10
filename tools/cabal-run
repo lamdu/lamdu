@@ -2,5 +2,5 @@
 set -eu
 dir=$(dirname $0)
 cd ${dir}/..
-git-cached-exec tools/git-cache-cabal.spec
+git-cached-exec tools/data/git-cache-cabal.spec
 dist/build/lamdu/lamdu $@

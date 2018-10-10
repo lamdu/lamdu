@@ -154,7 +154,7 @@ main =
         bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $ do
             toPackageWith lamduExec destPath
             toPackage "data"
-            when (SysInfo.os /= "mingw32") (toPackage "tools/run-lamdu.sh")
+            when (SysInfo.os /= "mingw32") (toPackage "tools/data/run-lamdu.sh")
             nodePath <- NodeJS.path
             toPackageWith nodePath "data/bin/node.exe"
             traverse_ libToPackage dependencies

@@ -1,1 +1,1 @@
-hlint src test tools --hint=tools/lamdu-hlint.yaml $@
+hlint src test tools --hint=tools/data/lamdu-hlint.yaml $@
