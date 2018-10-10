@@ -110,7 +110,9 @@ findDylibs path =
         traverse findDylibs deps <&> concat <&> (deps ++)
 
 pkgDir :: FilePath
-pkgDir = "lamdu-0.6.0"
+pkgDir
+    | SysInfo.os == "darwin" = "Lamdu.app"
+    | otherwise = "lamdu"
 
 toPackageWith :: FilePath -> FilePath -> IO ()
 toPackageWith srcPath relPath =
@@ -119,17 +121,22 @@ toPackageWith srcPath relPath =
         Dir.createDirectoryIfMissing True (takeDirectory destPath)
         callProcess "cp" ["-aLR", srcPath, destPath]
     where
-        destPath = pkgDir </> relPath
+        destPath = contentsDir </> relPath
+        contentsDir
+            | SysInfo.os == "darwin" = pkgDir </> "Contents"
+            | otherwise = pkgDir
 
 toPackage :: FilePath -> IO ()
 toPackage srcPath = toPackageWith srcPath (takeFileName srcPath)
 
 libToPackage :: FilePath -> IO ()
 libToPackage srcPath =
-    toPackageWith srcPath (dir </> takeFileName srcPath)
+    toPackageWith srcPath (dir </> filename)
     where
+        filename = takeFileName srcPath
         dir
             | SysInfo.os == "mingw32" = "."
+            | SysInfo.os == "darwin" = "MacOS"
             | otherwise = "lib"
 
 findDeps :: String -> IO [FilePath]
@@ -146,6 +153,18 @@ findDeps exec
     | otherwise =
         readProcess "ldd" [exec] "" <&> parseLddOut
 
+fixDylibPaths :: FilePath -> IO ()
+fixDylibPaths targetName =
+    findDylibs target >>=
+    traverse_ fixDep
+    where
+        target = pkgDir </> "Contents" </> "MacOS" </> targetName
+        fixDep dep =
+            do
+                callProcess "chmod" ["+w", target]
+                callProcess "install_name_tool"
+                    ["-change", dep, "@executable_path/" ++ takeFileName dep, target]
+
 main :: IO ()
 main =
     do
@@ -153,11 +172,14 @@ main =
         dependencies <- findDeps lamduExec
         bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $ do
             toPackageWith lamduExec destPath
-            toPackage "data"
-            when (SysInfo.os /= "mingw32") (toPackage "tools/data/run-lamdu.sh")
+            toPackageWith "data" dataDir
             nodePath <- NodeJS.path
-            toPackageWith nodePath "data/bin/node.exe"
+            toPackageWith nodePath (dataDir </> "bin/node.exe")
             traverse_ libToPackage dependencies
+            when (SysInfo.os == "linux") (toPackage "tools/data/run-lamdu.sh")
+            when (SysInfo.os == "darwin") $ do
+                toPackage "tools/data/Info.plist"
+                traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
             if SysInfo.os == "linux"
                 then callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
                 else
@@ -167,4 +189,8 @@ main =
     where
         destPath
             | SysInfo.os == "mingw32" = "lamdu.exe"
+            | SysInfo.os == "darwin" = "MacOS/lamdu"
             | otherwise = "bin/lamdu"
+        dataDir
+            | SysInfo.os == "darwin" = "Resources"
+            | otherwise = "data"

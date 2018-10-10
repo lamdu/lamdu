@@ -10,6 +10,7 @@ import qualified Paths_Lamdu
 import qualified System.Directory as Directory
 import           System.Environment.Executable (splitExecutablePath)
 import           System.FilePath ((</>))
+import qualified System.Info as SysInfo
 
 import           Lamdu.Prelude
 
@@ -20,9 +21,13 @@ dataDir = "data"
 searchPaths :: FilePath -> [IO FilePath]
 searchPaths path =
     [ Directory.getCurrentDirectory <&> (</> dataDir </> path)
-    , splitExecutablePath <&> fst <&> (</> dataDir </> path)
+    , splitExecutablePath <&> fst <&> (</> relDataDir </> path)
     , Paths_Lamdu.getDataFileName path
     ]
+    where
+        relDataDir
+            | SysInfo.os == "darwin" = "../Resources"
+            | otherwise = dataDir
 
 getDataFileNameMaybe :: FilePath -> IO (Maybe FilePath)
 getDataFileNameMaybe fileName =
