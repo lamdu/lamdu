@@ -89,8 +89,8 @@ type Parse = State (IntMap (ER.Val ()))
 
 getNodePath :: IO FilePath
 getNodePath =
-    -- prefer the relative-path bin/node
-    Paths.getDataFileNameMaybe "bin/node"
+    -- prefer the relative-path bin/node.exe
+    Paths.getDataFileNameMaybe "bin/node.exe"
     >>= \case
     Just x -> pure x
     Nothing -> NodeJS.path

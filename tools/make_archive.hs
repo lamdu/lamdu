@@ -68,7 +68,13 @@ interestingLibs =
     , "liblzma"
     , "libbz2"
     , "libbsd"
+
+    -- for macOS:
     , "libtcmalloc"
+
+    -- for Windows:
+    , "libwinpthread-1.dll"
+    , "libstdc++-6.dll"
     ]
 
 isInteresting :: FilePath -> Bool
@@ -89,6 +95,17 @@ parseLddOut lddOut =
             [] -> []
             "=>":libPath:_ -> [libPath]
             _ -> error "unexpected break output"
+
+parseObjdumpOut :: String -> [FilePath]
+parseObjdumpOut objdumpOut =
+    lines objdumpOut >>= parseLine
+    <&> ("/msys64/mingw64/bin" ++)
+    & filter isInteresting
+    where
+        parseLine line =
+            case words line of
+            ["DLL", "Name:", x] -> [x]
+            _ -> []
 
 parseOtoolOut :: String -> [FilePath]
 parseOtoolOut otoolOut =
@@ -123,25 +140,36 @@ toPackage srcPath = toPackageWith srcPath (takeFileName srcPath)
 libToPackage :: FilePath -> IO ()
 libToPackage srcPath = toPackageWith srcPath ("lib" </> takeFileName srcPath)
 
-createTempDir :: FilePath -> IO a -> IO a
-createTempDir dir =
-    bracket_ (Dir.createDirectory dir) (Dir.removeDirectoryRecursive dir)
+findDeps :: String -> IO [FilePath]
+findDeps exec
+    | SysInfo.os == "mingw32" =
+        readProcess "/msys64/usr/bin/objdump" ["-p", exec] "" <&> parseObjdumpOut
+    | SysInfo.os == "darwin" =
+        findDylibs exec
+    | otherwise =
+        readProcess "ldd" [exec] "" <&> parseLddOut
 
 main :: IO ()
 main =
     do
         [lamduExec] <- Env.getArgs
-        dependencies <-
-            if SysInfo.os == "darwin"
-            then findDylibs lamduExec
-            else readProcess "ldd" [lamduExec] "" <&> parseLddOut
-        createTempDir pkgDir $ do
-            toPackageWith lamduExec "bin/lamdu"
+        dependencies <- findDeps lamduExec
+        bracket_ (Dir.createDirectory pkgDir) cleanup $ do
+            toPackageWith lamduExec "bin/lamdu.exe"
             toPackage "data"
             toPackage "tools/run-lamdu.sh"
             nodePath <- NodeJS.path
-            toPackageWith nodePath "data/bin/node"
+            toPackageWith nodePath "data/bin/node.exe"
             mapM_ libToPackage dependencies
-            if SysInfo.os == "darwin"
-                then callProcess "zip" ["-r", "lamdu.zip", pkgDir]
-                else callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
+            finalize
+    where
+        (finalize, cleanup)
+            | SysInfo.os == "mingw32" = (pure (), pure ())
+            | SysInfo.os == "darwin" =
+                ( callProcess "zip" ["-r", "lamdu.zip", pkgDir]
+                , Dir.removeDirectoryRecursive pkgDir
+                )
+            | otherwise =
+                ( callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
+                , Dir.removeDirectoryRecursive pkgDir
+                )
