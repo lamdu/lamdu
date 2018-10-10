@@ -6,8 +6,8 @@ mkDerivation {
   version = "0.2.0.0";
   src = fetchgit {
     url = "https://github.com/lamdu/FreetypeGL";
-    sha256 = "152qaxlzv0zq60z6hvbmrkax07m7iinqfdzvlk6k2wnrd737chhg";
-    rev = "286b75894e51b08b7c63f8845f045f66d27e9849";
+    sha256 = "1nkxbgskl8ldnw7i8bls1kf7a5p8cwph7vrpxqir3ka39g5i1p1n";
+    rev = "764e86ad05e8821799148cc1c26b316c0e679acb";
   };
   isLibrary = true;
   isExecutable = true;

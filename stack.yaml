@@ -18,7 +18,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
-    commit: 5a16cfb95490b3dbb019ff27a28ba4b63218d056
+    commit: 60c8daadacaef620865ca174c0f5c46607b5aab8
   extra-dep: True
 - location:
     git: https://github.com/lamdu/leveldb-haskell
@@ -26,7 +26,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/FreetypeGL
-    commit: 286b75894e51b08b7c63f8845f045f66d27e9849
+    commit: 764e86ad05e8821799148cc1c26b316c0e679acb
   extra-dep: True
 - location:
     git: https://github.com/lamdu/nodejs-exec
