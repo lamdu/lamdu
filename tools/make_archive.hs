@@ -71,10 +71,6 @@ interestingLibs =
 
     -- for macOS:
     , "libtcmalloc"
-
-    -- for Windows:
-    , "libwinpthread-1"
-    , "libstdc++-6"
     ]
 
 isInteresting :: FilePath -> Bool
@@ -95,17 +91,6 @@ parseLddOut lddOut =
             [] -> []
             "=>":libPath:_ -> [libPath]
             _ -> error "unexpected break output"
-
-parseObjdumpOut :: String -> [FilePath]
-parseObjdumpOut objdumpOut =
-    lines objdumpOut >>= parseLine
-    <&> ("/c/msys64/mingw64/bin/" ++)
-    & filter isInteresting
-    where
-        parseLine line =
-            case words line of
-            ["DLL", "Name:", x] -> [x]
-            _ -> []
 
 parseOtoolOut :: String -> [FilePath]
 parseOtoolOut otoolOut =
@@ -148,7 +133,12 @@ libToPackage srcPath =
 findDeps :: String -> IO [FilePath]
 findDeps exec
     | SysInfo.os == "mingw32" =
-        readProcess "/msys64/usr/bin/objdump" ["-p", exec] "" <&> parseObjdumpOut
+        [ "libwinpthread-1.dll"
+        , "libstdc++-6.dll"
+        , "libgcc_s_seh-1.dll"
+        ]
+        <&> ("/c/msys64/mingw64/bin/" ++)
+        & pure
     | SysInfo.os == "darwin" =
         findDylibs exec
     | otherwise =
