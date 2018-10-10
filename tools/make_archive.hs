@@ -4,6 +4,7 @@ import           Control.Exception (bracket_)
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
+import qualified System.Info as SysInfo
 import qualified System.NodeJS.Path as NodeJS
 import           System.Process (readProcess, callProcess)
 
@@ -67,6 +68,7 @@ interestingLibs =
     , "liblzma"
     , "libbz2"
     , "libbsd"
+    , "libtcmalloc"
     ]
 
 isInteresting :: FilePath -> Bool
@@ -80,6 +82,7 @@ parseLddOut :: String -> [FilePath]
 parseLddOut lddOut =
     lines lddOut
     >>= parseLine
+    & filter isInteresting
     where
         parseLine line =
             case words line & break (== "=>") & snd of
@@ -87,15 +90,30 @@ parseLddOut lddOut =
             "=>":libPath:_ -> [libPath]
             _ -> error "unexpected break output"
 
+parseOtoolOut :: String -> [FilePath]
+parseOtoolOut otoolOut =
+    lines otoolOut & tail <&> words >>= take 1
+    & filter isInteresting
+
+-- Use `otool` to recursively find macOS deps
+findDylibs :: FilePath -> IO [FilePath]
+findDylibs path =
+    do
+        deps <-
+            readProcess "otool" ["-L", path] ""
+            <&> parseOtoolOut
+            <&> filter (/= path)
+        traverse findDylibs deps <&> concat <&> (deps ++)
+
 pkgDir :: FilePath
-pkgDir = "lamdu"
+pkgDir = "lamdu-0.6.0"
 
 toPackageWith :: FilePath -> FilePath -> IO ()
 toPackageWith srcPath relPath =
     do
         putStrLn $ "Packaging " ++ srcPath ++ " to " ++ destPath
         Dir.createDirectoryIfMissing True (takeDirectory destPath)
-        callProcess "cp" ["-aLr", srcPath, destPath]
+        callProcess "cp" ["-aLR", srcPath, destPath]
     where
         destPath = pkgDir </> relPath
 
@@ -113,12 +131,17 @@ main :: IO ()
 main =
     do
         [lamduExec] <- Env.getArgs
-        dependencies <- readProcess "ldd" [lamduExec] "" <&> parseLddOut
+        dependencies <-
+            if SysInfo.os == "darwin"
+            then findDylibs lamduExec
+            else readProcess "ldd" [lamduExec] "" <&> parseLddOut
         createTempDir pkgDir $ do
             toPackageWith lamduExec "bin/lamdu"
             toPackage "data"
             toPackage "tools/run-lamdu.sh"
             nodePath <- NodeJS.path
             toPackageWith nodePath "data/bin/node"
-            filter isInteresting dependencies & mapM_ libToPackage
-            callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
+            mapM_ libToPackage dependencies
+            if SysInfo.os == "darwin"
+                then callProcess "zip" ["-r", "lamdu.zip", pkgDir]
+                else callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
