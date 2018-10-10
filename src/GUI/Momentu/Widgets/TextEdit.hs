@@ -119,8 +119,9 @@ makeInternal ::
 makeInternal s str emptyStrings mode myId =
     v
     & Align.tValue %~ Widget.fromView
-    & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter
-        ?~ enterFromDirection (v ^. Element.size) s str myId
+    & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter ?~
+        Widget.enterFuncAddVirtualCursor (Rect 0 (v ^. Element.size))
+        (enterFromDirection (v ^. Element.size) s str myId)
     where
         emptyColor = s ^. sEmptyStringsColors . mode
         (displayStr, setColor)
