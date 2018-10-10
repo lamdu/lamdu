@@ -12,7 +12,6 @@ module GUI.Momentu.Widgets.Menu.Search
     , addSearchTermStyle
     , addDelSearchTerm
     , searchTermEdit
-    , searchTermEditId
 
     , TermStyle(..), bgColors, emptyStrings, emptyStringsColors
     , HasTermStyle(..)

@@ -8,7 +8,6 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
@@ -104,20 +103,8 @@ make ::
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
-    do
-        selected <- GuiState.isSubCursor ?? myId
-        if selected
-            then
-                SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
-                (makeOptions readGlobals) Element.empty myId ?? Menu.Below
-            else
-                do
-                    color <-
-                        Lens.view (Theme.theme . Theme.searchTerm . SearchMenu.bgColors . TextEdit.unfocused)
-                    (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-                        <*> (TextView.make ?? "Goto" ?? Widget.toAnimId (SearchMenu.searchTermEditId myId))
-                        <&> Align.tValue %~
-                            Draw.backgroundColor (Widget.toAnimId myId <> ["bg"]) color
+    SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
+    (makeOptions readGlobals) Element.empty myId ?? Menu.Below
     & Reader.local (Theme.theme . Theme.searchTerm %~ onTermStyle)
     <&> \searchWidget -> StatusBar.StatusWidget
     { StatusBar._widget = searchWidget
