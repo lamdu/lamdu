@@ -157,7 +157,7 @@ main =
             when (SysInfo.os /= "mingw32") (toPackage "tools/run-lamdu.sh")
             nodePath <- NodeJS.path
             toPackageWith nodePath "data/bin/node.exe"
-            mapM_ libToPackage dependencies
+            traverse_ libToPackage dependencies
             if SysInfo.os == "linux"
                 then callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
                 else
