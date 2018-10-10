@@ -73,8 +73,8 @@ interestingLibs =
     , "libtcmalloc"
 
     -- for Windows:
-    , "libwinpthread-1.dll"
-    , "libstdc++-6.dll"
+    , "libwinpthread-1"
+    , "libstdc++-6"
     ]
 
 isInteresting :: FilePath -> Bool
@@ -99,7 +99,7 @@ parseLddOut lddOut =
 parseObjdumpOut :: String -> [FilePath]
 parseObjdumpOut objdumpOut =
     lines objdumpOut >>= parseLine
-    <&> ("/msys64/mingw64/bin" ++)
+    <&> ("/c/msys64/mingw64/bin/" ++)
     & filter isInteresting
     where
         parseLine line =
@@ -138,7 +138,12 @@ toPackage :: FilePath -> IO ()
 toPackage srcPath = toPackageWith srcPath (takeFileName srcPath)
 
 libToPackage :: FilePath -> IO ()
-libToPackage srcPath = toPackageWith srcPath ("lib" </> takeFileName srcPath)
+libToPackage srcPath =
+    toPackageWith srcPath (dir </> takeFileName srcPath)
+    where
+        dir
+            | SysInfo.os == "mingw32" = "."
+            | otherwise = "lib"
 
 findDeps :: String -> IO [FilePath]
 findDeps exec
@@ -155,14 +160,17 @@ main =
         [lamduExec] <- Env.getArgs
         dependencies <- findDeps lamduExec
         bracket_ (Dir.createDirectory pkgDir) cleanup $ do
-            toPackageWith lamduExec "bin/lamdu.exe"
+            toPackageWith lamduExec destPath
             toPackage "data"
-            toPackage "tools/run-lamdu.sh"
+            when (SysInfo.os /= "minw32") (toPackage "tools/run-lamdu.sh")
             nodePath <- NodeJS.path
             toPackageWith nodePath "data/bin/node.exe"
             mapM_ libToPackage dependencies
             finalize
     where
+        destPath
+            | SysInfo.os == "minw32" = "lamdu.exe"
+            | otherwise = "bin/lamdu"
         (finalize, cleanup)
             | SysInfo.os == "mingw32" = (pure (), pure ())
             | SysInfo.os == "darwin" =
