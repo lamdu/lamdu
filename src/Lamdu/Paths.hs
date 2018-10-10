@@ -26,13 +26,14 @@ searchPaths path =
 
 getDataFileNameMaybe :: FilePath -> IO (Maybe FilePath)
 getDataFileNameMaybe fileName =
-    flip traverse_ (searchPaths fileName)
+    traverse_
         (\mkSearchPath ->
         do
             path <- lift mkSearchPath
             exists <- Directory.doesFileExist path & lift
             when exists $ throwError path -- Early exit, not an error
         )
+        (searchPaths fileName)
     & runExceptT
     <&> either Just (\() -> Nothing)
 

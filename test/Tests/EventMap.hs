@@ -25,9 +25,8 @@ eventMap =
 
 test :: Test
 test =
-    do
-        assertEqual "Lookup" (Just (Doc ["D"])) (res <&> (^. dhDoc))
-        & testCase "event-map-lookup for char handlers"
+    assertEqual "Lookup" (Just (Doc ["D"])) (res <&> (^. dhDoc))
+    & testCase "event-map-lookup for char handlers"
     where
         res =
             lookup (pure Nothing) (charEvent 'X' GLFW.Key'X) eventMap
