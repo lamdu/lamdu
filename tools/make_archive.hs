@@ -1,6 +1,8 @@
 #!/usr/bin/env runhaskell
 
+import qualified Codec.Archive.Zip as Zip
 import           Control.Exception (bracket_)
+import qualified Data.ByteString.Lazy as LBS
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
@@ -149,25 +151,20 @@ main =
     do
         [lamduExec] <- Env.getArgs
         dependencies <- findDeps lamduExec
-        bracket_ (Dir.createDirectory pkgDir) cleanup $ do
+        bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $ do
             toPackageWith lamduExec destPath
             toPackage "data"
             when (SysInfo.os /= "mingw32") (toPackage "tools/run-lamdu.sh")
             nodePath <- NodeJS.path
             toPackageWith nodePath "data/bin/node.exe"
             mapM_ libToPackage dependencies
-            finalize
+            if SysInfo.os == "linux"
+                then callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
+                else
+                    Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
+                    <&> Zip.fromArchive
+                    >>= LBS.writeFile "lamdu.zip"
     where
         destPath
             | SysInfo.os == "mingw32" = "lamdu.exe"
             | otherwise = "bin/lamdu"
-        (finalize, cleanup)
-            | SysInfo.os == "mingw32" = (pure (), pure ())
-            | SysInfo.os == "darwin" =
-                ( callProcess "zip" ["-r", "lamdu.zip", pkgDir]
-                , Dir.removeDirectoryRecursive pkgDir
-                )
-            | otherwise =
-                ( callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
-                , Dir.removeDirectoryRecursive pkgDir
-                )
