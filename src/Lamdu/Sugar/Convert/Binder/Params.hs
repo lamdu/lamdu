@@ -653,11 +653,9 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
         tagsInOuterScope <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
-        presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
-        let presModeOrder tag = takeWhile (/= tag) presModeTags & length
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
-                | Just fields <- composite ^? orderedClosedFlatComposite <&> List.sortOn (presModeOrder . fst)
+                | Just fields <- composite ^? orderedClosedFlatComposite
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
@@ -665,7 +663,18 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 ->
                     if Set.null (tagsInOuterScope `Set.intersection` myTags)
                     then
-                        convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
+                        do
+                            presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
+                            paramList <-
+                                getP (Anchors.assocFieldParamList (lambdaPl ^. Input.stored . Property.pVal))
+                                <&> (^.. Lens._Just . traverse)
+                            let presModeOrder tag =
+                                    ( takeWhile (/= tag) presModeTags & length
+                                    , takeWhile (/= tag) paramList & length
+                                    )
+                            convertRecordParams mPresMode binderKind
+                                (fieldParams & List.sortOn (presModeOrder . fpTag))
+                                lambda lambdaPl
                     else
                         convertNonRecordParam binderKind lambda lambdaPl
                         <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
