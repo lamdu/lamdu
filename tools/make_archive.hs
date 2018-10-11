@@ -6,12 +6,12 @@ import qualified Data.ByteString.Lazy as LBS
 import           Lamdu.Version (VersionInfo(..), currentVersionInfo)
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
-import           System.FilePath ((</>), (<.>), takeFileName, takeDirectory)
+import           System.FilePath ((</>), takeFileName, takeDirectory)
 import qualified System.Info as SysInfo
 import qualified System.NodeJS.Path as NodeJS
 import           System.Process (readProcess, callProcess)
 
-import           Lamdu.Prelude hiding ((<.>))
+import           Lamdu.Prelude
 
 -- ldd example output:
 -- 	linux-vdso.so.1 (0x00007ffc97d9f000)
@@ -167,7 +167,12 @@ fixDylibPaths targetName =
                     ["-change", dep, "@executable_path/" ++ takeFileName dep, target]
 
 archiveName :: String
-archiveName = "lamdu-" ++ version currentVersionInfo
+archiveName =
+    "lamdu-" ++ version currentVersionInfo ++ archiveSuffix
+    where
+        archiveSuffix
+            | SysInfo.os == "linux" = ".tgz"
+            | otherwise = ".zip"
 
 main :: IO ()
 main =
@@ -190,11 +195,12 @@ main =
                     , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
                     ]
             if SysInfo.os == "linux"
-                then callProcess "tar" ["-c", "-z", "-f", archiveName <.> "tgz", pkgDir]
+                then callProcess "tar" ["-c", "-z", "-f", archiveName, pkgDir]
                 else
                     Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
                     <&> Zip.fromArchive
-                    >>= LBS.writeFile (archiveName <.> "zip")
+                    >>= LBS.writeFile archiveName
+        putStrLn $ "Done creating " ++ archiveName
     where
         destPath
             | SysInfo.os == "mingw32" = "lamdu.exe"
