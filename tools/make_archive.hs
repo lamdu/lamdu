@@ -3,14 +3,15 @@
 import qualified Codec.Archive.Zip as Zip
 import           Control.Exception (bracket_)
 import qualified Data.ByteString.Lazy as LBS
+import           Lamdu.Version (VersionInfo(..), currentVersionInfo)
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
-import           System.FilePath ((</>), takeFileName, takeDirectory)
+import           System.FilePath ((</>), (<.>), takeFileName, takeDirectory)
 import qualified System.Info as SysInfo
 import qualified System.NodeJS.Path as NodeJS
 import           System.Process (readProcess, callProcess)
 
-import           Lamdu.Prelude
+import           Lamdu.Prelude hiding ((<.>))
 
 -- ldd example output:
 -- 	linux-vdso.so.1 (0x00007ffc97d9f000)
@@ -165,6 +166,9 @@ fixDylibPaths targetName =
                 callProcess "install_name_tool"
                     ["-change", dep, "@executable_path/" ++ takeFileName dep, target]
 
+archiveName :: String
+archiveName = "lamdu-" ++ version currentVersionInfo
+
 main :: IO ()
 main =
     do
@@ -186,11 +190,11 @@ main =
                     , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
                     ]
             if SysInfo.os == "linux"
-                then callProcess "tar" ["-c", "-z", "-f", "lamdu.tgz", pkgDir]
+                then callProcess "tar" ["-c", "-z", "-f", archiveName <.> "tgz", pkgDir]
                 else
                     Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
                     <&> Zip.fromArchive
-                    >>= LBS.writeFile "lamdu.zip"
+                    >>= LBS.writeFile (archiveName <.> "zip")
     where
         destPath
             | SysInfo.os == "mingw32" = "lamdu.exe"
