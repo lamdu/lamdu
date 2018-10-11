@@ -2,7 +2,8 @@
 module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
     , Command(..), _DeleteDb, _Undo, _Editor
-    , Parsed(..), pCommand, pLamduDB
+    , CommandWithDb(..), cCommand, cLamduDB
+    , Parsed(..), _ParsedRequestVersion, _ParsedCommand
     , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath, jsDebugInteractivePath
     , get
     ) where
@@ -38,14 +39,17 @@ data Command
     | Export FilePath
     | Editor EditorOpts
 
-data Parsed = Parsed
-    { _pCommand :: Command
-    , _pLamduDB :: Maybe FilePath
+data CommandWithDb = CommandWithDb
+    { _cCommand :: Command
+    , _cLamduDB :: Maybe FilePath
     }
 
+data Parsed = ParsedRequestVersion | ParsedCommand CommandWithDb
+
+Lens.makeLenses ''CommandWithDb
 Lens.makeLenses ''EditorOpts
 Lens.makeLenses ''JSDebugPaths
-Lens.makeLenses ''Parsed
+Lens.makePrisms ''Parsed
 Lens.makePrisms ''Command
 
 subcommands :: P.Parser Command
@@ -129,14 +133,23 @@ windowMode =
     )
     <|> pure Maximized
 
-parser :: P.Parser Parsed
-parser =
-    Parsed
+commandWithDb :: P.Parser CommandWithDb
+commandWithDb =
+    CommandWithDb
     <$> command
     <*> optional
         (P.option P.str
             (P.metavar "PATH" <> P.long "lamduDB" <>
              P.help "Override path to lamdu DB"))
+
+requestVersion :: P.Parser Parsed
+requestVersion =
+    P.long "version" <>
+    P.help "Get the build's version information"
+    & P.flag' ParsedRequestVersion
+
+parser :: P.Parser Parsed
+parser = requestVersion <|> (ParsedCommand <$> commandWithDb)
 
 get :: IO Parsed
 get =

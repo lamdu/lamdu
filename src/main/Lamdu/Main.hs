@@ -14,10 +14,12 @@ import qualified Lamdu.Data.Export.JSON as Export
 import qualified Lamdu.Editor as Editor
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Paths as LamduPaths
+import           Lamdu.Version (currentVersionInfoStr)
 import qualified Lamdu.VersionControl as VersionControl
 import           Lamdu.VersionControl.Actions (mUndo)
 import qualified Revision.Deltum.Transaction as Transaction
 import qualified System.Directory as Directory
+import           System.Exit (ExitCode(..), exitSuccess)
 import           System.IO (hPutStrLn, stderr)
 
 import           Lamdu.Prelude
@@ -26,10 +28,17 @@ main :: HasCallStack => IO ()
 main =
     do
         setNumCapabilities =<< getNumProcessors
-        Opts.Parsed{_pLamduDB,_pCommand} <- Opts.get
-        lamduDir <- maybe LamduPaths.getLamduDir pure _pLamduDB
+        -- Print version info in any case, but --version below will
+        -- just exit afterwards
+        putStrLn currentVersionInfoStr
+        cmd <-
+            Opts.get >>=
+            \case
+            Opts.ParsedRequestVersion -> exitSuccess
+            Opts.ParsedCommand cmd -> pure cmd
+        lamduDir <- maybe LamduPaths.getLamduDir pure (cmd ^. Opts.cLamduDB)
         let withDB = Db.withDB lamduDir
-        case _pCommand of
+        case cmd ^. Opts.cCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)
             Opts.Import path -> withDB (importPath path)

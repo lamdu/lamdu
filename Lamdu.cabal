@@ -44,11 +44,13 @@ Executable lamdu
   hs-source-dirs: src/main
   default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   default-language: Haskell2010
-  build-depends: Lamdu, base, directory, ekg-core, filepath, lens, OpenGL, deepseq
+  build-depends: Lamdu, OpenGL, base, deepseq, directory, ekg-core, filepath, lens, process, template-haskell, time
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
   if flag(ekg)
     ghc-options: -with-rtsopts=-T
+  other-modules: Lamdu.Version
+               , System.Process.Git
 
 Test-Suite Tests
   type: exitcode-stdio-1.0

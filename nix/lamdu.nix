@@ -5,7 +5,7 @@
 , hashable, lamdu-calculus, language-ecmascript, lens, lens-aeson
 , leveldb-haskell, List, mtl, nodejs-exec, OpenGL
 , optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
-, split, StateVar, stdenv, stm, temporary, test-framework, test-framework-hunit
+, split, StateVar, stdenv, stm, temporary, template-haskell, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers, unordered-containers
 , uuid, uuid-types, vector, wl-pprint, yaml, zip-archive, HUnit
 }:
@@ -23,7 +23,7 @@ mkDerivation {
     graphics-drawingcombinators hashable HUnit lamdu-calculus
     language-ecmascript lens lens-aeson leveldb-haskell List mtl nodejs-exec
     OpenGL optparse-applicative pretty process random QuickCheck safe-exceptions
-    split StateVar stm temporary test-framework test-framework-hunit test-framework-quickcheck2
+    split StateVar stm temporary template-haskell test-framework test-framework-hunit test-framework-quickcheck2
     text time timeit transformers unordered-containers uuid uuid-types vector wl-pprint
     yaml zip-archive
   ];
