@@ -137,8 +137,16 @@ orderFunction =
     -- because it needs to be consistent with the presentation mode.
     Sugar.fBody orderBinder
 
+orderAssignmentBody ::
+    Monad m =>
+    Order m (Sugar.AssignmentBody name (T m) o (Ann (Sugar.Payload name i o a)))
+orderAssignmentBody (Sugar.BodyFunction x) =
+    orderFunction x <&> Sugar.BodyFunction
+orderAssignmentBody (Sugar.BodyPlain x) =
+    Sugar.apBody orderBinderBody x <&> Sugar.BodyPlain
+
 orderAssignment :: Monad m => Order m (Sugar.Assignment name (T m) o (Sugar.Payload name i o a))
-orderAssignment = (val . Sugar._BodyFunction) orderFunction
+orderAssignment = val orderAssignmentBody
 
 orderDef ::
     Monad m => Order m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))
