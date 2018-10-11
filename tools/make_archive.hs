@@ -71,6 +71,7 @@ interestingLibs =
     , "liblzma"
     , "libbz2"
     , "libbsd"
+    , "libGLEW"
 
     -- for macOS:
     , "libtcmalloc"
