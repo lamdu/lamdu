@@ -263,6 +263,9 @@ holeMatches searchTerm groups =
     <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
     where
         searchText = ValTerms.definitePart searchTerm
-        searchTerms group = group ^. groupSearchTerms >>= unicodeAlts
+        searchTerms group =
+            case group ^. groupSearchTerms of
+            [] -> [""]
+            terms -> terms >>= unicodeAlts
         isHoleResultOK =
             ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . SugarLens.binderResultExpr . Lens.asIndex)

@@ -59,7 +59,7 @@ mkOptions ::
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions sugarContext argI argS exprPl =
     Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
-    <&> (<> pure fragmentOptions)
+    <&> (pure fragmentOptions <>)
     <&> (\mkOpts -> Hole.addWithoutDups <$> mkOpts <*> mkSuggested)
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
