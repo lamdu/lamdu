@@ -662,11 +662,13 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
                 , let fieldParams = fields <&> makeFieldParam lambdaPl
-                -> if Set.null (tagsInOuterScope `Set.intersection` myTags)
-                   then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
-                   else
-                       convertNonRecordParam binderKind lambda lambdaPl
-                       <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
+                ->
+                    if Set.null (tagsInOuterScope `Set.intersection` myTags)
+                    then
+                        convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
+                    else
+                        convertNonRecordParam binderKind lambda lambdaPl
+                        <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
             _ -> convertNonRecordParam binderKind lambda lambdaPl
     where
         param = lambda ^. V.lamParamId
