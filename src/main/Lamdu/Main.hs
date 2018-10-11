@@ -35,9 +35,13 @@ main =
             Opts.Import path -> withDB (importPath path)
             Opts.Export path -> withDB (exportToPath path)
             Opts.Editor opts -> withDB (Editor.run opts)
-    `E.catch` \e@E.SomeException{} -> do
-    hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
-    whoCreated e >>= traverse_ (hPutStrLn stderr)
+        `E.catch` \e@E.SomeException{} ->
+        case E.fromException e of
+        Just ex -> E.throwIO (ex::ExitCode)
+        Nothing ->
+            do
+                hPutStrLn stderr $ "Main exiting due to exception: " ++ show e
+                whoCreated e >>= traverse_ (hPutStrLn stderr)
 
 deleteDB :: FilePath -> IO ()
 deleteDB lamduDir =
