@@ -223,7 +223,7 @@ Library
                   , Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.PrimVal
                   , Lamdu.Cache
-                  , Lamdu.Calc.Val.Utils
+                  , Lamdu.Calc.Term.Utils
                   , Lamdu.CharClassification
                   , Lamdu.Compiler.Flatten
                   , Lamdu.Config

@@ -1,4 +1,4 @@
-module Lamdu.Calc.Val.Utils
+module Lamdu.Calc.Term.Utils
     ( culledSubexprPayloads
     ) where
 

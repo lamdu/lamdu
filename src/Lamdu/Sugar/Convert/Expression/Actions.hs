@@ -9,7 +9,7 @@ import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Val.Utils (culledSubexprPayloads)
+import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
