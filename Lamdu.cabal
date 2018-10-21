@@ -225,7 +225,6 @@ Library
                   , Lamdu.Cache
                   , Lamdu.Calc.Term.Utils
                   , Lamdu.CharClassification
-                  , Lamdu.Compiler.Flatten
                   , Lamdu.Config
                   , Lamdu.Config.Sampler
                   , Lamdu.Config.Theme

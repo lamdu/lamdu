@@ -29,10 +29,10 @@ import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Term.Utils as Flatten
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Scheme (Scheme)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
-import qualified Lamdu.Compiler.Flatten as Flatten
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (WhichGlobal(..), encodeWhichGlobal)
