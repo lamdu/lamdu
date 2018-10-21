@@ -218,13 +218,16 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
         let moreEvents = zoomEventMap <> jumpToSourceEventMap
         helpEnv <- cHelpEnv config ?? env ^. eZoom & sequenceA
         w <- mkWidgetUnmemod env
-        if Widget.isFocused w
-            then pure w
-            else env
+        ( if Widget.isFocused w
+            then
+                pure w
+            else
+                env
                 & State.cursor .~ mempty
                 & mkWidgetUnmemod
                 >>= assertFocused
                 >>= showInvalidCursor (env ^. State.cursor)
+            )
             <&> Widget.eventMapMaker . Lens.mapped %~ (moreEvents <>)
             >>= maybe pure (addHelp ?? env ^. eWindowSize) helpEnv
     where
