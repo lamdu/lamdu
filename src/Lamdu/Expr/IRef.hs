@@ -2,7 +2,6 @@ module Lamdu.Expr.IRef
     ( ValI
     , ValBody
     , ValP
-    , Lam, Apply
     , newVar, readVal
     , writeValWithStoredSubexpressions
     , DefI
@@ -48,8 +47,6 @@ type ValI m = Node (IRef m) V.Term
 
 type ValP m = Property (T m) (ValI m)
 type ValBody m = V.Term (IRef m)
-type Lam m = V.Lam (ValI m)
-type Apply m = V.Apply (ValI m)
 
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
