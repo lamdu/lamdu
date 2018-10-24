@@ -60,8 +60,11 @@ mkExtractToDef exprPl =
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
             & DataOps.newPublicDefinitionWithPane (ctx ^. ConvertM.scCodeAnchors)
-        PostProcess.GoodExpr <-
-            PostProcess.def infer (ctx ^. ConvertM.scDebugMonitors) newDefI
+        PostProcess.def infer (ctx ^. ConvertM.scDebugMonitors) newDefI
+            >>=
+            \case
+            PostProcess.GoodExpr -> pure ()
+            _ -> error "Bug!"
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & Transaction.newIRef
         (exprPl ^. Input.stored . Property.pSet) getVarI
