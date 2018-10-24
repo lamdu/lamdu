@@ -25,13 +25,13 @@ curdate =
         formatTime defaultTimeLocale "%y-%m-%d" curTime & pure
         & runIO >>= stringE)
 
-rc :: String -> String
-rc ver = ver ++ "-rc-" ++ curdate
+_rc :: String -> String
+_rc ver = ver ++ "-rc-" ++ curdate
 
 currentVersionInfo :: VersionInfo
 currentVersionInfo =
     VersionInfo
-    { version = rc "0.6"
+    { version = "0.7"
     , gitCommit = $(Git.hash)
     , gitStatus = $(Git.status)
     , gitDirty = $(Git.dirty)
