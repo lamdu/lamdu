@@ -13,54 +13,6 @@ import           System.Process (readProcess, callProcess)
 
 import           Lamdu.Prelude
 
--- ldd example output:
--- 	linux-vdso.so.1 (0x00007ffc97d9f000)
--- 	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f5a328be000)
--- 	libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f5a326a1000)
--- 	libleveldb.so.1 => /usr/lib/x86_64-linux-gnu/libleveldb.so.1 (0x00007f5a32444000)
---      ...
--- 	/lib64/ld-linux-x86-64.so.2 (0x00007f5a32c5c000)
---      ...
--- 	libXau.so.6 => /usr/lib/x86_64-linux-gnu/libXau.so.6 (0x00007f5a2e134000)
--- 	libXdmcp.so.6 => /usr/lib/x86_64-linux-gnu/libXdmcp.so.6 (0x00007f5a2df2e000)
--- 	libbsd.so.0 => /lib/x86_64-linux-gnu/libbsd.so.0 (0x00007f5a2dd19000)
-
--- full listing of ldd deps that have files:
---   libm
---   libz
---   libleveldb
---   libGLEW
---   libGLU
---   libGL
---   libX11
---   libXi
---   libXrandr
---   libXxf86vm
---   libXcursor
---   libXinerama
---   libpthread
---   librt
---   libutil
---   libdl
---   libgmp
---   libelf
---   libdw
---   libc
---   libsnappy
---   libstdc++
---   libgcc
---   libGLX
---   libGLdispatch
---   libxcb
---   libXext
---   libXrender
---   libXfixes
---   liblzma
---   libbz2
---   libXau
---   libXdmcp
---   libbsd
-
 interestingLibs :: [String]
 interestingLibs =
     [ "libleveldb"
