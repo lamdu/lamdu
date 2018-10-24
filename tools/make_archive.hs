@@ -3,7 +3,6 @@
 import qualified Codec.Archive.Zip as Zip
 import           Control.Exception (bracket_)
 import qualified Data.ByteString.Lazy as LBS
-import           Lamdu.Version (VersionInfo(..), currentVersionInfo)
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
@@ -119,18 +118,25 @@ fixDylibPaths targetName =
                 callProcess "install_name_tool"
                     ["-change", dep, "@executable_path/" ++ takeFileName dep, target]
 
-archiveName :: String
-archiveName =
-    "lamdu-" ++ version currentVersionInfo ++ archiveSuffix
-    where
-        archiveSuffix
-            | SysInfo.os == "linux" = ".tgz"
-            | otherwise = ".zip"
+archiveSuffix :: String
+archiveSuffix
+    | SysInfo.os == "linux" = ".tgz"
+    | otherwise = ".zip"
+
+parseLamduVersion :: String -> String
+parseLamduVersion info =
+    case lines info <&> words of
+    (["Lamdu", result]:_) -> result
+    _ -> error "failed parsing version number"
 
 main :: IO ()
 main =
     do
         [lamduExec] <- Env.getArgs
+        version <-
+            readProcess lamduExec ["--version"] ""
+            <&> parseLamduVersion
+        let archiveName = "lamdu-" ++ version ++ archiveSuffix
         dependencies <- findDeps lamduExec
         bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $ do
             toPackageWith lamduExec destPath
