@@ -554,7 +554,7 @@ slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId argVal =
 listenNoTellLogUsed :: Monad m => M m a -> M m (a, LogUsed)
 listenNoTellLogUsed = censor (const LogUnused) . listen
 
-compileLambda :: Monad m => V.Lam (Val ValId) -> ValId -> M m CodeGen
+compileLambda :: Monad m => V.Lam (Ann ValId) -> ValId -> M m CodeGen
 compileLambda (V.Lam v res) valId =
     Lens.view envMode
     >>= \case

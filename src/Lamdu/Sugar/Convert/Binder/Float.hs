@@ -11,7 +11,6 @@ import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Vars as TV
@@ -76,7 +75,7 @@ moveToGlobalScope =
         -- extraction/generalization of the inner type
         postProcess
 
-isVarAlwaysApplied :: V.Lam (Val a) -> Bool
+isVarAlwaysApplied :: V.Lam (Ann a) -> Bool
 isVarAlwaysApplied (V.Lam var x) =
     go False x
     where
@@ -101,7 +100,7 @@ convertLetToLam var redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> V.Lam (Val (ValP m)) -> T m ()
+    V.Var -> T.Tag -> V.Lam (Ann (ValP m)) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
@@ -113,7 +112,7 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> V.Lam (Val (ValP m)) -> Params.StoredLam m ->
+    V.Var -> V.Lam (Ann (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (ValP m))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
@@ -135,7 +134,7 @@ convertLetParamToRecord var letLam storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> V.Lam (Val (ValP m)) -> Params.StoredLam m ->
+    [T.Tag] -> V.Var -> V.Lam (Ann (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (ValP m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>

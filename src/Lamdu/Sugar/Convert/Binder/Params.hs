@@ -68,7 +68,7 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: V.Lam (Val (ValP m))
+    { _slLam :: V.Lam (Ann (ValP m))
     , _slLambdaProp :: ValP m
     }
 Lens.makeLenses ''StoredLam
@@ -77,11 +77,11 @@ slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . Property.pVal)
 
 mkStoredLam ::
-    V.Lam (Val (Input.Payload m a)) ->
+    V.Lam (Ann (Input.Payload m a)) ->
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam <&> annotations %~ (^. Input.stored))
+    (lam & V.lamResult . annotations %~ (^. Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -186,11 +186,11 @@ getFieldOnVar = val . V._BGetField . inGetField
         pack pl (v, t) =
             V.GetField (Ann pl (V.BLeaf (V.LVar v))) t
 
-getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Val (ValP m)) -> T m ()
+getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Ann (ValP m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-getFieldParamsToParams :: Monad m => V.Lam (Val (ValP m)) -> T.Tag -> T m ()
+getFieldParamsToParams :: Monad m => V.Lam (Ann (ValP m)) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
@@ -355,7 +355,7 @@ convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
+    V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
@@ -558,7 +558,7 @@ mkFuncParam entityId lamExprPl info =
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->
-    V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
+    V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
@@ -603,7 +603,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     where
         storedLam = mkStoredLam lam lamExprPl
 
-isParamAlwaysUsedWithGetField :: V.Lam (Val a) -> Bool
+isParamAlwaysUsedWithGetField :: V.Lam (Ann a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param bod) =
     go False bod
     where
@@ -626,7 +626,7 @@ postProcessActions post x
 
 convertLamParams ::
     Monad m =>
-    V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
+    V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
@@ -646,7 +646,7 @@ makeFieldParam lambdaPl (tag, typeExpr) =
 convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
-    BinderKind m -> V.Lam (Val (Input.Payload m a)) -> Input.Payload m a ->
+    BinderKind m -> V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do

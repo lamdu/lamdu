@@ -17,7 +17,7 @@ import           Lamdu.Prelude
 
 data Redex a = Redex
     { _bodyScope :: EvalScopes ScopeId
-    , _lam :: V.Lam (Val a)
+    , _lam :: V.Lam (Ann a)
     , _lamPl :: a
     , _paramRefs :: [EntityId]
     , _arg :: Val a

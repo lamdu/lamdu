@@ -40,7 +40,7 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    V.Lam (Val (Input.Payload m a)) -> T m ()
+    V.Lam (Ann (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
 
@@ -119,7 +119,7 @@ convertLet float pl redex =
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            <&> annotations %~ (^. Input.stored)
+            & V.lamResult . annotations %~ (^. Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
@@ -211,7 +211,7 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    V.Lam (Val (Input.Payload m a)) ->
+    V.Lam (Ann (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam exprPl =
     do
@@ -231,7 +231,7 @@ convertLam lam exprPl =
                     & fBody %~ markBinderLightParams paramNames
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
-            & addActions lam exprPl
+            & addActions (lam ^.. V.lamResult) exprPl
             <&> val . SugarLens.bodyChildPayloads .
                 pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
 
