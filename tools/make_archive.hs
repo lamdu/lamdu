@@ -118,11 +118,6 @@ fixDylibPaths targetName =
                 callProcess "install_name_tool"
                     ["-change", dep, "@executable_path/" ++ takeFileName dep, target]
 
-archiveSuffix :: String
-archiveSuffix
-    | SysInfo.os == "linux" = ".tgz"
-    | otherwise = ".zip"
-
 parseLamduVersion :: String -> String
 parseLamduVersion info =
     case lines info <&> words of
@@ -136,7 +131,6 @@ main =
         version <-
             readProcess lamduExec ["--version"] ""
             <&> parseLamduVersion
-        let archiveName = "lamdu-" ++ version ++ archiveSuffix
         dependencies <- findDeps lamduExec
         bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $ do
             toPackageWith lamduExec destPath
@@ -153,13 +147,19 @@ main =
                     , "tools/data/Lamdu.png"
                     , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
                     ]
-            if SysInfo.os == "linux"
-                then callProcess "tar" ["-c", "-z", "-f", archiveName, pkgDir]
-                else
-                    Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
-                    <&> Zip.fromArchive
-                    >>= LBS.writeFile archiveName
-        putStrLn $ "Done creating " ++ archiveName
+            let finalize
+                    | SysInfo.os == "linux" =
+                        callProcess "tar"
+                        ["-c", "-z", "-f", "lamdu-" ++ version ++ ".tgz", pkgDir]
+                    | SysInfo.os == "mingw32" =
+                        callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe"
+                        ["/FLamdu-" ++ version ++ "-Setup", "tools\\data\\lamdu.iss"]
+                    | otherwise =
+                        Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
+                        <&> Zip.fromArchive
+                        >>= LBS.writeFile ("lamdu-" ++ version ++ ".zip")
+            finalize
+        putStrLn "Done"
     where
         destPath
             | SysInfo.os == "mingw32" = "lamdu.exe"
