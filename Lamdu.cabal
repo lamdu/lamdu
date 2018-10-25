@@ -259,6 +259,7 @@ Library
                   , Lamdu.Editor.Settings
                   , Lamdu.Eval.JS
                   , Lamdu.Eval.JS.Compiler
+                  , Lamdu.Eval.JS.Types
                   , Lamdu.Eval.Manager
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process

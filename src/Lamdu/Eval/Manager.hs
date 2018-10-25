@@ -27,7 +27,6 @@ import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Opts as Opts
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 import           Revision.Deltum.IRef (IRef)
@@ -49,7 +48,7 @@ data NewParams = NewParams
     { resultsUpdated :: IO ()
     -- ^ Callback for notifying that new evaluation results are available.
     , dbMVar :: MVar (Maybe (Transaction.Store DbM))
-    , jsDebugPaths :: Opts.JSDebugPaths FilePath
+    , jsDebugPaths :: Eval.JSDebugPaths FilePath
     }
 
 data Evaluator = Evaluator

@@ -4,7 +4,6 @@ module Lamdu.Opts
     , Command(..), _DeleteDb, _Undo, _Editor
     , CommandWithDb(..), cCommand, cLamduDB
     , Parsed(..), _ParsedRequestVersion, _ParsedCommand
-    , JSDebugPaths(..), jsDebugCodePath, jsDebugNodeOutputPath, jsDebugInteractivePath
     , get
     ) where
 
@@ -13,16 +12,11 @@ import qualified Control.Lens as Lens
 import           Data.List.Split (splitOn)
 import           Data.Word (Word16)
 import           GUI.Momentu (WindowMode(..))
+import           Lamdu.Eval.JS.Types (JSDebugPaths(..))
 import           Options.Applicative ((<|>))
 import qualified Options.Applicative as P
 
 import           Lamdu.Prelude
-
-data JSDebugPaths a = JSDebugPaths
-    { _jsDebugCodePath :: Maybe a
-    , _jsDebugNodeOutputPath :: Maybe a
-    , _jsDebugInteractivePath :: Maybe a
-    } deriving (Functor, Foldable, Traversable)
 
 data EditorOpts = EditorOpts
     { _eoWindowMode :: WindowMode
@@ -48,7 +42,6 @@ data Parsed = ParsedRequestVersion | ParsedCommand CommandWithDb
 
 Lens.makeLenses ''CommandWithDb
 Lens.makeLenses ''EditorOpts
-Lens.makeLenses ''JSDebugPaths
 Lens.makePrisms ''Parsed
 Lens.makePrisms ''Command
 

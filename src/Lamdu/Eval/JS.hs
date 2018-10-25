@@ -2,7 +2,8 @@
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
-    ( Evaluator
+    ( module Lamdu.Eval.JS.Types
+    , Evaluator
     , Actions(..), aLoadGlobal, aReportUpdatesAvailable
     , start, stop, executeReplIOProcess
     , Dependencies(..), whilePaused
@@ -45,9 +46,9 @@ import           Lamdu.Data.Anchors (anonTag)
 import           Lamdu.Data.Definition (Definition)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.JS.Compiler as Compiler
+import           Lamdu.Eval.JS.Types
 import           Lamdu.Eval.Results (ScopeId(..), EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
-import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Paths as Paths
 import           Numeric (readHex)
 import           System.Environment (getEnvironment)
@@ -64,7 +65,7 @@ import           Lamdu.Prelude
 data Actions srcId = Actions
     { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
     , _aReportUpdatesAvailable :: IO ()
-    , _aJSDebugPaths :: Opts.JSDebugPaths FilePath
+    , _aJSDebugPaths :: JSDebugPaths FilePath
     }
 Lens.makeLenses ''Actions
 
@@ -378,11 +379,11 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
             \(Just stdin, Just stdout, Nothing, _handle) ->
             withJSDebugHandles (actions ^. aJSDebugPaths) $ \jsHandles ->
             do
-                let handlesJS = lamduOutputHandle : jsHandles ^.. Opts.jsDebugCodePath . Lens._Just
+                let handlesJS = lamduOutputHandle : jsHandles ^.. jsDebugCodePath . Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
                 let flushJS = traverse_ hFlush handlesJS
                 let handleEvent = processEvent fromUUID resultsRef actions
-                let nodeOutputHandle = jsHandles ^. Opts.jsDebugNodeOutputPath
+                let nodeOutputHandle = jsHandles ^. jsDebugNodeOutputPath
                 let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
                 withForkedIO processOutput $
                     do
@@ -398,7 +399,7 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
                                 do
                                     flushedOutput stdin msg
                                     traverse_ (`flushedOutput` msg)
-                                        (jsHandles ^. Opts.jsDebugInteractivePath)
+                                        (jsHandles ^. jsDebugInteractivePath)
                         "'use strict';\n" ++
                             "var repl = require(" ++ show lamduOutputPath ++ ");"
                             & outputInteractive
