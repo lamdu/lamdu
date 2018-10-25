@@ -62,9 +62,19 @@ findDylibs path =
             <&> filter (/= path)
         traverse findDylibs deps <&> concat <&> (deps ++)
 
+-- Slightly nicer syntax than using a sum type with case everywhere
+isMacOS :: Bool
+isMacOS = SysInfo.os == "darwin"
+
+isWindows :: Bool
+isWindows = SysInfo.os == "mingw32"
+
+isLinux :: Bool
+isLinux = SysInfo.os == "linux"
+
 pkgDir :: FilePath
 pkgDir
-    | SysInfo.os == "darwin" = "Lamdu.app"
+    | isMacOS = "Lamdu.app"
     | otherwise = "lamdu"
 
 toPackageWith :: FilePath -> FilePath -> IO ()
@@ -76,7 +86,7 @@ toPackageWith srcPath relPath =
     where
         destPath = contentsDir </> relPath
         contentsDir
-            | SysInfo.os == "darwin" = pkgDir </> "Contents"
+            | isMacOS = pkgDir </> "Contents"
             | otherwise = pkgDir
 
 toPackage :: FilePath -> IO ()
@@ -88,20 +98,20 @@ libToPackage srcPath =
     where
         filename = takeFileName srcPath
         dir
-            | SysInfo.os == "mingw32" = "."
-            | SysInfo.os == "darwin" = "MacOS"
+            | isWindows = "."
+            | isMacOS = "MacOS"
             | otherwise = "lib"
 
 findDeps :: String -> IO [FilePath]
 findDeps exec
-    | SysInfo.os == "mingw32" =
+    | isWindows =
         [ "libwinpthread-1.dll"
         , "libstdc++-6.dll"
         , "libgcc_s_seh-1.dll"
         ]
         <&> ("/c/msys64/mingw64/bin/" ++)
         & pure
-    | SysInfo.os == "darwin" =
+    | isMacOS =
         findDylibs exec
     | otherwise =
         readProcess "ldd" [exec] "" <&> parseLddOut
@@ -138,8 +148,8 @@ main =
             nodePath <- NodeJS.path
             toPackageWith nodePath (dataDir </> "bin/node.exe")
             traverse_ libToPackage dependencies
-            when (SysInfo.os == "linux") (toPackage "tools/data/run-lamdu.sh")
-            when (SysInfo.os == "darwin") $ do
+            when isLinux (toPackage "tools/data/run-lamdu.sh")
+            when isMacOS $ do
                 toPackage "tools/data/Info.plist"
                 traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
                 callProcess "sh"
@@ -148,10 +158,10 @@ main =
                     , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
                     ]
             let finalize
-                    | SysInfo.os == "linux" =
+                    | isLinux =
                         callProcess "tar"
                         ["-c", "-z", "-f", "lamdu-" ++ version ++ ".tgz", pkgDir]
-                    | SysInfo.os == "mingw32" =
+                    | isWindows =
                         callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe"
                         ["/FLamdu-" ++ version ++ "-Setup", "tools\\data\\lamdu.iss"]
                     | otherwise =
@@ -162,9 +172,9 @@ main =
         putStrLn "Done"
     where
         destPath
-            | SysInfo.os == "mingw32" = "lamdu.exe"
-            | SysInfo.os == "darwin" = "MacOS/lamdu"
+            | isWindows = "lamdu.exe"
+            | isMacOS = "MacOS/lamdu"
             | otherwise = "bin/lamdu"
         dataDir
-            | SysInfo.os == "darwin" = "Resources"
+            | isMacOS = "Resources"
             | otherwise = "data"
