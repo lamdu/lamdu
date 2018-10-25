@@ -10,8 +10,7 @@ module Lamdu.Style
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Font (Font)
-import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.Main.Animation (AnimConfig(..))
+import qualified GUI.Momentu.Main.Types as MainLoop
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -82,7 +81,7 @@ mainLoopConfig getFontInfo getConfig =
     { cAnim =
         getConfig
         <&> \(_config, theme) ->
-        AnimConfig
+        MainLoop.AnimConfig
         { acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
         , acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
         }

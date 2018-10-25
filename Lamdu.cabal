@@ -188,6 +188,7 @@ Library
                   , GUI.Momentu.Main
                   , GUI.Momentu.Main.Animation
                   , GUI.Momentu.Main.Image
+                  , GUI.Momentu.Main.Types
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
                   , GUI.Momentu.Rect

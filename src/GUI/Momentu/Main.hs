@@ -27,6 +27,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.Main.Animation (PerfCounters(..))
+import           GUI.Momentu.Main.Types (AnimConfig(..), Config(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -44,14 +45,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events as GLFWE
 
 import           Lamdu.Prelude
-
-data Config = Config
-    { cAnim :: IO MainAnim.AnimConfig
-    , cCursor :: Zoom -> IO Cursor.Config
-    , cZoom :: IO Zoom.Config
-    , cHelpEnv :: Maybe (Zoom -> IO EventMapHelp.Env)
-    , cInvalidCursorOverlayColor :: IO Draw.Color
-    }
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -95,7 +88,7 @@ defaultOptions helpFontPath =
             { tickHandler = pure False
             , config = Config
                 { cAnim =
-                    pure MainAnim.AnimConfig
+                    pure AnimConfig
                     { MainAnim.acTimePeriod = 0.11
                     , MainAnim.acRemainingRatioInPeriod = 0.2
                     }

@@ -8,7 +8,7 @@ module GUI.Momentu.Main.Animation
     , wakeUp
     ) where
 
-import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO)
+import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO, threadDelay)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
 import           Control.DeepSeq (force)
 import           Control.Exception (evaluate, onException)
@@ -18,11 +18,13 @@ import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
+import           GHC.Conc.Sync (unsafeIOToSTM)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
 import           GUI.Momentu.Main.Image (PerfCounters(..))
 import qualified GUI.Momentu.Main.Image as MainImage
+import           GUI.Momentu.Main.Types (AnimConfig(..))
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events (Event)
 
@@ -68,11 +70,6 @@ data ThreadVars = ThreadVars
     , toAnimVar :: TVar ToAnim
     }
 
-data AnimConfig = AnimConfig
-    { acTimePeriod :: NominalDiffTime
-    , acRemainingRatioInPeriod :: Anim.R
-    }
-
 newtype EventResult = EventResult
     { erUpdate :: Monoid.Any
     }
@@ -105,15 +102,16 @@ waitForEvent :: TVar EventsData -> IO EventsData
 waitForEvent eventTVar =
     do
         ed <- readTVar eventTVar
-        when (not (ed ^. edHaveTicks) &&
-              not (ed ^. edRefreshRequested) &&
-              null (ed ^. edReversedEvents))
-            STM.retry
+        STM.check
+            ((ed ^. edHaveTicks) ||
+             (ed ^. edRefreshRequested) ||
+             (not . null) (ed ^. edReversedEvents))
         ed
             & edHaveTicks .~ False
             & edRefreshRequested .~ False
             & edReversedEvents .~ []
             & writeTVar eventTVar
+        unsafeIOToSTM (threadDelay 400000)
         pure ed
     & STM.atomically
 

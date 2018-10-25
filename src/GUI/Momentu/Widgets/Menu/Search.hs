@@ -34,7 +34,7 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
-import           GUI.Momentu (TextWidget, View)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -46,6 +46,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import           GUI.Momentu.State (HasState(..), Gui)
 import qualified GUI.Momentu.State as State
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (Id(..), joinId)
 import qualified GUI.Momentu.Widgets.Menu as Menu
