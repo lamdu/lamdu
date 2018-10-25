@@ -8,7 +8,7 @@ module GUI.Momentu.Main.Animation
     , wakeUp
     ) where
 
-import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO, threadDelay)
+import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
 import           Control.DeepSeq (force)
 import           Control.Exception (evaluate, onException)
@@ -18,7 +18,6 @@ import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
-import           GHC.Conc.Sync (unsafeIOToSTM)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
@@ -111,7 +110,6 @@ waitForEvent eventTVar =
             & edRefreshRequested .~ False
             & edReversedEvents .~ []
             & writeTVar eventTVar
-        unsafeIOToSTM (threadDelay 400000)
         pure ed
     & STM.atomically
 
