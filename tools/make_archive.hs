@@ -160,7 +160,7 @@ main =
             let finalize
                     | isLinux =
                         callProcess "tar"
-                        ["-c", "-z", "-f", "lamdu-" ++ version ++ ".tgz", pkgDir]
+                        ["-c", "-z", "-f", "lamdu-" ++ version ++ "-linux.tgz", pkgDir]
                     | isWindows =
                         callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe"
                         ["/FLamdu-" ++ version ++ "-Setup", "tools\\data\\lamdu.iss"]
