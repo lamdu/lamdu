@@ -41,10 +41,16 @@ Optional: Install NodeJS from node's apt repository:
 
 ```shell
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-sudo apt-get install -y nodejs
+NODE=`apt-cache policy nodejs | egrep -v "Installed" | egrep -o "(6\..*nodesource\w*)"`
+echo "About to install node version" $NODE
 ```
+... check it outputs something like `About to install node version 6.14.1-1nodesource1`, and then run:
+```shell
+sudo apt-get install -y nodejs=$NODE
+```
+Run `node -v` to check you've ended up with a 6.x release rather than 8.x or later.
 
-requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above)
+Then to install lamdu - requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above):
 
 ```shell
 sudo apt-get update -qq
