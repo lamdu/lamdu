@@ -90,17 +90,15 @@ translate (x : xs) state =
     RawWindowClose -> simple EventWindowClose
     RawWindowRefresh -> simple EventWindowRefresh
     RawDropPaths paths -> simple (EventDropPaths paths)
-    RawCharEvent _ ->
-        -- Skip char events here as they are processed together with the
-        -- key events that immediately precede them.
-        translate xs state
+    RawCharEvent ch ->
+        case fromChar ch of
+        Nothing -> translate xs state
+        c ->
+            simple $ EventKey $
+            KeyEvent GLFW.Key'Unknown 0 GLFW.KeyState'Pressed
+            (GLFW.ModifierKeys False False False False) c
     RawKeyEvent key scanCode keyState modKeys ->
-        case xs of
-        RawCharEvent char : _ -> eventKey (fromChar char)
-        _ -> eventKey Nothing
-        where
-            eventKey ch =
-                simple $ EventKey $ KeyEvent key scanCode keyState modKeys ch
+        simple $ EventKey $ KeyEvent key scanCode keyState modKeys Nothing
     RawFrameBufferSize size ->
         (EventFrameBufferSize size : ne, ns)
         where
