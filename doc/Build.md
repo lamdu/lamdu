@@ -41,14 +41,12 @@ Optional: Install NodeJS from node's apt repository:
 
 ```shell
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+NODE=`apt-cache policy nodejs | egrep -v "Installed" | egrep -o "(6\..*nodesource\w*)"`
+echo "About to install node version" $NODE
 ```
-...and check which version of node you're getting, with:
+... check it outputs something like `About to install node version 6.14.1-1nodesource1`, and then run:
 ```shell
-apt-cache policy nodejs
-```
-...and substitute appropriately for `6.14.1-1nodesource1` in the following command:
-```shell
-sudo apt-get install -y nodejs=6.14.1-1nodesource1
+sudo apt-get install -y nodejs=$NODE
 ```
 Run `node -v` to check you've ended up with a 6.x release rather than 8.x or later.
 
