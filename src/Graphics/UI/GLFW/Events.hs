@@ -6,6 +6,7 @@ module Graphics.UI.GLFW.Events
     , Next(..)
     ) where
 
+import qualified Control.Concurrent as Concurrent
 import qualified Control.Exception as E
 import           Control.Monad (when)
 import           Data.IORef.Extended
@@ -140,7 +141,16 @@ eventLoop win eventsHandler =
             <*> (uncurry Vector2 <$> GLFW.getWindowSize win)
             >>= newIORef
 
-        let addEvent event = atomicModifyIORef_ eventsVar (event:)
+        let debug str =
+                do
+                    tid <- Concurrent.myThreadId
+                    putStrLn $ show tid ++ ": " ++ str
+        let debugAround name =
+                E.bracket_ (debug (name ++ " {")) (debug ("} // " ++ name))
+        let addEvent event =
+                do
+                    debug $ "addEvent " ++ show event
+                    atomicModifyIORef_ eventsVar (event:)
             addKeyEvent key scanCode keyState modKeys =
                 addEvent $ RawKeyEvent key scanCode keyState modKeys
             addMouseButtonEvent button buttonState modKeys =
@@ -152,6 +162,7 @@ eventLoop win eventsHandler =
                     let handleReversedEvents rEvents = ([], reverse rEvents)
                     rawEvents <-
                         atomicModifyIORef eventsVar handleReversedEvents
+                    debug $ "Read raw events: " ++ show rawEvents
                     oldState <- readIORef eventProcessingStateRef
                     let (events, newState) = translate rawEvents oldState
                     writeIORef eventProcessingStateRef newState
@@ -159,11 +170,11 @@ eventLoop win eventsHandler =
                     case next of
                         NextWait ->
                             do
-                                GLFW.waitEvents
+                                debugAround "waitEvents" GLFW.waitEvents
                                 loop
                         NextPoll ->
                             do
-                                GLFW.pollEvents
+                                debugAround "pollEvents" GLFW.pollEvents
                                 loop
                         NextQuit -> pure ()
 
