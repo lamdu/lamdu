@@ -4,8 +4,8 @@ mkDerivation {
   version = "0.1.0.0";
   src = fetchgit {
     url = "https://github.com/lamdu/nodejs-exec";
-    sha256 = "0fzp136gm7i10drflwdc25cnz8fg902i31f6kczr6x3cvkl1p6ym";
-    rev = "3635e2f4270bd5325fbada17af95f46fcde641cf";
+    sha256 = "0zaf0z8845mvpk6dcvfickjx34mh4w92myrf5vnbkk6nsm727qhz";
+    rev = "6a8b5c7897b822f523414fe2c0e666ecb8d4ab4b";
   };
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [ base ];

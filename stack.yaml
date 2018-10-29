@@ -30,7 +30,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/nodejs-exec
-    commit: 3635e2f4270bd5325fbada17af95f46fcde641cf
+    commit: 6a8b5c7897b822f523414fe2c0e666ecb8d4ab4b
   extra-dep: True
 - location:
     git: https://github.com/lamdu/GLFW-b
