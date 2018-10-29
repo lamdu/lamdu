@@ -163,11 +163,13 @@ main =
                         ["-c", "-z", "-f", "lamdu-" ++ version ++ "-linux.tgz", pkgDir]
                     | isWindows =
                         callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe"
-                        ["/FLamdu-" ++ version ++ "-Setup", "tools\\data\\lamdu.iss"]
-                    | otherwise =
+                        ["/Flamdu-" ++ version ++ "-win-setup", "tools\\data\\lamdu.iss"]
+                    | isMacOS =
                         Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
                         <&> Zip.fromArchive
-                        >>= LBS.writeFile ("lamdu-" ++ version ++ ".zip")
+                        >>= LBS.writeFile ("lamdu-" ++ version ++ "-macOS.zip")
+                    | otherwise =
+                        error "Unknown platform!"
             finalize
         putStrLn "Done"
     where
