@@ -241,9 +241,7 @@ lookup getClipboard event x =
     Events.EventChar c ->
         lookupCharGroup charGroups c <|> lookupAllCharHandler allCharHandlers c & pure
     Events.EventKey k ->
-        case lookupKeyMap getClipboard dict k of
-        Just action -> action
-        Nothing -> pure Nothing
+        fromMaybe (pure Nothing) (lookupKeyMap getClipboard dict k)
     _ -> pure Nothing
     where
         EventMap dict _dropHandlers charGroups allCharHandlers = x
