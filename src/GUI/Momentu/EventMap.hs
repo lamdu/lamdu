@@ -19,6 +19,7 @@ module GUI.Momentu.EventMap
       emKeyMap, dhDoc, dhFileLocation, dhHandler
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)
@@ -237,9 +238,7 @@ lookup _ (Events.EventDropPaths paths) x =
             dh ^. dropDocHandler & dhHandler %~ ($ paths) & sequenceA
 lookup getClipboard (Events.EventKey event) x
     | Just action <- lookupKeyMap getClipboard dict event = action
-    | Just res <- lookupCharGroup charGroups event = pure (Just res)
-    | Just res <- lookupAllCharHandler allCharHandlers event = pure (Just res)
-    | otherwise = pure Nothing
+    | otherwise = lookupCharGroup charGroups event <|> lookupAllCharHandler allCharHandlers event & pure
     where
         EventMap dict _dropHandlers charGroups allCharHandlers = x
 lookup _ _ _ = pure Nothing
