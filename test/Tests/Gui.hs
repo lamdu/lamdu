@@ -150,7 +150,6 @@ simpleKeyEvent key =
     , keScanCode = 0 -- dummy
     , keModKeys = mempty
     , keState = GLFW.KeyState'Pressed
-    , keChar = Nothing
     }
 
 dummyVirt :: VirtualCursor
@@ -218,13 +217,7 @@ testOpPrec =
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea cache
-        _ <- EventKey KeyEvent
-            { keKey = GLFW.Key'7
-            , keScanCode = 0 -- dummy
-            , keModKeys = GLFW.ModifierKeys True False False False
-            , keState = GLFW.KeyState'Pressed
-            , keChar = Just '&'
-            } & applyEvent cache (baseEnv & cursor .~ holeId) dummyVirt
+        _ <- applyEvent cache (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
         workArea' <- convertWorkArea cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
@@ -318,7 +311,6 @@ testTabNavigation cache env virtCursor =
                     , keScanCode = 0 -- dummy
                     , keModKeys = mempty { GLFW.modifierKeysShift = True }
                     , keState = GLFW.KeyState'Pressed
-                    , keChar = Nothing
                     }
                 , LT
                 )

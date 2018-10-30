@@ -415,9 +415,9 @@ make pMode defEventMap tag color assignment =
             makeParts Sugar.UnlimitedFuncApply assignment delParamDest
         rhsJumperEquals <-
             ExprGuiM.mkPrejumpPosSaver
-            <&> Lens.mapped .~ rhsId
-            <&> E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Equal]
-                (E.Doc ["Navigation", "Jump to Def Body"])
+            <&> Lens.mapped .~ GuiState.updateCursor rhsId
+            <&> const
+            <&> E.charGroup Nothing (E.Doc ["Navigation", "Jump to Def Body"]) "="
         mPresentationEdit <-
             case assignmentBody of
             Sugar.BodyPlain{} -> pure Nothing

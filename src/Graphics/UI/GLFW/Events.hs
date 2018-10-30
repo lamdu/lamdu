@@ -7,6 +7,7 @@ module Graphics.UI.GLFW.Events
     ) where
 
 import qualified Control.Exception as E
+import           Control.Lens.Operators
 import           Control.Monad (when)
 import           Data.IORef.Extended
 import           Data.Typeable (Typeable)
@@ -35,7 +36,6 @@ data KeyEvent = KeyEvent
     , keScanCode :: Int
     , keState :: GLFW.KeyState
     , keModKeys :: GLFW.ModifierKeys
-    , keChar :: Maybe Char
     } deriving (Show, Eq)
 
 data MouseButtonEvent = MouseButtonEvent
@@ -53,6 +53,7 @@ data MouseButtonEvent = MouseButtonEvent
 
 data Event
     = EventKey KeyEvent
+    | EventChar Char
     | EventMouseButton MouseButtonEvent
     | EventWindowClose
     | EventWindowRefresh
@@ -90,17 +91,12 @@ translate (x : xs) state =
     RawWindowClose -> simple EventWindowClose
     RawWindowRefresh -> simple EventWindowRefresh
     RawDropPaths paths -> simple (EventDropPaths paths)
-    RawCharEvent _ ->
-        -- Skip char events here as they are processed together with the
-        -- key events that immediately precede them.
-        translate xs state
+    RawCharEvent r ->
+        case fromChar r of
+        Just c -> simple (EventChar c)
+        Nothing -> translate xs state
     RawKeyEvent key scanCode keyState modKeys ->
-        case xs of
-        RawCharEvent char : _ -> eventKey (fromChar char)
-        _ -> eventKey Nothing
-        where
-            eventKey ch =
-                simple $ EventKey $ KeyEvent key scanCode keyState modKeys ch
+        KeyEvent key scanCode keyState modKeys & EventKey & simple
     RawFrameBufferSize size ->
         (EventFrameBufferSize size : ne, ns)
         where
