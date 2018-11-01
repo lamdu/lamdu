@@ -8,7 +8,6 @@ module GUI.Momentu.Main.Image
     , PerfCounters(..)
     , TickResult(..)
     , Handlers(..)
-    , windowSize
     , EventLoop.wakeUp
     ) where
 
@@ -23,6 +22,7 @@ import qualified Graphics.DrawingCombinators.Extended as Draw
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 import qualified System.Info as SysInfo
 import           System.TimeIt (timeItT)
 
@@ -54,11 +54,6 @@ instance Semigroup EventResult where
 instance Monoid EventResult where
     mempty = ERNone
     mappend = (<>)
-
-windowSize :: GLFW.Window -> IO Size
-windowSize win =
-    GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
-
 
 glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO PerfCounters
 glDraw win (Vector2 winSizeX winSizeY) image =
@@ -93,13 +88,13 @@ glDraw win (Vector2 winSizeX winSizeY) image =
 mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
     do
-        initialSize <- windowSize win
+        initialSize <- GLFW.Utils.windowSize win
         drawnImageHandlers <- imageHandlers initialSize & newIORef
         fps <- FPS.new
         eventResultRef <- newIORef mempty
         let iteration =
                 do
-                    winSize <- windowSize win
+                    winSize <- GLFW.Utils.windowSize win
                     let handlers = imageHandlers winSize
                     writeIORef drawnImageHandlers handlers
                     fpsImg <-

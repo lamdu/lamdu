@@ -10,12 +10,12 @@ module GUI.Momentu.Draw.FPS
 import           Data.IORef
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
-import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 import           Text.Printf (printf)
 
 import           Lamdu.Prelude
@@ -39,7 +39,7 @@ render font win fps =
         let fpsText = Text.pack (printf "%2.2f" fps)
         let Font.RenderedText sz img =
                 Font.render font white Nothing fpsText
-        winSize <- GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
+        winSize <- GLFW.Utils.framebufferSize win
         let translation = winSize - (sz ^. Font.bounding)
         pure (Draw.translateV translation %% img)
     where

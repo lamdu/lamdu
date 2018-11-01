@@ -14,6 +14,7 @@ import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Main.Events
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Prelude
 
@@ -36,8 +37,8 @@ mouseButtonEvent ::
     GLFW.ModifierKeys -> IO a
 mouseButtonEvent win eventHandler button buttonState modKeys =
     do
-        fbSize <- GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
-        winSize <- GLFW.getWindowSize win <&> uncurry Vector2 <&> fmap fromIntegral
+        fbSize <- GLFW.Utils.framebufferSize win
+        winSize <- GLFW.Utils.windowSize win
         p <- GLFW.getCursorPos win <&> uncurry Vector2
         EventMouseButton MouseButtonEvent
             { mbButton = button

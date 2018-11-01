@@ -26,6 +26,7 @@ import           GUI.Momentu.Main.Image (PerfCounters(..), TickResult(..))
 import qualified GUI.Momentu.Main.Image as MainImage
 import           GUI.Momentu.Main.Types (AnimConfig(..))
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
@@ -208,7 +209,7 @@ mainLoop reportPerfCounters win getFpsFont getAnimationConfig animHandlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
         animStateRef <- initialAnimState >>= newIORef
-        initialWinSize <- MainImage.windowSize win
+        initialWinSize <- GLFW.Utils.windowSize win
         tvars <-
             ThreadVars
             <$> newTVarIO EventsData

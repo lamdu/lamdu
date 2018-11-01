@@ -17,7 +17,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
@@ -63,9 +63,9 @@ getZoomFactor (Zoom ref) = readIORef ref <&> realToFrac
 make :: GLFW.Window -> IO Zoom
 make win =
     do
-        displayScale <- GLFWUtils.getDisplayScale win
-        winSize <- GLFW.getWindowSize win
-        let winSizeFactor = fromIntegral (winSize ^. _2) / 1080 & max 1
+        displayScale <- GLFW.Utils.getDisplayScale win
+        winSize <- GLFW.Utils.windowSize win
+        let winSizeFactor = (winSize ^. _2) / 1080 & max 1
         newIORef (displayScale ^. _2 * winSizeFactor) <&> Zoom
 
 -- | Useful mainly for tests

@@ -6,6 +6,8 @@ module Graphics.UI.GLFW.Utils
     , getVideoModeSize
     , getDisplayScale
     , charOfKey
+    , windowSize
+    , framebufferSize
     ) where
 
 import           Control.Exception (bracket_)
@@ -86,6 +88,14 @@ stdPixelsPerInch = Vector2 96 96
 stdPixelsPerMM :: Fractional a => Vector2 a
 stdPixelsPerMM = stdPixelsPerInch / 25.4
 
+windowSize :: Num a => GLFW.Window -> IO (Vector2 a)
+windowSize window =
+    GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
+
+framebufferSize :: Num a => GLFW.Window -> IO (Vector2 a)
+framebufferSize window =
+    GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
+
 getDisplayScale :: Fractional a => GLFW.Window -> IO (Vector2 a)
 getDisplayScale window =
     do
@@ -99,8 +109,8 @@ getDisplayScale window =
                     else (monitorUnits <&> fromIntegral) / (monitorMM <&> fromIntegral) & pure
         pixelsPerUnit <-
             do
-                windowUnits <- GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
-                windowPixels <- GLFW.getFramebufferSize window <&> uncurry Vector2 <&> fmap fromIntegral
+                windowUnits <- windowSize window
+                windowPixels <- framebufferSize window
                 windowPixels / windowUnits & pure
         pixelsPerUnit * unitsPerMM / stdPixelsPerMM & pure
 
