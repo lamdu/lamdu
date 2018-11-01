@@ -21,8 +21,8 @@ import qualified Graphics.DrawingCombinators.Extended as Draw
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (Event, Next(..), eventLoop)
-import qualified Graphics.UI.GLFW.Events as GLFWEvents
+import           Graphics.UI.GLFW.Events.Loop (Event, Next(..), eventLoop)
+import qualified Graphics.UI.GLFW.Events.Loop as GLFWEvents
 import qualified System.Info as SysInfo
 import           System.TimeIt (timeItT)
 import           Text.Printf (printf)

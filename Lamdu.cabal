@@ -219,6 +219,7 @@ Library
                   , GUI.Momentu.Zoom
                   , Graphics.DrawingCombinators.Extended
                   , Graphics.UI.GLFW.Events
+                  , Graphics.UI.GLFW.Events.Loop
                   , Graphics.UI.GLFW.Instances
                   , Graphics.UI.GLFW.Utils
                   , Lamdu.Builtins.Anchors
