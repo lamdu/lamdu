@@ -125,7 +125,7 @@ mainLoop win imageHandlers =
                 \case
                 EventLoop.EventWindowClose -> True <$ eventRes ERQuit
                 EventLoop.EventWindowRefresh -> True <$ eventRes ERRefresh
-                EventLoop.EventFrameBufferSize {} -> True <$ eventRes ERRefresh
+                EventLoop.EventFramebufferSize {} -> True <$ eventRes ERRefresh
                 event ->
                     do
                         handlers <- readIORef drawnImageHandlers

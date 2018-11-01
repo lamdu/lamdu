@@ -35,5 +35,5 @@ data Event
     | EventWindowClose
     | EventWindowRefresh
     | EventDropPaths [FilePath]
-    | EventFrameBufferSize (Vector2 Int)
+    | EventFramebufferSize (Vector2 Int)
     deriving (Show, Eq)

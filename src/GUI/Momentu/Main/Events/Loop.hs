@@ -56,9 +56,9 @@ keyEvent eventHandler key scanCode keyState modKeys =
     , keModKeys = modKeys
     } & eventHandler
 
-frameBufferSizeEvent :: (Event -> a) -> Int -> Int -> a
-frameBufferSizeEvent eventHandler w h =
-    Vector2 w h & EventFrameBufferSize & eventHandler
+framebufferSizeEvent :: (Event -> a) -> Int -> Int -> a
+framebufferSizeEvent eventHandler w h =
+    Vector2 w h & EventFramebufferSize & eventHandler
 
 charEvent :: Monoid a => (Event -> a) -> Char -> a
 charEvent eventHandler char
@@ -86,7 +86,7 @@ eventLoop win eventHandler iteration =
         setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win veventHandler)
         setCallback GLFW.setDropCallback (veventHandler . EventDropPaths)
         setCallback GLFW.setWindowRefreshCallback $ veventHandler EventWindowRefresh
-        setCallback GLFW.setFramebufferSizeCallback $ frameBufferSizeEvent veventHandler
+        setCallback GLFW.setFramebufferSizeCallback $ framebufferSizeEvent veventHandler
         setCallback GLFW.setWindowCloseCallback $ veventHandler EventWindowClose
 
         GLFW.swapInterval 1
