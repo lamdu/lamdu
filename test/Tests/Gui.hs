@@ -11,6 +11,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Main.Events (Event(..), KeyEvent(..))
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -19,7 +20,6 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (Event(..), KeyEvent(..))
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (HasConfig)
 import           Lamdu.Config.Theme (HasTheme)
@@ -29,8 +29,8 @@ import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)

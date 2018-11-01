@@ -1,10 +1,10 @@
 module Tests.EventMap where
 
-import           Control.Lens (runIdentity)
-import           GUI.Momentu.EventMap hiding (KeyEvent)
-import           Graphics.UI.GLFW.Events (Event(..))
+import Control.Lens (runIdentity)
+import GUI.Momentu.EventMap hiding (KeyEvent)
+import GUI.Momentu.Main.Events (Event(..))
 
-import           Test.Lamdu.Prelude hiding (lookup)
+import Test.Lamdu.Prelude hiding (lookup)
 
 eventMap :: EventMap Integer
 eventMap =

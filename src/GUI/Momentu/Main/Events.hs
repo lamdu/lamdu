@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
--- | Event-loop for GLFW (instead of its native callbacks model).
-
-module Graphics.UI.GLFW.Events
+module GUI.Momentu.Main.Events
     ( Event(..), KeyEvent(..), MouseButtonEvent(..)
     ) where
 

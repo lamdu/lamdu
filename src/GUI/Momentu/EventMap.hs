@@ -29,6 +29,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import           GHC.Stack (CallStack, callStack, withFrozenCallStack)
+import qualified GUI.Momentu.Main.Events as Events
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
@@ -36,7 +37,6 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget.Id (Id)
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Events as Events
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Prelude as Prelude
 

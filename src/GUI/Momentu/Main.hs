@@ -27,8 +27,9 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.Main.Animation (PerfCounters(..))
-import           GUI.Momentu.Main.Types (AnimConfig(..), Config(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
+import           GUI.Momentu.Main.Events as Main.Events
+import           GUI.Momentu.Main.Types (AnimConfig(..), Config(..))
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
@@ -42,7 +43,6 @@ import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events as GLFW.Events
 
 import           Lamdu.Prelude
 
@@ -148,8 +148,8 @@ lookupEvent ::
 lookupEvent debug lookupModeRef getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
     (Just enter, _
-        , GLFW.Events.EventMouseButton
-          (GLFW.Events.MouseButtonEvent GLFW.MouseButton'1
+        , Main.Events.EventMouseButton
+          (Main.Events.MouseButtonEvent GLFW.MouseButton'1
            GLFW.MouseButtonState'Released _ mousePosF _)) ->
         enter mousePosF
         ^. Widget.enterResultEvent & Just & pure

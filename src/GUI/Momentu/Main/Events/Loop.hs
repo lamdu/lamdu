@@ -1,6 +1,6 @@
 -- | Low-level event-loop
 
-module Graphics.UI.GLFW.Events.Loop
+module GUI.Momentu.Main.Events.Loop
     ( Event(..)
     , Next(..)
     , EventLoopDisallowedWhenMasked(..)
@@ -12,8 +12,8 @@ import           Control.Lens.Operators
 import           Control.Monad (when, void)
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Main.Events
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events
 
 import           Prelude
 

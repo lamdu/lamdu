@@ -21,11 +21,11 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addU
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
+import           GUI.Momentu.Main.Events (Event)
 import           GUI.Momentu.Main.Image (PerfCounters(..), TickResult(..))
 import qualified GUI.Momentu.Main.Image as MainImage
 import           GUI.Momentu.Main.Types (AnimConfig(..))
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events (Event)
 
 import           Lamdu.Prelude
 

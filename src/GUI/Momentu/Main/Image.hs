@@ -9,7 +9,7 @@ module GUI.Momentu.Main.Image
     , TickResult(..)
     , Handlers(..)
     , windowSize
-    , GLFWEvents.wakeUp
+    , EventLoop.wakeUp
     ) where
 
 import           Data.IORef
@@ -19,13 +19,13 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (Size)
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
+import           GUI.Momentu.Main.Events.Loop (Event, Next(..), eventLoop)
+import qualified GUI.Momentu.Main.Events.Loop as EventLoop
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events.Loop (Event, Next(..), eventLoop)
-import qualified Graphics.UI.GLFW.Events.Loop as GLFWEvents
 import qualified System.Info as SysInfo
 import           System.TimeIt (timeItT)
 import           Text.Printf (printf)
@@ -151,9 +151,9 @@ mainLoop win imageHandlers =
         let eventRes = modifyIORef eventResultRef . (<>)
         let handleEvent =
                 \case
-                GLFWEvents.EventWindowClose -> True <$ eventRes ERQuit
-                GLFWEvents.EventWindowRefresh -> True <$ eventRes ERRefresh
-                GLFWEvents.EventFrameBufferSize {} -> True <$ eventRes ERRefresh
+                EventLoop.EventWindowClose -> True <$ eventRes ERQuit
+                EventLoop.EventWindowRefresh -> True <$ eventRes ERRefresh
+                EventLoop.EventFrameBufferSize {} -> True <$ eventRes ERRefresh
                 event ->
                     do
                         handlers <- readIORef drawnImageHandlers

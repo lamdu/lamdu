@@ -15,7 +15,7 @@ import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
-import           Graphics.UI.GLFW.Events (Event(..))
+import           GUI.Momentu.Main.Events (Event(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Control.Monad (foldM)
 
