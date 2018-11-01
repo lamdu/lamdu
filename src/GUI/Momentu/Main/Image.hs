@@ -35,7 +35,7 @@ data PerfCounters = PerfCounters
     }
 
 data Handlers = Handlers
-    { eventHandler :: Event -> IO ()
+    { eventHandler :: Event -> IO Bool
     , update :: IO (Maybe (Draw.Image ()))
     , refresh :: IO (Draw.Image ())
     , fpsFont :: IO (Maybe Font)
@@ -139,9 +139,9 @@ mainLoop win imageHandlers =
         let eventRes = modifyIORef eventResultRef . (<>)
         let handleEvent =
                 \case
-                GLFWEvents.EventWindowClose -> eventRes ERQuit
-                GLFWEvents.EventWindowRefresh -> eventRes ERRefresh
-                GLFWEvents.EventFrameBufferSize {} -> eventRes ERRefresh
+                GLFWEvents.EventWindowClose -> True <$ eventRes ERQuit
+                GLFWEvents.EventWindowRefresh -> True <$ eventRes ERRefresh
+                GLFWEvents.EventFrameBufferSize {} -> True <$ eventRes ERRefresh
                 event ->
                     do
                         handlers <- readIORef drawnImageHandlers

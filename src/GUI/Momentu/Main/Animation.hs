@@ -159,7 +159,8 @@ animThread ::
 animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig win =
     MainImage.mainLoop win $ \size ->
     MainImage.Handlers
-    { MainImage.eventHandler = \event -> (edReversedEvents %~ (event :)) & updateTVar
+    { MainImage.eventHandler =
+        \event -> (edReversedEvents %~ (event :)) & updateTVar <&> const True
     , MainImage.refresh =
         do
             updateTVar (edRefreshRequested .~ True)

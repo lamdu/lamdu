@@ -9,7 +9,7 @@ module Graphics.UI.GLFW.Events.Loop
 
 import qualified Control.Exception as E
 import           Control.Lens.Operators
-import           Control.Monad (when)
+import           Control.Monad (when, void)
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
@@ -72,22 +72,22 @@ validateMasksingState =
         maskingState <- E.getMaskingState
         when (maskingState /= E.Unmasked) $ E.throwIO EventLoopDisallowedWhenMasked
 
-eventLoop :: GLFW.Window -> (Event -> IO ()) -> IO Next -> IO ()
+eventLoop :: GLFW.Window -> (Event -> IO Bool) -> IO Next -> IO ()
 eventLoop win eventHandler iteration =
     do
         validateMasksingState
         let setCallback f cb = f win $ Just $ const cb
-        setCallback GLFW.setCharCallback (charEvent eventHandler)
-        setCallback GLFW.setKeyCallback (keyEvent eventHandler)
-        setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win eventHandler)
-        setCallback GLFW.setDropCallback (eventHandler . EventDropPaths)
-        setCallback GLFW.setWindowRefreshCallback $ eventHandler EventWindowRefresh
-        setCallback GLFW.setFramebufferSizeCallback $ frameBufferSizeEvent eventHandler
-        setCallback GLFW.setWindowCloseCallback $ eventHandler EventWindowClose
+        setCallback GLFW.setCharCallback (charEvent veventHandler)
+        setCallback GLFW.setKeyCallback (keyEvent veventHandler)
+        setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win veventHandler)
+        setCallback GLFW.setDropCallback (veventHandler . EventDropPaths)
+        setCallback GLFW.setWindowRefreshCallback $ veventHandler EventWindowRefresh
+        setCallback GLFW.setFramebufferSizeCallback $ frameBufferSizeEvent veventHandler
+        setCallback GLFW.setWindowCloseCallback $ veventHandler EventWindowClose
 
         GLFW.swapInterval 1
 
-        eventHandler EventWindowRefresh
+        veventHandler EventWindowRefresh
 
         let loop =
                 iteration
@@ -96,3 +96,5 @@ eventLoop win eventHandler iteration =
                 NextPoll -> GLFW.pollEvents *> loop
                 NextQuit -> pure ()
         loop
+    where
+        veventHandler = void . eventHandler
