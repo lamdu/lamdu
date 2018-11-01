@@ -13,22 +13,18 @@ module GUI.Momentu.Main.Image
     ) where
 
 import           Data.IORef
-import qualified Data.Text as Text
-import           Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (Size)
+import qualified GUI.Momentu.Draw.FPS as FPS
 import           GUI.Momentu.Font (Font)
-import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Main.Events.Loop (Event, Next(..), eventLoop)
 import qualified GUI.Momentu.Main.Events.Loop as EventLoop
-import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import qualified System.Info as SysInfo
 import           System.TimeIt (timeItT)
-import           Text.Printf (printf)
 
 import           Lamdu.Prelude
 
@@ -63,30 +59,6 @@ windowSize :: GLFW.Window -> IO Size
 windowSize win =
     GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
 
-newtype FPS = FPS (IORef UTCTime)
-
-newFPS :: IO FPS
-newFPS = getCurrentTime >>= newIORef <&> FPS
-
-updateFPS :: FPS -> IO Double
-updateFPS (FPS ref) =
-    do
-        curTime <- getCurrentTime
-        prevTime <- readIORef ref
-        writeIORef ref curTime
-        1 / realToFrac (curTime `diffUTCTime` prevTime) & pure
-
-renderFPS :: Font -> GLFW.Window -> Double -> IO (Draw.Image ())
-renderFPS font win fps =
-    do
-        let fpsText = Text.pack (printf "%2.2f" fps)
-        let Font.RenderedText sz img =
-                Font.render font white Nothing fpsText
-        winSize <- windowSize win
-        let translation = winSize - (sz ^. Font.bounding)
-        pure (Draw.translateV translation %% img)
-    where
-        white = Draw.Color 1 1 1 1
 
 glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO PerfCounters
 glDraw win (Vector2 winSizeX winSizeY) image =
@@ -123,7 +95,7 @@ mainLoop win imageHandlers =
     do
         initialSize <- windowSize win
         drawnImageHandlers <- imageHandlers initialSize & newIORef
-        fps <- newFPS
+        fps <- FPS.new
         eventResultRef <- newIORef mempty
         let iteration =
                 do
@@ -133,7 +105,7 @@ mainLoop win imageHandlers =
                     fpsImg <-
                         fpsFont handlers >>= \case
                         Nothing -> pure mempty
-                        Just font -> updateFPS fps >>= renderFPS font win
+                        Just font -> FPS.update fps >>= FPS.render font win
                     let draw img =
                             NextPoll <$
                             (glDraw win winSize (fpsImg <> img)
