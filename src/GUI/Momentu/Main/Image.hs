@@ -42,9 +42,7 @@ data Handlers = Handlers
     , reportPerfCounters :: PerfCounters -> IO ()
     }
 
-data EventResult =
-    ERNone | ERRefresh | ERQuit
-    deriving (Eq, Ord, Show)
+data EventResult = ERNone | ERRefresh | ERQuit deriving (Eq, Ord, Show)
 instance Semigroup EventResult where
     (<>) = max
 instance Monoid EventResult where
@@ -114,13 +112,11 @@ mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
     do
         initialSize <- windowSize win
-        frameBufferSize <- newIORef initialSize
         drawnImageHandlers <- imageHandlers initialSize & newIORef
         fps <- newFPS
         let handleEvent GLFWEvents.EventWindowClose = pure ERQuit
             handleEvent GLFWEvents.EventWindowRefresh = pure ERRefresh
-            handleEvent (GLFWEvents.EventFrameBufferSize size) =
-                ERRefresh <$ writeIORef frameBufferSize (fromIntegral <$> size)
+            handleEvent GLFWEvents.EventFrameBufferSize {} = pure ERRefresh
             handleEvent event =
                 do
                     handlers <- readIORef drawnImageHandlers
@@ -129,7 +125,7 @@ mainLoop win imageHandlers =
         let handleEvents events =
                 do
                     eventResult <- mconcat <$> traverse handleEvent events
-                    winSize <- readIORef frameBufferSize
+                    winSize <- windowSize win
                     let handlers = imageHandlers winSize
                     writeIORef drawnImageHandlers handlers
                     fpsImg <-
