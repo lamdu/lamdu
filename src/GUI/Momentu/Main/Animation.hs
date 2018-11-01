@@ -21,7 +21,7 @@ import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addU
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
-import           GUI.Momentu.Main.Image (PerfCounters(..))
+import           GUI.Momentu.Main.Image (PerfCounters(..), TickResult(..))
 import qualified GUI.Momentu.Main.Image as MainImage
 import           GUI.Momentu.Main.Types (AnimConfig(..))
 import qualified Graphics.UI.GLFW as GLFW
@@ -166,7 +166,8 @@ animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig w
             updateTVar (edRefreshRequested .~ True)
             _ <- updateFrameState size
             readIORef animStateRef <&> draw
-    , MainImage.update = updateFrameState size <&> fmap draw
+    , MainImage.tick =
+        updateFrameState size <&> fmap draw <&> maybe StopTicking TickImage
     , MainImage.fpsFont = getFpsFont
     , MainImage.reportPerfCounters = reportPerfCounters
     }

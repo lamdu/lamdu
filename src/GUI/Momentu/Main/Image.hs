@@ -4,8 +4,10 @@
 -- The higher level GUI.Momentu.MainLoop builds upon this main-loop.
 
 module GUI.Momentu.Main.Image
-    ( mainLoop, Handlers(..)
+    ( mainLoop
     , PerfCounters(..)
+    , TickResult(..)
+    , Handlers(..)
     , windowSize
     ) where
 
@@ -34,10 +36,17 @@ data PerfCounters = PerfCounters
     , swapBuffersTime :: Double
     }
 
+data TickResult
+    = StopTicking               -- | Stop ticking until we have more events
+    | TickImage (Draw.Image ()) -- | Here's the next image, tick again please
+
 data Handlers = Handlers
     { eventHandler :: Event -> IO Bool
-    , update :: IO (Maybe (Draw.Image ()))
+        -- ^ Handle a single event, return whether event was handled or ignored
+    , tick :: IO TickResult
+        -- ^ A tick passed since we had an image update, yield the next image or stop
     , refresh :: IO (Draw.Image ())
+        -- ^ Window redraw requested, please provide an image to draw
     , fpsFont :: IO (Maybe Font)
     , reportPerfCounters :: PerfCounters -> IO ()
     }
@@ -134,8 +143,10 @@ mainLoop win imageHandlers =
                         ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw
                         ERNone ->
-                            update handlers >>=
-                            maybe (pure NextWait) draw
+                            tick handlers >>=
+                            \case
+                            StopTicking -> pure NextWait
+                            TickImage image -> draw image
         let eventRes = modifyIORef eventResultRef . (<>)
         let handleEvent =
                 \case
