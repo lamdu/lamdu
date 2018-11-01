@@ -10,26 +10,12 @@ module Graphics.UI.GLFW.Events.Loop
 import qualified Control.Exception as E
 import           Control.Lens.Operators
 import           Control.Monad (when)
-import           Data.IORef.Extended
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Events
 
 import           Prelude
-
--- GLFWRawEvent is the reification of the callback information.
--- It differs from Event in that in some cases events are grouped together
--- (i.e a RawKeyEvent and a RawCharEvent become a combined KeyEvent).
-data GLFWRawEvent
-    = RawCharEvent Char
-    | RawKeyEvent GLFW.Key Int GLFW.KeyState GLFW.ModifierKeys
-    | RawMouseButton GLFW.MouseButton GLFW.MouseButtonState GLFW.ModifierKeys
-    | RawWindowRefresh
-    | RawDropPaths [FilePath]
-    | RawFrameBufferSize (Vector2 Int)
-    | RawWindowClose
-    deriving (Show, Eq)
 
 -- | The output of the event handler back to the event-loop.
 data Next
@@ -41,85 +27,72 @@ data Next
     -- ^ The event-loop should quit.
     deriving (Show, Eq, Ord)
 
-fromChar :: Char -> Maybe Char
-fromChar char
-    -- Range for "key" characters (keys for left key, right key, etc.)
-    | '\57344' <= char && char <= '\63743' = Nothing
-    | otherwise = Just char
-
-translate ::
-    GLFW.Window -> [GLFWRawEvent] -> IO [Event]
-translate _ [] = pure []
-translate win (x : xs) =
-    case x of
-    RawWindowClose -> simple EventWindowClose
-    RawWindowRefresh -> simple EventWindowRefresh
-    RawDropPaths paths -> simple (EventDropPaths paths)
-    RawCharEvent r ->
-        case fromChar r of
-        Just c -> simple (EventChar c)
-        Nothing -> translate win xs
-    RawKeyEvent key scanCode keyState modKeys ->
-        KeyEvent key scanCode keyState modKeys & EventKey & simple
-    RawFrameBufferSize size -> simple (EventFrameBufferSize size)
-    RawMouseButton button buttonState modKeys ->
-        do
-            fbSize <- GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
-            winSize <- GLFW.getWindowSize win <&> uncurry Vector2 <&> fmap fromIntegral
-            p <- GLFW.getCursorPos win <&> uncurry Vector2
-            simple $ EventMouseButton $
-                MouseButtonEvent
-                { mbButton = button
-                , mbButtonState = buttonState
-                , mbModKeys = modKeys
-                , mbPosition = p * fbSize / winSize
-                , mbPositionInWindowCoords = p
-                }
-    where
-        simple out = translate win xs <&> (out :)
-
 data EventLoopDisallowedWhenMasked = EventLoopDisallowedWhenMasked
     deriving (Show, Typeable)
 instance E.Exception EventLoopDisallowedWhenMasked
 
-eventLoop :: GLFW.Window -> ([Event] -> IO Next) -> IO ()
-eventLoop win eventsHandler =
+mouseButtonEvent ::
+    GLFW.Window -> (Event -> IO a) -> GLFW.MouseButton -> GLFW.MouseButtonState ->
+    GLFW.ModifierKeys -> IO a
+mouseButtonEvent win eventHandler button buttonState modKeys =
+    do
+        fbSize <- GLFW.getFramebufferSize win <&> uncurry Vector2 <&> fmap fromIntegral
+        winSize <- GLFW.getWindowSize win <&> uncurry Vector2 <&> fmap fromIntegral
+        p <- GLFW.getCursorPos win <&> uncurry Vector2
+        EventMouseButton MouseButtonEvent
+            { mbButton = button
+            , mbButtonState = buttonState
+            , mbModKeys = modKeys
+            , mbPosition = p * fbSize / winSize
+            , mbPositionInWindowCoords = p
+            } & eventHandler
+
+keyEvent :: (Event -> a) -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> a
+keyEvent eventHandler key scanCode keyState modKeys =
+    EventKey KeyEvent
+    { keKey = key
+    , keScanCode = scanCode
+    , keState = keyState
+    , keModKeys = modKeys
+    } & eventHandler
+
+frameBufferSizeEvent :: (Event -> a) -> Int -> Int -> a
+frameBufferSizeEvent eventHandler w h =
+    Vector2 w h & EventFrameBufferSize & eventHandler
+
+charEvent :: Monoid a => (Event -> a) -> Char -> a
+charEvent eventHandler char
+    -- Range for "key" characters (keys for left key, right key, etc.)
+    | char < '\57344' || '\63743' < char = EventChar char & eventHandler
+    | otherwise = mempty
+
+validateMasksingState :: IO ()
+validateMasksingState =
     do
         maskingState <- E.getMaskingState
         when (maskingState /= E.Unmasked) $ E.throwIO EventLoopDisallowedWhenMasked
-        eventsVar <- newIORef [RawWindowRefresh]
-        let addEvent event = atomicModifyIORef_ eventsVar (event:)
-            addKeyEvent key scanCode keyState modKeys =
-                addEvent $ RawKeyEvent key scanCode keyState modKeys
-            addMouseButtonEvent button buttonState modKeys =
-                addEvent $ RawMouseButton button buttonState modKeys
-            setCallback f cb = f win $ Just $ const cb
-            addVec2Event c x y = addEvent $ c $ Vector2 x y
-            loop =
-                do
-                    let handleReversedEvents rEvents = ([], reverse rEvents)
-                    rawEvents <-
-                        atomicModifyIORef eventsVar handleReversedEvents
-                    events <- translate win rawEvents
-                    next <- eventsHandler events
-                    case next of
-                        NextWait ->
-                            do
-                                GLFW.waitEvents
-                                loop
-                        NextPoll ->
-                            do
-                                GLFW.pollEvents
-                                loop
-                        NextQuit -> pure ()
 
-        setCallback GLFW.setCharCallback (addEvent . RawCharEvent)
-        setCallback GLFW.setKeyCallback addKeyEvent
-        setCallback GLFW.setMouseButtonCallback addMouseButtonEvent
-        setCallback GLFW.setDropCallback (addEvent . RawDropPaths)
-        setCallback GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
-        setCallback GLFW.setFramebufferSizeCallback $ addVec2Event RawFrameBufferSize
-        setCallback GLFW.setWindowCloseCallback $ addEvent RawWindowClose
+eventLoop :: GLFW.Window -> (Event -> IO ()) -> IO Next -> IO ()
+eventLoop win eventHandler iteration =
+    do
+        validateMasksingState
+        let setCallback f cb = f win $ Just $ \_win -> cb
+        setCallback GLFW.setCharCallback (charEvent eventHandler)
+        setCallback GLFW.setKeyCallback (keyEvent eventHandler)
+        setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win eventHandler)
+        setCallback GLFW.setDropCallback (eventHandler . EventDropPaths)
+        setCallback GLFW.setWindowRefreshCallback $ eventHandler EventWindowRefresh
+        setCallback GLFW.setFramebufferSizeCallback $ frameBufferSizeEvent eventHandler
+        setCallback GLFW.setWindowCloseCallback $ eventHandler EventWindowClose
 
         GLFW.swapInterval 1
+
+        eventHandler EventWindowRefresh
+
+        let loop =
+                iteration
+                >>= \case
+                NextWait -> GLFW.waitEvents *> loop
+                NextPoll -> GLFW.pollEvents *> loop
+                NextQuit -> pure ()
         loop

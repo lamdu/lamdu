@@ -114,17 +114,9 @@ mainLoop win imageHandlers =
         initialSize <- windowSize win
         drawnImageHandlers <- imageHandlers initialSize & newIORef
         fps <- newFPS
-        let handleEvent GLFWEvents.EventWindowClose = pure ERQuit
-            handleEvent GLFWEvents.EventWindowRefresh = pure ERRefresh
-            handleEvent GLFWEvents.EventFrameBufferSize {} = pure ERRefresh
-            handleEvent event =
+        eventResultRef <- newIORef mempty
+        let iteration =
                 do
-                    handlers <- readIORef drawnImageHandlers
-                    eventHandler handlers event
-                    pure ERNone
-        let handleEvents events =
-                do
-                    eventResult <- mconcat <$> traverse handleEvent events
                     winSize <- windowSize win
                     let handlers = imageHandlers winSize
                     writeIORef drawnImageHandlers handlers
@@ -136,10 +128,22 @@ mainLoop win imageHandlers =
                             NextPoll <$
                             (glDraw win winSize (fpsImg <> img)
                                 >>= reportPerfCounters handlers)
+                    eventResult <- readIORef eventResultRef
+                    writeIORef eventResultRef mempty
                     case eventResult of
                         ERQuit -> pure NextQuit
                         ERRefresh -> refresh handlers >>= draw
                         ERNone ->
                             update handlers >>=
                             maybe (pure NextWait) draw
-        eventLoop win handleEvents
+        let eventRes = modifyIORef eventResultRef . (<>)
+        let handleEvent =
+                \case
+                GLFWEvents.EventWindowClose -> eventRes ERQuit
+                GLFWEvents.EventWindowRefresh -> eventRes ERRefresh
+                GLFWEvents.EventFrameBufferSize {} -> eventRes ERRefresh
+                event ->
+                    do
+                        handlers <- readIORef drawnImageHandlers
+                        eventHandler handlers event
+        eventLoop win handleEvent iteration
