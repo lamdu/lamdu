@@ -4,7 +4,7 @@ module Graphics.UI.GLFW.Events.Loop
     ( Event(..)
     , Next(..)
     , EventLoopDisallowedWhenMasked(..)
-    , eventLoop
+    , eventLoop, wakeUp
     ) where
 
 import qualified Control.Exception as E
@@ -71,6 +71,10 @@ validateMasksingState =
     do
         maskingState <- E.getMaskingState
         when (maskingState /= E.Unmasked) $ E.throwIO EventLoopDisallowedWhenMasked
+
+-- | Exit current iteration, when it is waiting on an event
+wakeUp :: IO ()
+wakeUp = GLFW.postEmptyEvent
 
 eventLoop :: GLFW.Window -> (Event -> IO Bool) -> IO Next -> IO ()
 eventLoop win eventHandler iteration =

@@ -9,6 +9,7 @@ module GUI.Momentu.Main.Image
     , TickResult(..)
     , Handlers(..)
     , windowSize
+    , GLFWEvents.wakeUp
     ) where
 
 import           Data.IORef
