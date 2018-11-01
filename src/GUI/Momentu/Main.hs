@@ -42,7 +42,7 @@ import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
-import           Graphics.UI.GLFW.Events as GLFWE
+import           Graphics.UI.GLFW.Events as GLFW.Events
 
 import           Lamdu.Prelude
 
@@ -148,8 +148,8 @@ lookupEvent ::
 lookupEvent debug lookupModeRef getClipboard virtCursorRef mEnter mFocus event =
     case (mEnter, mFocus, event) of
     (Just enter, _
-        , GLFWE.EventMouseButton
-          (GLFWE.MouseButtonEvent GLFW.MouseButton'1
+        , GLFW.Events.EventMouseButton
+          (GLFW.Events.MouseButtonEvent GLFW.MouseButton'1
            GLFW.MouseButtonState'Released _ mousePosF _)) ->
         enter mousePosF
         ^. Widget.enterResultEvent & Just & pure
