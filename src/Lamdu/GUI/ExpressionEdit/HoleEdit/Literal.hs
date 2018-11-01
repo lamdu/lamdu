@@ -6,10 +6,9 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
 
 import           Data.Functor.Identity (Identity(..))
 import           Data.Tree.Diverse (ann, val)
-import           GUI.Momentu (MetaKey(..), WidgetId)
+import           GUI.Momentu (WidgetId)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified Lamdu.CharClassification as Chars
@@ -18,12 +17,6 @@ import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-toLiteralTextKeys :: [MetaKey]
-toLiteralTextKeys =
-    [ MetaKey.shift MetaKey.Key'Apostrophe
-    , MetaKey MetaKey.noMods MetaKey.Key'Apostrophe
-    ]
 
 makeLiteral ::
     (Monad i, Monad o) =>
@@ -53,8 +46,8 @@ makeLiteralEventMap ::
     Sugar.OptionLiteral name i o ->
     Gui EventMap o
 makeLiteralEventMap io optionLiteral =
-    E.keysEventMapMovesCursor toLiteralTextKeys (E.Doc ["Edit", "Literal Text"])
-    (makeLiteral io optionLiteral (Sugar.LiteralText (Identity "")))
+    E.charGroup Nothing (E.Doc ["Edit", "Literal Text"]) "'\""
+    (const (makeLiteral io optionLiteral (Sugar.LiteralText (Identity "")) <&> GuiState.updateCursor))
     <>
     E.charGroup (Just "Digit") (E.Doc ["Edit", "Literal Number"]) Chars.digit
     (fmap GuiState.updateCursor . makeLiteral io optionLiteral . Sugar.LiteralNum . Identity . read . (: []))
