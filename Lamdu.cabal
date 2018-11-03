@@ -195,6 +195,7 @@ Library
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
                   , GUI.Momentu.Rect
+                  , GUI.Momentu.Render
                   , GUI.Momentu.Responsive
                   , GUI.Momentu.Responsive.Expression
                   , GUI.Momentu.Responsive.Options

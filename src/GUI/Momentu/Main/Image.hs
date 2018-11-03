@@ -12,26 +12,17 @@ module GUI.Momentu.Main.Image
     ) where
 
 import           Data.IORef
-import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (Size)
 import qualified GUI.Momentu.Draw.FPS as FPS
 import           GUI.Momentu.Font (Font)
 import           GUI.Momentu.Main.Events.Loop (Event, Next(..), eventLoop)
 import qualified GUI.Momentu.Main.Events.Loop as EventLoop
+import           GUI.Momentu.Render (PerfCounters(..), render)
 import qualified Graphics.DrawingCombinators.Extended as Draw
-import           Graphics.Rendering.OpenGL.GL (($=))
-import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
-import qualified System.Info as SysInfo
-import           System.TimeIt (timeItT)
 
 import           Lamdu.Prelude
-
-data PerfCounters = PerfCounters
-    { renderTime :: Double
-    , swapBuffersTime :: Double
-    }
 
 data TickResult
     = StopTicking               -- | Stop ticking until we have more events
@@ -55,36 +46,6 @@ instance Monoid EventResult where
     mempty = ERNone
     mappend = (<>)
 
-glDraw :: GLFW.Window -> Vector2 Double -> Draw.Image a -> IO PerfCounters
-glDraw win (Vector2 winSizeX winSizeY) image =
-    do
-        GL.viewport $=
-            (GL.Position 0 0,
-             GL.Size (round winSizeX) (round winSizeY))
-        GL.matrixMode $= GL.Projection
-        GL.loadIdentity
-        GL.ortho 0 winSizeX winSizeY 0 (-1) 1
-        (timedRender, ()) <-
-            do
-                Draw.clearRender image
-                platformWorkarounds
-            & timeItT
-        (timedSwapBuffers, ()) <- timeItT (GLFW.swapBuffers win)
-        pure PerfCounters
-            { renderTime = timedRender
-            , swapBuffersTime = timedSwapBuffers
-            }
-    where
-        platformWorkarounds
-            | SysInfo.os == "darwin" =
-                do
-                    -- Work around for https://github.com/glfw/glfw/issues/1334
-                    GL.colorMask GL.$= GL.Color4 GL.Disabled GL.Disabled GL.Disabled GL.Enabled
-                    GL.clearColor GL.$= GL.Color4 1 1 1 1
-                    GL.clear [GL.ColorBuffer]
-                    GL.colorMask GL.$= GL.Color4 GL.Enabled GL.Enabled GL.Enabled GL.Enabled
-            | otherwise = pure ()
-
 mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
 mainLoop win imageHandlers =
     do
@@ -94,8 +55,7 @@ mainLoop win imageHandlers =
         eventResultRef <- newIORef mempty
         let iteration =
                 do
-                    winSize <- GLFW.Utils.windowSize win
-                    let handlers = imageHandlers winSize
+                    handlers <- GLFW.Utils.windowSize win <&> imageHandlers
                     writeIORef drawnImageHandlers handlers
                     fpsImg <-
                         fpsFont handlers >>= \case
@@ -103,7 +63,7 @@ mainLoop win imageHandlers =
                         Just font -> FPS.update fps >>= FPS.render font win
                     let draw img =
                             NextPoll <$
-                            (glDraw win winSize (fpsImg <> img)
+                            (render win (fpsImg <> img)
                                 >>= reportPerfCounters handlers)
                     eventResult <- readIORef eventResultRef
                     writeIORef eventResultRef mempty
