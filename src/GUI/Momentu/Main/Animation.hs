@@ -17,7 +17,7 @@ import           Control.Monad (mplus)
 import qualified Control.Monad.STM as STM
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Monoid as Monoid
-import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
@@ -35,13 +35,6 @@ import           Lamdu.Prelude
 
 -- Worker thread receives events, ticks (which may be lost), handles them, responds to animation thread
 -- Animation thread sends events, ticks to worker thread. Samples results from worker thread, applies them to the cur state
-
-data AnimState = AnimState
-    { _asCurSpeedHalfLife :: !NominalDiffTime
-    , _asCurTime :: !UTCTime
-    , _asState :: !Anim.State
-    }
-Lens.makeLenses ''AnimState
 
 data EventsData = EventsData
     { _edHaveTicks :: !Bool
@@ -84,18 +77,6 @@ data Handlers = Handlers
     { tickHandler :: IO EventResult
     , eventHandler :: Event -> IO EventResult
     , makeFrame :: IO Anim.Frame
-    }
-
-desiredFrameRate :: Double
-desiredFrameRate = 60
-
-initialAnimState :: IO AnimState
-initialAnimState =
-    getCurrentTime <&>
-    \curTime -> AnimState
-    { _asCurSpeedHalfLife = 0
-    , _asCurTime = curTime
-    , _asState = Anim.initialState
     }
 
 waitForEvent :: TVar EventsData -> IO EventsData
@@ -150,7 +131,7 @@ eventHandlerThread tvars animHandlers =
 
 animThread ::
     (PerfCounters -> IO ()) -> IO (Maybe Font) ->
-    ThreadVars -> IORef AnimState -> IO AnimConfig -> GLFW.Window -> IO ()
+    ThreadVars -> IORef Anim.State -> IO AnimConfig -> GLFW.Window -> IO ()
 animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig win =
     MainImage.mainLoop win $ \size ->
     MainImage.Handlers
@@ -162,53 +143,34 @@ animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig w
             _ <- updateFrameState size
             readIORef animStateRef <&> draw
     , MainImage.tick =
-        updateFrameState size <&> fmap draw <&> maybe StopTicking TickImage
+        updateFrameState size
+        <&> (^? Anim._NewState)
+        <&> fmap draw <&> maybe StopTicking TickImage
     , MainImage.fpsFont = getFpsFont
     , MainImage.reportPerfCounters = reportPerfCounters
     }
     where
-        draw = Anim.draw . Anim.currentFrame . _asState
+        draw = Anim.draw . Anim.currentFrame
         updateTVar = STM.atomically . modifyTVar (eventsVar tvars)
         tick size = updateTVar $ (edHaveTicks .~ True) . (edWinSize .~ size)
-        advanceAnimation elapsed mNewDestFrame animState =
-            Anim.nextState progress mNewDestFrame (animState ^. asState)
-            <&> \newState -> animState & asState .~ newState
-            where
-                progress = 1 - 0.5 ** (realToFrac elapsed / realToFrac (animState ^. asCurSpeedHalfLife))
         updateFrameState size =
             do
                 tick size
                 fromEvents <- swapTVar (toAnimVar tvars) mempty & STM.atomically
-                AnimConfig timePeriod ratio <- getAnimationConfig
-                curTime <- getCurrentTime
+                animConfig <- getAnimationConfig
                 mNewState <-
-                    readIORef animStateRef <&>
-                    \animState ->
-                    case taMNewFrame fromEvents of
-                    Just (userEventTime, newDestFrame) ->
-                        animState
-                        & asCurSpeedHalfLife .~ timeRemaining / realToFrac (logBase 0.5 ratio)
-                        & advanceAnimation elapsed (Just newDestFrame)
-                        where
-                            -- Retroactively pretend animation started a little bit
-                            -- sooner so there's already a change in the first frame
-                            elapsed = 1.0 / desiredFrameRate
-                            timeRemaining =
-                                max 0 $
-                                diffUTCTime
-                                (addUTCTime timePeriod userEventTime)
-                                curTime
-                    Nothing ->
-                        advanceAnimation (curTime `diffUTCTime` (animState ^. asCurTime)) Nothing animState
-                    <&> asCurTime .~ curTime
-                _ <- Lens._Just (writeIORef animStateRef) mNewState
+                    readIORef animStateRef
+                    >>= Anim.clockedAdvanceAnimation animConfig (taMNewFrame fromEvents)
+                _ <-
+                    mNewState
+                    & Lens.traverseOf_ Anim._NewState (writeIORef animStateRef)
                 pure mNewState
 
 mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
 mainLoop reportPerfCounters win getFpsFont getAnimationConfig animHandlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
-        animStateRef <- initialAnimState >>= newIORef
+        animStateRef <- Anim.initialState >>= newIORef
         initialWinSize <- GLFW.Utils.windowSize win
         tvars <-
             ThreadVars

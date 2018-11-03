@@ -4,8 +4,7 @@ module GUI.Momentu.Main.Types
     ( AnimConfig(..), Config(..)
     ) where
 
-import           Data.Time.Clock (NominalDiffTime)
-import           GUI.Momentu.Animation (R)
+import           GUI.Momentu.Animation.Engine (AnimConfig(..))
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
@@ -13,11 +12,6 @@ import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 
 import           Lamdu.Prelude
-
-data AnimConfig = AnimConfig
-    { acTimePeriod :: NominalDiffTime
-    , acRemainingRatioInPeriod :: R
-    }
 
 data Config = Config
     { cAnim :: IO AnimConfig
