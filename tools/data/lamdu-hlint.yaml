@@ -17,6 +17,7 @@
     - hint: {lhs: "Data.Set.member a", rhs: "(^. Control.Lens.contains a)"}
     - hint: {lhs: "zipWith a [0..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "zipWith a [0::Int ..]", rhs: "Control.Lens.imap a"}
+    - hint: {lhs: "map (uncurry a) (Data.Map.toList b)", rhs: "Control.Lens.imap a b ^.. Control.Lens.folded"}
 
 - group:
     name: generalise-for-conciseness
