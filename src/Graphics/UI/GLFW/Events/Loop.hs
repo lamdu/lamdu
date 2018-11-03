@@ -76,7 +76,7 @@ eventLoop :: GLFW.Window -> (Event -> IO ()) -> IO Next -> IO ()
 eventLoop win eventHandler iteration =
     do
         validateMasksingState
-        let setCallback f cb = f win $ Just $ \_win -> cb
+        let setCallback f cb = f win $ Just $ const cb
         setCallback GLFW.setCharCallback (charEvent eventHandler)
         setCallback GLFW.setKeyCallback (keyEvent eventHandler)
         setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win eventHandler)
