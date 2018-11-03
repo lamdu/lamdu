@@ -43,6 +43,7 @@ import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
@@ -262,7 +263,6 @@ mainLoopWidget win mkWidgetUnmemod options =
                         <&> _1 . Lens.mapped %~ (vcursorimg <>)
         MainAnim.mainLoop (reportPerfCounters debug) win (fpsFont zoom)
             (cAnim config) $
-            \size ->
             MainAnim.Handlers
             { MainAnim.tickHandler =
                 do
@@ -273,6 +273,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         }
             , MainAnim.eventHandler = \event ->
                 do
+                    size <- GLFW.Utils.windowSize win
                     (_, mEnter, mFocus) <- renderWidget size
                     mWidgetRes <-
                         lookupEvent debug lookupModeRef getClipboard virtCursorRef
@@ -289,8 +290,9 @@ mainLoopWidget win mkWidgetUnmemod options =
                         { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
                         }
             , MainAnim.makeFrame =
-                (renderWidget size <&> (^. _1))
-                <*> cCursor config zoom
+                do
+                    size <- GLFW.Utils.windowSize win
+                    (renderWidget size <&> (^. _1)) <*> cCursor config zoom
             }
     where
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack

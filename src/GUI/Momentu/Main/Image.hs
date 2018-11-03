@@ -12,7 +12,6 @@ module GUI.Momentu.Main.Image
     ) where
 
 import           Data.IORef
-import           GUI.Momentu.Animation (Size)
 import qualified GUI.Momentu.Draw.FPS as FPS
 import           GUI.Momentu.Font (Font)
 import           GUI.Momentu.Main.Events.Loop (Event, Next(..), eventLoop)
@@ -20,7 +19,6 @@ import qualified GUI.Momentu.Main.Events.Loop as EventLoop
 import           GUI.Momentu.Render (PerfCounters(..), render)
 import qualified Graphics.DrawingCombinators.Extended as Draw
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
@@ -46,17 +44,13 @@ instance Monoid EventResult where
     mempty = ERNone
     mappend = (<>)
 
-mainLoop :: GLFW.Window -> (Size -> Handlers) -> IO ()
-mainLoop win imageHandlers =
+mainLoop :: GLFW.Window -> Handlers -> IO ()
+mainLoop win handlers =
     do
-        initialSize <- GLFW.Utils.windowSize win
-        drawnImageHandlers <- imageHandlers initialSize & newIORef
         fps <- FPS.new
         eventResultRef <- newIORef mempty
         let iteration =
                 do
-                    handlers <- GLFW.Utils.windowSize win <&> imageHandlers
-                    writeIORef drawnImageHandlers handlers
                     fpsImg <-
                         fpsFont handlers >>= \case
                         Nothing -> pure mempty
@@ -81,8 +75,5 @@ mainLoop win imageHandlers =
                 EventLoop.EventWindowClose -> True <$ eventRes ERQuit
                 EventLoop.EventWindowRefresh -> True <$ eventRes ERRefresh
                 EventLoop.EventFramebufferSize {} -> True <$ eventRes ERRefresh
-                event ->
-                    do
-                        handlers <- readIORef drawnImageHandlers
-                        eventHandler handlers event
+                event -> eventHandler handlers event
         eventLoop win handleEvent iteration

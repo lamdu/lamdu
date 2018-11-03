@@ -26,7 +26,6 @@ import           GUI.Momentu.Main.Image (PerfCounters(..), TickResult(..))
 import qualified GUI.Momentu.Main.Image as MainImage
 import           GUI.Momentu.Main.Types (AnimConfig(..))
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
@@ -39,7 +38,6 @@ import           Lamdu.Prelude
 data EventsData = EventsData
     { _edHaveTicks :: !Bool
     , _edRefreshRequested :: !Bool
-    , _edWinSize :: !Anim.Size
     , _edReversedEvents :: [Event]
     } deriving Show
 Lens.makeLenses ''EventsData
@@ -95,13 +93,12 @@ waitForEvent eventTVar =
         pure ed
     & STM.atomically
 
-eventHandlerThread :: ThreadVars -> (Anim.Size -> Handlers) -> IO ()
-eventHandlerThread tvars animHandlers =
+eventHandlerThread :: ThreadVars -> Handlers -> IO ()
+eventHandlerThread tvars handlers =
     forever $
     do
         ed <- waitForEvent (eventsVar tvars)
         userEventTime <- getCurrentTime
-        let handlers = animHandlers (ed ^. edWinSize)
         eventResults <-
             traverse (eventHandler handlers) $ reverse (ed ^. edReversedEvents)
         tickResult <-
@@ -133,17 +130,17 @@ animThread ::
     (PerfCounters -> IO ()) -> IO (Maybe Font) ->
     ThreadVars -> IORef Anim.State -> IO AnimConfig -> GLFW.Window -> IO ()
 animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig win =
-    MainImage.mainLoop win $ \size ->
+    MainImage.mainLoop win $
     MainImage.Handlers
     { MainImage.eventHandler =
         \event -> (edReversedEvents %~ (event :)) & updateTVar <&> const True
     , MainImage.refresh =
         do
             updateTVar (edRefreshRequested .~ True)
-            _ <- updateFrameState size
+            _ <- updateFrameState
             readIORef animStateRef <&> draw
     , MainImage.tick =
-        updateFrameState size
+        updateFrameState
         <&> (^? Anim._NewState)
         <&> fmap draw <&> maybe StopTicking TickImage
     , MainImage.fpsFont = getFpsFont
@@ -152,10 +149,10 @@ animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig w
     where
         draw = Anim.draw . Anim.currentFrame
         updateTVar = STM.atomically . modifyTVar (eventsVar tvars)
-        tick size = updateTVar $ (edHaveTicks .~ True) . (edWinSize .~ size)
-        updateFrameState size =
+        tick = updateTVar (edHaveTicks .~ True)
+        updateFrameState =
             do
-                tick size
+                tick
                 fromEvents <- swapTVar (toAnimVar tvars) mempty & STM.atomically
                 animConfig <- getAnimationConfig
                 mNewState <-
@@ -166,18 +163,16 @@ animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig w
                     & Lens.traverseOf_ Anim._NewState (writeIORef animStateRef)
                 pure mNewState
 
-mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Font) -> IO AnimConfig -> (Anim.Size -> Handlers) -> IO ()
+mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Font) -> IO AnimConfig -> Handlers -> IO ()
 mainLoop reportPerfCounters win getFpsFont getAnimationConfig animHandlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
         animStateRef <- Anim.initialState >>= newIORef
-        initialWinSize <- GLFW.Utils.windowSize win
         tvars <-
             ThreadVars
             <$> newTVarIO EventsData
                 { _edHaveTicks = False
                 , _edRefreshRequested = False
-                , _edWinSize = initialWinSize
                 , _edReversedEvents = []
                 }
             <*> newTVarIO mempty
