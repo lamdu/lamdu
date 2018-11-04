@@ -5,7 +5,6 @@ module Lamdu.Version
     ( VersionInfo(..), currentVersionInfo, currentVersionInfoStr
     ) where
 
-import           Control.Lens.Operators
 import           Data.Time (getZonedTime, formatTime, defaultTimeLocale)
 import           Language.Haskell.TH (runIO, stringE)
 import qualified System.Process.Git as Git
@@ -21,10 +20,7 @@ data VersionInfo = VersionInfo
 
 curdate :: String
 curdate =
-    $(do
-        curTime <- getZonedTime
-        formatTime defaultTimeLocale "%y-%m-%d" curTime & pure
-        & runIO >>= stringE)
+    $(runIO (formatTime defaultTimeLocale "%y-%m-%d" <$> getZonedTime) >>= stringE)
 
 _rc :: String -> String
 _rc ver = ver ++ "-rc-" ++ curdate
