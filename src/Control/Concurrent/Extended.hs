@@ -1,6 +1,7 @@
 module Control.Concurrent.Extended
     ( module Control.Concurrent
     , forkIOUnmasked, runAfter, forwardSynchronuousExceptions, withForkedIO
+    , forkOSUnmasked, withForkedOS
     ) where
 
 import           Control.Concurrent
@@ -13,6 +14,9 @@ import           Prelude
 
 forkIOUnmasked :: IO () -> IO ThreadId
 forkIOUnmasked action = forkIOWithUnmask $ \unmask -> unmask action
+
+forkOSUnmasked :: IO () -> IO ThreadId
+forkOSUnmasked action = forkOSWithUnmask $ \unmask -> unmask action
 
 runAfter :: Int -> IO () -> IO ThreadId
 runAfter delay action =
@@ -45,3 +49,7 @@ forwardSynchronuousExceptions action =
 withForkedIO :: IO () -> IO a -> IO a
 withForkedIO action =
     E.bracket (forkIOUnmasked action) (`E.throwTo` E.ThreadKilled) . const
+
+withForkedOS :: IO () -> IO a -> IO a
+withForkedOS action =
+    E.bracket (forkOSUnmasked action) (`E.throwTo` E.ThreadKilled) . const
