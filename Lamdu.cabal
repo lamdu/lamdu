@@ -44,7 +44,7 @@ Executable lamdu
   hs-source-dirs: src/main
   default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
   default-language: Haskell2010
-  build-depends: Lamdu, base, directory, process, template-haskell, time
+  build-depends: Lamdu, base, directory, process, template-haskell, time, base-compat, lens
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
   if flag(ekg)
