@@ -10,16 +10,16 @@ import qualified Language.Haskell.TH as TH
 import qualified Language.Haskell.TH.Syntax as THS
 import           System.Process (readProcess)
 
-import           Lamdu.Prelude
+import           Prelude
 
 runGit :: [String] -> TH.Q String
-runGit args = readProcess "git" args "" & TH.runIO
+runGit args = TH.runIO (readProcess "git" args "")
 
 hash :: TH.ExpQ
-hash = runGit ["rev-parse", "HEAD"] <&> words <&> head >>= TH.stringE
+hash = (head . words <$> runGit ["rev-parse", "HEAD"]) >>= TH.stringE
 
 status :: TH.ExpQ
 status = runGit ["status", "--porcelain"] >>= TH.stringE
 
 dirty :: TH.ExpQ
-dirty = runGit ["status", "--porcelain"] <&> words <&> not . null >>= THS.lift
+dirty = (not . null . words <$> runGit ["status", "--porcelain"]) >>= THS.lift
