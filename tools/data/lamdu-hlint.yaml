@@ -40,6 +40,7 @@
     - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
     - warn: {lhs: "[a] & sequenceA", rhs: "a <&> pure"}
     - warn: {lhs: "do { a <- b; pure c }", rhs: b <&> \a -> c}
+    - warn: {lhs: "do { a <- b; c & pure }", rhs: b <&> \a -> c}
     - error: {lhs: "Control.Lens.has (Control.Lens.at a)", rhs: "True"}
     - error: {lhs: "Control.Lens.has (a . Control.Lens.at b)", rhs: "Control.Lens.has a"}
     - error: {lhs: "Control.Lens.nullOf (Control.Lens.at a)", rhs: "False"}
