@@ -5,11 +5,12 @@ module Lamdu.Version
     ( VersionInfo(..), currentVersionInfo, currentVersionInfoStr
     ) where
 
+import           Control.Lens.Operators
 import           Data.Time (getZonedTime, formatTime, defaultTimeLocale)
 import           Language.Haskell.TH (runIO, stringE)
 import qualified System.Process.Git as Git
 
-import           Lamdu.Prelude
+import           Prelude.Compat
 
 data VersionInfo = VersionInfo
     { version :: !String
