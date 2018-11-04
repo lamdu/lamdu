@@ -3,181 +3,99 @@
 module GUI.Momentu.Main.Animation
     ( mainLoop
     , AnimConfig(..)
-    , Handlers(..), PerfCounters(..)
-    , EventResult(..)
-    , MainImage.wakeUp
+    , Handlers(..)
+    , PerfCounters(..)
+    , EventLoop.wakeUp
     ) where
 
-import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedIO)
-import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVar, writeTVar, modifyTVar, swapTVar)
-import           Control.DeepSeq (force)
-import           Control.Exception (evaluate, onException)
-import qualified Control.Lens as Lens
-import           Control.Monad (mplus)
-import qualified Control.Monad.STM as STM
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import qualified Data.Monoid as Monoid
+import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedOS)
+import           Control.Concurrent.STM (STM)
+import qualified Control.Concurrent.STM as STM
+import           Control.Exception (onException)
+import           Data.IORef
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
 import           GUI.Momentu.Main.Events (Event)
-import           GUI.Momentu.Main.Image (PerfCounters(..), TickResult(..))
-import qualified GUI.Momentu.Main.Image as MainImage
+import qualified GUI.Momentu.Main.Events.Loop as EventLoop
 import           GUI.Momentu.Main.Types (AnimConfig(..))
+import           GUI.Momentu.Render (render, PerfCounters(..))
 import qualified Graphics.UI.GLFW as GLFW
 
 import           Lamdu.Prelude
 
--- Animation thread will have not only the cur frame, but the dest
--- frame in its mutable current state (to update it asynchronously)
-
--- Worker thread receives events, ticks (which may be lost), handles them, responds to animation thread
--- Animation thread sends events, ticks to worker thread. Samples results from worker thread, applies them to the cur state
-
-data EventsData = EventsData
-    { _edHaveTicks :: !Bool
-    , _edRefreshRequested :: !Bool
-    , _edReversedEvents :: [Event]
-    } deriving Show
-Lens.makeLenses ''EventsData
-
--- Data sent from the events thread to the anim thread
-data ToAnim = ToAnim
-    { taEventResult :: EventResult
-    , taMNewFrame :: Maybe (UTCTime, Anim.Frame)
-    }
-
-instance Semigroup ToAnim where
-    -- Newer ToAnim is on the left, taking it's new frame if exists.
-    ToAnim erA nfA <> ToAnim erB nfB = ToAnim (erA <> erB) (mplus nfA nfB)
-instance Monoid ToAnim where
-    mempty = ToAnim mempty Nothing
-    mappend = (<>)
-
--- The threads communicate via these STM variables
-data ThreadVars = ThreadVars
-    { eventsVar :: TVar EventsData
-    , toAnimVar :: TVar ToAnim
-    }
-
-newtype EventResult = EventResult
-    { erUpdate :: Monoid.Any
-    }
-
-instance Semigroup EventResult where
-    EventResult am <> EventResult bm = EventResult (am <> bm)
-instance Monoid EventResult where
-    mempty = EventResult mempty
-    mappend = (<>)
-
 data Handlers = Handlers
-    { tickHandler :: IO EventResult
-    , eventHandler :: Event -> IO EventResult
+    { reportPerfCounters :: PerfCounters -> IO ()
+    , getFPSFont :: IO (Maybe Font)
+    , getAnimConfig :: IO AnimConfig
     , makeFrame :: IO Anim.Frame
+    , tickHandler :: IO Bool
+        -- ^ Returns whether the tick was handled, and a frame update
+        -- is needed
+    , eventHandler :: Event -> IO Bool
+        -- ^ Returns whether the event was handled, meaning two things:
+        -- 1. A new frame will be generated
+        -- 2. Do not pass event to further processing (e.g: input managers)
     }
 
-waitForEvent :: TVar EventsData -> IO EventsData
-waitForEvent eventTVar =
+eventThreadLoop :: (Maybe (UTCTime, Anim.Frame) -> IO ()) -> GLFW.Window -> Handlers -> IO ()
+eventThreadLoop sendNewFrame win handlers =
     do
-        ed <- readTVar eventTVar
-        STM.check
-            ((ed ^. edHaveTicks) ||
-             (ed ^. edRefreshRequested) ||
-             (not . null) (ed ^. edReversedEvents))
-        ed
-            & edHaveTicks .~ False
-            & edRefreshRequested .~ False
-            & edReversedEvents .~ []
-            & writeTVar eventTVar
-        pure ed
-    & STM.atomically
-
-eventHandlerThread :: ThreadVars -> Handlers -> IO ()
-eventHandlerThread tvars handlers =
-    forever $
-    do
-        ed <- waitForEvent (eventsVar tvars)
-        userEventTime <- getCurrentTime
-        eventResults <-
-            traverse (eventHandler handlers) $ reverse (ed ^. edReversedEvents)
-        tickResult <-
-            if ed ^. edHaveTicks
-            then tickHandler handlers
-            else pure mempty
-        let result = mconcat (tickResult : eventResults)
-        mNewFrame <-
-            if ed ^. edRefreshRequested || erUpdate result ^. Lens._Wrapped
-            then
-                makeFrame handlers
-                -- Force destFrame so that we don't get unknown computations
-                -- happening inside STM.atomically modifying the state var.
-                -- Without this we may get nested STM.atomically errors.
-                >>= evaluate . force
-                <&> Just
-            else pure Nothing
-        mappend ToAnim
-            { taEventResult = result
-            , taMNewFrame = mNewFrame <&> (,) userEventTime
+        lastTimestampRef <- newIORef Nothing
+        let updateTimestamp act =
+                do
+                    preTimestamp <- getCurrentTime
+                    didAnything <- act
+                    when didAnything
+                        (writeIORef lastTimestampRef (Just preTimestamp))
+                    pure didAnything
+        EventLoop.eventLoop win EventLoop.Handlers
+            { EventLoop.eventHandler = updateTimestamp . eventHandler handlers
+            , EventLoop.iteration =
+                do
+                    _ <- updateTimestamp (tickHandler handlers)
+                    lastTimestamp <- readIORef lastTimestampRef
+                    writeIORef lastTimestampRef Nothing
+                    traverse_ sendStampedFrame lastTimestamp
+                    pure EventLoop.NextWait
             }
-            & modifyTVar (toAnimVar tvars)
-            & STM.atomically
-        -- In case main thread went to sleep (not knowing whether to anticipate
-        -- a tick result), wake it up
-        when (Lens.has Lens._Just mNewFrame) MainImage.wakeUp
-
-animThread ::
-    (PerfCounters -> IO ()) -> IO (Maybe Font) ->
-    ThreadVars -> IORef Anim.State -> IO AnimConfig -> GLFW.Window -> IO ()
-animThread reportPerfCounters getFpsFont tvars animStateRef getAnimationConfig win =
-    MainImage.mainLoop win $
-    MainImage.Handlers
-    { MainImage.eventHandler =
-        \event -> (edReversedEvents %~ (event :)) & updateTVar <&> const True
-    , MainImage.refresh =
-        do
-            updateTVar (edRefreshRequested .~ True)
-            _ <- updateFrameState
-            readIORef animStateRef <&> draw
-    , MainImage.tick =
-        updateFrameState
-        <&> (^? Anim._NewState)
-        <&> fmap draw <&> maybe StopTicking TickImage
-    , MainImage.fpsFont = getFpsFont
-    , MainImage.reportPerfCounters = reportPerfCounters
-    }
     where
-        draw = Anim.draw . Anim.currentFrame
-        updateTVar = STM.atomically . modifyTVar (eventsVar tvars)
-        tick = updateTVar (edHaveTicks .~ True)
-        updateFrameState =
-            do
-                tick
-                fromEvents <- swapTVar (toAnimVar tvars) mempty & STM.atomically
-                animConfig <- getAnimationConfig
-                mNewState <-
-                    readIORef animStateRef
-                    >>= Anim.clockedAdvanceAnimation animConfig (taMNewFrame fromEvents)
-                _ <-
-                    mNewState
-                    & Lens.traverseOf_ Anim._NewState (writeIORef animStateRef)
-                pure mNewState
+        sendStampedFrame timestamp =
+            makeFrame handlers <&> (,) timestamp <&> Just
+            >>= sendNewFrame
 
-mainLoop :: (PerfCounters -> IO ()) -> GLFW.Window -> IO (Maybe Font) -> IO AnimConfig -> Handlers -> IO ()
-mainLoop reportPerfCounters win getFpsFont getAnimationConfig animHandlers =
+animThreadLoop :: STM (Maybe (UTCTime, Anim.Frame)) -> Handlers -> GLFW.Window -> IO ()
+animThreadLoop recvNewFrame handlers win =
+    do
+        GLFW.makeContextCurrent (Just win)
+        initialFrame <- makeFrame handlers
+        initialTime <- getCurrentTime
+        Anim.initialState >>= loop (Just (initialTime, initialFrame))
+    where
+        waitNewFrame = STM.atomically $ recvNewFrame >>= maybe STM.retry pure
+        pollNewFrame = STM.atomically recvNewFrame
+        loop frameReq animState =
+            do
+                Anim.currentFrame animState & Anim.draw & render win
+                    >>= reportPerfCounters handlers
+                animConfig <- getAnimConfig handlers
+                (nextAnimState, nextFrameReq) <-
+                    Anim.clockedAdvanceAnimation animConfig frameReq animState
+                    >>= \case
+                    Anim.AnimationComplete -> waitNewFrame <&> Just <&> (,) animState
+                    Anim.NewState nextAnimState -> pollNewFrame <&> (,) nextAnimState
+                loop nextFrameReq nextAnimState
+
+mainLoop :: GLFW.Window -> Handlers -> IO ()
+mainLoop win handlers =
     do
         unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
-        animStateRef <- Anim.initialState >>= newIORef
-        tvars <-
-            ThreadVars
-            <$> newTVarIO EventsData
-                { _edHaveTicks = False
-                , _edRefreshRequested = False
-                , _edReversedEvents = []
-                }
-            <*> newTVarIO mempty
-        eventsThread <- forwardSynchronuousExceptions (eventHandlerThread tvars animHandlers)
-        withForkedIO
-            (eventsThread `onException` MainImage.wakeUp)
-            (animThread reportPerfCounters
-                getFpsFont tvars animStateRef getAnimationConfig win)
+        newFrameReq <- STM.newTVarIO Nothing
+        animThread <-
+            animThreadLoop (STM.swapTVar newFrameReq Nothing) handlers win
+            & forwardSynchronuousExceptions
+        withForkedOS
+            (animThread `onException` EventLoop.wakeUp)
+            (eventThreadLoop (STM.atomically . STM.writeTVar newFrameReq)
+                win handlers)

@@ -190,7 +190,6 @@ Library
                   , GUI.Momentu.Main.Animation
                   , GUI.Momentu.Main.Events
                   , GUI.Momentu.Main.Events.Loop
-                  , GUI.Momentu.Main.Image
                   , GUI.Momentu.Main.Types
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey

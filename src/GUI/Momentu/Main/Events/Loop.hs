@@ -4,6 +4,7 @@ module GUI.Momentu.Main.Events.Loop
     ( Event(..)
     , Next(..)
     , EventLoopDisallowedWhenMasked(..)
+    , Handlers(..)
     , eventLoop, wakeUp
     ) where
 
@@ -21,7 +22,7 @@ import           Prelude
 -- | The output of the event handler back to the event-loop.
 data Next
     = NextWait
-    -- ^ idle wait for the next event
+    -- ^ idle wait for the next event, or an explicit wake-up
     | NextPoll
     -- ^ poll for the next event and immediately (up to sync-to-vblank) continue
     | NextQuit
@@ -35,7 +36,7 @@ instance E.Exception EventLoopDisallowedWhenMasked
 mouseButtonEvent ::
     GLFW.Window -> (Event -> IO a) -> GLFW.MouseButton -> GLFW.MouseButtonState ->
     GLFW.ModifierKeys -> IO a
-mouseButtonEvent win eventHandler button buttonState modKeys =
+mouseButtonEvent win handler button buttonState modKeys =
     do
         fbSize <- GLFW.Utils.framebufferSize win
         winSize <- GLFW.Utils.windowSize win
@@ -46,25 +47,25 @@ mouseButtonEvent win eventHandler button buttonState modKeys =
             , mbModKeys = modKeys
             , mbPosition = p * fbSize / winSize
             , mbPositionInWindowCoords = p
-            } & eventHandler
+            } & handler
 
 keyEvent :: (Event -> a) -> GLFW.Key -> Int -> GLFW.KeyState -> GLFW.ModifierKeys -> a
-keyEvent eventHandler key scanCode keyState modKeys =
+keyEvent handler key scanCode keyState modKeys =
     EventKey KeyEvent
     { keKey = key
     , keScanCode = scanCode
     , keState = keyState
     , keModKeys = modKeys
-    } & eventHandler
+    } & handler
 
 framebufferSizeEvent :: (Event -> a) -> Int -> Int -> a
-framebufferSizeEvent eventHandler w h =
-    Vector2 w h & EventFramebufferSize & eventHandler
+framebufferSizeEvent handler w h =
+    Vector2 w h & EventFramebufferSize & handler
 
 charEvent :: Monoid a => (Event -> a) -> Char -> a
-charEvent eventHandler char
+charEvent handler char
     -- Range for "key" characters (keys for left key, right key, etc.)
-    | char < '\57344' || '\63743' < char = EventChar char & eventHandler
+    | char < '\57344' || '\63743' < char = EventChar char & handler
     | otherwise = mempty
 
 validateMasksingState :: IO ()
@@ -77,29 +78,35 @@ validateMasksingState =
 wakeUp :: IO ()
 wakeUp = GLFW.postEmptyEvent
 
-eventLoop :: GLFW.Window -> (Event -> IO Bool) -> IO Next -> IO ()
-eventLoop win eventHandler iteration =
+data Handlers = Handlers
+    { eventHandler :: Event -> IO Bool -- ^ returns whether event was handled
+    , iteration :: IO Next -- ^ How to wait for next iteration
+    }
+
+eventLoop :: GLFW.Window -> Handlers -> IO ()
+eventLoop win handlers =
     do
         validateMasksingState
         let setCallback f cb = f win $ Just $ const cb
-        setCallback GLFW.setCharCallback (charEvent veventHandler)
-        setCallback GLFW.setKeyCallback (keyEvent veventHandler)
-        setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win veventHandler)
-        setCallback GLFW.setDropCallback (veventHandler . EventDropPaths)
-        setCallback GLFW.setWindowRefreshCallback $ veventHandler EventWindowRefresh
-        setCallback GLFW.setFramebufferSizeCallback $ framebufferSizeEvent veventHandler
-        setCallback GLFW.setWindowCloseCallback $ veventHandler EventWindowClose
+        setCallback GLFW.setCharCallback (charEvent vhandler)
+        setCallback GLFW.setKeyCallback (keyEvent vhandler)
+        setCallback GLFW.setMouseButtonCallback (mouseButtonEvent win vhandler)
+        setCallback GLFW.setDropCallback (vhandler . EventDropPaths)
+        setCallback GLFW.setWindowRefreshCallback $ vhandler EventWindowRefresh
+        setCallback GLFW.setFramebufferSizeCallback $ framebufferSizeEvent vhandler
+        setCallback GLFW.setWindowCloseCallback $ vhandler EventWindowClose
 
         GLFW.swapInterval 1
 
-        veventHandler EventWindowRefresh
+        vhandler EventWindowRefresh
 
         let loop =
-                iteration
+                iteration handlers
                 >>= \case
                 NextWait -> GLFW.waitEvents *> loop
                 NextPoll -> GLFW.pollEvents *> loop
                 NextQuit -> pure ()
         loop
     where
-        veventHandler = void . eventHandler
+        vhandler = void . handler
+        handler = eventHandler handlers

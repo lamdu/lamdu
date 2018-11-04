@@ -261,16 +261,16 @@ mainLoopWidget win mkWidgetUnmemod options =
                     Cursor.render
                         <$> (readIORef mkWidgetRef >>= (size &))
                         <&> _1 . Lens.mapped %~ (vcursorimg <>)
-        MainAnim.mainLoop (reportPerfCounters debug) win (fpsFont zoom)
-            (cAnim config) $
+        MainAnim.mainLoop win $
             MainAnim.Handlers
-            { MainAnim.tickHandler =
+            { MainAnim.reportPerfCounters = reportPerfCounters debug
+            , MainAnim.getAnimConfig = cAnim config
+            , MainAnim.getFPSFont = fpsFont debug zoom
+            , MainAnim.tickHandler =
                 do
-                    anyUpdate <- tickHandler
+                    anyUpdate <- tickHandler options
                     when anyUpdate newWidget
-                    pure MainAnim.EventResult
-                        { MainAnim.erUpdate = anyUpdate ^. Lens._Unwrapped
-                        }
+                    pure anyUpdate
             , MainAnim.eventHandler = \event ->
                 do
                     size <- GLFW.Utils.windowSize win
@@ -283,12 +283,11 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> pure ()
                         Just res ->
                             do
-                                Property.modP stateStorage (State.update res)
+                                Property.modP (stateStorage options)
+                                    (State.update res)
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
-                    pure MainAnim.EventResult
-                        { MainAnim.erUpdate = Lens.has Lens._Just mRes ^. Lens._Unwrapped
-                        }
+                    pure (Lens.has Lens._Just mRes)
             , MainAnim.makeFrame =
                 do
                     size <- GLFW.Utils.windowSize win
@@ -296,5 +295,4 @@ mainLoopWidget win mkWidgetUnmemod options =
             }
     where
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{stateStorage, tickHandler, debug, config} = options
-        DebugOptions{fpsFont} = debug
+        Options{debug, config} = options
