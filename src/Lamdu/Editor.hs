@@ -145,29 +145,33 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
         reportPerfCounters <- traverse makeReportPerfCounters ekg
-        MainLoop.mainLoopWidget win makeWidget MainLoop.Options
-            { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
-            , tickHandler = getRefreshScheduled refreshScheduler
-            , stateStorage = stateStorage
-            , debug = MainLoop.DebugOptions
-                { fpsFont =
-                  \zoom ->
-                  do
-                      sample <- ConfigSampler.getSample configSampler
-                      if sample ^. sConfig . Config.debug . Config.debugShowFPS
-                          then getFonts zoom sample <&> (^. Fonts.debugInfo) <&> Just
-                          else pure Nothing
-                , virtualCursorColor =
-                    ConfigSampler.getSample configSampler
-                    <&> (^. sConfig . Config.debug . Config.virtualCursorShown)
-                    <&> \case
-                        False -> Nothing
-                        True -> Just (M.Color 1 1 0 0.5)
-                , reportPerfCounters = fromMaybe (const (pure ())) reportPerfCounters
-                , jumpToSource = jumpToSource
-                , jumpToSourceKeys =
-                    ConfigSampler.getSample configSampler
-                    <&> (^. sConfig . Config.debug . Config.jumpToSourceKeys)
+        MainLoop.mainLoopWidget win MainLoop.Handlers
+            { tickHandler = getRefreshScheduled refreshScheduler
+            , makeWidget = makeWidget
+            , options =
+                MainLoop.Options
+                { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
+                , stateStorage = stateStorage
+                , debug = MainLoop.DebugOptions
+                    { fpsFont =
+                      \zoom ->
+                      do
+                          sample <- ConfigSampler.getSample configSampler
+                          if sample ^. sConfig . Config.debug . Config.debugShowFPS
+                              then getFonts zoom sample <&> (^. Fonts.debugInfo) <&> Just
+                              else pure Nothing
+                    , virtualCursorColor =
+                        ConfigSampler.getSample configSampler
+                        <&> (^. sConfig . Config.debug . Config.virtualCursorShown)
+                        <&> \case
+                            False -> Nothing
+                            True -> Just (M.Color 1 1 0 0.5)
+                    , reportPerfCounters = fromMaybe (const (pure ())) reportPerfCounters
+                    , jumpToSource = jumpToSource
+                    , jumpToSourceKeys =
+                        ConfigSampler.getSample configSampler
+                        <&> (^. sConfig . Config.debug . Config.jumpToSourceKeys)
+                    }
                 }
             }
 

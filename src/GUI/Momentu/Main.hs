@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances #-}
 module GUI.Momentu.Main
-    ( mainLoopWidget
-    , Config(..)
+    ( Config(..)
     , Env(..), eWindowSize, eZoom, eState
     , HasMainLoopEnv(..)
     , DebugOptions(..), defaultDebugOptions
@@ -9,6 +8,7 @@ module GUI.Momentu.Main
     , Options(..), defaultOptions
     , MainAnim.wakeUp
     , quitEventMap
+    , Handlers(..), mainLoopWidget
     ) where
 
 import qualified Control.Lens as Lens
@@ -60,10 +60,15 @@ iorefStateStorage initialCursor =
     newIORef (GUIState initialCursor mempty) <&> Property.fromIORef
 
 data Options = Options
-    { tickHandler :: IO Bool
-    , config :: Config
+    { config :: Config
     , stateStorage :: MkProperty' IO GUIState
     , debug :: DebugOptions
+    }
+
+data Handlers = Handlers
+    { tickHandler :: IO Bool
+    , makeWidget :: Env -> IO (Gui Widget IO)
+    , options :: Options
     }
 
 defaultDebugOptions :: DebugOptions
@@ -86,8 +91,7 @@ defaultOptions helpFontPath =
         -- so an empty value might be fitting.
         stateStorage_ <- iorefStateStorage (Widget.Id [])
         pure Options
-            { tickHandler = pure False
-            , config = Config
+            { config = Config
                 { cAnim =
                     pure AnimConfig
                     { MainAnim.acTimePeriod = 0.11
@@ -242,15 +246,16 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
         Config{cInvalidCursorOverlayColor} = config
         Options{stateStorage, debug, config} = options
 
-mainLoopWidget :: GLFW.Window -> (Env -> IO (Gui Widget IO)) -> Options -> IO ()
-mainLoopWidget win mkWidgetUnmemod options =
+mainLoopWidget :: GLFW.Window -> Handlers -> IO ()
+mainLoopWidget win handlers =
     do
         addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown
         zoom <- Zoom.make win
         lookupModeRef <- newIORef ApplyEvent
         virtCursorRef <- newIORef Nothing
         let mkW =
-                wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod
+                wrapMakeWidget zoom addHelp opts lookupModeRef
+                (makeWidget handlers)
                 & memoIO
         mkWidgetRef <- mkW >>= newIORef
         let newWidget = mkW >>= writeIORef mkWidgetRef
@@ -268,7 +273,7 @@ mainLoopWidget win mkWidgetUnmemod options =
             , MainAnim.getFPSFont = fpsFont debug zoom
             , MainAnim.tickHandler =
                 do
-                    anyUpdate <- tickHandler options
+                    anyUpdate <- tickHandler handlers
                     when anyUpdate newWidget
                     pure anyUpdate
             , MainAnim.eventHandler = \event ->
@@ -283,7 +288,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                         Nothing -> pure ()
                         Just res ->
                             do
-                                Property.modP (stateStorage options)
+                                Property.modP (stateStorage opts)
                                     (State.update res)
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
                                 newWidget
@@ -295,4 +300,5 @@ mainLoopWidget win mkWidgetUnmemod options =
             }
     where
         getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        Options{debug, config} = options
+        opts = options handlers
+        Options{debug, config} = opts
