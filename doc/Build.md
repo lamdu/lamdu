@@ -101,16 +101,12 @@ NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take 
 
 ### arch linux
 
-requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or above)
-
 ```shell
-sudo pacman -S leveldb glfw libxrandr libxi libxcursor libxinerama
+sudo pacman -Sy leveldb libxrandr libxi libxcursor libxinerama stack make tar gcc awk libxxf86vm mesa mesa-demos
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
-stack setup
-LD_PRELOAD=/usr/lib/libtcmalloc.so stack install
-~/.local/bin/lamdu
-
+LD_PRELOAD=/usr/lib/libtcmalloc.so stack build
+stack exec -- lamdu
 ```
 
 ### nix (any linux distribution)
