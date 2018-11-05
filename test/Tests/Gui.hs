@@ -10,8 +10,9 @@ import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Main.Events (Event(..), KeyEvent(..))
+import           GUI.Momentu.Main.Events (KeyEvent(..))
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive

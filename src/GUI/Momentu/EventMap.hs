@@ -4,6 +4,7 @@ module GUI.Momentu.EventMap
     , InputDoc, Subtitle, Doc(..), docStrs
     , Clipboard
     , MaybeWantsClipboard(..), _Doesn'tWantClipboard, _WantsClipboard
+    , Event(..)
     , EventMap, lookup
     , emDocs
     , charEventMap, allChars
@@ -228,19 +229,24 @@ deleteKey key = emKeyMap %~ Map.delete key
 deleteKeys :: [KeyEvent] -> EventMap a -> EventMap a
 deleteKeys = foldr ((.) . deleteKey) id
 
+data Event
+     = EventKey Events.KeyEvent
+     | EventChar Char
+     | EventDropPaths [FilePath]
+
 lookup ::
     Applicative f =>
-    f (Maybe Clipboard) -> Events.Event -> EventMap a -> f (Maybe (DocHandler a))
-lookup _ (Events.EventDropPaths paths) x =
+    f (Maybe Clipboard) -> Event -> EventMap a -> f (Maybe (DocHandler a))
+lookup _ (EventDropPaths paths) x =
     map applyHandler (x ^. emDropHandlers) & asum & pure
     where
         applyHandler dh =
             dh ^. dropDocHandler & dhHandler %~ ($ paths) & sequenceA
 lookup getClipboard event x =
     case event of
-    Events.EventChar c ->
+    EventChar c ->
         lookupCharGroup charGroups c <|> lookupAllCharHandler allCharHandlers c & pure
-    Events.EventKey k ->
+    EventKey k ->
         fromMaybe (pure Nothing) (lookupKeyMap getClipboard dict k)
     _ -> pure Nothing
     where

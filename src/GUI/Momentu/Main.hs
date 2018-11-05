@@ -27,7 +27,8 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
-import           GUI.Momentu.Main.Events as Main.Events
+import           GUI.Momentu.Main.Events (MouseButtonEvent(..))
+import qualified GUI.Momentu.Main.Events as Main.Events
 import           GUI.Momentu.Main.Types (AnimConfig(..), Config(..))
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -41,6 +42,7 @@ import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
+import           Graphics.UI.GLFW (MouseButton(..), MouseButtonState(..))
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
@@ -143,43 +145,67 @@ jumpToTopOfCallStack debug callStack =
 
 data LookupMode = ApplyEvent | JumpToSource
 
-lookupEvent ::
+handleEvent ::
+    Monoid a =>
     DebugOptions -> IORef LookupMode -> IO (Maybe E.Clipboard) ->
     IORef (Maybe State.VirtualCursor) ->
     Maybe (Vector2 R -> Widget.EnterResult a) ->
-    Maybe (Rect, State.VirtualCursor -> EventMap a) -> Event -> IO (Maybe a)
-lookupEvent debug lookupModeRef getClipboard virtCursorRef mEnter mFocus event =
-    case (mEnter, mFocus, event) of
-    (Just enter, _
-        , Main.Events.EventMouseButton
-          (Main.Events.MouseButtonEvent GLFW.MouseButton'1
-           GLFW.MouseButtonState'Released _ mousePosF _)) ->
-        enter mousePosF
-        ^. Widget.enterResultEvent & Just & pure
-    (_, Just (focalArea, mkEventMap), _) ->
-        do
-            virtCursorState <- readIORef virtCursorRef
-            virtCursor <-
-                case virtCursorState of
-                Just x -> pure x
-                Nothing ->
-                    res <$ writeIORef virtCursorRef (Just res)
-                    where
-                        res = State.VirtualCursor focalArea
-            mDocHandler <- E.lookup getClipboard event (mkEventMap virtCursor)
-            case mDocHandler of
-                Nothing -> pure Nothing
-                Just docHandler ->
-                    do
-                        lookupMode <- readIORef lookupModeRef
-                        writeIORef lookupModeRef ApplyEvent
-                        case lookupMode of
-                            ApplyEvent -> docHandler ^. E.dhHandler & Just & pure
-                            JumpToSource ->
-                                docHandler ^. E.dhFileLocation
-                                & jumpToTopOfCallStack debug
-                                & (Nothing <$)
-    _ -> pure Nothing
+    Maybe (Rect, State.VirtualCursor -> EventMap a) -> Main.Events.Event ->
+    IO (Maybe a)
+handleEvent debug lookupModeRef getClipboard virtCursorRef mEnter mFocus event =
+    case event of
+    Main.Events.EventKey key -> E.EventKey key & doLookup
+    Main.Events.EventChar c -> E.EventChar c & doLookup
+    Main.Events.EventDropPaths paths -> E.EventDropPaths paths & doLookup
+    Main.Events.EventMouseButton buttonEvent ->
+        case (buttonEvent, mEnter) of
+        ( MouseButtonEvent MouseButton'1
+            MouseButtonState'Released _ mousePosF _
+            , Just enter
+            ) -> enter mousePosF ^. Widget.enterResultEvent & Just & pure
+        _ -> pure Nothing
+    Main.Events.EventWindowClose -> fail "Quit"
+    Main.Events.EventWindowRefresh -> refresh
+    Main.Events.EventFramebufferSize _size -> refresh
+    where
+        refresh =
+            -- Returning a "Just" is a successful lookup - so
+            -- schedules a refresh
+            pure (Just mempty)
+        doLookup =
+            case mFocus of
+            Just focus ->
+                lookupEvent debug lookupModeRef getClipboard virtCursorRef focus
+            Nothing -> const (pure Nothing)
+
+lookupEvent ::
+    DebugOptions -> IORef LookupMode -> IO (Maybe E.Clipboard) ->
+    IORef (Maybe State.VirtualCursor) ->
+    (Rect, State.VirtualCursor -> EventMap a) -> E.Event ->
+    IO (Maybe a)
+lookupEvent debug lookupModeRef getClipboard virtCursorRef (focalArea, mkEventMap) event =
+    do
+        virtCursorState <- readIORef virtCursorRef
+        virtCursor <-
+            case virtCursorState of
+            Just x -> pure x
+            Nothing ->
+                res <$ writeIORef virtCursorRef (Just res)
+                where
+                    res = State.VirtualCursor focalArea
+        mDocHandler <- E.lookup getClipboard event (mkEventMap virtCursor)
+        case mDocHandler of
+            Nothing -> pure Nothing
+            Just docHandler ->
+                do
+                    lookupMode <- readIORef lookupModeRef
+                    writeIORef lookupModeRef ApplyEvent
+                    case lookupMode of
+                        ApplyEvent -> docHandler ^. E.dhHandler & Just & pure
+                        JumpToSource ->
+                            docHandler ^. E.dhFileLocation
+                            & jumpToTopOfCallStack debug
+                            & (Nothing <$)
 
 virtualCursorImage :: Maybe State.VirtualCursor -> DebugOptions -> IO Anim.Frame
 virtualCursorImage Nothing _ = pure mempty
@@ -279,8 +305,8 @@ runInner refreshAction run win handlers =
                     size <- GLFW.Utils.framebufferSize win
                     (_, mEnter, mFocus) <- renderWidget size
                     mWidgetRes <-
-                        lookupEvent debug lookupModeRef getClipboard virtCursorRef
-                        mEnter mFocus event
+                        handleEvent debug lookupModeRef getClipboard
+                        virtCursorRef mEnter mFocus event
                     mRes <- sequenceA mWidgetRes
                     case mRes of
                         Nothing -> pure ()
