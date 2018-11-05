@@ -24,7 +24,7 @@ data PerfCounters = PerfCounters
 render :: GLFW.Window -> Draw.Image a -> IO PerfCounters
 render win image =
     do
-        Vector2 winSizeX winSizeY <- GLFW.Utils.windowSize win
+        Vector2 winSizeX winSizeY <- GLFW.Utils.framebufferSize win
         GL.viewport $=
             (GL.Position 0 0,
              GL.Size (round winSizeX) (round winSizeY))

@@ -273,7 +273,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                     pure anyUpdate
             , MainAnim.eventHandler = \event ->
                 do
-                    size <- GLFW.Utils.windowSize win
+                    size <- GLFW.Utils.framebufferSize win
                     (_, mEnter, mFocus) <- renderWidget size
                     mWidgetRes <-
                         lookupEvent debug lookupModeRef getClipboard virtCursorRef
@@ -290,7 +290,7 @@ mainLoopWidget win mkWidgetUnmemod options =
                     pure (Lens.has Lens._Just mRes)
             , MainAnim.makeFrame =
                 do
-                    size <- GLFW.Utils.windowSize win
+                    size <- GLFW.Utils.framebufferSize win
                     (renderWidget size <&> (^. _1)) <*> cCursor config zoom
             }
     where
