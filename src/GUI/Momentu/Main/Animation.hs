@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module GUI.Momentu.Main.Animation
     ( mainLoop
     , AnimConfig(..)
