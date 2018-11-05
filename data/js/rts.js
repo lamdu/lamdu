@@ -217,7 +217,12 @@ module.exports = {
                         tag: tags.nothing,
                         data: {}
                     };
-                })
+                }),
+                exec: cmd => {
+                    return cont => {
+                        require('child_process').exec(toString(cmd), x => cont({}));
+                    };
+                }
             },
             network: {
                 openTcpServer: mutFunc(x => {
