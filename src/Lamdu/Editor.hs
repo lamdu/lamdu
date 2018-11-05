@@ -135,8 +135,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
-            { tickHandler = pure False
-            , makeWidget = makeWidget
+            { makeWidget = makeWidget
             , options =
                 MainLoop.Options
                 { config = Style.mainLoopConfig mkFontInfo mkConfigTheme

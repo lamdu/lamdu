@@ -65,8 +65,7 @@ data Options = Options
     }
 
 data Handlers = Handlers
-    { tickHandler :: IO Bool
-    , makeWidget :: Env -> IO (Gui Widget IO)
+    { makeWidget :: Env -> IO (Gui Widget IO)
     , options :: Options
     }
 
@@ -275,11 +274,6 @@ runInner refreshAction run win handlers =
             { MainAnim.reportPerfCounters = reportPerfCounters debug
             , MainAnim.getAnimConfig = cAnim config
             , MainAnim.getFPSFont = fpsFont debug zoom
-            , MainAnim.tickHandler =
-                do
-                    anyUpdate <- tickHandler handlers
-                    when anyUpdate newWidget
-                    pure anyUpdate
             , MainAnim.eventHandler = \event ->
                 do
                     size <- GLFW.Utils.framebufferSize win

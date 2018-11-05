@@ -28,9 +28,6 @@ data Handlers = Handlers
     , getFPSFont :: IO (Maybe Font)
     , getAnimConfig :: IO AnimConfig
     , makeFrame :: IO Anim.Frame
-    , tickHandler :: IO Bool
-        -- ^ Returns whether the tick was handled, and a frame update
-        -- is needed
     , eventHandler :: Event -> IO Bool
         -- ^ Returns whether the event was handled, meaning two things:
         -- 1. A new frame will be generated
@@ -45,7 +42,6 @@ eventThreadLoop lastTimestampRef sendNewFrame win handlers =
     { EventLoop.eventHandler = updateTimestamp . eventHandler handlers
     , EventLoop.iteration =
         do
-            _ <- updateTimestamp (tickHandler handlers)
             lastTimestamp <- readIORef lastTimestampRef
             writeIORef lastTimestampRef Nothing
             traverse_ sendStampedFrame lastTimestamp
