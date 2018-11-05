@@ -127,7 +127,6 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
     evaluator db mkSettingsProp cache cachedFunctions monitors =
     do
         getFonts <- EditorFonts.makeGetFonts subpixel
-        lastVersionNumRef <- newIORef []
         let makeWidget env =
                 do
                     sample <- ConfigSampler.getSample configSampler
@@ -148,16 +147,7 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.mainLoopWidget win makeWidget MainLoop.Options
             { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
-            , tickHandler =
-                do
-                    sample <- ConfigSampler.getSample configSampler
-                    let curVersionNum = ConfigSampler.sVersion sample
-                    configChanged <- atomicModifyIORef lastVersionNumRef $
-                        \lastVersionNum ->
-                        (curVersionNum, lastVersionNum /= curVersionNum)
-                    if configChanged
-                        then pure True
-                        else getRefreshScheduled refreshScheduler
+            , tickHandler = getRefreshScheduled refreshScheduler
             , stateStorage = stateStorage
             , debug = MainLoop.DebugOptions
                 { fpsFont =
