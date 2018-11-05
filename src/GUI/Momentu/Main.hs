@@ -6,9 +6,8 @@ module GUI.Momentu.Main
     , DebugOptions(..), defaultDebugOptions
     , PerfCounters(..)
     , Options(..), defaultOptions
-    , MainAnim.wakeUp
     , quitEventMap
-    , Handlers(..), mainLoopWidget
+    , MainLoop(..), Handlers(..), mainLoopWidget
     ) where
 
 import qualified Control.Lens as Lens
@@ -26,7 +25,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
-import           GUI.Momentu.Main.Animation (PerfCounters(..))
+import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Events as Main.Events
 import           GUI.Momentu.Main.Types (AnimConfig(..), Config(..))
@@ -246,9 +245,12 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
         Config{cInvalidCursorOverlayColor} = config
         Options{stateStorage, debug, config} = options
 
-mainLoopWidget :: GLFW.Window -> Handlers -> IO ()
-mainLoopWidget win handlers =
+runInner :: IORef (IO ()) -> (GLFW.Window -> MainAnim.Handlers -> IO b) -> GLFW.Window -> Handlers -> IO b
+runInner refreshAction run win handlers =
     do
+        let getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
+        let opts = options handlers
+        let Options{debug, config} = opts
         addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown
         zoom <- Zoom.make win
         lookupModeRef <- newIORef ApplyEvent
@@ -266,7 +268,9 @@ mainLoopWidget win handlers =
                     Cursor.render
                         <$> (readIORef mkWidgetRef >>= (size &))
                         <&> _1 . Lens.mapped %~ (vcursorimg <>)
-        MainAnim.mainLoop win $
+        -- Tie the knot here: now we know how to wake up, so put it in the IORef
+        writeIORef refreshAction newWidget
+        run win $
             MainAnim.Handlers
             { MainAnim.reportPerfCounters = reportPerfCounters debug
             , MainAnim.getAnimConfig = cAnim config
@@ -298,7 +302,17 @@ mainLoopWidget win handlers =
                     size <- GLFW.Utils.framebufferSize win
                     (renderWidget size <&> (^. _1)) <*> cCursor config zoom
             }
-    where
-        getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
-        opts = options handlers
-        Options{debug, config} = opts
+
+mainLoopWidget :: IO (MainLoop Handlers)
+mainLoopWidget =
+    do
+        refreshAction <- newIORef (fail "wakeUp called before run")
+        MainAnim.mainLoop <&>
+            \mainLoop ->
+            mainLoop
+            { run = runInner refreshAction (run mainLoop)
+            , wakeUp =
+                do
+                    readIORef refreshAction & join
+                    wakeUp mainLoop
+            }

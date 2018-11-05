@@ -9,12 +9,12 @@ import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
 import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
-import           Data.IORef
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Main as MainLoop
+import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -59,17 +59,6 @@ import qualified System.Remote.Monitoring.Shim as Ekg
 import           Lamdu.Prelude
 
 type T = Transaction
-
-newtype RefreshScheduler = RefreshScheduler (IORef Bool)
-
-getRefreshScheduled :: RefreshScheduler -> IO Bool
-getRefreshScheduled (RefreshScheduler ref) = atomicModifyIORef ref ((,) False)
-
-scheduleRefresh :: RefreshScheduler -> IO ()
-scheduleRefresh (RefreshScheduler ref) =
-    do
-        writeIORef ref True
-        MainLoop.wakeUp
 
 stateStorageInIRef ::
     Transaction.Store DbM -> IRef DbLayout.DbM M.GUIState ->
@@ -117,13 +106,13 @@ jumpToSource SrcLoc{srcLocFile, srcLocStartLine, srcLocStartCol} =
         , srcLocFile
         ] & void
 
-mainLoop ::
+runMainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
-    M.Window -> RefreshScheduler -> Sampler ->
+    M.Window -> MainLoop Handlers -> Sampler ->
     EvalManager.Evaluator -> Transaction.Store DbM ->
     MkProperty' IO Settings -> Cache -> Cache.Functions -> Debug.Monitors ->
     IO ()
-mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
+runMainLoop ekg stateStorage subpixel win mainLoop configSampler
     evaluator db mkSettingsProp cache cachedFunctions monitors =
     do
         getFonts <- EditorFonts.makeGetFonts subpixel
@@ -145,8 +134,8 @@ mainLoop ekg stateStorage subpixel win refreshScheduler configSampler
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
         reportPerfCounters <- traverse makeReportPerfCounters ekg
-        MainLoop.mainLoopWidget win MainLoop.Handlers
-            { tickHandler = getRefreshScheduled refreshScheduler
+        MainLoop.run mainLoop win MainLoop.Handlers
+            { tickHandler = pure False
             , makeWidget = makeWidget
             , options =
                 MainLoop.Options
@@ -246,8 +235,8 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
 run :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 run opts rawDb =
     do
-        refreshScheduler <- newIORef False <&> RefreshScheduler
-        let refresh = scheduleRefresh refreshScheduler
+        mainLoop <- MainLoop.mainLoopWidget
+        let refresh = MainLoop.wakeUp mainLoop
         ekg <- traverse Ekg.start (opts ^. Opts.eoEkgPort)
         monitors <-
             traverse Debug.makeCounters ekg
@@ -270,7 +259,7 @@ run opts rawDb =
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <- EditorSettings.newProp configSampler evaluator
-                mainLoop ekg stateStorage subpixel win refreshScheduler
+                runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
         subpixel

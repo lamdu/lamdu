@@ -1,9 +1,9 @@
 module GUI.Momentu.Main.Animation
-    ( mainLoop
+    ( MainLoop(..)
+    , mainLoop
     , AnimConfig(..)
     , Handlers(..)
     , PerfCounters(..)
-    , EventLoop.wakeUp
     ) where
 
 import           Control.Concurrent.Extended (rtsSupportsBoundThreads, forwardSynchronuousExceptions, withForkedOS)
@@ -37,28 +37,28 @@ data Handlers = Handlers
         -- 2. Do not pass event to further processing (e.g: input managers)
     }
 
-eventThreadLoop :: (Maybe (UTCTime, Anim.Frame) -> IO ()) -> GLFW.Window -> Handlers -> IO ()
-eventThreadLoop sendNewFrame win handlers =
-    do
-        lastTimestampRef <- newIORef Nothing
-        let updateTimestamp act =
-                do
-                    preTimestamp <- getCurrentTime
-                    didAnything <- act
-                    when didAnything
-                        (writeIORef lastTimestampRef (Just preTimestamp))
-                    pure didAnything
-        EventLoop.eventLoop win EventLoop.Handlers
-            { EventLoop.eventHandler = updateTimestamp . eventHandler handlers
-            , EventLoop.iteration =
-                do
-                    _ <- updateTimestamp (tickHandler handlers)
-                    lastTimestamp <- readIORef lastTimestampRef
-                    writeIORef lastTimestampRef Nothing
-                    traverse_ sendStampedFrame lastTimestamp
-                    pure EventLoop.NextWait
-            }
+eventThreadLoop ::
+    IORef (Maybe UTCTime) ->
+    (Maybe (UTCTime, Anim.Frame) -> IO ()) -> GLFW.Window -> Handlers -> IO ()
+eventThreadLoop lastTimestampRef sendNewFrame win handlers =
+    EventLoop.eventLoop win EventLoop.Handlers
+    { EventLoop.eventHandler = updateTimestamp . eventHandler handlers
+    , EventLoop.iteration =
+        do
+            _ <- updateTimestamp (tickHandler handlers)
+            lastTimestamp <- readIORef lastTimestampRef
+            writeIORef lastTimestampRef Nothing
+            traverse_ sendStampedFrame lastTimestamp
+            pure EventLoop.NextWait
+    }
     where
+        updateTimestamp act =
+            do
+                preTimestamp <- getCurrentTime
+                didAnything <- act
+                when didAnything
+                    (writeIORef lastTimestampRef (Just preTimestamp))
+                pure didAnything
         sendStampedFrame timestamp =
             makeFrame handlers <&> (,) timestamp <&> Just
             >>= sendNewFrame
@@ -85,15 +85,30 @@ animThreadLoop recvNewFrame handlers win =
                     Anim.NewState nextAnimState -> pollNewFrame <&> (,) nextAnimState
                 loop nextFrameReq nextAnimState
 
-mainLoop :: GLFW.Window -> Handlers -> IO ()
-mainLoop win handlers =
-    do
-        unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
-        newFrameReq <- STM.newTVarIO Nothing
-        animThread <-
-            animThreadLoop (STM.swapTVar newFrameReq Nothing) handlers win
-            & forwardSynchronuousExceptions
-        withForkedOS
-            (animThread `onException` EventLoop.wakeUp)
-            (eventThreadLoop (STM.atomically . STM.writeTVar newFrameReq)
-                win handlers)
+data MainLoop handlers = MainLoop
+    { wakeUp :: IO ()
+    , run :: GLFW.Window -> handlers -> IO ()
+    }
+
+mainLoop :: IO (MainLoop Handlers)
+mainLoop =
+    newIORef Nothing <&>
+    \lastTimestampRef ->
+    MainLoop
+    { wakeUp =
+        do
+            getCurrentTime <&> Just >>= writeIORef lastTimestampRef
+            EventLoop.wakeUp
+    , run = \win handlers ->
+        do
+            unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
+            newFrameReq <- STM.newTVarIO Nothing
+            let recvFrameReq = STM.swapTVar newFrameReq Nothing
+            let sendFrameReq = STM.atomically . STM.writeTVar newFrameReq
+            animThread <-
+                animThreadLoop recvFrameReq handlers win
+                & forwardSynchronuousExceptions
+            withForkedOS
+                (animThread `onException` EventLoop.wakeUp)
+                (eventThreadLoop lastTimestampRef sendFrameReq win handlers)
+    }
