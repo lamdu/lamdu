@@ -108,7 +108,7 @@ sudo pacman -S leveldb glfw libxrandr libxi libxcursor libxinerama
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
-stack install
+LD_PRELOAD=/usr/lib/libtcmalloc.so stack install
 ~/.local/bin/lamdu
 
 ```
