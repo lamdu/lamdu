@@ -24,13 +24,13 @@ data PerfCounters = PerfCounters
 render :: GLFW.Window -> Draw.Image a -> IO PerfCounters
 render win image =
     do
-        Vector2 winSizeX winSizeY <- GLFW.Utils.framebufferSize win
+        Vector2 sizeX sizeY <- GLFW.Utils.framebufferSize win
         GL.viewport $=
             (GL.Position 0 0,
-             GL.Size (round winSizeX) (round winSizeY))
+             GL.Size (round sizeX) (round sizeY))
         GL.matrixMode $= GL.Projection
         GL.loadIdentity
-        GL.ortho 0 winSizeX winSizeY 0 (-1) 1
+        GL.ortho 0 sizeX sizeY 0 (-1) 1
         (timedRender, ()) <-
             do
                 Draw.clearRender image
