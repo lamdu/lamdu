@@ -5,6 +5,7 @@ module GUI.Momentu.Widget.Instances
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
+    , GlueStroll(..), reverseStroll
     , combineEnterPoints, combineMEnters
     , eventMapMaker
     ) where
@@ -94,13 +95,27 @@ data NavDir = NavDir
     , dirKeys :: [ModKey.Key]
     }
 
+data GlueStroll = StrollForward | StrollBackward
+    deriving (Eq, Ord)
+-- ^ When glueing widgets, the strolling may be combined in a backward
+-- direction as it represents a logical ordering
+
+reverseStroll :: GlueStroll -> GlueStroll
+reverseStroll StrollForward = StrollBackward
+reverseStroll StrollBackward = StrollForward
+
+combineStroll :: Semigroup a => GlueStroll -> a -> a -> a
+combineStroll StrollForward = (<>)
+combineStroll StrollBackward = flip (<>)
+
 glueStates ::
     Applicative f =>
     Orientation -> Gui Widget f -> Gui Widget f -> Gui Widget f
 glueStates orientation w0 w1 =
     w0
     & wState .~
-        combineStates orientation dirPrev dirNext False (w0 ^. wState) (w1 ^. wState)
+        combineStates orientation dirPrev dirNext StrollForward
+        (w0 ^. wState) (w1 ^. wState)
     where
         (dirPrev, dirNext) =
             case orientation of
@@ -115,14 +130,16 @@ glueStates orientation w0 w1 =
 
 combineStates ::
     Applicative f =>
-    Orientation -> NavDir -> NavDir -> Bool ->
+    Orientation -> NavDir -> NavDir -> GlueStroll ->
     Gui State f -> Gui State f -> Gui State f
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates o _ _ _ (StateUnfocused u0) (StateUnfocused u1) =
-    Unfocused e (u0 ^. uMStroll <> u1 ^. uMStroll) (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
+combineStates o _ _ strollDir (StateUnfocused u0) (StateUnfocused u1) =
+    Unfocused e
+    (combineStroll strollDir (u0 ^. uMStroll) (u1 ^. uMStroll))
+    (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
         e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates orientation _ nextDir flipStroll (StateFocused f) (StateUnfocused u) =
+combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~ unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Direction.Point))
     <&> fEventMap . Lens.imapped %@~ addEvents
@@ -135,7 +152,7 @@ combineStates orientation _ nextDir flipStroll (StateFocused f) (StateUnfocused 
             Vertical   -> Rect.horizontalRange
         addEvents eventContext events =
             ( case u ^. uMStroll of
-                Just (Semigroup.First fwd, _) | not flipStroll ->
+                Just (Semigroup.First fwd, _) | strollDir == StrollForward ->
                     events <&> Lens.mapped %~
                     \e ->
                     if e ^. State.uPreferStroll . Lens._Wrapped
@@ -154,7 +171,7 @@ combineStates orientation _ nextDir flipStroll (StateFocused f) (StateUnfocused 
             ^. enterResultEvent
             & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
-            | flipStroll =
+            | strollDir == StrollBackward =
                 EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
                 (EventMap.Doc ["Navigation", "Stroll", "Back"])
                 (pure bwd)
@@ -162,8 +179,8 @@ combineStates orientation _ nextDir flipStroll (StateFocused f) (StateUnfocused 
                 EventMap.keysEventMapMovesCursor [MetaKey MetaKey.noMods MetaKey.Key'Tab]
                 (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                 (pure fwd)
-combineStates orientation dirPrev dirNext flipStroll (StateUnfocused u) (StateFocused f) =
-    combineStates orientation dirNext dirPrev (not flipStroll) (StateFocused f) (StateUnfocused u)
+combineStates orientation dirPrev dirNext strollDir (StateUnfocused u) (StateFocused f) =
+    combineStates orientation dirNext dirPrev (reverseStroll strollDir) (StateFocused f) (StateUnfocused u)
 
 combineMEnters ::
     Orientation ->
