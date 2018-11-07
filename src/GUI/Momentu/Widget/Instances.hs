@@ -167,9 +167,12 @@ combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u
             <> foldMap (enterEvents eventContext) (u ^. uMEnter)
             <> foldMap strollEvents (u ^. uMStroll)
         enterEvents eventContext enter =
-            enter (dirCons nextDir (eventContext ^. eVirtualCursor . State.vcRect . chooseRange))
-            ^. enterResultEvent
-            & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty) (EventMap.Doc ["Navigation", "Move", dirName nextDir])
+            eventContext ^. eVirtualCursor . State.vcRect . chooseRange
+            & dirCons nextDir
+            & enter
+            & (^. enterResultEvent)
+            & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty)
+            (EventMap.Doc ["Navigation", "Move", dirName nextDir])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | strollDir == StrollBackward =
                 EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
