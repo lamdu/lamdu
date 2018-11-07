@@ -9,6 +9,7 @@ module GUI.Momentu.Widget
     -- Widget lenses:
     , enterResultCursor, sizedState
 
+    , GlueStroll(..)
     , HasWidget(..)
 
     , isFocused

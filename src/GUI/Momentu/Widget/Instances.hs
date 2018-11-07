@@ -87,7 +87,7 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
 
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
-    glue orientation = Glue.glueH (glueStates orientation) orientation
+    glue orientation = Glue.glueH (glueStates orientation StrollForward) orientation
 
 data NavDir = NavDir
     { dirCons :: Rect.Range R -> Direction
@@ -110,11 +110,11 @@ combineStroll StrollBackward = flip (<>)
 
 glueStates ::
     Applicative f =>
-    Orientation -> Gui Widget f -> Gui Widget f -> Gui Widget f
-glueStates orientation w0 w1 =
+    Orientation -> GlueStroll -> Gui Widget f -> Gui Widget f -> Gui Widget f
+glueStates orientation strollDir w0 w1 =
     w0
     & wState .~
-        combineStates orientation dirPrev dirNext StrollForward
+        combineStates orientation dirPrev dirNext strollDir
         (w0 ^. wState) (w1 ^. wState)
     where
         (dirPrev, dirNext) =
