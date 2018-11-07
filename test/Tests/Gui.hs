@@ -91,7 +91,7 @@ makeGui afterDoc cache env =
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
-focusedWidget :: Monad m => Responsive a -> m (Widget.Focused a)
+focusedWidget :: Responsive a -> Either String (Widget.Focused a)
 focusedWidget gui =
     widget <$ verifyLayers (widget ^. Widget.fLayers)
     where
@@ -104,7 +104,7 @@ makeFocusedWidget ::
     String -> Cache.Functions -> env ->
     T ViewM (Widget.Focused (T ViewM GuiState.Update))
 makeFocusedWidget afterDoc cache env =
-    makeGui afterDoc cache env >>= focusedWidget
+    makeGui afterDoc cache env >>= either fail pure . focusedWidget
 
 mApplyEvent ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
@@ -374,7 +374,7 @@ programTest baseEnv filename =
     do
         baseGui <- makeGui "" cache baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
-        w <- focusedWidget baseGui
+        w <- focusedWidget baseGui & either fail pure
         Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
             <&> (w ^?! Widget.fMEnterPoint . Lens._Just)
             <&> (\x -> (x ^. Widget.enterResultRect, x))

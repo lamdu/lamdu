@@ -34,7 +34,8 @@ testTypeView :: Test
 testTypeView =
     do
         env <- GuiEnv.make
-        TypeView.make typ env ^. Align.tValue . View.vAnimLayers & verifyLayers
+        TypeView.make typ env ^. Align.tValue . View.vAnimLayers
+            & verifyLayers & either fail pure
     & testCase "typeview"
     where
         typ =
@@ -73,7 +74,8 @@ testFragment =
         let widget = gui ^. Responsive.rWide . Align.tValue
         case widget ^. Widget.wState of
             Widget.StateUnfocused{} -> fail "Expected focused widget"
-            Widget.StateFocused mk -> mk (Widget.Surrounding 0 0 0 0) ^. Widget.fLayers & verifyLayers
+            Widget.StateFocused mk ->
+                mk (Widget.Surrounding 0 0 0 0) ^. Widget.fLayers & verifyLayers & either fail pure
         pure ()
     & testCase "fragment"
     where
