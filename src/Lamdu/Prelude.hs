@@ -22,7 +22,7 @@ import qualified Debug.Trace as Trace
 import           GHC.Generics as X (Generic)
 import           GHC.Stack.Types as X (HasCallStack)
 
-import           Prelude.Compat as X
+import           Prelude.Compat as X hiding (return)
 
 {-# WARNING traceId "Leaving traces in the code" #-}
 traceId :: Show a => String -> a -> a
