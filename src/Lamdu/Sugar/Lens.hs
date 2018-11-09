@@ -51,7 +51,7 @@ overLetChildren ::
     (Node f (Binder name i o) -> Node g (Binder name i o)) ->
     (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
     Let name i o f -> Let name i o g
-overLetChildren b a = Lens.runIdentity . letChildren (pure . b) (pure . a)
+overLetChildren b a = runIdentity . letChildren (pure . b) (pure . a)
 
 binderChildren ::
     Applicative f =>
@@ -78,7 +78,7 @@ overBinderChildren ::
     (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
     Binder name i o f -> Binder name i o g
 overBinderChildren n v r e b f a =
-    Lens.runIdentity .
+    runIdentity .
     binderChildren
     (pure . n) (pure . v) (pure . r) (pure . e) (pure . b) (pure . f) (pure . a)
 
@@ -113,7 +113,7 @@ overLabeledApplyChildren ::
     (Node f (Body name i o) -> Node g (Body name i o)) ->
     LabeledApply name i o f -> LabeledApply name i o g
 overLabeledApplyChildren l r e =
-    Lens.runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
+    runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
 ifElseChildren ::
     Applicative f =>
@@ -128,7 +128,7 @@ overIfElseChildren ::
     (Node f (Body name i o) -> Node g (Body name i o)) ->
     IfElse name i o f -> IfElse name i o g
 overIfElseChildren onElse onExpr =
-    Lens.runIdentity . ifElseChildren (pure . onElse) (pure . onExpr)
+    runIdentity . ifElseChildren (pure . onElse) (pure . onExpr)
 
 injectContentChildren ::
     Applicative f =>
@@ -214,7 +214,7 @@ overBodyChildren ::
     (Node f (Body name i o) -> Node g (Body name i o)) ->
     Body name i o f -> Body name i o g
 overBodyChildren n v r e b f =
-    Lens.runIdentity .
+    runIdentity .
     bodyChildren (pure . n) (pure . v) (pure . r) (pure . e) (pure . b) (pure . f)
 
 leafNodePayload ::

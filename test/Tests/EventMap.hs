@@ -1,6 +1,5 @@
 module Tests.EventMap where
 
-import Control.Lens (runIdentity)
 import GUI.Momentu.EventMap
 
 import Test.Lamdu.Prelude hiding (lookup)

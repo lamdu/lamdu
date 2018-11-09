@@ -281,7 +281,7 @@ translateGeneric f pos w =
     & onStatePure translateUnfocused (translateFocusedGeneric f pos)
     where
         onStatePure onU onF =
-            Lens.runIdentity . onState (Lens.Identity . onU) (Lens.Identity . onF)
+            runIdentity . onState (Identity . onU) (Identity . onF)
         translateUnfocused u =
             u
             & uMEnter . Lens._Just %~ translateEnter
