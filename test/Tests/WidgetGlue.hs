@@ -1,21 +1,27 @@
 {-# LANGUAGE StandaloneDeriving, TemplateHaskell, TypeFamilies, DeriveTraversable #-}
 module Tests.WidgetGlue
-    ( test
+    ( module X, module Tests.WidgetGlue, module Lens, module Widget, encodeS
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Data.Binary.Extended (encodeS)
 import           Data.Semigroup (First(..), Last(..))
-import           GUI.Momentu
+import           Generic.Random
+import qualified Graphics.UI.GLFW as GLFW
+import           GUI.Momentu as X
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Glue
+import qualified GUI.Momentu.EventMap as EventMap
+import           GUI.Momentu.Glue as X
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.Rect (Rect(..))
+import qualified GUI.Momentu.Main.Events as Events
+import           GUI.Momentu.Rect as X (Rect(..))
+import qualified GUI.Momentu.State as GUIState
 import           GUI.Momentu.Widget (R, Widget(..))
 import qualified GUI.Momentu.Widget as Widget
-import           Generic.Random
 import           Test.QuickCheck
 
-import           Test.Lamdu.Prelude
+import           Test.Lamdu.Prelude as X
 
 data GlueOrder = FocusedFirst | FocusedLast
     deriving (Eq, Ord, Generic, Show)
@@ -102,6 +108,7 @@ toWidgetFocused (FocusedGlue hoverMode glueOrder orientation foc unf) =
             , Hover._bgPadding = pure 0
             }
             & Hover.hover
+
 propFocusedWidgetHasFocus :: FocusedWidget () -> Bool
 propFocusedWidgetHasFocus tree =
     Widget.isFocused
@@ -112,9 +119,47 @@ propUnfocusedWidgetIsntFocused tree =
     (toWidgetUnfocused (Nothing <$ tree) :: Gui Widget Identity)
     & Widget.isFocused & not
 
+expectedStrollDests :: FocusedWidget (Maybe a) -> (Maybe a, Maybe a)
+expectedStrollDests FocusedLeaf{} = (Nothing, Nothing)
+expectedStrollDests (FocusedGlue hoverMode glueOrder _ foc unf) =
+    case (hoverMode, glueOrder) of
+    (NoHover, FocusedFirst) -> unfAfter
+    (NoHover, FocusedLast) -> unfBefore
+    (FocusInHover, _) -> unfBefore
+    (FocusInAnchor, _) -> unfAfter
+    where
+        internal = expectedStrollDests foc
+        unfAfter = internal & _2 %~ (<|> unf ^? Lens.folded . Lens._Just)
+        unfBefore = internal & _1 %~ (<|> Lens.lastOf (Lens.folded . Lens._Just) unf)
+
+propStrollsCorrectly :: FocusedWidget (Maybe ()) -> Bool
+propStrollsCorrectly tree =
+    expectedStrollDests treeWithIds ==
+    (lookupStroll mempty {GLFW.modifierKeysShift = True}, lookupStroll mempty)
+    where
+        lookupStroll mods =
+            EventMap.lookup Nothing
+            (EventMap.EventKey (Events.KeyEvent GLFW.Key'Tab 0 GLFW.KeyState'Pressed mods))
+            eventMap
+            & join
+            >>= (^. EventMap.dhHandler . Lens._Wrapped . GUIState.uCursor . Lens._Wrapped)
+        eventMap =
+            mkEventMap Widget.EventContext
+            { Widget._eVirtualCursor = Rect (pure 0) (pure 0) & GUIState.VirtualCursor
+            , Widget._ePrevTextRemainder = ""
+            }
+        mkEventMap =
+            mkFocused (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap
+        mkFocused =
+            (toWidgetFocused treeWithIds :: Gui Widget Identity)
+            ^?! Widget.wState . Widget._StateFocused
+        treeWithIds =
+            tree & Lens.traversed . Lens._Just %@~ (\idx () -> Widget.Id [encodeS idx])
+
 test :: Test
 test =
     testGroup "glue-tests"
     [ testProperty "focused-has-focus" propFocusedWidgetHasFocus
     , testProperty "unfocused-isnt-focused" propUnfocusedWidgetIsntFocused
+    , testProperty "stroll" propStrollsCorrectly
     ]
