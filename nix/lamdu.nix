@@ -1,9 +1,9 @@
 { mkDerivation, aeson, aeson-diff, aeson-pretty, AlgoW, base, base-compat
 , base-orphans, base16-bytestring, binary, bytestring, Cabal, containers
 , cryptohash-sha256, data-default, deepseq, deepseq-generics
-, directory, edit-distance, ekg-core, executable-path, filepath, GLFW-b, graphics-drawingcombinators
-, hashable, lamdu-calculus, language-ecmascript, lens, lens-aeson
-, leveldb-haskell, List, mtl, nodejs-exec, OpenGL
+, directory, edit-distance, ekg-core, executable-path, filepath
+, generic-random, GLFW-b, graphics-drawingcombinators, hashable, lamdu-calculus
+, language-ecmascript, lens, lens-aeson, leveldb-haskell, List, mtl, nodejs-exec, OpenGL
 , optparse-applicative, pretty, process, random, QuickCheck, safe-exceptions
 , split, StateVar, stdenv, stm, temporary, template-haskell, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers, unordered-containers
@@ -19,8 +19,8 @@ mkDerivation {
   executableHaskellDepends = [
     aeson aeson-diff aeson-pretty AlgoW base base-compat base-orphans
     base16-bytestring binary bytestring Cabal containers cryptohash-sha256
-    data-default deepseq deepseq-generics directory edit-distance ekg-core executable-path filepath GLFW-b
-    graphics-drawingcombinators hashable HUnit lamdu-calculus
+    data-default deepseq deepseq-generics directory edit-distance ekg-core executable-path filepath
+    GLFW-b generic-random graphics-drawingcombinators hashable HUnit lamdu-calculus
     language-ecmascript lens lens-aeson leveldb-haskell List mtl nodejs-exec
     OpenGL optparse-applicative pretty process random QuickCheck safe-exceptions
     split StateVar stm temporary template-haskell test-framework test-framework-hunit test-framework-quickcheck2

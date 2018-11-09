@@ -14,7 +14,7 @@ import qualified GUI.Momentu.Element as Element
 import           Lamdu.Prelude
 
 data Orientation = Horizontal | Vertical
-    deriving (Eq, Show, Ord)
+    deriving (Eq, Show, Ord, Generic)
 
 class (Glued b a ~ Glued a b) => Glue a b where
     type Glued a b

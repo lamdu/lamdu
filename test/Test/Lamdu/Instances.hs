@@ -25,6 +25,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Generic.Random
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (Theme(..))
@@ -118,6 +119,12 @@ instance Arbitrary a => Arbitrary (NonEmpty a) where
     arbitrary = (:|) <$> arbitrary <*> arbitrary
     shrink (_ :| []) = []
     shrink (x0 :| (x1 : xs)) = (x1 :| xs) : (shrink (x1 : xs) <&> (x0 :|))
+
+instance Arbitrary Hover.Orientation where
+    arbitrary = genericArbitrary uniform
+
+instance Arbitrary Widget.Id where
+    arbitrary = arbitrary <&> BS8.pack <&> (:[]) <&> Widget.Id
 
 instance HasPrecedence InternalName where
     precedence (InternalName _ (T.Tag (Identifier ident))) =

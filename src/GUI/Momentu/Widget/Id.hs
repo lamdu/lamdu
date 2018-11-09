@@ -14,7 +14,7 @@ import Lamdu.Prelude
 
 newtype Id = Id
     { toAnimId :: AnimId
-    } deriving (Eq, Ord, Read, Binary, Semigroup, Monoid)
+    } deriving (Eq, Ord, Read, Binary, Semigroup, Monoid, Generic)
 
 instance Show Id where
     show (Id animId) =

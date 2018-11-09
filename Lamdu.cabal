@@ -84,9 +84,10 @@ Test-Suite Tests
                , Tests.Stdlib
                , Tests.Sugar
                , Tests.ValUtils
+               , Tests.WidgetGlue
   build-depends:
       base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
-    , aeson-diff, deepseq, deepseq-generics, lens-aeson, QuickCheck, split, yaml
+    , aeson-diff, deepseq, deepseq-generics, generic-random, lens-aeson, QuickCheck, split, yaml
     , Lamdu, AlgoW, lamdu-calculus, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
