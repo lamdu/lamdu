@@ -9,4 +9,3 @@
 :set -outputdir=ghci-out
 :set -DWITH_EKG
 :set -hide-package cryptohash
-:set -fdefer-type-errors
