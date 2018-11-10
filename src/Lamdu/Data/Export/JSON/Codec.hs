@@ -27,7 +27,11 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type, Composite)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Constraints (Constraints(..), CompositeVarConstraints(..))
+import           Lamdu.Calc.Type.Constraints
+    ( Constraints(..)
+    , CompositeVarConstraints(..)
+    , CompositeVarsConstraints(..)
+    )
 import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Nominal (Nominal(..), NominalType(..))
@@ -267,6 +271,18 @@ decodeType json =
           T.TInst nomId params & pure
     ]
 
+encodeCompositeVarConstraints :: CompositeVarConstraints t -> [Encoded]
+encodeCompositeVarConstraints (CompositeVarConstraints forbidden) =
+    Set.toList forbidden
+    <&> T.tagName
+    <&> encodeIdent
+
+decodeCompositeConstraints ::
+    [Encoded] -> AesonTypes.Parser (CompositeVarConstraints t)
+decodeCompositeConstraints json =
+    traverse decodeIdent json <&> map T.Tag <&> Set.fromList
+    <&> CompositeVarConstraints
+
 encodeTypeVars :: Encoder (TypeVars, Constraints)
 encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantConstraints) =
     concat
@@ -278,9 +294,9 @@ encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantCon
        encodeConstraints "variantTypeVars" variantConstraints)
     ] & Aeson.object
     where
-        encodeConstraints name (CompositeVarConstraints constraints) =
+        encodeConstraints name (CompositeVarsConstraints constraints) =
             encodeSquash Map.null name
-            (encodeIdentMap T.tvName (map (encodeIdent . T.tagName) . Set.toList))
+            (encodeIdentMap T.tvName encodeCompositeVarConstraints)
             constraints
         encodeTVs name =
             encodeSquash Set.null name
@@ -299,15 +315,13 @@ decodeTypeVars =
         decodedConstraints <-
             decodeSquashed "constraints"
             ( withObject "constraints" $ \constraints ->
-              let  getCs name = decodeConstraints name constraints <&> CompositeVarConstraints
+              let  getCs name = decodeConstraints name constraints <&> CompositeVarsConstraints
               in   Constraints <$> getCs "recordTypeVars" <*> getCs "variantTypeVars"
             ) obj
         pure (tvs, decodedConstraints)
     where
-        decodeForbiddenFields json =
-            traverse decodeIdent json <&> map T.Tag <&> Set.fromList
         decodeConstraints name =
-            decodeSquashed name (decodeIdentMap T.Var decodeForbiddenFields)
+            decodeSquashed name (decodeIdentMap T.Var decodeCompositeConstraints)
         decodeTV = fmap T.Var . decodeIdent
         decodeTVs = fmap Set.fromList . traverse decodeTV
 
