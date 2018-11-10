@@ -47,6 +47,6 @@ extra-deps:
 - stb-image-0.2.1
 - wl-pprint-1.2.1
 
-resolver: lts-12.0
+resolver: lts-12.17
 
 allow-newer: true
