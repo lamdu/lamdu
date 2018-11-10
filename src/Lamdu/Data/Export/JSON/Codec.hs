@@ -27,11 +27,8 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type, Composite)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Constraints
-    ( Constraints(..)
-    , CompositeVarConstraints(..)
-    , CompositeVarsConstraints(..)
-    )
+import           Lamdu.Calc.Type.Constraints (Constraints(..))
+import qualified Lamdu.Calc.Type.Constraints as Constraints
 import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import           Lamdu.Calc.Type.Nominal (Nominal(..), NominalType(..))
@@ -271,17 +268,17 @@ decodeType json =
           T.TInst nomId params & pure
     ]
 
-encodeCompositeVarConstraints :: CompositeVarConstraints t -> [Encoded]
-encodeCompositeVarConstraints (CompositeVarConstraints forbidden) =
+encodeCompositeVarConstraints :: Constraints.CompositeVar t -> [Encoded]
+encodeCompositeVarConstraints (Constraints.CompositeVar forbidden) =
     Set.toList forbidden
     <&> T.tagName
     <&> encodeIdent
 
 decodeCompositeConstraints ::
-    [Encoded] -> AesonTypes.Parser (CompositeVarConstraints t)
+    [Encoded] -> AesonTypes.Parser (Constraints.CompositeVar t)
 decodeCompositeConstraints json =
     traverse decodeIdent json <&> map T.Tag <&> Set.fromList
-    <&> CompositeVarConstraints
+    <&> Constraints.CompositeVar
 
 encodeTypeVars :: Encoder (TypeVars, Constraints)
 encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantConstraints) =
@@ -294,7 +291,7 @@ encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantCon
        encodeConstraints "variantTypeVars" variantConstraints)
     ] & Aeson.object
     where
-        encodeConstraints name (CompositeVarsConstraints constraints) =
+        encodeConstraints name (Constraints.CompositeVars constraints) =
             encodeSquash Map.null name
             (encodeIdentMap T.tvName encodeCompositeVarConstraints)
             constraints
@@ -315,7 +312,7 @@ decodeTypeVars =
         decodedConstraints <-
             decodeSquashed "constraints"
             ( withObject "constraints" $ \constraints ->
-              let  getCs name = decodeConstraints name constraints <&> CompositeVarsConstraints
+              let  getCs name = decodeConstraints name constraints <&> Constraints.CompositeVars
               in   Constraints <$> getCs "recordTypeVars" <*> getCs "variantTypeVars"
             ) obj
         pure (tvs, decodedConstraints)
