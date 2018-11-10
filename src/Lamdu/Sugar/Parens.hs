@@ -166,36 +166,35 @@ loopExprBody minOpPrec parentPrec body_ =
         result False = (,,) minOpPrec NoNeedForParens
         mkUnambiguous l cons x =
             x & l %~ loopExpr 0 unambiguous & cons & result False
-        childPrec _ True = pure 0
-        childPrec modify False = modify parentPrec
         leftSymbol = sideSymbol (\_ _ -> addToBinder) before after
         rightSymbol = sideSymbol loopExpr after before
         sideSymbol loop overrideSide checkSide lens prec cons x =
-            x & lens %~ loop prec (childPrec (overrideSide .~ prec) needParens) & cons
+            x & lens %~ loop prec childPrec & cons
             & result needParens
             where
                 needParens = parentPrec ^. checkSide > prec
+                childPrec
+                    | needParens = pure 0
+                    | otherwise = parentPrec & overrideSide .~ prec
         neverParen = (,,) (maxNamePrec + 1) NoNeedForParens
         inject (Inject t v) =
             case v of
-            InjectNullary x -> x & ann %~ neverParen & InjectNullary
-            InjectVal x -> loopExpr 0 (childPrec (before .~ 0) needParens) x & InjectVal
-            & Inject t & BodyInject
-            & result needParens
+            InjectNullary x -> x & ann %~ neverParen & InjectNullary & cons & result False
+            InjectVal x -> sideSymbol loopExpr before after id 0 (cons . InjectVal) x
             where
-                needParens =
-                    case v of
-                    InjectNullary{} -> False
-                    InjectVal{} -> parentPrec ^. after > 0
+                cons = BodyInject . Inject t
         simpleApply (V.Apply f a) =
             BodySimpleApply V.Apply
             { V._applyFunc =
-                loopExpr 0 (childPrec (after .~ 13) needParens) f
+                loopExpr 0 (newParentPrec & after .~ 13) f
             , V._applyArg =
-                loopExpr 13 (childPrec (before .~ 13) needParens) a
+                loopExpr 13 (newParentPrec & before .~ 13) a
             } & result needParens
             where
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
+                newParentPrec
+                    | needParens = pure 0
+                    | otherwise = parentPrec
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
@@ -205,14 +204,17 @@ loopExprBody minOpPrec parentPrec body_ =
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #
-            ( loopExpr 0 (childPrec (after .~ prec) needParens) l
+            ( loopExpr 0 (newParentPrec & after .~ prec) l
             , func & ann %~ neverParen
-            , loopExpr (prec+1) (childPrec (before .~ prec) needParens) r
+            , loopExpr (prec+1) (newParentPrec & before .~ prec) r
             ) & BodyLabeledApply & result needParens
             where
                 prec = func ^. val . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
+                newParentPrec
+                    | needParens = pure 0
+                    | otherwise = parentPrec
         ifElse x =
             x & SugarLens.overIfElseChildren addToElse (loopExpr 0 unambiguous)
             & BodyIfElse
