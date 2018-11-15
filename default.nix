@@ -2,7 +2,7 @@ let config = {
     packageOverrides = pkgs: rec {
         haskell = pkgs.haskell // {
             packages = pkgs.haskell.packages // {
-                ghc843 = pkgs.haskell.packages.ghc843.override {
+                ghc862 = pkgs.haskell.packages.ghc862.override {
                     overrides = self: super: rec {
                         AlgoW = self.callPackage ./nix/AlgoW.nix {};
                         bindings-freetype-gl = self.callPackage ./nix/bindings-freetype-gl.nix { GLEW = pkgs.glew; freetype-gl = freetype-gl; };
@@ -22,4 +22,4 @@ in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/
     inherit config;
 };
 
-{ lamdu = pkgs.haskell.packages.ghc843.callPackage ./nix/lamdu.nix {}; }
+{ lamdu = pkgs.haskell.packages.ghc862.callPackage ./nix/lamdu.nix {}; }

@@ -116,11 +116,11 @@ testInline =
     where
         inline workArea =
             do
-                Just yOption <-
+                ~(Just yOption) <-
                     letItem ^. lBody . val . _BinderExpr . _BodyHole
                     . holeOptions
                     >>= findM isY
-                List.Cons (_, mkResult) _ <- yOption ^. hoResults & List.runList
+                ~(List.Cons (_, mkResult) _) <- yOption ^. hoResults & List.runList
                 result <- mkResult
                 result ^. holeResultPick
                 _ <-

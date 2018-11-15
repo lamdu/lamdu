@@ -46,7 +46,14 @@ extra-deps:
 - language-ecmascript-0.17.2.0
 - stb-image-0.2.1
 - wl-pprint-1.2.1
+- ekg-core-0.1.1.4
+- timeit-2.0
+- aeson-diff-1.1.0.5
 
-resolver: lts-12.17
+resolver: nightly-2018-11-15
+
+flags:
+  Lamdu:
+    ekg: false
 
 allow-newer: true
