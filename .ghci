@@ -7,5 +7,4 @@
 :set -XNoImplicitPrelude -XOverloadedStrings -XPartialTypeSignatures -XLambdaCase -XDeriveTraversable -XDeriveGeneric
 :set -odir=ghci-out
 :set -outputdir=ghci-out
-:set -DWITH_EKG
 :set -hide-package cryptohash
