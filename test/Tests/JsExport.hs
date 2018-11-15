@@ -40,7 +40,6 @@ readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
     do
-        Directory.getTemporaryDirectory >>= Directory.setCurrentDirectory
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
         nodeExePath <- NodeJS.path
         pure (Proc.proc nodeExePath ["--harmony-tailcalls"])
