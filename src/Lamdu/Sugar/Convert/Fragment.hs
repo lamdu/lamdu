@@ -100,7 +100,7 @@ convertAppliedHole ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole (V.Apply funcI argI) argS exprPl =
     do
-        guard $ Lens.has ExprLens.valHole funcI
+        guard (Lens.has ExprLens.valHole funcI)
         isTypeMatch <-
             checkTypeMatch (argI ^. ann . Input.inferredType)
             (exprPl ^. Input.inferredType) & lift

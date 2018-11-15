@@ -41,8 +41,8 @@ convert app@(V.Apply funcI argI) exprPl =
     do
         (funcS, argS) <-
             do
-                argS <- lift $ ConvertM.convertSubexpression argI
-                justToLeft $ convertAppliedHole app argS exprPl
+                argS <- ConvertM.convertSubexpression argI & lift
+                convertAppliedHole app argS exprPl & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure
@@ -57,9 +57,9 @@ convert app@(V.Apply funcI argI) exprPl =
                       else funcS
                     , argS
                     )
-        justToLeft $ convertAppliedCase app funcS argS exprPl
-        justToLeft $ convertLabeled app funcS argS exprPl
-        lift $ convertPrefix app funcS argS exprPl
+        convertAppliedCase app funcS argS exprPl & justToLeft
+        convertLabeled app funcS argS exprPl & justToLeft
+        convertPrefix app funcS argS exprPl & lift
 
 noDuplicates :: Ord a => [a] -> Bool
 noDuplicates x = length x == Set.size (Set.fromList x)

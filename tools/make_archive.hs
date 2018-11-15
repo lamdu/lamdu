@@ -142,35 +142,37 @@ main =
             readProcess lamduExec ["--version"] ""
             <&> parseLamduVersion
         dependencies <- findDeps lamduExec
-        bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $ do
-            toPackageWith lamduExec destPath
-            toPackageWith "data" dataDir
-            nodePath <- NodeJS.path
-            toPackageWith nodePath (dataDir </> "bin/node.exe")
-            traverse_ libToPackage dependencies
-            when isLinux (toPackage "tools/data/run-lamdu.sh")
-            when isMacOS $ do
-                toPackage "tools/data/Info.plist"
-                traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
-                callProcess "sh"
-                    [ "tools/data/macos_icon.sh"
-                    , "tools/data/Lamdu.png"
-                    , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
-                    ]
-            let finalize
-                    | isLinux =
-                        callProcess "tar"
-                        ["-c", "-z", "-f", "lamdu-" ++ version ++ "-linux.tgz", pkgDir]
-                    | isWindows =
-                        callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe"
-                        ["/Flamdu-" ++ version ++ "-win-setup", "tools\\data\\lamdu.iss"]
-                    | isMacOS =
-                        Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
-                        <&> Zip.fromArchive
-                        >>= LBS.writeFile ("lamdu-" ++ version ++ "-macOS.zip")
-                    | otherwise =
-                        error "Unknown platform!"
-            finalize
+        bracket_ (Dir.createDirectory pkgDir) (Dir.removeDirectoryRecursive pkgDir) $
+            do
+                toPackageWith lamduExec destPath
+                toPackageWith "data" dataDir
+                nodePath <- NodeJS.path
+                toPackageWith nodePath (dataDir </> "bin/node.exe")
+                traverse_ libToPackage dependencies
+                when isLinux (toPackage "tools/data/run-lamdu.sh")
+                when isMacOS $
+                    do
+                        toPackage "tools/data/Info.plist"
+                        traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
+                        callProcess "sh"
+                            [ "tools/data/macos_icon.sh"
+                            , "tools/data/Lamdu.png"
+                            , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
+                            ]
+                let finalize
+                        | isLinux =
+                            callProcess "tar"
+                            ["-c", "-z", "-f", "lamdu-" ++ version ++ "-linux.tgz", pkgDir]
+                        | isWindows =
+                            callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe"
+                            ["/Flamdu-" ++ version ++ "-win-setup", "tools\\data\\lamdu.iss"]
+                        | isMacOS =
+                            Zip.addFilesToArchive [Zip.OptRecursive] Zip.emptyArchive [pkgDir]
+                            <&> Zip.fromArchive
+                            >>= LBS.writeFile ("lamdu-" ++ version ++ "-macOS.zip")
+                        | otherwise =
+                            error "Unknown platform!"
+                finalize
         putStrLn "Done"
     where
         destPath
