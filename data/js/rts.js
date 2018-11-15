@@ -249,6 +249,17 @@ module.exports = {
                     return function (cont) {
                         x[tags.socket].write(Buffer.from(x[tags.data]), null, cont);
                     };
+                },
+                connect: x => {
+                    return cont => {
+                        var socket = new require('net').Socket();
+                        makeOpaque(socket);
+                        var dataHandler = x[tags.dataHandler];
+                        socket.on('data', data => { dataHandler(new Uint8Array(data))(x => null); });
+                        socket.connect(x[tags.port], toString(x[tags.host]), function() {
+                            cont(socket);
+                        });
+                    };
                 }
             },
             database: {

@@ -33,6 +33,7 @@ module.exports = {
         fields:            conf.builtinTagName('fields'),
         exclusive:         conf.builtinTagName('exclusive'),
         connectionHandler: conf.builtinTagName('connectionHandler'),
+        dataHandler:       conf.builtinTagName('dataHandler'),
         socket:            conf.builtinTagName('socket'),
         error:             conf.builtinTagName('error'),
         success:           conf.builtinTagName('success'),
