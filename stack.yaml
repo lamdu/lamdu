@@ -14,11 +14,11 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/freetype2
-    commit: 520351a6e1cf5b18edae45d0e4a20758211fa8da
+    commit: 046328d92312d65638440132c016a3081d9c32a4
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
-    commit: 60c8daadacaef620865ca174c0f5c46607b5aab8
+    commit: 9516f1edb86e79d99aa356614b0d81597ef8e49a
   extra-dep: True
 - location:
     git: https://github.com/lamdu/leveldb-haskell
@@ -34,7 +34,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/GLFW-b
-    commit: 66135b821a15568eaa906a277644fbc2b54d6de3
+    commit: a5222ed7ff5cb670b707cadb06bfe900339672f7
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-GLFW

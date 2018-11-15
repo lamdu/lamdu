@@ -7,8 +7,8 @@ mkDerivation {
   version = "3.2.1.1";
   src = fetchgit {
     url = "https://github.com/lamdu/GLFW-b";
-    sha256 = "0h30air8k99bhqck11s817zzx51ppi9fjfskwhjx5bsdiblzqlmf";
-    rev = "66135b821a15568eaa906a277644fbc2b54d6de3";
+    sha256 = "1w6v6ry6lxgzmi412hmdpv3b0x1cnyv32dsk45pa4ypslshki9qj";
+    rev = "a5222ed7ff5cb670b707cadb06bfe900339672f7";
   };
   isLibrary = true;
   isExecutable = true;

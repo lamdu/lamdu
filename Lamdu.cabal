@@ -115,7 +115,7 @@ Library
                   , ekg-core
                   , filepath >= 1.1
                   , edit-distance
-                  , GLFW-b >= 1.4.8.0
+                  , GLFW-b >= 3.2.1.2
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
                   , lamdu-calculus

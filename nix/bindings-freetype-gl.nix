@@ -6,8 +6,8 @@ mkDerivation {
   version = "0.1.0.0";
   src = fetchgit {
     url = "https://github.com/lamdu/bindings-freetype-gl";
-    sha256 = "1v1lc0c0kv1bllkb1b2kxllvyv67c4jw6jazan65l66yl9nyqpxi";
-    rev = "60c8daadacaef620865ca174c0f5c46607b5aab8";
+    sha256 = "0srz2h73nx98sgywr2iwv14f3qdrzn81gw2w9b271rh6gflq992m";
+    rev = "9516f1edb86e79d99aa356614b0d81597ef8e49a";
   };
   postPatch = ''
     rm Setup.hs
