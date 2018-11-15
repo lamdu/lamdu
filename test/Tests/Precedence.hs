@@ -39,7 +39,7 @@ testMinOpPrecInfix :: Test
 testMinOpPrecInfix =
     do
         assertEqual "Plus in mul need no paren?!" Parens.NeedsParens needsParens
-        assertEqual "Parens minOpPrec is not 0?!" 0 minOpPrec
+        assertEqual "minOpPrec is not 10?!" 10 minOpPrec
         & testCase "min-op-prec-infix"
     where
         (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . ann

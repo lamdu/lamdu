@@ -162,7 +162,7 @@ loopExprBody minOpPrec parentPrec body_ =
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
     where
-        result True = (,,) 0 NeedsParens
+        result True = (,,) minOpPrec NeedsParens
         result False = (,,) minOpPrec NoNeedForParens
         mkUnambiguous l cons x =
             x & l %~ loopExpr 0 unambiguous & cons & result False
