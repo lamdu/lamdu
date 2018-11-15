@@ -15,7 +15,6 @@ import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Paths as Paths
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
-import qualified System.Directory as Directory
 import           System.FilePath ((</>), splitFileName)
 import qualified System.IO as IO
 import qualified System.NodeJS.Path as NodeJS
@@ -48,16 +47,6 @@ nodeRepl =
             , Proc.env =
                 Just [("NODE_PATH", (rtsPath </> "export") ++ ":" ++ rtsPath)]
             }
-    & inTmp
-
-inTmp :: IO a -> IO a
-inTmp action =
-    do
-        prevDir <- Directory.getCurrentDirectory
-        Directory.getTemporaryDirectory >>= Directory.setCurrentDirectory
-        r <- action
-        Directory.setCurrentDirectory prevDir
-        pure r
 
 compile :: FilePath -> IO String
 compile program =
