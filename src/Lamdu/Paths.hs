@@ -45,7 +45,7 @@ getDataFileNameMaybe fileName =
 getDataFileName :: FilePath -> IO FilePath
 getDataFileName fileName =
     getDataFileNameMaybe fileName
-    <&> fromMaybe (fail ("Cannot find " ++ show fileName))
+    >>= maybe (fail ("Cannot find data file " ++ show fileName)) pure
 
 getLamduDir :: IO FilePath
 getLamduDir = Directory.getHomeDirectory <&> (</> ".lamdu")
