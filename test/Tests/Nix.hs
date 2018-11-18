@@ -86,11 +86,18 @@ cabalDepsTest =
     do
         cabalDeps <- readFile "Lamdu.cabal" <&> parseCabalDeps
         nixFile <- readFile "nix/lamdu.nix"
-        let nixHaskellDeps =
+        let nixFindDeps name =
                 nixFile
-                & dropWhile (/= '[') & tail & takeWhile (/= ']')
+                & splitOn (name <> " = [")
+                & (^?! Lens.ix 1)
+                & splitOn "];"
+                & (^?! Lens.ix 0)
                 & words
                 & Set.fromList
+        let nixHaskellDeps =
+                nixFindDeps "libraryHaskellDepends"
+                <> nixFindDeps "executableHaskellDepends"
+                <> nixFindDeps "testHaskellDepends"
         let nixVars =
                 tail nixFile
                 & takeWhile (/= '}')
