@@ -6,7 +6,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
-    commit: dcd8914bcbe98a6156e413974bc452e0bd55fc92
+    commit: 84151ef8eee8680d8f9597d5f271b8d84ce52714
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
@@ -18,7 +18,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
-    commit: 9516f1edb86e79d99aa356614b0d81597ef8e49a
+    commit: c720425fc6ec3b68adfb7b25221723bab9520a9c
   extra-dep: True
 - location:
     git: https://github.com/lamdu/leveldb-haskell

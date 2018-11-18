@@ -1,11 +1,12 @@
 { mkDerivation, base, bindings-freetype-gl, bytestring, directory
-, fetchgit, GLFW-b, OpenGL, stdenv, text, transformers
+, fetchFromGitHub, GLFW-b, OpenGL, stdenv, text, transformers
 }:
 mkDerivation {
   pname = "freetype-gl";
   version = "0.2.0.0";
-  src = fetchgit {
-    url = "https://github.com/lamdu/FreetypeGL";
+  src = fetchFromGitHub {
+    owner = "lamdu";
+    repo = "FreetypeGL";
     sha256 = "1hq27372690p5rycb0wkbl2q6d5rg1qxcgiv96xybqa1jcxcxz74";
     rev = "d2312f89cdf1412d584d13cda235ef683fa9c832";
   };

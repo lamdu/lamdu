@@ -6,6 +6,7 @@
 -- * Update the "rev" value
 -- * Update the "sha256" value using
 --   [nix-prefetch-git](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git)
+--   (use --fetch-submodules)
 -- * Update the cabal dependencies of the dependency as necessary
 --
 -- Make sure to do these steps and not just make the test pass by changing the "rev" value,
@@ -44,16 +45,12 @@ stackDepsTest =
                     <&> packageNameFromGitUrl
                     <&> (<> ".nix")
                 ) <> extraNixFiles
-                & filter (`notElem` knownMissingNixFiles)
         nixFiles <- listDirectory "nix"
         assertSetEquals "Nix files" (Set.fromList expectedNixFiles) (Set.fromList nixFiles)
         & testCase "verify-stack"
     where
         -- Nix files that don't reflect stack.yaml dependencies
         extraNixFiles = ["lamdu.nix"]
-        -- Using our freetype2 version via nix causes GHC panics for some reason
-        -- TODO: Remove this and fix the nix issues
-        knownMissingNixFiles = ["freetype2.nix"]
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
@@ -66,9 +63,6 @@ verifyStackDep dep =
             let nixCommit = splitOn "rev = \"" nixFile !! 1 & takeWhile (/= '"')
             when (nixCommit /= commit)
                 (assertString ("Nix revision for dependency " <> packageName <> " mismatches stack"))
-            -- The nix setup doesn't use the freetype2 fork.
-            -- TODO: is this fine?
-            & when (packageName /= "freetype2")
     where
         getKey key =
             dep ^? LensAeson.key key . LensAeson._String
