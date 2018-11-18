@@ -1,32 +1,25 @@
 sudo: false
 
-addons:
-  apt:
-    packages:
-    - zlib1g-dev
-    - libglew-dev
-    - libleveldb-dev
-    - libxrandr-dev
-    - libxi-dev
-    - libxcursor-dev
-    - libxinerama-dev
+language: nix
+nix: 2.1.3
 
 branches:
   only:
   - master
 
 before_install:
-  - nvm install 7
-  - mkdir -p ~/.local/bin
-  - export PATH=$HOME/.local/bin:$PATH
-  - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+- sudo mkdir -p /etc/nix
+- echo "substituters = https://cache.nixos.org/ file://$HOME/nix.store" | sudo tee -a /etc/nix/nix.conf > /dev/null
+- echo 'require-sigs = false' | sudo tee -a /etc/nix/nix.conf > /dev/null
+- echo 'sandbox = true' | sudo tee -a /etc/nix/nix.conf > /dev/null
 
-install:
-  - stack setup
+before_cache:
+- mkdir -p $HOME/nix.store
+- nix copy --to file://$HOME/nix.store -f default.nix buildInputs
 
 script:
-  - stack test
+  - nix-build -A lamdu default.nix
 
 cache:
   directories:
-  - $HOME/.stack
+  - $HOME/nix.store
