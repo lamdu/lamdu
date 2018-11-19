@@ -28,7 +28,7 @@ _rc ver = ver ++ "-rc-" ++ curdate
 currentVersionInfo :: VersionInfo
 currentVersionInfo =
     VersionInfo
-    { version = "0.7"
+    { version = "0.7.1"
     , gitCommit = $(Git.hash)
     , gitStatus = $(Git.status)
     , gitDirty = $(Git.dirty)
