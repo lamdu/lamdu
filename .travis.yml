@@ -9,19 +9,19 @@ branches:
 
 before_install:
 - sudo mkdir -p /etc/nix
-- echo "substituters = https://cache.nixos.org/ file://$HOME/nix.store" | sudo tee -a /etc/nix/nix.conf > /dev/null
+- echo "substituters = https://cache.nixos.org/ file:///nix/store" | sudo tee -a /etc/nix/nix.conf > /dev/null
 - echo 'require-sigs = false' | sudo tee -a /etc/nix/nix.conf > /dev/null
 
 before_script:
 - echo 'sandbox = true' | sudo tee -a /etc/nix/nix.conf > /dev/null
 
 before_cache:
-- mkdir -p $HOME/nix.store
-- nix copy --to file://$HOME/nix.store -f default.nix buildInputs
+- mkdir -p /nix/store
+- nix copy --to file:///nix/store -f default.nix buildInputs
 
 script:
   - nix-build -A lamdu default.nix
 
 cache:
   directories:
-  - $HOME/nix.store
+  - /nix/store
