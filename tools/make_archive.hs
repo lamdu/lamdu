@@ -2,7 +2,10 @@
 
 import qualified Codec.Archive.Zip as Zip
 import           Control.Exception (bracket_)
+import           Control.Lens.Operators
+import           Control.Monad (when)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Foldable (traverse_)
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
@@ -10,7 +13,7 @@ import qualified System.Info as SysInfo
 import qualified System.NodeJS.Path as NodeJS
 import           System.Process (readProcess, callProcess)
 
-import           Lamdu.Prelude
+import           Prelude
 
 interestingLibs :: [String]
 interestingLibs =
