@@ -98,6 +98,7 @@ mainLoop =
     , run = \win handlers ->
         do
             unless rtsSupportsBoundThreads (error "mainLoop requires threaded runtime")
+            GLFW.makeContextCurrent Nothing
             newFrameReq <- STM.newTVarIO Nothing
             let recvFrameReq = STM.swapTVar newFrameReq Nothing
             let sendFrameReq = STM.atomically . STM.writeTVar newFrameReq
