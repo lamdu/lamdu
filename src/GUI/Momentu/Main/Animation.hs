@@ -63,6 +63,7 @@ animThreadLoop :: STM (Maybe (UTCTime, Anim.Frame)) -> Handlers -> GLFW.Window -
 animThreadLoop recvNewFrame handlers win =
     do
         GLFW.makeContextCurrent (Just win)
+        GLFW.swapInterval 1
         initialFrame <- makeFrame handlers
         initialTime <- getCurrentTime
         Anim.initialState >>= loop (Just (initialTime, initialFrame))

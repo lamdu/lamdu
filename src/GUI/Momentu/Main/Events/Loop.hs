@@ -96,8 +96,6 @@ eventLoop win handlers =
         setCallback GLFW.setFramebufferSizeCallback $ framebufferSizeEvent vhandler
         setCallback GLFW.setWindowCloseCallback $ vhandler EventWindowClose
 
-        GLFW.swapInterval 1
-
         vhandler EventWindowRefresh
 
         let loop =
