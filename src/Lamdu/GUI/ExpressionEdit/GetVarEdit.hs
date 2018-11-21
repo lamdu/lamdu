@@ -27,6 +27,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
@@ -72,7 +73,7 @@ makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
-            [ TextView.makeLabel "Params {" <&> Responsive.fromTextView
+            [ Label.make "Params {" <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
@@ -86,7 +87,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , TextView.makeLabel "}" <&> Responsive.fromTextView
+            , Label.make "}" <&> Responsive.fromTextView
             ] <&> Options.box Options.disambiguationNone <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar

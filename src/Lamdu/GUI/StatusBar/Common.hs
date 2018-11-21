@@ -27,6 +27,7 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.Label as Label
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -65,7 +66,7 @@ makeLabeledWidget ::
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) => Text -> a -> m b
 makeLabeledWidget headerText w =
-    TextView.makeLabel (headerText <> " ")
+    Label.make (headerText <> " ")
     & Styled.withColor TextColors.infoTextColor
     <&> (/|/ w)
 
@@ -92,7 +93,7 @@ makeChoice headerText prop choiceVals =
     where
         myId = Widget.Id [encodeUtf8 headerText]
         mkChoice (text, val) =
-            TextView.makeFocusableLabel text
+            Label.makeFocusable text
             <&> (^. Align.tValue)
             <&> (,) val
 

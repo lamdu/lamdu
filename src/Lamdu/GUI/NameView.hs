@@ -11,6 +11,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
 import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
@@ -37,7 +38,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
                 nameTheme <- Lens.view (theme . Theme.name)
                 (Draw.backgroundColor ?? nameTheme ^# collisionColor)
                     <*>
-                    (TextView.makeLabel text
+                    (Label.make text
                      & Styled.withColor TextColors.collisionSuffixTextColor
                      <&> Element.scale (nameTheme ^. NameTheme.collisionSuffixScaleFactor))
             <&> (^. Align.tValue)

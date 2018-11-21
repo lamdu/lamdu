@@ -32,6 +32,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -139,7 +140,7 @@ makeScopeNavArrow ::
 makeScopeNavArrow setScope arrowText mScopeId =
     do
         theme <- Lens.view Theme.theme
-        TextView.makeLabel arrowText
+        Label.make arrowText
             <&> Align.tValue %~ Widget.fromView
             <&> Align.tValue %~
                 Widget.sizedState <. Widget._StateUnfocused . Widget.uMEnter
@@ -440,7 +441,7 @@ make pMode defEventMap tag color assignment =
                 ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
-        equals <- TextView.makeLabel "="
+        equals <- Label.make "="
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
         hbox [ defNameEdit :
                 (mParamEdit ^.. Lens._Just) ++

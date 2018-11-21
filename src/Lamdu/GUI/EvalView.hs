@@ -20,6 +20,7 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Graphics.DrawingCombinators ((%%))
@@ -86,7 +87,7 @@ makeTable (Sugar.ResTable headers valss) =
         remainView <-
             if null (drop tableCutoff rows)
             then pure Element.empty
-            else TextView.makeLabel "…"
+            else Label.make "…"
         Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
 
 makeArray ::
@@ -95,15 +96,15 @@ makeArray ::
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
-        opener <- TextView.makeLabel "["
-        closer <- TextView.makeLabel "]"
+        opener <- Label.make "["
+        closer <- Label.make "]"
         opener : itemViews ++ [closer] & hbox & pure
     where
         makeItem idx val =
-            [ [ TextView.makeLabel ", " | idx > 0 ]
+            [ [ Label.make ", " | idx > 0 ]
             , [ makeInner val
                 | idx < arrayCutoff ]
-            , [ TextView.makeLabel "…" | idx == arrayCutoff ]
+            , [ Label.make "…" | idx == arrayCutoff ]
             ] & concat
             & sequence
             <&> hbox
@@ -119,9 +120,9 @@ makeTree (Sugar.ResTree root subtrees) =
         rootView : subtreeViews & vbox & pure
     where
         makeItem idx val =
-            [ [ TextView.makeLabel "* " ]
+            [ [ Label.make "* " ]
             , [ makeInner val | idx < cutoff ]
-            , [ TextView.makeLabel "…" | idx == cutoff ]
+            , [ Label.make "…" | idx == cutoff ]
             ] & concat
             & sequence
             <&> hbox
@@ -141,9 +142,9 @@ makeStream ::
     Sugar.ResStream (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
 makeStream (Sugar.ResStream head_) =
     do
-        o <- TextView.makeLabel "["
+        o <- Label.make "["
         inner <- makeInner head_
-        c <- TextView.makeLabel ", …]" <&> (^. Align.tValue)
+        c <- Label.make ", …]" <&> (^. Align.tValue)
         o /|/ inner
             & Align.tValue %~ (hGlueAlign 1 ?? c)
             & pure

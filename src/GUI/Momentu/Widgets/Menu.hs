@@ -43,6 +43,7 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
 import           Lamdu.Prelude
@@ -172,7 +173,7 @@ optionWidgets f (Option i w s) =
 makeNoResults ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     m (WithTextPos View)
-makeNoResults = TextView.makeLabel "(No results)"
+makeNoResults = Label.make "(No results)"
 
 blockEvents ::
     Applicative f =>
@@ -199,7 +200,7 @@ makeSubmenuSymbol ::
 makeSubmenuSymbol isSelected =
     do
         color <- Lens.view (config . configStyle . submenuSymbolColor)
-        TextView.makeLabel submenuSymbolText
+        Label.make submenuSymbolText
             & Reader.local (TextView.color .~ color)
     where
         submenuSymbolColor
@@ -351,7 +352,7 @@ make myId minWidth options =
                     & traverse (layoutOption maxOptionWidth)
                 hiddenOptionsWidget <-
                     if olIsTruncated options
-                    then TextView.makeLabel "..." <&> Align.tValue %~ Widget.fromView
+                    then Label.make "..." <&> Align.tValue %~ Widget.fromView
                     else pure Element.empty
                 pure
                     ( maybe NoPickFirstResult PickFirstResult mPickFirstResult

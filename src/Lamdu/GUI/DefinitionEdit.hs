@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui, assignCursor)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
@@ -65,7 +65,7 @@ makeBuiltinDefinition ::
 makeBuiltinDefinition def builtin =
     do
         nameEdit <- TagEdit.makeBinderTagEdit TextColors.definitionColor name
-        equals <- TextView.makeLabel " = "
+        equals <- Label.make " = "
         builtinEdit <- BuiltinEdit.make builtin myId
         typeView <-
             topLevelSchemeTypeView (builtin ^. Sugar.biType)

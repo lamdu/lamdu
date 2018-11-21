@@ -24,6 +24,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -117,10 +118,10 @@ textEdit ::
     m (TextWidget o)
 textEdit prop pl =
     do
-        left <- TextView.makeLabel "“"
+        left <- Label.make "“"
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         right <-
-            TextView.makeLabel "„"
+            Label.make "„"
             <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
         withFd ?? myId ?? left /|/ text /|/ right
     & withStyle Style.text

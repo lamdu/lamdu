@@ -26,6 +26,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
@@ -151,7 +152,7 @@ addNewTag tagSelection mkPickResult ctx =
     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
     , Menu._oRender =
         (Widget.makeFocusableView ?? optionId <&> fmap)
-        <*> TextView.makeLabel "Create new"
+        <*> Label.make "Create new"
         <&> (`Menu.RenderedOption` preEvent)
         & Styled.withColor TextColors.actionTextColor
     }

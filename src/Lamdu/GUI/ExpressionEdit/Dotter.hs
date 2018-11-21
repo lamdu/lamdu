@@ -27,6 +27,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (HasConfig)
@@ -46,7 +47,7 @@ add ::
 add pl =
     do
         ev <- eventMap pl
-        label <- TextView.makeLabel "?"
+        label <- Label.make "?"
         let f r =
                 r /|/ label
                 & Widget.setFocused

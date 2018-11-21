@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
@@ -43,7 +44,7 @@ infoLabel ::
     , TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) => Text -> m (WithTextPos View)
-infoLabel text = TextView.makeLabel text & withColor TextColors.infoTextColor
+infoLabel text = Label.make text & withColor TextColors.infoTextColor
 
 grammarLabel ::
     ( MonadReader env m
@@ -51,7 +52,7 @@ grammarLabel ::
     , TextView.HasStyle env
     , Element.HasAnimIdPrefix env
     ) => Text -> m (WithTextPos View)
-grammarLabel text = TextView.makeLabel text & withColor TextColors.grammarColor
+grammarLabel text = Label.make text & withColor TextColors.grammarColor
 
 grammarText ::
     ( MonadReader env m
@@ -158,7 +159,7 @@ actionable myId text doc action =
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> TextView.makeLabel text
+            <*> Label.make text
             & Reader.local (TextView.color .~ color)
             & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap

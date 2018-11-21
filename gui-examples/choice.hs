@@ -66,7 +66,7 @@ makeWidget choiceRef getFont mainEnv =
                 , _eAnimIdPrefix = []
                 }
         let makeChoice (name, _color) =
-                (name, TextView.makeFocusableLabel name env ^. M.tValue)
+                (name, Label.makeFocusable name env ^. M.tValue)
         choice <- readIORef choiceRef
         let choiceWidget =
                 Choice.make env (liftIO . writeIORef choiceRef)

@@ -16,6 +16,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
@@ -48,7 +49,7 @@ make myId (Sugar.Params params) prop =
     where
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagVal
         mkPair presentationMode =
-            TextView.makeFocusableLabel text <&> (^. Align.tValue)
+            Label.makeFocusable text <&> (^. Align.tValue)
             <&> (,) presentationMode
             where
                 text =

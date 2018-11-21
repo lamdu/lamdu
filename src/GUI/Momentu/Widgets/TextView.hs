@@ -6,7 +6,7 @@ module GUI.Momentu.Widgets.TextView
     , lineHeight
     , HasStyle(..)
 
-    , make, makeLabel, makeFocusable, makeFocusableLabel
+    , make, makeFocusable
     , Font.TextSize(..), bounding, advance
     , RenderedText(..), renderedText, renderedTextSize
     , drawText
@@ -15,13 +15,11 @@ module GUI.Momentu.Widgets.TextView
 
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Font (Font, RenderedText(..), renderedText, renderedTextSize, bounding, advance)
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
@@ -117,11 +115,6 @@ make =
         , _tValue = View.make (textSize ^. bounding) (frame animId)
         }
 
-makeLabel ::
-    (MonadReader env m, HasStyle env, Element.HasAnimIdPrefix env) =>
-    Text -> m (WithTextPos View)
-makeLabel text = (make ?? text) <*> Element.subAnimId [encodeUtf8 text]
-
 makeFocusable ::
     (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env) =>
     m (Text -> Widget.Id -> TextWidget f)
@@ -132,12 +125,3 @@ makeFocusable =
         pure $ \text myId ->
             mkText text (Widget.toAnimId myId)
             & Align.tValue %~ toFocusable myId
-
-makeFocusableLabel ::
-    (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env, Element.HasAnimIdPrefix env) =>
-    Text -> m (TextWidget f)
-makeFocusableLabel text =
-    do
-        toFocusable <- Widget.makeFocusableView
-        widgetId <- Element.subAnimId [encodeUtf8 text] <&> Widget.Id
-        makeLabel text <&> Align.tValue %~ toFocusable widgetId

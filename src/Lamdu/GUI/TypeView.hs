@@ -20,6 +20,7 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Calc.Identifier (Identifier(..))
@@ -64,7 +65,7 @@ sanitize = Text.replace "\0" ""
 text ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     Text -> m (WithTextPos View)
-text = TextView.makeLabel . sanitize
+text = Label.make . sanitize
 
 grammar ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env

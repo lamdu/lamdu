@@ -38,6 +38,7 @@ import           GUI.Momentu.State (Gui, GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -133,7 +134,7 @@ advanceDepth f action =
             then mkErrorWidget >>= f
             else action & Reader.local (aDepthLeft -~ 1)
     where
-        mkErrorWidget = TextView.makeLabel "..."
+        mkErrorWidget = Label.make "..."
 
 readMScopeId :: MonadReader (Askable i o) m => m (CurAndPrev (Maybe ScopeId))
 readMScopeId = Lens.view aMScopeId

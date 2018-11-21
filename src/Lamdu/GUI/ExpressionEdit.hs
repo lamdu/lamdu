@@ -11,7 +11,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
@@ -51,7 +51,7 @@ placeHolder ::
     ExprGuiM i o (Gui Responsive o)
 placeHolder pl =
     (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
-    <*> TextView.makeLabel "★"
+    <*> Label.make "★"
     <&> Responsive.fromWithTextPos
 
 makeEditor ::

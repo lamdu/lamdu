@@ -24,6 +24,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -97,7 +98,7 @@ makeIndicator ::
 makeIndicator tag enabledColor text =
     do
         color <- indicatorColor tag enabledColor
-        TextView.makeLabel text & Reader.local (TextView.color .~ color)
+        Label.make text & Reader.local (TextView.color .~ color)
 
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
@@ -121,7 +122,7 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
             do
                 errorColor <- Lens.view (theme . Theme.errorColor)
                 descLabel <-
-                    TextView.makeLabel desc & Reader.local (TextView.color .~ errorColor)
+                    Label.make desc & Reader.local (TextView.color .~ errorColor)
                 hspace <- Spacer.stdHSpace
                 vspace <- Spacer.stdVSpace
                 hover <- Hover.hover
@@ -196,7 +197,7 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             <*>
             sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
-              <*> TextView.makeLabel "⋙"
+              <*> Label.make "⋙"
               <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExprPl buttonExtractKeys)
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result

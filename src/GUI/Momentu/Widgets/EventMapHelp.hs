@@ -42,6 +42,7 @@ import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
@@ -133,7 +134,7 @@ makeShortcutKeyView :: [E.InputDoc] -> Env -> View
 makeShortcutKeyView inputDocs =
     inputDocs
     <&> (<> " ")
-    & traverse TextView.makeLabel
+    & traverse Label.make
     <&> map (^. Align.tValue)
     <&> Align.vboxAlign 1
     & Reader.local setColor
@@ -151,7 +152,7 @@ makeTextViews tree =
             makeShortcutKeyView doc
             & Reader.local (Element.animIdPrefix .~ animId)
         mkDoc (animId, subtitle) =
-            TextView.makeLabel subtitle
+            Label.make subtitle
             <&> (^. Align.tValue)
             & Reader.local (Element.animIdPrefix .~ animId)
 
@@ -178,7 +179,7 @@ make size eventMap =
 
 makeTooltip :: [ModKey] -> Env -> View
 makeTooltip helpKeys env =
-    (TextView.makeLabel "Show help" env ^. Align.tValue)
+    (Label.make "Show help" env ^. Align.tValue)
     /|/
     makeShortcutKeyView (helpKeys <&> ModKey.pretty) env
 

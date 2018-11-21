@@ -17,6 +17,7 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -77,7 +78,7 @@ make def myId =
         varName <-
             makeNamePartEditor (colors ^. TextColors.foreignVarColor) name nameSetter
             (builtinFFIName myId)
-        dot <- TextView.makeLabel "."
+        dot <- Label.make "."
         moduleName /|/ dot /|/ varName & pure
     & GuiState.assignCursor myId (builtinFFIName myId)
     where
