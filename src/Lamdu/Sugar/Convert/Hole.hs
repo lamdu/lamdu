@@ -304,49 +304,28 @@ sugar sugarContext holePl v =
             , Infer._plScope = holePl ^. Input.inferred . Infer.plScope
             }
 
-mkLiteralOptions ::
-    Monad m =>
-    Input.Payload m a ->
-    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult InternalName (T m) (T m))))
-mkLiteralOptions holePl =
-    Lens.view id
+valFromLiteral :: Monad m => ConvertM m (Literal Identity -> (Val T.Type, T m ()))
+valFromLiteral =
+    Lens.view ConvertM.scFrozenDeps
     <&>
-    \sugarContext ->
-    let mk updateDeps x =
-            pure
-            ( HoleResultScore 0 []
-            , fixedVal & annotations %~ convPl
-                & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
-            )
-            where
-                typ = x ^. ann
-                fixedVal
-                    | inferredType == typ || Lens.has T._TVar inferredType = x
-                    | otherwise =
-                        V.Apply (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
-                        & V.BApp
-                        & Ann inferredType
-        addTextDep = Property.pureModify (sugarContext ^. ConvertM.scFrozenDeps) (<> textDep)
-    in
+    \frozenDeps ->
     \case
-    LiteralNum (Identity x) -> PrimVal.Float x & literalExpr & mk (pure ())
-    LiteralBytes (Identity x) -> PrimVal.Bytes x & literalExpr & mk (pure ())
+    LiteralNum (Identity x) -> (literalExpr (PrimVal.Float x), pure ())
+    LiteralBytes (Identity x) -> (literalExpr (PrimVal.Bytes x), pure ())
     LiteralText (Identity x) ->
-        encodeUtf8 x
-        & PrimVal.Bytes
-        & literalExpr
-        & V.Nom Builtins.textTid
-        & V.BToNom
-        & Ann (T.TInst Builtins.textTid mempty)
-        & mk addTextDep
+        ( encodeUtf8 x
+            & PrimVal.Bytes
+            & literalExpr
+            & V.Nom Builtins.textTid
+            & V.BToNom
+            & Ann (T.TInst Builtins.textTid mempty)
+        , Property.pureModify frozenDeps (<> textDep)
+        )
     where
         literalExpr v =
             V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty)
             where
                 prim = PrimVal.fromKnown v
-        emptyPl = (Nothing, ())
-        convPl t = (Infer.Payload t Infer.emptyScope, emptyPl)
-        inferredType = holePl ^. Input.inferred . Infer.plType
         textDep =
             mempty
             { Infer._depsNominals =
@@ -356,6 +335,32 @@ mkLiteralOptions holePl =
                 , N._nomParams = mempty
                 }
             }
+mkLiteralOptions ::
+    Monad m =>
+    Input.Payload m a ->
+    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult InternalName (T m) (T m))))
+mkLiteralOptions holePl =
+    (,) <$> Lens.view id <*> valFromLiteral
+    <&>
+    \(sugarContext, valFromLit) lit ->
+    let (x, updateDeps) = valFromLit lit
+        typ = x ^. ann
+        fixedVal
+            | inferredType == typ || Lens.has T._TVar inferredType = x
+            | otherwise =
+                V.Apply (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
+                & V.BApp
+                & Ann inferredType
+    in
+    pure
+    ( HoleResultScore 0 []
+    , fixedVal & annotations %~ convPl
+        & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
+    )
+    where
+        emptyPl = (Nothing, ())
+        convPl t = (Infer.Payload t Infer.emptyScope, emptyPl)
+        inferredType = holePl ^. Input.inferred . Infer.plType
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
