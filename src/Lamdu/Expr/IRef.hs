@@ -7,7 +7,8 @@ module Lamdu.Expr.IRef
     , DefI
     , addProperties
 
-    , globalId, defI, nominalI
+    , globalId, defI, nominalI, tagI
+    , readTagInfo
 
     ) where
 
@@ -22,6 +23,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)
 import           Lamdu.Data.Definition (Definition)
+import           Lamdu.Data.Tag (Tag(..))
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -40,8 +42,21 @@ globalId = V.Var . Identifier . UUIDUtils.toSBS16 . IRef.uuid
 defI :: V.Var -> DefI m
 defI (V.Var (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
+tagI :: T.Tag -> IRef m Tag
+tagI (T.Tag (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
+
 nominalI :: T.NominalId -> IRef m Nominal
 nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
+
+readTagInfo :: Monad m => T.Tag -> T m Tag
+readTagInfo tag =
+    Transaction.irefExists iref
+    >>=
+    \case
+    False -> pure (Tag "" 0)
+    True -> Transaction.readIRef iref
+    where
+        iref = tagI tag
 
 type ValI m = Node (IRef m) V.Term
 

@@ -5,10 +5,10 @@ module Lamdu.Sugar.OrderTags
 
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
-import qualified Data.Property as Property
 import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Data.Anchors (assocTagOrder)
+import           Lamdu.Data.Tag (tagOrder)
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -24,9 +24,8 @@ orderByTag toTag =
     where
         loadOrder x =
             toTag x ^. Sugar.tagVal
-            & assocTagOrder
-            & Property.getP
-            <&> (,) x
+            & ExprIRef.readTagInfo
+            <&> (,) x . (^. tagOrder)
 
 orderComposite :: Monad m => Order m (Sugar.CompositeFields p name (Sugar.Type a))
 orderComposite =

@@ -90,7 +90,7 @@ setParamList ::
     MkProperty' (T m) (Maybe [T.Tag]) -> [T.Tag] -> T m ()
 setParamList mPresMode paramListProp newParamList =
     do
-        Lens.itraverse_ setParamOrder newParamList
+        Lens.itraverse_ (flip DataOps.setTagOrder) newParamList
         Just newParamList & setP paramListProp
         case mPresMode of
             Nothing -> pure ()
@@ -101,8 +101,6 @@ setParamList mPresMode paramListProp newParamList =
                         Object f | [f] /= take 1 newParamList -> setP presModeProp Verbose
                         Infix f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
                         _ -> pure ()
-    where
-        setParamOrder i p = setP (Anchors.assocTagOrder p) i
 
 isArgOfCallTo :: V.Var -> [Val ()] -> Bool
 isArgOfCallTo funcVar (cur : parent : _) =

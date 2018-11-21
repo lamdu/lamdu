@@ -36,6 +36,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
+import           Lamdu.Data.Tag (Tag(..), tagName, tagOrder)
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -101,10 +102,10 @@ tell = Writer.tell . (: [])
 exportTag :: Monad m => T.Tag -> Export m ()
 exportTag tag =
     do
-        tagOrder <- Property.getP (Anchors.assocTagOrder tag) & trans
-        name <- Property.getP (Anchors.assocTagNameRef tag) & trans
+        info <- ExprIRef.readTagInfo tag & trans
+        let name = info ^. tagName
         let mName = name <$ (guard . not . Text.null) name
-        Codec.EntityTag tagOrder mName tag & tell
+        Codec.EntityTag (info ^. tagOrder) mName tag & tell
     & withVisited visitedTags tag
 
 exportNominal :: Monad m => T.NominalId -> Export m ()
@@ -229,10 +230,9 @@ importRepl defExpr =
     Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
 importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
-importTag tagOrder mName tag =
+importTag order mName tag =
     do
-        Property.setP (Anchors.assocTagOrder tag) tagOrder
-        traverse_ (Property.setP (Anchors.assocTagNameRef tag)) mName
+        Transaction.writeIRef (ExprIRef.tagI tag) (Tag (mName ^. Lens._Just) order)
         tag `insertTo` DbLayout.tags
 
 importLamVar :: Monad m => Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T m ()
@@ -253,7 +253,7 @@ importNominal tag nomId nominal =
 importOne :: Codec.Entity -> T ViewM ()
 importOne (Codec.EntityDef def) = importDef def
 importOne (Codec.EntityRepl x) = importRepl x
-importOne (Codec.EntityTag tagOrder mName tag) = importTag tagOrder mName tag
+importOne (Codec.EntityTag order mName tag) = importTag order mName tag
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar paramList tag lamUUID var) = importLamVar paramList tag lamUUID var
 importOne (Codec.EntitySchemaVersion _) =

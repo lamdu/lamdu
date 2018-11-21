@@ -6,12 +6,10 @@ module Lamdu.Data.Anchors
     , Pane(..)
     , GuiAnchors, CodeAnchors, RevisionProps
     , assocBranchNameRef
-    , assocTagNameRef
     , assocTag, anonTag
     , assocScopeRef
     , assocPresentationMode
     , assocDefinitionState
-    , assocTagOrder
     , assocFieldParamList
     , BinderParamScopeId(..), bParamScopeId
     ) where
@@ -81,9 +79,6 @@ type GuiAnchors i o = Gui (MkProperty i o)
 type CodeAnchors m = Code (MkProperty' (T m)) m
 type RevisionProps m = Revision (MkProperty' (T m)) m
 
-assocTagNameRef :: Monad m => T.Tag -> MkProperty' (T m) Text
-assocTagNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
-
 assocBranchNameRef :: Monad m => Branch m -> MkProperty' (T m) Text
 assocBranchNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID
 
@@ -95,9 +90,6 @@ assocTag = Transaction.assocDataRefDef anonTag "Tag" . UniqueId.toUUID
 
 assocScopeRef :: Monad m => V.Var -> MkProperty' (T m) (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
-
-assocTagOrder :: Monad m => T.Tag -> MkProperty' (T m) Int
-assocTagOrder = Transaction.assocDataRefDef 0 "Order" . UniqueId.toUUID
 
 assocFieldParamList ::
     Monad m => ValI m -> MkProperty' (T m) (Maybe ParamList)

@@ -254,6 +254,7 @@ Library
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
+                  , Lamdu.Data.Tag
                   , Lamdu.Debug
                   , Lamdu.Debug.Tasks
                   , Lamdu.Editor

@@ -11,7 +11,6 @@ import qualified Data.Set as Set
 import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValBody, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -52,7 +51,7 @@ convertAddItem extendOp existingTags pl =
             do
                 DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. Property.pVal)
                 _ <- protectedSetToVal stored resultI
-                Property.setP (Anchors.assocTagOrder tag) (Set.size existingTags)
+                DataOps.setTagOrder tag (Set.size existingTags)
                 EntityId.ofValI newValI & pure
         convertTagSelection nameWithoutContext existingTags RequireTag (EntityId.ofTag (pl ^. Input.entityId)) addItem
     where

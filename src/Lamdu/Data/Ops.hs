@@ -10,6 +10,7 @@ module Lamdu.Data.Ops
     , newPublicDefinitionToIRef
     , newPane
     , newIdentityLambda
+    , setTagOrder
     ) where
 
 import qualified Control.Lens as Lens
@@ -21,6 +22,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
+import           Lamdu.Data.Tag (tagName, tagOrder)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -110,17 +112,21 @@ case_ tag tailI =
         V.Case tag newValueI tailI & V.BCase & Transaction.newIRef
             <&> CompositeExtendResult newValueI
 
--- | assocTagNameRef that publishes/unpublishes upon setting a
--- non-empty/empty name
+-- | publishes/unpublishes upon setting a non-empty/empty name
 assocPublishedTagName ::
     Monad m => MkProperty' (T m) (Set T.Tag) -> T.Tag -> MkProperty' (T m) Text
 assocPublishedTagName publishedTagsProp tag =
-    Anchors.assocTagNameRef tag
-    & Property.prop . Property.pSet .>
-    Lens.imapped %@~ \i -> (<* publish i)
+    ExprIRef.readTagInfo tag
+    <&> result
+    & Property.MkProperty
     where
-        publish newName =
-            Property.modP publishedTagsProp (Lens.contains tag .~ (newName /= ""))
+        result info =
+            Property (info ^. tagName) setName
+            where
+                setName name =
+                    do
+                        info & tagName .~ name & Transaction.writeIRef (ExprIRef.tagI tag)
+                        Property.modP publishedTagsProp (Lens.contains tag .~ (name /= ""))
 
 newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
 newPane codeAnchors defI =
@@ -165,3 +171,9 @@ newIdentityLambda =
         getVar <- V.LVar paramId & V.BLeaf & Transaction.newIRef
         lamI <- V.Lam paramId getVar & V.BLam & Transaction.newIRef
         pure (paramId, lamI)
+
+setTagOrder :: Monad m => T.Tag -> Int -> T m ()
+setTagOrder tag order =
+    ExprIRef.readTagInfo tag
+    <&> tagOrder .~ order
+    >>= Transaction.writeIRef (ExprIRef.tagI tag)
