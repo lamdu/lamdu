@@ -11,7 +11,7 @@ module Lamdu.Sugar.Types.Parts
     , ValAnnotation(..), annotationVal, annotationType
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
-    , NodeActions(..), detach, mSetToHole, extract, mReplaceParent, wrapInRecord
+    , NodeActions(..), detach, mSetToHole, setToLiteral, extract, mReplaceParent, wrapInRecord
         , mNewLet
     , -- Let
       ExtractDestination(..)
@@ -105,6 +105,7 @@ data DetachAction o
 data NodeActions name i o = NodeActions
     { _detach :: DetachAction o
     , _mSetToHole :: Maybe (o EntityId) -- (Not available for holes)
+    , _setToLiteral :: Literal Identity -> o EntityId
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
     , _wrapInRecord :: TagSelection name i o ()

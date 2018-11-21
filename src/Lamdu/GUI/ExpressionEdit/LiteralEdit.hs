@@ -1,5 +1,5 @@
 module Lamdu.GUI.ExpressionEdit.LiteralEdit
-    ( make
+    ( make, makeLiteralEventMap
     ) where
 
 import           Control.Applicative (liftA2)
@@ -7,6 +7,7 @@ import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
+import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
@@ -30,6 +31,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
@@ -187,13 +189,17 @@ numEdit prop pl =
                                 <&> SearchMenu.enterWithSearchTerm (Text.singleton c))
                             <$ guard (Char.isAlpha c)
                 _ -> mempty
+        let newLiteralEvent
+                | Text.null text =
+                    makeLiteralEventMap (pl ^. Sugar.plActions . Sugar.setToLiteral)
+                | otherwise = mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 -- Avoid taking keys that don't belong to us,
                 -- so weakerEvents with them will work.
                 E.filter (Lens.has Lens._Just . parseNum . fst)
             <&> Align.tValue . Lens.mapped %~ event
-            <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> strollEvent)
+            <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> newLiteralEvent <> strollEvent)
             <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
     & withStyle Style.num
     where
@@ -222,3 +228,16 @@ make lit pl =
     Sugar.LiteralNum x -> numEdit x pl <&> Responsive.fromWithTextPos
     Sugar.LiteralBytes x -> genericEdit Style.bytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
+
+makeLiteralEventMap ::
+    Monad o =>
+    (Sugar.Literal Identity -> o Sugar.EntityId) ->
+    Gui EventMap o
+makeLiteralEventMap makeLiteral =
+    E.charGroup Nothing (E.Doc ["Edit", "Literal Text"]) "'\""
+    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> r))
+    <>
+    E.charGroup (Just "Digit") (E.Doc ["Edit", "Literal Number"]) Chars.digit
+    (fmap r . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
+    where
+        r = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId

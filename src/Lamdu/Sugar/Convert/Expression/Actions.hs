@@ -1,15 +1,23 @@
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions, convertPayload
+    , valFromLiteral
     ) where
 
 import qualified Control.Lens.Extended as Lens
+import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node, Ann(..), ann, val)
+import           Data.Text.Encoding (encodeUtf8)
+import           Data.Tree.Diverse (Node, Ann(..), ann, val, annotations)
+import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)
+import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Calc.Type.Nominal as N
+import           Lamdu.Calc.Type.Scheme (mono)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -121,6 +129,23 @@ mkWrapInRecord exprPl =
         -- TODO: The entity-ids created here don't match the resulting entity ids of the record.
         tempMkEntityId = EntityId.ofTaggedEntity (stored ^. Property.pVal)
 
+makeSetToLiteral ::
+    Monad m =>
+    Input.Payload m a -> ConvertM m (Literal Identity -> T m EntityId)
+makeSetToLiteral exprPl =
+    ((,) <$> ConvertM.typeProtectedSetToVal <*> valFromLiteral)
+    <&>
+    \(setToVal, valFromLit) lit ->
+    let (x, update) = valFromLit lit
+    in
+    do
+        update
+        l <-
+            x & annotations .~ (Nothing, ()) & ExprIRef.writeValWithStoredSubexpressions
+            <&> (^. ann . _1)
+        _ <- setToVal (exprPl ^. Input.stored) l
+        EntityId.ofValI l & pure
+
 makeActions ::
     Monad m =>
     Input.Payload m a -> ConvertM m (NodeActions InternalName (T m) (T m))
@@ -132,9 +157,11 @@ makeActions exprPl =
         outerPos <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
             <&> (^? Lens._Just . ConvertM.osiPos)
+        setToLit <- makeSetToLiteral exprPl
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
+            , _setToLiteral = setToLit
             , _extract = ext
             , _mReplaceParent = Nothing
             , _wrapInRecord = wrapInRec
@@ -276,3 +303,35 @@ convertPayload mode (showAnn, pl) =
     , _plEntityId = pl ^. pInput . Input.entityId
     , _plData = pl ^. pInput . Input.userData
     }
+
+valFromLiteral :: Monad m => ConvertM m (Literal Identity -> (Val T.Type, T m ()))
+valFromLiteral =
+    Lens.view ConvertM.scFrozenDeps
+    <&>
+    \frozenDeps ->
+    \case
+    LiteralNum (Identity x) -> (literalExpr (PrimVal.Float x), pure ())
+    LiteralBytes (Identity x) -> (literalExpr (PrimVal.Bytes x), pure ())
+    LiteralText (Identity x) ->
+        ( encodeUtf8 x
+            & PrimVal.Bytes
+            & literalExpr
+            & V.Nom Builtins.textTid
+            & V.BToNom
+            & Ann (T.TInst Builtins.textTid mempty)
+        , Property.pureModify frozenDeps (<> textDep)
+        )
+    where
+        literalExpr v =
+            V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty)
+            where
+                prim = PrimVal.fromKnown v
+        textDep =
+            mempty
+            { Infer._depsNominals =
+                Map.singleton Builtins.textTid
+                N.Nominal
+                { N._nomType = T.TInst Builtins.bytesTid mempty & mono & N.NominalType
+                , N._nomParams = mempty
+                }
+            }

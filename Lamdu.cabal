@@ -293,7 +293,6 @@ Library
                   , Lamdu.GUI.ExpressionEdit.GetVarEdit
                   , Lamdu.GUI.ExpressionEdit.IfElseEdit
                   , Lamdu.GUI.ExpressionEdit.HoleEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.Literal
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
                   , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea

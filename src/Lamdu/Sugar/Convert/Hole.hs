@@ -27,11 +27,8 @@ import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Tree.Diverse (Node, Ann(..), ann, annotations)
 import qualified Data.UUID as UUID
-import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
@@ -39,7 +36,6 @@ import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Eq (couldEq)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (mono)
 import qualified Lamdu.Calc.Type.Scheme as CalcScheme
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
@@ -54,7 +50,7 @@ import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Annotations (neverShowAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload, valFromLiteral)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -304,37 +300,6 @@ sugar sugarContext holePl v =
             , Infer._plScope = holePl ^. Input.inferred . Infer.plScope
             }
 
-valFromLiteral :: Monad m => ConvertM m (Literal Identity -> (Val T.Type, T m ()))
-valFromLiteral =
-    Lens.view ConvertM.scFrozenDeps
-    <&>
-    \frozenDeps ->
-    \case
-    LiteralNum (Identity x) -> (literalExpr (PrimVal.Float x), pure ())
-    LiteralBytes (Identity x) -> (literalExpr (PrimVal.Bytes x), pure ())
-    LiteralText (Identity x) ->
-        ( encodeUtf8 x
-            & PrimVal.Bytes
-            & literalExpr
-            & V.Nom Builtins.textTid
-            & V.BToNom
-            & Ann (T.TInst Builtins.textTid mempty)
-        , Property.pureModify frozenDeps (<> textDep)
-        )
-    where
-        literalExpr v =
-            V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty)
-            where
-                prim = PrimVal.fromKnown v
-        textDep =
-            mempty
-            { Infer._depsNominals =
-                Map.singleton Builtins.textTid
-                N.Nominal
-                { N._nomType = T.TInst Builtins.bytesTid mempty & mono & N.NominalType
-                , N._nomParams = mempty
-                }
-            }
 mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->

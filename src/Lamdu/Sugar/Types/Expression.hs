@@ -115,7 +115,8 @@ data Hole name i o = Hole
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
-    , _holeOptionLiteral :: OptionLiteral name i o
+    , -- TODO: this is mostly duplicate of NodeActions setToLiteral functionality..
+      _holeOptionLiteral :: OptionLiteral name i o
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (o EntityId)
