@@ -82,7 +82,7 @@ addHelp size =
     helpEnv
     <&> \env ->
     Widget.wState . Widget._StateFocused . Lens.mapped %~
-    EventMapHelp.addHelpView env size
+    (EventMapHelp.addHelpView size ?? env)
 
 type Ctx env =
     ( HasCallStack

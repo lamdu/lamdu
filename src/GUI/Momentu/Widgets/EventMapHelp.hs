@@ -171,17 +171,19 @@ columns maxHeight itemHeight =
 
 make :: MonadReader Env m => Vector2 R -> EventMap a -> m View
 make size eventMap =
-    eventMap ^.. E.emDocs . Lens.withIndex
-    <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
-    & groupInputDocs & groupTree
-    & traverse makeTextViews
-    >>= makeTreeView size
+    (makeTreeView ?? size)
+    <*>
+    ( eventMap ^.. E.emDocs . Lens.withIndex
+        <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
+        & groupInputDocs & groupTree
+        & traverse makeTextViews
+    )
 
-makeTooltip :: [ModKey] -> Env -> View
-makeTooltip helpKeys env =
-    (Label.make "Show help" env ^. Align.tValue)
-    /|/
-    makeShortcutKeyView (helpKeys <&> ModKey.pretty) env
+makeTooltip :: MonadReader Env m => [ModKey] -> m View
+makeTooltip helpKeys =
+    (/|/)
+    <$> (Label.make "Show help" <&> (^. Align.tValue))
+    <*> makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
 indent :: R -> View -> View
 indent width = (Spacer.makeHorizontal width /|/)
@@ -192,27 +194,27 @@ fontHeight =
 
 makeFlatTreeView ::
     (MonadReader env m, TextView.HasStyle env) =>
-    Vector2 R -> [(View, View)] -> m View
-makeFlatTreeView size pairs =
-    fontHeight
-    <&> Spacer.makeHorizontal
-    <&> List.intersperse
-    ?? colViews
-    <&> Align.hboxAlign 1
-    where
-        colViews =
+    m (Vector2 R -> [(View, View)] -> View)
+makeFlatTreeView =
+    fontHeight <&> Spacer.makeHorizontal
+    <&>
+    \space size pairs ->
+    let colViews =
             pairs
             & columns (size ^. _2) pairHeight
             <&> map toRow
             <&> GridView.make
             <&> snd
+    in
+    List.intersperse space colViews & Align.hboxAlign 1
+    where
         toRow (titleView, docView) = [Aligned 0 titleView, Aligned (Vector2 1 0) docView]
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
     (MonadReader env m, TextView.HasStyle env) =>
-    Vector2 R -> [Tree View View] -> m View
-makeTreeView size trees =
+    m (Vector2 R -> [Tree View View] -> View)
+makeTreeView =
     do
         indentWidth <- fontHeight
         let go ts = ts <&> fromTree & mconcat
@@ -225,7 +227,8 @@ makeTreeView size trees =
                     (titles, inputDocs) = go ts
         let handleResult (pairs, []) = pairs
             handleResult _ = error "Leafs at root of tree!"
-        go trees & handleResult & makeFlatTreeView size
+        makeFlatTreeView
+            <&> \mk size trees -> mk size (handleResult (go trees))
 
 addToBottomRight :: View -> Widget.Size -> Element.Layers -> Element.Layers
 addToBottomRight (View eventMapSize eventMapLayers) size =
@@ -243,20 +246,23 @@ toggle HelpNotShown = HelpShown
 helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
-addHelpView :: Env -> Vector2 R -> Widget.Focused (f a) -> Widget.Focused (f a)
+addHelpView :: MonadReader Env m => Vector2 R -> Widget.Focused (f a) -> m (Widget.Focused (f a))
 addHelpView = addHelpViewWith HelpShown
 
 addHelpViewWith ::
-    IsHelpShown -> Env -> Vector2 R ->
-    Widget.Focused (f a) -> Widget.Focused (f a)
-addHelpViewWith showingHelp env size focus =
-    focus
-    & Widget.fLayers %~ addToBottomRight bgHelpView size
-    where
-        helpView =
-            env &
+    MonadReader Env m =>
+    IsHelpShown -> Vector2 R ->
+    Widget.Focused (f a) -> m (Widget.Focused (f a))
+addHelpViewWith showingHelp size focus =
+    do
+        keys <- Lens.view (eConfig . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
+        helpView <-
+            ( (.)
+                <$> (Element.tint <$> Lens.view (eStyle . styleTint))
+                <*> (MDraw.backgroundColor helpAnimId <$> Lens.view (eStyle . styleBGColor))
+            ) <*>
             case showingHelp of
-            HelpNotShown -> makeTooltip (env ^. eConfig . configOverlayDocKeys <&> toModKey)
+            HelpNotShown -> makeTooltip keys
             HelpShown ->
                 make size
                 ( (focus ^. Widget.fEventMap)
@@ -265,18 +271,18 @@ addHelpViewWith showingHelp env size focus =
                     , Widget._ePrevTextRemainder = mempty
                     }
                 )
-        bgHelpView =
-            helpView
-            & MDraw.backgroundColor helpAnimId (env ^. eStyle . styleBGColor)
-            & Element.tint (env ^. eStyle . styleTint)
+        focus & Widget.fLayers %~ addToBottomRight helpView size & pure
 
 toggleEventMap ::
-    (MonadIO f, Monoid a) =>
-    IORef IsHelpShown -> IsHelpShown -> Env -> EventMap (f a)
-toggleEventMap showingHelpVar showingHelp env =
+    (MonadReader Env m, MonadIO f, Monoid a) =>
+    IORef IsHelpShown -> IsHelpShown -> m (EventMap (f a))
+toggleEventMap showingHelpVar showingHelp =
+    Lens.view (eConfig . configOverlayDocKeys)
+    <&>
+    \keys ->
     modifyIORef showingHelpVar toggle
     & liftIO
-    & E.keysEventMap (env ^. eConfig . configOverlayDocKeys)
+    & E.keysEventMap keys
         (E.Doc ["Help", "Key Bindings", docStr])
     where
         docStr =
@@ -299,7 +305,7 @@ makeToggledHelpAdder startValue =
         readIORef showingHelpVar
         <&> (\showingHelp ->
                 makeFocus
-                <&> addHelpViewWith showingHelp env size
+                <&> (addHelpViewWith showingHelp size ?? env)
                 <&> Widget.fEventMap . Lens.mapped %~ (toggleEventMap showingHelpVar showingHelp env <>)
             )
         <&> Widget.StateFocused
