@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts #-}
 module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)
@@ -130,7 +130,7 @@ addAnimIds animId (Branch a cs) =
     where
         tAnimId = Anim.augmentId a animId
 
-makeShortcutKeyView :: [E.InputDoc] -> Env -> View
+makeShortcutKeyView :: MonadReader Env m => [E.InputDoc] -> m View
 makeShortcutKeyView inputDocs =
     inputDocs
     <&> (<> " ")
@@ -142,7 +142,7 @@ makeShortcutKeyView inputDocs =
         setColor env =
             env & TextView.style . TextView.styleColor .~ (env ^. eStyle . styleInputDocColor)
 
-makeTextViews :: Tree E.Subtitle [E.InputDoc] -> Env -> Tree View View
+makeTextViews :: MonadReader Env m => Tree E.Subtitle [E.InputDoc] -> m (Tree View View)
 makeTextViews tree =
     addAnimIds helpAnimId tree
     & traverse shortcut
@@ -169,7 +169,7 @@ columns maxHeight itemHeight =
             where
                 newHeight = itemHeight new
 
-make :: Vector2 R -> EventMap a -> Env -> View
+make :: MonadReader Env m => Vector2 R -> EventMap a -> m View
 make size eventMap =
     eventMap ^.. E.emDocs . Lens.withIndex
     <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
