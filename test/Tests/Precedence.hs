@@ -2,6 +2,7 @@
 module Tests.Precedence where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Tuple
 import           Data.Tree.Diverse (ann, val)
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -23,6 +24,7 @@ test =
     testGroup "precedence"
     [ testMinOpPrecInfix
     , testGetFieldOfApply
+    , test445
     ]
 
 testGetFieldOfApply :: Test
@@ -44,4 +46,19 @@ testMinOpPrecInfix =
     where
         (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . ann
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExpr
+        i = Stub.litNum
+
+-- Test for https://trello.com/c/OuaLvwiJ/445-wrong-parenthesis
+test445 :: Test
+test445 =
+    assertEqual "Expected paren" Parens.NeedsParens (problemPos ^. ann . _2)
+    & testCase "445-wrong-parenthesis"
+    where
+        expr =
+            Stub.identity $$ ((i 1 `Stub.plus` i 2) `Stub.mul` i 3)
+            & Parens.addToExpr
+        problemPos =
+            expr ^?!
+            val . Sugar._BodySimpleApply . Sugar.applyArg .
+            val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix . _1
         i = Stub.litNum
