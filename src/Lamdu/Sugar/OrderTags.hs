@@ -1,14 +1,15 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     , orderedClosedFlatComposite
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..), ann, val)
+import           AST (Node, Children(..))
+import           AST.Ann (Ann(..))
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
+import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -23,6 +24,13 @@ type OrderT m x = x -> T m x
 
 class Order m name o t where
     order :: OrderT m (t (Ann (Sugar.Payload name i o a)))
+
+    default order ::
+        ( Monad m, Children t
+        , ChildrenConstraint t (Order m name o)
+        ) =>
+        OrderT m (t (Ann (Sugar.Payload name i o a)))
+    order = children (Proxy :: Proxy (Order m name o)) orderNode
 
 orderByTag :: Monad m => (a -> Sugar.TagInfo name) -> OrderT m [a]
 orderByTag toTag =
@@ -46,7 +54,7 @@ orderTBody t =
     >>= traverse orderType
 
 orderType :: Monad m => OrderT m (Sugar.Type name)
-orderType = Sugar.tBody %%~ orderTBody
+orderType = Sugar.tBody orderTBody
 
 orderRecord ::
     Monad m =>
@@ -56,38 +64,18 @@ orderRecord r =
     & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagInfo))
     >>= traverse orderNode
 
-instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o) where
-    order a =
-        a
-        & Sugar.aAnnotatedArgs %%~ orderByTag (^. Sugar.aaTag)
-        >>= SugarLens.labeledApplyChildren pure pure orderNode
+instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
 
 orderCase ::
     Monad m =>
     OrderT m (Sugar.Case name (T m) o (Sugar.Expression name (T m) o (Sugar.Payload name i o a)))
-orderCase = Sugar.cBody %%~ orderRecord
+orderCase = Sugar.cBody orderRecord
 
-instance Monad m => Order m name o (Sugar.Lambda name (T m) o) where
-    order = Sugar.lamFunc order
-
-instance Monad m => Order m name o (Sugar.Binder name (T m) o) where
-    order (Sugar.BinderExpr x) = order x <&> Sugar.BinderExpr
-    order (Sugar.BinderLet x) =
-        x
-        & Sugar.lBody orderNode
-        >>= Sugar.lValue orderNode
-        <&> Sugar.BinderLet
-
-instance Monad m => Order m name o (Sugar.Else name (T m) o) where
-    order (Sugar.SimpleElse x) = order x <&> Sugar.SimpleElse
-    order (Sugar.ElseIf x) = Sugar.eiContent order x <&> Sugar.ElseIf
-
-instance Monad m => Order m name o (Sugar.IfElse name (T m) o) where
-    order x =
-        x
-        & Sugar.iIf orderNode
-        >>= Sugar.iThen orderNode
-        >>= Sugar.iElse orderNode
+instance Monad m => Order m name o (Sugar.Lambda name (T m) o)
+instance Monad m => Order m name o (Sugar.Binder name (T m) o)
+instance Monad m => Order m name o (Lens.Const a)
+instance Monad m => Order m name o (Sugar.Else name (T m) o)
+instance Monad m => Order m name o (Sugar.IfElse name (T m) o)
 
 instance Monad m => Order m name o (Sugar.Body name (T m) o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
@@ -113,20 +101,16 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
 orderNode ::
     (Monad m, Order m name o f) =>
     OrderT m (Node (Ann (Sugar.Payload name i o a)) f)
-orderNode e =
-    e
-    & ann . Sugar.plAnnotation . SugarLens.annotationTypes %%~ orderType
-    >>= val %%~ order
+orderNode (Ann a x) =
+    Ann
+    <$> (Sugar.plAnnotation . SugarLens.annotationTypes) orderType a
+    <*> order x
 
-instance Monad m => Order m name o (Sugar.Function name (T m) o) where
-    order =
-        -- The ordering for binder params already occurs at the Assignment's conversion,
-        -- because it needs to be consistent with the presentation mode.
-        Sugar.fBody orderNode
+instance Monad m => Order m name o (Sugar.Function name (T m) o)
+    -- The ordering for binder params already occurs at the Assignment's conversion,
+    -- because it needs to be consistent with the presentation mode.
 
-instance Monad m => Order m name o (Sugar.AssignmentBody name (T m) o) where
-    order (Sugar.BodyFunction x) = order x <&> Sugar.BodyFunction
-    order (Sugar.BodyPlain x) = Sugar.apBody order x <&> Sugar.BodyPlain
+instance Monad m => Order m name o (Sugar.AssignmentBody name (T m) o)
 
 orderDef ::
     Monad m => OrderT m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))
