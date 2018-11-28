@@ -72,10 +72,23 @@ orderCase ::
 orderCase = Sugar.cBody orderRecord
 
 instance Monad m => Order m name o (Sugar.Lambda name (T m) o)
-instance Monad m => Order m name o (Sugar.Binder name (T m) o)
 instance Monad m => Order m name o (Lens.Const a)
 instance Monad m => Order m name o (Sugar.Else name (T m) o)
 instance Monad m => Order m name o (Sugar.IfElse name (T m) o)
+instance Monad m => Order m name o (Sugar.Let name (T m) o)
+instance Monad m => Order m name o (Sugar.Function name (T m) o)
+    -- The ordering for binder params already occurs at the Assignment's conversion,
+    -- because it needs to be consistent with the presentation mode.
+
+-- Special case assignment and binder to invoke the special cases in expr
+
+instance Monad m => Order m name o (Sugar.AssignmentBody name (T m) o) where
+    order (Sugar.BodyPlain x) = Sugar.apBody order x <&> Sugar.BodyPlain
+    order (Sugar.BodyFunction x) = order x <&> Sugar.BodyFunction
+
+instance Monad m => Order m name o (Sugar.Binder name (T m) o) where
+    order (Sugar.BinderExpr x) = order x <&> Sugar.BinderExpr
+    order (Sugar.BinderLet x) = order x <&> Sugar.BinderLet
 
 instance Monad m => Order m name o (Sugar.Body name (T m) o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
@@ -105,12 +118,6 @@ orderNode (Ann a x) =
     Ann
     <$> (Sugar.plAnnotation . SugarLens.annotationTypes) orderType a
     <*> order x
-
-instance Monad m => Order m name o (Sugar.Function name (T m) o)
-    -- The ordering for binder params already occurs at the Assignment's conversion,
-    -- because it needs to be consistent with the presentation mode.
-
-instance Monad m => Order m name o (Sugar.AssignmentBody name (T m) o)
 
 orderDef ::
     Monad m => OrderT m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))
