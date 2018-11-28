@@ -12,7 +12,7 @@ import           Prelude
 {-# INLINE tagged #-}
 tagged :: Prism' tag () -> Prism' (a, tag) a
 tagged p =
-    prism (, (p # ()))
+    prism (, p # ())
     ( \(a, tag1) ->
       case matching p tag1 of
       Left tag2 -> Left (a, tag2)
