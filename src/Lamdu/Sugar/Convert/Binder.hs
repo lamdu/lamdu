@@ -262,24 +262,25 @@ allParamsUsed paramNames func =
             & Set.fromList
 
 markBinderLightParams ::
-    Set InternalName ->
-    Node (Ann a) (Binder InternalName (T m) (T m)) ->
-    Node (Ann a) (Binder InternalName (T m) (T m))
-markBinderLightParams paramNames (Ann pl bod) =
+    Ord name =>
+    Set name ->
+    Node (Ann a) (Binder name i o) ->
+    Node (Ann a) (Binder name i o)
+markBinderLightParams paramNames =
+    val %~
     SugarLens.overBinderChildren id id id
     (markElseLightParams paramNames) (markBinderLightParams paramNames)
     (markLightParams paramNames) fixAssignments
-    bod
-    & Ann pl
     where
         fixAssignments =
             -- No assignments inside light lambdas. Consider asserting?
             id
 
 markElseLightParams ::
-    Set InternalName ->
-    Node (Ann a) (Else InternalName (T m) (T m)) ->
-    Node (Ann a) (Else InternalName (T m) (T m))
+    Ord name =>
+    Set name ->
+    Node (Ann a) (Else name i o) ->
+    Node (Ann a) (Else name i o)
 markElseLightParams paramNames =
     val %~
     \case
@@ -293,15 +294,17 @@ markElseLightParams paramNames =
         & ElseIf
 
 markLightParams ::
-    Set InternalName ->
-    Expression InternalName (T m) (T m) a ->
-    Expression InternalName (T m) (T m) a
+    Ord name =>
+    Set name ->
+    Expression name i o a ->
+    Expression name i o a
 markLightParams paramNames = val %~ markBodyLightParams paramNames
 
 markBodyLightParams ::
-    Set InternalName ->
-    Body InternalName (T m) (T m) (Ann a) ->
-    Body InternalName (T m) (T m) (Ann a)
+    Ord name =>
+    Set name ->
+    Body name i o (Ann a) ->
+    Body name i o (Ann a)
 markBodyLightParams paramNames =
     \case
     BodyGetVar (GetParam n)
