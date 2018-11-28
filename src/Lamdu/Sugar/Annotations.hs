@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, KindSignatures #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
-    , markAnnotationsToDisplay, markBinderAnnotations, markAssignmentAnnotations
+    , markNodeAnnotations
     , neverShowAnnotations
     ) where
 
@@ -47,69 +47,52 @@ topLevelAnn ::
     ShowAnnotation
 topLevelAnn = ann . _1
 
-markAnnotationsToDisplay ::
-    Expression name i o a ->
-    Expression name i o (ShowAnnotation, a)
-markAnnotationsToDisplay (Ann pl oldBody) =
+markNodeAnnotations ::
+    MarkAnnotations t =>
+    Node (Ann a) t ->
+    Node (Ann (ShowAnnotation, a)) t
+markNodeAnnotations (Ann pl x) =
     Ann (showAnn, pl) newBody
     where
-        (showAnn, newBody) = markBodyAnnotations oldBody
+        (showAnn, newBody) = markAnnotations x
 
-markBinderAnnotations ::
-    Node (Ann a) (Binder name i o) ->
-    Node (Ann (ShowAnnotation, a)) (Binder name i o)
-markBinderAnnotations (Ann pl x) =
-    Ann (showAnn, pl) newBody
-    where
-        (showAnn, newBody) = markBinderBodyAnnotations x
+class MarkAnnotations (t :: (* -> *) -> *) where
+    markAnnotations :: t (Ann a) -> (ShowAnnotation, t (Ann (ShowAnnotation, a)))
 
-markBinderBodyAnnotations ::
-    Binder name i o (Ann a) ->
-    (ShowAnnotation, Binder name i o (Ann (ShowAnnotation, a)))
-markBinderBodyAnnotations =
-    \case
-    BinderExpr body -> markBodyAnnotations body & _2 %~ BinderExpr
-    BinderLet let_ ->
+instance MarkAnnotations (Binder name i o) where
+    markAnnotations (BinderExpr body) =
+        markBodyAnnotations body & _2 %~ BinderExpr
+    markAnnotations (BinderLet let_) =
         ( neverShowAnnotations
         , SugarLens.overLetChildren
-            markBinderAnnotations
-            markAssignmentAnnotations let_
+            markNodeAnnotations
+            markNodeAnnotations let_
             & BinderLet
         )
 
-markAssignmentAnnotations ::
-    Node (Ann a) (AssignmentBody name i o) ->
-    Node (Ann (ShowAnnotation, a)) (AssignmentBody name i o)
-markAssignmentAnnotations (Ann pl x) =
-    Ann (showAnn, pl) newBody
-    where
-        (showAnn, newBody) =
-            case x of
-            BodyPlain (AssignPlain a b) ->
-                markBinderBodyAnnotations b
-                & _2 %~ BodyPlain . AssignPlain a
-            BodyFunction function ->
-                ( neverShowAnnotations
-                , function & fBody %~ markBinderAnnotations & BodyFunction
-                )
+instance MarkAnnotations (AssignmentBody name i o) where
+    markAnnotations (BodyPlain (AssignPlain a b)) =
+        markAnnotations b
+        & _2 %~ BodyPlain . AssignPlain a
+    markAnnotations (BodyFunction function) =
+        ( neverShowAnnotations
+        , function & fBody %~ markNodeAnnotations & BodyFunction
+        )
 
-markElseAnnotations ::
-    Node (Ann a) (Else name i o) ->
-    Node (Ann (ShowAnnotation, a)) (Else name i o)
-markElseAnnotations (Ann pl x) =
-    Ann (showAnn, pl) newBody
-    where
-        (showAnn, newBody) =
-            case x of
-            SimpleElse body -> markBodyAnnotations body & _2 %~ SimpleElse
-            ElseIf elseIf ->
-                ( neverShowAnnotations
-                , elseIf
-                    & eiContent %~
-                    SugarLens.overIfElseChildren markElseAnnotations
-                    markAnnotationsToDisplay
-                    & ElseIf
-                )
+instance MarkAnnotations (Else name i o) where
+    markAnnotations (SimpleElse body) =
+        markBodyAnnotations body & _2 %~ SimpleElse
+    markAnnotations (ElseIf elseIf) =
+        ( neverShowAnnotations
+        , elseIf
+            & eiContent %~
+            SugarLens.overIfElseChildren markNodeAnnotations
+            markNodeAnnotations
+            & ElseIf
+        )
+
+instance MarkAnnotations (Body name i o) where
+    markAnnotations = markBodyAnnotations
 
 markBodyAnnotations ::
     Body name i o (Ann a) ->
@@ -179,9 +162,9 @@ markBodyAnnotations oldBody =
             (annotations %~ (,) neverShowAnnotations)
             (annotations %~ (,) neverShowAnnotations)
             (annotations %~ (,) neverShowAnnotations)
-            markElseAnnotations
-            markBinderAnnotations
-            markAnnotationsToDisplay
+            markNodeAnnotations
+            markNodeAnnotations
+            markNodeAnnotations
             oldBody
         nonHoleAnn =
             Lens.filtered
