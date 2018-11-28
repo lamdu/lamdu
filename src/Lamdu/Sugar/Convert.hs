@@ -209,7 +209,7 @@ convertRepl cache monitors annMode evalRes cp =
             & ConvertM.run context
             <&> SugarLens.binderSubExprParams . SugarLens.paramsAnnotations %~
                 trimParamAnnotation annMode
-            >>= OrderTags.orderBinder
+            >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
         pure Repl
             { _replExpr = expr
