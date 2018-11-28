@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables #-}
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
-    , overBodyChildren, bodyChildPayloads
+    , bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
     , ifElseChildren, overIfElseChildren
     , exprPayloads, binderPayloads
@@ -172,18 +172,6 @@ bodyChildPayloads f =
         relayedPayloads ::
             Lens.AnIndexedLens' (PayloadOf name i o) (LeafNode (Ann a) (GetVar name o)) a
         relayedPayloads = leafNodePayload OfRelayedArg
-
-overBodyChildren ::
-    (LeafNode f (NullaryVal name i o) -> LeafNode g (NullaryVal name i o)) ->
-    (LeafNode f (BinderVarRef name o) -> LeafNode g (BinderVarRef name o)) ->
-    (LeafNode f (GetVar name o) -> LeafNode g (GetVar name o)) ->
-    (Node f (Else name i o) -> Node g (Else name i o)) ->
-    (Node f (Binder name i o) -> Node g (Binder name i o)) ->
-    (Node f (Body name i o) -> Node g (Body name i o)) ->
-    Body name i o f -> Body name i o g
-overBodyChildren n v r e b f =
-    runIdentity .
-    bodyChildren (pure . n) (pure . v) (pure . r) (pure . e) (pure . b) (pure . f)
 
 leafNodePayload ::
     (l -> p) ->

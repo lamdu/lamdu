@@ -1,12 +1,17 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions, convertPayload
     , valFromLiteral
     ) where
 
+import           AST (Node, overChildren)
 import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
+import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
+import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -32,7 +37,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (overBodyChildren, bodyChildPayloads)
+import           Lamdu.Sugar.Lens (bodyChildPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -178,6 +183,39 @@ fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . ann)
 bodyIndex :: Lens.IndexedTraversal' x (Ann a x) (Ann a x)
 bodyIndex = Lens.filteredBy val
 
+class FixReplaceParent expr where
+    fixReplaceParent :: (a -> a -> a) -> Node (Ann a) expr -> Node (Ann a) expr
+
+instance FixReplaceParent (Const a) where
+    fixReplaceParent _ = id
+
+-- * Replace-parent with fragment sets directly to fragment expression
+-- * Replace-parent of fragment expr without "heal" available -
+--   replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
+
+-- TODO: These instances have a repeating pattern
+instance FixReplaceParent (Binder name (T m) (T m)) where
+    fixReplaceParent setToExpr =
+        (val . _BinderExpr . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. ann %@~ setToExpr)
+
+instance FixReplaceParent (Body name (T m) (T m)) where
+    fixReplaceParent setToExpr =
+        (val . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . fragmentAnnIndex) <. ann %@~ setToExpr)
+
+instance FixReplaceParent (Else name (T m) (T m)) where
+    fixReplaceParent setToExpr =
+        (val . _SimpleElse . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. ann %@~ setToExpr)
+
+-- TODO: This is an indexed lens of some sort?
+typeMismatchPayloads ::
+    (a -> Identity a) ->
+    Body name i o (Ann a) -> Identity (Body name i o (Ann a))
+typeMismatchPayloads =
+    _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr . ann
+
 setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
@@ -199,21 +237,7 @@ setChildReplaceParentActions =
     bod
     & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
     . bodyChildPayloads %~ join setToExpr
-    -- Replace-parent with fragment sets directly to fragment expression
-    & overBodyChildren id id id
-        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. ann %@~ setToExpr)
-        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. ann %@~ setToExpr)
-        ((bodyIndex . fragmentAnnIndex) <. ann %@~ setToExpr)
-    -- Replace-parent of fragment expr without "heal" available -
-    -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
-    & overBodyChildren id id id
-        (val . _SimpleElse . typeMismatchPayloads %~ join setToExpr)
-        (val . _BinderExpr . typeMismatchPayloads %~ join setToExpr)
-        (val . typeMismatchPayloads %~ join setToExpr)
-    where
-        typeMismatchPayloads =
-            _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr .
-            ann
+    & overChildren (Proxy :: Proxy FixReplaceParent) (fixReplaceParent setToExpr)
 
 subexprPayloads ::
     Foldable f =>
