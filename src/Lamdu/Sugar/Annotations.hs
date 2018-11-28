@@ -6,9 +6,10 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations
     ) where
 
-import           AST (Node)
+import           AST (Node, overChildren)
 import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
+import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
@@ -64,8 +65,7 @@ instance MarkAnnotations (Binder name i o) where
         markBodyAnnotations body & _2 %~ BinderExpr
     markAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , SugarLens.overLetChildren
-            markNodeAnnotations
+        , overChildren (Proxy :: Proxy MarkAnnotations)
             markNodeAnnotations let_
             & BinderLet
         )
@@ -86,8 +86,8 @@ instance MarkAnnotations (Else name i o) where
         ( neverShowAnnotations
         , elseIf
             & eiContent %~
-            SugarLens.overIfElseChildren markNodeAnnotations
-            markNodeAnnotations
+                overChildren (Proxy :: Proxy MarkAnnotations)
+                markNodeAnnotations
             & ElseIf
         )
 

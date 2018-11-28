@@ -4,7 +4,6 @@ module Lamdu.Sugar.Lens
     , overBodyChildren, bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
     , ifElseChildren, overIfElseChildren
-    , letChildren, overLetChildren
     , exprPayloads, binderPayloads
     , payloadsOf
     , bodyUnfinished, unfinishedExprPayloads
@@ -50,12 +49,6 @@ letChildren b a x =
     (\v bod -> x{_lValue=v, _lBody=bod})
     <$> a (x ^. lValue)
     <*> b (x ^. lBody)
-
-overLetChildren ::
-    (Node f (Binder name i o) -> Node g (Binder name i o)) ->
-    (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
-    Let name i o f -> Let name i o g
-overLetChildren b a = runIdentity . letChildren (pure . b) (pure . a)
 
 labeledApplyChildren ::
     Applicative f =>
