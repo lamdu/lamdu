@@ -7,8 +7,9 @@ module Lamdu.Sugar.Annotations
     ) where
 
 import           AST (Node, overChildren)
-import           AST.Ann (Ann(..), ann, val, annotations)
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
+import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -91,6 +92,9 @@ instance MarkAnnotations (Else name i o) where
             & ElseIf
         )
 
+instance MarkAnnotations (Const a) where
+    markAnnotations (Const x) = (neverShowAnnotations, Const x)
+
 instance MarkAnnotations (Body name i o) where
     markAnnotations = markBodyAnnotations
 
@@ -158,14 +162,8 @@ markBodyAnnotations oldBody =
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf (SugarLens._OfExpr . SugarLens.bodyUnfinished))
         set x = (x, newBody)
         newBody =
-            SugarLens.overBodyChildren
-            (annotations %~ (,) neverShowAnnotations)
-            (annotations %~ (,) neverShowAnnotations)
-            (annotations %~ (,) neverShowAnnotations)
-            markNodeAnnotations
-            markNodeAnnotations
-            markNodeAnnotations
-            oldBody
+            overChildren (Proxy :: Proxy MarkAnnotations)
+            markNodeAnnotations oldBody
         nonHoleAnn =
             Lens.filtered
             (Lens.nullOf (val . Lens.to SugarLens.stripAnnotations . SugarLens.bodyUnfinished))
