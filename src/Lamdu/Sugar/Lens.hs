@@ -2,7 +2,6 @@
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
     , overBodyChildren, bodyChildPayloads
-    , binderChildren, overBinderChildren
     , labeledApplyChildren, overLabeledApplyChildren
     , ifElseChildren, overIfElseChildren
     , letChildren, overLetChildren
@@ -57,35 +56,6 @@ overLetChildren ::
     (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
     Let name i o f -> Let name i o g
 overLetChildren b a = runIdentity . letChildren (pure . b) (pure . a)
-
-binderChildren ::
-    Applicative f =>
-    (LeafNode n (NullaryVal name i o) -> f (LeafNode m (NullaryVal name i o))) ->
-    (LeafNode n (BinderVarRef name o) -> f (LeafNode m (BinderVarRef name o))) ->
-    (LeafNode n (GetVar name o) -> f (LeafNode m (GetVar name o))) ->
-    (Node n (Else name i o) -> f (Node m (Else name i o))) ->
-    (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
-    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
-    (Node n (AssignmentBody name i o) -> f (Node m (AssignmentBody name i o))) ->
-    Binder name i o n -> f (Binder name i o m)
-binderChildren n l r e b f _a (BinderExpr x) =
-    bodyChildren n l r e b f x <&> BinderExpr
-binderChildren _n _l _r _e b _f a (BinderLet x) =
-    letChildren b a x <&> BinderLet
-
-overBinderChildren ::
-    (LeafNode f (NullaryVal name i o) -> LeafNode g (NullaryVal name i o)) ->
-    (LeafNode f (BinderVarRef name o) -> LeafNode g (BinderVarRef name o)) ->
-    (LeafNode f (GetVar name o) -> LeafNode g (GetVar name o)) ->
-    (Node f (Else name i o) -> Node g (Else name i o)) ->
-    (Node f (Binder name i o) -> Node g (Binder name i o)) ->
-    (Node f (Body name i o) -> Node g (Body name i o)) ->
-    (Node f (AssignmentBody name i o) -> Node g (AssignmentBody name i o)) ->
-    Binder name i o f -> Binder name i o g
-overBinderChildren n v r e b f a =
-    runIdentity .
-    binderChildren
-    (pure . n) (pure . v) (pure . r) (pure . e) (pure . b) (pure . f) (pure . a)
 
 labeledApplyChildren ::
     Applicative f =>

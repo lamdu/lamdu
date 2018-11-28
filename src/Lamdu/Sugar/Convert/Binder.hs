@@ -1,15 +1,16 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
     ) where
 
-import           AST (Node, monoChildren)
+import           AST (Node, Children(..), monoChildren, overChildren)
 import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
+import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -229,7 +230,7 @@ convertLam lam exprPl =
                     Lambda NormalBinder UnlimitedFuncApply func
                 | otherwise =
                     func
-                    & fBody %~ markBinderLightParams paramNames
+                    & fBody %~ markNodeLightParams paramNames
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions (lam ^.. V.lamResult) exprPl
@@ -261,61 +262,49 @@ allParamsUsed paramNames func =
             SugarLens._OfExpr . _BodyGetVar . _GetParam . pNameRef . nrName
             & Set.fromList
 
-markBinderLightParams ::
-    Ord name =>
-    Set name ->
-    Node (Ann a) (Binder name i o) ->
-    Node (Ann a) (Binder name i o)
-markBinderLightParams paramNames =
-    val %~
-    SugarLens.overBinderChildren id id id
-    (markElseLightParams paramNames) (markBinderLightParams paramNames)
-    (markExprLightParams paramNames) fixAssignments
-    where
-        fixAssignments =
-            -- No assignments inside light lambdas. Consider asserting?
-            id
+class MarkLightParams (t :: (* -> *) -> *) where
+    markLightParams :: Set InternalName -> t (Ann a) -> t (Ann a)
 
-markElseLightParams ::
-    Ord name =>
-    Set name ->
-    Node (Ann a) (Else name i o) ->
-    Node (Ann a) (Else name i o)
-markElseLightParams paramNames =
-    val %~
-    \case
-    SimpleElse body -> markBodyLightParams paramNames body & SimpleElse
-    ElseIf elseIf ->
-        elseIf
-        & eiContent %~
-            SugarLens.overIfElseChildren
-            (markElseLightParams paramNames)
-            (markExprLightParams paramNames)
-        & ElseIf
+    default markLightParams ::
+        (Children t, ChildrenConstraint t MarkLightParams) =>
+        Set InternalName -> t (Ann a) -> t (Ann a)
+    markLightParams = defaultMarkLightParams
 
-markExprLightParams ::
-    Ord name =>
-    Set name ->
-    Expression name i o a ->
-    Expression name i o a
-markExprLightParams paramNames = val %~ markBodyLightParams paramNames
+defaultMarkLightParams ::
+    (Children t, ChildrenConstraint t MarkLightParams) =>
+    Set InternalName -> t (Ann a) -> t (Ann a)
+defaultMarkLightParams paramNames =
+    overChildren (Proxy :: Proxy MarkLightParams)
+    (markNodeLightParams paramNames)
 
-markBodyLightParams ::
-    Ord name =>
-    Set name ->
-    Body name i o (Ann a) ->
-    Body name i o (Ann a)
-markBodyLightParams paramNames =
-    \case
-    BodyGetVar (GetParam n)
-        | paramNames ^. Lens.contains (n ^. pNameRef . nrName) ->
+markNodeLightParams ::
+    MarkLightParams t =>
+    Set InternalName ->
+    Node (Ann a) t ->
+    Node (Ann a) t
+markNodeLightParams paramNames =
+    val %~ markLightParams paramNames
+
+instance MarkLightParams (Lens.Const a)
+instance MarkLightParams (Else InternalName i o)
+instance MarkLightParams (Let InternalName i o)
+instance MarkLightParams (Function InternalName i o)
+
+instance MarkLightParams (AssignmentBody InternalName i o) where
+    markLightParams ps (BodyPlain x) = x & apBody %~ markLightParams ps & BodyPlain
+    markLightParams ps (BodyFunction x) = markLightParams ps x & BodyFunction
+
+instance MarkLightParams (Binder InternalName i o) where
+    markLightParams ps (BinderExpr x) = markLightParams ps x & BinderExpr
+    markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
+
+instance MarkLightParams (Body InternalName i o) where
+    markLightParams paramNames (BodyGetVar (GetParam n))
+        | paramNames ^. Lens.contains (n ^. pNameRef . nrName) =
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
-    BodyFragment w -> w & fExpr %~ markExprLightParams paramNames & BodyFragment
-    bod ->
-        SugarLens.overBodyChildren id id id (markElseLightParams paramNames)
-        (markBinderLightParams paramNames) (markExprLightParams paramNames) bod
+    markLightParams paramNames bod = defaultMarkLightParams paramNames bod
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::
