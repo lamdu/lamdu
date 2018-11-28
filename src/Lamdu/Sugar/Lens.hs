@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables #-}
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
-    , bodyChildren, overBodyChildren, bodyChildPayloads
+    , overBodyChildren, bodyChildPayloads
     , binderChildren, overBinderChildren
     , labeledApplyChildren, overLabeledApplyChildren
     , ifElseChildren, overIfElseChildren
