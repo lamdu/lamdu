@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , valFromLiteral
     ) where
 
-import           AST (Node)
 import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
@@ -176,7 +175,7 @@ fragmentAnnIndex ::
     p a (f a) -> Lens.Indexed (Body name i o (Ann j)) a (f a)
 fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . ann)
 
-bodyIndex :: Lens.IndexedTraversal' (e (Ann a)) (Node (Ann a) e) (Node (Ann a) e)
+bodyIndex :: Lens.IndexedTraversal' x (Ann a x) (Ann a x)
 bodyIndex = Lens.filteredBy val
 
 setChildReplaceParentActions ::
