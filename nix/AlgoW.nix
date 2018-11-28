@@ -1,6 +1,6 @@
 { mkDerivation, base, base-compat, binary, bytestring, containers
 , criterion, deepseq, fetchFromGitHub, lamdu-calculus, lens, mtl, pretty
-, QuickCheck, stdenv, test-framework, test-framework-quickcheck2
+, QuickCheck, stdenv, syntax-tree, test-framework, test-framework-quickcheck2
 , transformers
 }:
 mkDerivation {
@@ -14,12 +14,12 @@ mkDerivation {
   };
   libraryHaskellDepends = [
     base base-compat binary bytestring containers deepseq
-    lamdu-calculus lens pretty transformers
+    lamdu-calculus lens pretty syntax-tree transformers
   ];
   testHaskellDepends = [
     base base-compat bytestring containers lamdu-calculus lens mtl
     pretty QuickCheck test-framework test-framework-quickcheck2
-    transformers
+    syntax-tree transformers
   ];
   benchmarkHaskellDepends = [
     base base-compat bytestring containers criterion deepseq
