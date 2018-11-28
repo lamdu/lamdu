@@ -176,11 +176,8 @@ fragmentAnnIndex ::
     p a (f a) -> Lens.Indexed (Body name i o (Ann j)) a (f a)
 fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . ann)
 
-body :: Lens' (Node (Ann a) e) (e (Ann a))
-body = val
-
 bodyIndex :: Lens.IndexedTraversal' (e (Ann a)) (Node (Ann a) e) (Node (Ann a) e)
-bodyIndex = Lens.filteredBy body
+bodyIndex = Lens.filteredBy val
 
 setChildReplaceParentActions ::
     Monad m =>
@@ -211,9 +208,9 @@ setChildReplaceParentActions =
     -- Replace-parent of fragment expr without "heal" available -
     -- replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
     & overBodyChildren id id id
-        (body . _SimpleElse . typeMismatchPayloads %~ join setToExpr)
-        (body . _BinderExpr . typeMismatchPayloads %~ join setToExpr)
-        (body . typeMismatchPayloads %~ join setToExpr)
+        (val . _SimpleElse . typeMismatchPayloads %~ join setToExpr)
+        (val . _BinderExpr . typeMismatchPayloads %~ join setToExpr)
+        (val . typeMismatchPayloads %~ join setToExpr)
     where
         typeMismatchPayloads =
             _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr .
