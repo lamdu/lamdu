@@ -10,6 +10,7 @@ let config = {
                         bindings-freetype-gl = self.callPackage ./nix/bindings-freetype-gl.nix {};
                         freetype-gl = self.callPackage ./nix/FreetypeGL.nix {};
                         graphics-drawingcombinators = self.callPackage ./nix/graphics-drawingcombinators.nix {};
+                        syntax-tree = self.callPackage ./nix/syntax-tree.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
                         bindings-GLFW = haskell.lib.dontCheck (self.callPackage ./nix/bindings-GLFW.nix {});
                         GLFW-b = haskell.lib.dontCheck # cannot run X code in a build
