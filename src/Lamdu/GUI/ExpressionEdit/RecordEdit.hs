@@ -3,12 +3,12 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
+import           AST.Ann (val)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Data.Tree.Diverse (val)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Animation.Id (augmentId)

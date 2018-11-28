@@ -2,9 +2,9 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
     ( make
     ) where
 
+import           AST.Ann (ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Tree.Diverse (ann)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)

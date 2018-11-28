@@ -3,9 +3,10 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (ValP, ValI)
@@ -53,11 +54,11 @@ inlineLetH var arg bod =
                   & V.Lam param & V.BLam & Ann stored
                 )
             _ ->
-                ( r ^.. V.termChildren . Lens._Wrapped . _1 . traverse
-                , r & V.termChildren %~ (^. Lens._Wrapped . _2) & Ann stored
+                ( r ^.. monoChildren . Lens._Wrapped . _1 . traverse
+                , r & monoChildren %~ (^. Lens._Wrapped . _2) & Ann stored
                 )
                 where
-                    r = b & V.termChildren %~ Lens.Const . go
+                    r = b & monoChildren %~ Lens.Const . go
 
 cursorDest :: Val a -> a
 cursorDest x =

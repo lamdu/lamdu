@@ -7,6 +7,7 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
+import           AST.Ann (annotations)
 import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
@@ -15,7 +16,6 @@ import           Data.IORef.Extended
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (annotations)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)

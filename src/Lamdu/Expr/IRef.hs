@@ -12,11 +12,12 @@ module Lamdu.Expr.IRef
 
     ) where
 
+import           AST (Node, monoChildren)
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
-import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -73,19 +74,21 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> Transaction.readIRef valI >>= V.termChildren go <&> Ann valI
+            Just go ->
+                Transaction.readIRef valI >>=
+                monoChildren go <&> Ann valI
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
     T m (V.Term (Ann (ValI m, a)))
-expressionBodyFrom = V.termChildren writeValWithStoredSubexpressions . (^. val)
+expressionBodyFrom = monoChildren writeValWithStoredSubexpressions . (^. val)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & V.termChildren %~ (^. ann . _1)
+        let bodyWithRefs = body & monoChildren %~ (^. ann . _1)
         case mIRef of
             Just iref ->
                 Ann (iref, pl) body <$
@@ -102,10 +105,10 @@ addProperties ::
     Val (ValI m, a) ->
     Val (ValP m, a)
 addProperties setIRef (Ann (iref, a) body) =
-    Ann (Property iref setIRef, a) (body & Lens.indexing V.termChildren %@~ f)
+    Ann (Property iref setIRef, a) (body & Lens.indexing monoChildren %@~ f)
     where
         f index =
             addProperties $ \newIRef ->
             Transaction.readIRef iref
-            <&> Lens.indexing V.termChildren . Lens.index index .~ newIRef
+            <&> Lens.indexing monoChildren . Lens.index index .~ newIRef
             >>= Transaction.writeIRef iref

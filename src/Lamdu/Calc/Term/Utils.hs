@@ -7,9 +7,10 @@ module Lamdu.Calc.Term.Utils
     , culledSubexprPayloads
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..))
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Ann(..))
-import           Lamdu.Calc.Term (Val, termChildren)
+import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 
@@ -17,12 +18,9 @@ import           Lamdu.Prelude
 
 -- | Return all subexprs until the given cut-point
 culledSubexprPayloads :: (a -> Bool) -> Val a -> [a]
-culledSubexprPayloads cut =
-    go
-    where
-        go (Ann pl body)
-            | cut pl = []
-            | otherwise = pl : body ^. termChildren . Lens.to go
+culledSubexprPayloads cut (Ann pl body)
+    | cut pl = []
+    | otherwise = pl : body ^. monoChildren . Lens.to (culledSubexprPayloads cut)
 
 data Composite p a = Composite
     { _tags :: Map T.Tag a

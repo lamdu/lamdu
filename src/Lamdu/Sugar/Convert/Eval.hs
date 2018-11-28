@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Eval
     ( results, param, completion
     ) where
 
+import           AST.Ann (Ann(..), val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -12,7 +13,6 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
-import           Data.Tree.Diverse (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V

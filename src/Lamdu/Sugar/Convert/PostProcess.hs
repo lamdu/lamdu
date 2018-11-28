@@ -2,10 +2,10 @@ module Lamdu.Sugar.Convert.PostProcess
     ( Result(..), def, expr
     ) where
 
+import           AST.Ann (ann)
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (ann)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults

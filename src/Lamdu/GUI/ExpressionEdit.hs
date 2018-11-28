@@ -3,8 +3,8 @@ module Lamdu.GUI.ExpressionEdit
     ( make
     ) where
 
+import           AST.Ann (Ann(..))
 import qualified Control.Monad.Reader as Reader
-import           Data.Tree.Diverse (Ann(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive

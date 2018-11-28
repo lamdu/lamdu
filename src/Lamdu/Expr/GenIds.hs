@@ -11,6 +11,8 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..))
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))
@@ -18,7 +20,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Ann(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -52,7 +53,7 @@ randomizeExpr gen (Ann pl body) =
     (`evalState` gen) $
     do
         r <- state random
-        newBody <- body & V.termChildren %%~ randomizeSubexpr
+        newBody <- body & monoChildren %%~ randomizeSubexpr
         Ann (pl r) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
@@ -112,14 +113,14 @@ randomizeParamIdsG preNG gen initMap convertPL =
                                 <&> V.BLam
                     V.BLeaf (V.LVar par) ->
                         pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
-                    x@V.BLeaf {}      -> V.termChildren go x
-                    x@V.BApp {}       -> V.termChildren go x
-                    x@V.BGetField {}  -> V.termChildren go x
-                    x@V.BRecExtend {} -> V.termChildren go x
-                    x@V.BCase {}      -> V.termChildren go x
-                    x@V.BInject {}    -> V.termChildren go x
-                    x@V.BFromNom {}   -> V.termChildren go x
-                    x@V.BToNom {}     -> V.termChildren go x
+                    x@V.BLeaf {}      -> monoChildren go x
+                    x@V.BApp {}       -> monoChildren go x
+                    x@V.BGetField {}  -> monoChildren go x
+                    x@V.BRecExtend {} -> monoChildren go x
+                    x@V.BCase {}      -> monoChildren go x
+                    x@V.BInject {}    -> monoChildren go x
+                    x@V.BFromNom {}   -> monoChildren go x
+                    x@V.BToNom {}     -> monoChildren go x
                     <&> Ann (convertPL newGen parMap s)
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s

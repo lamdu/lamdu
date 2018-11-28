@@ -7,11 +7,11 @@ module Lamdu.Cache
     , make, FencedCache.Cache, FencedCache.fence
     ) where
 
+import           AST.Ann (annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.State (StateT(..))
 import           Data.Cache.Fenced (Decl, function)
 import qualified Data.Cache.Fenced as FencedCache
-import           Data.Tree.Diverse (annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Infer as Infer

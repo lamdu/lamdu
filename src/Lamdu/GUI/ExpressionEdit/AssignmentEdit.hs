@@ -3,6 +3,7 @@ module Lamdu.GUI.ExpressionEdit.AssignmentEdit
     , Parts(..), makeFunctionParts
     ) where
 
+import           AST.Ann (Ann(..), ann)
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -11,7 +12,6 @@ import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), ann)
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Direction

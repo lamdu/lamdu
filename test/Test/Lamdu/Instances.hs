@@ -3,6 +3,7 @@
 
 module Test.Lamdu.Instances () where
 
+import           AST.Ann (Ann(..))
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Monad.Unit (Unit(..))
@@ -12,7 +13,6 @@ import           Data.Data (Data)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
-import           Data.Tree.Diverse (Ann(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Data.Vector.Vector2 (Vector2(..))

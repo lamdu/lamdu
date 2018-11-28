@@ -2,6 +2,8 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), ann, val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
@@ -9,7 +11,6 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -57,7 +58,7 @@ recursivelyFixExpr mFix =
         recurse x =
             case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . V.termChildren)
+            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . monoChildren)
 
 changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =

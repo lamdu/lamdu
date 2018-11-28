@@ -21,11 +21,16 @@ module Lamdu.Sugar.Lens
     , stripAnnotations
     ) where
 
+import           AST (Node, LeafNode, Children(..), hoist)
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node, Ann(..), Children(..), ann, val, hoist)
+import           Data.Functor.Const (Const(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
+
+-- TODO: Get rid of most of these.
+-- First step is replacing their usages with `AST.children`
 
 data PayloadOf name i o
     = OfExpr (Body name i o (Ann ()))
@@ -55,9 +60,9 @@ overLetChildren b a = runIdentity . letChildren (pure . b) (pure . a)
 
 binderChildren ::
     Applicative f =>
-    (n (NullaryVal name i o) -> f (m (NullaryVal name i o))) ->
-    (n (BinderVarRef name o) -> f (m (BinderVarRef name o))) ->
-    (n (GetVar name o) -> f (m (GetVar name o))) ->
+    (LeafNode n (NullaryVal name i o) -> f (LeafNode m (NullaryVal name i o))) ->
+    (LeafNode n (BinderVarRef name o) -> f (LeafNode m (BinderVarRef name o))) ->
+    (LeafNode n (GetVar name o) -> f (LeafNode m (GetVar name o))) ->
     (Node n (Else name i o) -> f (Node m (Else name i o))) ->
     (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
     (Node n (Body name i o) -> f (Node m (Body name i o))) ->
@@ -69,9 +74,9 @@ binderChildren _n _l _r _e b _f a (BinderLet x) =
     letChildren b a x <&> BinderLet
 
 overBinderChildren ::
-    (f (NullaryVal name i o) -> g (NullaryVal name i o)) ->
-    (f (BinderVarRef name o) -> g (BinderVarRef name o)) ->
-    (f (GetVar name o) -> g (GetVar name o)) ->
+    (LeafNode f (NullaryVal name i o) -> LeafNode g (NullaryVal name i o)) ->
+    (LeafNode f (BinderVarRef name o) -> LeafNode g (BinderVarRef name o)) ->
+    (LeafNode f (GetVar name o) -> LeafNode g (GetVar name o)) ->
     (Node f (Else name i o) -> Node g (Else name i o)) ->
     (Node f (Binder name i o) -> Node g (Binder name i o)) ->
     (Node f (Body name i o) -> Node g (Body name i o)) ->
@@ -84,8 +89,8 @@ overBinderChildren n v r e b f a =
 
 labeledApplyChildren ::
     Applicative f =>
-    (n (BinderVarRef name o) -> f (m (BinderVarRef name o))) ->
-    (n (GetVar name o) -> f (m (GetVar name o))) ->
+    (LeafNode n (BinderVarRef name o) -> f (LeafNode m (BinderVarRef name o))) ->
+    (LeafNode n (GetVar name o) -> f (LeafNode m (GetVar name o))) ->
     (Node n (Body name i o) -> f (Node m (Body name i o))) ->
     LabeledApply name i o n -> f (LabeledApply name i o m)
 labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
@@ -108,8 +113,8 @@ labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
                 <*> traverse e special
 
 overLabeledApplyChildren ::
-    (f (BinderVarRef name o) -> g (BinderVarRef name o)) ->
-    (f (GetVar name o) -> g (GetVar name o)) ->
+    (LeafNode f (BinderVarRef name o) -> LeafNode g (BinderVarRef name o)) ->
+    (LeafNode f (GetVar name o) -> LeafNode g (GetVar name o)) ->
     (Node f (Body name i o) -> Node g (Body name i o)) ->
     LabeledApply name i o f -> LabeledApply name i o g
 overLabeledApplyChildren l r e =
@@ -132,7 +137,7 @@ overIfElseChildren onElse onExpr =
 
 injectContentChildren ::
     Applicative f =>
-    (n (NullaryVal name i o) -> f (m (NullaryVal name i o))) ->
+    (LeafNode n (NullaryVal name i o) -> f (LeafNode m (NullaryVal name i o))) ->
     (Node n (Body name i o) -> f (Node m (Body name i o))) ->
     InjectContent name i o n -> f (InjectContent name i o m)
 injectContentChildren _ e (InjectVal x) = e x <&> InjectVal
@@ -140,9 +145,9 @@ injectContentChildren n _ (InjectNullary x) = n x <&> InjectNullary
 
 bodyChildren ::
     Applicative f =>
-    (n (NullaryVal name i o) -> f (m (NullaryVal name i o))) ->
-    (n (BinderVarRef name o) -> f (m (BinderVarRef name o))) ->
-    (n (GetVar name o) -> f (m (GetVar name o))) ->
+    (LeafNode n (NullaryVal name i o) -> f (LeafNode m (NullaryVal name i o))) ->
+    (LeafNode n (BinderVarRef name o) -> f (LeafNode m (BinderVarRef name o))) ->
+    (LeafNode n (GetVar name o) -> f (LeafNode m (GetVar name o))) ->
     (Node n (Else name i o) -> f (Node m (Else name i o))) ->
     (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
     (Node n (Body name i o) -> f (Node m (Body name i o))) ->
@@ -199,16 +204,16 @@ bodyChildPayloads f =
     (parentNodePayload (OfExpr . stripAnnotations) f)
     where
         labeledFuncPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (Ann a (BinderVarRef name o)) a
+            Lens.AnIndexedLens' (PayloadOf name i o) (LeafNode (Ann a) (BinderVarRef name o)) a
         labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
         relayedPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (Ann a (GetVar name o)) a
+            Lens.AnIndexedLens' (PayloadOf name i o) (LeafNode (Ann a) (GetVar name o)) a
         relayedPayloads = leafNodePayload OfRelayedArg
 
 overBodyChildren ::
-    (f (NullaryVal name i o) -> g (NullaryVal name i o)) ->
-    (f (BinderVarRef name o) -> g (BinderVarRef name o)) ->
-    (f (GetVar name o) -> g (GetVar name o)) ->
+    (LeafNode f (NullaryVal name i o) -> LeafNode g (NullaryVal name i o)) ->
+    (LeafNode f (BinderVarRef name o) -> LeafNode g (BinderVarRef name o)) ->
+    (LeafNode f (GetVar name o) -> LeafNode g (GetVar name o)) ->
     (Node f (Else name i o) -> Node g (Else name i o)) ->
     (Node f (Binder name i o) -> Node g (Binder name i o)) ->
     (Node f (Body name i o) -> Node g (Body name i o)) ->
@@ -219,9 +224,9 @@ overBodyChildren n v r e b f =
 
 leafNodePayload ::
     (l -> p) ->
-    Lens.IndexedLens p (Ann a l) (Ann b l) a b
-leafNodePayload c f (Ann pl x) =
-    Lens.indexed f (c x) pl <&> (`Ann` x)
+    Lens.IndexedLens p (LeafNode (Ann a) l) (LeafNode (Ann b) l) a b
+leafNodePayload c f (Ann pl (Const x)) =
+    Lens.indexed f (c x) pl <&> (`Ann` Const x)
 
 parentNodePayloads ::
     Lens.AnIndexedTraversal i (e (Ann a)) (e (Ann b)) a b ->
@@ -322,14 +327,14 @@ bodyPayloads f =
     where
         labeledFuncPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
-            (Ann a (BinderVarRef name o))
-            (Ann b (BinderVarRef name o))
+            (LeafNode (Ann a) (BinderVarRef name o))
+            (LeafNode (Ann b) (BinderVarRef name o))
             a b
         labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
         relayedPayloads ::
             Lens.AnIndexedLens (PayloadOf name i o)
-            (Ann a (GetVar name o))
-            (Ann b (GetVar name o))
+            (LeafNode (Ann a) (GetVar name o))
+            (LeafNode (Ann b) (GetVar name o))
             a b
         relayedPayloads = leafNodePayload OfRelayedArg
 
@@ -348,7 +353,7 @@ bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
     & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
-    & Lens.failing (_BodyLabeledApply . aFunc . val . binderVarRefUnfinished)
+    & Lens.failing (_BodyLabeledApply . aFunc . val . Lens._Wrapped . binderVarRefUnfinished)
 
 unfinishedExprPayloads ::
     Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a

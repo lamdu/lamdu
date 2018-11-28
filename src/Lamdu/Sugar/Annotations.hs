@@ -6,8 +6,9 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
@@ -175,9 +176,9 @@ markBodyAnnotations oldBody =
         set x = (x, newBody)
         newBody =
             SugarLens.overBodyChildren
-            (ann %~ (,) neverShowAnnotations)
-            (ann %~ (,) neverShowAnnotations)
-            (ann %~ (,) neverShowAnnotations)
+            (annotations %~ (,) neverShowAnnotations)
+            (annotations %~ (,) neverShowAnnotations)
+            (annotations %~ (,) neverShowAnnotations)
             markElseAnnotations
             markBinderAnnotations
             markAnnotationsToDisplay

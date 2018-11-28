@@ -7,6 +7,7 @@ module Lamdu.Eval.JS.Compiler
     , compileRepl, Mode(..), loggingEnabled
     ) where
 
+import           AST.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState)
@@ -20,7 +21,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
-import           Data.Tree.Diverse (Ann(..), val)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins

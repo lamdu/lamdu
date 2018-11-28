@@ -3,9 +3,9 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
+import           AST.Ann (ann)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (ann)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Data.Definition as Definition

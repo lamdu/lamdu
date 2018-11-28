@@ -2,6 +2,7 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
+import           AST.Ann (ann, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
@@ -10,7 +11,6 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (ann, annotations)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)

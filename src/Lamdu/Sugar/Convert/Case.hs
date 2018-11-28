@@ -4,11 +4,11 @@ module Lamdu.Sugar.Convert.Case
     , convertAppliedCase
     ) where
 
+import           AST.Ann (ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps

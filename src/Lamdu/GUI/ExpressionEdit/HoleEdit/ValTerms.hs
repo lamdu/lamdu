@@ -9,12 +9,12 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     , definitePart
     ) where
 
+import           AST.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Ann(..), val)
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
@@ -60,7 +60,7 @@ ofBody =
     BodySimpleApply x -> "apply" : foldMap expr x
     BodyLabeledApply x ->
         "apply"
-        : ofName (x ^. aFunc . val . bvNameRef . nrName)
+        : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)
         ++ (x ^.. aAnnotatedArgs . Lens.folded . aaTag . tagName >>= ofName)
     BodyRecord {} ->
         -- We don't allow completing a record by typing one of its

@@ -2,10 +2,11 @@ module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Node, Ann(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

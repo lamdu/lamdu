@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Binder.Types
     ( BinderKind(..)
     ) where
 
-import           Data.Tree.Diverse (Ann)
+import           AST.Ann (Ann)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (DefI, ValP)
 

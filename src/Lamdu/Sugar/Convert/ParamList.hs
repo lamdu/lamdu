@@ -4,10 +4,10 @@ module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
     ) where
 
+import           AST.Ann (Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), annotations)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

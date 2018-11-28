@@ -2,9 +2,9 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
     ( make
     ) where
 
+import           AST.Ann (Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Ann(..), ann)
 import qualified GUI.Momentu as Momentu
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align

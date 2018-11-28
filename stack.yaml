@@ -1,12 +1,16 @@
 packages:
 - '.'
 - location:
+    git: https://github.com/lamdu/syntax-tree
+    commit: f11955414a8dd81f28e7483156709fb72c436617
+  extra-dep: True
+- location:
     git: https://github.com/lamdu/lamdu-calculus
-    commit: 2959559d5399a101d12bb114223352e2a4e1459d
+    commit: 91160d922971b3ff8f6d1d41960a4bd1534db8ec
   extra-dep: True
 - location:
     git: https://github.com/lamdu/Algorithm-W-Step-By-Step
-    commit: 84151ef8eee8680d8f9597d5f271b8d84ce52714
+    commit: 5f1e1b36ff48b2001c30c3b731d61bf45b106d0b
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators

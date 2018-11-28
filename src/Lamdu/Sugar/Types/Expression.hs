@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, KindSignatures, TypeFamilies #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
@@ -37,11 +37,13 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     ) where
 
+import           AST (Node, LeafNode)
+import           AST.Ann (Ann)
+import           AST.TH (makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
-import           Data.Tree.Diverse (Node, Ann, Children(..), leaf)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
@@ -65,14 +67,14 @@ data AnnotatedArg name expr = AnnotatedArg
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o f = LabeledApply
-    { _aFunc :: f (BinderVarRef name o)
+    { _aFunc :: LeafNode f (BinderVarRef name o)
     , _aSpecialArgs :: Meta.SpecialArgs (Node f (Body name i o))
     , _aAnnotatedArgs :: [AnnotatedArg name (Node f (Body name i o))]
-    , _aRelayedArgs :: [f (GetVar name o)]
+    , _aRelayedArgs :: [LeafNode f (GetVar name o)]
     } deriving Generic
 
 data InjectContent name i o f
-    = InjectNullary (f (NullaryVal name i o))
+    = InjectNullary (LeafNode f (NullaryVal name i o))
     | InjectVal (Node f (Body name i o))
     deriving Generic
 
@@ -218,56 +220,17 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
-instance Children (AssignmentBody name i o) where
-    children f (BodyPlain x) = apBody (children f) x <&> BodyPlain
-    children f (BodyFunction x) = fBody f x <&> BodyFunction
-
-instance Children (Body name i o) where
-    children f (BodyLam x) = (lamFunc . fBody) f x <&> BodyLam
-    children f (BodySimpleApply x) = traverse f x <&> BodySimpleApply
-    children f (BodyLabeledApply x) = children f x <&> BodyLabeledApply
-    children _ (BodyHole x) = BodyHole x & pure
-    children _ (BodyLiteral x) = BodyLiteral x & pure
-    children f (BodyRecord x) = traverse f x <&> BodyRecord
-    children f (BodyGetField x) = traverse f x <&> BodyGetField
-    children f (BodyCase x) = traverse f x <&> BodyCase
-    children f (BodyIfElse x) = children f x <&> BodyIfElse
-    children f (BodyInject x) = iContent (children f) x <&> BodyInject
-    children _ (BodyGetVar x) = BodyGetVar x & pure
-    children f (BodyToNom x) = traverse f x <&> BodyToNom
-    children f (BodyFromNom x) = traverse f x <&> BodyFromNom
-    children f (BodyFragment x) = fExpr f x <&> BodyFragment
-    children _ BodyPlaceHolder = pure BodyPlaceHolder
-
-instance Children (Binder name i o) where
-    children f (BinderExpr x) = children f x <&> BinderExpr
-    children f (BinderLet x) = children f x <&> BinderLet
-
-instance Children (Else name i o) where
-    children f (SimpleElse x) = children f x <&> SimpleElse
-    children f (ElseIf x) = eiContent (children f) x <&> ElseIf
-
-instance Children (Function name i o) where
-    children = fBody
-
-instance Children (IfElse name i o) where
-    children f (IfElse cond then_ else_) =
-        IfElse <$> f cond <*> f then_ <*> f else_
-
-instance Children (InjectContent name i o) where
-    children f (InjectVal x) = f x <&> InjectVal
-    children f (InjectNullary x) = leaf f x <&> InjectNullary
-
-instance Children (LabeledApply name i o) where
-    children f (LabeledApply func spec norm rel) =
-        LabeledApply
-        <$> leaf f func
-        <*> traverse f spec
-        <*> (traverse . aaExpr) f norm
-        <*> (traverse . leaf) f rel
-
-instance Children (Let name i o) where
-    children f x =
-        (\v b -> x { _lValue = v, _lBody = b} )
-        <$> f (x ^. lValue)
-        <*> f (x ^. lBody)
+makeChildren ''AssignmentBody
+makeChildren ''AssignPlain
+makeChildren ''Body
+makeChildren ''Binder
+makeChildren ''Else
+makeChildren ''ElseIfContent
+makeChildren ''Fragment
+makeChildren ''Function
+makeChildren ''IfElse
+makeChildren ''Inject
+makeChildren ''InjectContent
+makeChildren ''LabeledApply
+makeChildren ''Lambda
+makeChildren ''Let

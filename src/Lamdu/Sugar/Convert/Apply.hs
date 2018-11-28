@@ -3,16 +3,17 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Data.Functor.Const (Const(..))
 import           Data.List.Extended (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -116,7 +117,7 @@ convertLabeled subexprs funcS argS exprPl =
         unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (funcS ^. ann) sBinderVar) args exprPl
+            (Ann (funcS ^. ann) (Const sBinderVar)) args exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. bodyChildPayloads)

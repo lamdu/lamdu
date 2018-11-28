@@ -6,6 +6,8 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , applyForms
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
@@ -15,7 +17,6 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Ann(..), ann, val, annotations)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -219,7 +220,7 @@ fillHoles empty (Ann pl (V.BApp (V.Apply func arg))) =
 fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     v
-fillHoles empty x = x & val . V.termChildren %~ fillHoles empty
+fillHoles empty x = x & val . monoChildren %~ fillHoles empty
 
 applyForms ::
     ListClass.List m =>

@@ -2,11 +2,14 @@ module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
 
+import           AST (LeafNode)
+import           AST.Ann (Ann(..), ann, val)
+import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import           Data.Either (partitionEithers)
+import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -22,13 +25,13 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Ann (ConvertPayload m a) (Sugar.BinderVarRef InternalName (T m)) ->
+    LeafNode (Ann (ConvertPayload m a)) (Sugar.BinderVarRef InternalName (T m)) ->
     [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
     Input.Payload m a ->
     ConvertM m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
 makeLabeledApply func args exprPl =
     do
-        presentationMode <- func ^. val . Sugar.bvVar & Anchors.assocPresentationMode & getP
+        presentationMode <- func ^. val . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let mkInfixArg arg other =
                 arg
@@ -57,7 +60,7 @@ makeLabeledApply func args exprPl =
             { Sugar._aFunc = func
             , Sugar._aSpecialArgs = specialArgs
             , Sugar._aAnnotatedArgs = annotatedArgs
-            , Sugar._aRelayedArgs = relayedArgs
+            , Sugar._aRelayedArgs = relayedArgs <&> val %~ Const
             }
     where
         argsMap =

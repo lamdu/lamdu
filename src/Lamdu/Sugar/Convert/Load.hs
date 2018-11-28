@@ -12,6 +12,7 @@ module Lamdu.Sugar.Convert.Load
     , InferFunc, unmemoizedInfer
     ) where
 
+import           AST.Ann (ann, annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)
@@ -19,7 +20,6 @@ import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (ann, annotations)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

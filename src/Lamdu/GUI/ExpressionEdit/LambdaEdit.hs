@@ -2,9 +2,9 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
     ( make
     ) where
 
+import           AST.Ann (Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Tree.Diverse (Ann(..), ann)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element

@@ -14,10 +14,10 @@ module Lamdu.Sugar.Internal.EntityId
     , usedTypeOf, currentTypeOf
     ) where
 
+import           AST.Ann (annotations)
 import           Data.Binary.Extended (encodeS)
 import qualified Data.ByteString as BS
 import           Data.Hashable (Hashable)
-import           Data.Tree.Diverse (annotations)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Calc.Term (Val)

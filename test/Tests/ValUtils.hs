@@ -2,8 +2,8 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.ValUtils where
 
+import           AST.Ann (annotations)
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (annotations)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Calc.Term.Arbitrary ()
 import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)

@@ -12,6 +12,8 @@ module Lamdu.Eval.Results
     , extractField
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..))
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
@@ -19,7 +21,6 @@ import qualified Data.IntMap as IntMap
 import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Node, Ann(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

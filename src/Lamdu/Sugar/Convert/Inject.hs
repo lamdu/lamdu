@@ -2,8 +2,9 @@ module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
+import           AST.Ann (Ann(..), ann, val)
+import           Data.Functor.Const (Const(..))
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), val, ann)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -38,7 +39,9 @@ convert (V.Inject tag injected) exprPl =
                     (BodyRecord
                      (Composite []
                       (ClosedComposite closedCompositeActions) addItem)) ->
-                    Ann pl (NullaryVal closedCompositeActions addItem)
+                    NullaryVal closedCompositeActions addItem
+                    & Const
+                    & Ann pl
                     & InjectNullary
                 _ ->
                     injectedS

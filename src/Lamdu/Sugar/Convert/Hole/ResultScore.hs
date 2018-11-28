@@ -2,9 +2,10 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Ann(..), val)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -32,7 +33,7 @@ score (Ann pl body) =
     (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
     resultScopeScore :
     resultTypeScore (pl ^. Infer.plType) ++
-    (body ^.. V.termChildren >>= score)
+    (body ^.. monoChildren >>= score)
     where
         resultScopeScore =
             case body ^? ExprLens.valBodyVar <&> (`Map.member` Infer.scopeToTypeMap (pl ^. Infer.plScope)) of
@@ -48,7 +49,7 @@ resultScore x =
 
 numFragments :: Val a -> Int
 numFragments x =
-    sum (x ^.. val . V.termChildren <&> numFragments) +
+    sum (x ^.. val . monoChildren <&> numFragments) +
     if Lens.has appliedHole x
     then 1
     else 0

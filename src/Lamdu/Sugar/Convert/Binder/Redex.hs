@@ -5,8 +5,8 @@ module Lamdu.Sugar.Convert.Binder.Redex
     , check
     ) where
 
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Ann, annotations, ann, val)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Eval.Results (ScopeId)

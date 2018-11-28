@@ -8,8 +8,9 @@ module Lamdu.Sugar.Parens
       addToExpr
     ) where
 
+import           AST (Node, LeafNode)
+import           AST.Ann (Ann(..), val, annotations)
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence
     (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)
@@ -121,7 +122,7 @@ addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 bareInfix ::
     Lens.Prism' (LabeledApply name i o (Ann a))
     ( Expression name i o a
-    , Ann a (BinderVarRef name o)
+    , LeafNode (Ann a) (BinderVarRef name o)
     , Expression name i o a
     )
 bareInfix =
@@ -179,7 +180,7 @@ loopExprBody minOpPrec parentPrec body_ =
         neverParen = (,,) (maxNamePrec + 1) NoNeedForParens
         inject (Inject t v) =
             case v of
-            InjectNullary x -> x & ann %~ neverParen & InjectNullary & cons & result False
+            InjectNullary x -> x & annotations %~ neverParen & InjectNullary & cons & result False
             InjectVal x -> sideSymbol loopExpr before after id 0 (cons . InjectVal) x
             where
                 cons = BodyInject . Inject t
@@ -199,17 +200,17 @@ loopExprBody minOpPrec parentPrec body_ =
             case x ^? bareInfix of
             Nothing ->
                 SugarLens.overLabeledApplyChildren
-                (ann %~ neverParen) (ann %~ neverParen) (loopExpr 0 unambiguous) x
+                (annotations %~ neverParen) (annotations %~ neverParen) (loopExpr 0 unambiguous) x
                 & BodyLabeledApply & result False
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #
             ( loopExpr 0 (newParentPrec & after .~ prec) l
-            , func & ann %~ neverParen
+            , func & annotations %~ neverParen
             , loopExpr (prec+1) (newParentPrec & before .~ prec) r
             ) & BodyLabeledApply & result needParens
             where
-                prec = func ^. val . bvNameRef . nrName & precedence
+                prec = func ^. val . Lens._Wrapped . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
                 newParentPrec

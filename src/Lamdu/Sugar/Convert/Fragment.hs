@@ -7,6 +7,8 @@ module Lamdu.Sugar.Convert.Fragment
     , fragmentVar
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -14,7 +16,6 @@ import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), ann, val, annotations)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
@@ -190,7 +191,7 @@ replaceFragment parentEntityId idxInParent (Ann pl bod) =
         V.LVar fragmentVar & V.BLeaf
         & Ann (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId)
     NotFragment ->
-        bod & Lens.indexing V.termChildren %@~ replaceFragment (pl ^. Input.entityId)
+        bod & Lens.indexing monoChildren %@~ replaceFragment (pl ^. Input.entityId)
         & Ann (void pl)
 
 emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
@@ -216,9 +217,9 @@ emplaceInHoles replaceHole =
                                 , pure (pure oldVal)
                                 ]
                         _ ->
-                            V.termChildren (fmap Lens.Const . go) bod
-                            <&> Lens.sequenceAOf (V.termChildren . Lens._Wrapped)
-                            <&> Lens.mapped . V.termChildren %~ (^. Lens._Wrapped)
+                            monoChildren (fmap Lens.Const . go) bod
+                            <&> Lens.sequenceAOf (monoChildren . Lens._Wrapped)
+                            <&> Lens.mapped . monoChildren %~ (^. Lens._Wrapped)
                             <&> Lens.mapped %~ Ann x
         replace x = replaceHole x <$ State.put True
 
@@ -276,4 +277,4 @@ mkOptionFromFragment sugarContext exprPl x =
         topEntityId = Property.value stored & EntityId.ofValI
         baseExpr = pruneExpr x
         pruneExpr (Ann (_, Just{}) _) = P.hole
-        pruneExpr (Ann _ b) = b & V.termChildren %~ pruneExpr & Ann ()
+        pruneExpr (Ann _ b) = b & monoChildren %~ pruneExpr & Ann ()

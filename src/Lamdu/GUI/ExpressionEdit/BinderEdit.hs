@@ -3,11 +3,12 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann, val)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))

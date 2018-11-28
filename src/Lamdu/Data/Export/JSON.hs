@@ -7,6 +7,8 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
@@ -20,7 +22,6 @@ import qualified Data.List as List
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Ann(..), annotations)
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -198,7 +199,7 @@ export msg act exportPath =
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
 writeValAt (Ann valI body) =
-    valI <$ (V.termChildren writeValAt body >>= Transaction.writeIRef valI)
+    valI <$ (monoChildren writeValAt body >>= Transaction.writeIRef valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
 writeValAtUUID x = x & annotations %~ IRef.unsafeFromUUID & writeValAt

@@ -9,10 +9,11 @@ module Lamdu.Sugar.Convert.Input
     , preparePayloads
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Ann(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
@@ -65,7 +66,7 @@ preparePayloads =
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
                 V.BLam (V.Lam var _) -> Lens.at var .~ Nothing
                 _ -> id
-            , b & V.termChildren %~ (^. Lens._Wrapped . _2)
+            , b & monoChildren %~ (^. Lens._Wrapped . _2)
               & Ann
                 ( case body of
                   V.BLam (V.Lam var _) -> childrenVars ^. Lens.ix var
@@ -74,5 +75,5 @@ preparePayloads =
                 )
             )
             where
-                childrenVars = Map.unionsWith (++) (b ^.. V.termChildren . Lens._Wrapped . _1)
-                b = body & V.termChildren %~ Lens.Const . go
+                childrenVars = Map.unionsWith (++) (b ^.. monoChildren . Lens._Wrapped . _1)
+                b = body & monoChildren %~ Lens.Const . go

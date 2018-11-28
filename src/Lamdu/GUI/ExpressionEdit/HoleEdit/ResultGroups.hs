@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     , ResultGroup(..), rgPrefixId, rgMain, rgExtra
     ) where
 
+import           AST.Ann (val)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
@@ -14,7 +15,6 @@ import           Data.List (sortOn, nubBy)
 import qualified Data.List.Class as ListClass
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (val)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu

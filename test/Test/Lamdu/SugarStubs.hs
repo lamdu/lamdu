@@ -2,12 +2,14 @@
 
 module Test.Lamdu.SugarStubs where
 
+import           AST (LeafNode)
+import           AST.Ann (Ann(..), val)
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
+import           Data.Functor.Const (Const(..))
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property(..), MkProperty(..))
 import           Data.String (IsString(..))
-import           Data.Tree.Diverse (Ann(..), val)
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -51,8 +53,8 @@ node = Ann payload
 
 labeledApplyFunc ::
     Sugar.BinderVarRef name Unit ->
-    Ann (Sugar.Payload name Identity Unit ()) (Sugar.BinderVarRef name Unit)
-labeledApplyFunc = node
+    LeafNode (Ann (Sugar.Payload name Identity Unit ())) (Sugar.BinderVarRef name Unit)
+labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
 

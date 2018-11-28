@@ -5,6 +5,8 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..))
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, writerT, runWriterT)
@@ -19,7 +21,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBS8
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Tree.Diverse
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
@@ -388,7 +389,7 @@ decodeVal =
 
 encodeValBody :: V.Term (Ann UUID) -> AesonTypes.Object
 encodeValBody body =
-    case body & V.termChildren %~ Lens.Const . encodeVal of
+    case body & monoChildren %~ Lens.Const . encodeVal of
     V.BApp (V.Apply func arg) ->
         HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
     V.BLam (V.Lam (V.Var varId) res) ->
@@ -448,7 +449,7 @@ decodeValBody obj =
       <*> (obj .: "fromNomVal" <&> c)
       <&> V.BFromNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= V.termChildren (lift . decodeVal . (^. Lens._Wrapped))
+    ] >>= monoChildren (lift . decodeVal . (^. Lens._Wrapped))
     where
         c = Lens.Const
 

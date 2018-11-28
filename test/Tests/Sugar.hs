@@ -2,10 +2,10 @@
 
 module Tests.Sugar where
 
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -116,11 +116,17 @@ testInline =
     where
         inline workArea =
             do
-                ~(Just yOption) <-
+                yOption <-
                     letItem ^. lBody . val . _BinderExpr . _BodyHole
                     . holeOptions
                     >>= findM isY
-                ~(List.Cons (_, mkResult) _) <- yOption ^. hoResults & List.runList
+                    <&> fromMaybe (error "expected option")
+                mkResult <-
+                    yOption ^. hoResults & List.runList
+                    <&>
+                    \case
+                    List.Cons (_, x) _ -> x
+                    List.Nil -> error "expected Cons"
                 result <- mkResult
                 result ^. holeResultPick
                 _ <-
@@ -199,7 +205,7 @@ testExtractForRecursion =
     where
         openDef =
             replBody . _BodyLabeledApply . aFunc .
-            val . bvNameRef . nrGotoDefinition
+            val . Lens._Wrapped . bvNameRef . nrGotoDefinition
         extractDef =
             waPanes . traverse . paneDefinition .
             drBody . _DefinitionBodyExpression . deContent .

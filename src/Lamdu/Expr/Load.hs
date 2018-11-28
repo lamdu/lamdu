@@ -3,9 +3,9 @@ module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
+import           AST.Ann (annotations)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Nominal (Nominal)

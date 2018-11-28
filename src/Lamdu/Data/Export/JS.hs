@@ -4,6 +4,7 @@ module Lamdu.Data.Export.JS
       compile
     ) where
 
+import           AST.Ann (Ann(..), ann, annotations)
 import qualified Codec.Archive.Zip as Zip
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (execWriterT, tell)
@@ -14,7 +15,6 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
-import           Data.Tree.Diverse (Ann(..), ann, annotations)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

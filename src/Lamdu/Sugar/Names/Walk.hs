@@ -8,9 +8,10 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..))
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node, Ann(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
@@ -304,10 +305,10 @@ toLabeledApply ::
     m (LabeledApply (NewName m) (IM m) o (Ann (Payload (NewName m) (IM m) o a)))
 toLabeledApply app@LabeledApply{..} =
     LabeledApply
-    <$> toNode (toBinderVarRef (Just (funcSignature app))) _aFunc
+    <$> toNode (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
     <*> traverse toExpression _aSpecialArgs
     <*> traverse (toAnnotatedArg toExpression) _aAnnotatedArgs
-    <*> traverse (toNode toGetVar) _aRelayedArgs
+    <*> traverse (toNode (Lens._Wrapped toGetVar)) _aRelayedArgs
 
 toHole ::
     MonadNaming m =>
@@ -360,7 +361,7 @@ toInjectVal ::
     InjectContent (OldName m) (IM m) o (Ann (Payload (OldName m) (IM m) o a)) ->
     m (InjectContent (NewName m) (IM m) o (Ann (Payload (NewName m) (IM m) o a)))
 toInjectVal (InjectVal v) = toExpression v <&> InjectVal
-toInjectVal (InjectNullary n) = toNode (nullaryAddItem toTagSelection) n <&> InjectNullary
+toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagSelection)) n <&> InjectNullary
 
 toInject ::
     MonadNaming m =>

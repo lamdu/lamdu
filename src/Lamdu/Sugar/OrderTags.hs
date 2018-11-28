@@ -3,9 +3,10 @@ module Lamdu.Sugar.OrderTags
     , orderedClosedFlatComposite
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
-import           Data.Tree.Diverse (Node, Ann(..), ann, val)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef

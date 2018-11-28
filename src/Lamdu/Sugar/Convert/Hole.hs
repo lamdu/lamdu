@@ -10,6 +10,8 @@ module Lamdu.Sugar.Convert.Hole
     , BaseExpr(..)
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
@@ -27,7 +29,6 @@ import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node, Ann(..), ann, annotations)
 import qualified Data.UUID as UUID
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P

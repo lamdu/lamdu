@@ -3,12 +3,13 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , valFromLiteral
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
-import           Data.Tree.Diverse (Node, Ann(..), ann, val, annotations)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Cache as Cache

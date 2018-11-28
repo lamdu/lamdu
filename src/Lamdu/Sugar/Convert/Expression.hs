@@ -3,9 +3,9 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
+import           AST.Ann (ann, val)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (ann, val)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

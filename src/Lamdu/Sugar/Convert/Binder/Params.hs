@@ -11,6 +11,8 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
+import           AST (monoChildren)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List
@@ -19,7 +21,6 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Ann(..), val, ann, annotations)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -287,7 +288,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
             }
     where
         param = storedLam ^. slLam . V.lamParamId
-        (tagsBefore, _:tagsAfter) = break (== fpTag fp) tags
+        (tagsBefore, tagsAfter) = break (== fpTag fp) tags & _2 %~ tail
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
 fpIdEntityId param = EntityId.ofTaggedEntity param . fpTag
@@ -312,7 +313,7 @@ changeGetFieldTags param prevTag chosenTag x =
     b ->
         traverse_
         (changeGetFieldTags param prevTag chosenTag)
-        (b ^.. V.termChildren)
+        (b ^.. monoChildren)
 
 setFieldParamTag ::
     Monad m =>
@@ -347,7 +348,7 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
             (storedLam ^. slLam . V.lamResult)
         postProcess
     where
-        (tagsBefore, _:tagsAfter) = break (== prevTag) prevTagList
+        (tagsBefore, tagsAfter) = break (== prevTag) prevTagList & _2 %~ tail
 
 convertRecordParams ::
     Monad m =>
@@ -609,7 +610,7 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
             case expr ^. val of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
-            x -> all (go False) (x ^.. V.termChildren)
+            x -> all (go False) (x ^.. monoChildren)
 
 -- Post process param add and delete actions to detach lambda.
 -- This isn't done for all actions as some already perform this function.

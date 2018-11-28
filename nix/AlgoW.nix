@@ -9,8 +9,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "Algorithm-W-Step-By-Step";
-    sha256 = "0n1gcfzmqjrax5jhwfznksayhd7z8imknx0l0aypqcbxrx4cgkgy";
-    rev = "84151ef8eee8680d8f9597d5f271b8d84ce52714";
+    sha256 = "0aad53kic3jvwb69vsczqhn6fvq5k2c82b5y4j1cyaaaw0m2s7v5";
+    rev = "5f1e1b36ff48b2001c30c3b731d61bf45b106d0b";
   };
   libraryHaskellDepends = [
     base base-compat binary bytestring containers deepseq

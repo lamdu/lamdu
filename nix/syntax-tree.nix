@@ -3,19 +3,19 @@
 , QuickCheck, transformers, stdenv
 }:
 mkDerivation {
-  pname = "lamdu-calculus";
+  pname = "syntax-tree";
   version = "0.1.0.0";
   src = fetchFromGitHub {
     owner = "lamdu";
-    repo = "lamdu-calculus";
-    sha256 = "08gk0n8k77i3p4a2zbgplb302r5q0zbamxd8j2qwpxrk6kgxh5pf";
-    rev = "91160d922971b3ff8f6d1d41960a4bd1534db8ec";
+    repo = "syntax-tree";
+    sha256 = "1rildsmkq310a9xv2jhh01kgvnk02lx60kl3w16p813br9akm7r3";
+    rev = "f11955414a8dd81f28e7483156709fb72c436617";
   };
   libraryHaskellDepends = [
     base base-compat base16-bytestring binary bytestring containers
     deepseq hashable lens pretty QuickCheck transformers
   ];
-  homepage = "https://github.com/lamdu/lamdu-calculus.git#readme";
-  description = "The Lamdu Calculus programming language";
+  homepage = "https://github.com/lamdu/syntax-tree.git#readme";
+  description = "Library for typed ASTs";
   license = stdenv.lib.licenses.bsd3;
 }

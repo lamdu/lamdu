@@ -4,12 +4,13 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
+import           AST (Node, monoChildren)
+import           AST.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tree.Diverse (Node, Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
@@ -138,7 +139,7 @@ convertBinder expr@(Ann pl body) =
         & ann . pInput . Input.userData .~
             mconcat
             (subexprPayloads
-             (body ^.. V.termChildren)
+             (body ^.. monoChildren)
              (exprS ^.. val . SugarLens.bodyChildPayloads))
     Just redex ->
         do

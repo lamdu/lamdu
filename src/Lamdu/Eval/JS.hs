@@ -13,6 +13,7 @@ module Lamdu.Eval.JS
     , nodeRepl
     ) where
 
+import           AST.Ann (Ann(..), annotations)
 import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
@@ -32,7 +33,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Data.Text as Text
-import           Data.Tree.Diverse (Ann(..), annotations)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec

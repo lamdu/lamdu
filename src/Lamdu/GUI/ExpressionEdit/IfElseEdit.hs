@@ -3,11 +3,12 @@ module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.Map as Map
-import           Data.Tree.Diverse (Node, Ann(..), ann)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation (AnimId)

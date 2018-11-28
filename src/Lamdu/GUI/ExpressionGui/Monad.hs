@@ -18,6 +18,8 @@ module Lamdu.GUI.ExpressionGui.Monad
     , ExprGuiM, run
     ) where
 
+import           AST (Node)
+import           AST.Ann (Ann(..), ann)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
@@ -26,7 +28,6 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
-import           Data.Tree.Diverse (Node, Ann, ann)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Element as Element

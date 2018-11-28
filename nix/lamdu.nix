@@ -5,8 +5,8 @@
 , executable-path, filepath, generic-random, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
 , language-ecmascript, lens, lens-aeson, leveldb-haskell, List, mtl
-, nodejs-exec, OpenGL, optparse-applicative, pretty, process
-, QuickCheck, random, safe-exceptions, split, StateVar, stdenv, stm
+, nodejs-exec, OpenGL, optparse-applicative, pretty, process, QuickCheck
+, random, safe-exceptions, split, StateVar, stdenv, stm, syntax-tree
 , template-haskell, temporary, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers
 , unordered-containers, uuid, uuid-types, vector, wl-pprint, yaml
@@ -47,7 +47,7 @@ mkDerivation {
     graphics-drawingcombinators hashable lamdu-calculus
     language-ecmascript lens lens-aeson leveldb-haskell List mtl
     nodejs-exec OpenGL optparse-applicative pretty process random
-    safe-exceptions split StateVar stm temporary text time timeit
+    safe-exceptions split StateVar stm syntax-tree temporary text time timeit
     transformers unordered-containers uuid uuid-types vector wl-pprint
     zip-archive
   ];
@@ -59,7 +59,7 @@ mkDerivation {
     aeson aeson-diff aeson-pretty AlgoW base bytestring Cabal
     containers deepseq deepseq-generics directory filepath
     generic-random GLFW-b HUnit lamdu-calculus lens lens-aeson List mtl
-    nodejs-exec pretty process QuickCheck random split test-framework
+    nodejs-exec pretty process QuickCheck random split syntax-tree test-framework
     test-framework-hunit test-framework-quickcheck2 text uuid-types
     yaml
   ];

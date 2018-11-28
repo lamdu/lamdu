@@ -3,8 +3,9 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
 
+import           AST (LeafNode)
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
-import           Data.Tree.Diverse (Ann(..), ann, val)
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
@@ -31,11 +32,11 @@ import           Lamdu.Prelude
 makeFunc ::
     (Monad i, Monad o) =>
     GetVarEdit.Role ->
-    Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.BinderVarRef (Name o) o) ->
+    LeafNode (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.BinderVarRef (Name o) o) ->
     ExprGuiM i o (Gui Responsive o)
 makeFunc role func =
     stdWrap pl <*>
-    ( GetVarEdit.makeGetBinder role (func ^. val) myId
+    ( GetVarEdit.makeGetBinder role (func ^. val . Lens._Wrapped) myId
         <&> Responsive.fromWithTextPos
     )
     where
@@ -104,15 +105,13 @@ makeArgRow arg =
 
 mkRelayedArgs ::
     (Monad i, Monad o) =>
-    [Ann (Sugar.Payload (Name o) i o ExprGui.Payload) (Sugar.GetVar (Name o) o)] ->
+    [LeafNode (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.GetVar (Name o) o)] ->
     ExprGuiM i o (Gui Responsive o)
 mkRelayedArgs args =
     do
-        argEdits <- traverse makeArgEdit args
+        argEdits <- traverse (\(Ann a v) -> GetVarEdit.make (v ^. Lens._Wrapped) a) args
         collapsed <- Styled.grammarLabel "➾" <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
-    where
-        makeArgEdit arg = GetVarEdit.make (arg ^. val) (arg ^. ann)
 
 mkBoxed ::
     (Monad i, Monad o) =>

@@ -1,9 +1,9 @@
 -- | "if" sugar/guards conversion
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
+import           AST.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
-import           Data.Tree.Diverse (Ann(..), ann, val)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
