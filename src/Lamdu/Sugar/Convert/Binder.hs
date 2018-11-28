@@ -270,7 +270,7 @@ markBinderLightParams paramNames =
     val %~
     SugarLens.overBinderChildren id id id
     (markElseLightParams paramNames) (markBinderLightParams paramNames)
-    (markLightParams paramNames) fixAssignments
+    (markExprLightParams paramNames) fixAssignments
     where
         fixAssignments =
             -- No assignments inside light lambdas. Consider asserting?
@@ -290,15 +290,15 @@ markElseLightParams paramNames =
         & eiContent %~
             SugarLens.overIfElseChildren
             (markElseLightParams paramNames)
-            (markLightParams paramNames)
+            (markExprLightParams paramNames)
         & ElseIf
 
-markLightParams ::
+markExprLightParams ::
     Ord name =>
     Set name ->
     Expression name i o a ->
     Expression name i o a
-markLightParams paramNames = val %~ markBodyLightParams paramNames
+markExprLightParams paramNames = val %~ markBodyLightParams paramNames
 
 markBodyLightParams ::
     Ord name =>
@@ -312,10 +312,10 @@ markBodyLightParams paramNames =
             n
             & pBinderMode .~ LightLambda
             & GetParam & BodyGetVar
-    BodyFragment w -> w & fExpr %~ markLightParams paramNames & BodyFragment
+    BodyFragment w -> w & fExpr %~ markExprLightParams paramNames & BodyFragment
     bod ->
         SugarLens.overBodyChildren id id id (markElseLightParams paramNames)
-        (markBinderLightParams paramNames) (markLightParams paramNames) bod
+        (markBinderLightParams paramNames) (markExprLightParams paramNames) bod
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::
