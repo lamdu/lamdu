@@ -1,6 +1,6 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
-, bytestring, containers, deepseq, fetchFromGitHub, hashable, lens, pretty
-, QuickCheck, transformers, stdenv
+, bytestring, constraint, containers, deepseq, fetchFromGitHub, hashable
+, lens, pretty, QuickCheck, transformers, stdenv
 }:
 mkDerivation {
   pname = "syntax-tree";
@@ -8,12 +8,12 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "syntax-tree";
-    sha256 = "1k815qaza62ffn9cvblyj6nxih1azmi7ncj3n0pwph109zahybcw";
-    rev = "d9e62518b72d6584b75fde07352e4c80ca90599e";
+    sha256 = "1r81pwjc0iy16hjfalsmxaghdxmiha3bjp1r475awbai19s5xzsk";
+    rev = "318cede067a076ba31836afd36a9b59791230682";
   };
   libraryHaskellDepends = [
-    base base-compat base16-bytestring binary bytestring containers
-    deepseq hashable lens pretty QuickCheck transformers
+    base base-compat base16-bytestring binary bytestring constraint
+    containers deepseq hashable lens pretty QuickCheck transformers
   ];
   homepage = "https://github.com/lamdu/syntax-tree.git#readme";
   description = "Library for typed ASTs";

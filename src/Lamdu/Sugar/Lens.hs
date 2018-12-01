@@ -19,8 +19,9 @@ module Lamdu.Sugar.Lens
     , stripAnnotations
     ) where
 
-import           AST (Node, LeafNode, Children(..), hoist)
+import           AST (Node, LeafNode)
 import           AST.Ann (Ann(..), ann, val)
+import           AST.Recursive (Recursive, hoistBody)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Lamdu.Sugar.Types
@@ -139,8 +140,8 @@ parentNodePayload ::
 parentNodePayload c f (Ann pl x) =
     Lens.indexed f (c x) pl <&> (`Ann` x)
 
-stripAnnotations :: Children expr => expr (Ann a) -> expr (Ann ())
-stripAnnotations = hoist (ann .~ ())
+stripAnnotations :: Recursive expr => expr (Ann a) -> expr (Ann ())
+stripAnnotations = hoistBody (ann .~ ())
 
 binderIndex :: Binder name i o (Ann a) -> PayloadOf name i o
 binderIndex (BinderLet x) = stripAnnotations x & OfLet

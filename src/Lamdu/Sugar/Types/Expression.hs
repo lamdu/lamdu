@@ -39,6 +39,7 @@ module Lamdu.Sugar.Types.Expression
 
 import           AST (Node, LeafNode)
 import           AST.Ann (Ann)
+import           AST.Recursive (Recursive)
 import           AST.TH (makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
@@ -234,3 +235,21 @@ makeChildren ''InjectContent
 makeChildren ''LabeledApply
 makeChildren ''Lambda
 makeChildren ''Let
+
+-- TODO: The instances below are a bit of boiler-plate,
+-- perhaps `Recursive` shouldn't be a separate class from `Children`?
+
+instance Recursive (AssignmentBody name i o)
+instance Recursive (AssignPlain name i o)
+instance Recursive (Body name i o)
+instance Recursive (Binder name i o)
+instance Recursive (Else name i o)
+instance Recursive (ElseIfContent name i o)
+instance Recursive (Fragment name i o)
+instance Recursive (Function name i o)
+instance Recursive (IfElse name i o)
+instance Recursive (Inject name i o)
+instance Recursive (InjectContent name i o)
+instance Recursive (LabeledApply name i o)
+instance Recursive (Lambda name i o)
+instance Recursive (Let name i o)
