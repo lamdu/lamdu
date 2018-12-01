@@ -4,16 +4,16 @@ module Lamdu.Sugar.Lens
     , bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
     , ifElseChildren, overIfElseChildren
-    , exprPayloads, binderPayloads
+    , binderPayloads
     , payloadsOf
-    , bodyUnfinished, unfinishedExprPayloads
+    , bodyUnfinished
     , defSchemes
     , assignmentBodyAddFirstParam
     , binderFuncParamActions
     , binderResultExpr
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
-    , assignmentSubExprParams, assignmentPayloads
+    , assignmentSubExprParams
     , binderSubExprParams
     , paramsAnnotations
     , stripAnnotations
@@ -306,10 +306,6 @@ bodyUnfinished =
     & Lens.failing (_BodyFragment . Lens.united)
     & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
     & Lens.failing (_BodyLabeledApply . aFunc . val . Lens._Wrapped . binderVarRefUnfinished)
-
-unfinishedExprPayloads ::
-    Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a
-unfinishedExprPayloads = payloadsOf bodyUnfinished
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name i o expr) (Scheme name)
 defBodySchemes f (DefinitionBodyBuiltin b) =
