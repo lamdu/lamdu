@@ -3,7 +3,7 @@ module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
     , addToWorkArea, addToExprWith
-    , addToBinder, addToBinderWith
+    , addToBinderWith
     , -- Exposed for tests
       addToExpr
     ) where
@@ -34,33 +34,22 @@ addToWorkArea ::
     WorkArea name i o (MinOpPrec, NeedsParens, a)
 addToWorkArea w =
     w
-    { _waRepl = w ^. waRepl & replExpr %~ addToBinder
+    { _waRepl = w ^. waRepl & replExpr %~ addToNode
     , _waPanes =
         w ^. waPanes
         <&> paneDefinition . drBody . _DefinitionBodyExpression . deContent
-        %~ addToAssignment
+        %~ addToNode
     }
 
-addToAssignment ::
-    HasPrecedence name =>
-    Node (Ann a) (AssignmentBody name i o) ->
-    Node (Ann (MinOpPrec, NeedsParens, a)) (AssignmentBody name i o)
-addToAssignment (Ann pl b) =
-    Ann (0, NoNeedForParens, pl) (addToAssignmentBody b)
+class AddParens expr where
+    addToBody :: expr (Ann a) -> expr (Ann (MinOpPrec, NeedsParens, a))
 
-addToAssignmentBody ::
-    HasPrecedence name =>
-    AssignmentBody name i o (Ann a) ->
-    AssignmentBody name i o (Ann (MinOpPrec, NeedsParens, a))
-addToAssignmentBody (BodyFunction x) = x & fBody %~ addToBinder & BodyFunction
-addToAssignmentBody (BodyPlain x) =
-    x & apBody %~ addToBinderBody & BodyPlain
+    addToNode :: Node (Ann a) expr -> Node (Ann (MinOpPrec, NeedsParens, a)) expr
+    addToNode (Ann pl x) = Ann (0, NoNeedForParens, pl) (addToBody x)
 
-addToBinder ::
-    HasPrecedence name =>
-    Node (Ann a) (Binder name i o) ->
-    Node (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
-addToBinder = addToBinderWith 0
+instance HasPrecedence name => AddParens (AssignmentBody name i o) where
+    addToBody (BodyFunction x) = x & fBody %~ addToNode & BodyFunction
+    addToBody (BodyPlain x) = x & apBody %~ addToBody & BodyPlain
 
 addToBinderWith ::
     HasPrecedence name =>
@@ -68,7 +57,7 @@ addToBinderWith ::
     Node (Ann a) (Binder name i o) ->
     Node (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
 addToBinderWith minOpPrec (Ann pl x) =
-    addToBinderBody x
+    addToBody x
     & Ann (minOpPrec, NoNeedForParens, pl)
 
 unambiguousBody ::
@@ -81,30 +70,21 @@ unambiguousBody x =
     -- them:
     loopExprBody 0 unambiguous x ^. _3
 
-addToElse ::
-    HasPrecedence name =>
-    Node (Ann a) (Else name i o) ->
-    Node (Ann (MinOpPrec, NeedsParens, a)) (Else name i o)
-addToElse (Ann pl x) =
-    case x of
-    SimpleElse expr -> unambiguousBody expr & SimpleElse
-    ElseIf elseIf ->
+instance HasPrecedence name => AddParens (Else name i o) where
+    addToBody (SimpleElse expr) = unambiguousBody expr & SimpleElse
+    addToBody (ElseIf elseIf) =
         elseIf
         & eiContent %~
-        SugarLens.overIfElseChildren addToElse (loopExpr 0 unambiguous)
+        SugarLens.overIfElseChildren addToNode (loopExpr 0 unambiguous)
         & ElseIf
-    & Ann (0, NoNeedForParens, pl)
 
-addToBinderBody ::
-    HasPrecedence name =>
-    Binder name i o (Ann a) ->
-    Binder name i o (Ann (MinOpPrec, NeedsParens, a))
-addToBinderBody (BinderExpr x) = unambiguousBody x & BinderExpr
-addToBinderBody (BinderLet x) =
-    BinderLet x
-    { _lValue = x ^. lValue & addToAssignment
-    , _lBody = x ^. lBody & addToBinder
-    }
+instance HasPrecedence name => AddParens (Binder name i o) where
+    addToBody (BinderExpr x) = unambiguousBody x & BinderExpr
+    addToBody (BinderLet x) =
+        BinderLet x
+        { _lValue = x ^. lValue & addToNode
+        , _lBody = x ^. lBody & addToNode
+        }
 
 addToExpr ::
     HasPrecedence name =>
@@ -167,7 +147,7 @@ loopExprBody minOpPrec parentPrec body_ =
         result False = (,,) minOpPrec NoNeedForParens
         mkUnambiguous l cons x =
             x & l %~ loopExpr 0 unambiguous & cons & result False
-        leftSymbol = sideSymbol (\_ _ -> addToBinder) before after
+        leftSymbol = sideSymbol (\_ _ -> addToNode) before after
         rightSymbol = sideSymbol loopExpr after before
         sideSymbol loop overrideSide checkSide lens prec cons x =
             x & lens %~ loop prec childPrec & cons
@@ -217,7 +197,7 @@ loopExprBody minOpPrec parentPrec body_ =
                     | needParens = pure 0
                     | otherwise = parentPrec
         ifElse x =
-            x & SugarLens.overIfElseChildren addToElse (loopExpr 0 unambiguous)
+            x & SugarLens.overIfElseChildren addToNode (loopExpr 0 unambiguous)
             & BodyIfElse
             & result needParens
             where
