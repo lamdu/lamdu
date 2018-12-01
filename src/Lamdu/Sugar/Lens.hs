@@ -2,10 +2,7 @@
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
     , bodyChildPayloads
-    , labeledApplyChildren
-    , ifElseChildren
     , binderPayloads
-    , payloadsOf
     , bodyUnfinished
     , defSchemes
     , assignmentBodyAddFirstParam
@@ -274,12 +271,6 @@ bodyPayloads f =
             (LeafNode (Ann b) (GetVar name o))
             a b
         relayedPayloads = leafNodePayload OfRelayedArg
-
-payloadsOf ::
-    Lens.Fold (Body name i o (Ann ())) dummy ->
-    Lens.IndexedTraversal' (PayloadOf name i o) (Expression name i o a) a
-payloadsOf predicate =
-    exprPayloads . Lens.ifiltered (const . Lens.has (_OfExpr . predicate))
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
