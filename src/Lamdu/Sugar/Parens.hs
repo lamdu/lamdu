@@ -7,13 +7,13 @@ module Lamdu.Sugar.Parens
     ) where
 
 import           AST (Node, LeafNode, overChildren)
-import           AST.Ann (Ann(..), val, annotations)
+import           AST.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
+import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence
     (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -74,6 +74,11 @@ instance HasPrecedence name => AddParens (Binder name i o) where
 instance HasPrecedence name => AddParens (Body name i o) where
     addToBody = loopExprBody unambiguous <&> (^. _2)
     addToNode = addToExprWith 0
+
+instance AddParens (Const a) where
+    addToBody (Const x) = Const x
+    addToNode (Ann pl (Const x)) =
+        Ann (maxNamePrec + 1, NoNeedForParens, pl) (Const x)
 
 addToExprWith ::
     HasPrecedence name =>
@@ -140,10 +145,9 @@ loopExprBody parentPrec body_ =
                 childPrec
                     | needParens = pure 0
                     | otherwise = parentPrec & overrideSide .~ prec
-        neverParen = (,,) (maxNamePrec + 1) NoNeedForParens
         inject (Inject t v) =
             case v of
-            InjectNullary x -> x & annotations %~ neverParen & InjectNullary & cons & result False
+            InjectNullary x -> addToNode x & InjectNullary & cons & result False
             InjectVal x -> sideSymbol loopExpr before after id 0 (cons . InjectVal) x
             where
                 cons = BodyInject . Inject t
@@ -162,14 +166,13 @@ loopExprBody parentPrec body_ =
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
-                SugarLens.overLabeledApplyChildren
-                (annotations %~ neverParen) (annotations %~ neverParen) (loopExpr 0 unambiguous) x
+                overChildren (Proxy :: Proxy AddParens) addToNode x
                 & BodyLabeledApply & result False
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #
             ( loopExpr 0 (newParentPrec & after .~ prec) l
-            , func & annotations %~ neverParen
+            , addToNode func
             , loopExpr (prec+1) (newParentPrec & before .~ prec) r
             ) & BodyLabeledApply & result needParens
             where

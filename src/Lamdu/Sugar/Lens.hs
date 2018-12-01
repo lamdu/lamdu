@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
     , bodyChildPayloads
-    , labeledApplyChildren, overLabeledApplyChildren
+    , labeledApplyChildren
     , ifElseChildren
     , binderPayloads
     , payloadsOf
@@ -75,14 +75,6 @@ labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
                 (,)
                 <$> l func
                 <*> traverse e special
-
-overLabeledApplyChildren ::
-    (LeafNode f (BinderVarRef name o) -> LeafNode g (BinderVarRef name o)) ->
-    (LeafNode f (GetVar name o) -> LeafNode g (GetVar name o)) ->
-    (Node f (Body name i o) -> Node g (Body name i o)) ->
-    LabeledApply name i o f -> LabeledApply name i o g
-overLabeledApplyChildren l r e =
-    runIdentity . labeledApplyChildren (pure . l) (pure . r) (pure . e)
 
 ifElseChildren ::
     Applicative f =>
