@@ -8,9 +8,10 @@ module Lamdu.Sugar.Parens
       addToExpr
     ) where
 
-import           AST (Node, LeafNode)
+import           AST (Node, LeafNode, overChildren)
 import           AST.Ann (Ann(..), val, annotations)
 import qualified Control.Lens as Lens
+import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence
     (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)
@@ -81,10 +82,7 @@ instance HasPrecedence name => AddParens (Else name i o) where
 instance HasPrecedence name => AddParens (Binder name i o) where
     addToBody (BinderExpr x) = unambiguousBody x & BinderExpr
     addToBody (BinderLet x) =
-        BinderLet x
-        { _lValue = x ^. lValue & addToNode
-        , _lBody = x ^. lBody & addToNode
-        }
+        overChildren (Proxy :: Proxy AddParens) addToNode x & BinderLet
 
 addToExpr ::
     HasPrecedence name =>
