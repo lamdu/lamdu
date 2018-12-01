@@ -3,7 +3,7 @@ module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
     , bodyChildPayloads
     , labeledApplyChildren, overLabeledApplyChildren
-    , ifElseChildren, overIfElseChildren
+    , ifElseChildren
     , binderPayloads
     , payloadsOf
     , bodyUnfinished
@@ -91,13 +91,6 @@ ifElseChildren ::
     IfElse name i o n -> f (IfElse name i o m)
 ifElseChildren onElse onExpr (IfElse if_ then_ else_) =
     IfElse <$> onExpr if_ <*> onExpr then_ <*> onElse else_
-
-overIfElseChildren ::
-    (Node f (Else name i o) -> Node g (Else name i o)) ->
-    (Node f (Body name i o) -> Node g (Body name i o)) ->
-    IfElse name i o f -> IfElse name i o g
-overIfElseChildren onElse onExpr =
-    runIdentity . ifElseChildren (pure . onElse) (pure . onExpr)
 
 injectContentChildren ::
     Applicative f =>

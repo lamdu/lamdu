@@ -4,8 +4,6 @@ module Lamdu.Sugar.Parens
     , MinOpPrec
     , addToWorkArea, addToExprWith
     , addToBinderWith
-    , -- Exposed for tests
-      addToExpr
     ) where
 
 import           AST (Node, LeafNode, overChildren)
@@ -61,34 +59,21 @@ addToBinderWith minOpPrec (Ann pl x) =
     addToBody x
     & Ann (minOpPrec, NoNeedForParens, pl)
 
-unambiguousBody ::
-    HasPrecedence name =>
-    Body name i o (Ann a) ->
-    Body name i o (Ann (MinOpPrec, NeedsParens, a))
-unambiguousBody x =
-    -- NOTE: In "unambiguous" case, the expr body is necessarily
-    -- without parens and cannot reduce minOpPrec further, so ignore
-    -- them:
-    loopExprBody unambiguous x ^. _2
-
 instance HasPrecedence name => AddParens (Else name i o) where
-    addToBody (SimpleElse expr) = unambiguousBody expr & SimpleElse
-    addToBody (ElseIf elseIf) =
-        elseIf
-        & eiContent %~
-        SugarLens.overIfElseChildren addToNode (loopExpr 0 unambiguous)
-        & ElseIf
+    addToBody (SimpleElse expr) = addToBody expr & SimpleElse
+    addToBody (ElseIf elseIf) = elseIf & eiContent %~ addToBody & ElseIf
+
+instance HasPrecedence name => AddParens (IfElse name i o) where
+    addToBody = overChildren (Proxy :: Proxy AddParens) addToNode
 
 instance HasPrecedence name => AddParens (Binder name i o) where
-    addToBody (BinderExpr x) = unambiguousBody x & BinderExpr
+    addToBody (BinderExpr x) = addToBody x & BinderExpr
     addToBody (BinderLet x) =
         overChildren (Proxy :: Proxy AddParens) addToNode x & BinderLet
 
-addToExpr ::
-    HasPrecedence name =>
-    Expression name i o a ->
-    Expression name i o (MinOpPrec, NeedsParens, a)
-addToExpr = addToExprWith 0
+instance HasPrecedence name => AddParens (Body name i o) where
+    addToBody = loopExprBody unambiguous <&> (^. _2)
+    addToNode = addToExprWith 0
 
 addToExprWith ::
     HasPrecedence name =>
@@ -195,8 +180,4 @@ loopExprBody parentPrec body_ =
                     | needParens = pure 0
                     | otherwise = parentPrec
         ifElse x =
-            x & SugarLens.overIfElseChildren addToNode (loopExpr 0 unambiguous)
-            & BodyIfElse
-            & result needParens
-            where
-                needParens = parentPrec ^. after > 1
+            addToBody x & BodyIfElse & result (parentPrec ^. after > 1)
