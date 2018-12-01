@@ -66,10 +66,10 @@ unambiguousBody ::
     Body name i o (Ann a) ->
     Body name i o (Ann (MinOpPrec, NeedsParens, a))
 unambiguousBody x =
-    -- NOTE: In "0 unambiguous" case, the expr body is necessarily
+    -- NOTE: In "unambiguous" case, the expr body is necessarily
     -- without parens and cannot reduce minOpPrec further, so ignore
     -- them:
-    loopExprBody 0 unambiguous x ^. _3
+    loopExprBody unambiguous x ^. _2
 
 instance HasPrecedence name => AddParens (Else name i o) where
     addToBody (SimpleElse expr) = unambiguousBody expr & SimpleElse
@@ -115,15 +115,15 @@ loopExpr ::
     MinOpPrec -> Precedence Prec -> Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
 loopExpr minOpPrec parentPrec (Ann pl body_) =
-    Ann (resPrec, parens, pl) newBody
+    Ann (minOpPrec, parens, pl) newBody
     where
-        (resPrec, parens, newBody) = loopExprBody minOpPrec parentPrec body_
+        (parens, newBody) = loopExprBody parentPrec body_
 
 loopExprBody ::
     HasPrecedence name =>
-    MinOpPrec -> Precedence Prec -> Body name i o (Ann a) ->
-    (MinOpPrec, NeedsParens, Body name i o (Ann (MinOpPrec, NeedsParens, a)))
-loopExprBody minOpPrec parentPrec body_ =
+    Precedence Prec -> Body name i o (Ann a) ->
+    (NeedsParens, Body name i o (Ann (MinOpPrec, NeedsParens, a)))
+loopExprBody parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
     BodyLiteral      x -> result False (BodyLiteral x)
@@ -141,8 +141,8 @@ loopExprBody minOpPrec parentPrec body_ =
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
     where
-        result True = (,,) minOpPrec NeedsParens
-        result False = (,,) minOpPrec NoNeedForParens
+        result True = (,) NeedsParens
+        result False = (,) NoNeedForParens
         mkUnambiguous l cons x =
             x & l %~ loopExpr 0 unambiguous & cons & result False
         leftSymbol = sideSymbol (\_ _ -> addToNode) before after
