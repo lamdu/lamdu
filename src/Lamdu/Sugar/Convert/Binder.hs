@@ -141,7 +141,7 @@ convertBinder expr@(Ann pl body) =
             mconcat
             (subexprPayloads
              (body ^.. monoChildren)
-             (exprS ^.. val . SugarLens.bodyChildPayloads))
+             (exprS ^.. val . SugarLens.childPayloads))
     Just redex ->
         do
             float <-
@@ -234,8 +234,9 @@ convertLam lam exprPl =
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions (lam ^.. V.lamResult) exprPl
-            <&> val . SugarLens.bodyChildPayloads .
-                pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)
+            <&> val %~
+                overChildren (Proxy :: Proxy Children)
+                (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
 
 useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 useNormalLambda paramNames func

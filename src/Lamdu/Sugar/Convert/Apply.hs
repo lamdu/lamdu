@@ -28,7 +28,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (bodyChildPayloads)
+import           Lamdu.Sugar.Lens (childPayloads)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 
@@ -120,7 +120,7 @@ convertLabeled subexprs funcS argS exprPl =
             (Ann (funcS ^. ann) (Const sBinderVar)) args exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
-                subexprPayloads subexprs (bod ^.. bodyChildPayloads)
+                subexprPayloads subexprs (bod ^.. childPayloads)
                 & mconcat
         addActionsWith userPayload exprPl bod & lift
 

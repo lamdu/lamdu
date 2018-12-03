@@ -37,7 +37,7 @@ import           Lamdu.Sugar.Convert.Tag (convertTagSelection, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (bodyChildPayloads)
+import           Lamdu.Sugar.Lens (childPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -235,9 +235,12 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     bod
-    & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch))
-    . bodyChildPayloads %~ join setToExpr
-    & overChildren (Proxy :: Proxy FixReplaceParent) (fixReplaceParent setToExpr)
+    & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) %~
+        overChildren p (ann %~ join setToExpr)
+    & overChildren p (fixReplaceParent setToExpr)
+    where
+        p :: Proxy FixReplaceParent
+        p = Proxy
 
 subexprPayloads ::
     Foldable f =>
@@ -276,9 +279,8 @@ addActions ::
     Body InternalName (T m) (T m) (Ann (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
-    addActionsWith (mconcat (subexprPayloads subexprs childPayloads)) exprPl bodyS
-    where
-        childPayloads = bodyS ^.. bodyChildPayloads
+    addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
+    exprPl bodyS
 
 makeTypeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Type InternalName)
 makeTypeAnnotation payload =

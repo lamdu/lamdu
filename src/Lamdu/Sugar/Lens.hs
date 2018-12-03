@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables #-}
 module Lamdu.Sugar.Lens
     ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
+    , childPayloads
     , bodyChildPayloads
     , binderPayloads
     , bodyUnfinished
@@ -16,14 +17,20 @@ module Lamdu.Sugar.Lens
     , stripAnnotations
     ) where
 
-import           AST (Node, LeafNode)
+import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint)
 import           AST.Ann (Ann(..), ann, val)
 import           AST.Recursive (Recursive, hoistBody)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
+import           Data.Proxy (Proxy(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
+
+childPayloads :: ChildrenWithConstraint expr Children =>
+    Lens.Traversal' (expr (Ann a)) a
+childPayloads f =
+    children (Proxy :: Proxy Children) (ann f)
 
 -- TODO: Get rid of most of these.
 -- First step is replacing their usages with `AST.children`
