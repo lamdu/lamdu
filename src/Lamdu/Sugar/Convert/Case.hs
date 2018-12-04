@@ -96,5 +96,5 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
     case argS ^. val of
-    BodyFromNom nom | Lens.nullOf (nVal . val . SugarLens.bodyUnfinished) nom -> nom ^. nVal
+    BodyFromNom nom | Lens.nullOf (nVal . val . Lens.filtered SugarLens.isUnfinished) nom -> nom ^. nVal
     _ -> argS

@@ -251,7 +251,7 @@ useNormalLambda paramNames func
     where
         forbiddenLightLamSubExprs :: Lens.Traversal' (Body name i o (Ann a)) ()
         forbiddenLightLamSubExprs =
-            Lens.failing SugarLens.bodyUnfinished
+            Lens.failing (Lens.filtered SugarLens.isUnfinished . Lens.united)
             (_BodyLam . lamFunc . fParams . _Params . Lens.united)
 
 allParamsUsed :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
