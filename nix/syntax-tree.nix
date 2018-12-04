@@ -1,6 +1,6 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
-, bytestring, constraints, containers, deepseq, fetchFromGitHub, hashable
-, lens, pretty, QuickCheck, transformers, stdenv
+, constraints, containers, fetchFromGitHub, lens, monad-st, mtl
+, pretty, QuickCheck, template-haskell, th-abstraction, transformers, stdenv
 }:
 mkDerivation {
   pname = "syntax-tree";
@@ -12,8 +12,8 @@ mkDerivation {
     rev = "87a407715d682a68e1f3326aa3bbfd608735db55";
   };
   libraryHaskellDepends = [
-    base base-compat base16-bytestring binary bytestring constraints
-    containers deepseq hashable lens pretty QuickCheck transformers
+    base base-compat binary constraints containers lens
+    monad-st mtl pretty QuickCheck template-haskell th-abstraction transformers
   ];
   homepage = "https://github.com/lamdu/syntax-tree.git#readme";
   description = "Library for typed ASTs";
