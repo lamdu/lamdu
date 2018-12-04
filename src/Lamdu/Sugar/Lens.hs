@@ -1,8 +1,8 @@
 {-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables #-}
 module Lamdu.Sugar.Lens
-    ( PayloadOf(..), _OfExpr, _OfLabeledApplyFunc, _OfNullaryVal
+    ( SugarExpr(..)
+    , PayloadOf(..), _OfExpr
     , childPayloads
-    , bodyChildPayloads
     , binderPayloads
     , bodyUnfinished
     , defSchemes
@@ -31,6 +31,33 @@ childPayloads :: ChildrenWithConstraint expr Children =>
     Lens.Traversal' (expr (Ann a)) a
 childPayloads f =
     children (Proxy :: Proxy Children) (ann f)
+
+class SugarExpr t where
+    isUnfinished :: t (Ann a) -> Bool
+    isUnfinished _ = False
+
+instance SugarExpr (Const a)
+instance SugarExpr (Else name i o)
+
+instance SugarExpr (AssignmentBody name i o) where
+    isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
+    isUnfinished BodyFunction{} = False
+
+instance SugarExpr (Binder name i o) where
+    isUnfinished (BinderExpr x) = isUnfinished x
+    isUnfinished BinderLet{} = False
+
+instance SugarExpr (Body name i o) where
+    isUnfinished BodyHole{} = True
+    isUnfinished BodyFragment{} = True
+    isUnfinished (BodyGetVar (GetBinder x)) = Lens.has binderVarRefUnfinished x
+    isUnfinished (BodyLabeledApply x) =
+        Lens.has (aFunc . val . Lens._Wrapped . binderVarRefUnfinished) x
+    isUnfinished _ = False
+
+binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
+binderVarRefUnfinished =
+    bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
 -- TODO: Get rid of most of these.
 -- First step is replacing their usages with `AST.children`
@@ -123,12 +150,6 @@ bodyChildren n l r e b f =
     BodyFragment     x -> fExpr f x <&> BodyFragment
     BodyToNom        x -> traverse b x <&> BodyToNom
 
-parentNodePayload ::
-    (expr (Ann a) -> p) ->
-    Lens.IndexedLens' p (Node (Ann a) expr) a
-parentNodePayload c f (Ann pl x) =
-    Lens.indexed f (c x) pl <&> (`Ann` x)
-
 stripAnnotations :: Recursive expr => expr (Ann a) -> expr (Ann ())
 stripAnnotations = hoistBody (ann .~ ())
 
@@ -143,25 +164,6 @@ elseIndex (SimpleElse x) = stripAnnotations x & OfExpr
 assignmentBodyIndex :: AssignmentBody name i o (Ann a) -> PayloadOf name i o
 assignmentBodyIndex (BodyFunction x) = stripAnnotations x & OfAssignFunction
 assignmentBodyIndex (BodyPlain x) = binderIndex (x ^. apBody)
-
-bodyChildPayloads ::
-    forall name i o a.
-    Lens.IndexedTraversal' (PayloadOf name i o) (Body name i o (Ann a)) a
-bodyChildPayloads f =
-    bodyChildren
-    (leafNodePayload OfNullaryVal f)
-    (Lens.cloneIndexedLens labeledFuncPayloads f)
-    (Lens.cloneIndexedLens relayedPayloads f)
-    (parentNodePayload elseIndex f)
-    (parentNodePayload binderIndex f)
-    (parentNodePayload (OfExpr . stripAnnotations) f)
-    where
-        labeledFuncPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (LeafNode (Ann a) (BinderVarRef name o)) a
-        labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
-        relayedPayloads ::
-            Lens.AnIndexedLens' (PayloadOf name i o) (LeafNode (Ann a) (GetVar name o)) a
-        relayedPayloads = leafNodePayload OfRelayedArg
 
 leafNodePayload ::
     (l -> p) ->
@@ -278,10 +280,6 @@ bodyPayloads f =
             (LeafNode (Ann b) (GetVar name o))
             a b
         relayedPayloads = leafNodePayload OfRelayedArg
-
-binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
-binderVarRefUnfinished =
-    bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
 bodyUnfinished :: Lens.Traversal' (Body name i o (Ann a)) ()
 bodyUnfinished =
