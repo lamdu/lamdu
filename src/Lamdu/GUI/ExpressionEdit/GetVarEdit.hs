@@ -94,6 +94,7 @@ makeParamsRecord myId paramsRecordVar =
 
 infixMarker :: Vector2 Anim.R -> Draw.Image
 infixMarker (Vector2 w h) =
+    () <$
     mconcat
     [ Draw.line (x, 0) (0,x)
     , Draw.line (w-x, 0) (w,x)
@@ -104,7 +105,6 @@ infixMarker (Vector2 w h) =
     , Draw.line (x, 0) (w-x, 0)
     , Draw.line (x, h) (w-x, h)
     ]
-    <&> const ()
     where
         x = min w h / 4
 

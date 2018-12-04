@@ -83,4 +83,4 @@ inlineLet topLevelProp redex =
     >>= ExprIRef.writeValWithStoredSubexpressions
     <&> (^. ann . _1)
     >>= Property.set topLevelProp
-    <&> const (cursorDest (redex ^. Redex.arg & annotations %~ EntityId.ofValI))
+    & (cursorDest (redex ^. Redex.arg & annotations %~ EntityId.ofValI) <$)
