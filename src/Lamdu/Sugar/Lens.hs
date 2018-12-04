@@ -52,6 +52,7 @@ instance SugarExpr (Body name i o) where
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = Lens.has binderVarRefUnfinished x
     isUnfinished (BodyLabeledApply x) =
+        -- TODO: shouldn't it actually be the function within that is considered unfinished?
         Lens.has (aFunc . val . Lens._Wrapped . binderVarRefUnfinished) x
     isUnfinished _ = False
 
