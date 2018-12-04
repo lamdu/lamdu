@@ -2,7 +2,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/lamdu/syntax-tree
-    commit: 8501c027b77f87d9c021ae9c4f08e571976510e8
+    commit: 87a407715d682a68e1f3326aa3bbfd608735db55
   extra-dep: True
 - location:
     git: https://github.com/lamdu/lamdu-calculus
