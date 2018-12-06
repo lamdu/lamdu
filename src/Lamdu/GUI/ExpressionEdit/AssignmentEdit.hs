@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.AssignmentEdit
     , Parts(..), makeFunctionParts
     ) where
 
-import           AST.Ann (Ann(..), ann)
+import           AST (Ann(..), ann)
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader

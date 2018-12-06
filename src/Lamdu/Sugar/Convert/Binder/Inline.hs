@@ -3,8 +3,8 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
-import           AST.Ann (Ann(..), ann, val, annotations)
-import           AST.Mono (monoChildren)
+import           AST (monoChildren)
+import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)

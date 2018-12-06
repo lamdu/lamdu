@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.PostProcess
     ( Result(..), def, expr
     ) where
 
-import           AST.Ann (ann)
+import           AST (ann)
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property

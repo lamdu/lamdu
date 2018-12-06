@@ -3,7 +3,7 @@
 module Test.Lamdu.SugarStubs where
 
 import           AST (LeafNode)
-import           AST.Ann (Ann(..), val)
+import           AST.Functor.Ann (Ann(..), val)
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Functor.Const (Const(..))

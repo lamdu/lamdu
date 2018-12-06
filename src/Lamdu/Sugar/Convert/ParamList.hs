@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
     ) where
 
-import           AST.Ann (Ann(..), annotations)
+import           AST (Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Property as Property

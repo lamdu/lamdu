@@ -8,8 +8,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( make
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..), annotations)
+import           AST (Node, Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid

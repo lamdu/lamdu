@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import           AST.Ann (ann)
+import           AST (ann)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)

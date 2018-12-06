@@ -2,7 +2,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
     ( make
     ) where
 
-import           AST.Ann (ann)
+import           AST (ann)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive)

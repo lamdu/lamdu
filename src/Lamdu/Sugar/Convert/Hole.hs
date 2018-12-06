@@ -10,8 +10,7 @@ module Lamdu.Sugar.Convert.Hole
     , BaseExpr(..)
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..), ann, annotations)
+import           AST (Node, Ann(..), ann, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)

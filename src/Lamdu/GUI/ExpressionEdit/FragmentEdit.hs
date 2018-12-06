@@ -2,7 +2,7 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
     ( make
     ) where
 
-import           AST.Ann (Ann(..), ann)
+import           AST (Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as Momentu

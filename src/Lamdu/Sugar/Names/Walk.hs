@@ -8,8 +8,7 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..))
+import           AST (Node, Ann(..))
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T

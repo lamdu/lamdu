@@ -8,8 +8,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "lamdu-calculus";
-    sha256 = "14892n4s1gpqr89g11nin7p8mrd7y5k2xyk6g9k3gjrkdp9gs5cp";
-    rev = "6daceb4cc6fe2d06a4f88fec148e71ad086edec8";
+    sha256 = "168k0zx4cwl6hbc1j5z5n2ib5rrvh7iznr3m31fkjaiw2wi3gmim";
+    rev = "36610ccc54436e438fae1abc5f54532ede913cc3";
   };
   libraryHaskellDepends = [
     base base-compat base16-bytestring binary bytestring containers

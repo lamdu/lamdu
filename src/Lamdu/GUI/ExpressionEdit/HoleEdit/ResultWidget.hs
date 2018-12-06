@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ) where
 
 import           AST (Node)
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align

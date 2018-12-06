@@ -2,8 +2,7 @@ module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..))
+import           AST (Node, Ann(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text

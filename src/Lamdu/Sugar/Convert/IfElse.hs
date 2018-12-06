@@ -1,7 +1,7 @@
 -- | "if" sugar/guards conversion
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)

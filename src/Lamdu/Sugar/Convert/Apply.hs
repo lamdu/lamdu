@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)

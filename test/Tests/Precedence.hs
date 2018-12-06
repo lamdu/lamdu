@@ -1,7 +1,7 @@
 -- | Test precedences
 module Tests.Precedence where
 
-import           AST.Ann (ann, val)
+import           AST.Functor.Ann (ann, val)
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
 import qualified Lamdu.Sugar.Parens as Parens

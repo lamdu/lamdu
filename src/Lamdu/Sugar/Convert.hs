@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           AST.Ann (ann, annotations)
+import           AST (ann, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)

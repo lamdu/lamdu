@@ -1,6 +1,6 @@
 module Tests.AnimIdClash (test) where
 
-import           AST.Ann (ann, annotations)
+import           AST (ann, annotations)
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
 import qualified GUI.Momentu.Align as Align

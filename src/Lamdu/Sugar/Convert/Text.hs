@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Text
      ( text
      ) where
 
-import           AST.Ann (Ann(..))
+import           AST (Ann(..))
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)

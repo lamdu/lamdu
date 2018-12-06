@@ -7,8 +7,8 @@ module Lamdu.Sugar.Convert.Fragment
     , fragmentVar
     ) where
 
-import           AST.Ann (Ann(..), ann, val, annotations)
-import           AST.Mono (monoChildren)
+import           AST (monoChildren)
+import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))

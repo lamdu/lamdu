@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import           Data.Functor.Const (Const(..))
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)

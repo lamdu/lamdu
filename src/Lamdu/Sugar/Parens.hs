@@ -7,7 +7,7 @@ module Lamdu.Sugar.Parens
     ) where
 
 import           AST (Node, LeafNode, overChildren)
-import           AST.Ann (Ann(..), val)
+import           AST.Functor.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))

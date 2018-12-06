@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ) where
 
 import           AST (LeafNode)
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element

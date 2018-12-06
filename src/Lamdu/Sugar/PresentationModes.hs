@@ -3,7 +3,7 @@ module Lamdu.Sugar.PresentationModes
     ) where
 
 import           AST (LeafNode)
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import           Data.Either (partitionEithers)

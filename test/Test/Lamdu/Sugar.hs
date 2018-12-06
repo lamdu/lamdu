@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 module Test.Lamdu.Sugar where
 
-import           AST.Ann (annotations)
+import           AST (annotations)
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)

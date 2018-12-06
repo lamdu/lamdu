@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Redex
     , check
     ) where
 
-import           AST.Ann (Ann(..), ann, val, annotations)
+import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

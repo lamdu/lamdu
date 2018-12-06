@@ -37,10 +37,7 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     ) where
 
-import           AST (Node, LeafNode)
-import           AST.Ann (Ann)
-import           AST.Recursive (ChildrenRecursive)
-import           AST.TH (makeChildren)
+import           AST (Node, LeafNode, Ann, ChildrenRecursive, makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))

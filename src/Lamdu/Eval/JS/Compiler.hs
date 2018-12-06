@@ -7,7 +7,7 @@ module Lamdu.Eval.JS.Compiler
     , compileRepl, Mode(..), loggingEnabled
     ) where
 
-import           AST.Ann (Ann(..), val)
+import           AST.Functor.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState)

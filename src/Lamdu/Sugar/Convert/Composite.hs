@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Composite
     , ExtendVal(..), extendTag, extendValI, extendRest
     ) where
 
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set

@@ -2,7 +2,7 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
     ( make
     ) where
 
-import           AST.Ann (ann)
+import           AST (ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Vector.Vector2 (Vector2(..))

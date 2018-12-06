@@ -9,7 +9,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     , definitePart
     ) where
 
-import           AST.Ann (Ann(..), val)
+import           AST.Functor.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.Property (Property)

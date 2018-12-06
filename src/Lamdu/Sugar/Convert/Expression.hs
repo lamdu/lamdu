@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           AST.Ann (ann, val)
+import           AST.Functor.Ann (ann, val)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Lamdu.Builtins.PrimVal as PrimVal

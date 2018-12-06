@@ -7,7 +7,7 @@ module Lamdu.Sugar.Annotations
     ) where
 
 import           AST (Node, overChildren)
-import           AST.Ann (Ann(..), ann, val)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))

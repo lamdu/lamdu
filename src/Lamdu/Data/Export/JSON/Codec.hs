@@ -5,8 +5,7 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           AST.Ann (Ann(..))
-import           AST.Mono (monoChildren)
+import           AST (Ann(..), monoChildren)
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, writerT, runWriterT)

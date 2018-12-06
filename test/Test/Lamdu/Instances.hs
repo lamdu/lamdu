@@ -3,7 +3,7 @@
 
 module Test.Lamdu.Instances () where
 
-import           AST.Ann (Ann(..))
+import           AST (Ann(..))
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Monad.Unit (Unit(..))

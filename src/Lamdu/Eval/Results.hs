@@ -12,8 +12,7 @@ module Lamdu.Eval.Results
     , extractField
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..))
+import           AST (Node, Ann(..))
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)

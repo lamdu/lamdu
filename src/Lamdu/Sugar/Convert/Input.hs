@@ -9,8 +9,7 @@ module Lamdu.Sugar.Convert.Input
     , preparePayloads
     ) where
 
-import           AST.Ann (Ann(..))
-import           AST.Mono (monoChildren)
+import           AST (Ann(..), monoChildren)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map

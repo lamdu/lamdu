@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Case
     , convertAppliedCase
     ) where
 
-import           AST.Ann (ann, val)
+import           AST.Functor.Ann (ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)

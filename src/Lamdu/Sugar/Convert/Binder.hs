@@ -4,9 +4,8 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
-import           AST (Node, Children(..), overChildren)
-import           AST.Ann (Ann(..), ann, val, annotations)
-import           AST.Mono (monoChildren)
+import           AST (Node, Children(..), overChildren, monoChildren)
+import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')

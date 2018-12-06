@@ -4,7 +4,7 @@ module Lamdu.Data.Export.JS
       compile
     ) where
 
-import           AST.Ann (Ann(..), ann, annotations)
+import           AST (Ann(..), ann, annotations)
 import qualified Codec.Archive.Zip as Zip
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (execWriterT, tell)

@@ -3,8 +3,7 @@ module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..), ann)
+import           AST (Node, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))

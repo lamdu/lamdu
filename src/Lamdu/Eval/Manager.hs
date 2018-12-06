@@ -7,7 +7,7 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
-import           AST.Ann (annotations)
+import           AST (annotations)
 import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens

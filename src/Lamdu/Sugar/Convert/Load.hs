@@ -12,7 +12,7 @@ module Lamdu.Sugar.Convert.Load
     , InferFunc, unmemoizedInfer
     ) where
 
-import           AST.Ann (ann, annotations)
+import           AST (ann, annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)

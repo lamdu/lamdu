@@ -18,8 +18,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , ExprGuiM, run
     ) where
 
-import           AST (Node)
-import           AST.Ann (Ann(..), ann)
+import           AST (Node, Ann(..), ann)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))

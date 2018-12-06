@@ -3,8 +3,7 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where
 
-import           AST (LeafNode)
-import           AST.Ann (Ann(..), ann)
+import           AST (LeafNode, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           GUI.Momentu.Align (WithTextPos)

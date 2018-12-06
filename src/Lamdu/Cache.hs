@@ -7,7 +7,7 @@ module Lamdu.Cache
     , make, FencedCache.Cache, FencedCache.fence
     ) where
 
-import           AST.Ann (annotations)
+import           AST (annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.State (StateT(..))
 import           Data.Cache.Fenced (Decl, function)

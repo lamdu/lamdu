@@ -8,8 +8,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "syntax-tree";
-    sha256 = "19j26fyvrr7df21sp18l7qbmbdwy0wcl1yp08k5b3k24n96c7wk6";
-    rev = "d382f40ec7018b418867b97c2f8973bd8216d3f5";
+    sha256 = "092fs5858zmx18r1y95j2gjv86lkjlna1drpy6ng4mn2a5b66gy0";
+    rev = "edcaff261cf4aaab3b613b11ee2812aa6988306f";
   };
   libraryHaskellDepends = [
     base base-compat binary constraints containers lens

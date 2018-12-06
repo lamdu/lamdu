@@ -3,7 +3,7 @@ module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
-import           AST.Ann (annotations)
+import           AST (annotations)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)

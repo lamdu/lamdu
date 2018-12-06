@@ -13,7 +13,7 @@ module Lamdu.Eval.JS
     , nodeRepl
     ) where
 
-import           AST.Ann (Ann(..), annotations)
+import           AST (Ann(..), annotations)
 import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar

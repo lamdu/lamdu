@@ -18,8 +18,8 @@ module Lamdu.Sugar.Lens
     ) where
 
 import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint)
-import           AST.Ann (Ann(..), ann, val)
-import           AST.Recursive (ChildrenRecursive, hoistBody)
+import           AST.Class.Recursive (ChildrenRecursive, hoistBody)
+import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))

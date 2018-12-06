@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     ) where
 
 import           AST (Node, overChildren)
-import           AST.Ann (Ann(..), ann, val, annotations)
+import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map

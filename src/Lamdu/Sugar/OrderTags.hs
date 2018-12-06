@@ -5,8 +5,7 @@ module Lamdu.Sugar.OrderTags
     , orderedClosedFlatComposite
     ) where
 
-import           AST (Node, Children(..))
-import           AST.Ann (Ann(..))
+import           AST (Node, Children(..), Ann(..))
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import           Data.Proxy (Proxy(..))
