@@ -6,8 +6,8 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , applyForms
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..), ann, val, annotations)
+import           AST.Mono (monoChildren)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)

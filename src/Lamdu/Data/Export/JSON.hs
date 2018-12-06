@@ -7,8 +7,8 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..), annotations)
+import           AST.Mono (monoChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer

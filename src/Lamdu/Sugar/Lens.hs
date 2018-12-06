@@ -19,7 +19,7 @@ module Lamdu.Sugar.Lens
 
 import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint)
 import           AST.Ann (Ann(..), ann, val)
-import           AST.Recursive (Recursive, hoistBody)
+import           AST.Recursive (ChildrenRecursive, hoistBody)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))
@@ -151,7 +151,7 @@ bodyChildren n l r e b f =
     BodyFragment     x -> fExpr f x <&> BodyFragment
     BodyToNom        x -> traverse b x <&> BodyToNom
 
-stripAnnotations :: Recursive expr => expr (Ann a) -> expr (Ann ())
+stripAnnotations :: ChildrenRecursive expr => expr (Ann a) -> expr (Ann ())
 stripAnnotations = hoistBody (ann .~ ())
 
 binderIndex :: Binder name i o (Ann a) -> PayloadOf name i o

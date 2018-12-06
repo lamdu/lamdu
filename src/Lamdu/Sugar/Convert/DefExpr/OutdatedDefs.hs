@@ -2,8 +2,8 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..), ann, val)
+import           AST.Mono (monoChildren)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)

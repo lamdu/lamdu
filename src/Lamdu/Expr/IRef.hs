@@ -12,8 +12,9 @@ module Lamdu.Expr.IRef
 
     ) where
 
-import           AST (Node, monoChildren)
+import           AST (Node)
 import           AST.Ann (Ann(..), ann, val)
+import           AST.Mono (monoChildren)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))

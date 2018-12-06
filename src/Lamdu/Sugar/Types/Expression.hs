@@ -39,7 +39,7 @@ module Lamdu.Sugar.Types.Expression
 
 import           AST (Node, LeafNode)
 import           AST.Ann (Ann)
-import           AST.Recursive (Recursive)
+import           AST.Recursive (ChildrenRecursive)
 import           AST.TH (makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
@@ -221,35 +221,27 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
-makeChildren ''AssignmentBody
-makeChildren ''AssignPlain
-makeChildren ''Body
-makeChildren ''Binder
-makeChildren ''Else
-makeChildren ''ElseIfContent
-makeChildren ''Fragment
-makeChildren ''Function
-makeChildren ''IfElse
-makeChildren ''Inject
-makeChildren ''InjectContent
-makeChildren ''LabeledApply
-makeChildren ''Lambda
-makeChildren ''Let
+makeChildren
+    [ ''AssignmentBody, ''AssignPlain, ''Body, ''Binder
+    , ''Else, ''ElseIfContent, ''Fragment, ''Function
+    , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply
+    , ''Lambda, ''Let
+    ]
 
 -- TODO: The instances below are a bit of boiler-plate,
--- perhaps `Recursive` shouldn't be a separate class from `Children`?
+-- Need to rethink if the TH could generate this.
 
-instance Recursive (AssignmentBody name i o)
-instance Recursive (AssignPlain name i o)
-instance Recursive (Body name i o)
-instance Recursive (Binder name i o)
-instance Recursive (Else name i o)
-instance Recursive (ElseIfContent name i o)
-instance Recursive (Fragment name i o)
-instance Recursive (Function name i o)
-instance Recursive (IfElse name i o)
-instance Recursive (Inject name i o)
-instance Recursive (InjectContent name i o)
-instance Recursive (LabeledApply name i o)
-instance Recursive (Lambda name i o)
-instance Recursive (Let name i o)
+instance ChildrenRecursive (AssignmentBody name i o)
+instance ChildrenRecursive (AssignPlain name i o)
+instance ChildrenRecursive (Body name i o)
+instance ChildrenRecursive (Binder name i o)
+instance ChildrenRecursive (Else name i o)
+instance ChildrenRecursive (ElseIfContent name i o)
+instance ChildrenRecursive (Fragment name i o)
+instance ChildrenRecursive (Function name i o)
+instance ChildrenRecursive (IfElse name i o)
+instance ChildrenRecursive (Inject name i o)
+instance ChildrenRecursive (InjectContent name i o)
+instance ChildrenRecursive (LabeledApply name i o)
+instance ChildrenRecursive (Lambda name i o)
+instance ChildrenRecursive (Let name i o)

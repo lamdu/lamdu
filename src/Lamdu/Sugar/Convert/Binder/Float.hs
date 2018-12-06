@@ -4,8 +4,8 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..), ann, val)
+import           AST.Mono (monoChildren)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property

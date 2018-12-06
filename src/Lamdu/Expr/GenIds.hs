@@ -11,8 +11,8 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..))
+import           AST.Mono (monoChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))

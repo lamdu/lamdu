@@ -11,8 +11,8 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..), ann, val, annotations)
+import           AST.Mono (monoChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List

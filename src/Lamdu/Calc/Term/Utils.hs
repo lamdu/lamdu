@@ -7,8 +7,8 @@ module Lamdu.Calc.Term.Utils
     , culledSubexprPayloads
     ) where
 
-import           AST (monoChildren)
 import           AST.Ann (Ann(..))
+import           AST.Mono (monoChildren)
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
