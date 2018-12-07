@@ -23,8 +23,8 @@ type T = Transaction
 
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
 redexes (Ann _ (V.BApp (V.Apply (Ann _ (V.BLam lam)) arg))) =
-    redexes (lam ^. V.lamResult)
-    & _1 %~ (:) (lam ^. V.lamParamId, arg)
+    redexes (lam ^. V.lamOut)
+    & _1 %~ (:) (lam ^. V.lamIn, arg)
 redexes v = ([], v)
 
 wrapWithRedexes :: [(V.Var, Val (Maybe a))] -> Val (Maybe a) -> Val (Maybe a)
@@ -63,7 +63,7 @@ inlineLetH var arg bod =
 cursorDest :: Val a -> a
 cursorDest x =
     case x ^. val of
-    V.BLam lam -> lam ^. V.lamResult
+    V.BLam lam -> lam ^. V.lamOut
     _ -> x
     & redexes
     & (^. _2 . ann)
@@ -72,12 +72,12 @@ inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
-    <&> (^? val . V._BApp . V.applyFunc . val . V._BLam . V.lamResult . ann)
+    <&> (^? val . V._BApp . V.applyFunc . val . V._BLam . V.lamOut . ann)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readVal
     <&> annotations %~ Just
     <&> inlineLetH
-        (redex ^. Redex.lam . V.lamParamId)
+        (redex ^. Redex.lam . V.lamIn)
         (redex ^. Redex.arg & annotations %~ Just)
     <&> annotations %~ (, ())
     >>= ExprIRef.writeValWithStoredSubexpressions

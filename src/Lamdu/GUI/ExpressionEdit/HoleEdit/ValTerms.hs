@@ -9,6 +9,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     , definitePart
     ) where
 
+import           AST (monoChildren)
 import           AST.Functor.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -57,7 +58,7 @@ ofBody :: Body (Name o) i o (Ann a) -> [Text]
 ofBody =
     \case
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
-    BodySimpleApply x -> "apply" : foldMap expr x
+    BodySimpleApply x -> "apply" : x ^. monoChildren . Lens.to expr
     BodyLabeledApply x ->
         "apply"
         : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)

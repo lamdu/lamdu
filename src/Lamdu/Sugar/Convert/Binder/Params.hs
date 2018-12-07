@@ -69,7 +69,7 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: V.Lam (Ann (ValP m))
+    { _slLam :: V.Lam V.Var V.Term (Ann (ValP m))
     , _slLambdaProp :: ValP m
     }
 Lens.makeLenses ''StoredLam
@@ -78,11 +78,11 @@ slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . Property.pVal)
 
 mkStoredLam ::
-    V.Lam (Ann (Input.Payload m a)) ->
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamResult . annotations %~ (^. Input.stored))
+    (lam & V.lamOut . annotations %~ (^. Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -146,9 +146,9 @@ fixLamUsages =
     <&> \protectedSetToVal fixOp binderKind storedLam ->
     case binderKind of
     BinderKindDef defI ->
-        changeCallArgs fixOp (storedLam ^. slLam . V.lamResult) (ExprIRef.globalId defI)
+        changeCallArgs fixOp (storedLam ^. slLam . V.lamOut) (ExprIRef.globalId defI)
     BinderKindLet redexLam ->
-        changeCallArgs fixOp (redexLam ^. V.lamResult) (redexLam ^. V.lamParamId)
+        changeCallArgs fixOp (redexLam ^. V.lamOut) (redexLam ^. V.lamIn)
     BinderKindLambda ->
         protectedSetToVal prop (prop ^. Property.pVal) & void
         where
@@ -185,11 +185,11 @@ getFieldOnVar = val . V._BGetField . inGetField
         pack pl (v, t) =
             V.GetField (Ann pl (V.BLeaf (V.LVar v))) t
 
-getFieldParamsToHole :: Monad m => T.Tag -> V.Lam (Ann (ValP m)) -> T m ()
+getFieldParamsToHole :: Monad m => T.Tag -> V.Lam V.Var V.Term (Ann (ValP m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-getFieldParamsToParams :: Monad m => V.Lam (Ann (ValP m)) -> T.Tag -> T m ()
+getFieldParamsToParams :: Monad m => V.Lam V.Var V.Term (Ann (ValP m)) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
@@ -237,7 +237,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
         onLastTag lastTag =
             do
                 getFieldParamsToParams (storedLam ^. slLam) lastTag
-                setP (Anchors.assocTag (storedLam ^. slLam . V.lamParamId)) lastTag
+                setP (Anchors.assocTag (storedLam ^. slLam . V.lamIn)) lastTag
         tag = fpTag fp
         fixRecurseArg =
             maybe (fixCallArgRemoveField tag)
@@ -287,7 +287,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                     & setParamList mPresMode (slParamList storedLam) & Just
             }
     where
-        param = storedLam ^. slLam . V.lamParamId
+        param = storedLam ^. slLam . V.lamIn
         (tagsBefore, tagsAfter) = break (== fpTag fp) tags & _2 %~ tail
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
@@ -344,8 +344,8 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
             changeFieldToCall argI = Transaction.readIRef argI >>= fixArg argI
         fixUsages changeFieldToCall binderKind storedLam
         changeGetFieldTags
-            (storedLam ^. slLam . V.lamParamId) prevTag chosenTag
-            (storedLam ^. slLam . V.lamResult)
+            (storedLam ^. slLam . V.lamIn) prevTag chosenTag
+            (storedLam ^. slLam . V.lamOut)
         postProcess
     where
         (tagsBefore, tagsAfter) = break (== prevTag) prevTagList & _2 %~ tail
@@ -354,7 +354,7 @@ convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
@@ -438,7 +438,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 (ExprIRef.globalId defI) lamBodyStored
             BinderKindLet redexLam ->
                 removeCallsToVar
-                (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
+                (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
             BinderKindLambda -> pure ()
         let lamBodyI = Property.value (lamBodyStored ^. ann)
         protectedSetToVal lambdaProp lamBodyI & void
@@ -473,7 +473,7 @@ convertToRecordParams =
     fixLamUsages <&>
     \fixUsages mkNewArg binderKind storedLam newParamPosition newParam ->
     do
-        let paramVar = storedLam ^. slLam . V.lamParamId
+        let paramVar = storedLam ^. slLam . V.lamIn
         oldParam <-
             getP (Anchors.assocTag paramVar)
             >>=
@@ -490,7 +490,7 @@ convertToRecordParams =
             NewParamAfter -> [oldParam, newParam]
             & setParamList Nothing (slParamList storedLam)
         convertVarToGetField oldParam paramVar
-            (storedLam ^. slLam . V.lamResult)
+            (storedLam ^. slLam . V.lamOut)
         fixUsages (wrapArgWithRecord mkNewArg oldParam newParam)
             binderKind storedLam
 
@@ -527,7 +527,7 @@ makeNonRecordParamActions binderKind storedLam =
             , _fpMOrderAfter = Nothing
             }
     where
-        param = storedLam ^. slLam . V.lamParamId
+        param = storedLam ^. slLam . V.lamIn
 
 mkVarInfo :: T.Type -> VarInfo
 mkVarInfo T.TFun{} = VarFunction
@@ -557,7 +557,7 @@ mkFuncParam entityId lamExprPl info =
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->
-    V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
@@ -602,7 +602,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     where
         storedLam = mkStoredLam lam lamExprPl
 
-isParamAlwaysUsedWithGetField :: V.Lam (Ann a) -> Bool
+isParamAlwaysUsedWithGetField :: V.Lam V.Var V.Term (Ann a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param bod) =
     go False bod
     where
@@ -625,7 +625,8 @@ postProcessActions post x
 
 convertLamParams ::
     Monad m =>
-    V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
+    Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
@@ -645,7 +646,9 @@ makeFieldParam lambdaPl (tag, typeExpr) =
 convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
-    BinderKind m -> V.Lam (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    BinderKind m ->
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
+    Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
@@ -679,7 +682,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                         <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
             _ -> convertNonRecordParam binderKind lambda lambdaPl
     where
-        param = lambda ^. V.lamParamId
+        param = lambda ^. V.lamIn
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
         mPresModeToTags p =
             case p of
@@ -706,7 +709,7 @@ convertBinderToFunction mkArg binderKind x =
                 convertVarToCalls mkArg (ExprIRef.globalId defI) x
             BinderKindLet redexLam ->
                 convertVarToCalls mkArg
-                (redexLam ^. V.lamParamId) (redexLam ^. V.lamResult)
+                (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
             BinderKindLambda -> error "Lambda will never be an empty-params binder"
         pure (newParam, newValP)
 
@@ -750,7 +753,7 @@ convertParams binderKind defVar expr =
                 <&> f
                 where
                     f convParams =
-                        (mPresMode convParams, convParams, lambda ^. V.lamResult)
+                        (mPresMode convParams, convParams, lambda ^. V.lamOut)
                     mPresMode convParams =
                         presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
                     presMode = Anchors.assocPresentationMode defVar

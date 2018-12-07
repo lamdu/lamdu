@@ -1,5 +1,5 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
-, constraints, containers, fetchFromGitHub, lens, monad-st, mtl
+, constraints, containers, deepseq, fetchFromGitHub, lens, monad-st, mtl
 , pretty, QuickCheck, template-haskell, th-abstraction, transformers, stdenv
 }:
 mkDerivation {
@@ -8,11 +8,11 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "syntax-tree";
-    sha256 = "092fs5858zmx18r1y95j2gjv86lkjlna1drpy6ng4mn2a5b66gy0";
-    rev = "edcaff261cf4aaab3b613b11ee2812aa6988306f";
+    sha256 = "1nn0imqfajh6z692cj7gcaax37jm7pr2a5alvv2p0j1lwdzr0k2f";
+    rev = "b0a633c39dc2c0b5e6fa2c1ec5ce75276acb031f";
   };
   libraryHaskellDepends = [
-    base base-compat binary constraints containers lens
+    base base-compat binary constraints containers deepseq lens
     monad-st mtl pretty QuickCheck template-haskell th-abstraction transformers
   ];
   homepage = "https://github.com/lamdu/syntax-tree.git#readme";

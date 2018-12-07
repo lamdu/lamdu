@@ -76,7 +76,7 @@ moveToGlobalScope =
         -- extraction/generalization of the inner type
         postProcess
 
-isVarAlwaysApplied :: V.Lam (Ann a) -> Bool
+isVarAlwaysApplied :: V.Lam V.Var V.Term (Ann a) -> Bool
 isVarAlwaysApplied (V.Lam var x) =
     go False x
     where
@@ -101,7 +101,7 @@ convertLetToLam var redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> V.Lam (Ann (ValP m)) -> T m ()
+    V.Var -> T.Tag -> V.Lam V.Var V.Term (Ann (ValP m)) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
@@ -113,13 +113,13 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> V.Lam (Ann (ValP m)) -> Params.StoredLam m ->
+    V.Var -> V.Lam V.Var V.Term (Ann (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (ValP m))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
     do
         tagForExistingParam <-
-            storedLam ^. Params.slLam . V.lamParamId & Anchors.assocTag & Property.getP
+            storedLam ^. Params.slLam . V.lamIn & Anchors.assocTag & Property.getP
         addAsTag <-
             Property.getP (Anchors.assocTag var)
             >>=
@@ -135,7 +135,7 @@ convertLetParamToRecord var letLam storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> V.Lam (Ann (ValP m)) -> Params.StoredLam m ->
+    [T.Tag] -> V.Var -> V.Lam V.Var V.Term (Ann (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (ValP m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
@@ -199,8 +199,8 @@ processLet redex =
         let maybeDetach
                 | TV.null skolemsExitingScope = pure ()
                 | otherwise =
-                    Load.readValAndAddProperties (redex ^. Redex.lam . V.lamResult . ann . Input.stored)
-                    >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamParamId)
+                    Load.readValAndAddProperties (redex ^. Redex.lam . V.lamOut . ann . Input.stored)
+                    >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamIn)
         case varsExitingScope of
             [] -> sameLet (redex <&> (^. Input.stored)) & pure & pure
             [x] -> addLetParam x redex
@@ -220,7 +220,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     (,,)
     <$>
     ( redex
-    & Redex.lam . V.lamResult . ann . Input.stored . Property.pSet .~
+    & Redex.lam . V.lamOut . ann . Input.stored . Property.pSet .~
         setTopLevel
     & processLet
     )
@@ -229,7 +229,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     <&>
     \(makeNewLet, ctx, floatToGlobal) ->
     do
-        redex ^. Redex.lam . V.lamResult . ann . Input.stored .
+        redex ^. Redex.lam . V.lamOut . ann . Input.stored .
             Property.pVal & setTopLevel
         newLetP <- makeNewLet
         case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
@@ -255,4 +255,4 @@ makeFloatLetToOuterScope setTopLevel redex =
                 (Property.value newLetP) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
     where
-        param = redex ^. Redex.lam . V.lamParamId
+        param = redex ^. Redex.lam . V.lamIn

@@ -43,7 +43,6 @@ import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
 import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
@@ -141,7 +140,7 @@ data IfElse name i o f = IfElse
 
 data Body name i o f
     = BodyLam (Lambda name i o f)
-    | BodySimpleApply (V.Apply (Node f (Body name i o)))
+    | BodySimpleApply (Apply (Body name i o) f)
     | BodyLabeledApply (LabeledApply name i o f)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))

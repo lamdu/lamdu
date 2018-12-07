@@ -8,5 +8,5 @@ import           Lamdu.Expr.IRef (DefI, ValP)
 
 data BinderKind m
     = BinderKindDef (DefI m) -- TODO: Top-level defs to fix
-    | BinderKindLet (V.Lam (Ann (ValP m)))
+    | BinderKindLet (V.Lam V.Var V.Term (Ann (ValP m)))
     | BinderKindLambda

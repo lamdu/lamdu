@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
+import           AST (monoChildren)
 import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
@@ -35,7 +36,8 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convert ::
-    (Monad m, Monoid a) => V.Apply (Val (Input.Payload m a)) ->
+    (Monad m, Monoid a) =>
+    V.Apply V.Term (Ann (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert app@(V.Apply funcI argI) exprPl =
     runMatcherT $
@@ -59,8 +61,8 @@ convert app@(V.Apply funcI argI) exprPl =
                     , argS
                     )
         convertAppliedCase app funcS argS exprPl & justToLeft
-        convertLabeled app funcS argS exprPl & justToLeft
-        convertPrefix app funcS argS exprPl & lift
+        convertLabeled (app ^.. monoChildren) funcS argS exprPl & justToLeft
+        convertPrefix (app ^.. monoChildren) funcS argS exprPl & lift
 
 noDuplicates :: Ord a => [a] -> Bool
 noDuplicates x = length x == Set.size (Set.fromList x)

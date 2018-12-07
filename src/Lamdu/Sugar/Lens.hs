@@ -17,7 +17,7 @@ module Lamdu.Sugar.Lens
     , stripAnnotations
     ) where
 
-import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint)
+import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint, monoChildren)
 import           AST.Class.Recursive (ChildrenRecursive, hoistBody)
 import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
@@ -140,7 +140,7 @@ bodyChildren n l r e b f =
     BodyGetVar  x -> BodyGetVar  x & pure
     BodyHole    x -> BodyHole    x & pure
     BodyLam          x -> (lamFunc . fBody) b x <&> BodyLam
-    BodySimpleApply  x -> traverse f x <&> BodySimpleApply
+    BodySimpleApply  x -> monoChildren f x <&> BodySimpleApply
     BodyLabeledApply x -> labeledApplyChildren l r f x <&> BodyLabeledApply
     BodyRecord       x -> traverse f x <&> BodyRecord
     BodyGetField     x -> traverse f x <&> BodyGetField

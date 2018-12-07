@@ -554,7 +554,7 @@ slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId argVal =
 listenNoTellLogUsed :: Monad m => M m a -> M m (a, LogUsed)
 listenNoTellLogUsed = censor (const LogUnused) . listen
 
-compileLambda :: Monad m => V.Lam (Ann ValId) -> ValId -> M m CodeGen
+compileLambda :: Monad m => V.Lam V.Var V.Term (Ann ValId) -> ValId -> M m CodeGen
 compileLambda (V.Lam v res) valId =
     Lens.view envMode
     >>= \case
@@ -580,7 +580,7 @@ compileLambda (V.Lam v res) valId =
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
         compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
 
-compileApply :: Monad m => ValId -> V.Apply (Val ValId) -> M m CodeGen
+compileApply :: Monad m => ValId -> V.Apply V.Term (Ann ValId) -> M m CodeGen
 compileApply valId (V.Apply func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression

@@ -96,7 +96,7 @@ checkTypeMatch x y =
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
-    V.Apply (Val (Input.Payload m a)) -> ExpressionU m a ->
+    V.Apply V.Term (Ann (Input.Payload m a)) -> ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole (V.Apply funcI argI) argS exprPl =

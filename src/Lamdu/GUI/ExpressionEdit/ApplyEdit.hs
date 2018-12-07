@@ -135,7 +135,7 @@ mkBoxed apply funcRow =
 
 makeSimple ::
     (Monad i, Monad o) =>
-    Sugar.Apply (ExprGui.SugarExpr i o) ->
+    Sugar.Apply (Sugar.Body (Name o) i o) (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeSimple (Sugar.Apply func arg) pl =

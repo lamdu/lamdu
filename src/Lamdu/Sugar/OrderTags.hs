@@ -5,7 +5,7 @@ module Lamdu.Sugar.OrderTags
     , orderedClosedFlatComposite
     ) where
 
-import           AST (Node, Children(..), Ann(..))
+import           AST (Node, Children(..), Ann(..), monoChildren)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import           Data.Proxy (Proxy(..))
@@ -104,7 +104,7 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
     order (Sugar.BodyInject x) = (Sugar.iContent . Sugar._InjectVal) orderNode x <&> Sugar.BodyInject
     order (Sugar.BodyToNom x) = traverse orderNode x <&> Sugar.BodyToNom
     order (Sugar.BodyFromNom x) = traverse orderNode x <&> Sugar.BodyFromNom
-    order (Sugar.BodySimpleApply x) = traverse orderNode x <&> Sugar.BodySimpleApply
+    order (Sugar.BodySimpleApply x) = monoChildren orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyGetField x) = traverse orderNode x <&> Sugar.BodyGetField
     order x@Sugar.BodyLiteral{} = pure x
     order x@Sugar.BodyGetVar{} = pure x

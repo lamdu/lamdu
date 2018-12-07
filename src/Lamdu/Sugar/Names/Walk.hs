@@ -9,6 +9,7 @@ module Lamdu.Sugar.Names.Walk
     ) where
 
 import           AST (Node, Ann(..))
+import           AST.Term.Apply (applyChildren)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
@@ -397,7 +398,7 @@ toBody =
     BodyRecord       x -> x & toComposite toExpression <&> BodyRecord
     BodyCase         x -> x & toCase toExpression <&> BodyCase
     BodyIfElse       x -> x & toIfElse <&> BodyIfElse
-    BodySimpleApply  x -> x & traverse toExpression <&> BodySimpleApply
+    BodySimpleApply  x -> x & applyChildren toExpression <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom

@@ -17,7 +17,7 @@ import           Lamdu.Prelude
 
 data Redex a = Redex
     { _bodyScope :: EvalScopes ScopeId
-    , _lam :: V.Lam (Ann a)
+    , _lam :: V.Lam V.Var V.Term (Ann a)
     , _lamPl :: a
     , _paramRefs :: [EntityId]
     , _arg :: Val a
@@ -27,7 +27,7 @@ Lens.makeLenses ''Redex
 instance Functor Redex where
     fmap f r =
         r
-        { _lam = r ^. lam & V.lamResult . annotations %~ f
+        { _lam = r ^. lam & V.lamOut . annotations %~ f
         , _lamPl = r ^. lamPl & f
         , _arg = r ^. arg & annotations %~ f
         }

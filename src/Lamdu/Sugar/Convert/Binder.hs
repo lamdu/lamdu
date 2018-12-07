@@ -42,7 +42,7 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    V.Lam (Ann (Input.Payload m a)) -> T m ()
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
 
@@ -91,7 +91,7 @@ convertLet float pl redex =
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamResult . ann . Input.stored
+                    redex ^. Redex.lam . V.lamOut . ann . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         actions <- makeActions pl
@@ -121,7 +121,7 @@ convertLet float pl redex =
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            & V.lamResult . annotations %~ (^. Input.stored)
+            & V.lamOut . annotations %~ (^. Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
@@ -213,15 +213,15 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    V.Lam (Ann (Input.Payload m a)) ->
+    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
         func <-
             makeFunction
-            (lam ^. V.lamParamId & Anchors.assocScopeRef)
-            convParams (lam ^. V.lamResult)
+            (lam ^. V.lamIn & Anchors.assocScopeRef)
+            convParams (lam ^. V.lamOut)
         let paramNames =
                 func ^.. fParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
                 & Set.fromList
@@ -233,7 +233,7 @@ convertLam lam exprPl =
                     & fBody %~ markNodeLightParams paramNames
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
-            & addActions (lam ^.. V.lamResult) exprPl
+            & addActions (lam ^.. V.lamOut) exprPl
             <&> val %~
                 overChildren (Proxy :: Proxy Children)
                 (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
