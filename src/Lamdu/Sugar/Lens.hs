@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables, FlexibleInstances, KindSignatures #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , PayloadOf(..), _OfExpr
@@ -18,9 +18,10 @@ module Lamdu.Sugar.Lens
     ) where
 
 import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint, monoChildren)
-import           AST.Class.Recursive (ChildrenRecursive, hoistBody)
+import           AST.Class.Recursive (Recursive(..), ChildrenRecursive, hoistBody)
 import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
+import           Data.Constraint
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))
 import           Lamdu.Sugar.Types
@@ -36,9 +37,20 @@ class SugarExpr (t :: (* -> *) -> *) where
     isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
+    isForbiddenInLightLam :: t f -> Bool
+    isForbiddenInLightLam = isUnfinished
+
+    sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarExpr)
+    default sugarExprRecursive ::
+        ChildrenWithConstraint t SugarExpr =>
+        Dict (ChildrenWithConstraint t SugarExpr)
+    sugarExprRecursive = Dict
+
+instance Recursive SugarExpr where
+    recursive _ _ = Sub sugarExprRecursive
+
 instance SugarExpr (Const (NullaryVal name i o))
 instance SugarExpr (Const (GetVar name o))
-
 instance SugarExpr (Else name i o)
 
 instance SugarExpr (Const (BinderVarRef name o)) where
@@ -48,14 +60,19 @@ instance SugarExpr (AssignmentBody name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
 
+instance SugarExpr (Function name i o) where
+    isForbiddenInLightLam = Lens.has (fParams . _Params)
+
 instance SugarExpr (Binder name i o) where
     isUnfinished (BinderExpr x) = isUnfinished x
     isUnfinished BinderLet{} = False
+    isForbiddenInLightLam BinderLet{} = True
+    isForbiddenInLightLam (BinderExpr x) = isForbiddenInLightLam x
 
 instance SugarExpr (Body name i o) where
     isUnfinished BodyHole{} = True
     isUnfinished BodyFragment{} = True
-    isUnfinished (BodyGetVar (GetBinder x)) = Lens.has binderVarRefUnfinished x
+    isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
     isUnfinished _ = False
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()

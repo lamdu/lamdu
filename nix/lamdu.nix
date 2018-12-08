@@ -1,6 +1,6 @@
 { mkDerivation, aeson, aeson-diff, aeson-pretty, AlgoW, base
 , base-compat, base-orphans, base16-bytestring, binary, bytestring
-, Cabal, containers, cryptohash-sha256, data-default, deepseq
+, Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
 , deepseq-generics, directory, edit-distance, ekg-core
 , executable-path, filepath, generic-random, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
@@ -41,7 +41,7 @@ mkDerivation {
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [
     aeson aeson-pretty AlgoW base base-compat base-orphans
-    base16-bytestring binary bytestring containers cryptohash-sha256
+    base16-bytestring binary bytestring constraints containers cryptohash-sha256
     data-default deepseq deepseq-generics directory edit-distance
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus

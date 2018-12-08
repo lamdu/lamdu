@@ -5,9 +5,11 @@ module Lamdu.Sugar.Convert.Binder
     ) where
 
 import           AST (Node, Children(..), overChildren, monoChildren)
+import           AST.Class.Recursive (foldMapRecursive)
 import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
+import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
@@ -242,17 +244,10 @@ useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        any (func &)
-        [ Lens.has (fBody . val . _BinderLet)
-        , Lens.has (fBody . SugarLens.binderPayloads . Lens.filteredByIndex
-            (SugarLens._OfExpr . forbiddenLightLamSubExprs))
-        , not . allParamsUsed paramNames
-        ]
-    where
-        forbiddenLightLamSubExprs :: Lens.Traversal' (Body name i o (Ann a)) ()
-        forbiddenLightLamSubExprs =
-            Lens.failing SugarLens.bodyUnfinished
-            (_BodyLam . lamFunc . fParams . _Params . Lens.united)
+        (foldMapRecursive (Proxy :: Proxy SugarLens.SugarExpr)
+            (Any . SugarLens.isForbiddenInLightLam) (func ^. fBody . val)
+            ^. Lens._Wrapped)
+        || not (allParamsUsed paramNames func)
 
 allParamsUsed :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 allParamsUsed paramNames func =

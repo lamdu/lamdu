@@ -1,10 +1,14 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Node, Ann(..))
+import           AST (Node, Ann(..), Children(..), ChildrenWithConstraint)
+import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
+import           Data.Constraint (Dict, withDict)
+import           Data.Proxy (Proxy(..))
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -108,9 +112,8 @@ make ctx resultId pick holeResultConverted =
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResultConverted ^?
-            SugarLens.binderPayloads .
-            Lens.filteredByIndex (SugarLens._OfExpr . SugarLens.bodyUnfinished) .
-            Sugar.plEntityId <&> WidgetIds.fromEntityId
+            unfinishedPayloads . Sugar.plEntityId
+            <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of
             Nothing ->
@@ -123,3 +126,15 @@ make ctx resultId pick holeResultConverted =
                 { Menu._pickDest = innerEntryPoint
                 , Menu._pickMNextEntry = Just innerEntryPoint
                 }
+
+unfinishedPayloads ::
+    forall t a.
+    SugarLens.SugarExpr t =>
+    Traversal' (Node (Ann a) t) a
+unfinishedPayloads f (Ann a x)
+    | SugarLens.isUnfinished x = f a <&> (`Ann` x)
+    | otherwise =
+        withDict
+        (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarLens.SugarExpr))
+        (children (Proxy :: Proxy SugarLens.SugarExpr) (unfinishedPayloads f) x)
+        <&> Ann a
