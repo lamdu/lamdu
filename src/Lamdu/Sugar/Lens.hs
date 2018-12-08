@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables, FlexibleInstances, KindSignatures #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , PayloadOf(..), _OfExpr
@@ -32,12 +32,17 @@ childPayloads :: ChildrenWithConstraint expr Children =>
 childPayloads f =
     children (Proxy :: Proxy Children) (ann f)
 
-class SugarExpr t where
-    isUnfinished :: t (Ann a) -> Bool
+class SugarExpr (t :: (* -> *) -> *) where
+    isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
-instance SugarExpr (Const a)
+instance SugarExpr (Const (NullaryVal name i o))
+instance SugarExpr (Const (GetVar name o))
+
 instance SugarExpr (Else name i o)
+
+instance SugarExpr (Const (BinderVarRef name o)) where
+    isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
 
 instance SugarExpr (AssignmentBody name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
@@ -51,9 +56,6 @@ instance SugarExpr (Body name i o) where
     isUnfinished BodyHole{} = True
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = Lens.has binderVarRefUnfinished x
-    isUnfinished (BodyLabeledApply x) =
-        -- TODO: shouldn't it actually be the function within that is considered unfinished?
-        Lens.has (aFunc . val . Lens._Wrapped . binderVarRefUnfinished) x
     isUnfinished _ = False
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
