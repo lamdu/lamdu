@@ -3,8 +3,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Node)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Node, Ann(..))
 import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -109,8 +108,9 @@ make ctx resultId pick holeResultConverted =
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResultConverted ^?
-            Lens.filtered (SugarLens.isUnfinished . (^. val)) .
-            ann . Sugar.plEntityId <&> WidgetIds.fromEntityId
+            SugarLens.binderPayloads .
+            Lens.filteredByIndex (SugarLens._OfExpr . SugarLens.bodyUnfinished) .
+            Sugar.plEntityId <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of
             Nothing ->
