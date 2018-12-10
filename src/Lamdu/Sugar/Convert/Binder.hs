@@ -4,10 +4,12 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
-import           AST (Node, Children(..), overChildren, monoChildren)
-import           AST.Class.Recursive (foldMapRecursive)
+import           AST (Node, Children(..), ChildrenWithConstraint, overChildren, monoChildren)
+import           AST.Class.Recursive (Recursive(..), foldMapRecursive)
 import           AST.Functor.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
+import           Data.Constraint
+import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
@@ -244,18 +246,48 @@ useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        (foldMapRecursive (Proxy :: Proxy (SugarLens.SugarExpr name))
+        (foldMapRecursive (Proxy :: Proxy SugarLens.SugarExpr)
             (Any . SugarLens.isForbiddenInLightLam) (func ^. fBody . val)
             ^. Lens._Wrapped)
         || not (allParamsUsed paramNames func)
+
+class GetParam (t :: (* -> *) -> *) where
+    getParam :: t f -> Maybe InternalName
+    getParam _ = Nothing
+
+    getParamRecursive :: Dict (ChildrenWithConstraint t GetParam)
+    default getParamRecursive ::
+        ChildrenWithConstraint t GetParam =>
+        Dict (ChildrenWithConstraint t GetParam)
+    getParamRecursive = Dict
+
+instance Recursive GetParam where
+    recursive _ _ = Sub getParamRecursive
+
+instance GetParam (Const (BinderVarRef InternalName o)) where
+instance GetParam (Const (NullaryVal InternalName i o))
+instance GetParam (Else InternalName i o)
+instance GetParam (Function InternalName i o) where
+
+instance GetParam (Const (GetVar InternalName o)) where
+    getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
+
+instance GetParam (AssignmentBody InternalName i o) where
+    getParam x = x ^? _BodyPlain . apBody >>= getParam
+
+instance GetParam (Binder InternalName i o) where
+    getParam x = x ^? _BinderExpr >>= getParam
+
+instance GetParam (Body InternalName i o) where
+    getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 allParamsUsed :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            foldMapRecursive (Proxy :: Proxy (SugarLens.SugarExpr name))
-            ((^. Lens._Just . Lens.to Set.singleton) . SugarLens.getParam) func
+            foldMapRecursive (Proxy :: Proxy GetParam)
+            ((^. Lens._Just . Lens.to Set.singleton) . getParam) func
 
 class MarkLightParams (t :: (* -> *) -> *) where
     markLightParams :: Set InternalName -> t (Ann a) -> t (Ann a)

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , childPayloads
@@ -31,55 +31,47 @@ childPayloads :: ChildrenWithConstraint expr Children =>
 childPayloads f =
     children (Proxy :: Proxy Children) (ann f)
 
-class SugarExpr name (t :: (* -> *) -> *) | t -> name where
+class SugarExpr (t :: (* -> *) -> *) where
     isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
     isForbiddenInLightLam :: t f -> Bool
     isForbiddenInLightLam = isUnfinished
 
-    getParam :: t f -> Maybe name
-    getParam _ = Nothing
-
-    sugarExprRecursive :: Dict (ChildrenWithConstraint t (SugarExpr name))
+    sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarExpr)
     default sugarExprRecursive ::
-        ChildrenWithConstraint t (SugarExpr name) =>
-        Dict (ChildrenWithConstraint t (SugarExpr name))
+        ChildrenWithConstraint t SugarExpr =>
+        Dict (ChildrenWithConstraint t SugarExpr)
     sugarExprRecursive = Dict
 
-instance Recursive (SugarExpr name) where
+instance Recursive SugarExpr where
     recursive _ _ = Sub sugarExprRecursive
 
-instance SugarExpr name (Const (NullaryVal name i o))
-instance SugarExpr name (Else name i o)
+instance SugarExpr (Const (GetVar name o))
+instance SugarExpr (Const (NullaryVal name i o))
+instance SugarExpr (Else name i o)
 
-instance SugarExpr name (Const (GetVar name o)) where
-    getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
-
-instance SugarExpr name (Const (BinderVarRef name o)) where
+instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
 
-instance SugarExpr name (AssignmentBody name i o) where
+instance SugarExpr (AssignmentBody name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
-    getParam x = x ^? _BodyPlain . apBody >>= getParam
 
-instance SugarExpr name (Function name i o) where
+instance SugarExpr (Function name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
 
-instance SugarExpr name (Binder name i o) where
+instance SugarExpr (Binder name i o) where
     isUnfinished (BinderExpr x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
     isForbiddenInLightLam (BinderExpr x) = isForbiddenInLightLam x
-    getParam x = x ^? _BinderExpr >>= getParam
 
-instance SugarExpr name (Body name i o) where
+instance SugarExpr (Body name i o) where
     isUnfinished BodyHole{} = True
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
     isUnfinished _ = False
-    getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
