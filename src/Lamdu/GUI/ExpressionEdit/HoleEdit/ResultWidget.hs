@@ -131,10 +131,13 @@ unfinishedPayloads ::
     forall name t a.
     SugarLens.SugarExpr name t =>
     Traversal' (Node (Ann a) t) a
-unfinishedPayloads f (Ann a x)
-    | SugarLens.isUnfinished x = f a <&> (`Ann` x)
-    | otherwise =
-        withDict
-        (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t (SugarLens.SugarExpr name)))
-        (children (Proxy :: Proxy (SugarLens.SugarExpr name)) (unfinishedPayloads f) x)
-        <&> Ann a
+unfinishedPayloads f (Ann a x) =
+    flip Ann
+    <$>
+    withDict
+    (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t (SugarLens.SugarExpr name)))
+    (children (Proxy :: Proxy (SugarLens.SugarExpr name)) (unfinishedPayloads f) x)
+    <*>
+    ( if SugarLens.isUnfinished x
+        then f a else pure a
+    )
