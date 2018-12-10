@@ -101,7 +101,7 @@ make ctx resultId pick holeResultConverted =
         , Widget._pAction = pickResult <$ pick
         , Widget._pTextRemainder =
             holeResultConverted ^.
-            SugarLens.binderResultExpr . Lens.asIndex . SugarLens._OfExpr .
+            SugarLens.binderResultExpr . Lens.asIndex .
             Lens.to (getSearchStringRemainder ctx)
         }
     , Menu._rWidget = widget

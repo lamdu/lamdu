@@ -1,7 +1,6 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses, FunctionalDependencies #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
-    , PayloadOf(..), _OfExpr
     , childPayloads
     , bodyUnfinished
     , defSchemes
@@ -88,16 +87,6 @@ binderVarRefUnfinished =
 
 -- TODO: Get rid of most of these.
 -- First step is replacing their usages with `AST.children`
-
-data PayloadOf name i o
-    = OfExpr (Body name i o (Ann ()))
-    | OfElseIf (ElseIfContent name i o (Ann ()))
-    | OfLet (Let name i o (Ann ()))
-    | OfAssignFunction (Function name i o (Ann ()))
-    | OfLabeledApplyFunc (BinderVarRef name o)
-    | OfRelayedArg (GetVar name o)
-    | OfNullaryVal (NullaryVal name i o)
-Lens.makePrisms ''PayloadOf
 
 labeledApplyChildren ::
     Applicative f =>
@@ -193,11 +182,11 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderResultExpr :: Lens.IndexedLens' (PayloadOf name i o) (Node (Ann a) (Binder name i o)) a
+binderResultExpr :: Lens.IndexedLens' (Body name i o (Ann ())) (Node (Ann a) (Binder name i o)) a
 binderResultExpr f (Ann pl x) =
     case x of
     BinderExpr e ->
-        Lens.indexed f (OfExpr (stripAnnotations e)) pl
+        Lens.indexed f (stripAnnotations e) pl
         <&> (`Ann` x)
     BinderLet l ->
         lBody (binderResultExpr f) l

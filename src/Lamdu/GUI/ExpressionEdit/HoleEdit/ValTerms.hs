@@ -89,7 +89,7 @@ ofBody =
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
     BodyToNom (Nominal tid b) ->
         ofName (tid ^. tidName)
-        ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . SugarLens._OfExpr . Lens.to ofBody
+        ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to ofBody
     BodyFromNom (Nominal tid _) ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an
@@ -149,7 +149,7 @@ getSearchStringRemainder ctx holeResult
         fragmentExpr = _BodyFragment . fExpr
         isA x = any (`Lens.has` holeResult) [x, fragmentExpr . val . x]
 
-verifyInjectSuffix :: Text -> SugarLens.PayloadOf name i o -> Bool
+verifyInjectSuffix :: Text -> Body name i o f -> Bool
 verifyInjectSuffix searchTerm x =
     case suffix of
     Just ':' | Lens.has (injectContent . _InjectNullary) x -> False
@@ -157,7 +157,7 @@ verifyInjectSuffix searchTerm x =
     _ -> True
     where
         suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
-        injectContent = SugarLens._OfExpr . _BodyInject . iContent
+        injectContent = _BodyInject . iContent
 
 -- | Returns the part of the search term that is DEFINITELY part of
 -- it. Some of the stripped suffix may be part of the search term,
