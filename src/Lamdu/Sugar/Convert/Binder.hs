@@ -244,7 +244,7 @@ useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        (foldMapRecursive (Proxy :: Proxy SugarLens.SugarExpr)
+        (foldMapRecursive (Proxy :: Proxy (SugarLens.SugarExpr name))
             (Any . SugarLens.isForbiddenInLightLam) (func ^. fBody . val)
             ^. Lens._Wrapped)
         || not (allParamsUsed paramNames func)
@@ -254,9 +254,8 @@ allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            func ^.. fBody . SugarLens.binderPayloads . Lens.asIndex .
-            SugarLens._OfExpr . _BodyGetVar . _GetParam . pNameRef . nrName
-            & Set.fromList
+            foldMapRecursive (Proxy :: Proxy (SugarLens.SugarExpr name))
+            ((^. Lens._Just . Lens.to Set.singleton) . SugarLens.getParam) func
 
 class MarkLightParams (t :: (* -> *) -> *) where
     markLightParams :: Set InternalName -> t (Ann a) -> t (Ann a)

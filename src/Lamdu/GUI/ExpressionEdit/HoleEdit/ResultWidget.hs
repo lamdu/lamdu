@@ -128,13 +128,13 @@ make ctx resultId pick holeResultConverted =
                 }
 
 unfinishedPayloads ::
-    forall t a.
-    SugarLens.SugarExpr t =>
+    forall name t a.
+    SugarLens.SugarExpr name t =>
     Traversal' (Node (Ann a) t) a
 unfinishedPayloads f (Ann a x)
     | SugarLens.isUnfinished x = f a <&> (`Ann` x)
     | otherwise =
         withDict
-        (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarLens.SugarExpr))
-        (children (Proxy :: Proxy SugarLens.SugarExpr) (unfinishedPayloads f) x)
+        (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t (SugarLens.SugarExpr name)))
+        (children (Proxy :: Proxy (SugarLens.SugarExpr name)) (unfinishedPayloads f) x)
         <&> Ann a

@@ -1,9 +1,8 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, TemplateHaskell, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses, FunctionalDependencies #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , PayloadOf(..), _OfExpr
     , childPayloads
-    , binderPayloads
     , bodyUnfinished
     , defSchemes
     , assignmentBodyAddFirstParam
@@ -33,47 +32,55 @@ childPayloads :: ChildrenWithConstraint expr Children =>
 childPayloads f =
     children (Proxy :: Proxy Children) (ann f)
 
-class SugarExpr (t :: (* -> *) -> *) where
+class SugarExpr name (t :: (* -> *) -> *) | t -> name where
     isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
     isForbiddenInLightLam :: t f -> Bool
     isForbiddenInLightLam = isUnfinished
 
-    sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarExpr)
+    getParam :: t f -> Maybe name
+    getParam _ = Nothing
+
+    sugarExprRecursive :: Dict (ChildrenWithConstraint t (SugarExpr name))
     default sugarExprRecursive ::
-        ChildrenWithConstraint t SugarExpr =>
-        Dict (ChildrenWithConstraint t SugarExpr)
+        ChildrenWithConstraint t (SugarExpr name) =>
+        Dict (ChildrenWithConstraint t (SugarExpr name))
     sugarExprRecursive = Dict
 
-instance Recursive SugarExpr where
+instance Recursive (SugarExpr name) where
     recursive _ _ = Sub sugarExprRecursive
 
-instance SugarExpr (Const (NullaryVal name i o))
-instance SugarExpr (Const (GetVar name o))
-instance SugarExpr (Else name i o)
+instance SugarExpr name (Const (NullaryVal name i o))
+instance SugarExpr name (Else name i o)
 
-instance SugarExpr (Const (BinderVarRef name o)) where
+instance SugarExpr name (Const (GetVar name o)) where
+    getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
+
+instance SugarExpr name (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
 
-instance SugarExpr (AssignmentBody name i o) where
+instance SugarExpr name (AssignmentBody name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
+    getParam x = x ^? _BodyPlain . apBody >>= getParam
 
-instance SugarExpr (Function name i o) where
+instance SugarExpr name (Function name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
 
-instance SugarExpr (Binder name i o) where
+instance SugarExpr name (Binder name i o) where
     isUnfinished (BinderExpr x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
     isForbiddenInLightLam (BinderExpr x) = isForbiddenInLightLam x
+    getParam x = x ^? _BinderExpr >>= getParam
 
-instance SugarExpr (Body name i o) where
+instance SugarExpr name (Body name i o) where
     isUnfinished BodyHole{} = True
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
     isUnfinished _ = False
+    getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
@@ -91,16 +98,6 @@ data PayloadOf name i o
     | OfRelayedArg (GetVar name o)
     | OfNullaryVal (NullaryVal name i o)
 Lens.makePrisms ''PayloadOf
-
-letChildren ::
-    Applicative f =>
-    (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
-    (Node n (AssignmentBody name i o) -> f (Node m (AssignmentBody name i o))) ->
-    Let name i o n -> f (Let name i o m)
-letChildren b a x =
-    (\v bod -> x{_lValue=v, _lBody=bod})
-    <$> a (x ^. lValue)
-    <*> b (x ^. lBody)
 
 labeledApplyChildren ::
     Applicative f =>
@@ -172,134 +169,6 @@ bodyChildren n l r e b f =
 
 stripAnnotations :: ChildrenRecursive expr => expr (Ann a) -> expr (Ann ())
 stripAnnotations = hoistBody (ann .~ ())
-
-binderIndex :: Binder name i o (Ann a) -> PayloadOf name i o
-binderIndex (BinderLet x) = stripAnnotations x & OfLet
-binderIndex (BinderExpr x) = stripAnnotations x & OfExpr
-
-elseIndex :: Else name i o (Ann a) -> PayloadOf name i o
-elseIndex (ElseIf x) = x & eiContent %~ stripAnnotations & OfElseIf
-elseIndex (SimpleElse x) = stripAnnotations x & OfExpr
-
-assignmentBodyIndex :: AssignmentBody name i o (Ann a) -> PayloadOf name i o
-assignmentBodyIndex (BodyFunction x) = stripAnnotations x & OfAssignFunction
-assignmentBodyIndex (BodyPlain x) = binderIndex (x ^. apBody)
-
-leafNodePayload ::
-    (l -> p) ->
-    Lens.IndexedLens p (LeafNode (Ann a) l) (LeafNode (Ann b) l) a b
-leafNodePayload c f (Ann pl (Const x)) =
-    Lens.indexed f (c x) pl <&> (`Ann` Const x)
-
-parentNodePayloads ::
-    Lens.AnIndexedTraversal i (e (Ann a)) (e (Ann b)) a b ->
-    (e (Ann a) -> i) ->
-    Lens.IndexedTraversal i
-    (Node (Ann a) e)
-    (Node (Ann b) e)
-    a b
-parentNodePayloads b i f (Ann pl x) =
-    flip Ann
-    <$> Lens.cloneIndexedTraversal b f x
-    <*> Lens.indexed f (i x) pl
-
-binderPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Node (Ann a) (Binder name i o))
-    (Node (Ann b) (Binder name i o))
-    a b
-binderPayloads = parentNodePayloads binderBodyPayloads binderIndex
-
-assignmentBodyPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (AssignmentBody name i o (Ann a))
-    (AssignmentBody name i o (Ann b))
-    a b
-assignmentBodyPayloads f (BodyFunction x) =
-    (fBody . binderPayloads) f x <&> BodyFunction
-assignmentBodyPayloads f (BodyPlain x) =
-    (apBody . binderBodyPayloads) f x <&> BodyPlain
-
-assignmentPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Assignment name i o a)
-    (Assignment name i o b)
-    a b
-assignmentPayloads = parentNodePayloads assignmentBodyPayloads assignmentBodyIndex
-
-letPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Let name i o (Ann a))
-    (Let name i o (Ann b))
-    a b
-letPayloads f =
-    letChildren (binderPayloads f) (assignmentPayloads f)
-
-binderBodyPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Binder name i o (Ann a))
-    (Binder name i o (Ann b))
-    a b
-binderBodyPayloads f (BinderExpr x) = bodyPayloads f x <&> BinderExpr
-binderBodyPayloads f (BinderLet x) = letPayloads f x <&> BinderLet
-
-elseIfContentPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (ElseIfContent name i o (Ann a))
-    (ElseIfContent name i o (Ann b))
-    a b
-elseIfContentPayloads f =
-    eiContent (ifElseChildren (elsePayloads f) (exprPayloads f))
-
-elseBodyPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Else name i o (Ann a))
-    (Else name i o (Ann b))
-    a b
-elseBodyPayloads f (SimpleElse x) = bodyPayloads f x <&> SimpleElse
-elseBodyPayloads f (ElseIf x) = elseIfContentPayloads f x <&> ElseIf
-
-exprPayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Expression name i o a)
-    (Expression name i o b)
-    a b
-exprPayloads = parentNodePayloads bodyPayloads (OfExpr . stripAnnotations)
-
-elsePayloads ::
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Node (Ann a) (Else name i o))
-    (Node (Ann b) (Else name i o))
-    a b
-elsePayloads = parentNodePayloads elseBodyPayloads elseIndex
-
-bodyPayloads ::
-    forall name i o a b.
-    Lens.IndexedTraversal (PayloadOf name i o)
-    (Body name i o (Ann a))
-    (Body name i o (Ann b))
-    a b
-bodyPayloads f =
-    bodyChildren
-    (leafNodePayload OfNullaryVal f)
-    (Lens.cloneIndexedLens labeledFuncPayloads f)
-    (Lens.cloneIndexedLens relayedPayloads f)
-    (elsePayloads f)
-    (binderPayloads f)
-    (exprPayloads f)
-    where
-        labeledFuncPayloads ::
-            Lens.AnIndexedLens (PayloadOf name i o)
-            (LeafNode (Ann a) (BinderVarRef name o))
-            (LeafNode (Ann b) (BinderVarRef name o))
-            a b
-        labeledFuncPayloads = leafNodePayload OfLabeledApplyFunc
-        relayedPayloads ::
-            Lens.AnIndexedLens (PayloadOf name i o)
-            (LeafNode (Ann a) (GetVar name o))
-            (LeafNode (Ann b) (GetVar name o))
-            a b
-        relayedPayloads = leafNodePayload OfRelayedArg
 
 bodyUnfinished :: Lens.Traversal' (Body name i o (Ann a)) ()
 bodyUnfinished =

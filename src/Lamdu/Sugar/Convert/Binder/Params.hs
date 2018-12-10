@@ -303,9 +303,9 @@ changeGetFieldTags ::
     Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValP m) -> T m ()
 changeGetFieldTags param prevTag chosenTag x =
     case x ^. val of
-    V.BGetField (V.GetField getVar@(Ann _ (V.BLeaf (V.LVar v))) t)
+    V.BGetField (V.GetField (Ann a (V.BLeaf (V.LVar v))) t)
         | v == param && t == prevTag ->
-            V.GetField (getVar ^. ann . Property.pVal) chosenTag & V.BGetField
+            V.GetField (a ^. Property.pVal) chosenTag & V.BGetField
             & Transaction.writeIRef (x ^. ann . Property.pVal)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
