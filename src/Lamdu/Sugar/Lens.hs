@@ -49,7 +49,10 @@ instance Recursive SugarExpr where
 
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (NullaryVal name i o))
-instance SugarExpr (Else name i o)
+
+instance SugarExpr (Else name i o) where
+    isUnfinished (SimpleElse x) = isUnfinished x
+    isUnfinished ElseIf{} = False
 
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
