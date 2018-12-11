@@ -1,6 +1,7 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
+    , HasBinderParams(..)
     , childPayloads
     , bodyUnfinished
     , defSchemes
@@ -9,13 +10,12 @@ module Lamdu.Sugar.Lens
     , binderResultExpr
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
-    , assignmentSubExprParams
-    , binderSubExprParams
+    , onSubExprParams
     , paramsAnnotations
     , stripAnnotations
     ) where
 
-import           AST (Node, LeafNode, Children(..), ChildrenWithConstraint, monoChildren)
+import           AST (Node, Children(..), ChildrenWithConstraint, overChildren)
 import           AST.Class.Recursive (Recursive(..), ChildrenRecursive, hoistBody)
 import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
@@ -76,77 +76,6 @@ instance SugarExpr (Body name i o) where
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
-
--- TODO: Get rid of most of these.
--- First step is replacing their usages with `AST.children`
-
-labeledApplyChildren ::
-    Applicative f =>
-    (LeafNode n (BinderVarRef name o) -> f (LeafNode m (BinderVarRef name o))) ->
-    (LeafNode n (GetVar name o) -> f (LeafNode m (GetVar name o))) ->
-    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
-    LabeledApply name i o n -> f (LabeledApply name i o m)
-labeledApplyChildren l r e (LabeledApply func special annotated relayed) =
-    uncurry LabeledApply
-    <$> funcAndSpecial
-    <*> (traverse . traverse) e annotated
-    <*> traverse r relayed
-    where
-        funcAndSpecial =
-            case special of
-            Infix left right ->
-                -- Correct order in infix is operator in the middle.
-                (\l0 f0 r0 -> (f0, Infix l0 r0))
-                <$> e left
-                <*> l func
-                <*> e right
-            _ ->
-                (,)
-                <$> l func
-                <*> traverse e special
-
-ifElseChildren ::
-    Applicative f =>
-    (Node n (Else name i o) -> f (Node m (Else name i o))) ->
-    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
-    IfElse name i o n -> f (IfElse name i o m)
-ifElseChildren onElse onExpr (IfElse if_ then_ else_) =
-    IfElse <$> onExpr if_ <*> onExpr then_ <*> onElse else_
-
-injectContentChildren ::
-    Applicative f =>
-    (LeafNode n (NullaryVal name i o) -> f (LeafNode m (NullaryVal name i o))) ->
-    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
-    InjectContent name i o n -> f (InjectContent name i o m)
-injectContentChildren _ e (InjectVal x) = e x <&> InjectVal
-injectContentChildren n _ (InjectNullary x) = n x <&> InjectNullary
-
-bodyChildren ::
-    Applicative f =>
-    (LeafNode n (NullaryVal name i o) -> f (LeafNode m (NullaryVal name i o))) ->
-    (LeafNode n (BinderVarRef name o) -> f (LeafNode m (BinderVarRef name o))) ->
-    (LeafNode n (GetVar name o) -> f (LeafNode m (GetVar name o))) ->
-    (Node n (Else name i o) -> f (Node m (Else name i o))) ->
-    (Node n (Binder name i o) -> f (Node m (Binder name i o))) ->
-    (Node n (Body name i o) -> f (Node m (Body name i o))) ->
-    Body name i o n -> f (Body name i o m)
-bodyChildren n l r e b f =
-    \case
-    BodyPlaceHolder -> pure BodyPlaceHolder
-    BodyLiteral x -> BodyLiteral x & pure
-    BodyGetVar  x -> BodyGetVar  x & pure
-    BodyHole    x -> BodyHole    x & pure
-    BodyLam          x -> (lamFunc . fBody) b x <&> BodyLam
-    BodySimpleApply  x -> monoChildren f x <&> BodySimpleApply
-    BodyLabeledApply x -> labeledApplyChildren l r f x <&> BodyLabeledApply
-    BodyRecord       x -> traverse f x <&> BodyRecord
-    BodyGetField     x -> traverse f x <&> BodyGetField
-    BodyCase         x -> traverse f x <&> BodyCase
-    BodyIfElse       x -> ifElseChildren e f x <&> BodyIfElse
-    BodyInject       x -> iContent (injectContentChildren n f) x <&> BodyInject
-    BodyFromNom      x -> traverse f x <&> BodyFromNom
-    BodyFragment     x -> fExpr f x <&> BodyFragment
-    BodyToNom        x -> traverse b x <&> BodyToNom
 
 stripAnnotations :: ChildrenRecursive expr => expr (Ann a) -> expr (Ann ())
 stripAnnotations = hoistBody (ann .~ ())
@@ -222,44 +151,48 @@ paramsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
 paramsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
 paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 
-funcSubExprParams :: Lens.Traversal' (Function name i o (Ann a)) (BinderParams name i o)
-funcSubExprParams f x =
-    (\p b -> x{_fParams = p, _fBody = b})
-    <$> f (x ^. fParams)
-    <*> binderSubExprParams f (x ^. fBody)
+class HasBinderParams p (expr :: (* -> *) -> *) where
+    binderParams :: Lens.Setter' (expr f) p
 
-elseSubExprParams :: Lens.Traversal' (Else name i o (Ann a)) (BinderParams name i o)
-elseSubExprParams f (SimpleElse x) = bodySubExprParams f x <&> SimpleElse
-elseSubExprParams f (ElseIf x) =
-    eiContent
-    (ifElseChildren
-        ((val . elseSubExprParams) f)
-        ((val . bodySubExprParams) f))
-    x <&> ElseIf
+    binderParamsRecursive :: Proxy p -> Dict (ChildrenWithConstraint expr (HasBinderParams p))
+    default binderParamsRecursive ::
+        ChildrenWithConstraint expr (HasBinderParams p) =>
+        Proxy p -> Dict (ChildrenWithConstraint expr (HasBinderParams p))
+    binderParamsRecursive _ = Dict
 
-bodySubExprParams :: Lens.Traversal' (Body name i o (Ann a)) (BinderParams name i o)
-bodySubExprParams f (BodyLam x) = (lamFunc . funcSubExprParams) f x <&> BodyLam
-bodySubExprParams f x =
-    bodyChildren pure pure pure
-    ((val . elseSubExprParams) f)
-    (binderSubExprParams f)
-    ((val . bodySubExprParams) f) x
+instance Recursive (HasBinderParams p) where
+    recursive _ _ = Sub (binderParamsRecursive (Proxy :: Proxy p))
 
-binderBodySubExprParams :: Lens.Traversal' (Binder name i o (Ann a)) (BinderParams name i o)
-binderBodySubExprParams f (BinderExpr x) =
-    bodySubExprParams f x <&> BinderExpr
-binderBodySubExprParams f (BinderLet x) =
-    (\v b -> BinderLet x{_lValue = v, _lBody = b})
-    <$> assignmentSubExprParams f (x ^. lValue)
-    <*> binderSubExprParams f (x ^. lBody)
+instance HasBinderParams (BinderParams name i o) (AssignmentBody name i o) where
+    binderParams f (BodyPlain x) = (apBody . binderParams) f x <&> BodyPlain
+    binderParams f (BodyFunction x) = binderParams f x <&> BodyFunction
 
-binderSubExprParams :: Lens.Traversal' (Node (Ann a) (Binder name i o)) (BinderParams name i o)
-binderSubExprParams = val . binderBodySubExprParams
+instance HasBinderParams (BinderParams name i o) (Binder name i o) where
+    binderParams f (BinderExpr x) = binderParams f x <&> BinderExpr
+    binderParams _ x = pure x
 
-assignmentBodySubExprParams ::
-    Lens.Traversal' (AssignmentBody name i o (Ann a)) (BinderParams name i o)
-assignmentBodySubExprParams f (BodyPlain x) = (apBody . binderBodySubExprParams) f x <&> BodyPlain
-assignmentBodySubExprParams f (BodyFunction x) = funcSubExprParams f x <&> BodyFunction
+instance HasBinderParams (BinderParams name i o) (Body name i o) where
+    binderParams f (BodyLam x) = (lamFunc . binderParams) f x <&> BodyLam
+    binderParams _ x = pure x
 
-assignmentSubExprParams :: Lens.Traversal' (Assignment name i o a) (BinderParams name i o)
-assignmentSubExprParams = val . assignmentBodySubExprParams
+instance HasBinderParams (BinderParams name i o) (Const a) where
+    binderParams _ x = pure x
+
+instance HasBinderParams (BinderParams name i o) (Else name i o) where
+    binderParams f (SimpleElse x) = binderParams f x <&> SimpleElse
+    binderParams _ x = pure x
+
+instance HasBinderParams (BinderParams name i o) (Function name i o) where
+    binderParams = fParams
+
+onSubExprParams ::
+    forall p expr f.
+    (HasBinderParams p expr, Functor f) =>
+    Proxy p -> (p -> p) -> expr f -> expr f
+onSubExprParams p f x =
+    x
+    & binderParams %~ f
+    & overChildren pc (fmap (onSubExprParams p f))
+    \\ recursive pc (Proxy :: Proxy expr)
+    where
+        pc = Proxy :: Proxy (HasBinderParams p)

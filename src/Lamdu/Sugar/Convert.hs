@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
@@ -10,6 +12,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
+import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -101,6 +104,7 @@ trimParamAnnotation Input.Types (AnnotationVal x) =
 trimParamAnnotation Input.Types x = x
 
 convertInferDefExpr ::
+    forall m.
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
     Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
@@ -138,8 +142,10 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
             <&> _DefinitionBodyExpression . deContent %~ markNodeAnnotations
             >>= (_DefinitionBodyExpression . deContent . annotations) (convertPayload annMode)
             & ConvertM.run context
-            <&> _DefinitionBodyExpression . deContent . SugarLens.assignmentSubExprParams .
-                SugarLens.paramsAnnotations %~ trimParamAnnotation annMode
+            <&> _DefinitionBodyExpression . deContent . Lens.mapped %~
+                SugarLens.onSubExprParams
+                (Proxy :: Proxy (BinderParams InternalName (T m) (T m)))
+                (SugarLens.paramsAnnotations %~ trimParamAnnotation annMode)
     where
         cachedInfer = Cache.infer cache
         postProcess = PostProcess.def cachedInfer monitors defI
@@ -166,6 +172,7 @@ convertDefBody cache monitors annMode evalRes cp (Definition.Definition bod defT
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
 
 convertRepl ::
+    forall m.
     (HasCallStack, Monad m) =>
     Cache.Functions -> Debug.Monitors ->
     Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
@@ -207,8 +214,10 @@ convertRepl cache monitors annMode evalRes cp =
             <&> markNodeAnnotations
             >>= annotations (convertPayload annMode)
             & ConvertM.run context
-            <&> SugarLens.binderSubExprParams . SugarLens.paramsAnnotations %~
-                trimParamAnnotation annMode
+            <&> Lens.mapped %~
+                SugarLens.onSubExprParams
+                (Proxy :: Proxy (BinderParams InternalName (T m) (T m)))
+                (SugarLens.paramsAnnotations %~ trimParamAnnotation annMode)
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
         pure Repl

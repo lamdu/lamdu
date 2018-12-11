@@ -8,8 +8,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "syntax-tree";
-    sha256 = "13vwgn4xwh4jb2z10q2fgd7a5dmgzamzpr7fh8c7frkpkz1b2a7m";
-    rev = "5a2027192833dce3979f552cede25b238e865673";
+    sha256 = "0mhac6chy4sal73aashldl335wj3avlqb2l2ldcrfi7kzx4kc3y7";
+    rev = "ea5fb08a022c575c4d44e4ce5012a925c88374b0";
   };
   libraryHaskellDepends = [
     base base-compat binary constraints containers deepseq lens
