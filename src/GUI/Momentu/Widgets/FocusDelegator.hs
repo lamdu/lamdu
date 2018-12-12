@@ -35,7 +35,7 @@ focusChildEventMap config =
     foldMap f
     where
         f childEnter =
-            childEnter Direction.Outside ^. Widget.enterResultEvent
+            childEnter Direction.FromOutside ^. Widget.enterResultEvent
             & E.keyPresses (focusChildKeys config <&> toModKey)
                 (focusChildDoc config)
 
@@ -50,8 +50,8 @@ modifyEntry myId fullChildRect target mChildEnter =
     FocusEntryChild -> maybe parentEnter wrapEnter mChildEnter
     & Just
     where
-        wrapEnter _          Direction.Outside = parentEnterResult
-        wrapEnter enterChild dir               = enterChild dir
+        wrapEnter _          Direction.FromOutside = parentEnterResult
+        wrapEnter enterChild dir                   = enterChild dir
 
         parentEnter = Widget.enterFuncAddVirtualCursor fullChildRect (const parentEnterResult)
         parentEnterResult =

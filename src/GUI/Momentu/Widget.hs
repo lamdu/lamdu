@@ -110,7 +110,7 @@ enterFuncAddVirtualCursor destRect =
             Direction.FromLeft  r -> destRect & Rect.verticalRange   .~ r & Just
             Direction.FromAbove r -> destRect & Rect.horizontalRange .~ r & Just
             Direction.FromBelow r -> destRect & Rect.horizontalRange .~ r & Just
-            Direction.Outside     -> Nothing
+            Direction.FromOutside -> Nothing
             Direction.Point p     -> Rect p 0 & Just
             <&> VirtualCursor
 

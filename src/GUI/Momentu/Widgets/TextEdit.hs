@@ -157,8 +157,8 @@ enterFromDirection sz sty str myId dir =
     where
         cursor =
             case dir of
-            Direction.Outside -> Text.length str
             Direction.Point x -> Rect x 0 & fromRect
+            Direction.FromOutside -> Text.length str
             Direction.FromLeft  r -> Rect 0 0    & Rect.verticalRange   .~ r & fromRect
             Direction.FromRight r -> edgeRect _1 & Rect.verticalRange   .~ r & fromRect
             Direction.FromAbove r -> Rect 0 0    & Rect.horizontalRange .~ r & fromRect

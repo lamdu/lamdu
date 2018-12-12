@@ -268,8 +268,8 @@ combineMEnters children
                 dirRect =
                     Rect 0 0 &
                     case dir of
-                    Outside -> id
                     Point x -> Rect.topLeft .~ x
+                    FromOutside -> id
                     FromAbove x -> Rect.horizontalRange .~ x
                     FromBelow x -> Rect.horizontalRange .~ x
                     FromLeft  x -> Rect.verticalRange .~ x
@@ -277,7 +277,7 @@ combineMEnters children
                 edge =
                     case dir of
                     Point{} -> Vector2 0 0 -- Check all widgets for mouse movements (for hovers)
-                    Outside -> Vector2 0 0
+                    FromOutside -> Vector2 0 0
                     FromAbove{} -> Vector2 0 (-1)
                     FromBelow{} -> Vector2 0 1
                     FromLeft{}  -> Vector2 (-1) 0

@@ -221,7 +221,7 @@ closer axis r r0 r1
 chooseEnter ::
     Orientation -> FocusDirection ->
     EnterResult a -> EnterResult a -> EnterResult a
-chooseEnter _          Direction.Outside   r0 _  = r0 -- left-biased
+chooseEnter _          Direction.FromOutside r0 _  = r0 -- left-biased
 chooseEnter _          (Direction.Point p) r0 r1 = closerGeometric p r0 r1
 chooseEnter Horizontal Direction.FromLeft{}  r0 _  = r0
 chooseEnter Vertical   Direction.FromAbove{} r0 _  = r0
