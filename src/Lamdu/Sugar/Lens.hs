@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts, TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , HasBinderParams(..)
@@ -169,7 +169,7 @@ instance HasBinderParams (BinderParams name i o) (Body name i o) where
 instance Recursive (HasBinderParams (BinderParams name i o)) (Body name i o)
 
 instance HasBinderParams (BinderParams name i o) (Const a) where
-    binderParams _ x = pure x
+    binderParams _ = pure
 
 instance HasBinderParams (BinderParams name i o) (Else name i o) where
     binderParams f (SimpleElse x) = binderParams f x <&> SimpleElse
