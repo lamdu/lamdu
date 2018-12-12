@@ -1,4 +1,4 @@
-module GUI.Momentu.Direction
+module GUI.Momentu.FocusDirection
     ( FocusDirection(..), translate, scale
     ) where
 

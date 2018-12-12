@@ -14,7 +14,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Direction
+import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)

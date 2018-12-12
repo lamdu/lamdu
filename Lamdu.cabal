@@ -181,7 +181,7 @@ Library
                   , GUI.Momentu.Animation
                   , GUI.Momentu.Animation.Engine
                   , GUI.Momentu.Animation.Id
-                  , GUI.Momentu.Direction
+                  , GUI.Momentu.FocusDirection
                   , GUI.Momentu.Draw
                   , GUI.Momentu.Draw.FPS
                   , GUI.Momentu.Element

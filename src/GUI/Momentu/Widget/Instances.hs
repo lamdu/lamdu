@@ -17,8 +17,8 @@ import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (FocusDirection)
-import qualified GUI.Momentu.Direction as Direction
+import           GUI.Momentu.FocusDirection (FocusDirection)
+import qualified GUI.Momentu.FocusDirection as Direction
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)

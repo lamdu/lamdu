@@ -22,8 +22,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (FocusDirection)
-import qualified GUI.Momentu.Direction as Direction
+import           GUI.Momentu.FocusDirection (FocusDirection)
+import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E

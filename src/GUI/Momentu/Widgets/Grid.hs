@@ -13,7 +13,7 @@ import           Data.Maybe.Extended (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
-import           GUI.Momentu.Direction (FocusDirection(..))
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
