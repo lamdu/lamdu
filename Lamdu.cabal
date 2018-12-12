@@ -181,11 +181,12 @@ Library
                   , GUI.Momentu.Animation
                   , GUI.Momentu.Animation.Engine
                   , GUI.Momentu.Animation.Id
-                  , GUI.Momentu.FocusDirection
+                  , GUI.Momentu.Direction
                   , GUI.Momentu.Draw
                   , GUI.Momentu.Draw.FPS
                   , GUI.Momentu.Element
                   , GUI.Momentu.EventMap
+                  , GUI.Momentu.FocusDirection
                   , GUI.Momentu.Font
                   , GUI.Momentu.Glue
                   , GUI.Momentu.Hover

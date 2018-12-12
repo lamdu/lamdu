@@ -2,19 +2,16 @@
 module GUI.Momentu.Glue
     ( Glue(..), GluesTo
     , (/|/), (/-/)
-    , Orientation(..)
     , box, hbox, vbox
     , glueH
     ) where
 
 import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Direction (Orientation(..))
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 
 import           Lamdu.Prelude
-
-data Orientation = Horizontal | Vertical
-    deriving (Eq, Show, Ord, Generic)
 
 class (Glued b a ~ Glued a b) => Glue a b where
     type Glued a b

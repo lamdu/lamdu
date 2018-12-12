@@ -27,6 +27,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Direction (Orientation(..))
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -254,7 +255,7 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
                     anchored
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
-                        (Hover.hoverBesideOptionsAxis Glue.Horizontal
+                        (Hover.hoverBesideOptionsAxis Horizontal
                          (submenus <&> hover <&> Hover.sequenceHover) anchored <&> (^. Align.tValue))
                         & pure
                 else pure base

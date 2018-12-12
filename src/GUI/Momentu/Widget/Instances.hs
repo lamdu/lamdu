@@ -17,13 +17,14 @@ import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.FocusDirection (FocusDirection)
-import qualified GUI.Momentu.FocusDirection as Direction
+import           GUI.Momentu.Direction (Orientation(..))
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
-import           GUI.Momentu.Glue (Glue(..), Orientation(..))
+import           GUI.Momentu.FocusDirection (FocusDirection)
+import qualified GUI.Momentu.FocusDirection as Direction
+import           GUI.Momentu.Glue (Glue(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey

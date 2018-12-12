@@ -9,9 +9,9 @@ module GUI.Momentu.Widgets.Choice
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
+import           GUI.Momentu.Direction (Orientation(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue (Orientation(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Hover (Hover, AnchoredWidget)
 import qualified GUI.Momentu.Hover as Hover

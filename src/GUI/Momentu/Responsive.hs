@@ -49,9 +49,10 @@ import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Direction (Orientation(..))
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), (/-/), Orientation(..))
+import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), (/-/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
@@ -75,7 +76,9 @@ data Responsive a = Responsive
     } deriving Functor
 Lens.makeLenses ''Responsive
 
-adjustNarrowLayoutParams :: SizedElement v => Orientation -> v -> NarrowLayoutParams -> NarrowLayoutParams
+adjustNarrowLayoutParams ::
+    SizedElement v =>
+    Orientation -> v -> NarrowLayoutParams -> NarrowLayoutParams
 adjustNarrowLayoutParams Vertical _ = layoutNeedDisambiguation .~ True
 adjustNarrowLayoutParams Horizontal v = layoutWidth -~ v ^. Element.size . _1
 

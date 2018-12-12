@@ -10,9 +10,10 @@ module GUI.Momentu.Align
 
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue (Glue(..), GluesTo, Orientation)
+import           GUI.Momentu.Glue (Glue(..), GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
@@ -110,8 +111,8 @@ instance (SizedElement (Widget a), Glue (Widget a) b) =>
         WithTextPos
         { _textTop =
             case o of
-            Glue.Vertical -> y + a ^. Element.height
-            Glue.Horizontal -> y
+            Dir.Vertical -> y + a ^. Element.height
+            Dir.Horizontal -> y
         , _tValue = glue o a b
         }
 
@@ -125,14 +126,14 @@ instance Glue View a => Glue View (WithTextPos a) where
         WithTextPos
         { _textTop =
             case o of
-            Glue.Vertical -> y + a ^. Element.height
-            Glue.Horizontal -> y
+            Dir.Vertical -> y + a ^. Element.height
+            Dir.Horizontal -> y
         , _tValue = glue o a b
         }
 
 glueHelper ::
     (Glue a b, Element b, SizedElement a) =>
-    ((Vector2 R, Vector2 R) -> Vector2 R) -> Orientation ->
+    ((Vector2 R, Vector2 R) -> Vector2 R) -> Dir.Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, Glued a b)
 glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     ( chooseAlign
@@ -143,17 +144,13 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     )
     where
         l :: Lens' (Vector2 a) a
-        l = axis orientation
+        l = Dir.axis orientation
 
         -- Duplicates the logic from underlying glue:
         bGlueTranslation = 0 & l .~ aw ^. Element.size . l
         aToB = bAbsAlign - aAbsAlign & l .~ 0
         bToA = -aToB
         syncAlign move = Element.assymetricPad (max 0 move) 0
-
-axis :: (Field1 s s a a, Field2 s s a a, Functor f) => Orientation -> (a -> f a) -> s -> f s
-axis Glue.Horizontal = _1
-axis Glue.Vertical = _2
 
 {-# INLINE asTuple #-}
 asTuple :: Lens.Iso (Aligned a) (Aligned b) (Vector2 R, a) (Vector2 R, b)
@@ -177,12 +174,12 @@ absAligned =
             | size == 0 = 0
             | otherwise = align / size
 
-boxAlign :: (SizedElement a, GluesTo a a a) => Orientation -> Widget.R -> [a] -> a
+boxAlign :: (SizedElement a, GluesTo a a a) => Dir.Orientation -> Widget.R -> [a] -> a
 boxAlign orientation r xs =
     Glue.box orientation (xs <&> Aligned (pure r)) ^. value
 
 vboxAlign :: (SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
-vboxAlign = boxAlign Glue.Vertical
+vboxAlign = boxAlign Dir.Vertical
 
 hboxAlign :: (SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
-hboxAlign = boxAlign Glue.Horizontal
+hboxAlign = boxAlign Dir.Horizontal

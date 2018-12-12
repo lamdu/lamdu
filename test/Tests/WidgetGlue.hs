@@ -7,9 +7,8 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.Binary.Extended (encodeS)
 import           Data.Semigroup (First(..), Last(..))
-import           Generic.Random
-import qualified Graphics.UI.GLFW as GLFW
 import           GUI.Momentu as X
+import           GUI.Momentu.Direction (Orientation(..))
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue as X
@@ -19,6 +18,8 @@ import           GUI.Momentu.Rect as X (Rect(..))
 import qualified GUI.Momentu.State as GUIState
 import           GUI.Momentu.Widget (R, Widget(..))
 import qualified GUI.Momentu.Widget as Widget
+import           Generic.Random
+import qualified Graphics.UI.GLFW as GLFW
 import           Test.QuickCheck
 
 import           Test.Lamdu.Prelude as X

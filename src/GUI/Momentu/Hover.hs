@@ -20,10 +20,11 @@ import           Data.List.Extended (minimumOn)
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
+import           GUI.Momentu.Direction (Orientation(..))
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue (Glue(..), Orientation, GluesTo)
+import           GUI.Momentu.Glue (Glue(..), GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.State (Gui)
@@ -162,7 +163,7 @@ hoverBesideOptions ::
     a -> b -> [Glued a b]
 hoverBesideOptions h src =
     do
-        o <- [Glue.Vertical, Glue.Horizontal]
+        o <- [Vertical, Horizontal]
         hoverBesideOptionsAxis o (Ordered h h) src
 
 addFrame ::
