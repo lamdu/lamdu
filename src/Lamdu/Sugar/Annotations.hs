@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, KindSignatures #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleContexts, KindSignatures #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -66,7 +66,7 @@ instance MarkAnnotations (Binder name i o) where
         markBodyAnnotations body & _2 %~ BinderExpr
     markAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , overChildren (Proxy :: Proxy MarkAnnotations)
+        , overChildren (Proxy @MarkAnnotations)
             markNodeAnnotations let_
             & BinderLet
         )
@@ -87,7 +87,7 @@ instance MarkAnnotations (Else name i o) where
         ( neverShowAnnotations
         , elseIf
             & eiContent %~
-                overChildren (Proxy :: Proxy MarkAnnotations)
+                overChildren (Proxy @MarkAnnotations)
                 markNodeAnnotations
             & ElseIf
         )
@@ -164,7 +164,7 @@ markBodyAnnotations oldBody =
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)
         newBody =
-            overChildren (Proxy :: Proxy MarkAnnotations)
+            overChildren (Proxy @MarkAnnotations)
             markNodeAnnotations oldBody
         nonHoleAnn =
             Lens.filtered

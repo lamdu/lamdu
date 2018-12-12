@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
@@ -144,7 +144,7 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
             & ConvertM.run context
             <&> _DefinitionBodyExpression . deContent . Lens.mapped %~
                 SugarLens.onSubExprParams
-                (Proxy :: Proxy (BinderParams InternalName (T m) (T m)))
+                (Proxy @(BinderParams InternalName (T m) (T m)))
                 (SugarLens.paramsAnnotations %~ trimParamAnnotation annMode)
     where
         cachedInfer = Cache.infer cache
@@ -216,7 +216,7 @@ convertRepl cache monitors annMode evalRes cp =
             & ConvertM.run context
             <&> Lens.mapped %~
                 SugarLens.onSubExprParams
-                (Proxy :: Proxy (BinderParams InternalName (T m) (T m)))
+                (Proxy @(BinderParams InternalName (T m) (T m)))
                 (SugarLens.paramsAnnotations %~ trimParamAnnotation annMode)
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId

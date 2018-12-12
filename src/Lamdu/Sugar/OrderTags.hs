@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
@@ -29,7 +29,7 @@ class Order m name o t where
         , ChildrenConstraint t (Order m name o)
         ) =>
         OrderT m (t (Ann (Sugar.Payload name i o a)))
-    order = children (Proxy :: Proxy (Order m name o)) orderNode
+    order = children (Proxy @(Order m name o)) orderNode
 
 orderByTag :: Monad m => (a -> Sugar.TagInfo name) -> OrderT m [a]
 orderByTag toTag =

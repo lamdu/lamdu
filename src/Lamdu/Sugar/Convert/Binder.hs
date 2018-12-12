@@ -1,4 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures #-}
+{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
@@ -239,14 +239,14 @@ convertLam lam exprPl =
         BodyLam lambda
             & addActions (lam ^.. V.lamOut) exprPl
             <&> val %~
-                overChildren (Proxy :: Proxy Children)
+                overChildren (Proxy @Children)
                 (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
 
 useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        (foldMapRecursive (Proxy :: Proxy SugarLens.SugarExpr)
+        (foldMapRecursive (Proxy @SugarLens.SugarExpr)
             (Any . SugarLens.isForbiddenInLightLam) (func ^. fBody . val)
             ^. Lens._Wrapped)
         || not (allParamsUsed paramNames func)
@@ -286,7 +286,7 @@ allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            foldMapRecursive (Proxy :: Proxy GetParam)
+            foldMapRecursive (Proxy @GetParam)
             ((^. Lens._Just . Lens.to Set.singleton) . getParam) func
 
 class MarkLightParams (t :: (* -> *) -> *) where
@@ -301,7 +301,7 @@ defaultMarkLightParams ::
     (Children t, ChildrenConstraint t MarkLightParams) =>
     Set InternalName -> t (Ann a) -> t (Ann a)
 defaultMarkLightParams paramNames =
-    overChildren (Proxy :: Proxy MarkLightParams)
+    overChildren (Proxy @MarkLightParams)
     (markNodeLightParams paramNames)
 
 markNodeLightParams ::

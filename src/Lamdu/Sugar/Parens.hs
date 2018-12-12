@@ -1,4 +1,5 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
+{-# LANGUAGE TypeApplications #-}
 module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
@@ -64,12 +65,12 @@ instance HasPrecedence name => AddParens (Else name i o) where
     addToBody (ElseIf elseIf) = elseIf & eiContent %~ addToBody & ElseIf
 
 instance HasPrecedence name => AddParens (IfElse name i o) where
-    addToBody = overChildren (Proxy :: Proxy AddParens) addToNode
+    addToBody = overChildren (Proxy @AddParens) addToNode
 
 instance HasPrecedence name => AddParens (Binder name i o) where
     addToBody (BinderExpr x) = addToBody x & BinderExpr
     addToBody (BinderLet x) =
-        overChildren (Proxy :: Proxy AddParens) addToNode x & BinderLet
+        overChildren (Proxy @AddParens) addToNode x & BinderLet
 
 instance HasPrecedence name => AddParens (Body name i o) where
     addToBody = loopExprBody unambiguous <&> (^. _2)
@@ -166,7 +167,7 @@ loopExprBody parentPrec body_ =
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
-                overChildren (Proxy :: Proxy AddParens) addToNode x
+                overChildren (Proxy @AddParens) addToNode x
                 & BodyLabeledApply & result False
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =

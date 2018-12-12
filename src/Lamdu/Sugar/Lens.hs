@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts, TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, DefaultSignatures, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , HasBinderParams(..)
@@ -29,7 +29,7 @@ import           Lamdu.Prelude
 childPayloads :: ChildrenWithConstraint expr Children =>
     Lens.Traversal' (expr (Ann a)) a
 childPayloads f =
-    children (Proxy :: Proxy Children) (ann f)
+    children (Proxy @Children) (ann f)
 
 class SugarExpr (t :: (* -> *) -> *) where
     isUnfinished :: t f -> Bool
@@ -164,7 +164,7 @@ class HasBinderParams p (expr :: (* -> *) -> *) where
     binderParamsRecursive _ = Dict
 
 instance Recursive (HasBinderParams p) where
-    recursive _ _ = Sub (binderParamsRecursive (Proxy :: Proxy p))
+    recursive _ _ = Sub (binderParamsRecursive (Proxy @p))
 
 instance HasBinderParams (BinderParams name i o) (AssignmentBody name i o) where
     binderParams f (BodyPlain x) = (apBody . binderParams) f x <&> BodyPlain
@@ -196,6 +196,6 @@ onSubExprParams p f x =
     x
     & binderParams %~ f
     & overChildren pc (fmap (onSubExprParams p f))
-    \\ recursive pc (Proxy :: Proxy expr)
+    \\ recursive pc (Proxy @expr)
     where
-        pc = Proxy :: Proxy (HasBinderParams p)
+        pc = Proxy @(HasBinderParams p)

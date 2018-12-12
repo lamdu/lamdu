@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
@@ -136,7 +136,7 @@ unfinishedPayloads f (Ann a x) =
     <$>
     withDict
     (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarLens.SugarExpr))
-    (children (Proxy :: Proxy SugarLens.SugarExpr) (unfinishedPayloads f) x)
+    (children (Proxy @SugarLens.SugarExpr) (unfinishedPayloads f) x)
     <*>
     ( if SugarLens.isUnfinished x
         then f a else pure a

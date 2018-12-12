@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 module Tests.Config (test) where
 
 import qualified Data.Aeson as Aeson
@@ -16,8 +17,8 @@ import           Test.Lamdu.Prelude
 test :: Test
 test =
     do
-        verifyJson (Proxy :: Proxy Config) "config.json"
-        Themes.getFiles >>= traverse_ (verifyJson (Proxy :: Proxy Theme))
+        verifyJson (Proxy @Config) "config.json"
+        Themes.getFiles >>= traverse_ (verifyJson (Proxy @Theme))
     & testCase "config-parses"
 
 verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
