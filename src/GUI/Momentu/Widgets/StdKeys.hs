@@ -1,12 +1,26 @@
-module GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys) where
+module GUI.Momentu.Widgets.StdKeys
+    ( DirKeys(..)
+    , stdDirKeys
+    , dirKey
+    ) where
 
 import qualified GUI.Momentu.MetaKey as MetaKey
+import GUI.Momentu.Direction (Orientation(..), Order(..))
 
 import           Lamdu.Prelude
 
 data DirKeys key = DirKeys
-    { keysLeft, keysRight, keysUp, keysDown :: [key]
+    { keysLeft :: [key]
+    , keysRight :: [key]
+    , keysUp :: [key]
+    , keysDown :: [key]
     } deriving (Functor, Foldable, Traversable)
+
+dirKey :: Orientation -> Order -> DirKeys key -> [key]
+dirKey Horizontal Backward = keysLeft
+dirKey Horizontal Forward = keysRight
+dirKey Vertical Backward = keysUp
+dirKey Vertical Forward = keysDown
 
 stdDirKeys :: DirKeys MetaKey.Key
 stdDirKeys = DirKeys

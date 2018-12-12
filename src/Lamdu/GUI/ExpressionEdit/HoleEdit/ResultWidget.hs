@@ -44,7 +44,8 @@ setFocalAreaToFullSize =
     (:[]) . Rect 0
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted :: (MonadReader env m, HasConfig env) => m (EventMap a -> EventMap a)
+removeUnwanted ::
+    (MonadReader env m, HasConfig env) => m (EventMap a -> EventMap a)
 removeUnwanted =
     Lens.view config
     <&>

@@ -13,11 +13,12 @@ import           Data.Maybe.Extended (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
-import           GUI.Momentu.Direction (Orientation(..))
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
-import           GUI.Momentu.FocusDirection (FocusDirection(..))
+import           GUI.Momentu.FocusDirection (FocusDirection(..), GeometricOrigin(..))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
@@ -29,7 +30,7 @@ import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Instances as WidgetGlue
 import qualified GUI.Momentu.Widgets.GridView as GridView
-import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import           GUI.Momentu.Widgets.StdKeys (stdDirKeys, DirKeys(..))
 
 import           Lamdu.Prelude
 
@@ -53,15 +54,15 @@ mkNavDests ::
     Gui NavDests f
 mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
     NavDests
-    { leftOfCursor    = reverse colsLeft  & enterHoriz FromRight
-    , aboveCursor     = reverse rowsAbove & enterVert  FromBelow
-    , rightOfCursor   = colsRight         & enterHoriz FromLeft
-    , belowCursor     = rowsBelow         & enterVert  FromAbove
+    { leftOfCursor    = reverse colsLeft  & enter Horizontal Forward
+    , aboveCursor     = reverse rowsAbove & enter Vertical Forward
+    , rightOfCursor   = colsRight         & enter Horizontal Backward
+    , belowCursor     = rowsBelow         & enter Vertical Backward
 
-    , topCursor       = take 1 rowsAbove           & enterVert  FromAbove
-    , leftMostCursor  = take 1 colsLeft            & enterHoriz FromLeft
-    , bottomCursor    = reverse rowsBelow & take 1 & enterVert  FromBelow
-    , rightMostCursor = reverse colsRight & take 1 & enterHoriz FromRight
+    , topCursor       = take 1 rowsAbove           & enter Vertical   Backward
+    , leftMostCursor  = take 1 colsLeft            & enter Horizontal Backward
+    , bottomCursor    = reverse rowsBelow & take 1 & enter Vertical   Forward
+    , rightMostCursor = reverse colsRight & take 1 & enter Horizontal Forward
     }
     where
         columns = transpose rows
@@ -69,8 +70,7 @@ mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
         colsRight = drop (cursorX+1) columns
         rowsAbove = take cursorY rows
         rowsBelow = drop (cursorY+1) rows
-        enterHoriz = enterFrom Vertical Rect.verticalRange
-        enterVert  = enterFrom Horizontal Rect.horizontalRange
+        enter o = enterFrom o (Dir.rectRange o)
         setVirt axis enterResult =
             enterResult
             & Widget.enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped ?~
@@ -79,11 +79,12 @@ mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
                 & State.VirtualCursor
             )
         prevArea = virtCursor ^. State.vcRect
-        enterFrom orientation axis cons lns =
+        enterFrom orientation axis dir lns =
             lns
-            <&> foldl' (WidgetGlue.combineMEnters orientation) Nothing
+            <&> foldl' (WidgetGlue.combineMEnters (Dir.perpendicular orientation))
+                Nothing
             & msum
-            ?? cons (prevArea ^# axis)
+            ?? FromGeometric (GeometricOrigin orientation dir (prevArea ^# axis))
             <&> setVirt axis
 
 data Keys key = Keys
@@ -98,7 +99,7 @@ data Keys key = Keys
 
 stdKeys :: Keys MetaKey
 stdKeys = Keys
-    { keysDir = k <$> stdDirKeys
+    { keysDir = stdDirKeys <&> k
     , keysMoreLeft = [k MetaKey.Key'Home]
     , keysMoreRight = [k MetaKey.Key'End]
     , keysLeftMost = [MetaKey.cmd MetaKey.Key'Home]
@@ -270,18 +271,20 @@ combineMEnters children
                     case dir of
                     Point x -> Rect.topLeft .~ x
                     FromOutside -> id
-                    FromAbove x -> Rect.horizontalRange .~ x
-                    FromBelow x -> Rect.horizontalRange .~ x
-                    FromLeft  x -> Rect.verticalRange .~ x
-                    FromRight x -> Rect.verticalRange .~ x
+                    FromGeometric (GeometricOrigin o _ x) ->
+                        Dir.rectRange (Dir.perpendicular o) .~ x
                 edge =
                     case dir of
                     Point{} -> Vector2 0 0 -- Check all widgets for mouse movements (for hovers)
                     FromOutside -> Vector2 0 0
-                    FromAbove{} -> Vector2 0 (-1)
-                    FromBelow{} -> Vector2 0 1
-                    FromLeft{}  -> Vector2 (-1) 0
-                    FromRight{} -> Vector2 1 0
+                    FromGeometric (GeometricOrigin Vertical Backward _) ->
+                        Vector2 0 (-1)
+                    FromGeometric (GeometricOrigin Vertical Forward _) ->
+                        Vector2 0 1
+                    FromGeometric (GeometricOrigin Horizontal Backward _) ->
+                        Vector2 (-1) 0
+                    FromGeometric (GeometricOrigin Horizontal Forward _) ->
+                        Vector2 1 0
 
         -- | Take only the first/last enterable row/column
         filteredByEdge =

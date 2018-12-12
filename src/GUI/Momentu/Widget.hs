@@ -52,13 +52,12 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
-import           GUI.Momentu.FocusDirection (FocusDirection)
-import qualified GUI.Momentu.FocusDirection as Direction
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.FocusDirection (FocusDirection(..), GeometricOrigin(..))
 import           GUI.Momentu.Rect (Rect(..))
-import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.State (VirtualCursor(..), HasCursor(..), Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
@@ -93,7 +92,7 @@ takesFocus enterFunc =
                 & enterFuncAddVirtualCursor rect
         in  w
             & wFocused . fMEnterPoint %~
-                Just . fromMaybe (enter . Direction.Point)
+                Just . fromMaybe (enter . Point)
             & wState . _StateUnfocused . uMEnter ?~ enter
 
 enterFuncAddVirtualCursor ::
@@ -106,12 +105,10 @@ enterFuncAddVirtualCursor destRect =
     where
         mkVirtCursor dir =
             case dir of
-            Direction.FromRight r -> destRect & Rect.verticalRange   .~ r & Just
-            Direction.FromLeft  r -> destRect & Rect.verticalRange   .~ r & Just
-            Direction.FromAbove r -> destRect & Rect.horizontalRange .~ r & Just
-            Direction.FromBelow r -> destRect & Rect.horizontalRange .~ r & Just
-            Direction.FromOutside -> Nothing
-            Direction.Point p     -> Rect p 0 & Just
+            FromGeometric (GeometricOrigin o _ r) ->
+                destRect & (Dir.rectRange (Dir.perpendicular o)) .~ r & Just
+            FromOutside -> Nothing
+            Point p     -> Rect p 0 & Just
             <&> VirtualCursor
 
 -- | Take a manual `mappend` function to avoid needing "Monoid (f a)"
@@ -224,7 +221,7 @@ setFocusedWith rect eventMap =
         { _fFocalAreas = [rect]
         , _fEventMap = eventMap
         , _fPreEvents = mempty
-        , _fMEnterPoint = u ^. uMEnter <&> (. Direction.Point)
+        , _fMEnterPoint = u ^. uMEnter <&> (. Point)
         , _fLayers = u ^. uLayers
         }
     StateFocused makeFocus ->
