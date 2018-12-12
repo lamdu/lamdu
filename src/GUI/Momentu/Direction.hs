@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Direction
     ( Orientation(..), _Horizontal, _Vertical
+    , LogicalOrder(..), _Forward, _Backward
     , axis
     ) where
 
@@ -16,4 +17,8 @@ axis :: Functor f => Orientation -> Lens.LensLike' f (Vector2 a) a
 axis Horizontal = _1
 axis Vertical = _2
 
+data LogicalOrder = Forward | Backward
+    deriving (Eq, Show, Ord, Generic)
+
 Lens.makePrisms ''Orientation
+Lens.makePrisms ''LogicalOrder

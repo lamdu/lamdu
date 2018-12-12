@@ -5,7 +5,7 @@ module GUI.Momentu.Widget.Instances
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
-    , GlueStroll(..), reverseStroll
+    , LogicalOrder(..), reverseStroll
     , combineEnterPoints, combineMEnters
     , eventMapMaker
     ) where
@@ -17,7 +17,7 @@ import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (Orientation(..))
+import           GUI.Momentu.Direction (Orientation(..), LogicalOrder(..))
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -88,7 +88,7 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
 
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
-    glue orientation = Glue.glueH (glueStates orientation StrollForward) orientation
+    glue orientation = Glue.glueH (glueStates orientation Forward) orientation
 
 data NavDir = NavDir
     { dirCons :: Rect.Range R -> FocusDirection
@@ -96,22 +96,17 @@ data NavDir = NavDir
     , dirKeys :: [ModKey.Key]
     }
 
-data GlueStroll = StrollForward | StrollBackward
-    deriving (Eq, Ord)
--- ^ When glueing widgets, the strolling may be combined in a backward
--- direction as it represents a logical ordering
+reverseStroll :: LogicalOrder -> LogicalOrder
+reverseStroll Forward = Backward
+reverseStroll Backward = Forward
 
-reverseStroll :: GlueStroll -> GlueStroll
-reverseStroll StrollForward = StrollBackward
-reverseStroll StrollBackward = StrollForward
-
-combineStroll :: Semigroup a => GlueStroll -> a -> a -> a
-combineStroll StrollForward = (<>)
-combineStroll StrollBackward = flip (<>)
+combineStroll :: Semigroup a => LogicalOrder -> a -> a -> a
+combineStroll Forward = (<>)
+combineStroll Backward = flip (<>)
 
 glueStates ::
     Applicative f =>
-    Orientation -> GlueStroll -> Gui Widget f -> Gui Widget f -> Gui Widget f
+    Orientation -> LogicalOrder -> Gui Widget f -> Gui Widget f -> Gui Widget f
 glueStates orientation strollDir w0 w1 =
     w0
     & wState .~
@@ -131,7 +126,7 @@ glueStates orientation strollDir w0 w1 =
 
 combineStates ::
     Applicative f =>
-    Orientation -> NavDir -> NavDir -> GlueStroll ->
+    Orientation -> NavDir -> NavDir -> LogicalOrder ->
     Gui State f -> Gui State f -> Gui State f
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates o _ _ strollDir (StateUnfocused u0) (StateUnfocused u1) =
@@ -153,7 +148,7 @@ combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u
             Vertical   -> Rect.horizontalRange
         addEvents eventContext events =
             ( case u ^. uMStroll of
-                Just (Semigroup.First fwd, _) | strollDir == StrollForward ->
+                Just (Semigroup.First fwd, _) | strollDir == Forward ->
                     events <&> Lens.mapped %~
                     \e ->
                     if e ^. State.uPreferStroll . Lens._Wrapped
@@ -175,7 +170,7 @@ combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u
             & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty)
             (EventMap.Doc ["Navigation", "Move", dirName nextDir])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
-            | strollDir == StrollBackward =
+            | strollDir == Backward =
                 EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
                 (EventMap.Doc ["Navigation", "Stroll", "Back"])
                 (pure bwd)

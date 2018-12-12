@@ -20,7 +20,7 @@ import           Data.List.Extended (minimumOn)
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
-import           GUI.Momentu.Direction (Orientation(..))
+import           GUI.Momentu.Direction (Orientation(..), LogicalOrder(..))
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
@@ -31,7 +31,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
-import           GUI.Momentu.Widget (Widget(..), R, GlueStroll(..))
+import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
 
 import           Lamdu.Prelude
@@ -116,7 +116,7 @@ instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (AnchoredWidget a) (
         Glue.glueH f orientation ow0 ow1 & Hover
         where
             f (AnchoredWidget pos w0) w1 =
-                AnchoredWidget pos (Widget.glueStates orientation StrollForward w0 w1)
+                AnchoredWidget pos (Widget.glueStates orientation Forward w0 w1)
 
 instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget b) where
     type Glued (Hover (Widget a)) (AnchoredWidget b) =
@@ -128,7 +128,7 @@ instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (
                 -- The hover is always logically "after" the
                 -- lower-layer widgets, no matter if it is glued
                 -- before/after geometrically
-                AnchoredWidget pos (Widget.glueStates orientation StrollBackward w0 w1)
+                AnchoredWidget pos (Widget.glueStates orientation Backward w0 w1)
 
 data Ordered a = Ordered
     { _forward :: a
