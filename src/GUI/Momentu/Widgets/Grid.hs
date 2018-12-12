@@ -13,7 +13,7 @@ import           Data.Maybe.Extended (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
-import           GUI.Momentu.Direction (Direction(..))
+import           GUI.Momentu.Direction (FocusDirection(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
@@ -49,7 +49,7 @@ data NavDests a = NavDests
 mkNavDests ::
     Functor f =>
     Cursor -> State.VirtualCursor ->
-    [[Maybe (Direction -> Gui Widget.EnterResult f)]] ->
+    [[Maybe (FocusDirection -> Gui Widget.EnterResult f)]] ->
     Gui NavDests f
 mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
     NavDests
@@ -243,8 +243,8 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
 combineMEnters ::
-    [[Maybe (Direction -> Widget.EnterResult a)]] ->
-    Maybe (Direction -> Widget.EnterResult a)
+    [[Maybe (FocusDirection -> Widget.EnterResult a)]] ->
+    Maybe (FocusDirection -> Widget.EnterResult a)
 combineMEnters children
     | null childEnters = Nothing
     | otherwise = Just byDirection

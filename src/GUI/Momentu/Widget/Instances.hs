@@ -17,7 +17,7 @@ import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (Direction)
+import           GUI.Momentu.Direction (FocusDirection)
 import qualified GUI.Momentu.Direction as Direction
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
@@ -90,7 +90,7 @@ instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) wher
     glue orientation = Glue.glueH (glueStates orientation StrollForward) orientation
 
 data NavDir = NavDir
-    { dirCons :: Rect.Range R -> Direction
+    { dirCons :: Rect.Range R -> FocusDirection
     , dirName :: Text
     , dirKeys :: [ModKey.Key]
     }
@@ -187,15 +187,16 @@ combineStates orientation dirPrev dirNext strollDir (StateUnfocused u) (StateFoc
 
 combineMEnters ::
     Orientation ->
-    Maybe (Direction -> EnterResult a) ->
-    Maybe (Direction -> EnterResult a) ->
-    Maybe (Direction -> EnterResult a)
+    Maybe (FocusDirection -> EnterResult a) ->
+    Maybe (FocusDirection -> EnterResult a) ->
+    Maybe (FocusDirection -> EnterResult a)
 combineMEnters = unionMaybeWith . combineEnters
 
 combineEnters ::
     Orientation ->
-    (Direction -> EnterResult a) -> (Direction -> EnterResult a) ->
-    Direction -> EnterResult a
+    (FocusDirection -> EnterResult a) ->
+    (FocusDirection -> EnterResult a) ->
+    FocusDirection -> EnterResult a
 combineEnters o e0 e1 dir = chooseEnter o dir (e0 dir) (e1 dir)
 
 combineEnterPoints ::
@@ -217,7 +218,9 @@ closer axis r r0 r1
       Rect.rangeDistance r (r1 ^# enterResultRect . axis) = r0
     | otherwise = r1
 
-chooseEnter :: Orientation -> Direction -> EnterResult a -> EnterResult a -> EnterResult a
+chooseEnter ::
+    Orientation -> FocusDirection ->
+    EnterResult a -> EnterResult a -> EnterResult a
 chooseEnter _          Direction.Outside   r0 _  = r0 -- left-biased
 chooseEnter _          (Direction.Point p) r0 r1 = closerGeometric p r0 r1
 chooseEnter Horizontal Direction.FromLeft{}  r0 _  = r0

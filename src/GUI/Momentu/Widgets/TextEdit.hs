@@ -22,6 +22,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Direction (FocusDirection)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -147,7 +148,7 @@ cursorNearRect s str fromRect =
 
 enterFromDirection ::
     Widget.Size -> Style -> Text -> Widget.Id ->
-    Direction.Direction -> Gui Widget.EnterResult ((,) Text)
+    FocusDirection -> Gui Widget.EnterResult ((,) Text)
 enterFromDirection sz sty str myId dir =
     encodeCursor myId cursor
     & State.updateCursor

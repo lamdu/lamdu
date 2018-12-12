@@ -5,7 +5,7 @@ module GUI.Momentu.Widgets.FocusDelegator
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Direction (Direction)
+import           GUI.Momentu.Direction (FocusDirection)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -27,7 +27,7 @@ data Config = Config
     , focusParentDoc :: E.Doc
     }
 
-focusChildEventMap :: Config -> Maybe (Direction -> Widget.EnterResult a) -> EventMap a
+focusChildEventMap :: Config -> Maybe (FocusDirection -> Widget.EnterResult a) -> EventMap a
 focusChildEventMap config =
     -- We're not delegating, so replace the child eventmap with an
     -- event map to either delegate to it (if it is enterable) or to
@@ -42,8 +42,8 @@ focusChildEventMap config =
 modifyEntry ::
     Applicative f =>
     Widget.Id -> Rect -> FocusEntryTarget ->
-    Maybe (Direction -> Gui Widget.EnterResult f) ->
-    Maybe (Direction -> Gui Widget.EnterResult f)
+    Maybe (FocusDirection -> Gui Widget.EnterResult f) ->
+    Maybe (FocusDirection -> Gui Widget.EnterResult f)
 modifyEntry myId fullChildRect target mChildEnter =
     case target of
     FocusEntryParent -> parentEnter

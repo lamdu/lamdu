@@ -52,7 +52,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
-import           GUI.Momentu.Direction (Direction)
+import           GUI.Momentu.Direction (FocusDirection)
 import qualified GUI.Momentu.Direction as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -81,7 +81,7 @@ enterResultCursor =
 
 takesFocus ::
     (HasWidget w, Functor f) =>
-    (Direction -> f Id) -> Gui w f -> Gui w f
+    (FocusDirection -> f Id) -> Gui w f -> Gui w f
 takesFocus enterFunc =
     widget %~
     \w ->
@@ -98,7 +98,9 @@ takesFocus enterFunc =
 
 enterFuncAddVirtualCursor ::
     Functor f =>
-    Rect -> (Direction -> Gui EnterResult f) -> (Direction -> Gui EnterResult f)
+    Rect ->
+    (FocusDirection -> Gui EnterResult f) ->
+    FocusDirection -> Gui EnterResult f
 enterFuncAddVirtualCursor destRect =
     Lens.imapped <. (enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
     where
