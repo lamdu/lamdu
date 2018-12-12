@@ -1,10 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, FlexibleContexts #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Node, Ann(..), Children(..), ChildrenWithConstraint)
+import           AST (Node, Ann(..), Children(..), Recursive(..), RecursiveConstraint)
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict, withDict)
@@ -129,15 +129,10 @@ make ctx resultId pick holeResultConverted =
 
 unfinishedPayloads ::
     forall t a.
-    SugarLens.SugarExpr t =>
+    Recursive SugarLens.SugarExpr t =>
     Traversal' (Node (Ann a) t) a
 unfinishedPayloads f (Ann a x) =
+    withDict (recursive :: Dict (RecursiveConstraint t SugarLens.SugarExpr)) $
     flip Ann
-    <$>
-    withDict
-    (SugarLens.sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarLens.SugarExpr))
-    (children (Proxy @SugarLens.SugarExpr) (unfinishedPayloads f) x)
-    <*>
-    ( if SugarLens.isUnfinished x
-        then f a else pure a
-    )
+    <$> children (Proxy @(Recursive SugarLens.SugarExpr)) (unfinishedPayloads f) x
+    <*> (if SugarLens.isUnfinished x then f a else pure a)

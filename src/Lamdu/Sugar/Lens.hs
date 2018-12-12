@@ -16,7 +16,7 @@ module Lamdu.Sugar.Lens
     ) where
 
 import           AST (Node, Children(..), ChildrenWithConstraint, overChildren)
-import           AST.Class.Recursive (Recursive(..), ChildrenRecursive, hoistBody)
+import           AST.Class.Recursive (Recursive(..), RecursiveConstraint, hoistBody)
 import           AST.Functor.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Constraint
@@ -38,21 +38,8 @@ class SugarExpr (t :: (* -> *) -> *) where
     isForbiddenInLightLam :: t f -> Bool
     isForbiddenInLightLam = isUnfinished
 
-    sugarExprRecursive :: Dict (ChildrenWithConstraint t SugarExpr)
-    default sugarExprRecursive ::
-        ChildrenWithConstraint t SugarExpr =>
-        Dict (ChildrenWithConstraint t SugarExpr)
-    sugarExprRecursive = Dict
-
-instance Recursive SugarExpr where
-    recursive _ _ = Sub sugarExprRecursive
-
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (NullaryVal name i o))
-
-instance SugarExpr (Else name i o) where
-    isUnfinished (SimpleElse x) = isUnfinished x
-    isUnfinished ElseIf{} = False
 
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
@@ -60,27 +47,36 @@ instance SugarExpr (Const (BinderVarRef name o)) where
 instance SugarExpr (AssignmentBody name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
+instance Recursive SugarExpr (AssignmentBody name i o)
+
+instance SugarExpr (Else name i o) where
+    isUnfinished (SimpleElse x) = isUnfinished x
+    isUnfinished ElseIf{} = False
+instance Recursive SugarExpr (Else name i o)
 
 instance SugarExpr (Function name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
+instance Recursive SugarExpr (Function name i o)
 
 instance SugarExpr (Binder name i o) where
     isUnfinished (BinderExpr x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
     isForbiddenInLightLam (BinderExpr x) = isForbiddenInLightLam x
+instance Recursive SugarExpr (Binder name i o)
 
 instance SugarExpr (Body name i o) where
     isUnfinished BodyHole{} = True
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
     isUnfinished _ = False
+instance Recursive SugarExpr (Body name i o)
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
-stripAnnotations :: ChildrenRecursive expr => expr (Ann a) -> expr (Ann ())
+stripAnnotations :: Recursive Children expr => expr (Ann a) -> expr (Ann ())
 stripAnnotations = hoistBody (ann .~ ())
 
 bodyUnfinished :: Lens.Traversal' (Body name i o (Ann a)) ()
@@ -157,26 +153,20 @@ paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 class HasBinderParams p (expr :: (* -> *) -> *) where
     binderParams :: Lens.Setter' (expr f) p
 
-    binderParamsRecursive :: Proxy p -> Dict (ChildrenWithConstraint expr (HasBinderParams p))
-    default binderParamsRecursive ::
-        ChildrenWithConstraint expr (HasBinderParams p) =>
-        Proxy p -> Dict (ChildrenWithConstraint expr (HasBinderParams p))
-    binderParamsRecursive _ = Dict
-
-instance Recursive (HasBinderParams p) where
-    recursive _ _ = Sub (binderParamsRecursive (Proxy @p))
-
 instance HasBinderParams (BinderParams name i o) (AssignmentBody name i o) where
     binderParams f (BodyPlain x) = (apBody . binderParams) f x <&> BodyPlain
     binderParams f (BodyFunction x) = binderParams f x <&> BodyFunction
+instance Recursive (HasBinderParams (BinderParams name i o)) (AssignmentBody name i o)
 
 instance HasBinderParams (BinderParams name i o) (Binder name i o) where
     binderParams f (BinderExpr x) = binderParams f x <&> BinderExpr
     binderParams _ x = pure x
+instance Recursive (HasBinderParams (BinderParams name i o)) (Binder name i o)
 
 instance HasBinderParams (BinderParams name i o) (Body name i o) where
     binderParams f (BodyLam x) = (lamFunc . binderParams) f x <&> BodyLam
     binderParams _ x = pure x
+instance Recursive (HasBinderParams (BinderParams name i o)) (Body name i o)
 
 instance HasBinderParams (BinderParams name i o) (Const a) where
     binderParams _ x = pure x
@@ -184,18 +174,20 @@ instance HasBinderParams (BinderParams name i o) (Const a) where
 instance HasBinderParams (BinderParams name i o) (Else name i o) where
     binderParams f (SimpleElse x) = binderParams f x <&> SimpleElse
     binderParams _ x = pure x
+instance Recursive (HasBinderParams (BinderParams name i o)) (Else name i o)
 
 instance HasBinderParams (BinderParams name i o) (Function name i o) where
     binderParams = fParams
+instance Recursive (HasBinderParams (BinderParams name i o)) (Function name i o)
 
 onSubExprParams ::
     forall p expr f.
-    (HasBinderParams p expr, Functor f) =>
+    (Recursive (HasBinderParams p) expr, Functor f) =>
     Proxy p -> (p -> p) -> expr f -> expr f
 onSubExprParams p f x =
+    withDict (recursive :: Dict (RecursiveConstraint expr (HasBinderParams p))) $
     x
     & binderParams %~ f
-    & overChildren pc (fmap (onSubExprParams p f))
-    \\ recursive pc (Proxy @expr)
-    where
-        pc = Proxy @(HasBinderParams p)
+    & overChildren
+        (Proxy @(Recursive (HasBinderParams p)))
+        (fmap (onSubExprParams p f))

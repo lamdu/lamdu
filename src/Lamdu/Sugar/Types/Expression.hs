@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, KindSignatures, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
@@ -37,7 +37,7 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     ) where
 
-import           AST (Node, LeafNode, Ann, ChildrenRecursive, makeChildren)
+import           AST (Node, LeafNode, Ann, Children, Recursive, makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
@@ -227,17 +227,17 @@ makeChildren
 -- TODO: The instances below are a bit of boiler-plate,
 -- Need to rethink if the TH could generate this.
 
-instance ChildrenRecursive (AssignmentBody name i o)
-instance ChildrenRecursive (AssignPlain name i o)
-instance ChildrenRecursive (Body name i o)
-instance ChildrenRecursive (Binder name i o)
-instance ChildrenRecursive (Else name i o)
-instance ChildrenRecursive (ElseIfContent name i o)
-instance ChildrenRecursive (Fragment name i o)
-instance ChildrenRecursive (Function name i o)
-instance ChildrenRecursive (IfElse name i o)
-instance ChildrenRecursive (Inject name i o)
-instance ChildrenRecursive (InjectContent name i o)
-instance ChildrenRecursive (LabeledApply name i o)
-instance ChildrenRecursive (Lambda name i o)
-instance ChildrenRecursive (Let name i o)
+instance Recursive Children (AssignmentBody name i o)
+instance Recursive Children (AssignPlain name i o)
+instance Recursive Children (Body name i o)
+instance Recursive Children (Binder name i o)
+instance Recursive Children (Else name i o)
+instance Recursive Children (ElseIfContent name i o)
+instance Recursive Children (Fragment name i o)
+instance Recursive Children (Function name i o)
+instance Recursive Children (IfElse name i o)
+instance Recursive Children (Inject name i o)
+instance Recursive Children (InjectContent name i o)
+instance Recursive Children (LabeledApply name i o)
+instance Recursive Children (Lambda name i o)
+instance Recursive Children (Let name i o)
