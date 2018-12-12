@@ -43,6 +43,7 @@ module GUI.Momentu.Widget
     , respondToCursorBy
     , setFocused, setFocusedWith
 
+    , StrollOrder(..)
     , glueStates
     ) where
 

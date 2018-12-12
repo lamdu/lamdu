@@ -5,7 +5,7 @@ module GUI.Momentu.Widget.Instances
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
-    , LogicalOrder(..), reverseStroll
+    , StrollOrder(..)
     , combineEnterPoints, combineMEnters
     , eventMapMaker
     ) where
@@ -17,7 +17,7 @@ import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (Orientation(..), LogicalOrder(..))
+import           GUI.Momentu.Direction (Orientation(..), Order(..), reverseOrder, applyOrder)
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -88,7 +88,8 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
 
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
-    glue orientation = Glue.glueH (glueStates orientation Forward) orientation
+    glue orientation =
+        Glue.glueH (glueStates orientation (StrollOrder Forward)) orientation
 
 data NavDir = NavDir
     { dirCons :: Rect.Range R -> FocusDirection
@@ -96,21 +97,15 @@ data NavDir = NavDir
     , dirKeys :: [ModKey.Key]
     }
 
-reverseStroll :: LogicalOrder -> LogicalOrder
-reverseStroll Forward = Backward
-reverseStroll Backward = Forward
-
-combineStroll :: Semigroup a => LogicalOrder -> a -> a -> a
-combineStroll Forward = (<>)
-combineStroll Backward = flip (<>)
+newtype StrollOrder = StrollOrder Order
 
 glueStates ::
     Applicative f =>
-    Orientation -> LogicalOrder -> Gui Widget f -> Gui Widget f -> Gui Widget f
-glueStates orientation strollDir w0 w1 =
+    Orientation -> StrollOrder -> Gui Widget f -> Gui Widget f -> Gui Widget f
+glueStates orientation (StrollOrder order) w0 w1 =
     w0
     & wState .~
-        combineStates orientation dirPrev dirNext strollDir
+        combineStates orientation dirPrev dirNext order
         (w0 ^. wState) (w1 ^. wState)
     where
         (dirPrev, dirNext) =
@@ -126,16 +121,16 @@ glueStates orientation strollDir w0 w1 =
 
 combineStates ::
     Applicative f =>
-    Orientation -> NavDir -> NavDir -> LogicalOrder ->
+    Orientation -> NavDir -> NavDir -> Order ->
     Gui State f -> Gui State f -> Gui State f
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates o _ _ strollDir (StateUnfocused u0) (StateUnfocused u1) =
+combineStates o _ _ strollOrder (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
-    (combineStroll strollDir (u0 ^. uMStroll) (u1 ^. uMStroll))
+    (applyOrder strollOrder (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
     (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
         e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u) =
+combineStates orientation _ nextDir strollOrder (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~ unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Direction.Point))
     <&> fEventMap . Lens.imapped %@~ addEvents
@@ -148,7 +143,7 @@ combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u
             Vertical   -> Rect.horizontalRange
         addEvents eventContext events =
             ( case u ^. uMStroll of
-                Just (Semigroup.First fwd, _) | strollDir == Forward ->
+                Just (Semigroup.First fwd, _) | strollOrder == Forward ->
                     events <&> Lens.mapped %~
                     \e ->
                     if e ^. State.uPreferStroll . Lens._Wrapped
@@ -170,7 +165,7 @@ combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u
             & EventMap.keyPresses (dirKeys nextDir <&> ModKey mempty)
             (EventMap.Doc ["Navigation", "Move", dirName nextDir])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
-            | strollDir == Backward =
+            | strollOrder == Backward =
                 EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
                 (EventMap.Doc ["Navigation", "Stroll", "Back"])
                 (pure bwd)
@@ -178,8 +173,8 @@ combineStates orientation _ nextDir strollDir (StateFocused f) (StateUnfocused u
                 EventMap.keysEventMapMovesCursor [MetaKey MetaKey.noMods MetaKey.Key'Tab]
                 (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                 (pure fwd)
-combineStates orientation dirPrev dirNext strollDir (StateUnfocused u) (StateFocused f) =
-    combineStates orientation dirNext dirPrev (reverseStroll strollDir) (StateFocused f) (StateUnfocused u)
+combineStates orientation dirPrev dirNext strollOrder (StateUnfocused u) (StateFocused f) =
+    combineStates orientation dirNext dirPrev (reverseOrder strollOrder) (StateFocused f) (StateUnfocused u)
 
 combineMEnters ::
     Orientation ->
