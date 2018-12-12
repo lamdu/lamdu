@@ -141,20 +141,24 @@ combineStates orientation _ nextDir strollOrder (StateFocused f) (StateUnfocused
             case orientation of
             Horizontal -> Rect.verticalRange
             Vertical   -> Rect.horizontalRange
-        addEvents eventContext events =
+        applyStrollPreference events =
+            -- | If the unfocused one has a stroll destination for us
+            -- Use it in each event that prefers the stroll position
             ( case u ^. uMStroll of
-                Just (Semigroup.First fwd, _) | strollOrder == Forward ->
-                    events <&> Lens.mapped %~
-                    \e ->
-                    if e ^. State.uPreferStroll . Lens._Wrapped
-                    then
-                        e
-                        & State.uCursor .~ (Just fwd ^. Lens._Unwrapped)
-                        & State.uPreferStroll .~ mempty
-                    else
-                        e
-                _ -> events
+            Just (Semigroup.First fwd, _) | strollOrder == Forward ->
+                events <&> Lens.mapped %~
+                \e ->
+                if e ^. State.uPreferStroll . Lens._Wrapped
+                then
+                    e
+                    & State.uCursor .~ (Just fwd ^. Lens._Unwrapped)
+                    & State.uPreferStroll .~ mempty
+                else
+                    e
+            _ -> events
             )
+        addEvents eventContext events =
+            applyStrollPreference events
             <> foldMap (enterEvents eventContext) (u ^. uMEnter)
             <> foldMap strollEvents (u ^. uMStroll)
         enterEvents eventContext enter =
