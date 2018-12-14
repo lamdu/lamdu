@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, DisambiguateRecordFields #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
-    , Keys(..), stdKeys
+    , NavDests(..), stdKeys
     ) where
 
 import qualified Control.Lens as Lens
@@ -37,32 +37,118 @@ import           Lamdu.Prelude
 type Cursor = Vector2 Int
 
 data NavDests a = NavDests
-    { cursorLeft
-    , cursorUp
-    , cursorRight
-    , cursorDown
-    , cursorTop
-    , cursorLeftMost
-    , cursorBottom
-    , cursorRightMost :: Maybe (Widget.EnterResult a)
+    { cursorLeft :: !a
+    , cursorUp :: !a
+    , cursorRight :: !a
+    , cursorDown :: !a
+    , cursorLeftMore :: !a
+    , cursorRightMore :: !a
+    , cursorLeftMost :: !a
+    , cursorRightMost :: !a
+    , cursorTop :: !a
+    , cursorBottom :: !a
+    } deriving (Functor, Foldable, Traversable)
+
+instance Applicative NavDests where
+    pure x = NavDests x x x x x x x x x x
+    NavDests f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+        <*> NavDests x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+        = NavDests
+            (f0 x0) (f1 x1) (f2 x2) (f3 x3) (f4 x4)
+            (f5 x5) (f6 x6) (f7 x7) (f8 x8) (f9 x9)
+
+data EventStrength = EventWeak | EventStrong deriving (Eq)
+
+stdKeys :: NavDests [MetaKey]
+stdKeys =
+    NavDests
+    { cursorLeft      = keysLeft dirKeys
+    , cursorUp        = keysUp dirKeys
+    , cursorRight     = keysRight dirKeys
+    , cursorDown      = keysDown dirKeys
+    , cursorLeftMore  = [k MetaKey.Key'Home]
+    , cursorRightMore = [k MetaKey.Key'End]
+    , cursorLeftMost  = [MetaKey.cmd MetaKey.Key'Home]
+    , cursorRightMost = [MetaKey.cmd MetaKey.Key'End]
+    , cursorTop       = [k MetaKey.Key'PageUp]
+    , cursorBottom    = [k MetaKey.Key'PageDown]
     }
+    where
+        k = MetaKey noMods
+        dirKeys = stdDirKeys <&> k
+
+navDestNames :: NavDests Text
+navDestNames =
+    NavDests
+    { cursorLeft      = "left"
+    , cursorUp        = "up"
+    , cursorRight     = "right"
+    , cursorDown      = "down"
+    , cursorLeftMore  = "more left"
+    , cursorRightMore = "more right"
+    , cursorLeftMost  = "leftmost"
+    , cursorRightMost = "rightmost"
+    , cursorTop       = "top"
+    , cursorBottom    = "bottom"
+    }
+
+navDestDocs :: NavDests EventMap.Doc
+navDestDocs = navDestNames <&> \dirName -> EventMap.Doc ["Navigation", "Move", dirName]
+
+keysStrength :: NavDests EventStrength
+keysStrength =
+    NavDests
+    { cursorLeft      = EventWeak
+    , cursorUp        = EventWeak
+    , cursorRight     = EventWeak
+    , cursorDown      = EventWeak
+    , cursorLeftMore  = EventWeak
+    , cursorRightMore = EventWeak
+    , cursorLeftMost  = EventStrong
+    , cursorRightMost = EventStrong
+    , cursorTop       = EventStrong
+    , cursorBottom    = EventStrong
+    }
+
+directions :: NavDests (Orientation, Order)
+directions =
+    NavDests
+    { cursorLeft      = (Horizontal, Backward)
+    , cursorUp        = (Vertical, Backward)
+    , cursorRight     = (Horizontal, Forward)
+    , cursorDown      = (Vertical, Forward)
+    , cursorLeftMore  = (Horizontal, Backward)
+    , cursorRightMore = (Horizontal, Forward)
+    , cursorLeftMost  = (Horizontal, Backward)
+    , cursorRightMost = (Horizontal, Forward)
+    , cursorTop    = (Vertical, Backward)
+    , cursorBottom  = (Vertical, Forward)
+    }
+
+-- enter *from* is inverse of direction we're entering to:
+enterDirections :: NavDests (Orientation, Order)
+enterDirections = directions & Lens.mapped . _2 %~ Dir.reverseOrder
 
 mkNavDests ::
     Functor f =>
     Cursor -> State.VirtualCursor ->
     [[Maybe (FocusDirection -> Gui Widget.EnterResult f)]] ->
-    Gui NavDests f
+    NavDests (Maybe (Widget.EnterResult (f State.Update)))
 mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
-    NavDests
-    { cursorLeft    = reverse colsLeft  & enter Horizontal Forward
-    , cursorUp     = reverse rowsAbove & enter Vertical Forward
-    , cursorRight   = colsRight         & enter Horizontal Backward
-    , cursorDown     = rowsBelow         & enter Vertical Backward
+    uncurry enter
+    <$> enterDirections
+    <*> NavDests
+    { cursorLeft      = reverse colsLeft
+    , cursorUp        = reverse rowsAbove
+    , cursorRight     = colsRight
+    , cursorDown      = rowsBelow
 
-    , cursorTop       = take 1 rowsAbove           & enter Vertical   Backward
-    , cursorLeftMost  = take 1 colsLeft            & enter Horizontal Backward
-    , cursorBottom    = reverse rowsBelow & take 1 & enter Vertical   Forward
-    , cursorRightMost = reverse colsRight & take 1 & enter Horizontal Forward
+    , cursorTop       = take 1 rowsAbove
+    , cursorLeftMore  = take 1 colsLeft
+    , cursorLeftMost  = take 1 colsLeft -- same dests, uses strong event map
+    , cursorBottom    = reverse rowsBelow & take 1
+    , cursorRightMore = reverse colsRight & take 1
+    , cursorRightMost = reverse colsRight & take 1 -- same dest use strong event map
     }
     where
         columns = transpose rows
@@ -87,64 +173,31 @@ mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
             ?? FromGeometric (GeometricOrigin orientation dir (prevArea ^# axis))
             <&> setVirt axis
 
-data Keys key = Keys
-    { keysDir :: DirKeys key
-    , keysMoreLeft :: [key]
-    , keysMoreRight :: [key]
-    , keysLeftMost :: [key]
-    , keysRightMost :: [key]
-    , keysTop :: [key]
-    , keysBottom :: [key]
-    } deriving (Functor, Foldable, Traversable)
-
-stdKeys :: Keys MetaKey
-stdKeys = Keys
-    { keysDir = stdDirKeys <&> k
-    , keysMoreLeft = [k MetaKey.Key'Home]
-    , keysMoreRight = [k MetaKey.Key'End]
-    , keysLeftMost = [MetaKey.cmd MetaKey.Key'Home]
-    , keysRightMost = [MetaKey.cmd MetaKey.Key'End]
-    , keysTop = [k MetaKey.Key'PageUp]
-    , keysBottom = [k MetaKey.Key'PageDown]
-    }
+addNavEventmap ::
+    NavDests [ModKey] -> NavDests (Maybe (Widget.EnterResult a)) ->
+    EventMap a -> EventMap a
+addNavEventmap navKeys enters eMap =
+    eventMapOf EventStrong <> eMap <> eventMapOf EventWeak
     where
-        k = MetaKey noMods
-
-addNavEventmap :: Keys ModKey -> NavDests a -> EventMap a -> EventMap a
-addNavEventmap keys navDests eMap =
-    strongMap <> eMap <> weakMap
-    where
-        dir = keysDir keys
-        weakMap =
-            [ movement "left"       (keysLeft  dir)      cursorLeft
-            , movement "right"      (keysRight dir)      cursorRight
-            , movement "up"         (keysUp    dir)      cursorUp
-            , movement "down"       (keysDown  dir)      cursorDown
-            , movement "more left"  (keysMoreLeft keys)  cursorLeftMost
-            , movement "more right" (keysMoreRight keys) cursorRightMost
-            ] ^. Lens.traverse . Lens._Just
-        strongMap =
-            [ movement "top"       (keysTop keys)       cursorTop
-            , movement "bottom"    (keysBottom keys)    cursorBottom
-            , movement "leftmost"  (keysLeftMost keys)  cursorLeftMost
-            , movement "rightmost" (keysRightMost keys) cursorRightMost
-            ] ^. Lens.traverse . Lens._Just
-        movement dirName events f =
-            f navDests
-            <&> (^. Widget.enterResultEvent)
-            <&> EventMap.keyPresses
-                events
-                (EventMap.Doc ["Navigation", "Move", dirName])
+        eventMaps =
+            (,)
+            <$> keysStrength
+            <*> (movement <$> navKeys <*> navDestDocs <*> enters)
+        eventMapOf strength =
+            eventMaps ^.. Lens.folded & filter ((== strength) . fst) & foldMap snd
+        movement keys doc =
+            foldMap $ \enter ->
+            enter ^. Widget.enterResultEvent & EventMap.keyPresses keys doc
 
 make ::
     (Traversable vert, Traversable horiz, Applicative f) =>
     vert (horiz (Aligned (Gui Widget f))) ->
     (vert (horiz (Aligned ())), Gui Widget f)
-make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
+make = makeWithKeys (stdKeys <&> map MetaKey.toModKey)
 
 makeWithKeys ::
     (Traversable vert, Traversable horiz, Applicative f) =>
-    Keys ModKey ->
+    NavDests [ModKey] ->
     vert (horiz (Aligned (Gui Widget f))) ->
     (vert (horiz (Aligned ())), Gui Widget f)
 makeWithKeys keys children =
@@ -163,7 +216,7 @@ each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vecto
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
     Applicative f =>
-    Keys ModKey -> Widget.Size ->
+    NavDests [ModKey] -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f
 toWidgetWithKeys keys size sChildren =

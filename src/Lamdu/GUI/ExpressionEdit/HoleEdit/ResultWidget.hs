@@ -55,7 +55,7 @@ removeUnwanted =
     , c ^. Config.enterSubexpressionKeys
     , c ^. Config.leaveSubexpressionKeys
     , c ^. Config.letAddItemKeys
-    , Grid.stdKeys ^.. Lens.folded
+    , Grid.stdKeys ^.. Lens.folded . Lens.folded
     ]
     <&> MetaKey.toModKey
     <&> E.KeyEvent MetaKey.KeyState'Pressed
