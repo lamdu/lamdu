@@ -37,14 +37,14 @@ import           Lamdu.Prelude
 type Cursor = Vector2 Int
 
 data NavDests a = NavDests
-    { leftOfCursor
-    , aboveCursor
-    , rightOfCursor
-    , belowCursor
-    , topCursor
-    , leftMostCursor
-    , bottomCursor
-    , rightMostCursor :: Maybe (Widget.EnterResult a)
+    { cursorLeft
+    , cursorUp
+    , cursorRight
+    , cursorDown
+    , cursorTop
+    , cursorLeftMost
+    , cursorBottom
+    , cursorRightMost :: Maybe (Widget.EnterResult a)
     }
 
 mkNavDests ::
@@ -54,15 +54,15 @@ mkNavDests ::
     Gui NavDests f
 mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
     NavDests
-    { leftOfCursor    = reverse colsLeft  & enter Horizontal Forward
-    , aboveCursor     = reverse rowsAbove & enter Vertical Forward
-    , rightOfCursor   = colsRight         & enter Horizontal Backward
-    , belowCursor     = rowsBelow         & enter Vertical Backward
+    { cursorLeft    = reverse colsLeft  & enter Horizontal Forward
+    , cursorUp     = reverse rowsAbove & enter Vertical Forward
+    , cursorRight   = colsRight         & enter Horizontal Backward
+    , cursorDown     = rowsBelow         & enter Vertical Backward
 
-    , topCursor       = take 1 rowsAbove           & enter Vertical   Backward
-    , leftMostCursor  = take 1 colsLeft            & enter Horizontal Backward
-    , bottomCursor    = reverse rowsBelow & take 1 & enter Vertical   Forward
-    , rightMostCursor = reverse colsRight & take 1 & enter Horizontal Forward
+    , cursorTop       = take 1 rowsAbove           & enter Vertical   Backward
+    , cursorLeftMost  = take 1 colsLeft            & enter Horizontal Backward
+    , cursorBottom    = reverse rowsBelow & take 1 & enter Vertical   Forward
+    , cursorRightMost = reverse colsRight & take 1 & enter Horizontal Forward
     }
     where
         columns = transpose rows
@@ -116,18 +116,18 @@ addNavEventmap keys navDests eMap =
     where
         dir = keysDir keys
         weakMap =
-            [ movement "left"       (keysLeft  dir)      leftOfCursor
-            , movement "right"      (keysRight dir)      rightOfCursor
-            , movement "up"         (keysUp    dir)      aboveCursor
-            , movement "down"       (keysDown  dir)      belowCursor
-            , movement "more left"  (keysMoreLeft keys)  leftMostCursor
-            , movement "more right" (keysMoreRight keys) rightMostCursor
+            [ movement "left"       (keysLeft  dir)      cursorLeft
+            , movement "right"      (keysRight dir)      cursorRight
+            , movement "up"         (keysUp    dir)      cursorUp
+            , movement "down"       (keysDown  dir)      cursorDown
+            , movement "more left"  (keysMoreLeft keys)  cursorLeftMost
+            , movement "more right" (keysMoreRight keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
         strongMap =
-            [ movement "top"       (keysTop keys)       topCursor
-            , movement "bottom"    (keysBottom keys)    bottomCursor
-            , movement "leftmost"  (keysLeftMost keys)  leftMostCursor
-            , movement "rightmost" (keysRightMost keys) rightMostCursor
+            [ movement "top"       (keysTop keys)       cursorTop
+            , movement "bottom"    (keysBottom keys)    cursorBottom
+            , movement "leftmost"  (keysLeftMost keys)  cursorLeftMost
+            , movement "rightmost" (keysRightMost keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
         movement dirName events f =
             f navDests
