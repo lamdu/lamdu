@@ -22,7 +22,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/bindings-freetype-gl
-    commit: c720425fc6ec3b68adfb7b25221723bab9520a9c
+    commit: 3e409dd8c5232abc53fd10e8138658333b90456f
   extra-dep: True
 - location:
     git: https://github.com/lamdu/leveldb-haskell
@@ -54,7 +54,7 @@ extra-deps:
 - timeit-2.0
 - aeson-diff-1.1.0.5
 
-resolver: nightly-2018-11-15
+resolver: nightly-2018-12-19
 
 flags:
   Lamdu:
