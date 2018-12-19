@@ -44,6 +44,7 @@ module GUI.Momentu.Widget
     , setFocused, setFocusedWith
 
     , StrollOrder(..)
+    , strollAheadKeys, strollBackKeys
     , glueStates
     ) where
 
