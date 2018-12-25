@@ -8,7 +8,7 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
-import           AST (Node, Ann(..))
+import           AST (Ann(..))
 import           AST.Term.Apply (applyChildren)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
@@ -176,14 +176,6 @@ toAnnotation AnnotationNone = pure AnnotationNone
 toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
 
-toParentNode ::
-    MonadNaming m =>
-    (a (Ann (Payload (OldName m) (IM m) o p)) ->
-        m (b (Ann (Payload (NewName m) (IM m) o p)))) ->
-    Node (Ann (Payload (OldName m) (IM m) o p)) a ->
-    m (Node (Ann (Payload (NewName m) (IM m) o p)) b)
-toParentNode = toNode
-
 toLet ::
     MonadNaming m =>
     Let (OldName m) (IM m) o (Ann (Payload (OldName m) (IM m) o a)) ->
@@ -192,7 +184,7 @@ toLet Let{..} =
     do
         (_lName, _lBody) <-
             unCPS (withTag TaggedVar _lVarInfo _lName)
-            (toParentNode toBinder _lBody)
+            (toNode toBinder _lBody)
         _lValue <- toAssignment _lValue
         pure Let{..}
 
@@ -215,7 +207,7 @@ toFunction ::
     m (Function (NewName m) (IM m) o (Ann (Payload (NewName m) (IM m) o a)))
 toFunction Function{..} =
     (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
-    <$> unCPS (withBinderParams _fParams) (toParentNode toBinder _fBody)
+    <$> unCPS (withBinderParams _fParams) (toNode toBinder _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
 toBinderPlain ::
@@ -238,7 +230,7 @@ toAssignment ::
     MonadNaming m =>
     Assignment (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Assignment (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toAssignment = toParentNode toAssignmentBody
+toAssignment = toNode toAssignmentBody
 
 
 toLam ::
@@ -318,7 +310,7 @@ toHole hole =
     opRun
     <&>
     \run ->
-    SugarLens.holeTransformExprs (run . toParentNode toBinder) hole
+    SugarLens.holeTransformExprs (run . toNode toBinder) hole
 
 toFragment ::
     MonadNaming m =>
@@ -335,7 +327,7 @@ toFragment Fragment{..} =
                  _fOptions
                  <&> Lens.mapped %~
                      SugarLens.holeOptionTransformExprs
-                     (run . toParentNode toBinder)
+                     (run . toNode toBinder)
             }
 
 toComposite ::
@@ -385,7 +377,7 @@ toIfElse (IfElse i t e) =
     IfElse
     <$> toExpression i
     <*> toExpression t
-    <*> toParentNode toElse e
+    <*> toNode toElse e
 
 toBody ::
     MonadNaming m =>
@@ -432,7 +424,7 @@ toExpression ::
     MonadNaming m =>
     Expression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Expression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toExpression = toParentNode toBody
+toExpression = toNode toBody
 
 withParamInfo ::
     MonadNaming m =>
@@ -503,7 +495,7 @@ toRepl ::
     m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toRepl (Repl bod varInfo res) =
     Repl
-    <$> toParentNode toBinder bod
+    <$> toNode toBinder bod
     <*> pure varInfo
     <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 
