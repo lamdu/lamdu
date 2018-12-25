@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, FlexibleInstances, DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , NavDests(..), stdKeys
@@ -34,7 +34,16 @@ import           GUI.Momentu.Widgets.StdKeys (stdDirKeys, DirKeys(..))
 
 import           Lamdu.Prelude
 
-type Cursor = Vector2 Int
+newtype Cursor = Cursor (Vector2 Int)
+    deriving (Eq)
+Lens.makePrisms ''Cursor
+
+instance Field1 Cursor Cursor Int Int where _1 = _Cursor . _1
+instance Field2 Cursor Cursor Int Int where _2 = _Cursor . _2
+
+instance Ord Cursor where
+    Cursor (Vector2 x0 y0) `compare` Cursor (Vector2 x1 y1) =
+        compare y0 y1 <> compare x0 x1
 
 data NavDests a = NavDests
     { cursorLeft :: !a
@@ -134,7 +143,7 @@ mkNavDests ::
     Cursor -> State.VirtualCursor ->
     [[Maybe (FocusDirection -> Gui Widget.EnterResult f)]] ->
     NavDests (Maybe (Widget.EnterResult (f State.Update)))
-mkNavDests (Vector2 cursorX cursorY) virtCursor rows =
+mkNavDests (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
     uncurry enter
     <$> enterDirections
     <*> NavDests
@@ -210,7 +219,9 @@ makeWithKeys keys children =
         (size, content) = GridView.makePlacements children
 
 each2d :: (Traversable vert, Traversable horiz) => Lens.IndexedTraversal Cursor (vert (horiz a)) (vert (horiz b)) a b
-each2d = Lens.traversed <.> Lens.traversed & Lens.reindexed (uncurry (flip Vector2))
+each2d =
+    Lens.traversed <.> Lens.traversed
+    & Lens.reindexed (Cursor . uncurry (flip Vector2))
 
 -- TODO: We assume that the given Cursor selects a focused
 -- widget. Prove it by passing the Focused data of that widget
@@ -237,7 +248,7 @@ toWidgetWithKeys keys size sChildren =
                 addNavDests eventContext =
                     mkNavDests cursor (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
                     & addNavEventmap keys
-                (before, after) = break ((>= cursor) . fst) (unfocused ^@.. each2d)
+                (before, after) = break ((>= cursor) . fst) (sortOn fst (unfocused ^@.. each2d))
                 -- TODO: DRY with Widget's Glue instance
                 addEventStroll events =
                     case strollAheadDst of
