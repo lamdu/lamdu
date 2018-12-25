@@ -33,7 +33,7 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Assignment name i o a
+    , _deContent :: Node (Ann a) (AssignmentBody name i o)
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression

@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.AssignmentEdit
     , Parts(..), makeFunctionParts
     ) where
 
-import           AST (Ann(..), ann)
+import           AST (Node, Ann(..), ann)
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -394,7 +394,8 @@ makePlainParts assignPlain pl delVarBackwardsId =
 makeParts ::
     (Monad i, Monad o) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Assignment (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Sugar.AssignmentBody (Name o) i o) ->
     Widget.Id ->
     ExprGuiM i o (Parts o)
 makeParts funcApplyLimit (Ann pl assignmentBody) =
@@ -407,8 +408,8 @@ make ::
     Maybe (i (Property o Meta.PresentationMode)) ->
     Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    Sugar.Assignment (Name o) i o
-    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+    (Sugar.AssignmentBody (Name o) i o) ->
     ExprGuiM i o (Gui Responsive o)
 make pMode defEventMap tag color assignment =
     do

@@ -23,7 +23,6 @@ module Lamdu.Sugar.Types.Expression
     , Function(..)
         , fChosenScopeProp, fParams, fBody
         , fAddFirstParam, fBodyScopes
-    , Assignment
     , AssignPlain(..), apAddFirstParam, apBody
     , AssignmentBody(..), _BodyFunction, _BodyPlain
     -- Holes
@@ -195,8 +194,6 @@ data AssignmentBody name i o f
     = BodyFunction (Function name i o f)
     | BodyPlain (AssignPlain name i o f)
     deriving Generic
-
-type Assignment name i o a = Node (Ann a) (AssignmentBody name i o)
 
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignPlain

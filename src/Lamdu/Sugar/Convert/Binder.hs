@@ -192,7 +192,8 @@ makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
-    ConvertM m (Assignment InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m
+    (Node (Ann (ConvertPayload m a)) (AssignmentBody InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
     case params ^. cpParams of
     Nothing ->
@@ -336,7 +337,7 @@ convertAssignment ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Assignment InternalName (T m) (T m) (ConvertPayload m a)
+    , Node (Ann (ConvertPayload m a)) (AssignmentBody InternalName (T m) (T m))
     )
 convertAssignment binderKind defVar expr =
     do
@@ -351,7 +352,8 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Assignment InternalName (T m) (T m) (ConvertPayload m a)
+    , Node (Ann (ConvertPayload m a)) (AssignmentBody InternalName (T m) (T m))
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)
+    

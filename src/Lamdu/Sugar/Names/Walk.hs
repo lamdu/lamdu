@@ -8,7 +8,7 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
-import           AST (Ann(..))
+import           AST (Node, Ann(..))
 import           AST.Term.Apply (applyChildren)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
@@ -219,19 +219,18 @@ toBinderPlain AssignPlain{..} =
     <$> toBinder _apBody
     <*> toAddFirstParam _apAddFirstParam
 
-toAssignmentBody ::
-    MonadNaming m =>
-    AssignmentBody (OldName m) (IM m) o (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (AssignmentBody (NewName m) (IM m) o (Ann (Payload (NewName m) (IM m) o a)))
-toAssignmentBody (BodyPlain x) = toBinderPlain x <&> BodyPlain
-toAssignmentBody (BodyFunction x) = toFunction x <&> BodyFunction
-
 toAssignment ::
     MonadNaming m =>
-    Assignment (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Assignment (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toAssignment = toNode toAssignmentBody
-
+    Node (Ann (Payload (OldName m) (IM m) o a))
+        (AssignmentBody (OldName m) (IM m) o) ->
+    m
+    (Node (Ann (Payload (NewName m) (IM m) o a))
+        (AssignmentBody (NewName m) (IM m) o))
+toAssignment =
+    \case
+    BodyPlain x -> toBinderPlain x <&> BodyPlain
+    BodyFunction x -> toFunction x <&> BodyFunction
+    & toNode
 
 toLam ::
     MonadNaming m =>
