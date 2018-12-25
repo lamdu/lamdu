@@ -395,7 +395,7 @@ makeParts ::
     (Monad i, Monad o) =>
     Sugar.FuncApplyLimit ->
     Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Sugar.AssignmentBody (Name o) i o) ->
+        (Sugar.Assignment (Name o) i o) ->
     Widget.Id ->
     ExprGuiM i o (Parts o)
 makeParts funcApplyLimit (Ann pl assignmentBody) =
@@ -409,7 +409,7 @@ make ::
     Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-    (Sugar.AssignmentBody (Name o) i o) ->
+    (Sugar.Assignment (Name o) i o) ->
     ExprGuiM i o (Gui Responsive o)
 make pMode defEventMap tag color assignment =
     do

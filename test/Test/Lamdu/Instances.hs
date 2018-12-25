@@ -139,7 +139,7 @@ instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
 
 deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.AssignmentBody n Unit Unit (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Sugar.Assignment n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.AssignPlain n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.Binder n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.Body n Unit Unit (Ann a))
@@ -218,7 +218,7 @@ deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
 
 instance (NFData a, NFData e) => NFData (Ann a e)
 instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.AssignmentBody n (T i) (T o) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.Assignment n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.AssignPlain n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Binder n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Body n (T i) (T o) (Ann a)) where rnf = genericRnf

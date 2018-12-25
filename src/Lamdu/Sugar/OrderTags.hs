@@ -81,7 +81,7 @@ instance Monad m => Order m name o (Sugar.Function name (T m) o)
 
 -- Special case assignment and binder to invoke the special cases in expr
 
-instance Monad m => Order m name o (Sugar.AssignmentBody name (T m) o) where
+instance Monad m => Order m name o (Sugar.Assignment name (T m) o) where
     order (Sugar.BodyPlain x) = Sugar.apBody order x <&> Sugar.BodyPlain
     order (Sugar.BodyFunction x) = order x <&> Sugar.BodyFunction
 

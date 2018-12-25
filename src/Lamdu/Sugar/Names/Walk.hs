@@ -222,10 +222,10 @@ toBinderPlain AssignPlain{..} =
 toAssignment ::
     MonadNaming m =>
     Node (Ann (Payload (OldName m) (IM m) o a))
-        (AssignmentBody (OldName m) (IM m) o) ->
+        (Assignment (OldName m) (IM m) o) ->
     m
     (Node (Ann (Payload (NewName m) (IM m) o a))
-        (AssignmentBody (NewName m) (IM m) o))
+        (Assignment (NewName m) (IM m) o))
 toAssignment =
     \case
     BodyPlain x -> toBinderPlain x <&> BodyPlain

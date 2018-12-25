@@ -295,7 +295,7 @@ testFloatToRepl =
                 assertEq "Inner let val" inner
                     (workArea ^?! innerLet . literalVal)
 
-        innerLet :: Lens.Traversal' (WorkArea name i o a) (Ann a (AssignmentBody name i o (Ann a)))
+        innerLet :: Lens.Traversal' (WorkArea name i o a) (Ann a (Assignment name i o (Ann a)))
         innerLet = replLet . lBody . val . _BinderLet . lValue
         literalVal = val . _BodyPlain . apBody . _BinderExpr . _BodyLiteral . _LiteralNum . Property.pVal
 

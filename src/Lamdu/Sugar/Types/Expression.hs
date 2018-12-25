@@ -24,7 +24,7 @@ module Lamdu.Sugar.Types.Expression
         , fChosenScopeProp, fParams, fBody
         , fAddFirstParam, fBodyScopes
     , AssignPlain(..), apAddFirstParam, apBody
-    , AssignmentBody(..), _BodyFunction, _BodyPlain
+    , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
     , OptionLiteral
@@ -156,7 +156,7 @@ data Body name i o f
     deriving Generic
 
 data Let name i o f = Let
-    { _lValue :: Node f (AssignmentBody name i o) -- "let foo = [[bar]] in x"
+    { _lValue :: Node f (Assignment name i o) -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: Tag name i o -- let [[foo]] = bar in x
@@ -190,7 +190,7 @@ data AssignPlain name i o f = AssignPlain
     , _apBody :: Binder name i o f
     } deriving Generic
 
-data AssignmentBody name i o f
+data Assignment name i o f
     = BodyFunction (Function name i o f)
     | BodyPlain (AssignPlain name i o f)
     deriving Generic
@@ -208,14 +208,14 @@ Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
-Lens.makePrisms ''AssignmentBody
+Lens.makePrisms ''Assignment
 Lens.makePrisms ''Binder
 Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
 makeChildren
-    [ ''AssignmentBody, ''AssignPlain, ''Body, ''Binder
+    [ ''Assignment, ''AssignPlain, ''Body, ''Binder
     , ''Else, ''ElseIfContent, ''Fragment, ''Function
     , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply
     , ''Lambda, ''Let
@@ -224,7 +224,7 @@ makeChildren
 -- TODO: The instances below are a bit of boiler-plate,
 -- Need to rethink if the TH could generate this.
 
-instance Recursive Children (AssignmentBody name i o)
+instance Recursive Children (Assignment name i o)
 instance Recursive Children (AssignPlain name i o)
 instance Recursive Children (Body name i o)
 instance Recursive Children (Binder name i o)

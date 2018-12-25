@@ -44,10 +44,10 @@ instance SugarExpr (Const (NullaryVal name i o))
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
 
-instance SugarExpr (AssignmentBody name i o) where
+instance SugarExpr (Assignment name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
-instance Recursive SugarExpr (AssignmentBody name i o)
+instance Recursive SugarExpr (Assignment name i o)
 
 instance SugarExpr (Else name i o) where
     isUnfinished (SimpleElse x) = isUnfinished x
@@ -136,7 +136,7 @@ holeTransformExprs onExpr hole =
         hole ^. holeOptionLiteral <&> Lens.mapped . Lens._2 %~ (>>= holeResultConverted onExpr)
     }
 
-assignmentBodyAddFirstParam :: Lens' (AssignmentBody name i o a) (AddFirstParam name i o)
+assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
 assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 
@@ -153,10 +153,10 @@ paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 class HasBinderParams p (expr :: (* -> *) -> *) where
     binderParams :: Lens.Setter' (expr f) p
 
-instance HasBinderParams (BinderParams name i o) (AssignmentBody name i o) where
+instance HasBinderParams (BinderParams name i o) (Assignment name i o) where
     binderParams f (BodyPlain x) = (apBody . binderParams) f x <&> BodyPlain
     binderParams f (BodyFunction x) = binderParams f x <&> BodyFunction
-instance Recursive (HasBinderParams (BinderParams name i o)) (AssignmentBody name i o)
+instance Recursive (HasBinderParams (BinderParams name i o)) (Assignment name i o)
 
 instance HasBinderParams (BinderParams name i o) (Binder name i o) where
     binderParams f (BinderExpr x) = binderParams f x <&> BinderExpr

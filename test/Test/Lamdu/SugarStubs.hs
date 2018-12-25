@@ -131,7 +131,7 @@ mkTag var tag =
 
 def ::
     Sugar.Type InternalName -> UUID -> T.Tag ->
-    Node (Ann expr) (Sugar.AssignmentBody InternalName Identity Unit) ->
+    Node (Ann expr) (Sugar.Assignment InternalName Identity Unit) ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
@@ -196,7 +196,7 @@ funcExpr params pn =
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
     Node (Ann (Sugar.Payload InternalName Identity Unit ()))
-    (Sugar.AssignmentBody InternalName Identity Unit)
+    (Sugar.Assignment InternalName Identity Unit)
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::

@@ -193,7 +193,7 @@ makeAssignment ::
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m
-    (Node (Ann (ConvertPayload m a)) (AssignmentBody InternalName (T m) (T m)))
+    (Node (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
     case params ^. cpParams of
     Nothing ->
@@ -267,9 +267,9 @@ instance Recursive GetParam (Function InternalName i o)
 instance GetParam (Const (GetVar InternalName o)) where
     getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
 
-instance GetParam (AssignmentBody InternalName i o) where
+instance GetParam (Assignment InternalName i o) where
     getParam x = x ^? _BodyPlain . apBody >>= getParam
-instance Recursive GetParam (AssignmentBody InternalName i o)
+instance Recursive GetParam (Assignment InternalName i o)
 
 instance GetParam (Binder InternalName i o) where
     getParam x = x ^? _BinderExpr >>= getParam
@@ -315,7 +315,7 @@ instance MarkLightParams (Else InternalName i o)
 instance MarkLightParams (Let InternalName i o)
 instance MarkLightParams (Function InternalName i o)
 
-instance MarkLightParams (AssignmentBody InternalName i o) where
+instance MarkLightParams (Assignment InternalName i o) where
     markLightParams ps (BodyPlain x) = x & apBody %~ markLightParams ps & BodyPlain
     markLightParams ps (BodyFunction x) = markLightParams ps x & BodyFunction
 
@@ -337,7 +337,7 @@ convertAssignment ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Node (Ann (ConvertPayload m a)) (AssignmentBody InternalName (T m) (T m))
+    , Node (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
     )
 convertAssignment binderKind defVar expr =
     do
@@ -352,7 +352,7 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Node (Ann (ConvertPayload m a)) (AssignmentBody InternalName (T m) (T m))
+    , Node (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)
