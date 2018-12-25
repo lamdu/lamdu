@@ -255,13 +255,13 @@ toWidgetWithKeys keys size sChildren =
                 strollBefore =
                     before ^. traverse . _2 . Lens._Just . Widget.uMStroll
                     & foldMap
-                        ( EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
+                        ( EventMap.keysEventMapMovesCursor Widget.strollBackKeys
                             (EventMap.Doc ["Navigation", "Stroll", "Back"])
                             . pure . (^. _2 . Lens._Wrapped)
                         )
                 strollAfter =
                     foldMap
-                    ( EventMap.keysEventMapMovesCursor [MetaKey MetaKey.noMods MetaKey.Key'Tab]
+                    ( EventMap.keysEventMapMovesCursor Widget.strollAheadKeys
                         (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                         . pure . (^. _1 . Lens._Wrapped)
                     ) strollAheadDst
