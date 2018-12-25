@@ -262,20 +262,19 @@ toWidgetWithKeys keys size sChildren =
                             & State.uCursor .~ (Just (dst ^. Lens._Wrapped) ^. Lens._Unwrapped)
                             & State.uPreferStroll .~ mempty
                         else e
-                strollAheadDst = after ^. traverse . _2 . Lens._Just . Widget.uMStroll
-                strollBefore =
-                    before ^. traverse . _2 . Lens._Just . Widget.uMStroll
-                    & foldMap
-                        ( EventMap.keysEventMapMovesCursor Widget.strollBackKeys
-                            (EventMap.Doc ["Navigation", "Stroll", "Back"])
-                            . pure . (^. _2 . Lens._Wrapped)
-                        )
-                strollAfter =
+                strollDests = traverse . _2 . Lens._Just . Widget.uMStroll
+                strollAheadDst = after ^. strollDests
+                foldStrollDests strollKeys dirName l =
                     foldMap
-                    ( EventMap.keysEventMapMovesCursor Widget.strollAheadKeys
-                        (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
-                        . pure . (^. _1 . Lens._Wrapped)
-                    ) strollAheadDst
+                    ( EventMap.keysEventMapMovesCursor strollKeys
+                        (EventMap.Doc ["Navigation", "Stroll", dirName])
+                        . pure . (^. l . Lens._Wrapped)
+                    )
+                strollBefore =
+                    before ^. strollDests
+                    & foldStrollDests Widget.strollBackKeys "Back" _2
+                strollAfter =
+                    foldStrollDests Widget.strollAheadKeys "Ahead" _1 strollAheadDst
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers
