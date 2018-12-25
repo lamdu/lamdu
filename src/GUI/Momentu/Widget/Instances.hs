@@ -158,19 +158,19 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
             (EventMap.Doc ["Navigation", "Move", Dir.name orientation order])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
-                EventMap.keysEventMapMovesCursor strollAheadKeys
+                EventMap.keysEventMapMovesCursor strollBackKeys
                 (EventMap.Doc ["Navigation", "Stroll", "Back"])
                 (pure bwd)
             | otherwise =
-                EventMap.keysEventMapMovesCursor strollBackKeys
+                EventMap.keysEventMapMovesCursor strollAheadKeys
                 (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                 (pure fwd)
 
 strollAheadKeys :: [MetaKey]
-strollAheadKeys = [MetaKey.shift MetaKey.Key'Tab]
+strollAheadKeys = [MetaKey MetaKey.noMods MetaKey.Key'Tab]
 
 strollBackKeys :: [MetaKey]
-strollBackKeys = [MetaKey MetaKey.noMods MetaKey.Key'Tab]
+strollBackKeys = [MetaKey.shift MetaKey.Key'Tab]
 
 combineMEnters ::
     Orientation ->
