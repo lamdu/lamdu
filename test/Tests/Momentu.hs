@@ -1,6 +1,7 @@
-module Tests.Momentu (test) where
+module Tests.Momentu where
 
 import qualified Control.Lens as Lens
+import           Data.Binary.Extended (encodeS, decodeS)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Vector.Vector2 (Vector2(..))
@@ -8,12 +9,23 @@ import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (R)
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Main.Events (KeyEvent(..))
+import           GUI.Momentu.MetaKey (MetaKey(..))
+import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.State (Gui, GUIState(..), VirtualCursor(..))
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
-import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.View as View
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as W
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified Graphics.UI.GLFW as GLFW
 
 import           Test.Lamdu.Prelude
 
@@ -25,6 +37,7 @@ test =
         & plusTestOptions mempty
         { topt_maximum_generated_tests = Just 1000
         }
+    , testCase "grid-stroll" gridStrollTest
     ]
 
 propGridSensibleSize :: NonEmpty (NonEmpty (Aligned (Vector2 R))) -> Bool
@@ -69,6 +82,71 @@ viewsFromConf viewConfs =
         minRowTailLen = minimum (viewConfs ^.. traverse <&> NonEmpty.tail <&> length)
         onTail f (x :| xs) = x :| f xs
 
+simpleKeyEvent :: MetaKey -> E.Event
+simpleKeyEvent (MetaKey mods key) =
+    E.EventKey KeyEvent
+    { keKey = key
+    , keScanCode = 0 -- dummy
+    , keModKeys = MetaKey.toGLFWModifiers mods
+    , keState = GLFW.KeyState'Pressed
+    }
+
+gridStrollTest :: IO ()
+gridStrollTest =
+    makeGrid 0
+    & testStroll W.strollAheadKeys 1
+    >>= testStroll W.strollAheadKeys 2
+    >>= testStroll W.strollAheadKeys 3
+    >>= testStroll W.strollBackKeys 2
+    >>= testStroll W.strollBackKeys 1
+    >>= testStroll W.strollBackKeys 0
+    & void
+    where
+        makeGrid :: Int -> Gui Widget Identity
+        makeGrid pos =
+            Grid.make
+            [ [ Aligned 0 (mkWidget pos 0)
+              , Aligned 0 (mkWidget pos 1)
+              ]
+            , [ Aligned 0 (mkWidget pos 2)
+              , Aligned 0 (mkWidget pos 3)
+              ]
+            ] & snd
+        eventCtx = W.EventContext (VirtualCursor (Rect 0 0)) ""
+        getEventMap :: Gui Widget Identity -> Gui E.EventMap Identity
+        getEventMap w =
+            w ^. W.wState . W._StateFocused .
+            Lens.to ($ W.Surrounding 0 0 0 0) .
+            W.fEventMap . Lens.to ($ eventCtx)
+        fromCursor ~(W.Id [bs]) = decodeS bs
+        toCursor i = W.Id [encodeS i]
+        keyEventTarget msg keys w =
+            getEventMap w
+            & E.lookup (Identity Nothing) (simpleKeyEvent (head keys))
+            & runIdentity
+            & maybe (error (msg ++ ": has no key mapping")) (trace (msg ++ " found key!"))
+            & (^. E.dhHandler)
+            & runIdentity
+            & (^?! State.uCursor . Lens._Wrapped . Lens._Just)
+            & fromCursor
+        testStroll keys idx w =
+            do
+                traceM $ unwords ["testStroll", show keys, show idx]
+                assertEqual "Stroll dest" idx
+                    (keyEventTarget
+                     ("Strolling to " ++ show idx ++ " via " ++ show keys) keys w)
+                pure (makeGrid idx)
+        mkWidget :: Int -> Int -> Gui Widget Identity
+        mkWidget pos i =
+            W.makeFocusableView
+            GUIState
+            { _sCursor = toCursor pos
+            , _sWidgetStates = mempty
+            } myId (View.make 1 mempty)
+            & W.takesStroll myId
+            where
+                myId = toCursor i
+
 verticalDisambigTest :: IO ()
 verticalDisambigTest =
     do
@@ -80,7 +158,7 @@ verticalDisambigTest =
             | otherwise =
                 assertString ("unexpected size " <> show size <> ", expected " <> show expect)
             where
-                size = rendered ^. Align.tValue . Widget.wSize
+                size = rendered ^. Align.tValue . W.wSize
                 rendered =
                     (box ^. Responsive.rNarrow)
                     Responsive.NarrowLayoutParams

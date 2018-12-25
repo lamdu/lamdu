@@ -48,6 +48,7 @@ import           Test.Lamdu.Gui (verifyLayers)
 import qualified Test.Lamdu.GuiEnv as GuiEnv
 import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
+import           Tests.Momentu (simpleKeyEvent)
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Test.Lamdu.Prelude
@@ -148,15 +149,6 @@ fromWorkArea ::
 fromWorkArea cache path =
     convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
 
-simpleKeyEvent :: MetaKey -> Event
-simpleKeyEvent (MetaKey mods key) =
-    EventKey KeyEvent
-    { keKey = key
-    , keScanCode = 0 -- dummy
-    , keModKeys = MetaKey.toGLFWModifiers mods
-    , keState = GLFW.KeyState'Pressed
-    }
-
 dummyVirt :: VirtualCursor
 dummyVirt = VirtualCursor (Rect 0 0)
 
@@ -176,7 +168,7 @@ testLambdaDelete =
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
-        let delEvent = simpleKeyEvent (MetaKey noMods GLFW.Key'Backspace)
+        let delEvent = MetaKey noMods GLFW.Key'Backspace & simpleKeyEvent
         env0 <- applyEvent cache (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent cache env0 dummyVirt delEvent
