@@ -2,7 +2,7 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
     ( make
     ) where
 
-import           AST (Ann(..), ann)
+import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (WithTextPos(..))
@@ -121,7 +121,8 @@ mkLightLambda params myId =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Lambda (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Lambda (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make lam pl =

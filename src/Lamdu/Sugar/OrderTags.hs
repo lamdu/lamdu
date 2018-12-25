@@ -5,7 +5,7 @@ module Lamdu.Sugar.OrderTags
     , orderedClosedFlatComposite
     ) where
 
-import           AST (Node, Children(..), Ann(..), monoChildren)
+import           AST (Tree, Children(..), Ann(..), monoChildren)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import           Data.Proxy (Proxy(..))
@@ -22,13 +22,13 @@ type T = Transaction
 type OrderT m x = x -> T m x
 
 class Order m name o t where
-    order :: OrderT m (t (Ann (Sugar.Payload name i o a)))
+    order :: OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
 
     default order ::
         ( Monad m, Children t
         , ChildrenConstraint t (Order m name o)
         ) =>
-        OrderT m (t (Ann (Sugar.Payload name i o a)))
+        OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
     order = children (Proxy @(Order m name o)) orderNode
 
 orderByTag :: Monad m => (a -> Sugar.TagInfo name) -> OrderT m [a]
@@ -112,7 +112,7 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
 
 orderNode ::
     (Monad m, Order m name o f) =>
-    OrderT m (Node (Ann (Sugar.Payload name i o a)) f)
+    OrderT m (Tree (Ann (Sugar.Payload name i o a)) f)
 orderNode (Ann a x) =
     Ann
     <$> (Sugar.plAnnotation . SugarLens.annotationTypes) orderType a

@@ -30,8 +30,8 @@ import qualified Lamdu.Eval.Results as EV
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
+import           Lamdu.Expr.UniqueId (toUUID)
 import qualified Lamdu.Paths as Paths
-import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
@@ -50,7 +50,7 @@ compile repl =
     & execWriterT
     <&> unlines
     where
-        valId = Compiler.ValId . IRef.uuid . (^. Property.pVal)
+        valId = Compiler.ValId . toUUID . (^. Property.pVal)
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])

@@ -3,12 +3,13 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           AST.Functor.Ann (ann, val)
+import           AST.Knot.Ann (ann, val)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import qualified Lamdu.Sugar.Convert.Case as ConvertCase
@@ -24,7 +25,6 @@ import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -39,7 +39,7 @@ convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
     , _pSet =
-      Transaction.writeIRef iref . V.BLeaf . V.LLiteral .
+      ExprIRef.writeValI iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
     } & mkLit & BodyLiteral & addActions [] exprPl
     where

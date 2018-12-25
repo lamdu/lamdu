@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections, TypeFamilies, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
@@ -6,8 +6,8 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , applyForms
     ) where
 
-import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST (Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
@@ -16,6 +16,7 @@ import           Control.Monad.Trans.Reader (ReaderT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
+import           Data.Semigroup (All)
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -103,7 +104,7 @@ prependOpt :: a -> SuggestM a -> SuggestM a
 prependOpt opt = Lens._Wrapped . Lens.mapped . Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
 
 valueConversionNoSplit ::
-    Nominals -> a -> Val (Payload, a) -> SuggestM (Val (Payload, a))
+    forall a. Nominals -> a -> Val (Payload, a) -> SuggestM (Val (Payload, a))
 valueConversionNoSplit nominals empty src =
     prependOpt src $
     case srcType of
@@ -154,6 +155,10 @@ valueConversionNoSplit nominals empty src =
         srcType = srcInferPl ^. Infer.plType
         srcScope = srcInferPl ^. Infer.plScope
         mkRes typ = Ann (Payload typ srcScope, empty)
+        bodyNot ::
+            Lens.LensLike' (Lens.Const All)
+            (Tree V.Term (Ann (Payload, a)))
+            w -> Bool
         bodyNot f = Lens.nullOf (val . f) src
 
 value :: Payload -> [Val Payload]

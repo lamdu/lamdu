@@ -2,7 +2,7 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
     ( make
     ) where
 
-import           AST (Ann(..), ann)
+import           AST (Tree, Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as Momentu
@@ -50,7 +50,8 @@ responsiveLiftA3 f x y z =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.Fragment (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Fragment (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make fragment pl =
@@ -119,7 +120,8 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Sugar.Fragment (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Fragment (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Gui Responsive o)
 makeFragmentExprEdit fragment =
     do

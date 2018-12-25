@@ -3,8 +3,8 @@ module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     ) where
 
-import           AST (Node)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -35,7 +35,8 @@ import           Lamdu.Prelude
 
 makeLetEdit ::
     (Monad i, Monad o) =>
-    Sugar.Let (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Let (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Gui Responsive o)
 makeLetEdit item =
     do
@@ -73,7 +74,8 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 make ::
     (Monad i, Monad o) =>
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (Gui Responsive o)
 make (Ann pl (Sugar.BinderExpr assignmentBody)) =
     Ann pl assignmentBody & ExprGuiM.makeSubexpression

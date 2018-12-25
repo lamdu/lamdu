@@ -3,8 +3,8 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Apply V.Term (Ann (Input.Payload m a)) ->
+    Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert app@(V.Apply funcI argI) exprPl =
     runMatcherT $

@@ -1,9 +1,10 @@
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
 import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
@@ -112,7 +113,7 @@ fixArg (ArgRecordChange recChange) arg go =
                     <$> DataOps.newHole
                     ?? arg ^. ann . Property.pVal
                     <&> V.BApp
-                    >>= Transaction.newIRef
+                    >>= ExprIRef.newValI
     )
     >>= addFields (fieldsAdded recChange)
     >>= arg ^. ann . Property.pSet
@@ -124,7 +125,7 @@ addFields fields src =
         addField x tag =
             V.RecExtend tag <$> DataOps.newHole ?? x
             <&> V.BRecExtend
-            >>= Transaction.newIRef
+            >>= ExprIRef.newValI
 
 changeFields ::
     Monad m =>

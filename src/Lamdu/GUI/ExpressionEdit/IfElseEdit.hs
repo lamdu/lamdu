@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where
 
-import           AST (Node, Ann(..), ann)
+import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
@@ -46,7 +46,8 @@ Lens.makeLenses ''Row
 makeIfThen ::
     (Monad i, Monad o) =>
     WithTextPos View -> AnimId ->
-    Sugar.IfElse (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.IfElse (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Row (Gui Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
@@ -70,7 +71,8 @@ makeIfThen prefixLabel animId ifElse =
 makeElseBody ::
     (Monad i, Monad o) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Else (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Else (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
@@ -104,7 +106,7 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
 -- TODO inline and use "case"
 makeElse ::
     (Monad i, Monad o) =>
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElse (Ann pl x) = makeElseBody pl x
 
@@ -153,7 +155,8 @@ renderRows mParensId =
 
 make ::
     (Monad i, Monad o) =>
-    Sugar.IfElse (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.IfElse (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 make ifElse pl =

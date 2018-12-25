@@ -9,8 +9,8 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
     , definitePart
     ) where
 
-import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), val)
+import           AST (Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.Property (Property)
@@ -54,7 +54,7 @@ formatLiteral (LiteralBytes i) = formatProp i
 expr :: Expression (Name o) i o a -> [Text]
 expr = ofBody . (^. val)
 
-ofBody :: Body (Name o) i o (Ann a) -> [Text]
+ofBody :: Tree (Body (Name o) i o) (Ann a) -> [Text]
 ofBody =
     \case
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
@@ -100,7 +100,7 @@ ofBody =
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
 
-binder :: Binder (Name o) i o (Ann a) -> [Text]
+binder :: Tree (Binder (Name o) i o) (Ann a) -> [Text]
 binder BinderLet{} = ["let"]
 binder (BinderExpr x) = ofBody x
 
@@ -132,7 +132,7 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Body name i o (Ann a) -> Text
+    SearchMenu.ResultsContext -> Tree (Body name i o) (Ann a) -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which

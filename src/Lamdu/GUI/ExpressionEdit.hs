@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit
     ( make
     ) where
 
-import           AST (Ann(..))
+import           AST (Tree, Ann(..))
 import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
@@ -56,7 +56,8 @@ placeHolder pl =
 
 makeEditor ::
     (Monad i, Monad o) =>
-    Sugar.Body (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Body (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeEditor body pl =

@@ -7,8 +7,8 @@ module Lamdu.Sugar.Convert.Fragment
     , fragmentVar
     ) where
 
-import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST (Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -96,7 +96,8 @@ checkTypeMatch x y =
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
-    V.Apply V.Term (Ann (Input.Payload m a)) -> ExpressionU m a ->
+    Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
+    ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole (V.Apply funcI argI) argS exprPl =

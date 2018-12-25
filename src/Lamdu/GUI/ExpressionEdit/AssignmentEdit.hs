@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.AssignmentEdit
     , Parts(..), makeFunctionParts
     ) where
 
-import           AST (Node, Ann(..), ann)
+import           AST (Tree, Ann(..), ann)
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -103,7 +103,8 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Function (Name o) i o (Ann (Sugar.Payload name i o ExprGui.Payload)) ->
+    Tree (Sugar.Function (Name o) i o)
+        (Ann (Sugar.Payload name i o ExprGui.Payload)) ->
     ExprGuiM i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
@@ -330,7 +331,8 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
 makeFunctionParts ::
     (Monad i, Monad o) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Function (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Function (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Widget.Id ->
     ExprGuiM i o (Parts o)
@@ -375,7 +377,8 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
 
 makePlainParts ::
     (Monad i, Monad o) =>
-    Sugar.AssignPlain (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.AssignPlain (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Widget.Id ->
     ExprGuiM i o (Parts o)
@@ -394,7 +397,7 @@ makePlainParts assignPlain pl delVarBackwardsId =
 makeParts ::
     (Monad i, Monad o) =>
     Sugar.FuncApplyLimit ->
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Assignment (Name o) i o) ->
     Widget.Id ->
     ExprGuiM i o (Parts o)
@@ -408,7 +411,7 @@ make ::
     Maybe (i (Property o Meta.PresentationMode)) ->
     Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Sugar.Assignment (Name o) i o) ->
     ExprGuiM i o (Gui Responsive o)
 make pMode defEventMap tag color assignment =

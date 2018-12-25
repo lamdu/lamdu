@@ -3,8 +3,9 @@ module Lamdu.GUI.ExpressionEdit.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
 
-import           AST (LeafNode)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val)
+import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Element as Element
@@ -18,9 +19,9 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -32,7 +33,8 @@ import           Lamdu.Prelude
 makeFunc ::
     (Monad i, Monad o) =>
     GetVarEdit.Role ->
-    LeafNode (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.BinderVarRef (Name o) o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Const (Sugar.BinderVarRef (Name o) o)) ->
     ExprGuiM i o (Gui Responsive o)
 makeFunc role func =
     stdWrap pl <*>
@@ -51,7 +53,8 @@ isBoxed apply =
 makeFuncRow ::
     (Monad i, Monad o) =>
     Maybe AnimId ->
-    Sugar.LabeledApply (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.LabeledApply (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     ExprGuiM i o (Gui Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
@@ -77,7 +80,8 @@ makeFuncRow mParensId apply =
 
 makeLabeled ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApply (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.LabeledApply (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeLabeled apply pl =
@@ -105,7 +109,8 @@ makeArgRow arg =
 
 mkRelayedArgs ::
     (Monad i, Monad o) =>
-    [LeafNode (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.GetVar (Name o) o)] ->
+    [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Const (Sugar.GetVar (Name o) o))] ->
     ExprGuiM i o (Gui Responsive o)
 mkRelayedArgs args =
     do
@@ -115,7 +120,8 @@ mkRelayedArgs args =
 
 mkBoxed ::
     (Monad i, Monad o) =>
-    Sugar.LabeledApply (Name o) i o (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.LabeledApply (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 mkBoxed apply funcRow =
     do
@@ -135,7 +141,8 @@ mkBoxed apply funcRow =
 
 makeSimple ::
     (Monad i, Monad o) =>
-    Sugar.Apply (Sugar.Body (Name o) i o) (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Apply (Sugar.Body (Name o) i o))
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM i o (Gui Responsive o)
 makeSimple (Sugar.Apply func arg) pl =

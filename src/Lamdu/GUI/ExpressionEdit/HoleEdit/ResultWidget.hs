@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Node, Ann(..), Children(..), Recursive(..), RecursiveConstraint)
+import           AST (Tree, Ann(..), Children(..), Recursive(..), RecursiveConstraint)
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict, withDict)
@@ -67,7 +67,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
@@ -88,7 +88,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     makeWidget resultId holeResultConverted
@@ -131,7 +131,7 @@ make ctx resultId pick holeResultConverted =
 unfinishedPayloads ::
     forall t a.
     Recursive SugarLens.SugarExpr t =>
-    Traversal' (Node (Ann a) t) a
+    Traversal' (Tree (Ann a) t) a
 unfinishedPayloads f (Ann a x) =
     withDict (recursive :: Dict (RecursiveConstraint t SugarLens.SugarExpr)) $
     flip Ann

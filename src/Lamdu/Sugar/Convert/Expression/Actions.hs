@@ -1,12 +1,12 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances, TypeFamilies #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions, convertPayload
     , valFromLiteral
     ) where
 
-import           AST (Node, overChildren)
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST (Tree, overChildren)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
@@ -40,7 +40,6 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (childPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -79,7 +78,7 @@ mkExtractToDef exprPl =
             PostProcess.GoodExpr -> pure ()
             _ -> error "Bug!"
         let param = ExprIRef.globalId newDefI
-        getVarI <- V.LVar param & V.BLeaf & Transaction.newIRef
+        getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValI
         (exprPl ^. Input.stored . Property.pSet) getVarI
         Infer.depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
@@ -106,11 +105,11 @@ mkExtractToLet outerScope stored =
                     newParam <- ExprIRef.newVar
                     lamI <-
                         V.Lam newParam extractPosI & V.BLam
-                        & Transaction.newIRef
-                    getVarI <- V.LVar newParam & V.BLeaf & Transaction.newIRef
+                        & ExprIRef.newValI
+                    getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValI
                     (stored ^. Property.pSet) getVarI
                     pure lamI
-        V.Apply lamI oldStored & V.BApp & Transaction.newIRef
+        V.Apply lamI oldStored & V.BApp & ExprIRef.newValI
             >>= outerScope ^. Property.pSet
         EntityId.ofValI oldStored & pure
     where
@@ -124,8 +123,8 @@ mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
         let recWrap tag =
-                V.BLeaf V.LRecEmpty & Transaction.newIRef
-                >>= Transaction.newIRef . V.BRecExtend . V.RecExtend tag (stored ^. Property.pVal)
+                V.BLeaf V.LRecEmpty & ExprIRef.newValI
+                >>= ExprIRef.newValI . V.BRecExtend . V.RecExtend tag (stored ^. Property.pVal)
                 >>= typeProtectedSetToVal stored
                 & void
         convertTagSelection nameWithoutContext mempty RequireTag tempMkEntityId recWrap
@@ -177,14 +176,15 @@ makeActions exprPl =
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
-    p a (f a) -> Lens.Indexed (Body name i o (Ann j)) a (f a)
+    p a (f a) -> Lens.Indexed (Tree (Body name i o) (Ann j)) a (f a)
 fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . ann)
 
-bodyIndex :: Lens.IndexedTraversal' x (Ann a x) (Ann a x)
+bodyIndex ::
+    Lens.IndexedTraversal' (Tree k (Ann a)) (Tree (Ann a) k) (Tree (Ann a) k)
 bodyIndex = Lens.filteredBy val
 
 class FixReplaceParent expr where
-    fixReplaceParent :: (a -> a -> a) -> Node (Ann a) expr -> Node (Ann a) expr
+    fixReplaceParent :: (a -> a -> a) -> Tree (Ann a) expr -> Tree (Ann a) expr
 
 instance FixReplaceParent (Const a) where
     fixReplaceParent _ = id
@@ -212,7 +212,7 @@ instance FixReplaceParent (Else name (T m) (T m)) where
 -- TODO: This is an indexed lens of some sort?
 typeMismatchPayloads ::
     (a -> Identity a) ->
-    Body name i o (Ann a) -> Identity (Body name i o (Ann a))
+    Tree (Body name i o) (Ann a) -> Identity (Tree (Body name i o) (Ann a))
 typeMismatchPayloads =
     _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr . ann
 
@@ -220,8 +220,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValP m ->
-        Body name (T m) (T m) (Ann (ConvertPayload m a)) ->
-        Body name (T m) (T m) (Ann (ConvertPayload m a))
+        Tree (Body name (T m) (T m)) (Ann (ConvertPayload m a)) ->
+        Tree (Body name (T m) (T m)) (Ann (ConvertPayload m a))
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -258,7 +258,7 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m b ->
-    Body InternalName (T m) (T m) (Ann (ConvertPayload m a)) ->
+    Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -276,7 +276,7 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
     f (Val (Input.Payload m a)) -> Input.Payload m a ->
-    Body InternalName (T m) (T m) (Ann (ConvertPayload m a)) ->
+    Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))

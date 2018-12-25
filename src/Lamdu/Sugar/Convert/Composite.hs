@@ -5,7 +5,8 @@ module Lamdu.Sugar.Convert.Composite
     , ExtendVal(..), extendTag, extendValI, extendRest
     ) where
 
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -23,7 +24,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -114,7 +114,7 @@ convertOpenCompositeActions leaf stored =
     \protectedSetToVal ->
     OpenCompositeActions
     { _openCompositeClose =
-        Transaction.newIRef (V.BLeaf leaf)
+        ExprIRef.newValI (V.BLeaf leaf)
         >>= protectedSetToVal stored
         <&> EntityId.ofValI
     }
@@ -157,7 +157,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
-                    cons newTag exprI restI & Transaction.writeIRef valI
+                    cons newTag exprI restI & ExprIRef.writeValI valI
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. Property.pVal
@@ -172,7 +172,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Body InternalName (T m) (T m) (Ann (ConvertPayload m a)))
+    (Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
     (Composite InternalName (T m) (T m) (ExpressionU m a))
 
 convert ::

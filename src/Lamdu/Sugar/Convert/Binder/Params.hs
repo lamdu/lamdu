@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
@@ -11,8 +11,8 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST (Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List
@@ -46,7 +46,6 @@ import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -69,7 +68,7 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: V.Lam V.Var V.Term (Ann (ValP m))
+    { _slLam :: Tree (V.Lam V.Var V.Term) (Ann (ValP m))
     , _slLambdaProp :: ValP m
     }
 Lens.makeLenses ''StoredLam
@@ -78,7 +77,7 @@ slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . Property.pVal)
 
 mkStoredLam ::
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
@@ -167,7 +166,7 @@ addFieldParam =
                 do
                     newArg <- mkArg
                     V.RecExtend tag newArg argI
-                        & V.BRecExtend & Transaction.newIRef
+                        & V.BRecExtend & ExprIRef.newValI
         setParamList mPresMode (slParamList storedLam) (mkNewTags tag)
         fixUsages addFieldToCall binderKind storedLam
 
@@ -185,20 +184,24 @@ getFieldOnVar = val . V._BGetField . inGetField
         pack pl (v, t) =
             V.GetField (Ann pl (V.BLeaf (V.LVar v))) t
 
-getFieldParamsToHole :: Monad m => T.Tag -> V.Lam V.Var V.Term (Ann (ValP m)) -> T m ()
+getFieldParamsToHole ::
+    Monad m =>
+    T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
-getFieldParamsToParams :: Monad m => V.Lam V.Var V.Term (Ann (ValP m)) -> T.Tag -> T m ()
+getFieldParamsToParams ::
+    Monad m =>
+    Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
-        toParam bodyI = Transaction.writeIRef bodyI $ V.BLeaf $ V.LVar param
+        toParam bodyI = ExprIRef.writeValI bodyI $ V.BLeaf $ V.LVar param
 
 fixCallArgRemoveField :: Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallArgRemoveField tag argI =
-    Transaction.readIRef argI
+    ExprIRef.readValI argI
     >>= \case
     V.BRecExtend (V.RecExtend t v restI)
         | t == tag -> pure restI
@@ -206,7 +209,7 @@ fixCallArgRemoveField tag argI =
             do
                 newRestI <- fixCallArgRemoveField tag restI
                 when (newRestI /= restI) $
-                    Transaction.writeIRef argI $
+                    ExprIRef.writeValI argI $
                     V.BRecExtend $ V.RecExtend t v newRestI
                 pure argI
     _ -> pure argI
@@ -214,7 +217,7 @@ fixCallArgRemoveField tag argI =
 fixCallToSingleArg ::
     Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallToSingleArg tag argI =
-    Transaction.readIRef argI
+    ExprIRef.readValI argI
     >>= \case
     V.BRecExtend (V.RecExtend t v restI)
         | t == tag -> pure v
@@ -306,7 +309,7 @@ changeGetFieldTags param prevTag chosenTag x =
     V.BGetField (V.GetField (Ann a (V.BLeaf (V.LVar v))) t)
         | v == param && t == prevTag ->
             V.GetField (a ^. Property.pVal) chosenTag & V.BGetField
-            & Transaction.writeIRef (x ^. ann . Property.pVal)
+            & ExprIRef.writeValI (x ^. ann . Property.pVal)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
         | v == param -> DataOps.applyHoleTo (x ^. ann) & void
@@ -328,20 +331,20 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. V.recTag == prevTag =
                     argI <$
-                    Transaction.writeIRef argI
+                    ExprIRef.writeValI argI
                     (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
                 | otherwise =
                     argI <$
                     ( changeFieldToCall (recExtend ^. V.recRest)
                         <&> (\x -> recExtend & V.recRest .~ x)
                         <&> V.BRecExtend
-                        >>= Transaction.writeIRef argI
+                        >>= ExprIRef.writeValI argI
                     )
             fixArg argI _ =
                 DataOps.newHole
                 <&> (`V.Apply` argI) <&> V.BApp
-                >>= Transaction.newIRef
-            changeFieldToCall argI = Transaction.readIRef argI >>= fixArg argI
+                >>= ExprIRef.newValI
+            changeFieldToCall argI = ExprIRef.readValI argI >>= fixArg argI
         fixUsages changeFieldToCall binderKind storedLam
         changeGetFieldTags
             (storedLam ^. slLam . V.lamIn) prevTag chosenTag
@@ -354,7 +357,7 @@ convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
@@ -421,7 +424,7 @@ removeCallsToVar funcVar x =
         wrapUnappliedUsesOfVar funcVar x
     where
         changeRecursion prop =
-            Transaction.readIRef (Property.value prop)
+            ExprIRef.readValI (Property.value prop)
             >>= \case
             V.BApp (V.Apply f _) -> (prop ^. Property.pSet) f
             _ -> error "assertion: expected BApp"
@@ -449,18 +452,18 @@ convertVarToGetField tagForVar paramVar =
     SubExprs.onGetVars (convertVar . Property.value) paramVar
     where
         convertVar bodyI =
-            Transaction.newIRef (V.BLeaf (V.LVar paramVar))
+            ExprIRef.newValI (V.BLeaf (V.LVar paramVar))
             <&> (`V.GetField` tagForVar) <&> V.BGetField
-            >>= Transaction.writeIRef bodyI
+            >>= ExprIRef.writeValI bodyI
 
 wrapArgWithRecord ::
     Monad m => T m (ValI m) -> T.Tag -> T.Tag -> ValI m -> T m (ValI m)
 wrapArgWithRecord mkNewArg oldParam newParam oldArg =
     do
         newArg <- mkNewArg
-        Transaction.newIRef (V.BLeaf V.LRecEmpty)
-            >>= Transaction.newIRef . V.BRecExtend . V.RecExtend newParam newArg
-            >>= Transaction.newIRef . V.BRecExtend . V.RecExtend oldParam oldArg
+        ExprIRef.newValI (V.BLeaf V.LRecEmpty)
+            >>= ExprIRef.newValI . V.BRecExtend . V.RecExtend newParam newArg
+            >>= ExprIRef.newValI . V.BRecExtend . V.RecExtend oldParam oldArg
 
 data NewParamPosition = NewParamBefore | NewParamAfter
 
@@ -557,7 +560,7 @@ mkFuncParam entityId lamExprPl info =
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
@@ -602,7 +605,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     where
         storedLam = mkStoredLam lam lamExprPl
 
-isParamAlwaysUsedWithGetField :: V.Lam V.Var V.Term (Ann a) -> Bool
+isParamAlwaysUsedWithGetField :: Tree (V.Lam V.Var V.Term) (Ann a) -> Bool
 isParamAlwaysUsedWithGetField (V.Lam param bod) =
     go False bod
     where
@@ -625,7 +628,7 @@ postProcessActions post x
 
 convertLamParams ::
     Monad m =>
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
     Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
@@ -647,7 +650,7 @@ convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m ->
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
     Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
@@ -695,7 +698,7 @@ convertVarToCalls ::
 convertVarToCalls mkArg var =
     SubExprs.onMatchingSubexprs (Property.modify_ ?? change) (ExprLens.valVar . Lens.only var)
     where
-        change x = mkArg >>= Transaction.newIRef . V.BApp . V.Apply x
+        change x = mkArg >>= ExprIRef.newValI . V.BApp . V.Apply x
 
 convertBinderToFunction ::
     Monad m =>

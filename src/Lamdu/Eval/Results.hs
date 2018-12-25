@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances, TypeFamilies, MultiParamTypeClasses #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
     , Val
@@ -12,7 +12,8 @@ module Lamdu.Eval.Results
     , extractField
     ) where
 
-import           AST (Node, Ann(..))
+import qualified AST
+import           AST (Ann(..), Tie, Tree)
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
@@ -36,16 +37,19 @@ topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
 data Body f
-    = RRecExtend (V.RecExtend (Node f Body))
-    | RInject (V.Inject (Node f Body))
+    = RRecExtend (V.RecExtend (Tie f Body))
+    | RInject (V.Inject (Tie f Body))
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
-    | RArray [Node f Body]
+    | RArray [Tie f Body]
     | RError EvalTypeError
-deriving instance Show (f (Body f)) => Show (Body f)
 
-type Val pl = Node (Ann pl) Body
+AST.makeChildrenRecursive [''Body]
+
+deriving instance AST.SubTreeConstraint Body f Show => Show (Body f)
+
+type Val pl = Tree (Ann pl) Body
 
 data ErrorType = LamduBug | BrokenDef | ReachedHole | RuntimeError
     deriving (Read, Show, Generic, Eq)

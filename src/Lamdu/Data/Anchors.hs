@@ -93,7 +93,8 @@ assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
 
 assocFieldParamList ::
     Monad m => ValI m -> MkProperty' (T m) (Maybe ParamList)
-assocFieldParamList = Transaction.assocDataRef "field param list" . UniqueId.toUUID
+assocFieldParamList =
+    Transaction.assocDataRef "field param list" . UniqueId.toUUID
 
 assocPresentationMode :: Monad m => V.Var -> MkProperty' (T m) PresentationMode
 assocPresentationMode =

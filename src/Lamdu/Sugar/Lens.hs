@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts, TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , HasBinderParams(..)
@@ -12,12 +12,12 @@ module Lamdu.Sugar.Lens
     , annotationTypes
     , onSubExprParams
     , paramsAnnotations
-    , stripAnnotations
     ) where
 
-import           AST (Node, Children(..), ChildrenWithConstraint, overChildren)
-import           AST.Class.Recursive (Recursive(..), RecursiveConstraint, hoistBody)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Knot, Tree, Children(..), ChildrenWithConstraint)
+import qualified AST
+import           AST.Class.Recursive (Recursive(..), RecursiveConstraint)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Constraint
 import           Data.Functor.Const (Const(..))
@@ -27,11 +27,11 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 childPayloads :: ChildrenWithConstraint expr Children =>
-    Lens.Traversal' (expr (Ann a)) a
+    Lens.Traversal' (Tree expr (Ann a)) a
 childPayloads f =
     children (Proxy @Children) (ann f)
 
-class SugarExpr (t :: (* -> *) -> *) where
+class SugarExpr (t :: Knot -> *) where
     isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
@@ -76,10 +76,7 @@ binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
-stripAnnotations :: Recursive Children expr => expr (Ann a) -> expr (Ann ())
-stripAnnotations = hoistBody (ann .~ ())
-
-bodyUnfinished :: Lens.Traversal' (Body name i o (Ann a)) ()
+bodyUnfinished :: Lens.Traversal' (Tree (Body name i o) (Ann a)) ()
 bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
@@ -102,11 +99,15 @@ binderFuncParamActions ::
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
-binderResultExpr :: Lens.IndexedLens' (Body name i o (Ann ())) (Node (Ann a) (Binder name i o)) a
+binderResultExpr ::
+    Lens.IndexedLens' (Tree (Body name i o) (Ann ()))
+    (Tree (Ann a) (Binder name i o)) a
 binderResultExpr f (Ann pl x) =
     case x of
     BinderExpr e ->
-        Lens.indexed f (stripAnnotations e) pl
+        Lens.indexed f
+        (AST.overChildren (Proxy @(Recursive Children))
+            (AST.annotations .~ ()) e) pl
         <&> (`Ann` x)
     BinderLet l ->
         lBody (binderResultExpr f) l
@@ -115,8 +116,8 @@ binderResultExpr f (Ann pl x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Node (Ann (Payload n0 i o ())) (Binder n0 i o) ->
-        i (Node (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
+    (Tree (Ann (Payload n0 i o ())) (Binder n0 i o) ->
+        i (Tree (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -126,8 +127,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Node (Ann (Payload n0 i o ())) (Binder n0 i o) ->
-        i (Node (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
+    (Tree (Ann (Payload n0 i o ())) (Binder n0 i o) ->
+        i (Tree (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr hole =
     hole
@@ -150,7 +151,7 @@ paramsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
 paramsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
 paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
 
-class HasBinderParams p (expr :: (* -> *) -> *) where
+class HasBinderParams p (expr :: Knot -> *) where
     binderParams :: Lens.Setter' (expr f) p
 
 instance HasBinderParams (BinderParams name i o) (Assignment name i o) where
@@ -181,13 +182,16 @@ instance HasBinderParams (BinderParams name i o) (Function name i o) where
 instance Recursive (HasBinderParams (BinderParams name i o)) (Function name i o)
 
 onSubExprParams ::
-    forall p expr f.
-    (Recursive (HasBinderParams p) expr, Functor f) =>
-    Proxy p -> (p -> p) -> expr f -> expr f
+    forall p expr k.
+    Recursive Children k =>
+    Recursive (HasBinderParams p) expr =>
+    Proxy p -> (p -> p) -> Tree expr k -> Tree expr k
 onSubExprParams p f x =
     withDict (recursive :: Dict (RecursiveConstraint expr (HasBinderParams p))) $
+    withDict (recursive :: Dict (RecursiveConstraint k Children)) $
     x
     & binderParams %~ f
-    & overChildren
+    & AST.overChildren
         (Proxy @(Recursive (HasBinderParams p)))
-        (fmap (onSubExprParams p f))
+        (AST.overChildren (Proxy @(Recursive Children))
+            (onSubExprParams p f))

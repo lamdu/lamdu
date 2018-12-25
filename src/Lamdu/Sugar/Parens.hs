@@ -1,5 +1,5 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes #-}
 module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
@@ -7,8 +7,8 @@ module Lamdu.Sugar.Parens
     , addToBinderWith
     ) where
 
-import           AST (Node, LeafNode, overChildren)
-import           AST.Functor.Ann (Ann(..), val)
+import           AST (Tree, overChildren)
+import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))
@@ -42,9 +42,9 @@ addToWorkArea w =
     }
 
 class AddParens expr where
-    addToBody :: expr (Ann a) -> expr (Ann (MinOpPrec, NeedsParens, a))
+    addToBody :: Tree expr (Ann a) -> Tree expr (Ann (MinOpPrec, NeedsParens, a))
 
-    addToNode :: Node (Ann a) expr -> Node (Ann (MinOpPrec, NeedsParens, a)) expr
+    addToNode :: Tree (Ann a) expr -> Tree (Ann (MinOpPrec, NeedsParens, a)) expr
     addToNode (Ann pl x) = Ann (0, NoNeedForParens, pl) (addToBody x)
 
 instance HasPrecedence name => AddParens (Assignment name i o) where
@@ -53,9 +53,9 @@ instance HasPrecedence name => AddParens (Assignment name i o) where
 
 addToBinderWith ::
     HasPrecedence name =>
-    Prec ->
-    Node (Ann a) (Binder name i o) ->
-    Node (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
+    MinOpPrec ->
+    Tree (Ann a) (Binder name i o) ->
+    Tree (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
 addToBinderWith minOpPrec (Ann pl x) =
     addToBody x
     & Ann (minOpPrec, NoNeedForParens, pl)
@@ -83,15 +83,15 @@ instance AddParens (Const a) where
 
 addToExprWith ::
     HasPrecedence name =>
-    Prec ->
+    MinOpPrec ->
     Expression name i o a ->
     Expression name i o (MinOpPrec, NeedsParens, a)
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
-    Lens.Prism' (LabeledApply name i o (Ann a))
+    Lens.Prism' (Tree (LabeledApply name i o) (Ann a))
     ( Expression name i o a
-    , LeafNode (Ann a) (BinderVarRef name o)
+    , Tree (Ann a) (Lens.Const (BinderVarRef name o))
     , Expression name i o a
     )
 bareInfix =
@@ -101,19 +101,31 @@ bareInfix =
         fromLabeledApply (LabeledApply f (Infix l r) [] []) = Right (l, f, r)
         fromLabeledApply a = Left a
 
-loopExpr ::
-    HasPrecedence name =>
-    MinOpPrec -> Precedence Prec -> Expression name i o a ->
-    Expression name i o (MinOpPrec, NeedsParens, a)
+type AnnotateAST a body =
+    MinOpPrec -> Precedence Prec ->
+    Tree (Ann a) body ->
+    Tree (Ann (MinOpPrec, NeedsParens, a)) body
+
+loopExpr ::  HasPrecedence name => AnnotateAST a (Body name i o)
 loopExpr minOpPrec parentPrec (Ann pl body_) =
     Ann (minOpPrec, parens, pl) newBody
     where
         (parens, newBody) = loopExprBody parentPrec body_
 
+type SideSymbol =
+    forall s t res pl body.
+    AnnotateAST pl body ->
+    Lens.ASetter' (Precedence Prec) MinOpPrec ->
+    Lens.Getting MinOpPrec (Precedence Prec) MinOpPrec ->
+    Lens.ASetter s t
+    (Tree (Ann pl) body)
+    (Tree (Ann (MinOpPrec, NeedsParens, pl)) body) ->
+    MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
+
 loopExprBody ::
     HasPrecedence name =>
-    Precedence Prec -> Body name i o (Ann a) ->
-    (NeedsParens, Body name i o (Ann (MinOpPrec, NeedsParens, a)))
+    Precedence Prec -> Tree (Body name i o) (Ann a) ->
+    (NeedsParens, Tree (Body name i o) (Ann (MinOpPrec, NeedsParens, a)))
 loopExprBody parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
@@ -138,6 +150,7 @@ loopExprBody parentPrec body_ =
             x & l %~ loopExpr 0 unambiguous & cons & result False
         leftSymbol = sideSymbol (\_ _ -> addToNode) before after
         rightSymbol = sideSymbol loopExpr after before
+        sideSymbol :: SideSymbol
         sideSymbol loop overrideSide checkSide lens prec cons x =
             x & lens %~ loop prec childPrec & cons
             & result needParens

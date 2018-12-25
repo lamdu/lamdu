@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, TupleSections #-}
+{-# LANGUAGE ExistentialQuantification, TupleSections, TypeFamilies, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -10,7 +10,7 @@ module Lamdu.Sugar.Convert.Hole
     , BaseExpr(..)
     ) where
 
-import           AST (Node, Ann(..), ann, annotations)
+import           AST (Tree, ToKnot(..), Ann(..), ann, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
@@ -27,6 +27,7 @@ import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
+import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -239,14 +240,21 @@ loadDeps vars noms =
             <&> (^. Def.defType) <&> (,) globalId
         loadNom nomId = Load.nominal nomId <&> (,) nomId
 
+type Getting' r a = Lens.Getting a r a
+type Folding' r a = Lens.Getting (Endo [a]) r a
+
 -- TODO: Generalize into a separate module?
 loadNewDeps ::
+    forall m a.
     Monad m => Infer.Dependencies -> Infer.Scope -> Val a -> T m Infer.Dependencies
 loadNewDeps currentDeps scope x =
     loadDeps newDepVars newNoms
     <&> mappend currentDeps
     where
         scopeVars = Infer.scopeToTypeMap scope & Map.keysSet
+        newDeps ::
+            forall x r. Ord r =>
+            Getting' Infer.Dependencies (Map r x) -> Folding' (Val a) r -> [r]
         newDeps depsLens valLens =
             Set.fromList (x ^.. valLens)
             `Set.difference` Map.keysSet (currentDeps ^. depsLens)
@@ -278,7 +286,7 @@ prepareUnstoredPayloads v =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (Node (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
+    T m (Tree (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
     v
     & annotations %~ mkPayload
@@ -439,7 +447,7 @@ mkResultVals sugarContext scope base =
                         Infer.infer seedDeps scope seed & InferT.liftInfer
                         <&> annotations . _2 %~ \() -> emptyPl
                     pure (seedDeps, inferResult)
-                & mapStateT exceptTtoListT
+                    & mapStateT exceptTtoListT
             form <- Suggest.applyForms (transaction . Load.nominal) emptyPl inferResult
             newDeps <- loadNewDeps seedDeps scope form & transaction
             pure (newDeps, form)
@@ -450,6 +458,8 @@ mkResultVals sugarContext scope base =
     where
         transaction = lift . lift
         emptyPl = (Nothing, ())
+        loadTheNewDeps ::
+            Monad m => Val a -> InferT.M (Transaction m) Infer.Dependencies
         loadTheNewDeps expr =
             loadNewDeps (sugarContext ^. ConvertM.scFrozenDeps . Property.pVal)
             scope expr & InferT.liftInner
@@ -536,7 +546,7 @@ randomizeNonStoredRefs uniqueIdent gen v =
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> Just
+            <&> IRef.unsafeFromUUID <&> ToKnot <&> Just
         f (Just x) = Just x & pure
 
 writeExprMStored ::

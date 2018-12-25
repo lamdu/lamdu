@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody
@@ -10,10 +11,11 @@ module Lamdu.Expr.IRef
     , globalId, defI, nominalI, tagI
     , readTagInfo
 
+    , readValI, writeValI, newValI
     ) where
 
-import           AST (Node, monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (ToKnot(..), Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
@@ -59,13 +61,22 @@ readTagInfo tag =
     where
         iref = tagI tag
 
-type ValI m = Node (IRef m) V.Term
+type ValI m = Tree (ToKnot (IRef m)) V.Term
 
 type ValP m = Property (T m) (ValI m)
-type ValBody m = V.Term (IRef m)
+type ValBody m = Tree V.Term (ToKnot (IRef m))
 
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
+
+readValI :: Monad m => ValI m -> T m (Tree V.Term (ToKnot (IRef m)))
+readValI = Transaction.readIRef . getToKnot
+
+writeValI :: Monad m => ValI m -> Tree V.Term (ToKnot (IRef m)) -> T m ()
+writeValI = Transaction.writeIRef . getToKnot
+
+newValI :: Monad m => Tree V.Term (ToKnot (IRef m)) -> T m (ValI m)
+newValI = fmap ToKnot . Transaction.newIRef
 
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =
@@ -74,14 +85,12 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go ->
-                Transaction.readIRef valI >>=
-                monoChildren go <&> Ann valI
+            Just go -> readValI valI >>= monoChildren go <&> Ann valI
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
-    T m (V.Term (Ann (ValI m, a)))
+    T m (Tree V.Term (Ann (ValI m, a)))
 expressionBodyFrom = monoChildren writeValWithStoredSubexpressions . (^. val)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
@@ -90,12 +99,8 @@ writeValWithStoredSubexpressions expr =
         body <- expressionBodyFrom expr
         let bodyWithRefs = body & monoChildren %~ (^. ann . _1)
         case mIRef of
-            Just iref ->
-                Ann (iref, pl) body <$
-                Transaction.writeIRef iref bodyWithRefs
-            Nothing ->
-                Transaction.newIRef bodyWithRefs
-                <&> \exprI -> Ann (exprI, pl) body
+            Just valI -> Ann (valI, pl) body <$ writeValI valI bodyWithRefs
+            Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (exprI, pl) body
     where
         (mIRef, pl) = expr ^. ann
 
@@ -104,11 +109,11 @@ addProperties ::
     (ValI m -> T m ()) ->
     Val (ValI m, a) ->
     Val (ValP m, a)
-addProperties setIRef (Ann (iref, a) body) =
-    Ann (Property iref setIRef, a) (body & Lens.indexing monoChildren %@~ f)
+addProperties setValI (Ann (valI, a) body) =
+    Ann (Property valI setValI, a) (body & Lens.indexing monoChildren %@~ f)
     where
         f index =
-            addProperties $ \newIRef ->
-            Transaction.readIRef iref
-            <&> Lens.indexing monoChildren . Lens.index index .~ newIRef
-            >>= Transaction.writeIRef iref
+            addProperties $ \valINew ->
+            readValI valI
+            <&> Lens.indexing monoChildren . Lens.index index .~ valINew
+            >>= writeValI valI

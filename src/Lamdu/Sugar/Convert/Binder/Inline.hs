@@ -1,10 +1,10 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
 import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)

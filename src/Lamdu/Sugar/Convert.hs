@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert
     ) where
 
 import           AST (ann, annotations)
+import           AST.Knot.Ann (val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
@@ -142,7 +143,7 @@ convertInferDefExpr cache monitors annMode evalRes cp defType defExpr defI =
             <&> _DefinitionBodyExpression . deContent %~ markNodeAnnotations
             >>= (_DefinitionBodyExpression . deContent . annotations) (convertPayload annMode)
             & ConvertM.run context
-            <&> _DefinitionBodyExpression . deContent . Lens.mapped %~
+            <&> _DefinitionBodyExpression . deContent . val %~
                 SugarLens.onSubExprParams
                 (Proxy @(BinderParams InternalName (T m) (T m)))
                 (SugarLens.paramsAnnotations %~ trimParamAnnotation annMode)
@@ -214,7 +215,7 @@ convertRepl cache monitors annMode evalRes cp =
             <&> markNodeAnnotations
             >>= annotations (convertPayload annMode)
             & ConvertM.run context
-            <&> Lens.mapped %~
+            <&> val %~
                 SugarLens.onSubExprParams
                 (Proxy @(BinderParams InternalName (T m) (T m)))
                 (SugarLens.paramsAnnotations %~ trimParamAnnotation annMode)

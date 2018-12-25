@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.NomEdit
     ( makeFromNom, makeToNom
     ) where
 
-import           AST (Node, Ann(..), ann)
+import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Align as Align
@@ -39,7 +39,7 @@ mReplaceParent = ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 makeToNom ::
     (Monad i, Monad o) =>
     Sugar.Nominal (Name o)
-        (Node
+        (Tree
             (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
             (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->

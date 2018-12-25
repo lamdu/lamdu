@@ -1,9 +1,11 @@
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
 
-import           AST (LeafNode)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val)
+import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import           Data.Either (partitionEithers)
@@ -25,10 +27,14 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    LeafNode (Ann (ConvertPayload m a)) (Sugar.BinderVarRef InternalName (T m)) ->
-    [Sugar.AnnotatedArg InternalName (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))] ->
+    Tree (Ann (ConvertPayload m a))
+        (Const (Sugar.BinderVarRef InternalName (T m))) ->
+    [ Sugar.AnnotatedArg InternalName
+        (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))
+    ] ->
     Input.Payload m a ->
-    ConvertM m (Sugar.LabeledApply InternalName (T m) (T m) (Ann (ConvertPayload m a)))
+    ConvertM m
+    (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
 makeLabeledApply func args exprPl =
     do
         presentationMode <- func ^. val . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
@@ -55,12 +61,13 @@ makeLabeledApply func args exprPl =
                     , Map.delete o argsMap & Map.elems
                     )
                 _ -> (Sugar.Verbose, args)
-            (annotatedArgs, relayedArgs) = otherArgs <&> processArg & partitionEithers
+            (annotatedArgs, relayedArgs) =
+                otherArgs <&> processArg & partitionEithers
         pure Sugar.LabeledApply
             { Sugar._aFunc = func
             , Sugar._aSpecialArgs = specialArgs
             , Sugar._aAnnotatedArgs = annotatedArgs
-            , Sugar._aRelayedArgs = relayedArgs <&> val %~ Const
+            , Sugar._aRelayedArgs = relayedArgs
             }
     where
         argsMap =
@@ -78,7 +85,7 @@ makeLabeledApply func args exprPl =
                     Sugar.GetParamsRecord _ -> Nothing
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Ann
-                    { _val = getVar
+                    { _val = Const getVar
                     , _ann = arg ^. Sugar.aaExpr . ann
                     } & Just
-            & fromMaybe (Left arg)
+                & fromMaybe (Left arg)

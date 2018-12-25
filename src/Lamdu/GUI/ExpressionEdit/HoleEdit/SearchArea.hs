@@ -8,7 +8,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
     ( make
     ) where
 
-import           AST (Node, Ann(..), annotations)
+import           AST (Tree, Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
@@ -75,8 +75,8 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Node (Ann (Sugar.Payload (Name o) i o ())) (Sugar.Binder (Name o) i o) ->
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o)
+    Tree (Ann (Sugar.Payload (Name o) i o ())) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o)
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
     & annotations %~ pl

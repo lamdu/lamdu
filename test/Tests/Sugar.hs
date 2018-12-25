@@ -2,7 +2,8 @@
 
 module Tests.Sugar where
 
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
@@ -51,13 +52,13 @@ testSugarActions program actions =
     testProgram program $ \cache ->
     traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
 
-replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o (Ann a))
+replBinder :: Lens.Traversal' (WorkArea name i o a) (Tree (Binder name i o) (Ann a))
 replBinder = waRepl . replExpr . val
 
-replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o (Ann a))
+replBody :: Lens.Traversal' (WorkArea name i o a) (Tree (Body name i o) (Ann a))
 replBody = replBinder . _BinderExpr
 
-replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o (Ann a))
+replLet :: Lens.Traversal' (WorkArea name i o a) (Tree (Let name i o) (Ann a))
 replLet = replBinder . _BinderLet
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
@@ -295,7 +296,9 @@ testFloatToRepl =
                 assertEq "Inner let val" inner
                     (workArea ^?! innerLet . literalVal)
 
-        innerLet :: Lens.Traversal' (WorkArea name i o a) (Ann a (Assignment name i o (Ann a)))
+        innerLet ::
+            Lens.Traversal' (WorkArea name i o a)
+            (Tree (Ann a) (Assignment name i o))
         innerLet = replLet . lBody . val . _BinderLet . lValue
         literalVal = val . _BodyPlain . apBody . _BinderExpr . _BodyLiteral . _LiteralNum . Property.pVal
 
@@ -321,5 +324,8 @@ testCreateLetInLetVal =
         -- | Extract from:
         -- >>> \x -> let y = 0 in <hole>
         --           ^^^^^^^^^^^^^^^^^^^
-        theLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o (Ann a))
+        theLet ::
+            Lens.Traversal'
+            (WorkArea name i o a)
+            (Tree (Let name i o) (Ann a))
         theLet = replBody . _BodyLam . lamFunc . fBody . val . _BinderLet

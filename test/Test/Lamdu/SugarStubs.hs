@@ -2,8 +2,8 @@
 
 module Test.Lamdu.SugarStubs where
 
-import           AST (LeafNode, Node)
-import           AST.Functor.Ann (Ann(..), val)
+import           AST (Tree, Tie)
+import           AST.Knot.Ann (Ann(..), val)
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Functor.Const (Const(..))
@@ -48,12 +48,15 @@ defRef var tag =
     , Sugar._bvInline = Sugar.CannotInline
     }
 
-node :: v -> Ann (Sugar.Payload name Identity Unit ()) v
+node ::
+    Tie knot (Ann (Sugar.Payload name Identity Unit ())) ->
+    Ann (Sugar.Payload name Identity Unit ()) knot
 node = Ann payload
 
 labeledApplyFunc ::
     Sugar.BinderVarRef name Unit ->
-    LeafNode (Ann (Sugar.Payload name Identity Unit ())) (Sugar.BinderVarRef name Unit)
+    Tree (Ann (Sugar.Payload name Identity Unit ()))
+    (Const (Sugar.BinderVarRef name Unit))
 labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
@@ -131,7 +134,7 @@ mkTag var tag =
 
 def ::
     Sugar.Type InternalName -> UUID -> T.Tag ->
-    Node (Ann expr) (Sugar.Assignment InternalName Identity Unit) ->
+    Tree (Ann expr) (Sugar.Assignment InternalName Identity Unit) ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
@@ -182,7 +185,7 @@ mkFuncParam (paramVar, paramTag) =
 
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Sugar.Function InternalName Identity Unit
+    Tree (Sugar.Function InternalName Identity Unit)
     (Ann (Sugar.Payload InternalName Identity Unit ()))
 funcExpr params pn =
     Sugar.Function
@@ -195,12 +198,12 @@ funcExpr params pn =
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Node (Ann (Sugar.Payload InternalName Identity Unit ()))
+    Tree (Ann (Sugar.Payload InternalName Identity Unit ()))
     (Sugar.Assignment InternalName Identity Unit)
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Body name Identity Unit (Ann (Sugar.Payload name Identity Unit ())) ->
+    Tree (Sugar.Body name Identity Unit) (Ann (Sugar.Payload name Identity Unit ())) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr = node
 

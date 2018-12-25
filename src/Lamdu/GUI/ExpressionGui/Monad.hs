@@ -18,7 +18,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , ExprGuiM, run
     ) where
 
-import           AST (Node, Ann(..), ann)
+import           AST (Tree, Ann(..), ann)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
@@ -72,7 +72,8 @@ data Askable i o = Askable
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)
     , _aMakeBinder ::
-        Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+        Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Sugar.Binder (Name o) i o) ->
         ExprGuiM i o (Gui Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
@@ -176,7 +177,7 @@ makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (Gui Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -192,7 +193,8 @@ run ::
     , HasSettings env, HasStyle env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
-    (Node (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o)
+    (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Sugar.Binder (Name o) i o)
         -> ExprGuiM i o (Gui Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> ExprGuiM i o a -> i a

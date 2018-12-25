@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionEdit.RecordEdit
     ( make
     ) where
 
-import           AST.Functor.Ann (val)
+import           AST.Knot.Ann (val)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char

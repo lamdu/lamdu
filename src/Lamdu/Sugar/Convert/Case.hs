@@ -4,7 +4,8 @@ module Lamdu.Sugar.Convert.Case
     , convertAppliedCase
     ) where
 
-import           AST.Functor.Ann (Ann, ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann, ann, val)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
@@ -67,7 +68,7 @@ convert caseV exprPl =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    V.Apply V.Term (Ann (Input.Payload m a)) ->
+    Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.Apply _ arg) funcS argS exprPl =

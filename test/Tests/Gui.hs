@@ -2,7 +2,8 @@
 
 module Tests.Gui where
 
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
@@ -61,7 +62,8 @@ test =
     ]
 
 replExpr ::
-    Lens.Traversal' (Sugar.WorkArea name i o a) (Sugar.Body name i o (Ann a))
+    Lens.Traversal' (Sugar.WorkArea name i o a)
+    (Tree (Sugar.Body name i o) (Ann a))
 replExpr = Sugar.waRepl . Sugar.replExpr . val . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)

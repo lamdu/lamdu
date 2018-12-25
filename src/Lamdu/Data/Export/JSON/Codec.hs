@@ -5,7 +5,7 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           AST (Ann(..), monoChildren)
+import           AST (Ann(..), monoChildren, Tree)
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, writerT, runWriterT)
@@ -386,7 +386,7 @@ decodeVal =
     <$> (obj .: "id")
     <*> decodeValBody obj
 
-encodeValBody :: V.Term (Ann UUID) -> AesonTypes.Object
+encodeValBody :: Tree V.Term (Ann UUID) -> AesonTypes.Object
 encodeValBody body =
     case body & monoChildren %~ Lens.Const . encodeVal of
     V.BApp (V.Apply func arg) ->
@@ -410,45 +410,45 @@ encodeValBody body =
     where
         c x = x ^. Lens._Wrapped
 
-decodeValBody :: ExhaustiveDecoder (V.Term (Ann UUID))
+decodeValBody :: ExhaustiveDecoder (Tree V.Term (Ann UUID))
 decodeValBody obj =
     jsum'
     [ V.Apply
-      <$> (obj .: "applyFunc" <&> c)
-      <*> (obj .: "applyArg" <&> c)
+      <$> (obj .: "applyFunc" <&> c <&> Lens.Const)
+      <*> (obj .: "applyArg" <&> c <&> Lens.Const)
       <&> V.BApp
     , V.Lam
       <$> (obj .: "lamVar" >>= lift . decodeIdent <&> V.Var)
-      <*> (obj .: "lamBody" <&> c)
+      <*> (obj .: "lamBody" <&> c <&> Lens.Const)
       <&> V.BLam
     , V.GetField
-      <$> (obj .: "getFieldRec" <&> c)
+      <$> (obj .: "getFieldRec" <&> c <&> Lens.Const)
       <*> (obj .: "getFieldName" >>= lift . decodeTagId)
       <&> V.BGetField
     , V.RecExtend
       <$> (obj .: "extendTag" >>= lift . decodeTagId)
-      <*> (obj .: "extendVal" <&> c)
-      <*> (obj .: "extendRest" <&> c)
+      <*> (obj .: "extendVal" <&> c <&> Lens.Const)
+      <*> (obj .: "extendRest" <&> c <&> Lens.Const)
       <&> V.BRecExtend
     , V.Inject
       <$> (obj .: "injectTag" >>= lift . decodeTagId)
-      <*> (obj .: "injectVal" <&> c)
+      <*> (obj .: "injectVal" <&> c <&> Lens.Const)
       <&> V.BInject
     , V.Case
       <$> (obj .: "caseTag" >>= lift . decodeTagId)
-      <*> (obj .: "caseHandler" <&> c)
-      <*> (obj .: "caseRest" <&> c)
+      <*> (obj .: "caseHandler" <&> c <&> Lens.Const)
+      <*> (obj .: "caseRest" <&> c <&> Lens.Const)
       <&> V.BCase
     , V.Nom
       <$> (obj .: "toNomId" >>= lift . decodeIdent <&> T.NominalId)
-      <*> (obj .: "toNomVal" <&> c)
+      <*> (obj .: "toNomVal" <&> c <&> Lens.Const)
       <&> V.BToNom
     , V.Nom
       <$> (obj .: "fromNomId" >>= lift . decodeIdent <&> T.NominalId)
-      <*> (obj .: "fromNomVal" <&> c)
+      <*> (obj .: "fromNomVal" <&> c <&> Lens.Const)
       <&> V.BFromNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= monoChildren (lift . decodeVal . (^. Lens._Wrapped))
+    ] >>= monoChildren (lift . decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
     where
         c = Lens.Const
 

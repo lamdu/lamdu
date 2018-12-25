@@ -7,7 +7,7 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
-import           AST (annotations)
+import           AST (ToKnot(..), annotations)
 import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
@@ -27,6 +27,7 @@ import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
+import           Lamdu.Expr.UniqueId (toUUID)
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
 import           Revision.Deltum.IRef (IRef)
@@ -118,8 +119,10 @@ evalActions evaluator =
 replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
 replIRef = DbLayout.repl DbLayout.codeIRefs
 
-startBG :: Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) -> IO (Eval.Evaluator (ValI m))
-startBG = Eval.start IRef.uuid IRef.unsafeFromUUID
+startBG ::
+    Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) ->
+    IO (Eval.Evaluator (ValI m))
+startBG = Eval.start toUUID (ToKnot . IRef.unsafeFromUUID)
 
 start :: Evaluator -> IO ()
 start evaluator =
@@ -154,8 +157,8 @@ executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
 sumDependency :: Eval.Dependencies (ValI m) -> Set UUID
 sumDependency (Eval.Dependencies subexprs globals) =
     mconcat
-    [ Set.map IRef.uuid subexprs
-    , Set.map (IRef.uuid . ExprIRef.defI) globals
+    [ Set.map toUUID subexprs
+    , Set.map (toUUID . ExprIRef.defI) globals
     ]
 
 runTransactionAndMaybeRestartEvaluator :: Evaluator -> T DbM a -> IO a
@@ -168,7 +171,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
         \rawDependencies ->
         do
             let dependencies =
-                    sumDependency rawDependencies & Set.insert (IRef.uuid replIRef)
+                    sumDependency rawDependencies & Set.insert (toUUID replIRef)
             (dependencyChanged, result) <-
                 do
                     (oldVersion, result, newVersion) <-

@@ -7,7 +7,7 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
-import           AST (Ann(..), annotations, monoChildren)
+import           AST (Ann(..), annotations, monoChildren, ToKnot(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
@@ -40,7 +40,7 @@ import           Lamdu.Data.Tag (Tag(..), tagName, tagOrder)
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import           Lamdu.Expr.UniqueId (ToUUID)
+import           Lamdu.Expr.UniqueId (ToUUID(..))
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -121,7 +121,7 @@ exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
         mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
-        Codec.EntityLamVar mParamList tag (IRef.uuid lamI) lamVar & tell
+        Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
     where
         lamI = lamP ^. Property.pVal
 exportSubexpr _ = pure ()
@@ -145,7 +145,7 @@ exportDef globalId =
         let def' =
                 def
                 & Definition.defBody . Lens.mapped . annotations %~
-                    IRef.uuid . Property.value
+                    toUUID . Property.value
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
@@ -156,7 +156,7 @@ exportRepl =
     do
         repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
-        repl <&> annotations %~ IRef.uuid . Property.value & Codec.EntityRepl & tell
+        repl <&> annotations %~ toUUID . Property.value & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -198,10 +198,10 @@ export msg act exportPath =
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
 writeValAt (Ann valI body) =
-    valI <$ (monoChildren writeValAt body >>= Transaction.writeIRef valI)
+    valI <$ (monoChildren writeValAt body >>= ExprIRef.writeValI valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
-writeValAtUUID x = x & annotations %~ IRef.unsafeFromUUID & writeValAt
+writeValAtUUID x = x & annotations %~ ToKnot . IRef.unsafeFromUUID & writeValAt
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>
@@ -241,7 +241,7 @@ importLamVar paramList tag lamUUID var =
         Property.setP (Anchors.assocFieldParamList lamI) paramList
         Property.setP (Anchors.assocTag var) tag
     where
-        lamI = IRef.unsafeFromUUID lamUUID
+        lamI = IRef.unsafeFromUUID lamUUID & ToKnot
 
 importNominal :: T.Tag -> T.NominalId -> Nominal -> T ViewM ()
 importNominal tag nomId nominal =

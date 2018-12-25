@@ -1,12 +1,12 @@
-{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses, DataKinds #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
     ) where
 
-import           AST (Node, Children(..), overChildren, monoChildren)
+import           AST (Knot, Tree, Children(..), overChildren, monoChildren)
 import           AST.Class.Recursive (Recursive(..), foldMapRecursive)
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
@@ -45,7 +45,7 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) -> T m ()
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
 
@@ -68,8 +68,7 @@ convertLet ::
     Input.Payload m a ->
     Redex (Input.Payload m a) ->
     ConvertM m
-    (Ann (ConvertPayload m a)
-     (Binder InternalName (T m) (T m) (Ann (ConvertPayload m a))))
+    (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertLet float pl redex =
     do
         tag <- convertTaggedEntity param
@@ -131,7 +130,7 @@ convertLet float pl redex =
 convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (Node (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
+    ConvertM m (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertBinder expr@(Ann pl body) =
     case Redex.check body of
     Nothing ->
@@ -164,7 +163,8 @@ makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
-    ConvertM m (Function InternalName (T m) (T m) (Ann (ConvertPayload m a)))
+    ConvertM m
+    (Tree (Function InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
@@ -193,7 +193,7 @@ makeAssignment ::
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m
-    (Node (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m)))
+    (Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
     case params ^. cpParams of
     Nothing ->
@@ -217,7 +217,7 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    V.Lam V.Var V.Term (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertLam lam exprPl =
     do
@@ -242,7 +242,8 @@ convertLam lam exprPl =
                 overChildren (Proxy @Children)
                 (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
 
-useNormalLambda :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
+useNormalLambda ::
+    Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
@@ -251,7 +252,7 @@ useNormalLambda paramNames func
             ^. Lens._Wrapped)
         || not (allParamsUsed paramNames func)
 
-class GetParam (t :: (* -> *) -> *) where
+class GetParam (t :: Knot -> *) where
     getParam :: t f -> Maybe InternalName
     getParam _ = Nothing
 
@@ -279,7 +280,8 @@ instance GetParam (Body InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 instance Recursive GetParam (Body InternalName i o)
 
-allParamsUsed :: Set InternalName -> Function InternalName i o (Ann a) -> Bool
+allParamsUsed ::
+    Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
 allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
@@ -287,17 +289,17 @@ allParamsUsed paramNames func =
             foldMapRecursive (Proxy @GetParam)
             ((^. Lens._Just . Lens.to Set.singleton) . getParam) func
 
-class MarkLightParams (t :: (* -> *) -> *) where
-    markLightParams :: Set InternalName -> t (Ann a) -> t (Ann a)
+class MarkLightParams (t :: Knot -> *) where
+    markLightParams :: Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 
     default markLightParams ::
         (Children t, ChildrenConstraint t MarkLightParams) =>
-        Set InternalName -> t (Ann a) -> t (Ann a)
+        Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
     markLightParams = defaultMarkLightParams
 
 defaultMarkLightParams ::
     (Children t, ChildrenConstraint t MarkLightParams) =>
-    Set InternalName -> t (Ann a) -> t (Ann a)
+    Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 defaultMarkLightParams paramNames =
     overChildren (Proxy @MarkLightParams)
     (markNodeLightParams paramNames)
@@ -305,8 +307,8 @@ defaultMarkLightParams paramNames =
 markNodeLightParams ::
     MarkLightParams t =>
     Set InternalName ->
-    Node (Ann a) t ->
-    Node (Ann a) t
+    Tree (Ann a) t ->
+    Tree (Ann a) t
 markNodeLightParams paramNames =
     val %~ markLightParams paramNames
 
@@ -337,7 +339,7 @@ convertAssignment ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Node (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
+    , Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
     )
 convertAssignment binderKind defVar expr =
     do
@@ -352,8 +354,7 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Node (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
+    , Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)
-    

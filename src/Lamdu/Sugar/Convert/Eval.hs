@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Eval
     ( results, param, completion
     ) where
 
-import           AST.Functor.Ann (Ann(..), val)
+import           AST.Knot.Ann (Ann(..), val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))

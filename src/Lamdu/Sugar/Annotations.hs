@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleContexts, KindSignatures #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleContexts, KindSignatures, DataKinds, TypeFamilies #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -6,8 +6,8 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations
     ) where
 
-import           AST (Node, overChildren)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree, Knot, overChildren)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
 import           Data.Proxy (Proxy(..))
@@ -51,15 +51,15 @@ topLevelAnn = ann . _1
 
 markNodeAnnotations ::
     MarkAnnotations t =>
-    Node (Ann a) t ->
-    Node (Ann (ShowAnnotation, a)) t
+    Tree (Ann a) t ->
+    Tree (Ann (ShowAnnotation, a)) t
 markNodeAnnotations (Ann pl x) =
     Ann (showAnn, pl) newBody
     where
         (showAnn, newBody) = markAnnotations x
 
-class MarkAnnotations (t :: (* -> *) -> *) where
-    markAnnotations :: t (Ann a) -> (ShowAnnotation, t (Ann (ShowAnnotation, a)))
+class MarkAnnotations (t :: Knot -> *) where
+    markAnnotations :: Tree t (Ann a) -> (ShowAnnotation, Tree t (Ann (ShowAnnotation, a)))
 
 instance MarkAnnotations (Binder name i o) where
     markAnnotations (BinderExpr body) =
@@ -99,8 +99,8 @@ instance MarkAnnotations (Body name i o) where
     markAnnotations = markBodyAnnotations
 
 markBodyAnnotations ::
-    Body name i o (Ann a) ->
-    (ShowAnnotation, Body name i o (Ann (ShowAnnotation, a)))
+    Tree (Body name i o) (Ann a) ->
+    (ShowAnnotation, Tree (Body name i o) (Ann (ShowAnnotation, a)))
 markBodyAnnotations oldBody =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations
@@ -167,9 +167,8 @@ markBodyAnnotations oldBody =
             overChildren (Proxy @MarkAnnotations)
             markNodeAnnotations oldBody
         nonHoleAnn =
-            Lens.filtered
-            (Lens.nullOf (val . Lens.to SugarLens.stripAnnotations . SugarLens.bodyUnfinished))
-            . topLevelAnn
+            Lens.filtered (Lens.nullOf (val . SugarLens.bodyUnfinished)) .
+            topLevelAnn
         onHandler a =
             a
             & _BodyLam . lamFunc . fBody .

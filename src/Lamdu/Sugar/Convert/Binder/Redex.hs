@@ -5,7 +5,8 @@ module Lamdu.Sugar.Convert.Binder.Redex
     , check
     ) where
 
-import           AST.Functor.Ann (Ann(..), ann, val, annotations)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -17,7 +18,7 @@ import           Lamdu.Prelude
 
 data Redex a = Redex
     { _bodyScope :: EvalScopes ScopeId
-    , _lam :: V.Lam V.Var V.Term (Ann a)
+    , _lam :: Tree (V.Lam V.Var V.Term) (Ann a)
     , _lamPl :: a
     , _paramRefs :: [EntityId]
     , _arg :: Val a
@@ -32,7 +33,7 @@ instance Functor Redex where
         , _arg = r ^. arg & annotations %~ f
         }
 
-check :: V.Term (Ann (Input.Payload m a)) -> Maybe (Redex (Input.Payload m a))
+check :: Tree V.Term (Ann (Input.Payload m a)) -> Maybe (Redex (Input.Payload m a))
 check term =
     do
         V.Apply func a <- term ^? V._BApp

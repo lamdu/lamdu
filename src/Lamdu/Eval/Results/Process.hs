@@ -2,7 +2,7 @@ module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
-import           AST (Node, Ann(..))
+import           AST (Tie, Ann(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
@@ -37,7 +37,7 @@ extractVariantTypeField tag typ =
         comp <- typ ^? T._TVariant
         FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
 
-type AddTypes val f = (T.Type -> val -> Node f Body) -> T.Type -> Body f
+type AddTypes val f = (T.Type -> val -> Tie f Body) -> T.Type -> Body f
 
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack

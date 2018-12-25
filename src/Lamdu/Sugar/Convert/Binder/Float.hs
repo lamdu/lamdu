@@ -4,8 +4,8 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), ann, val)
+import           AST (Tree, monoChildren)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
@@ -36,7 +36,6 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import qualified Revision.Deltum.Transaction as Transaction
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -76,7 +75,7 @@ moveToGlobalScope =
         -- extraction/generalization of the inner type
         postProcess
 
-isVarAlwaysApplied :: V.Lam V.Var V.Term (Ann a) -> Bool
+isVarAlwaysApplied :: Tree (V.Lam V.Var V.Term) (Ann a) -> Bool
 isVarAlwaysApplied (V.Lam var x) =
     go False x
     where
@@ -93,27 +92,27 @@ convertLetToLam var redex =
             (BinderKindLet (redex ^. Redex.lam)) (redex ^. Redex.arg)
         let toNewParam prop =
                 V.LVar newParam & V.BLeaf &
-                Transaction.writeIRef (Property.value prop)
+                ExprIRef.writeValI (Property.value prop)
         SubExprs.onGetVars toNewParam var (redex ^. Redex.arg)
         pure newValP
     where
-        mkArg = V.LVar var & V.BLeaf & Transaction.newIRef
+        mkArg = V.LVar var & V.BLeaf & ExprIRef.newValI
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> V.Lam V.Var V.Term (Ann (ValP m)) -> T m ()
+    V.Var -> T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
         toNewParam prop =
             V.LVar lamVar & V.BLeaf
-            & Transaction.newIRef
+            & ExprIRef.newValI
             <&> (`V.GetField` paramTag) <&> V.BGetField
-            >>= Transaction.writeIRef (Property.value prop)
+            >>= ExprIRef.writeValI (Property.value prop)
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> V.Lam V.Var V.Term (Ann (ValP m)) -> Params.StoredLam m ->
+    V.Var -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> Params.StoredLam m ->
     ConvertM m (T m (ValP m))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
@@ -131,12 +130,12 @@ convertLetParamToRecord var letLam storedLam =
         convertVarToGetFieldParam var addAsTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp & pure
     where
-        mkNewArg = V.LVar var & V.BLeaf & Transaction.newIRef
+        mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValI
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> V.Lam V.Var V.Term (Ann (ValP m)) -> Params.StoredLam m ->
-    ConvertM m (T m (ValP m))
+    [T.Tag] -> V.Var -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) ->
+    Params.StoredLam m -> ConvertM m (T m (ValP m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
     \addParam ->
@@ -147,7 +146,7 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
         convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp & pure
     where
-        mkNewArg = V.LVar var & V.BLeaf & Transaction.newIRef
+        mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValI
 
 addLetParam ::
     Monad m =>

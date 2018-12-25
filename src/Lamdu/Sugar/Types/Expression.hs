@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts, DataKinds #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
@@ -36,7 +36,7 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     ) where
 
-import           AST (Node, LeafNode, Ann, Children, Recursive, makeChildren)
+import           AST (Tree, Tie, Ann, Children, Recursive, makeChildrenRecursive)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
@@ -53,7 +53,7 @@ import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
 
-type Expression name i o a = Node (Ann a) (Body name i o)
+type Expression name i o a = Tree (Ann a) (Body name i o)
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: TagInfo name
@@ -63,15 +63,15 @@ data AnnotatedArg name expr = AnnotatedArg
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o f = LabeledApply
-    { _aFunc :: LeafNode f (BinderVarRef name o)
-    , _aSpecialArgs :: Meta.SpecialArgs (Node f (Body name i o))
-    , _aAnnotatedArgs :: [AnnotatedArg name (Node f (Body name i o))]
-    , _aRelayedArgs :: [LeafNode f (GetVar name o)]
+    { _aFunc :: Tie f (Lens.Const (BinderVarRef name o))
+    , _aSpecialArgs :: Meta.SpecialArgs (Tie f (Body name i o))
+    , _aAnnotatedArgs :: [AnnotatedArg name (Tie f (Body name i o))]
+    , _aRelayedArgs :: [Tie f (Lens.Const (GetVar name o))]
     } deriving Generic
 
 data InjectContent name i o f
-    = InjectNullary (LeafNode f (NullaryVal name i o))
-    | InjectVal (Node f (Body name i o))
+    = InjectNullary (Tie f (Lens.Const (NullaryVal name i o)))
+    | InjectVal (Tie f (Body name i o))
     deriving Generic
 
 data Inject name i o f = Inject
@@ -88,19 +88,19 @@ data Lambda name i o f = Lambda
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment name i o f = Fragment
-    { _fExpr :: Node f (Body name i o)
+    { _fExpr :: Tie f (Body name i o)
     , _fHeal :: Heal o
     , _fOptions :: i [HoleOption name i o]
     } deriving Generic
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Node (Ann (Payload name i o ())) (Binder name i o)
+    { _holeResultConverted :: Tree (Ann (Payload name i o ())) (Binder name i o)
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i (Node (Ann (Payload name i o ())) (Binder name i o))
+    , _hoSugaredBaseExpr :: i (Tree (Ann (Payload name i o ())) (Binder name i o))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic
@@ -132,9 +132,9 @@ data Else name i o f
     deriving Generic
 
 data IfElse name i o f = IfElse
-    { _iIf :: Node f (Body name i o)
-    , _iThen :: Node f (Body name i o)
-    , _iElse :: Node f (Else name i o)
+    { _iIf :: Tie f (Body name i o)
+    , _iThen :: Tie f (Body name i o)
+    , _iElse :: Tie f (Else name i o)
     } deriving Generic
 
 data Body name i o f
@@ -143,26 +143,26 @@ data Body name i o f
     | BodyLabeledApply (LabeledApply name i o f)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
-    | BodyRecord (Composite name i o (Node f (Body name i o)))
-    | BodyGetField (GetField name i o (Node f (Body name i o)))
-    | BodyCase (Case name i o (Node f (Body name i o)))
+    | BodyRecord (Composite name i o (Tie f (Body name i o)))
+    | BodyGetField (GetField name i o (Tie f (Body name i o)))
+    | BodyCase (Case name i o (Tie f (Body name i o)))
     | BodyIfElse (IfElse name i o f)
     | BodyInject (Inject name i o f)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (Node f (Binder name i o)))
-    | BodyFromNom (Nominal name (Node f (Body name i o)))
+    | BodyToNom (Nominal name (Tie f (Binder name i o)))
+    | BodyFromNom (Nominal name (Tie f (Body name i o)))
     | BodyFragment (Fragment name i o f)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
 data Let name i o f = Let
-    { _lValue :: Node f (Assignment name i o) -- "let foo = [[bar]] in x"
+    { _lValue :: Tie f (Assignment name i o) -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: Tag name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
     , _lBodyScope :: ChildScopes
-    , _lBody :: Node f (Binder name i o) -- "let foo = bar in [[x]]"
+    , _lBody :: Tie f (Binder name i o) -- "let foo = bar in [[x]]"
     } deriving Generic
 
 -- An expression with 0 or more let items,
@@ -179,7 +179,7 @@ data Binder name i o f
 data Function name i o f = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: Node f (Binder name i o)
+    , _fBody :: Tie f (Binder name i o)
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope
@@ -214,7 +214,7 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
-makeChildren
+makeChildrenRecursive
     [ ''Assignment, ''AssignPlain, ''Body, ''Binder
     , ''Else, ''ElseIfContent, ''Fragment, ''Function
     , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply

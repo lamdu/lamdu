@@ -3,7 +3,7 @@
 
 module Test.Lamdu.Instances () where
 
-import           AST (Ann(..))
+import           AST (Tree, Ann(..))
 import           Control.DeepSeq (NFData(..))
 import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Monad.Unit (Unit(..))
@@ -139,10 +139,6 @@ instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
 
 deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.Assignment n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.AssignPlain n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.Binder n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.Body n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.Case n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Composite n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.CompositeItem n Unit Unit a)
@@ -150,18 +146,8 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.Definition n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.DefinitionBody n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.DefinitionExpression n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.DefinitionOutdatedType n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.Else n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.ElseIfContent n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.Fragment n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.FuncParam n Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.Function n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.GetField n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.IfElse n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.Inject n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.InjectContent n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.LabeledApply n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.Lambda n Unit Unit (Ann a))
-deriving instance (Eq a, Eq n) => Eq (Sugar.Let n Unit Unit (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Sugar.Nominal n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Pane n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Payload n Unit Unit a)
@@ -174,6 +160,20 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.ResTable n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.TBody n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.VariantType n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.WorkArea n Unit Unit a)
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.AssignPlain n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Assignment n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Binder n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Body n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Else n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.ElseIfContent n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Fragment n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Function n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.IfElse n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Inject n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.InjectContent n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.LabeledApply n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Lambda n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Let n Unit Unit) (Ann a))
 deriving instance Eq (Name Unit)
 deriving instance Eq (Name.StoredName Unit)
 deriving instance Eq (Sugar.BinderVarInline Unit)
@@ -216,12 +216,7 @@ deriving instance Eq n => Eq (Sugar.TagSelection n Unit Unit a)
 deriving instance Eq n => Eq (Sugar.Type n)
 deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
 
-instance (NFData a, NFData e) => NFData (Ann a e)
 instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Assignment n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.AssignPlain n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Binder n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Body n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Case n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Composite n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.CompositeFields tag n a) where rnf = genericRnf
@@ -230,18 +225,8 @@ instance (NFData a, NFData n) => NFData (Sugar.Definition n (T i) (T o) a) where
 instance (NFData a, NFData n) => NFData (Sugar.DefinitionBody n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.DefinitionExpression n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.DefinitionOutdatedType n a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Else n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.ElseIfContent n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Fragment n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.FuncParam n (T i) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Function n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.GetField n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.IfElse n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Inject n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.InjectContent n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.LabeledApply n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Lambda n (T i) (T o) (Ann a)) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.Let n (T i) (T o) (Ann a)) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Nominal n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Pane n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Payload n (T i) (T o) a) where rnf = genericRnf
@@ -252,6 +237,20 @@ instance (NFData a, NFData n) => NFData (Sugar.ResRecord n a) where rnf = generi
 instance (NFData a, NFData n) => NFData (Sugar.ResTable n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.TBody n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.WorkArea n (T i) (T o) a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.AssignPlain n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Assignment n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Binder n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Body n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Else n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.ElseIfContent n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Fragment n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Function n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.IfElse n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Inject n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.InjectContent n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.LabeledApply n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Lambda n (T i) (T o)) (Ann a)) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Let n (T i) (T o)) (Ann a)) where rnf = genericRnf
 instance NFData (Name (T o)) where rnf = genericRnf
 instance NFData (Name.StoredName (T o)) where rnf = genericRnf
 instance NFData (Sugar.AddFirstParam n (T i) (T o)) where rnf = genericRnf
@@ -265,10 +264,24 @@ instance NFData (Sugar.Heal (Transaction o)) where rnf = genericRnf
 instance NFData (Sugar.Hole n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.Literal (Property (T o))) where rnf = genericRnf
 instance NFData (Sugar.NodeActions n (T i) (T o)) where rnf = genericRnf
-instance NFData (Sugar.NullaryVal n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.NullParamActions (T o)) where rnf = genericRnf
+instance NFData (Sugar.NullaryVal n (T i) (T o)) where rnf = genericRnf
 instance NFData (Sugar.OpenCompositeActions (T o)) where rnf = genericRnf
 instance NFData (Sugar.TagSelection n (T i) (T o) a) where rnf = genericRnf
+instance NFData Def.FFIName where rnf = genericRnf
+instance NFData EntityId where rnf = genericRnf
+instance NFData ExprGui.Payload
+instance NFData Name.Collision
+instance NFData Name.TagText
+instance NFData ShowAnnotation
+instance NFData Sugar.BinderBodyScope where rnf = genericRnf
+instance NFData Sugar.BinderMode where rnf = genericRnf
+instance NFData Sugar.BinderParamScopeId where rnf = genericRnf
+instance NFData Sugar.ErrorType where rnf = genericRnf
+instance NFData Sugar.EvalTypeError
+instance NFData Sugar.FuncApplyLimit
+instance NFData Sugar.ScopeId
+instance NFData Sugar.VarInfo
 instance NFData a => NFData (CurAndPrev a) where rnf = genericRnf
 instance NFData a => NFData (Property f a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseArg (T o) a) where rnf = genericRnf
@@ -277,9 +290,6 @@ instance NFData a => NFData (Sugar.CompositeTail (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResStream a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf
-instance NFData Def.FFIName where rnf = genericRnf
-instance NFData EntityId where rnf = genericRnf
-instance NFData ExprGui.Payload
 instance NFData n => NFData (Sugar.Annotation n (T i)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderParams n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.BinderVarForm n (T o)) where rnf = genericRnf
@@ -294,19 +304,8 @@ instance NFData n => NFData (Sugar.ParamRef n (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ParamsRecordVarRef n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ResVal n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Scheme n) where rnf = genericRnf
+instance NFData n => NFData (Sugar.TId n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Tag n (T i) (T o)) where rnf = genericRnf
 instance NFData n => NFData (Sugar.TagInfo n) where rnf = genericRnf
-instance NFData n => NFData (Sugar.TId n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Type n) where rnf = genericRnf
 instance NFData n => NFData (Sugar.ValAnnotation n (T i)) where rnf = genericRnf
-instance NFData Name.Collision
-instance NFData Name.TagText
-instance NFData ShowAnnotation
-instance NFData Sugar.BinderBodyScope where rnf = genericRnf
-instance NFData Sugar.BinderMode where rnf = genericRnf
-instance NFData Sugar.BinderParamScopeId where rnf = genericRnf
-instance NFData Sugar.ErrorType where rnf = genericRnf
-instance NFData Sugar.EvalTypeError
-instance NFData Sugar.FuncApplyLimit
-instance NFData Sugar.ScopeId
-instance NFData Sugar.VarInfo

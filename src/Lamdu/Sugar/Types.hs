@@ -13,7 +13,7 @@ module Lamdu.Sugar.Types
     , DefinitionBuiltin(..), biType, biName, biSetName
     ) where
 
-import           AST (Node, Ann, annotations)
+import           AST (Tree, Ann, annotations)
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified Lamdu.Calc.Term as V
@@ -33,7 +33,7 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Node (Ann a) (Assignment name i o)
+    , _deContent :: Tree (Ann a) (Assignment name i o)
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression
@@ -74,7 +74,7 @@ data Pane name i o a = Pane
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
-    { _replExpr :: Node (Ann a) (Binder name i o)
+    { _replExpr :: Tree (Ann a) (Binder name i o)
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving Generic

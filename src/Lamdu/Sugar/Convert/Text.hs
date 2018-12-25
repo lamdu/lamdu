@@ -15,12 +15,12 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
-import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -42,7 +42,7 @@ text n@(V.Nom tid (Ann litPl bod)) toNomPl =
         Property
             { _pVal = txt
             , _pSet =
-                Transaction.writeIRef litIRef . V.BLeaf . V.LLiteral .
+                ExprIRef.writeValI litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
             } & LiteralText & BodyLiteral & addActions n toNomPl
             & lift

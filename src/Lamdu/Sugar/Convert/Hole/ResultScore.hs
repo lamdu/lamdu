@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ) where
 
 import           AST (monoChildren)
-import           AST.Functor.Ann (Ann(..), val)
+import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Lens as ExprLens
