@@ -14,6 +14,8 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Main.Events (KeyEvent(..))
+import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -146,12 +148,12 @@ fromWorkArea ::
 fromWorkArea cache path =
     convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
 
-simpleKeyEvent :: GLFW.Key -> Event
-simpleKeyEvent key =
+simpleKeyEvent :: MetaKey -> Event
+simpleKeyEvent (MetaKey mods key) =
     EventKey KeyEvent
     { keKey = key
     , keScanCode = 0 -- dummy
-    , keModKeys = mempty
+    , keModKeys = MetaKey.toGLFWModifiers mods
     , keState = GLFW.KeyState'Pressed
     }
 
@@ -174,7 +176,7 @@ testLambdaDelete =
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
-        let delEvent = simpleKeyEvent GLFW.Key'Backspace
+        let delEvent = simpleKeyEvent (MetaKey noMods GLFW.Key'Backspace)
         env0 <- applyEvent cache (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent cache env0 dummyVirt delEvent
@@ -242,7 +244,7 @@ workAreaEq x y =
 
 testKeyboardDirAndBack ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor ->
-    GLFW.Key -> GLFW.Key -> T ViewM ()
+    MetaKey -> MetaKey -> T ViewM ()
 testKeyboardDirAndBack cache posEnv posVirt way back =
     mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
     >>=
@@ -307,16 +309,8 @@ testTabNavigation cache env virtCursor =
     where
         pos = Widget.fFocalAreas . traverse
         dirs =
-            [ ("tab", simpleKeyEvent GLFW.Key'Tab, GT)
-            , ( "shift-tab"
-                , EventKey KeyEvent
-                    { keKey = GLFW.Key'Tab
-                    , keScanCode = 0 -- dummy
-                    , keModKeys = mempty { GLFW.modifierKeysShift = True }
-                    , keState = GLFW.KeyState'Pressed
-                    }
-                , LT
-                )
+            [ ("tab", simpleKeyEvent (head Widget.strollAheadKeys), GT)
+            , ( "shift-tab", simpleKeyEvent (head Widget.strollBackKeys), LT)
             ]
 
 testConsistentKeyboardNavigation ::
@@ -326,13 +320,15 @@ testConsistentKeyboardNavigation cache posEnv posVirt =
         when (Widget.toAnimId (posEnv ^. cursor) ^? Lens.ix 1 /= Just "literal edit")
             -- TODO: Handle literal edits properly
             ( traverse_ (uncurry (testKeyboardDirAndBack cache posEnv posVirt))
-            [ (GLFW.Key'Up, GLFW.Key'Down)
-            , (GLFW.Key'Down, GLFW.Key'Up)
-            , (GLFW.Key'Left, GLFW.Key'Right)
-            , (GLFW.Key'Right, GLFW.Key'Left)
+            [ (k GLFW.Key'Up, k GLFW.Key'Down)
+            , (k GLFW.Key'Down, k GLFW.Key'Up)
+            , (k GLFW.Key'Left, k GLFW.Key'Right)
+            , (k GLFW.Key'Right, k GLFW.Key'Left)
             ]
             )
         testTabNavigation cache posEnv posVirt
+    where
+        k = MetaKey noMods
 
 testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testActions cache env virtCursor =
