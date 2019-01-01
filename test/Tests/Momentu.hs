@@ -124,14 +124,13 @@ gridStrollTest =
             getEventMap w
             & E.lookup (Identity Nothing) (simpleKeyEvent (head keys))
             & runIdentity
-            & maybe (error (msg ++ ": has no key mapping")) (trace (msg ++ " found key!"))
+            & fromMaybe (error (msg ++ ": has no key mapping"))
             & (^. E.dhHandler)
             & runIdentity
             & (^?! State.uCursor . Lens._Wrapped . Lens._Just)
             & fromCursor
         testStroll keys idx w =
             do
-                traceM $ unwords ["testStroll", show keys, show idx]
                 assertEqual "Stroll dest" idx
                     (keyEventTarget
                      ("Strolling to " ++ show idx ++ " via " ++ show keys) keys w)
