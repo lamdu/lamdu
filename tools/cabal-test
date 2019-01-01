@@ -1,2 +1,2 @@
 set -eu
-cabal build && dist/build/Tests/Tests "$@"
+cabal v1-build && dist/build/Tests/Tests "$@"
