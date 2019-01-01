@@ -130,7 +130,7 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
         applyStrollPreference events =
             -- | If the unfocused one has a stroll destination for us
             -- Use it in each event that prefers the stroll position
-            ( case u ^. uMStroll of
+            case u ^. uMStroll of
             Just (Semigroup.First fwd, _) | order == Forward ->
                 events <&> Lens.mapped %~
                 \e ->
@@ -142,7 +142,6 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
                 else
                     e
             _ -> events
-            )
         addEvents eventContext events =
             applyStrollPreference events
             <> foldMap (enterEvents eventContext) (u ^. uMEnter)

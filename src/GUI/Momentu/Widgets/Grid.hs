@@ -136,7 +136,7 @@ directions =
 
 -- enter *from* is inverse of direction we're entering to:
 enterDirections :: NavDests (Orientation, Order)
-enterDirections = directions & Lens.mapped . _2 %~ Dir.reverseOrder
+enterDirections = directions <&> _2 %~ Dir.reverseOrder
 
 mkNavDests ::
     Functor f =>

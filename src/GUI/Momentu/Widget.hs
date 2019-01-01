@@ -113,7 +113,7 @@ enterFuncAddVirtualCursor destRect =
         mkVirtCursor dir =
             case dir of
             FromGeometric (GeometricOrigin o _ r) ->
-                destRect & (Dir.rectRange (Dir.perpendicular o)) .~ r & Just
+                destRect & Dir.rectRange (Dir.perpendicular o) .~ r & Just
             FromOutside -> Nothing
             Point p     -> Rect p 0 & Just
             <&> VirtualCursor
