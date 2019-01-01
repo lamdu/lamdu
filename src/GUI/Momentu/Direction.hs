@@ -4,7 +4,7 @@ module GUI.Momentu.Direction
     , perpendicular, axis, rectRange
     , Order(..), _Forward, _Backward
     , reverseOrder, applyOrder
-    , name
+    , englishName
     ) where
 
 import qualified Control.Lens as Lens
@@ -41,11 +41,11 @@ applyOrder :: Order -> (a -> a -> b) -> a -> a -> b
 applyOrder Forward = id
 applyOrder Backward = flip
 
-name :: IsString a => Orientation -> Order -> a
-name Horizontal Backward = "left"
-name Horizontal Forward = "right"
-name Vertical Backward = "up"
-name Vertical Forward = "down"
+englishName :: IsString a => Orientation -> Order -> a
+englishName Horizontal Backward = "left"
+englishName Horizontal Forward = "right"
+englishName Vertical Backward = "up"
+englishName Vertical Forward = "down"
 
 Lens.makePrisms ''Orientation
 Lens.makePrisms ''Order

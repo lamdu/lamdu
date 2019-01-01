@@ -155,7 +155,7 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
             & (^. enterResultEvent)
             & EventMap.keyPresses
                 (dirKey orientation order stdDirKeys <&> ModKey mempty)
-            (EventMap.Doc ["Navigation", "Move", Dir.name orientation order])
+            (EventMap.Doc ["Navigation", "Move", Dir.englishName orientation order])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
                 EventMap.keysEventMapMovesCursor strollBackKeys
