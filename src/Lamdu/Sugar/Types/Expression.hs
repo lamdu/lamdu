@@ -36,7 +36,7 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     ) where
 
-import           AST (Tree, Tie, Ann, Children, Recursive, makeChildrenRecursive)
+import           AST (Tree, Tie, Ann, Children, Recursive, makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Functor.Identity (Identity(..))
@@ -214,15 +214,20 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
-makeChildrenRecursive
-    [ ''Assignment, ''AssignPlain, ''Body, ''Binder
-    , ''Else, ''ElseIfContent, ''Fragment, ''Function
-    , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply
-    , ''Lambda, ''Let
-    ]
-
--- TODO: The instances below are a bit of boiler-plate,
--- Need to rethink if the TH could generate this.
+makeChildren ''Assignment
+makeChildren ''AssignPlain
+makeChildren ''Body
+makeChildren ''Binder
+makeChildren ''Else
+makeChildren ''ElseIfContent
+makeChildren ''Fragment
+makeChildren ''Function
+makeChildren ''IfElse
+makeChildren ''Inject
+makeChildren ''InjectContent
+makeChildren ''LabeledApply
+makeChildren ''Lambda
+makeChildren ''Let
 
 instance Recursive Children (Assignment name i o)
 instance Recursive Children (AssignPlain name i o)

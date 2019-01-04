@@ -45,9 +45,9 @@ data Body f
     | RArray [Tie f Body]
     | RError EvalTypeError
 
-AST.makeChildrenRecursive [''Body]
+AST.makeChildren ''Body
 
-deriving instance AST.SubTreeConstraint Body f Show => Show (Body f)
+deriving instance Show (Tie f Body) => Show (Body f)
 
 type Val pl = Tree (Ann pl) Body
 
