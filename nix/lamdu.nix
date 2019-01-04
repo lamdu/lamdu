@@ -1,4 +1,4 @@
-{ mkDerivation, aeson, aeson-diff, aeson-pretty, AlgoW, base
+{ mkDerivation, aeson, aeson-diff, aeson-pretty, AlgoW, ansi-wl-pprint, base
 , base-compat, base-orphans, base16-bytestring, binary, bytestring
 , Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
 , deepseq-generics, directory, edit-distance, ekg-core
@@ -9,7 +9,7 @@
 , random, safe-exceptions, split, StateVar, stdenv, stm, syntax-tree
 , template-haskell, temporary, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers
-, unordered-containers, uuid, uuid-types, vector, wl-pprint, yaml
+, unordered-containers, uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal
 }:
 mkDerivation {
@@ -40,7 +40,7 @@ mkDerivation {
   enableExecutableProfiling = false;
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [
-    aeson aeson-pretty AlgoW base base-compat base-orphans
+    aeson aeson-pretty AlgoW ansi-wl-pprint base base-compat base-orphans
     base16-bytestring binary bytestring constraints containers cryptohash-sha256
     data-default deepseq deepseq-generics directory edit-distance
     ekg-core executable-path filepath GLFW-b
@@ -48,7 +48,7 @@ mkDerivation {
     language-ecmascript lens lens-aeson leveldb-haskell List mtl
     nodejs-exec OpenGL optparse-applicative pretty process random
     safe-exceptions split StateVar stm syntax-tree temporary text time timeit
-    transformers unordered-containers uuid uuid-types vector wl-pprint
+    transformers unordered-containers uuid uuid-types vector
     zip-archive
   ];
   buildDepends = [ gitMinimal ];

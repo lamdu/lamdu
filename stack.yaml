@@ -47,9 +47,7 @@ packages:
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
-- language-ecmascript-0.17.2.0
 - stb-image-0.2.1
-- wl-pprint-1.2.1
 
 resolver: lts-13.1
 

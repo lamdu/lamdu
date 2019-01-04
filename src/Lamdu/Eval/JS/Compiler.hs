@@ -44,7 +44,7 @@ import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
 import           Language.ECMAScript3.Syntax.QuasiQuote (jsstmt)
 import           Numeric.Lens (hex)
-import qualified Text.PrettyPrint.Leijen as Pretty
+import qualified Text.PrettyPrint.ANSI.Leijen as Pretty
 
 import           Lamdu.Prelude
 
