@@ -18,7 +18,6 @@ let config = {
                         nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
                         testing-feat = self.callHackage "testing-feat" "1.1.0.0" {};
                         aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
-                        language-ecmascript = pkgs.haskell.lib.doJailbreak (self.callHackage "language-ecmascript" "0.17.2.0" {});
                         ekg-core = pkgs.haskell.lib.doJailbreak (self.callHackage "ekg-core" "0.1.1.4" {});
                     };
                 };
