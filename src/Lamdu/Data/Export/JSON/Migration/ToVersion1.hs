@@ -16,14 +16,9 @@ import           Data.Foldable (asum)
 import qualified Data.Map.Extended as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Lamdu.Data.Export.JSON.Migration.Common (version)
 
 import           Lamdu.Prelude
-
-version1 :: Aeson.Value
-version1 =
-    mempty
-    & Lens.at "schemaVersion" ?~ Aeson.Number 1
-    & Aeson.Object
 
 type NominalId = Text
 type FrozenNominal = Aeson.Value
@@ -215,6 +210,6 @@ migrate (Aeson.Array vals) =
         nominalMap <- traverse collectNominals vals <&> (^. traverse)
         defMap <- traverse collectDefs vals <&> (^. traverse)
         newVals <- traverse (migrateEntity nominalMap defMap) vals
-        Lens._Cons # (version1, newVals)
+        Lens._Cons # (version 1, newVals)
             & Aeson.Array & pure
 migrate _ = Left "top-level should be array"

@@ -13,14 +13,9 @@ import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.Class (sortOn)
 import qualified Data.Vector as Vector
+import           Lamdu.Data.Export.JSON.Migration.Common (version)
 
 import           Lamdu.Prelude
-
-version :: Integer -> Aeson.Value
-version x =
-    mempty
-    & Lens.at "schemaVersion" ?~ Aeson.toJSON x
-    & Aeson.Object
 
 type TagId = Text
 type TagOrder = Int

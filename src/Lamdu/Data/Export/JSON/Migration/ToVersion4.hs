@@ -12,14 +12,9 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Data.Vector as Vector
 import           Numeric.Extended (encodeHex)
+import           Lamdu.Data.Export.JSON.Migration.Common (version)
 
 import           Lamdu.Prelude
-
-version :: Integer -> Aeson.Value
-version x =
-    mempty
-    & Lens.at "schemaVersion" ?~ Aeson.toJSON x
-    & Aeson.Object
 
 collectTags :: Aeson.Value -> Either Text (Map Text (Set Text))
 collectTags (Aeson.Object obj) =

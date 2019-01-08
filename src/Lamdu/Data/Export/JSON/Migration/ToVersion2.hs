@@ -11,14 +11,9 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (asum)
 import qualified Data.Vector as Vector
+import           Lamdu.Data.Export.JSON.Migration.Common (version)
 
 import           Lamdu.Prelude
-
-version :: Integer -> Aeson.Value
-version x =
-    mempty
-    & Lens.at "schemaVersion" ?~ Aeson.toJSON x
-    & Aeson.Object
 
 migrateEntity ::
     Aeson.Value -> Either Text Aeson.Value

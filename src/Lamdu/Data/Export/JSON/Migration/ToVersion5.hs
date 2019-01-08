@@ -2,14 +2,9 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion5 (migrate) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
+import           Lamdu.Data.Export.JSON.Migration.Common (version)
 
 import           Lamdu.Prelude
-
-version :: Integer -> Aeson.Value
-version x =
-    mempty
-    & Lens.at "schemaVersion" ?~ Aeson.toJSON x
-    & Aeson.Object
 
 replaceKey :: Lens.At t => Lens.Index t -> Lens.Index t -> t -> t
 replaceKey pre post obj =

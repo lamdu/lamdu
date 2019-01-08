@@ -250,6 +250,7 @@ Library
                   , Lamdu.Data.Export.JSON
                   , Lamdu.Data.Export.JSON.Codec
                   , Lamdu.Data.Export.JSON.Migration
+                  , Lamdu.Data.Export.JSON.Migration.Common
                   , Lamdu.Data.Export.JSON.Migration.ToVersion1
                   , Lamdu.Data.Export.JSON.Migration.ToVersion2
                   , Lamdu.Data.Export.JSON.Migration.ToVersion3
