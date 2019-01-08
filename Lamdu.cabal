@@ -121,7 +121,7 @@ Library
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
                   , lamdu-calculus
-                  , language-ecmascript >= 0.17 && < 0.18
+                  , language-ecmascript
                   , lens >= 4.1
                   , lens-aeson
                   , leveldb-haskell >= 0.6
