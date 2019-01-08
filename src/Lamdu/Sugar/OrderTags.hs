@@ -40,7 +40,7 @@ orderByTag toTag =
             & ExprIRef.readTagInfo
             <&> (,) x . (^. tagOrder)
 
-orderComposite :: Monad m => OrderT m (Sugar.CompositeFields p name (Sugar.Type a))
+orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Sugar.Type a))
 orderComposite =
     Sugar.compositeFields $
     \fields -> fields & orderByTag (^. _1) >>= traverse . _2 %%~ orderType
@@ -127,18 +127,16 @@ orderDef def =
 
 {-# INLINE orderedFlatComposite #-}
 orderedFlatComposite ::
-    Lens.Iso (T.Composite a) (T.Composite b)
-    ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite a)))
-    ([(T.Tag, T.Type)], Maybe (T.Var (T.Composite b)))
+    Lens.Iso' T.Row ([(T.Tag, T.Type)], Maybe T.RowVar)
 orderedFlatComposite =
     Lens.iso to from
     where
-        to T.CEmpty = ([], Nothing)
-        to (T.CVar x) = ([], Just x)
-        to (T.CExtend tag typ rest) = to rest & Lens._1 %~ (:) (tag, typ)
-        from ([], Nothing) = T.CEmpty
-        from ([], Just x) = T.CVar x
-        from ((tag,typ):rest, v) = (rest, v) & from & T.CExtend tag typ
+        to T.REmpty = ([], Nothing)
+        to (T.RVar x) = ([], Just x)
+        to (T.RExtend tag typ rest) = to rest & Lens._1 %~ (:) (tag, typ)
+        from ([], Nothing) = T.REmpty
+        from ([], Just x) = T.RVar x
+        from ((tag,typ):rest, v) = (rest, v) & from & T.RExtend tag typ
 
-orderedClosedFlatComposite :: Lens.Prism' (T.Composite b) [(T.Tag, T.Type)]
+orderedClosedFlatComposite :: Lens.Prism' T.Row [(T.Tag, T.Type)]
 orderedClosedFlatComposite = orderedFlatComposite . Lens.tagged Lens._Nothing

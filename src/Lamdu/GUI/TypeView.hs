@@ -208,7 +208,7 @@ makeComposite ::
     m (WithTextPos View) -> m (WithTextPos View) ->
     ((Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
          m (WithTextPos View, WithTextPos View)) ->
-    Sugar.CompositeFields t (Name f) (Sugar.Type (Name f)) ->
+    Sugar.CompositeFields (Name f) (Sugar.Type (Name f)) ->
     m (WithTextPos View)
 makeComposite o c mkPre mkPost mkField composite =
     case composite of

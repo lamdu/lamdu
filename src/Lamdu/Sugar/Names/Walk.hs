@@ -72,8 +72,8 @@ binderVarType (GetDefinition _) = GlobalDef
 
 toCompositeFields ::
     MonadNaming m =>
-    CompositeFields p (OldName m) (Type (OldName m)) ->
-    m (CompositeFields p (NewName m) (Type (NewName m)))
+    CompositeFields (OldName m) (Type (OldName m)) ->
+    m (CompositeFields (NewName m) (Type (NewName m)))
 toCompositeFields (CompositeFields fields mExt) =
     CompositeFields
     <$> traverse toField fields

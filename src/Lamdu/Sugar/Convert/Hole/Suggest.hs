@@ -164,7 +164,7 @@ valueConversionNoSplit nominals empty src =
 value :: Payload -> [Val Payload]
 value pl@(Payload (T.TVariant comp) scope) =
     case comp of
-    T.CVar{} -> [V.BLeaf V.LHole]
+    T.RVar{} -> [V.BLeaf V.LHole]
     _ -> comp ^.. ExprLens.compositeFields <&> inject
     <&> Ann pl
     where
@@ -185,12 +185,12 @@ valueNoSplit pl@(Payload typ scope) =
     _ -> V.BLeaf V.LHole & pure
     <&> Ann pl
 
-suggestRecordWith :: MonadReader Options m => T.Record -> Infer.Scope -> m (Val Payload)
+suggestRecordWith :: MonadReader Options m => T.Row -> Infer.Scope -> m (Val Payload)
 suggestRecordWith recordType scope =
     case recordType of
-    T.CVar{} -> V.BLeaf V.LHole & pure
-    T.CEmpty -> V.BLeaf V.LRecEmpty & pure
-    T.CExtend f t r ->
+    T.RVar{} -> V.BLeaf V.LHole & pure
+    T.REmpty -> V.BLeaf V.LRecEmpty & pure
+    T.RExtend f t r ->
         do
             noRec <- Lens.view avoidRecord
             if noRec
@@ -202,12 +202,12 @@ suggestRecordWith recordType scope =
                     <&> V.BRecExtend
     <&> Ann (Payload (T.TRecord recordType) scope)
 
-suggestCaseWith :: MonadReader Options m => T.Variant -> Payload -> m (Val Payload)
+suggestCaseWith :: MonadReader Options m => T.Row -> Payload -> m (Val Payload)
 suggestCaseWith variantType resultPl@(Payload resultType scope) =
     case variantType of
-    T.CVar{} -> V.BLeaf V.LHole & pure
-    T.CEmpty -> V.BLeaf V.LAbsurd & pure
-    T.CExtend tag fieldType rest ->
+    T.RVar{} -> V.BLeaf V.LHole & pure
+    T.REmpty -> V.BLeaf V.LAbsurd & pure
+    T.RExtend tag fieldType rest ->
         V.Case tag
         <$> valueNoSplit (Payload (T.TFun fieldType resultType) scope)
         <*> suggestCaseWith rest resultPl

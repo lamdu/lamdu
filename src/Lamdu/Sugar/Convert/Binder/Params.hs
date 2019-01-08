@@ -567,7 +567,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
         funcParamActions <- makeNonRecordParamActions binderKind storedLam
         funcParam <-
             case lamParamType lamExprPl of
-            T.TRecord T.CEmpty
+            T.TRecord T.REmpty
                 | null (lamExprPl ^. Input.varRefsOfLambda) ->
                     mkFuncParam (EntityId.ofBinder param) lamExprPl info <&> NullParam
                 where

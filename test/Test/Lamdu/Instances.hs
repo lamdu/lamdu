@@ -141,6 +141,7 @@ instance Eq a => Eq (Property Unit a) where
 deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Case n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Composite n Unit Unit a)
+deriving instance (Eq a, Eq n) => Eq (Sugar.CompositeFields n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.CompositeItem n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Definition n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.DefinitionBody n Unit Unit a)
@@ -151,14 +152,12 @@ deriving instance (Eq a, Eq n) => Eq (Sugar.GetField n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Nominal n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Pane n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Payload n Unit Unit a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.RecordType n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Repl n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResBody n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResInject n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResRecord n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.ResTable n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.TBody n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.VariantType n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.WorkArea n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.AssignPlain n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Assignment n Unit Unit) (Ann a))
@@ -219,7 +218,7 @@ deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
 instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Case n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Composite n (T i) (T o) a) where rnf = genericRnf
-instance (NFData a, NFData n) => NFData (Sugar.CompositeFields tag n a) where rnf = genericRnf
+instance (NFData a, NFData n) => NFData (Sugar.CompositeFields n a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.CompositeItem n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.Definition n (T i) (T o) a) where rnf = genericRnf
 instance (NFData a, NFData n) => NFData (Sugar.DefinitionBody n (T i) (T o) a) where rnf = genericRnf

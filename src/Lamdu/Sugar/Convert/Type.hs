@@ -20,8 +20,8 @@ import           Lamdu.Prelude
 
 convertComposite ::
     MonadTransaction n m =>
-    EntityId -> T.Composite p -> m (CompositeFields p InternalName (Type InternalName))
-convertComposite entityId (T.CExtend tag typ rest) =
+    EntityId -> T.Row -> m (CompositeFields InternalName (Type InternalName))
+convertComposite entityId (T.RExtend tag typ rest) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         convertComposite (EntityId.ofRestOfComposite entityId) rest
@@ -33,9 +33,9 @@ convertComposite entityId (T.CExtend tag typ rest) =
             , _tagInstance = EntityId.ofTag entityId tag
             , _tagVal = tag
             }
-convertComposite _ (T.CVar v) =
+convertComposite _ (T.RVar v) =
     CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
-convertComposite _ T.CEmpty = CompositeFields mempty Nothing & pure
+convertComposite _ T.REmpty = CompositeFields mempty Nothing & pure
 
 convertType :: MonadTransaction n m => EntityId -> T.Type -> m (Type InternalName)
 convertType entityId typ =

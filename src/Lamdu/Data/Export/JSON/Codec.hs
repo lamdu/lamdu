@@ -25,7 +25,7 @@ import qualified Data.Vector as Vector
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Type (Type, Composite)
+import           Lamdu.Calc.Type (Type, Row)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.Constraints (Constraints(..))
 import qualified Lamdu.Calc.Type.Constraints as Constraints
@@ -212,7 +212,7 @@ decodeTagId :: Decoder T.Tag
 decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
-encodeFlatComposite :: Encoder (FlatComposite p)
+encodeFlatComposite :: Encoder FlatComposite
 encodeFlatComposite = \case
     FlatComposite fields Nothing -> encodedFields fields
     FlatComposite fields (Just (T.Var name)) ->
@@ -220,7 +220,7 @@ encodeFlatComposite = \case
     where
         encodedFields = encodeIdentMap T.tagName encodeType
 
-decodeFlatComposite :: Decoder (FlatComposite p)
+decodeFlatComposite :: Decoder FlatComposite
 decodeFlatComposite json =
     jsum
     [ do
@@ -236,10 +236,10 @@ decodeFlatComposite json =
     where
         decodeFields = decodeIdentMap T.Tag decodeType
 
-encodeComposite :: Encoder (Composite p)
+encodeComposite :: Encoder Row
 encodeComposite = encodeFlatComposite . FlatComposite.fromComposite
 
-decodeComposite :: Decoder (Composite p)
+decodeComposite :: Decoder Row
 decodeComposite = fmap FlatComposite.toComposite . decodeFlatComposite
 
 encodeType :: Encoder Type
@@ -268,30 +268,28 @@ decodeType json =
           T.TInst nomId params & pure
     ]
 
-encodeCompositeVarConstraints :: Constraints.CompositeVar t -> [Encoded]
+encodeCompositeVarConstraints :: Constraints.CompositeVar -> [Encoded]
 encodeCompositeVarConstraints (Constraints.CompositeVar forbidden) =
     Set.toList forbidden
     <&> T.tagName
     <&> encodeIdent
 
 decodeCompositeConstraints ::
-    [Encoded] -> AesonTypes.Parser (Constraints.CompositeVar t)
+    [Encoded] -> AesonTypes.Parser Constraints.CompositeVar
 decodeCompositeConstraints json =
     traverse decodeIdent json <&> map T.Tag <&> Set.fromList
     <&> Constraints.CompositeVar
 
 encodeTypeVars :: Encoder (TypeVars, Constraints)
-encodeTypeVars (TypeVars tvs rtvs stvs, Constraints recordConstraints variantConstraints) =
+encodeTypeVars (TypeVars tvs rvs, cs) =
     concat
     [ encodeTVs "typeVars" tvs
-    , encodeTVs "recordTypeVars" rtvs
-    , encodeTVs "variantTypeVars" stvs
+    , encodeTVs "rowVars" rvs
     , encodeSquash null "constraints" Aeson.object
-      (encodeConstraints "recordTypeVars" recordConstraints ++
-       encodeConstraints "variantTypeVars" variantConstraints)
+      (encodeConstraints "rowVars" cs)
     ] & Aeson.object
     where
-        encodeConstraints name (Constraints.CompositeVars constraints) =
+        encodeConstraints name (Constraints constraints) =
             encodeSquash Map.null name
             (encodeIdentMap T.tvName encodeCompositeVarConstraints)
             constraints
@@ -307,13 +305,11 @@ decodeTypeVars =
         tvs <-
             TypeVars
             <$> getTVs "typeVars"
-            <*> getTVs "recordTypeVars"
-            <*> getTVs "variantTypeVars"
+            <*> getTVs "rowVars"
         decodedConstraints <-
             decodeSquashed "constraints"
             ( withObject "constraints" $ \constraints ->
-              let  getCs name = decodeConstraints name constraints <&> Constraints.CompositeVars
-              in   Constraints <$> getCs "recordTypeVars" <*> getCs "variantTypeVars"
+              decodeConstraints "rowVars" constraints <&> Constraints
             ) obj
         pure (tvs, decodedConstraints)
     where

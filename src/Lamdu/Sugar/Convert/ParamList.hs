@@ -50,10 +50,10 @@ loadStored = Property.getP . assocFieldParamList . Property.value
 mkFuncType :: Infer.Scope -> ParamList -> Infer Type
 mkFuncType scope paramList =
     T.TFun
-    <$> (T.TRecord <$> foldr step (pure T.CEmpty) paramList)
+    <$> (T.TRecord <$> foldr step (pure T.REmpty) paramList)
     <*> Infer.freshInferredVar scope "l"
     where
-        step tag rest = T.CExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
+        step tag rest = T.RExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
     ParamListPayload a => Val a -> InferT.M (T (M a)) (Val a)

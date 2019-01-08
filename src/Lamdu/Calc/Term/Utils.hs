@@ -2,8 +2,8 @@
 
 module Lamdu.Calc.Term.Utils
     ( Composite(..), tags, rest
-    , case_, Case
-    , recExtend, Record
+    , case_
+    , recExtend
     , culledSubexprPayloads
     ) where
 
@@ -21,16 +21,13 @@ culledSubexprPayloads cut (Ann pl body)
     | cut pl = []
     | otherwise = pl : body ^. monoChildren . Lens.to (culledSubexprPayloads cut)
 
-data Composite p a = Composite
+data Composite a = Composite
     { _tags :: Map T.Tag a
     , _rest :: Maybe a
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Composite
 
-type Case = Composite T.VariantTag
-type Record = Composite T.RecordTag
-
-case_ :: V.Case (Val pl) -> Case (Val pl)
+case_ :: V.Case (Val pl) -> Composite (Val pl)
 case_ (V.Case tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
@@ -41,7 +38,7 @@ case_ (V.Case tag handler r) =
             V.BCase x -> case_ x
             _ -> Composite mempty (Just v)
 
-recExtend :: V.RecExtend (Val pl) -> Record (Val pl)
+recExtend :: V.RecExtend (Val pl) -> Composite (Val pl)
 recExtend (V.RecExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field

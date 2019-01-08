@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Type (Type(..), Composite(..))
+import           Lamdu.Calc.Type (Type(..), Row(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
 
@@ -22,10 +22,10 @@ resultTypeScore (TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
 resultTypeScore (TVariant c) = 2 : compositeTypeScore c
 resultTypeScore (TRecord c) = 2 : compositeTypeScore c
 
-compositeTypeScore :: Composite t -> [Int]
-compositeTypeScore CEmpty = []
-compositeTypeScore (CVar _) = [1]
-compositeTypeScore (CExtend _ t r) =
+compositeTypeScore :: Row -> [Int]
+compositeTypeScore REmpty = []
+compositeTypeScore (RVar _) = [1]
+compositeTypeScore (RExtend _ t r) =
     max (resultTypeScore t) (compositeTypeScore r)
 
 score :: Val Infer.Payload -> [Int]

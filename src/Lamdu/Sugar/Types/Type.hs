@@ -3,8 +3,6 @@
 module Lamdu.Sugar.Types.Type
     ( Scheme(..), schemeForAll, schemeConstraints, schemeType
     , TypeVars(..), Constraints(..)
-    , RecordTag, VariantTag
-    , RecordType, VariantType
     , NominalId, ParamId
     , CompositeFields(..), compositeFields, compositeExtension
     , TBody(..), _TVar, _TFun, _TInst, _TRecord, _TVariant
@@ -13,7 +11,7 @@ module Lamdu.Sugar.Types.Type
     ) where
 
 import qualified Control.Lens as Lens
-import           Lamdu.Calc.Type (NominalId, RecordTag, VariantTag, ParamId)
+import           Lamdu.Calc.Type (NominalId, ParamId)
 import           Lamdu.Calc.Type.Constraints (Constraints(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import           Lamdu.Sugar.EntityId (EntityId)
@@ -21,10 +19,7 @@ import           Lamdu.Sugar.Types.Tag (TagInfo)
 
 import           Lamdu.Prelude
 
-type RecordType = CompositeFields RecordTag
-type VariantType = CompositeFields VariantTag
-
-data CompositeFields p name a = CompositeFields
+data CompositeFields name a = CompositeFields
     { _compositeFields :: [(TagInfo name, a)]
     , _compositeExtension :: Maybe name -- TyVar of more possible fields
     } deriving (Show, Functor, Foldable, Traversable, Generic)
@@ -42,9 +37,9 @@ data TBody name a
     | TInst (TId name) (Map ParamId a)
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
-    | TRecord (RecordType name a)
+    | TRecord (CompositeFields name a)
       -- ^ Lifts a composite record type
-    | TVariant (VariantType name a)
+    | TVariant (CompositeFields name a)
       -- ^ Lifts a composite variant type
     deriving (Show, Functor, Foldable, Traversable, Generic)
 
