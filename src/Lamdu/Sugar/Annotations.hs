@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleContexts, KindSignatures, DataKinds, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleContexts, DataKinds, TypeFamilies #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, KindSignatures, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, GeneralizedNewtypeDeriving #-}
 -- | fmap for names
 module Lamdu.Sugar.Names.Map
     ( runMapNames
