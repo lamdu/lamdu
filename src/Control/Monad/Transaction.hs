@@ -1,5 +1,5 @@
 -- | A MonadTransaction mtl-style class for Transactions
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies, UndecidableInstances #-}
 
 module Control.Monad.Transaction
     ( MonadTransaction(..)
