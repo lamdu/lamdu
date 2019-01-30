@@ -88,9 +88,7 @@ valueConversionH nominals empty src =
     case srcInferPl ^. Infer.plType of
     T.TRecord composite
         | Lens.nullOf (val . V._BRecExtend) src ->
-        composite ^.. ExprLens.compositeFields
-        <&> getField & lift & lift
-        & prependOpt src
+        src : (composite ^.. ExprLens.compositeFields <&> getField) & lift & lift
         where
             getField (tag, typ) =
                 V.GetField src tag
