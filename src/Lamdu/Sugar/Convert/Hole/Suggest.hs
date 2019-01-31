@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections, TypeFamilies, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , applyForms
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
@@ -16,7 +16,6 @@ import           Control.Monad.Trans.Reader (ReaderT(..))
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import           Data.Semigroup (All)
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -85,10 +84,11 @@ valueConversionH ::
     Nominals -> a -> Val (Payload, a) ->
     SuggestM (Val (Payload, a))
 valueConversionH nominals empty src =
+    pure src <|>
     case srcInferPl ^. Infer.plType of
     T.TRecord composite
         | Lens.nullOf (val . V._BRecExtend) src ->
-        src : (composite ^.. ExprLens.compositeFields <&> getField) & lift & lift
+        (composite ^.. ExprLens.compositeFields <&> getField) & lift & lift
         where
             getField (tag, typ) =
                 V.GetField src tag
@@ -98,17 +98,13 @@ valueConversionH nominals empty src =
     where
         srcInferPl = src ^. ann . _1
 
-prependOpt :: a -> SuggestM a -> SuggestM a
-prependOpt opt = Lens._Wrapped . Lens.mapped . Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
-
 valueConversionNoSplit ::
-    forall a. Nominals -> a -> Val (Payload, a) -> SuggestM (Val (Payload, a))
+    Nominals -> a -> Val (Payload, a) -> SuggestM (Val (Payload, a))
 valueConversionNoSplit nominals empty src =
-    prependOpt src $
     case srcType of
     T.TInst name _params
         | Lens.has (Lens.ix name . Nominal.nomType . Nominal._NominalType) nominals
-        && bodyNot V._BToNom ->
+        && Lens.nullOf V._BToNom srcVal ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
             (_, resType) <-
@@ -124,7 +120,7 @@ valueConversionNoSplit nominals empty src =
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
         & lift
         >>= valueConversionNoSplit nominals empty
-    T.TFun argType resType | bodyNot V._BLam ->
+    T.TFun argType resType | Lens.nullOf V._BLam srcVal ->
         do
             arg <-
                 valueNoSplit (Payload argType srcScope)
@@ -136,7 +132,7 @@ valueConversionNoSplit nominals empty src =
                     -- then stop suggesting there to avoid "overwhelming"..
                     pure applied
                 else valueConversionNoSplit nominals empty applied
-    T.TVariant composite | bodyNot V._BInject ->
+    T.TVariant composite | Lens.nullOf V._BInject srcVal ->
         do
             dstType <-
                 Infer.freshInferredVar srcScope "s"
@@ -153,11 +149,7 @@ valueConversionNoSplit nominals empty src =
         srcType = srcInferPl ^. Infer.plType
         srcScope = srcInferPl ^. Infer.plScope
         mkRes typ = Ann (Payload typ srcScope, empty)
-        bodyNot ::
-            Lens.LensLike' (Lens.Const All)
-            (Tree V.Term (Ann (Payload, a)))
-            w -> Bool
-        bodyNot f = Lens.nullOf (val . f) src
+        srcVal = src ^. val
 
 value :: Payload -> [Val Payload]
 value pl@(Payload (T.TVariant comp) scope) =
