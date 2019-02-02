@@ -4,8 +4,8 @@ module GUI.Momentu.Widgets.StdKeys
     , dirKey
     ) where
 
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
-import GUI.Momentu.Direction (Orientation(..), Order(..))
 
 import           Lamdu.Prelude
 

@@ -52,12 +52,12 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.FocusDirection (FocusDirection(..), GeometricOrigin(..))
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import           GUI.Momentu.Rect (Rect(..))
+import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.State (VirtualCursor(..), HasCursor(..), Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
@@ -105,8 +105,10 @@ enterFuncAddVirtualCursor destRect =
     where
         mkVirtCursor dir =
             case dir of
-            FromGeometric (GeometricOrigin o _ r) ->
-                destRect & (Dir.rectRange (Dir.perpendicular o)) .~ r & Just
+            FromRight r -> destRect & Rect.verticalRange   .~ r & Just
+            FromLeft  r -> destRect & Rect.verticalRange   .~ r & Just
+            FromAbove r -> destRect & Rect.horizontalRange .~ r & Just
+            FromBelow r -> destRect & Rect.horizontalRange .~ r & Just
             FromOutside -> Nothing
             Point p     -> Rect p 0 & Just
             <&> VirtualCursor

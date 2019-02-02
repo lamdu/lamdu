@@ -18,18 +18,18 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Orientation(..), Order(..), reverseOrder, applyOrder)
-import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
-import           GUI.Momentu.FocusDirection (FocusDirection(..), GeometricOrigin(..))
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.FocusDirection as FDir
 import           GUI.Momentu.Glue (Glue(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.State (Gui, Update)
@@ -37,7 +37,7 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget.Types
-import           GUI.Momentu.Widgets.StdKeys (dirKey, stdDirKeys)
+import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 
 import           Lamdu.Prelude
 
@@ -91,6 +91,12 @@ instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) wher
     glue orientation =
         Glue.glueH (glueStates orientation (StrollOrder Forward)) orientation
 
+data NavDir = NavDir
+    { dirCons :: Rect.Range R -> FocusDirection
+    , dirName :: Text
+    , dirKeys :: [ModKey.Key]
+    }
+
 newtype StrollOrder = StrollOrder Order
 
 glueStates ::
@@ -98,23 +104,33 @@ glueStates ::
     Orientation -> StrollOrder -> Gui Widget f -> Gui Widget f -> Gui Widget f
 glueStates orientation (StrollOrder order) w0 w1 =
     w0
-    & wState .~ combineStates orientation order (w0 ^. wState) (w1 ^. wState)
+    & wState .~
+        combineStates orientation dirPrev dirNext order
+        (w0 ^. wState) (w1 ^. wState)
+    where
+        (dirPrev, dirNext) =
+            case orientation of
+            Horizontal ->
+                ( NavDir FromRight "left"  (keysLeft stdDirKeys )
+                , NavDir FromLeft  "right" (keysRight stdDirKeys)
+                )
+            Vertical ->
+                ( NavDir FromBelow "up"    (keysUp stdDirKeys   )
+                , NavDir FromAbove "down"  (keysDown stdDirKeys )
+                )
 
 combineStates ::
     Applicative f =>
-    Orientation -> Order ->
+    Orientation -> NavDir -> NavDir -> Order ->
     Gui State f -> Gui State f -> Gui State f
-combineStates _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates o order (StateUnfocused u0) (StateUnfocused u1) =
+combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates o _ _ order (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
     (applyOrder order (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
     (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
         e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates orientation order (StateUnfocused u) (StateFocused f) =
-    combineStates orientation (reverseOrder order)
-    (StateFocused f) (StateUnfocused u)
-combineStates orientation order (StateFocused f) (StateUnfocused u) =
+combineStates orientation _ nextDir order (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~
         unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Point))
@@ -148,13 +164,12 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
             <> foldMap strollEvents (u ^. uMStroll)
         enterEvents eventContext enter =
             eventContext ^. eVirtualCursor . State.vcRect . chooseRange
-            & GeometricOrigin orientation (reverseOrder order)
-            & FromGeometric
+            & dirCons nextDir
             & enter
             & (^. enterResultEvent)
             & EventMap.keyPresses
-                (dirKey orientation order stdDirKeys <&> ModKey mempty)
-            (EventMap.Doc ["Navigation", "Move", Dir.name orientation order])
+                (dirKeys nextDir <&> ModKey mempty)
+            (EventMap.Doc ["Navigation", "Move", dirName nextDir])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
                 EventMap.keysEventMapMovesCursor [MetaKey.shift MetaKey.Key'Tab]
@@ -164,6 +179,8 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
                 EventMap.keysEventMapMovesCursor [MetaKey MetaKey.noMods MetaKey.Key'Tab]
                 (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                 (pure fwd)
+combineStates orientation dirPrev dirNext strollOrder (StateUnfocused u) (StateFocused f) =
+    combineStates orientation dirNext dirPrev (reverseOrder strollOrder) (StateFocused f) (StateUnfocused u)
 
 combineMEnters ::
     Orientation ->
@@ -203,23 +220,17 @@ chooseEnter ::
     EnterResult a -> EnterResult a -> EnterResult a
 chooseEnter _          FromOutside r0 _  = r0 -- left-biased
 chooseEnter _          (Point p) r0 r1 = closerGeometric p r0 r1
-chooseEnter o (FromGeometric geoOrigin) r0 r1 =
-    chooseEnterGeometric o geoOrigin r0 r1
-
-chooseEnterGeometric ::
-    Orientation -> GeometricOrigin ->
-    EnterResult a -> EnterResult a -> EnterResult a
-chooseEnterGeometric Horizontal (GeometricOrigin Horizontal Backward _) r0 _ = r0
-chooseEnterGeometric Vertical   (GeometricOrigin Vertical   Backward _) r0 _ = r0
-chooseEnterGeometric Horizontal (GeometricOrigin Horizontal Forward  _) _ r1 = r1
-chooseEnterGeometric Vertical   (GeometricOrigin Vertical   Forward  _) _ r1 = r1
-chooseEnterGeometric Horizontal (GeometricOrigin Vertical   Backward r) r0 r1 =
+chooseEnter Horizontal FromLeft{}  r0 _  = r0
+chooseEnter Vertical   FromAbove{} r0 _  = r0
+chooseEnter Horizontal FromRight{} _  r1 = r1
+chooseEnter Vertical   FromBelow{} _  r1 = r1
+chooseEnter Horizontal (FromAbove r) r0 r1 =
     closer Rect.horizontalRange r r0 r1
-chooseEnterGeometric Horizontal (GeometricOrigin Vertical   Forward  r) r0 r1 =
+chooseEnter Horizontal (FromBelow r) r0 r1 =
     closer Rect.horizontalRange r r0 r1
-chooseEnterGeometric Vertical   (GeometricOrigin Horizontal Backward r) r0 r1 =
+chooseEnter Vertical (FromLeft r) r0 r1 =
     closer Rect.verticalRange r r0 r1
-chooseEnterGeometric Vertical   (GeometricOrigin Horizontal Forward  r) r0 r1 =
+chooseEnter Vertical (FromRight r) r0 r1 =
     closer Rect.verticalRange r r0 r1
 
 stateLayers :: Lens.Setter' (State a) Element.Layers
