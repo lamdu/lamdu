@@ -22,12 +22,10 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (Order(..))
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.FocusDirection (FocusDirection(..), GeometricOrigin(..))
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -160,10 +158,10 @@ enterFromDirection sz sty str myId dir =
             case dir of
             Point x -> Rect x 0 & fromRect
             FromOutside -> Text.length str
-            FromGeometric (GeometricOrigin o d r) ->
-                rect o d & Dir.rectRange (Dir.perpendicular o) .~ r & fromRect
-        rect _ Backward = Rect 0 0
-        rect o Forward = edgeRect (Dir.axis o)
+            FromLeft  r -> Rect 0 0    & Rect.verticalRange   .~ r & fromRect
+            FromRight r -> edgeRect _1 & Rect.verticalRange   .~ r & fromRect
+            FromAbove r -> Rect 0 0    & Rect.horizontalRange .~ r & fromRect
+            FromBelow r -> edgeRect _2 & Rect.horizontalRange .~ r & fromRect
         edgeRect l = Rect (0 & Lens.cloneLens l .~ sz ^. Lens.cloneLens l) 0
         cursorRect = mkCursorRect sty cursor str
         fromRect = cursorNearRect (sty ^. sTextViewStyle) str

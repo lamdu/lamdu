@@ -24,7 +24,7 @@ import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
-import           GUI.Momentu.FocusDirection (FocusDirection(..), GeometricOrigin(..))
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.FocusDirection as FDir
 import           GUI.Momentu.Glue (Glue(..))
 import qualified GUI.Momentu.Glue as Glue
@@ -38,7 +38,7 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget.Types
-import           GUI.Momentu.Widgets.StdKeys (dirKey, stdDirKeys)
+import           GUI.Momentu.Widgets.StdKeys (stdDirKeys, dirKey)
 
 import           Lamdu.Prelude
 
@@ -148,8 +148,7 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
             <> foldMap strollEvents (u ^. uMStroll)
         enterEvents eventContext enter =
             eventContext ^. eVirtualCursor . State.vcRect . chooseRange
-            & GeometricOrigin orientation (reverseOrder order)
-            & FromGeometric
+            & dirCons
             & enter
             & (^. enterResultEvent)
             & EventMap.keyPresses
@@ -164,6 +163,12 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
                 EventMap.keysEventMapMovesCursor strollAheadKeys
                 (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                 (pure fwd)
+        dirCons =
+            case (orientation, order) of
+            (Horizontal, Backward) -> FromRight
+            (Horizontal, Forward ) -> FromLeft
+            (Vertical  , Backward) -> FromBelow
+            (Vertical  , Forward ) -> FromAbove
 
 strollAheadKeys :: [MetaKey]
 strollAheadKeys = [MetaKey MetaKey.noMods MetaKey.Key'Tab]
@@ -209,23 +214,17 @@ chooseEnter ::
     EnterResult a -> EnterResult a -> EnterResult a
 chooseEnter _          FromOutside r0 _  = r0 -- left-biased
 chooseEnter _          (Point p) r0 r1 = closerGeometric p r0 r1
-chooseEnter o (FromGeometric geoOrigin) r0 r1 =
-    chooseEnterGeometric o geoOrigin r0 r1
-
-chooseEnterGeometric ::
-    Orientation -> GeometricOrigin ->
-    EnterResult a -> EnterResult a -> EnterResult a
-chooseEnterGeometric Horizontal (GeometricOrigin Horizontal Backward _) r0 _ = r0
-chooseEnterGeometric Vertical   (GeometricOrigin Vertical   Backward _) r0 _ = r0
-chooseEnterGeometric Horizontal (GeometricOrigin Horizontal Forward  _) _ r1 = r1
-chooseEnterGeometric Vertical   (GeometricOrigin Vertical   Forward  _) _ r1 = r1
-chooseEnterGeometric Horizontal (GeometricOrigin Vertical   Backward r) r0 r1 =
+chooseEnter Horizontal FromLeft{}  r0 _  = r0
+chooseEnter Vertical   FromAbove{} r0 _  = r0
+chooseEnter Horizontal FromRight{} _  r1 = r1
+chooseEnter Vertical   FromBelow{} _  r1 = r1
+chooseEnter Horizontal (FromAbove r) r0 r1 =
     closer Rect.horizontalRange r r0 r1
-chooseEnterGeometric Horizontal (GeometricOrigin Vertical   Forward  r) r0 r1 =
+chooseEnter Horizontal (FromBelow r) r0 r1 =
     closer Rect.horizontalRange r r0 r1
-chooseEnterGeometric Vertical   (GeometricOrigin Horizontal Backward r) r0 r1 =
+chooseEnter Vertical (FromLeft r) r0 r1 =
     closer Rect.verticalRange r r0 r1
-chooseEnterGeometric Vertical   (GeometricOrigin Horizontal Forward  r) r0 r1 =
+chooseEnter Vertical (FromRight r) r0 r1 =
     closer Rect.verticalRange r r0 r1
 
 stateLayers :: Lens.Setter' (State a) Element.Layers
