@@ -14,6 +14,7 @@ module Lamdu.Eval.Results
 
 import qualified AST
 import           AST (Ann(..), Tie, Tree)
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
@@ -37,7 +38,7 @@ topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
 data Body f
-    = RRecExtend (V.RecExtend (Tie f Body))
+    = RRecExtend (RowExtend T.Tag Body Body f)
     | RInject (V.Inject (Tie f Body))
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
@@ -84,7 +85,7 @@ instance Show srcId => Show (EvalException srcId) where
         Just (g, e) -> encodeWhichGlobal g ++ ":" ++ show e
 
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
-extractField errPl tag (Ann _ (RRecExtend (V.RecExtend vt vv vr)))
+extractField errPl tag (Ann _ (RRecExtend (RowExtend vt vv vr)))
     | vt == tag = vv
     | otherwise = extractField errPl tag vr
 extractField _ _ v@(Ann _ RError{}) = v

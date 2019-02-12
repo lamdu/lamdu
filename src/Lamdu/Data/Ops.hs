@@ -13,6 +13,7 @@ module Lamdu.Data.Ops
     , setTagOrder
     ) where
 
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
@@ -102,14 +103,14 @@ recExtend :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
 recExtend tag valI =
     do
         newValueI <- newHole
-        V.RecExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValI
+        RowExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValI
             <&> CompositeExtendResult newValueI
 
 case_ :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
 case_ tag tailI =
     do
         newValueI <- newHole
-        V.Case tag newValueI tailI & V.BCase & ExprIRef.newValI
+        RowExtend tag newValueI tailI & V.BCase & ExprIRef.newValI
             <&> CompositeExtendResult newValueI
 
 -- | publishes/unpublishes upon setting a non-empty/empty name

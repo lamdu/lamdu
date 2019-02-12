@@ -13,6 +13,8 @@ module Lamdu.Sugar.Convert.Binder.Params
 
 import           AST (Tree, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Term.Row (RowExtend(..))
+import qualified AST.Term.Row as Row
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List
@@ -165,7 +167,7 @@ addFieldParam =
         let addFieldToCall argI =
                 do
                     newArg <- mkArg
-                    V.RecExtend tag newArg argI
+                    RowExtend tag newArg argI
                         & V.BRecExtend & ExprIRef.newValI
         setParamList mPresMode (slParamList storedLam) (mkNewTags tag)
         fixUsages addFieldToCall binderKind storedLam
@@ -203,14 +205,14 @@ fixCallArgRemoveField :: Monad m => T.Tag -> ValI m -> T m (ValI m)
 fixCallArgRemoveField tag argI =
     ExprIRef.readValI argI
     >>= \case
-    V.BRecExtend (V.RecExtend t v restI)
+    V.BRecExtend (RowExtend t v restI)
         | t == tag -> pure restI
         | otherwise ->
             do
                 newRestI <- fixCallArgRemoveField tag restI
                 when (newRestI /= restI) $
                     ExprIRef.writeValI argI $
-                    V.BRecExtend $ V.RecExtend t v newRestI
+                    V.BRecExtend $ RowExtend t v newRestI
                 pure argI
     _ -> pure argI
 
@@ -219,7 +221,7 @@ fixCallToSingleArg ::
 fixCallToSingleArg tag argI =
     ExprIRef.readValI argI
     >>= \case
-    V.BRecExtend (V.RecExtend t v restI)
+    V.BRecExtend (RowExtend t v restI)
         | t == tag -> pure v
         | otherwise -> fixCallToSingleArg tag restI
     _ -> pure argI
@@ -329,14 +331,14 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
         tagsBefore ++ chosenTag : tagsAfter
             & setParamList mPresMode (slParamList storedLam)
         let fixArg argI (V.BRecExtend recExtend)
-                | recExtend ^. V.recTag == prevTag =
+                | recExtend ^. Row.eKey == prevTag =
                     argI <$
                     ExprIRef.writeValI argI
-                    (V.BRecExtend (recExtend & V.recTag .~ chosenTag))
+                    (V.BRecExtend (recExtend & Row.eKey .~ chosenTag))
                 | otherwise =
                     argI <$
-                    ( changeFieldToCall (recExtend ^. V.recRest)
-                        <&> (\x -> recExtend & V.recRest .~ x)
+                    ( changeFieldToCall (recExtend ^. Row.eRest)
+                        <&> (\x -> recExtend & Row.eRest .~ x)
                         <&> V.BRecExtend
                         >>= ExprIRef.writeValI argI
                     )
@@ -462,8 +464,8 @@ wrapArgWithRecord mkNewArg oldParam newParam oldArg =
     do
         newArg <- mkNewArg
         ExprIRef.newValI (V.BLeaf V.LRecEmpty)
-            >>= ExprIRef.newValI . V.BRecExtend . V.RecExtend newParam newArg
-            >>= ExprIRef.newValI . V.BRecExtend . V.RecExtend oldParam oldArg
+            >>= ExprIRef.newValI . V.BRecExtend . RowExtend newParam newArg
+            >>= ExprIRef.newValI . V.BRecExtend . RowExtend oldParam oldArg
 
 data NewParamPosition = NewParamBefore | NewParamAfter
 

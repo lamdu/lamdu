@@ -14,6 +14,7 @@ module Lamdu.Eval.JS
     ) where
 
 import           AST (Ann(..), annotations)
+import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
@@ -132,10 +133,10 @@ parseRecord obj =
         step r (k, v) =
             parseResult v
             <&> \pv ->
-            ER.RRecExtend V.RecExtend
-            { V._recTag = parseHexNameBs k & Identifier & Tag
-            , V._recFieldVal = pv
-            , V._recRest = r
+            ER.RRecExtend RowExtend
+            { _eKey = parseHexNameBs k & Identifier & Tag
+            , _eVal = pv
+            , _eRest = r
             } & Ann ()
 
 parseWord8 :: Json.Value -> Word8

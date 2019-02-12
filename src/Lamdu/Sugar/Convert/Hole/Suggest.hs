@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
 
 import           AST (monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
@@ -186,7 +187,7 @@ suggestRecordWith recordType scope =
             if noRec
                 then V.BLeaf V.LHole & pure
                 else
-                    V.RecExtend f
+                    RowExtend f
                     <$> Reader.local (avoidRecord .~ True) (valueNoSplit (Payload t scope))
                     <*> suggestRecordWith r scope
                     <&> V.BRecExtend
@@ -198,7 +199,7 @@ suggestCaseWith variantType resultPl@(Payload resultType scope) =
     T.RVar{} -> V.BLeaf V.LHole & pure
     T.REmpty -> V.BLeaf V.LAbsurd & pure
     T.RExtend tag fieldType rest ->
-        V.Case tag
+        RowExtend tag
         <$> valueNoSplit (Payload (T.TFun fieldType resultType) scope)
         <*> suggestCaseWith rest resultPl
         <&> V.BCase

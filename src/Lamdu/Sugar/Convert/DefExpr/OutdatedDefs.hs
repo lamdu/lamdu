@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
 
 import           AST (monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val)
+import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
@@ -123,7 +124,7 @@ addFields fields src =
     foldM addField src fields
     where
         addField x tag =
-            V.RecExtend tag <$> DataOps.newHole ?? x
+            RowExtend tag <$> DataOps.newHole ?? x
             <&> V.BRecExtend
             >>= ExprIRef.newValI
 
@@ -136,7 +137,7 @@ changeFields changes arg go
     | Map.null changes = go NotHoleArg arg
     | otherwise =
         case arg ^. val of
-        V.BRecExtend (V.RecExtend tag fieldVal rest) ->
+        V.BRecExtend (RowExtend tag fieldVal rest) ->
             case Map.lookup tag changes of
             Nothing ->
                 do

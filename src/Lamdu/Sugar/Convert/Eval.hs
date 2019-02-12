@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Eval
     ) where
 
 import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -52,7 +53,7 @@ type ERV = ER.Val T.Type
 
 flattenRecord :: ERV -> Either EvalTypeError ([(T.Tag, ERV)], Map T.Tag ERV)
 flattenRecord (Ann _ ER.RRecEmpty) = Right ([], Map.empty)
-flattenRecord (Ann _ (ER.RRecExtend (V.RecExtend tag v rest))) =
+flattenRecord (Ann _ (ER.RRecExtend (RowExtend tag v rest))) =
     flattenRecord rest
     <&> _1 %~ ((tag, v) :)
     <&> _2 . Lens.at tag ?~ v

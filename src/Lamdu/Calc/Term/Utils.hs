@@ -7,7 +7,8 @@ module Lamdu.Calc.Term.Utils
     , culledSubexprPayloads
     ) where
 
-import           AST (Ann(..), monoChildren)
+import           AST (Tree, Ann(..), monoChildren)
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -27,8 +28,8 @@ data Composite a = Composite
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Composite
 
-case_ :: V.Case (Val pl) -> Composite (Val pl)
-case_ (V.Case tag handler r) =
+case_ :: Tree (RowExtend T.Tag V.Term V.Term) (Ann pl) -> Composite (Val pl)
+case_ (RowExtend tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
     where
@@ -38,8 +39,8 @@ case_ (V.Case tag handler r) =
             V.BCase x -> case_ x
             _ -> Composite mempty (Just v)
 
-recExtend :: V.RecExtend (Val pl) -> Composite (Val pl)
-recExtend (V.RecExtend tag field r) =
+recExtend :: Tree (RowExtend T.Tag V.Term V.Term) (Ann pl) -> Composite (Val pl)
+recExtend (RowExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field
     where

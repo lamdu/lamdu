@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 
 import           AST (Tree, overChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
@@ -124,7 +125,7 @@ mkWrapInRecord exprPl =
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
         let recWrap tag =
                 V.BLeaf V.LRecEmpty & ExprIRef.newValI
-                >>= ExprIRef.newValI . V.BRecExtend . V.RecExtend tag (stored ^. Property.pVal)
+                >>= ExprIRef.newValI . V.BRecExtend . RowExtend tag (stored ^. Property.pVal)
                 >>= typeProtectedSetToVal stored
                 & void
         convertTagSelection nameWithoutContext mempty RequireTag tempMkEntityId recWrap

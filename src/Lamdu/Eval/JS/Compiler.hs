@@ -9,6 +9,7 @@ module Lamdu.Eval.JS.Compiler
 
 import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState)
@@ -466,7 +467,7 @@ compileLiteral literal =
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     PrimVal.Float num -> JS.number num & codeGenFromExpr
 
-compileRecExtend :: Monad m => V.RecExtend (Val ValId) -> M m CodeGen
+compileRecExtend :: Monad m => Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
 compileRecExtend x =
     do
         Flatten.Composite tags mRest <- Flatten.recExtend x & Lens.traverse compileVal
@@ -494,11 +495,11 @@ compileInject (V.Inject tag dat) =
         dat' <- compileVal dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
 
-compileCase :: Monad m => ValId -> V.Case (Val ValId) -> M m CodeGen
+compileCase :: Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
 compileCase valId = fmap codeGenFromExpr . lam "x" . compileCaseOnVar valId
 
 compileCaseOnVar ::
-    Monad m => ValId -> V.Case (Val ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
+    Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
 compileCaseOnVar valId x scrutineeVar =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString

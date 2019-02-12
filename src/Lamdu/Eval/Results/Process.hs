@@ -2,7 +2,8 @@ module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
-import           AST (Tie, Ann(..))
+import           AST (Tree, Tie, Ann(..))
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
@@ -42,15 +43,19 @@ type AddTypes val f = (T.Type -> val -> Tie f Body) -> T.Type -> Body f
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack
 
-addTypesRecExtend :: V.RecExtend val -> AddTypes val f
-addTypesRecExtend (V.RecExtend tag val rest) go typ =
+addTypesRecExtend ::
+    Tree (RowExtend T.Tag val val) k ->
+    (T.Type -> Tree k val -> Tree f Body) ->
+    T.Type ->
+    Tree Body f
+addTypesRecExtend (RowExtend tag val rest) go typ =
     case extractRecordTypeField tag typ of
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
         case typ of
         T.TVar{} ->
-            V.RecExtend tag
+            RowExtend tag
             (go typ val)
             (go typ rest)
             & RRecExtend
@@ -59,7 +64,7 @@ addTypesRecExtend (V.RecExtend tag val rest) go typ =
             RRecEmpty
         _ -> "addTypesRecExtend got " ++ show typ & typeError
     Just (valType, restType) ->
-        V.RecExtend tag
+        RowExtend tag
         (go valType val)
         (go restType rest)
         & RRecExtend

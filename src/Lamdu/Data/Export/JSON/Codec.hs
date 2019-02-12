@@ -6,6 +6,7 @@ module Lamdu.Data.Export.JSON.Codec
     ) where
 
 import           AST (Ann(..), monoChildren, Tree)
+import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, writerT, runWriterT)
@@ -391,12 +392,12 @@ encodeValBody body =
         HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= c res]
     V.BGetField (V.GetField reco tag) ->
         HashMap.fromList ["getFieldRec" .= c reco, "getFieldName" .= encodeTagId tag]
-    V.BRecExtend (V.RecExtend tag x rest) ->
+    V.BRecExtend (RowExtend tag x rest) ->
         HashMap.fromList
         ["extendTag" .= encodeTagId tag, "extendVal" .= c x, "extendRest" .= c rest]
     V.BInject (V.Inject tag x) ->
         HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= c x]
-    V.BCase (V.Case tag handler restHandler) ->
+    V.BCase (RowExtend tag handler restHandler) ->
         HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= c handler, "caseRest" .= c restHandler]
     V.BToNom (V.Nom (T.NominalId nomId) x) ->
         HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
@@ -421,7 +422,7 @@ decodeValBody obj =
       <$> (obj .: "getFieldRec" <&> c <&> Lens.Const)
       <*> (obj .: "getFieldName" >>= lift . decodeTagId)
       <&> V.BGetField
-    , V.RecExtend
+    , RowExtend
       <$> (obj .: "extendTag" >>= lift . decodeTagId)
       <*> (obj .: "extendVal" <&> c <&> Lens.Const)
       <*> (obj .: "extendRest" <&> c <&> Lens.Const)
@@ -430,7 +431,7 @@ decodeValBody obj =
       <$> (obj .: "injectTag" >>= lift . decodeTagId)
       <*> (obj .: "injectVal" <&> c <&> Lens.Const)
       <&> V.BInject
-    , V.Case
+    , RowExtend
       <$> (obj .: "caseTag" >>= lift . decodeTagId)
       <*> (obj .: "caseHandler" <&> c <&> Lens.Const)
       <*> (obj .: "caseRest" <&> c <&> Lens.Const)

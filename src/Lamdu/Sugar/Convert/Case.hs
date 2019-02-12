@@ -6,12 +6,13 @@ module Lamdu.Sugar.Convert.Case
 
 import           AST (Tree)
 import           AST.Knot.Ann (Ann, ann, val)
+import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Composite as Composite
@@ -48,23 +49,25 @@ _CaseThatIsLambdaCase =
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Case (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
+    Input.Payload m a ->
     ConvertM m (ExpressionU m a)
-convert caseV exprPl =
+convert (RowExtend tag v rest) exprPl =
     do
-        V.Case tag valS restS <-
-            traverse ConvertM.convertSubexpression caseV
-            <&> V.caseMatch . val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+        valS <-
+            ConvertM.convertSubexpression v
+            <&> val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+        restS <- ConvertM.convertSubexpression rest
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = caseV ^. V.caseMatch . ann . plValI
-                , Composite._extendRest = caseV ^. V.caseMismatch . ann
+                , Composite._extendValI = v ^. ann . plValI
+                , Composite._extendRest = rest ^. ann
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
     where
-        mkCase t v r = V.Case t v r & V.BCase
+        mkCase t c r = RowExtend t c r & V.BCase
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
