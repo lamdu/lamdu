@@ -163,7 +163,7 @@ suggestRecordWith recordType scope =
     T.REmpty -> V.BLeaf V.LRecEmpty
     T.RExtend f t r ->
         RowExtend f
-        (valueNoSplit (Payload t scope))
+        (valueSimple (Payload t scope))
         (suggestRecordWith r scope)
         & V.BRecExtend
     & Ann (Payload (T.TRecord recordType) scope)
@@ -175,10 +175,19 @@ suggestCaseWith variantType resultPl@(Payload resultType scope) =
     T.REmpty -> V.BLeaf V.LAbsurd
     T.RExtend tag fieldType rest ->
         RowExtend tag
-        (valueNoSplit (Payload (T.TFun fieldType resultType) scope))
+        (valueSimple (Payload (T.TFun fieldType resultType) scope))
         (suggestCaseWith rest resultPl)
         & V.BCase
     & Ann (Payload (T.TFun (T.TVariant variantType) resultType) scope)
+
+valueSimple :: Payload -> Val Payload
+valueSimple pl@(Payload typ scope) =
+    case typ of
+    T.TFun _ r ->
+        -- TODO: add var to the scope?
+        valueSimple (Payload r scope) & V.Lam "var" & V.BLam
+    _ -> V.BLeaf V.LHole
+    & Ann pl
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
 fillHoles empty (Ann pl (V.BLeaf V.LHole)) =
