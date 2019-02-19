@@ -215,9 +215,10 @@ decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
 encodeFlatComposite :: Encoder FlatComposite
-encodeFlatComposite = \case
-    FlatComposite fields Nothing -> encodedFields fields
-    FlatComposite fields (Just (T.Var name)) ->
+encodeFlatComposite (FlatComposite fields rest) =
+    case rest of
+    Nothing -> encodedFields fields
+    Just (T.Var name) ->
         AesonTypes.toJSON [encodedFields fields, encodeIdent name]
     where
         encodedFields = encodeIdentMap T.tagName encodeType
