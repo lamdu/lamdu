@@ -111,7 +111,7 @@ exportTag tag =
 exportNominal :: Monad m => T.NominalId -> Export m ()
 exportNominal nomId =
     do
-        nominal <- trans (Load.nominal nomId)
+        nominal <- trans (Load.nominal nomId) <&> fromMaybe (error "opaque nominal exported")
         tag <- readAssocTag nomId & trans
         Codec.EntityNominal tag nomId nominal & tell
         & withVisited visitedNominals nomId
@@ -261,7 +261,7 @@ importOne (Codec.EntitySchemaVersion _) =
 
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
-    if ver == 6
+    if ver == 7
     then traverse_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail

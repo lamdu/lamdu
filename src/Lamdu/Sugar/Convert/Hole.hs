@@ -160,6 +160,7 @@ getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, N.Nominal)]
 getNominals sugarContext =
     getListing Anchors.tids sugarContext
     >>= traverse (\nomId -> (,) nomId <$> Load.nominal nomId)
+    <&> map (Lens.sequenceAOf Lens._2) <&> (^.. traverse . Lens._Just)
 
 getGlobals :: Monad m => ConvertM.Context m -> T m [DefI m]
 getGlobals sugarContext =
@@ -195,7 +196,7 @@ mkNominalOptions nominals =
             do
                 (tag, _typ) <-
                     nominal ^..
-                    N.nomType . N._NominalType . CalcScheme.schemeType . T._TVariant .
+                    N.nomType . CalcScheme.schemeType . T._TVariant .
                     ExprLens.compositeFields
                 let inject = V.Inject tag P.hole & V.BInject & Ann ()
                 [ inject & ToNom tid & V.BToNom & Ann () ]
@@ -239,7 +240,10 @@ loadDeps vars noms =
         loadVar globalId =
             ExprIRef.defI globalId & Transaction.readIRef
             <&> (^. Def.defType) <&> (,) globalId
-        loadNom nomId = Load.nominal nomId <&> (,) nomId
+        loadNom nomId =
+            Load.nominal nomId
+            <&> fromMaybe (error "Opaque nominal used!")
+            <&> (,) nomId
 
 type Getting' r a = Lens.Getting a r a
 type Folding' r a = Lens.Getting (Endo [a]) r a

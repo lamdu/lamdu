@@ -33,7 +33,7 @@ import           Lamdu.Calc.Type.Constraints (Constraints(..))
 import qualified Lamdu.Calc.Type.Constraints as Constraints
 import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import           Lamdu.Calc.Type.Nominal (Nominal(..), NominalType(..))
+import           Lamdu.Calc.Type.Nominal (Nominal(..))
 import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import qualified Lamdu.Data.Anchors as Anchors
@@ -500,17 +500,9 @@ decodeRepl =
 insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (Aeson.toJSON v)
 
-encodeNominalType :: Encoder NominalType
-encodeNominalType (NominalType scheme) = encodeScheme scheme
-encodeNominalType OpaqueNominal = "OpaqueNominal"
-
-decodeNominalType :: Decoder NominalType
-decodeNominalType (Aeson.String "OpaqueNominal") = pure OpaqueNominal
-decodeNominalType json = decodeScheme json <&> NominalType
-
 encodeNominal :: Nominal -> Aeson.Object
 encodeNominal (Nominal paramsMap nominalType) =
-    "nomType" .= encodeNominalType nominalType :
+    "nomType" .= encodeScheme nominalType :
     encodeSquash Map.null "typeParams"
     (encodeIdentMap T.typeParamId (encodeIdent . T.tvName)) paramsMap
     & HashMap.fromList
@@ -519,7 +511,7 @@ decodeNominal :: ExhaustiveDecoder Nominal
 decodeNominal obj =
     Nominal
     <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
-    <*> (obj .: "nomType" >>= lift . decodeNominalType)
+    <*> (obj .: "nomType" >>= lift . decodeScheme)
 
 encodeTagged :: Text -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
 encodeTagged idAttrName encoder ((tag, ident), x) =

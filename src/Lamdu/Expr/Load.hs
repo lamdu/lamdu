@@ -55,7 +55,12 @@ def defI =
             <&> Definition.defBody . Definition._BodyExpr . Definition.expr .~ e
             >>= Transaction.writeIRef defI
 
-nominal :: Monad m => T.NominalId -> T m Nominal
-nominal tid = Transaction.readIRef iref
+nominal :: Monad m => T.NominalId -> T m (Maybe Nominal)
+nominal tid =
+    Transaction.irefExists iref
+    >>=
+    \case
+    False -> pure Nothing -- Opaque nominal
+    True -> Transaction.readIRef iref <&> Just
     where
         iref = ExprIRef.nominalI tid

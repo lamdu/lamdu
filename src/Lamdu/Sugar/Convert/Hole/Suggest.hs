@@ -21,7 +21,7 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Nominal (Nominal, _NominalType)
+import           Lamdu.Calc.Type.Nominal (Nominal)
 import qualified Lamdu.Calc.Type.Nominal as Nominal
 import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Infer (Context, Payload(..))
@@ -35,9 +35,10 @@ import           Lamdu.Prelude
 
 type Nominals = Map T.NominalId Nominal
 
-loadNominalsForType :: Monad m => (T.NominalId -> m Nominal) -> Type -> m Nominals
+loadNominalsForType :: Monad m => (T.NominalId -> m (Maybe Nominal)) -> Type -> m Nominals
 loadNominalsForType loadNominal typ =
     go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
+    <&> Map.mapMaybe id
     where
         go res toLoad
             | Set.null toLoad = pure res
@@ -47,15 +48,15 @@ loadNominalsForType loadNominal typ =
                     let result = res <> nominals
                     let newTIds =
                             nominals
-                            ^. Lens.traversed . Nominal.nomType
-                            . _NominalType . schemeType
+                            ^. Lens.traversed . Lens._Just
+                            . Nominal.nomType . schemeType
                             . ExprLens.typeTIds . Lens.to Set.singleton
                             & (`Set.difference` Map.keysSet result)
                     go result newTIds
 
 valueConversion ::
     Monad m =>
-    (T.NominalId -> m Nominal) -> a ->
+    (T.NominalId -> m (Maybe Nominal)) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
 valueConversion loadNominal empty src =
     loadNominalsForType loadNominal
@@ -86,7 +87,7 @@ valueConversionNoSplit ::
 valueConversionNoSplit nominals empty src =
     case srcType of
     T.TInst name _params
-        | Lens.has (Lens.ix name . Nominal.nomType . Nominal._NominalType) nominals
+        | Lens.has (Lens.ix name) nominals
         && Lens.nullOf V._BToNom srcVal ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
@@ -204,7 +205,7 @@ fillHoles empty x = x & val . monoChildren %~ fillHoles empty
 
 applyForms ::
     ListClass.List m =>
-    (T.NominalId -> StateT Context m Nominal) -> a -> Val (Payload, a) ->
+    (T.NominalId -> StateT Context m (Maybe Nominal)) -> a -> Val (Payload, a) ->
     StateT Context m (Val (Payload, a))
 applyForms _ _ v@(Ann _ V.BLam {}) = pure v
 applyForms _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =

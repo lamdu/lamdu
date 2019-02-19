@@ -356,7 +356,7 @@ valFromLiteral =
             { Infer._depsNominals =
                 Map.singleton Builtins.textTid
                 N.Nominal
-                { N._nomType = T.TInst Builtins.bytesTid mempty & mono & N.NominalType
+                { N._nomType = T.TInst Builtins.bytesTid mempty & mono
                 , N._nomParams = mempty
                 }
             }

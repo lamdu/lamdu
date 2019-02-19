@@ -111,9 +111,8 @@ unwrapTInsts nomsMap typ =
     case typ of
     T.TInst tid params ->
         Map.lookup tid nomsMap
-        & fromMaybe (error "addTypes: nominal missing from map")
-        & applyNominal params
-        & \case
-          N.OpaqueNominal -> typ
-          N.NominalType scheme -> scheme ^. schemeType & unwrapTInsts nomsMap
+        <&> applyNominal params
+        <&> (^. schemeType)
+        <&> unwrapTInsts nomsMap
+        & fromMaybe typ
     _ -> typ

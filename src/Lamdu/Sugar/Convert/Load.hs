@@ -105,6 +105,7 @@ makeNominalsMap :: Monad m => [T.Type] -> T m (Map NominalId N.Nominal)
 makeNominalsMap types =
     traverse_ loadForType types
     & (`State.execStateT` mempty)
+    <&> Map.mapMaybe id
     where
         loadForType typ = typ ^.. ExprLens.typeTIds & traverse_ loadForTid
         loadForTid tid =
@@ -114,7 +115,7 @@ makeNominalsMap types =
                     do
                         nom <- ExprLoad.nominal tid & lift
                         Map.insert tid nom loaded & State.put
-                        nom ^.. N.nomType . N._NominalType . Scheme.schemeType
+                        nom ^.. Lens._Just . N.nomType . Scheme.schemeType
                             & traverse_ loadForType
 
 loadInferPrepareInput ::
