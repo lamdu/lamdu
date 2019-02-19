@@ -11,6 +11,7 @@ module Lamdu.Sugar.Convert.Hole
     ) where
 
 import           AST (Tree, ToKnot(..), Ann(..), ann, annotations)
+import           AST.Term.Nominal (ToNom(..))
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
@@ -187,9 +188,9 @@ mkNominalOptions nominals =
         mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
         mkDirectNoms tid =
-            do
-                f <- [V.BFromNom, V.BToNom]
-                [ V.Nom tid P.hole & f & Ann () ]
+            [ V.Nom tid P.hole & V.BFromNom
+            , ToNom tid P.hole & V.BToNom
+            ] <&> Ann ()
         mkToNomInjections tid nominal =
             do
                 (tag, _typ) <-
@@ -197,7 +198,7 @@ mkNominalOptions nominals =
                     N.nomType . N._NominalType . CalcScheme.schemeType . T._TVariant .
                     ExprLens.compositeFields
                 let inject = V.Inject tag P.hole & V.BInject & Ann ()
-                [ inject & V.Nom tid & V.BToNom & Ann () ]
+                [ inject & ToNom tid & V.BToNom & Ann () ]
 
 mkOptions ::
     Monad m =>

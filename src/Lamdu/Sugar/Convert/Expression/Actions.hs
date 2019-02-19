@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 
 import           AST (Tree, overChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Term.Nominal (ToNom(..))
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
@@ -340,7 +341,7 @@ valFromLiteral =
         ( encodeUtf8 x
             & PrimVal.Bytes
             & literalExpr
-            & V.Nom Builtins.textTid
+            & ToNom Builtins.textTid
             & V.BToNom
             & Ann (T.TInst Builtins.textTid mempty)
         , Property.pureModify frozenDeps (<> textDep)

@@ -6,6 +6,7 @@ module Lamdu.Data.Export.JSON.Codec
     ) where
 
 import           AST (Ann(..), monoChildren, Tree)
+import           AST.Term.Nominal (ToNom(..))
 import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
@@ -399,7 +400,7 @@ encodeValBody body =
         HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= c x]
     V.BCase (RowExtend tag handler restHandler) ->
         HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= c handler, "caseRest" .= c restHandler]
-    V.BToNom (V.Nom (T.NominalId nomId) x) ->
+    V.BToNom (ToNom (T.NominalId nomId) x) ->
         HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
     V.BFromNom (V.Nom (T.NominalId nomId) x) ->
         HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= c x]
@@ -436,7 +437,7 @@ decodeValBody obj =
       <*> (obj .: "caseHandler" <&> c <&> Lens.Const)
       <*> (obj .: "caseRest" <&> c <&> Lens.Const)
       <&> V.BCase
-    , V.Nom
+    , ToNom
       <$> (obj .: "toNomId" >>= lift . decodeIdent <&> T.NominalId)
       <*> (obj .: "toNomVal" <&> c <&> Lens.Const)
       <&> V.BToNom

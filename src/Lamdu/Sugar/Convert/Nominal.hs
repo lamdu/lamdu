@@ -2,6 +2,8 @@ module Lamdu.Sugar.Convert.Nominal
     ( convertFromNom, convertToNom
     ) where
 
+import           AST (Tree, Ann)
+import           AST.Term.Nominal (ToNom(..))
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -17,8 +19,10 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertNom :: Monad m => V.Nom expr -> ConvertM m (Nominal InternalName expr)
-convertNom (V.Nom tid x) =
+convertNom ::
+    Monad m =>
+    NominalId -> expr -> ConvertM m (Nominal InternalName expr)
+convertNom tid x =
     ConvertTId.convert tid
     <&> \tidS ->
     Nominal
@@ -30,20 +34,20 @@ convertFromNom ::
     (Monad m, Monoid a) =>
     V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
-convertFromNom nom pl =
-    traverse ConvertM.convertSubexpression nom
-    >>= convertNom <&> BodyFromNom
-    >>= addActions nom pl
+convertFromNom (V.Nom tid x) pl =
+    ConvertM.convertSubexpression x
+    >>= convertNom tid <&> BodyFromNom
+    >>= addActions [x] pl
 
 convertToNom ::
     (Monad m, Monoid a) =>
-    V.Nom (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (ToNom NominalId V.Term) (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
-convertToNom nom pl =
+convertToNom nom@(ToNom tid x) pl =
     do
         ConvertText.text nom pl & justToLeft
-        traverse ConvertBinder.convertBinder nom
-            >>= convertNom <&> BodyToNom
-            >>= addActions nom pl
+        ConvertBinder.convertBinder x
+            >>= convertNom tid <&> BodyToNom
+            >>= addActions [x] pl
             & lift
     & runMatcherT

@@ -9,6 +9,7 @@ module Lamdu.Eval.JS.Compiler
 
 import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.Nominal (ToNom(..))
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader(..))
@@ -668,8 +669,10 @@ compileLeaf x valId =
     V.LVar var -> compileVar valId var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & pure
 
-compileToNom :: Monad m => V.Nom (Val ValId) -> ValId -> M m CodeGen
-compileToNom (V.Nom tId x) valId =
+compileToNom ::
+    Monad m =>
+    Tree (ToNom T.NominalId V.Term) (Ann ValId) -> ValId -> M m CodeGen
+compileToNom (ToNom tId x) valId =
     case x ^? ExprLens.valLiteral <&> PrimVal.toKnown of
     Just (PrimVal.Bytes bytes)
         | tId == Builtins.textTid
