@@ -2,7 +2,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion5 (migrate) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
-import           Lamdu.Data.Export.JSON.Migration.Common (version)
+import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
@@ -28,11 +28,4 @@ migrateVal (Aeson.Bool x) = Aeson.Bool x
 migrateVal Aeson.Null = Aeson.Null
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
-migrate (Aeson.Array vals) =
-    case vals ^? Lens._Cons of
-    Just (ver, rest)
-        | ver == version 4 ->
-            Lens._Cons # (version 5, rest <&> migrateVal) & Aeson.Array & Right
-        | otherwise -> Left "Migration from unexpected version"
-    _ -> Left "Array of at least 1 element required"
-migrate _ = Left "top-level should be array"
+migrate = migrateToVer 5 (pure . fmap migrateVal)

@@ -12,7 +12,7 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Data.Vector as Vector
 import           Numeric.Extended (encodeHex)
-import           Lamdu.Data.Export.JSON.Migration.Common (version)
+import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
@@ -64,21 +64,18 @@ newTagEntity name tag =
     & Aeson.Object
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
-migrate (Aeson.Array vals)
-    | Vector.head vals == version 3 =
-        do
-            tags <- traverse collectTags vals <&> (^. traverse)
-            names <- traverse collectNames vals <&> (^. traverse)
-            let newTags = filter (`Map.notMember` tags) (names ^.. Lens.folded) <&> addTag
-            let allTags = (tags <&> (^?! Lens.folded)) <> Map.fromList newTags
-            traverse (migrateEntity allTags) (Vector.tail vals)
-                <&> mappend (newTags <&> uncurry newTagEntity & Vector.fromList)
-        <&> (,) (version 4)
-        <&> (Lens._Cons #)
-        <&> Aeson.Array
+migrate =
+    migrateToVer 4 $
+    \vals ->
+    do
+        tags <- traverse collectTags vals <&> (^. traverse)
+        names <- traverse collectNames vals <&> (^. traverse)
+        let newTags = filter (`Map.notMember` tags) (names ^.. Lens.folded) <&> addTag
+        let allTags = (tags <&> (^?! Lens.folded)) <> Map.fromList newTags
+        traverse (migrateEntity allTags) vals
+            <&> mappend (newTags <&> uncurry newTagEntity & Vector.fromList)
     where
         addTag name =
             ( name
             , fromString (encodeHex (SBS.take 16 (SHA256.hash (encodeUtf8 name))))
             )
-migrate _ = Left "top-level should be array"

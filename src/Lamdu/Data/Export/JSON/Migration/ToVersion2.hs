@@ -11,7 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (asum)
 import qualified Data.Vector as Vector
-import           Lamdu.Data.Export.JSON.Migration.Common (version)
+import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
@@ -36,13 +36,4 @@ migrateEntity (Aeson.Object obj) =
 migrateEntity _ = Left "Expecting object"
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
-migrate (Aeson.Array vals)
-    | Vector.head vals == version 1 =
-        Vector.tail vals
-        & traverse migrateEntity
-        <&> (,) (version 2)
-        <&> (Lens._Cons #)
-        <&> Aeson.Array
-    | otherwise =
-        Left "Migrating from incorrent version"
-migrate _ = Left "top-level should be array"
+migrate = migrateToVer 2 (traverse migrateEntity)

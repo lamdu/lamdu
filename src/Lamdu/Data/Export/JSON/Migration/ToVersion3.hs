@@ -13,7 +13,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.Class (sortOn)
 import qualified Data.Vector as Vector
-import           Lamdu.Data.Export.JSON.Migration.Common (version)
+import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
@@ -70,14 +70,9 @@ collectTags (Aeson.Object obj) =
 collectTags _ = Right mempty
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
-migrate (Aeson.Array vals)
-    | Vector.head vals == version 2 =
-        do
-            tagMap <- traverse collectTags vals <&> (^. traverse)
-            traverse (migrateEntity tagMap) (Vector.tail vals)
-        <&> (,) (version 3)
-        <&> (Lens._Cons #)
-        <&> Aeson.Array
-    | otherwise =
-        Left "Migrating from incorrent version"
-migrate _ = Left "top-level should be array"
+migrate =
+    migrateToVer 3 $
+    \vals ->
+    do
+        tagMap <- traverse collectTags vals <&> (^. traverse)
+        traverse (migrateEntity tagMap) vals
