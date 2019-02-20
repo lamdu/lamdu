@@ -120,7 +120,7 @@ Library
                   , GLFW-b >= 3.2.1.2
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
-                  , lamdu-calculus
+                  , lamdu-calculus < 0.2
                   , language-ecmascript >= 0.18
                   , lens >= 4.1
                   , lens-aeson
@@ -258,6 +258,7 @@ Library
                   , Lamdu.Data.Export.JSON.Migration.ToVersion5
                   , Lamdu.Data.Export.JSON.Migration.ToVersion6
                   , Lamdu.Data.Export.JSON.Migration.ToVersion7
+                  , Lamdu.Data.Export.JSON.Migration.ToVersion8
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs

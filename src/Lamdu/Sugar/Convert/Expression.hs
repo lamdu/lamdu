@@ -67,7 +67,6 @@ convert v =
       V.BGetField x -> ConvertGetField.convert x
       V.BInject x -> ConvertInject.convert x
       V.BToNom x -> ConvertNominal.convertToNom x
-      V.BFromNom x -> ConvertNominal.convertFromNom x
       V.BCase x -> ConvertCase.convert x
       V.BLeaf (V.LVar x) -> ConvertGetVar.convert x
       V.BLeaf (V.LLiteral literal) ->
@@ -77,3 +76,4 @@ convert v =
       V.BLeaf V.LHole -> ConvertHole.convert
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
+      V.BLeaf V.LFromNom{} -> error "TODO: support un-applied FromNom"

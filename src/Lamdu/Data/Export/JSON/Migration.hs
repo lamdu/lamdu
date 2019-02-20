@@ -14,6 +14,7 @@ import qualified Lamdu.Data.Export.JSON.Migration.ToVersion4 as ToVersion4
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion5 as ToVersion5
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion6 as ToVersion6
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion7 as ToVersion7
+import qualified Lamdu.Data.Export.JSON.Migration.ToVersion8 as ToVersion8
 
 import           Lamdu.Prelude
 
@@ -38,6 +39,7 @@ versionMigrations =
     , ToVersion5.migrate
     , ToVersion6.migrate
     , ToVersion7.migrate
+    , ToVersion8.migrate
     ]
 
 currentVersion :: Int

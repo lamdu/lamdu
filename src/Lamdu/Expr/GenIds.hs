@@ -118,7 +118,6 @@ randomizeParamIdsG preNG gen initMap convertPL =
                     x@V.BRecExtend {} -> monoChildren go x
                     x@V.BCase {}      -> monoChildren go x
                     x@V.BInject {}    -> monoChildren go x
-                    x@V.BFromNom {}   -> monoChildren go x
                     x@V.BToNom {}     -> monoChildren go x
                     <&> Ann (convertPL newGen parMap s)
         makeName oldParamId s nameGen =

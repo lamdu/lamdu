@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 7
+        "schemaVersion": 8
     },
     {
         "tagOrder": 0,
@@ -374,16 +374,19 @@
                     "id": "c390bdf3-2664-4eb8-9adf-7a5779c13fb4"
                 },
                 "applyArg": {
-                    "fromNomId": "42493a73747265616d00000000000000",
-                    "id": "c9da9646-15e2-4b29-bf66-cd3e44463cba",
-                    "fromNomVal": {
+                    "applyFunc": {
+                        "fromNomId": "42493a73747265616d00000000000000",
+                        "id": "855f2043-0048-5fe4-be70-e0363b511b38"
+                    },
+                    "applyArg": {
                         "getFieldName": "1b6990743fcc77560fdb139d1ac01a2c",
                         "id": "a770aa60-f3cf-4e03-89bd-27c47156716f",
                         "getFieldRec": {
                             "var": "2973918529414ba783f46c576aa20e40",
                             "id": "8760ec92-701a-490f-9d93-1c5834228a56"
                         }
-                    }
+                    },
+                    "id": "c9da9646-15e2-4b29-bf66-cd3e44463cba"
                 },
                 "id": "637233b5-b124-439a-9577-0c0e0d801258"
             }

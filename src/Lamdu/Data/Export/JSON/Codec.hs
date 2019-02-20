@@ -347,6 +347,8 @@ encodeLeaf =
         [ "primId" .= encodeIdent primId
         , "primBytes" .= BS.unpack (Hex.encode primBytes)
         ]
+    V.LFromNom (T.NominalId nomId) ->
+        HashMap.fromList ["fromNomId" .= encodeIdent nomId]
     where
         l x = HashMap.fromList [x .= Aeson.object []]
 
@@ -364,6 +366,9 @@ decodeLeaf obj =
           BS.null remain & guard
           V.PrimVal primId primBytes & pure
       <&> V.LLiteral
+    , obj .: "fromNomId" >>= lift . decodeIdent
+      <&> T.NominalId
+      <&> V.LFromNom
     ]
     where
         l key v =
@@ -403,8 +408,6 @@ encodeValBody body =
         HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= c handler, "caseRest" .= c restHandler]
     V.BToNom (ToNom (T.NominalId nomId) x) ->
         HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
-    V.BFromNom (V.Nom (T.NominalId nomId) x) ->
-        HashMap.fromList ["fromNomId" .= encodeIdent nomId, "fromNomVal" .= c x]
     V.BLeaf x -> encodeLeaf x
     where
         c x = x ^. Lens._Wrapped
@@ -442,10 +445,6 @@ decodeValBody obj =
       <$> (obj .: "toNomId" >>= lift . decodeIdent <&> T.NominalId)
       <*> (obj .: "toNomVal" <&> c <&> Lens.Const)
       <&> V.BToNom
-    , V.Nom
-      <$> (obj .: "fromNomId" >>= lift . decodeIdent <&> T.NominalId)
-      <*> (obj .: "fromNomVal" <&> c <&> Lens.Const)
-      <&> V.BFromNom
     , decodeLeaf obj <&> V.BLeaf
     ] >>= monoChildren (lift . decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
     where

@@ -189,7 +189,7 @@ mkNominalOptions nominals =
         mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
         mkDirectNoms tid =
-            [ V.Nom tid P.hole & V.BFromNom
+            [ Apply (Ann () (V.BLeaf (V.LFromNom tid))) P.hole & V.BApp
             , ToNom tid P.hole & V.BToNom
             ] <&> Ann ()
         mkToNomInjections tid nominal =

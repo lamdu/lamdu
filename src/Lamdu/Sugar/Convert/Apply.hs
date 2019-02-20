@@ -27,6 +27,7 @@ import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.Nominal (convertAppliedFromNom)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (childPayloads)
@@ -46,6 +47,7 @@ convert app@(V.Apply funcI argI) exprPl =
             do
                 argS <- ConvertM.convertSubexpression argI & lift
                 convertAppliedHole app argS exprPl & justToLeft
+                convertAppliedFromNom app argS exprPl & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure

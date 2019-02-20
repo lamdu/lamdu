@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 7
+        "schemaVersion": 8
     },
     {
         "tagOrder": 0,
@@ -176,9 +176,11 @@
                     "id": "16707691-b796-5c80-2f4c-d4d95001484e"
                 },
                 "applyArg": {
-                    "fromNomId": "426f6f6c000000000000000000000000",
-                    "id": "0cf09757-fd50-57d9-11b5-35259e27c97b",
-                    "fromNomVal": {
+                    "applyFunc": {
+                        "fromNomId": "426f6f6c000000000000000000000000",
+                        "id": "7c6e23c0-4572-54de-aa34-bafdf2053c69"
+                    },
+                    "applyArg": {
                         "applyFunc": {
                             "var": "0de3f3f9c1ce450590f76395c35fc113",
                             "id": "3132fad8-d9ca-1e57-a8b7-ce1a57b252f3"
@@ -206,7 +208,8 @@
                             }
                         },
                         "id": "758094ba-1cba-12d2-93f2-60c015a8a9bb"
-                    }
+                    },
+                    "id": "0cf09757-fd50-57d9-11b5-35259e27c97b"
                 },
                 "id": "1621640d-921b-5936-0095-d0e0916b5a8a"
             }

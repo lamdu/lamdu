@@ -668,6 +668,8 @@ compileLeaf x valId =
     V.LAbsurd -> throwErr valId "LamduBug" "Reached absurd"
     V.LVar var -> compileVar valId var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & pure
+    V.LFromNom {} ->
+        lam "x" (pure . (:[]) . JSS.ReturnStmt () . Just) <&> codeGenFromExpr
 
 compileToNom ::
     Monad m =>
@@ -692,7 +694,6 @@ compileVal (Ann valId body) =
     V.BInject x                 -> compileInject x   >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase valId x
-    V.BFromNom (V.Nom _tId x)   -> compileVal x      >>= maybeLog
     V.BToNom x                  -> compileToNom x valId
     where
         maybeLog = maybeLogSubexprResult valId

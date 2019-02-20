@@ -27,8 +27,6 @@ import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Infer (Context, Payload(..))
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Infer.Unify (unify)
-import           Lamdu.Infer.Update (update)
-import qualified Lamdu.Infer.Update as Update
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -91,14 +89,12 @@ valueConversionNoSplit nominals empty src =
         && Lens.nullOf V._BToNom srcVal ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
-            (_, resType) <-
-                Infer.inferFromNom nominals (V.Nom name ())
-                (\_ () -> pure (srcType, Ann () (V.BLeaf V.LHole)))
-                srcScope
-            updated <-
-                src & annotations . _1 . Infer.plType %%~ update
-                & Update.liftInfer
-            V.Nom name updated & V.BFromNom & mkRes resType & pure
+            fromNomType <- Infer.inferFromNom nominals name srcScope
+            let T.TFun _ innerType = fromNomType
+            V.BApp V.Apply
+                { V._applyFunc = V.LFromNom name & V.BLeaf & mkRes fromNomType
+                , V._applyArg = src
+                } & mkRes innerType & pure
         & Infer.run
         & mapStateT
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
