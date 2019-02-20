@@ -111,7 +111,7 @@ exportTag tag =
 exportNominal :: Monad m => T.NominalId -> Export m ()
 exportNominal nomId =
     do
-        nominal <- trans (Load.nominal nomId) <&> fromMaybe (error "opaque nominal exported")
+        nominal <- trans (Load.nominal nomId)
         tag <- readAssocTag nomId & trans
         Codec.EntityNominal tag nomId nominal & tell
         & withVisited visitedNominals nomId
@@ -243,11 +243,11 @@ importLamVar paramList tag lamUUID var =
     where
         lamI = IRef.unsafeFromUUID lamUUID & ToKnot
 
-importNominal :: T.Tag -> T.NominalId -> Nominal -> T ViewM ()
+importNominal :: T.Tag -> T.NominalId -> Maybe Nominal -> T ViewM ()
 importNominal tag nomId nominal =
     do
         Property.setP (Anchors.assocTag nomId) tag
-        Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
+        traverse_ (Transaction.writeIRef (ExprIRef.nominalI nomId)) nominal
         nomId `insertTo` DbLayout.tids
 
 importOne :: Codec.Entity -> T ViewM ()

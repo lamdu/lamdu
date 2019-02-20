@@ -56,7 +56,7 @@ data Entity
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag TagOrder (Maybe Text) T.Tag
-    | EntityNominal T.Tag T.NominalId Nominal
+    | EntityNominal T.Tag T.NominalId (Maybe Nominal)
     | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
 Lens.makePrisms ''Entity
 
@@ -519,7 +519,6 @@ encodeTagged idAttrName encoder ((tag, ident), x) =
     & insertField idAttrName (encodeIdent ident)
     & insertField "tag" (encodeTagId tag)
 
-
 decodeTagged :: Text -> ExhaustiveDecoder a -> ExhaustiveDecoder ((T.Tag, Identifier), a)
 decodeTagged idAttrName decoder obj =
     (,)
@@ -609,14 +608,23 @@ decodeTaggedLamVar json =
     <&> \((tag, ident), (lamI, mParamList)) ->
     (mParamList, tag, lamI, V.Var ident)
 
-encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Nominal)
-encodeTaggedNominal ((tag, T.NominalId nomId), nom) =
-    encodeTagged "nom" encodeNominal ((tag, nomId), nom) & Aeson.Object
+encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe Nominal)
+encodeTaggedNominal ((tag, T.NominalId nomId), mNom) =
+    maybe mempty encodeNominal mNom
+    & insertField "nom" (encodeIdent nomId)
+    & insertField "tag" (encodeTagId tag)
+    & Aeson.Object
 
-decodeTaggedNominal :: Decoder ((T.Tag, T.NominalId), Nominal)
+decodeTaggedNominal :: Decoder ((T.Tag, T.NominalId), Maybe Nominal)
 decodeTaggedNominal json =
-    withObject "nom" (decodeTagged "nom" decodeNominal) json
+    withObject "nom" (decodeTagged "nom" decodeMNom) json
     <&> _1 . _2 %~ T.NominalId
+    where
+        decodeMNom x =
+            jsum'
+            [ decodeNominal x <&> Just
+            , pure Nothing
+            ]
 
 encodeSchemaVersion :: Encoder Int
 encodeSchemaVersion ver =
