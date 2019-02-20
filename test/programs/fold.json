@@ -1,6 +1,11 @@
 [
     {
-        "schemaVersion": 5
+        "schemaVersion": 7
+    },
+    {
+        "tagOrder": 0,
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
+        "name": "num"
     },
     {
         "tagOrder": 0,
@@ -66,16 +71,6 @@
         "tagOrder": 0,
         "tag": "f5f4a4909a4091dbb5b3f9524b71fd18",
         "name": "item"
-    },
-    {
-        "tagOrder": 0,
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "name": "num"
-    },
-    {
-        "nomType": "OpaqueNominal",
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "nom": "42493a666c6f61740000000000000000"
     },
     {
         "nomType": {

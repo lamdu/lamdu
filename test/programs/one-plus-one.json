@@ -1,6 +1,11 @@
 [
     {
-        "schemaVersion": 5
+        "schemaVersion": 7
+    },
+    {
+        "tagOrder": 0,
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
+        "name": "num"
     },
     {
         "tagOrder": 0,
@@ -16,16 +21,6 @@
         "tagOrder": 0,
         "tag": "a318c24216defe206feeb73ef5be0003",
         "name": "+"
-    },
-    {
-        "tagOrder": 0,
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "name": "num"
-    },
-    {
-        "nomType": "OpaqueNominal",
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "nom": "42493a666c6f61740000000000000000"
     },
     {
         "tag": "a318c24216defe206feeb73ef5be0003",
