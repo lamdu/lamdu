@@ -30,7 +30,10 @@ convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. val of
-            BodyFromNom nom | nom ^. nTId . tidTId == boolTid -> tryIfElse (nom ^. nVal)
+            BodyFromNom nom | nom ^. nTId . tidTId == boolTid ->
+                -- In "case _»Nom of ..." the case expression doesn't absorb the FromNom
+                -- (and also in case of fragment)
+                tryIfElse (nom ^. nVal)
             _ | arg ^? ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
