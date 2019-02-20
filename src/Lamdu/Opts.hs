@@ -48,21 +48,20 @@ Lens.makePrisms ''Command
 subcommands :: P.Parser Command
 subcommands =
     mconcat
-    [ P.command "deletedb"
-      (P.info (pure DeleteDb) (P.progDesc "Irreversibly delete the lamdu database"))
-    , P.command "undo"
-      (P.info
-       (P.argument (Undo <$> P.auto) (P.metavar "COUNT"))
-       (P.progDesc "Perform undos on the database"))
-    , P.command "import"
-      (P.info
-       (P.argument (Import <$> P.str) (P.metavar "IMPORTPATH"))
-       (P.progDesc "Import from a given JSON file path into the database"))
-    , P.command "export"
-      (P.info
-       (P.argument (Export <$> P.str) (P.metavar "EXPORTPATH"))
-       (P.progDesc "Export the database into a JSON file")
-      )
+    [ P.info (pure DeleteDb) (P.progDesc "Irreversibly delete the lamdu database")
+        & P.command "deletedb"
+    , P.info
+        (P.argument P.auto (P.metavar "COUNT"))
+        (P.progDesc "Perform undos on the database")
+        <&> Undo & P.command "undo"
+    , P.info
+        (P.argument P.str (P.metavar "IMPORTPATH"))
+        (P.progDesc "Import from a given JSON file path into the database")
+        <&> Import & P.command "import"
+    , P.info
+        (P.argument P.str (P.metavar "EXPORTPATH"))
+        (P.progDesc "Export the database into a JSON file")
+        <&> Export & P.command "export"
     ] & P.hsubparser
 
 jsDebugOpts :: P.Parser (JSDebugPaths FilePath)
