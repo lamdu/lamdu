@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
+    , ImportOpts(..), importPath
     , Command(..), _DeleteDb, _Undo, _Editor
     , CommandWithDb(..), cCommand, cLamduDB
     , Parsed(..), _ParsedRequestVersion, _ParsedCommand
@@ -26,10 +27,14 @@ data EditorOpts = EditorOpts
     , _eoEkgPort :: Maybe Word16
     }
 
+newtype ImportOpts = ImportOpts
+    { _importPath :: FilePath
+    }
+
 data Command
     = DeleteDb
     | Undo Int
-    | Import FilePath
+    | Import ImportOpts
     | Export FilePath
     | Editor EditorOpts
 
@@ -42,8 +47,9 @@ data Parsed = ParsedRequestVersion | ParsedCommand CommandWithDb
 
 Lens.makeLenses ''CommandWithDb
 Lens.makeLenses ''EditorOpts
-Lens.makePrisms ''Parsed
+Lens.makeLenses ''ImportOpts
 Lens.makePrisms ''Command
+Lens.makePrisms ''Parsed
 
 subcommands :: P.Parser Command
 subcommands =
@@ -55,7 +61,8 @@ subcommands =
         (P.progDesc "Perform undos on the database")
         <&> Undo & P.command "undo"
     , P.info
-        (P.argument P.str (P.metavar "IMPORTPATH"))
+        (ImportOpts
+            <$> P.argument P.str (P.metavar "IMPORTPATH"))
         (P.progDesc "Import from a given JSON file path into the database")
         <&> Import & P.command "import"
     , P.info

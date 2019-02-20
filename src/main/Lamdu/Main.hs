@@ -41,7 +41,7 @@ main =
         case cmd ^. Opts.cCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n -> withDB (undoN n)
-            Opts.Import path -> withDB (importPath path)
+            Opts.Import opts -> withDB (importPath (opts ^. Opts.importPath))
             Opts.Export path -> withDB (exportToPath path)
             Opts.Editor opts -> withDB (Editor.run opts)
         `E.catch` \e@E.SomeException{} ->
