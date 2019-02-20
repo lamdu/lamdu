@@ -28,10 +28,7 @@ type FrozenDef = Aeson.Value
 children :: Aeson.Value -> [Aeson.Value]
 children (Aeson.Object x) = x ^.. Lens.folded
 children (Aeson.Array  x) = x ^.. Lens.folded
-children Aeson.Null {} = []
-children Aeson.Bool {} = []
-children Aeson.Number {} = []
-children Aeson.String {} = []
+children _ = []
 
 asIdentifierSet :: Maybe Aeson.Value -> Either Text (Set Text)
 asIdentifierSet Nothing = Right mempty

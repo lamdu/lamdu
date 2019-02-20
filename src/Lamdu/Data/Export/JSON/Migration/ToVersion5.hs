@@ -22,10 +22,7 @@ migrateVal (Aeson.Object obj) =
     & replaceKey "sumTypeVars" "variantTypeVars"
     & Aeson.Object
 migrateVal (Aeson.Array vals) = vals <&> migrateVal & Aeson.Array
-migrateVal (Aeson.String x) = Aeson.String x
-migrateVal (Aeson.Number x) = Aeson.Number x
-migrateVal (Aeson.Bool x) = Aeson.Bool x
-migrateVal Aeson.Null = Aeson.Null
+migrateVal x = x
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
 migrate = migrateToVer 5 (pure . fmap migrateVal)

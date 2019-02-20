@@ -610,7 +610,7 @@ decodeTaggedLamVar json =
 
 encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe Nominal)
 encodeTaggedNominal ((tag, T.NominalId nomId), mNom) =
-    maybe mempty encodeNominal mNom
+    foldMap encodeNominal mNom
     & insertField "nom" (encodeIdent nomId)
     & insertField "tag" (encodeTagId tag)
     & Aeson.Object

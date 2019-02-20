@@ -7,7 +7,7 @@ import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
-migrateVal :: Aeson.Value -> Either Text (Aeson.Value)
+migrateVal :: Aeson.Value -> Either Text Aeson.Value
 migrateVal val =
     case val ^? _Object . Lens.ix "nomType" . _String of
     Nothing -> Right val

@@ -23,10 +23,7 @@ migrateVal (Aeson.Object obj) =
             & Lens.at "rowVars" ?~ Aeson.Array x
             & pure
 migrateVal (Aeson.Array vals) = traverse migrateVal vals <&> Aeson.Array
-migrateVal (Aeson.String x) = Aeson.String x & pure
-migrateVal (Aeson.Number x) = Aeson.Number x & pure
-migrateVal (Aeson.Bool x) = Aeson.Bool x & pure
-migrateVal Aeson.Null = pure Aeson.Null
+migrateVal x = pure x
 
 migrate :: Aeson.Value -> Either Text Aeson.Value
 migrate = migrateToVer 6 (traverse migrateVal)
