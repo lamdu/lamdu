@@ -37,13 +37,21 @@ main =
             Opts.ParsedRequestVersion -> exitSuccess
             Opts.ParsedCommand cmd -> pure cmd
         lamduDir <- maybe LamduPaths.getLamduDir pure (cmd ^. Opts.cLamduDB)
-        let withDB = Db.withDB lamduDir
+        let withDB = Db.withDBOpts lamduDir
         case cmd ^. Opts.cCommand of
             Opts.DeleteDb -> deleteDB lamduDir
-            Opts.Undo n -> withDB (undoN n)
-            Opts.Import opts -> withDB (importPath (opts ^. Opts.importPath))
-            Opts.Export path -> withDB (exportToPath path)
-            Opts.Editor opts -> withDB (Editor.run opts)
+            Opts.Undo n ->
+                withDB (Db.FailIfFresh "not creating DB for undo") (undoN n)
+            Opts.Import opts ->
+                withDB implicitFreshDb (importPath (opts ^. Opts.importPath))
+                where
+                    implicitFreshDb
+                        | opts ^. Opts.importImplicitPrelude = Db.ImplicitFreshDb
+                        | otherwise = Db.NoImplicitFreshDb
+            Opts.Export path ->
+                withDB (Db.FailIfFresh "not creating DB for export")
+                (exportToPath path)
+            Opts.Editor opts -> withDB Db.ImplicitFreshDb (Editor.run opts)
         `E.catch` \e@E.SomeException{} ->
         case E.fromException e of
         Just ex -> E.throwIO (ex::ExitCode)

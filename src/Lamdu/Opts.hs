@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Opts
     ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
-    , ImportOpts(..), importPath
+    , ImportOpts(..), importPath, importImplicitPrelude
     , Command(..), _DeleteDb, _Undo, _Editor
     , CommandWithDb(..), cCommand, cLamduDB
     , Parsed(..), _ParsedRequestVersion, _ParsedCommand
@@ -27,8 +27,9 @@ data EditorOpts = EditorOpts
     , _eoEkgPort :: Maybe Word16
     }
 
-newtype ImportOpts = ImportOpts
-    { _importPath :: FilePath
+data ImportOpts = ImportOpts
+    { _importImplicitPrelude :: Bool
+    , _importPath :: FilePath
     }
 
 data Command
@@ -51,6 +52,14 @@ Lens.makeLenses ''ImportOpts
 Lens.makePrisms ''Command
 Lens.makePrisms ''Parsed
 
+inverseSwitch :: P.Mod P.FlagFields Bool -> P.Parser Bool
+inverseSwitch m = P.switch m <&> not
+
+implicitPrelude :: P.Parser Bool
+implicitPrelude =
+    inverseSwitch
+    (P.long "no-implicit-prelude" <> P.help "Do not implicitly import freshdb")
+
 subcommands :: P.Parser Command
 subcommands =
     mconcat
@@ -62,7 +71,8 @@ subcommands =
         <&> Undo & P.command "undo"
     , P.info
         (ImportOpts
-            <$> P.argument P.str (P.metavar "IMPORTPATH"))
+            <$> implicitPrelude
+            <*> P.argument P.str (P.metavar "IMPORTPATH"))
         (P.progDesc "Import from a given JSON file path into the database")
         <&> Import & P.command "import"
     , P.info
@@ -104,10 +114,9 @@ editorOpts =
           <> P.showDefault
           <> P.help "Override window title"
         )
-    <*> (P.switch
+    <*> inverseSwitch
          (P.long "disable-lcd-rendering"
           <> P.help "Disables LCD subpixel font rendering")
-         <&> not)
     <*> optional
         (P.option P.auto
             ( P.long "with-ekg"
