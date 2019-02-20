@@ -97,9 +97,10 @@ editorOpts =
           <> P.showDefault
           <> P.help "Override window title"
         )
-    <*> P.flag True False
-        (P.long "disable-lcd-rendering"
-         <> P.help "Disables LCD subpixel font rendering")
+    <*> (P.switch
+         (P.long "disable-lcd-rendering"
+          <> P.help "Disables LCD subpixel font rendering")
+         <&> not)
     <*> optional
         (P.option P.auto
             ( P.long "with-ekg"
