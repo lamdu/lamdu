@@ -157,9 +157,10 @@ decodeIdentMap fromIdent decode json =
             <*> decode v
 
 encodeSquash ::
-    Aeson.ToJSON j => (a -> Bool) -> Text -> (a -> j) -> a -> [AesonTypes.Pair]
-encodeSquash isEmpty name encode x
-    | isEmpty x = []
+    (Eq a, Monoid a, Aeson.ToJSON j) =>
+    Text -> (a -> j) -> a -> [AesonTypes.Pair]
+encodeSquash name encode x
+    | x == mempty = []
     | otherwise = [name .= encode x]
 
 jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
@@ -252,7 +253,7 @@ encodeType (T.TVariant composite) = Aeson.object ["variant" .= encodeComposite c
 encodeType (T.TVar (T.Var name)) = Aeson.object ["typeVar" .= encodeIdent name]
 encodeType (T.TInst tId params) =
     ("nomId" .= encodeIdent (T.nomId tId)) :
-    encodeSquash null "nomParams" (encodeIdentMap T.typeParamId encodeType) params
+    encodeSquash "nomParams" (encodeIdentMap T.typeParamId encodeType) params
     & Aeson.object
 
 decodeType :: Decoder Type
@@ -288,16 +289,16 @@ encodeTypeVars (TypeVars tvs rvs, cs) =
     concat
     [ encodeTVs "typeVars" tvs
     , encodeTVs "rowVars" rvs
-    , encodeSquash null "constraints" Aeson.object
+    , encodeSquash "constraints" Aeson.object
       (encodeConstraints "rowVars" cs)
     ] & Aeson.object
     where
         encodeConstraints name (Constraints constraints) =
-            encodeSquash Map.null name
+            encodeSquash name
             (encodeIdentMap T.tvName encodeCompositeVarConstraints)
             constraints
         encodeTVs name =
-            encodeSquash Set.null name
+            encodeSquash name
             (Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList)
 
 decodeTypeVars :: Decoder (TypeVars, Constraints)
@@ -324,7 +325,7 @@ decodeTypeVars =
 encodeScheme :: Encoder Scheme
 encodeScheme (Scheme tvs constraints typ) =
     ("schemeType" .= encodeType typ) :
-    encodeSquash (== mempty) "schemeBinders" encodeTypeVars (tvs, constraints)
+    encodeSquash "schemeBinders" encodeTypeVars (tvs, constraints)
     & Aeson.object
 
 decodeScheme :: Decoder Scheme
@@ -454,14 +455,14 @@ encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =
     ( "val" .= encodeVal x
     ) :
-    encodeSquash null "frozenDeps" HashMap.fromList encodedDeps
+    encodeSquash "frozenDeps" HashMap.fromList encodedDeps
     & HashMap.fromList
     where
         encodedDeps =
-            encodeSquash Map.null "defTypes"
+            encodeSquash "defTypes"
                 (encodeIdentMap V.vvName encodeScheme)
                 (frozenDeps ^. Infer.depsGlobalTypes) ++
-            encodeSquash Map.null "nominals"
+            encodeSquash "nominals"
                 (encodeIdentMap T.nomId encodeNominal)
                 (frozenDeps ^. Infer.depsNominals)
 
@@ -502,7 +503,7 @@ insertField k v = HashMap.insert k (Aeson.toJSON v)
 encodeNominal :: Nominal -> Aeson.Object
 encodeNominal (Nominal paramsMap nominalType) =
     "nomType" .= encodeScheme nominalType :
-    encodeSquash Map.null "typeParams"
+    encodeSquash "typeParams"
     (encodeIdentMap T.typeParamId (encodeIdent . T.tvName)) paramsMap
     & HashMap.fromList
 
