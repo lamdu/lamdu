@@ -14,6 +14,8 @@ import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Vars as TV
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -33,7 +35,6 @@ import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
@@ -156,7 +157,8 @@ addLetParam var redex =
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
         case redex ^. Redex.arg . ann . Input.inferred . Infer.plType of
         T.TFun (T.TRecord composite) _
-            | Just fields <- composite ^? orderedClosedFlatComposite
+            | FlatComposite fieldsMap Nothing <- FlatComposite.fromComposite composite
+            , let fields = Map.toList fieldsMap
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord
                 (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam

@@ -2,14 +2,12 @@
 
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
-    , orderedClosedFlatComposite
     ) where
 
 import           AST (Tree, Children(..), Ann(..), monoChildren)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import           Data.Proxy (Proxy(..))
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -124,19 +122,3 @@ orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
     >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent) orderNode
-
-{-# INLINE orderedFlatComposite #-}
-orderedFlatComposite ::
-    Lens.Iso' T.Row ([(T.Tag, T.Type)], Maybe T.RowVar)
-orderedFlatComposite =
-    Lens.iso to from
-    where
-        to T.REmpty = ([], Nothing)
-        to (T.RVar x) = ([], Just x)
-        to (T.RExtend tag typ rest) = to rest & Lens._1 %~ (:) (tag, typ)
-        from ([], Nothing) = T.REmpty
-        from ([], Just x) = T.RVar x
-        from ((tag,typ):rest, v) = (rest, v) & from & T.RExtend tag typ
-
-orderedClosedFlatComposite :: Lens.Prism' T.Row [(T.Tag, T.Type)]
-orderedClosedFlatComposite = orderedFlatComposite . Lens.tagged Lens._Nothing

@@ -28,6 +28,8 @@ import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
+import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -45,7 +47,6 @@ import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.OrderTags (orderedClosedFlatComposite)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -662,7 +663,8 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             <&> Map.keysSet
         case lambdaPl ^. Input.inferredType of
             T.TFun (T.TRecord composite) _
-                | Just fields <- composite ^? orderedClosedFlatComposite
+                | FlatComposite fieldsMap Nothing <- FlatComposite.fromComposite composite
+                , let fields = Map.toList fieldsMap
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
