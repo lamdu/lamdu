@@ -38,6 +38,7 @@ test =
     , testCreateLetInLetVal
     , testFloatToRepl
     , floatLetWithGlobalRef
+    , testHoleTypeShown
     ]
 
 -- | Verify that a sugar action does not result in a crash
@@ -329,3 +330,11 @@ testCreateLetInLetVal =
             (WorkArea name i o a)
             (Tree (Let name i o) (Ann a))
         theLet = replBody . _BodyLam . lamFunc . fBody . val . _BinderLet
+
+testHoleTypeShown :: Test
+testHoleTypeShown =
+    testCase "hole-type-shown" $
+    do
+        workArea <- testProgram "to-nom.json" convertWorkArea
+        let x = workArea ^?! replBody . _BodyToNom . nVal
+        assertBool "Expected to have type" (Lens.has _AnnotationType (x ^. ann . plAnnotation))
