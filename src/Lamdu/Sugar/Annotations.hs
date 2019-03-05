@@ -160,7 +160,7 @@ markBodyAnnotations oldBody =
     where
         newBodyWith f =
             newBody & overChildren (Proxy :: (Proxy SugarLens.SugarExpr))
-            (Lens.filtered (SugarLens.isUnfinished . (^. val)) . ann . _1 .~ f)
+            (Lens.filtered (not . SugarLens.isUnfinished . (^. val)) . ann . _1 .~ f)
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)
         newBody =
