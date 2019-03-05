@@ -16,7 +16,6 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import qualified Lamdu.Calc.Type.Vars as TV
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
@@ -186,31 +185,23 @@ processLet redex =
                 redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
                 & ordNub
                 & filter (not . isRecursiveDefRef)
-                & filter (`Map.member` Infer.scopeToTypeMap innerScope)
-        let (varsExitingScope, skolemsExitingScope) =
+                & filter (`Map.member` innerScope)
+        let varsExitingScope =
                 case scopeInfo ^. ConvertM.siMOuter of
-                Nothing -> (usedLocalVars, mempty)
+                Nothing -> usedLocalVars
                 Just outerScopeInfo ->
-                    ( filter (`Map.notMember` Infer.scopeToTypeMap outerScope) usedLocalVars
-                    , innerSkolems `TV.difference` outerSkolems
-                    )
+                    filter (`Map.notMember` outerScope) usedLocalVars
                     where
-                        outerSkolems = Infer.skolems outerScope ^. Infer.skolemScopeVars
-                        outerScope = outerScopeInfo ^. ConvertM.osiScope
-        let maybeDetach
-                | TV.null skolemsExitingScope = pure ()
-                | otherwise =
-                    Load.readValAndAddProperties (redex ^. Redex.lam . V.lamOut . ann . Input.stored)
-                    >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamIn)
+                        outerScope =
+                            outerScopeInfo ^. ConvertM.osiScope & Infer.scopeToTypeMap
         case varsExitingScope of
             [] -> sameLet (redex <&> (^. Input.stored)) & pure & pure
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
-            <&> (<* maybeDetach)
     where
         innerScope =
             redex ^. Redex.arg . ann . Input.inferred . Infer.plScope
-        innerSkolems = Infer.skolems innerScope ^. Infer.skolemScopeVars
+            & Infer.scopeToTypeMap
 
 makeFloatLetToOuterScope ::
     Monad m =>
