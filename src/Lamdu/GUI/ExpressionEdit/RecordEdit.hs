@@ -63,7 +63,7 @@ mkAddFieldEventMap myId =
 
 addFieldWithSearchTermEventMap :: Applicative o => Widget.Id -> Gui EventMap o
 addFieldWithSearchTermEventMap myId =
-    E.charEventMap "Character" (doc "Add Field") f
+    E.charEventMap "Letter" (doc "Add Field") f
     where
         f c
             | Char.isAlpha c =

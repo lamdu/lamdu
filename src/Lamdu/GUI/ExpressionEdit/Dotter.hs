@@ -91,7 +91,7 @@ with pl =
 fragmentEventMap ::
     Applicative o => Sugar.Payload name i o expr -> Gui EventMap o
 fragmentEventMap pl =
-    E.charEventMap "Character" (E.Doc ["Edit", "Get field"]) getField
+    E.charEventMap "Letter" (E.Doc ["Edit", "Get field"]) getField
     where
         detach (Sugar.FragmentAlready entityId) = pure entityId
         detach (Sugar.FragmentExprAlready entityId) = pure entityId

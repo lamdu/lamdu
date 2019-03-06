@@ -146,7 +146,7 @@ transformSearchTerm exprInfo eventCtx =
     where
         maybeTransformEventMap
             | exprInfoIsSelected exprInfo =
-                E.charEventMap "Character" (E.Doc ["Edit", "Transform"]) transform
+                E.charEventMap "Letter" (E.Doc ["Edit", "Transform"]) transform
             | otherwise = mempty
         transform c =
             do

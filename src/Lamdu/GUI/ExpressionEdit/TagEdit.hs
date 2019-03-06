@@ -435,7 +435,7 @@ makeLHSTag onPickNext color tag =
         tagEdit <&> Widget.weakerEvents eventMap & pure
     where
         chooseEventMap =
-            E.charEventMap "Character" (E.Doc ["Edit", "Tag", "Choose"]) chooseWithChar
+            E.charEventMap "Letter" (E.Doc ["Edit", "Tag", "Choose"]) chooseWithChar
         chooseWithChar c =
             pure (SearchMenu.enterWithSearchTerm (Text.singleton c) (WidgetIds.tagHoleId myId))
             <$ guard (Char.isAlpha c)

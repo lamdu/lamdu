@@ -182,7 +182,7 @@ numEdit prop pl =
                     E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Delete"])
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                     <>
-                    E.charEventMap "Character" (E.Doc ["Edit", "Replace"]) holeWithChar
+                    E.charEventMap "Letter" (E.Doc ["Edit", "Replace"]) holeWithChar
                     where
                         holeWithChar c =
                             (action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
