@@ -16,7 +16,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
-import           Control.Monad.Trans.State (StateT(..), mapStateT, evalState, state)
+import           Control.Monad.Trans.State (State, StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.Trans.State as State
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
@@ -400,9 +400,8 @@ exceptTtoListT :: Monad m => ExceptT err m a -> ListT m a
 exceptTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runExceptT
 
 detachValIfNeeded ::
-    Monad m =>
     a -> T.Type -> Val (Infer.Payload, a) ->
-    StateT Infer.Context m (Val (Infer.Payload, a))
+    State Infer.Context (Val (Infer.Payload, a))
 detachValIfNeeded emptyPl holeType x =
     do
         unifyResult <-
@@ -491,6 +490,9 @@ mkResult preConversion sugarContext updateDeps stored x =
                 ConvertM.run sugarContext ConvertM.postProcessAssert & join
         }
 
+toStateT :: Applicative m => State s a -> StateT s m a
+toStateT = mapStateT $ \(Lens.Identity act) -> pure act
+
 toScoredResults ::
     (Monad f, Monad m) =>
     a -> Preconversion m a -> ConvertM.Context m -> Input.Payload m dummy ->
@@ -501,7 +503,7 @@ toScoredResults ::
       )
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
-    >>= _2 %%~ detachValIfNeeded (Nothing, emptyPl) typ
+    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) typ
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =

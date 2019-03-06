@@ -12,7 +12,7 @@ import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (StateT(..), mapStateT, evalStateT)
+import           Control.Monad.Trans.State (State, runState, StateT(..), mapStateT, evalStateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
@@ -225,10 +225,9 @@ emplaceInHoles replaceHole =
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::
-    Monad m =>
     Infer.Payload ->
     Val (T.Type, Maybe (Input.Payload m a)) ->
-    StateT Infer.Context (T m) (Hole.ResultVal m IsFragment)
+    State Infer.Context (Hole.ResultVal m IsFragment)
 mkResultValFragment inferred x =
     x & annotations %~ onPl
     & Hole.detachValIfNeeded emptyPl (inferred ^. Infer.plType)
@@ -254,10 +253,6 @@ mkOptionFromFragment sugarContext exprPl x =
     , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
-            (result, inferContext) <-
-                mkResultValFragment (exprPl ^. Input.inferred) x
-                & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-            let depsProp = sugarContext ^. ConvertM.scFrozenDeps
             newDeps <-
                 Hole.loadNewDeps (depsProp ^. Property.pVal)
                 (exprPl ^. Input.inferred . Infer.plScope) x
@@ -271,9 +266,14 @@ mkOptionFromFragment sugarContext exprPl x =
                 , Hole.mkResult (replaceFragment topEntityId 0) newSugarContext
                     updateDeps stored result
                 )
-        <&> pure & ListClass.joinL
+            <&> pure & ListClass.joinL
     }
     where
+        depsProp = sugarContext ^. ConvertM.scFrozenDeps
+        (result, inferContext) =
+            runState
+            (mkResultValFragment (exprPl ^. Input.inferred) x)
+            (sugarContext ^. ConvertM.scInferContext)
         stored = exprPl ^. Input.stored
         topEntityId = Property.value stored & EntityId.ofValI
         baseExpr = pruneExpr x
