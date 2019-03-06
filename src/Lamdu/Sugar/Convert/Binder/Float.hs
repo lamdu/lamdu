@@ -209,22 +209,19 @@ makeFloatLetToOuterScope ::
     Redex (Input.Payload m a) ->
     ConvertM m (T m ExtractDestination)
 makeFloatLetToOuterScope setTopLevel redex =
-    (,,)
-    <$>
-    ( redex
-    & Redex.lam . V.lamOut . ann . Input.stored . Property.pSet .~
-        setTopLevel
-    & processLet
-    )
+    (,,,)
+    <$> processLet newRedex
     <*> Lens.view id
     <*> moveToGlobalScope
+    <*> ConvertM.postProcessWith
     <&>
-    \(makeNewLet, ctx, floatToGlobal) ->
+    \(makeNewLet, ctx, floatToGlobal, postProcess) ->
     do
         redex ^. Redex.lam . V.lamOut . ann . Input.stored .
             Property.pVal & setTopLevel
         newLetP <- makeNewLet
-        case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
+        r <-
+            case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
                 floatToGlobal param innerDefExpr <&> ExtractToDef
@@ -246,5 +243,12 @@ makeFloatLetToOuterScope setTopLevel redex =
                 DataOps.redexWrapWithGivenParam param
                 (Property.value newLetP) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
+        r <$ postProcess fixUsages
     where
         param = redex ^. Redex.lam . V.lamIn
+        fixUsages _ =
+            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.lamOut . ann . Input.stored)
+            >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamIn)
+        newRedex =
+            redex
+            & Redex.lam . V.lamOut . ann . Input.stored . Property.pSet .~ setTopLevel
