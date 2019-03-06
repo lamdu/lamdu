@@ -288,6 +288,17 @@ prepareUnstoredPayloads v =
               }
             )
 
+-- | Load given expr deps not already in the sugar context and infer
+-- it
+loadInfer ::
+    Monad m =>
+    Infer.Scope -> (Infer.Dependencies, Val a) ->
+    InferT.M (T m) (Infer.Dependencies, Val (Infer.Payload, a))
+loadInfer scope (oldDeps, expr) =
+    do
+        deps <- loadNewDeps oldDeps scope expr & InferT.liftInner
+        Infer.infer deps scope expr <&> (,) deps & InferT.liftInfer
+
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
@@ -445,28 +456,20 @@ mkResultVals sugarContext scope base =
     SeedExpr seed ->
         do
             (seedDeps, inferResult) <-
-                do
-                    seedDeps <- loadTheNewDeps seed
-                    inferResult <-
-                        Infer.infer seedDeps scope seed & InferT.liftInfer
-                        <&> annotations . _2 %~ \() -> emptyPl
-                    pure (seedDeps, inferResult)
-                    & mapStateT exceptTtoListT
+                loadInfer scope (sugarDeps, seed)
+                <&> _2 . annotations . _2 %~ (\() -> emptyPl)
+                & mapStateT exceptTtoListT
             form <- Suggest.applyForms (transaction . Load.nominal) emptyPl inferResult
             newDeps <- loadNewDeps seedDeps scope form & transaction
             pure (newDeps, form)
     SuggestedExpr sugg ->
         (,)
-        <$> mapStateT exceptTtoListT (loadTheNewDeps sugg)
+        <$> (loadNewDeps sugarDeps scope sugg & transaction)
         ?? (sugg & annotations %~ (, (Nothing, ())))
     where
         transaction = lift . lift
         emptyPl = (Nothing, ())
-        loadTheNewDeps ::
-            Monad m => Val a -> InferT.M (Transaction m) Infer.Dependencies
-        loadTheNewDeps expr =
-            loadNewDeps (sugarContext ^. ConvertM.scFrozenDeps . Property.pVal)
-            scope expr & InferT.liftInner
+        sugarDeps = sugarContext ^. ConvertM.scFrozenDeps . Property.pVal
 
 mkResult ::
     Monad m =>
