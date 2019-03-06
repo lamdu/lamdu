@@ -139,7 +139,7 @@ makeSetToLiteral ::
     Monad m =>
     Input.Payload m a -> ConvertM m (Literal Identity -> T m EntityId)
 makeSetToLiteral exprPl =
-    ((,) <$> ConvertM.typeProtectedSetToVal <*> valFromLiteral)
+    (,) <$> ConvertM.typeProtectedSetToVal <*> valFromLiteral
     <&>
     \(setToVal, valFromLit) lit ->
     let (x, update) = valFromLit lit

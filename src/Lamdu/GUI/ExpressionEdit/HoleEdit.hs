@@ -19,8 +19,8 @@ import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedSearchTermCo
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionEdit.LiteralEdit (makeLiteralEventMap)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
