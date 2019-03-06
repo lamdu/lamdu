@@ -147,7 +147,10 @@ numEdit ::
 numEdit prop pl =
     (withFd ?? myId) <*>
     do
-        text <- GuiState.readWidgetState myId <&> fromMaybe (format (prop ^. Property.pVal))
+        text <-
+            GuiState.readWidgetState myId
+            <&> (^? Lens._Just . Lens.filtered ((== Just prevVal) . parseNum))
+            <&> fromMaybe (format prevVal)
         let preEvent =
                 Widget.PreEvent
                 { Widget._pDesc = ""
@@ -201,8 +204,9 @@ numEdit prop pl =
             <&> Align.tValue . Lens.mapped %~ event
             <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> newLiteralEvent <> strollEvent)
             <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
-    & withStyle Style.num
+        & withStyle Style.num
     where
+        prevVal = prop ^. Property.pVal
         setPos newPos = TextEdit.encodeCursor innerId newPos & GuiState.updateCursor
         innerId = WidgetIds.literalEditOf myId
         curVal = prop ^. Property.pVal
