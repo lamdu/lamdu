@@ -332,16 +332,10 @@ testActions cache env virtCursor =
             ^.. (E.emKeyMap . traverse . Lens.filteredBy E.dhDoc <. (E.dhHandler . E._Doesn'tWantClipboard)) . Lens.withIndex
             & traverse_ testEvent
     where
-        testEvent (doc, event)
-            | doc == E.Doc ["Edit", "Literal Text"] =
-                -- We ignore the literal text event,
-                -- because text programs don't have its nominal declared.
-                -- TODO: cleaner solution?
-                pure ()
-            | otherwise =
-                event <&> (`GuiState.update` env)
-                >>= makeGui (show doc <> " from " <> show (env ^. cursor)) cache
-                & Transaction.fork & void
+        testEvent (doc, event) =
+            event <&> (`GuiState.update` env)
+            >>= makeGui (show doc <> " from " <> show (env ^. cursor)) cache
+            & Transaction.fork & void
 
 testProgramGuiAtPos ::
     Cache.Functions -> GuiEnv.Env -> Widget.EnterResult (T ViewM GuiState.Update) ->
