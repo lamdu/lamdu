@@ -31,14 +31,8 @@ compositeTypeScore (RExtend _ t r) =
 score :: Val Infer.Payload -> [Int]
 score (Ann pl body) =
     (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
-    resultScopeScore :
     resultTypeScore (pl ^. Infer.plType) ++
     (body ^.. monoChildren >>= score)
-    where
-        resultScopeScore =
-            case body ^? ExprLens.valBodyVar <&> (`Map.member` Infer.scopeToTypeMap (pl ^. Infer.plScope)) of
-            Just False -> 1
-            _ -> 0
 
 resultScore :: Val Infer.Payload -> HoleResultScore
 resultScore x =
