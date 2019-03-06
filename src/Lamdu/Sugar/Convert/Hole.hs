@@ -16,8 +16,9 @@ import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
 import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
-import           Control.Monad.Trans.State (State, StateT(..), mapStateT, evalState, state)
+import           Control.Monad.Trans.State (State, StateT(..), mapStateT, evalStateT, evalState, state)
 import qualified Control.Monad.Trans.State as State
+import           Control.Monad.Transaction (transaction)
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
 import           Data.Bits (xor)
@@ -66,6 +67,7 @@ import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (random)
 import qualified System.Random.Extended as Random
+import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -304,25 +306,23 @@ sugar ::
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
     T m (Tree (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
-    v
-    & annotations %~ mkPayload
-    & (EntityId.randomizeExprAndParams . Random.genFromHashable)
+    loadInfer scope (sugarContext ^. ConvertM.scFrozenDeps . Property.pVal, v)
+    <&> snd
+    & (`evalStateT` (sugarContext ^. ConvertM.scInferContext))
+    & runExceptT
+    <&> either (error . prettyShow) id
+    <&> annotations %~ mkPayload
+    <&> (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (holePl ^. Input.entityId)
-    & prepareUnstoredPayloads
-    & convertBinder
+    <&> prepareUnstoredPayloads
+    & transaction
+    >>= convertBinder
     <&> annotations %~ (,) neverShowAnnotations
     >>= annotations (convertPayload Input.None)
     & ConvertM.run sugarContext
     where
-        mkPayload x entityId = (fakeInferPayload, entityId, x)
-        -- A fake Infer payload we use to sugar the base expressions.
-        -- Currently it is a function type because
-        -- otherwise sugaring of lambdas crashes.
-        fakeInferPayload =
-            Infer.Payload
-            { Infer._plType = T.TFun (T.TVar "fakeInput") (T.TVar "fakeOutput")
-            , Infer._plScope = holePl ^. Input.inferred . Infer.plScope
-            }
+        mkPayload (inferPl, x) entityId = (inferPl, entityId, x)
+        scope = holePl ^. Input.inferred . Infer.plScope
 
 mkLiteralOptions ::
     Monad m =>
@@ -459,15 +459,15 @@ mkResultVals sugarContext scope base =
                 loadInfer scope (sugarDeps, seed)
                 <&> _2 . annotations . _2 %~ (\() -> emptyPl)
                 & mapStateT exceptTtoListT
-            form <- Suggest.applyForms (transaction . Load.nominal) emptyPl inferResult
-            newDeps <- loadNewDeps seedDeps scope form & transaction
+            form <- Suggest.applyForms (txn . Load.nominal) emptyPl inferResult
+            newDeps <- loadNewDeps seedDeps scope form & txn
             pure (newDeps, form)
     SuggestedExpr sugg ->
         (,)
-        <$> (loadNewDeps sugarDeps scope sugg & transaction)
+        <$> (loadNewDeps sugarDeps scope sugg & txn)
         ?? (sugg & annotations %~ (, (Nothing, ())))
     where
-        transaction = lift . lift
+        txn = lift . lift
         emptyPl = (Nothing, ())
         sugarDeps = sugarContext ^. ConvertM.scFrozenDeps . Property.pVal
 
