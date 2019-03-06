@@ -16,7 +16,7 @@ module Lamdu.Sugar.Convert.Monad
     , ConvertM(..), run
     , local
     , convertSubexpression
-    , typeProtectedSetToVal, postProcessAssert
+    , typeProtectedSetToVal, postProcessAssert, postProcessWith
     ) where
 
 import qualified Control.Lens as Lens
@@ -34,6 +34,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
+import qualified Lamdu.Infer.Error as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Internal
@@ -135,13 +136,24 @@ typeProtectedSetToVal =
                     _ <- checkOk
                     pure res
 
-postProcessAssert :: Monad m => ConvertM m (T m ())
-postProcessAssert =
+postProcessWith :: Monad m => ConvertM m ((Infer.Error -> T m ()) -> T m ())
+postProcessWith =
     Lens.view scPostProcessRoot
-    <&> (>>= assertSuccess)
-    where
-        assertSuccess PostProcess.GoodExpr = pure ()
-        assertSuccess (PostProcess.BadExpr err) = fail (prettyShow err)
+    <&> \postProcess onError ->
+    postProcess
+    >>=
+    \case
+    PostProcess.GoodExpr -> pure ()
+    PostProcess.BadExpr err ->
+        do
+            onError err
+            postProcess >>=
+                \case
+                PostProcess.GoodExpr -> pure ()
+                PostProcess.BadExpr e -> fail ("postProcessWith onError failed: " <> prettyShow e)
+
+postProcessAssert :: Monad m => ConvertM m (T m ())
+postProcessAssert = postProcessWith ?? (fail . prettyShow)
 
 run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> T m a
 run ctx (ConvertM action) =
