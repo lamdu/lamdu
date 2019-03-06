@@ -1,4 +1,5 @@
-{-# LANGUAGE ExistentialQuantification, TypeFamilies, ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -7,16 +8,25 @@ module Lamdu.Sugar.Convert.Hole
     , mkOptions, detachValIfNeeded, sugar, loadNewDeps
     , mkResult
     , mkOption, addWithoutDups
+    , assertSuccessfulInfer
     ) where
 
-import           AST (Tree, ToKnot(..), Ann(..), ann, annotations)
-import           AST.Term.Nominal (ToNom(..))
+import           AST (Tree, Pure(..), ToKnot(..), _Pure)
+import           AST.Infer (IResult(..), irScope, inferNode, irType)
+import           AST.Knot.Ann (Ann(..), ann, annotations)
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Term.Nominal (ToNom(..), NominalDecl, nScheme)
+import           AST.Term.Row (freExtends)
+import           AST.Term.Scheme (sTyp)
+import           AST.Unify (unify, newTerm, applyBindings)
+import           AST.Unify.Binding (UVar)
+import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
-import           Control.Monad.Trans.State (State, StateT(..), mapStateT, evalStateT, evalState, state)
-import qualified Control.Monad.Trans.State as State
+import           Control.Monad.Reader (local)
+import           Control.Monad.State (State, StateT(..), mapStateT, evalState, state)
+import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
@@ -31,25 +41,21 @@ import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import qualified Lamdu.Annotations as Annotations
+import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)
+import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
+import qualified Lamdu.Calc.Infer as Infer
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Eq (couldEq)
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Nominal as N
-import qualified Lamdu.Calc.Type.Scheme as CalcScheme
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValP, ValI, DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Trans as InferT
-import           Lamdu.Infer.Unify (unify)
-import           Lamdu.Infer.Update (Update, update)
-import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
@@ -75,11 +81,11 @@ type T = Transaction
 
 type StorePoint m a = (Maybe (ValI m), a)
 
-type ResultVal m a = Val (Infer.Payload, StorePoint m a)
+type ResultVal m a = Val (StorePoint m a, IResult UVar V.Term)
 
 type Preconversion m a = Val (Input.Payload m a) -> Val (Input.Payload m ())
 
-type ResultGen m = StateT Infer.Context (ListT (T m))
+type ResultGen m = StateT InferState (ListT (T m))
 
 convert :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convert holePl =
@@ -121,10 +127,19 @@ mkHoleSuggesteds ::
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
     [HoleOption InternalName (T m) (T m)]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
-    holePl ^. Input.inferred
+    holePl ^. Input.inferResult . irType
     & Suggest.forType
-    <&> annotations .~ ()
+    & runPureInfer (holePl ^. Input.inferResult . irScope) inferContext
+
+    -- TODO: Change ConvertM to be stateful rather than reader on the
+    -- sugar context, to collect union-find updates.
+    -- TODO: use a specific monad here that has no Either
+    & assertSuccessfulInfer
+    & fst
+    <&> annotations .~ () -- TODO: "Avoid re-inferring known type here"
     <&> mkOption sugarContext resultProcessor holePl
+    where
+        inferContext = sugarContext ^. ConvertM.scInferContext
 
 addWithoutDups ::
     [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
@@ -150,7 +165,7 @@ getListing anchor sugarContext =
     sugarContext ^. ConvertM.scCodeAnchors
     & anchor & Property.getP <&> Set.toList
 
-getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, N.Nominal)]
+getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, Tree Pure (NominalDecl T.Type))]
 getNominals sugarContext =
     getListing Anchors.tids sugarContext
     >>= traverse (\nomId -> (,) nomId <$> Load.nominal nomId)
@@ -163,10 +178,10 @@ getGlobals sugarContext =
 getTags :: Monad m => ConvertM.Context m -> T m [T.Tag]
 getTags = getListing Anchors.tags
 
-mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
+mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [Val ()]
 mkNominalOptions nominals =
     do
-        (tid, nominal) <- nominals
+        (tid, Pure nominal) <- nominals
         mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
         mkDirectNoms tid =
@@ -175,10 +190,10 @@ mkNominalOptions nominals =
             ] <&> Ann ()
         mkToNomInjections tid nominal =
             do
-                (tag, _typ) <-
+                tag <-
                     nominal ^..
-                    N.nomType . CalcScheme.schemeType . T._TVariant .
-                    ExprLens.compositeFields
+                    nScheme . sTyp . _Pure . T._TVariant .
+                    T.flatRow . freExtends >>= Map.keys
                 let inject = V.Inject tag P.hole & V.BInject & Ann ()
                 [ inject & ToNom tid & V.BToNom & Ann () ]
 
@@ -210,9 +225,9 @@ mkOptions resultProcessor holePl =
             & pure
 
 -- TODO: Generalize into a separate module?
-loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Infer.Dependencies
+loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Deps
 loadDeps vars noms =
-    Infer.Deps
+    Deps
     <$> (traverse loadVar vars <&> Map.fromList)
     <*> (traverse loadNom noms <&> Map.fromList)
     where
@@ -229,38 +244,39 @@ type Folding' r a = Lens.Getting (Endo [a]) r a
 
 -- TODO: Generalize into a separate module?
 loadNewDeps ::
-    forall m a.
-    Monad m => Infer.Dependencies -> Infer.Scope -> Val a -> T m Infer.Dependencies
+    forall m a k.
+    Monad m => Deps -> Tree V.Scope k -> Val a -> T m Deps
 loadNewDeps currentDeps scope x =
     loadDeps newDepVars newNoms
     <&> mappend currentDeps
     where
-        scopeVars = Infer.scopeToTypeMap scope & Map.keysSet
+        scopeVars = scope ^. V.scopeVarTypes & Map.keysSet
         newDeps ::
             Ord r =>
-            Getting' Infer.Dependencies (Map r x) -> Folding' (Val a) r -> [r]
+            Getting' Deps (Map r x) -> Folding' (Val a) r -> [r]
         newDeps depsLens valLens =
             Set.fromList (x ^.. valLens)
             `Set.difference` Map.keysSet (currentDeps ^. depsLens)
             & Set.toList
-        newDepVars = newDeps Infer.depsGlobalTypes (ExprLens.valGlobals scopeVars)
-        newNoms = newDeps Infer.depsNominals ExprLens.valNominals
+        newDepVars = newDeps depsGlobalTypes (ExprLens.valGlobals scopeVars)
+        newNoms = newDeps depsNominals ExprLens.valNominals
 
 -- Unstored and without eval results (e.g: hole result)
 prepareUnstoredPayloads ::
-    Val (Infer.Payload, EntityId, a) ->
+    Val (IResult UVar V.Term, Tree Pure T.Type, EntityId, a) ->
     Val (Input.Payload m a)
 prepareUnstoredPayloads v =
     v & annotations %~ mk & Input.preparePayloads
     where
-        mk (inferPl, eId, x) =
+        mk (inferPl, typ, eId, x) =
             ( eId
             , \varRefs ->
               Input.Payload
               { Input._varRefsOfLambda = varRefs
               , Input._userData = x
               , Input._localsInScope = []
-              , Input._inferred = inferPl
+              , Input._inferredType = typ
+              , Input._inferResult = inferPl
               , Input._entityId = eId
               , Input._stored = error "TODO: Nothing stored?!"
               , Input._evalResults =
@@ -268,40 +284,63 @@ prepareUnstoredPayloads v =
               }
             )
 
--- | Load given expr deps not already in the sugar context and infer
--- it
+assertSuccessfulInfer ::
+    HasCallStack =>
+    Either (Tree Pure T.TypeError) a -> a
+assertSuccessfulInfer = either (error . prettyShow) id
+
 loadInfer ::
     Monad m =>
-    Infer.Scope -> (Infer.Dependencies, Val a) ->
-    InferT.M (T m) (Infer.Dependencies, Val (Infer.Payload, a))
-loadInfer scope (oldDeps, expr) =
-    do
-        deps <- loadNewDeps oldDeps scope expr & InferT.liftInner
-        Infer.infer deps scope expr <&> (,) deps & InferT.liftInfer
+    ConvertM.Context m -> Tree V.Scope UVar -> Val a ->
+    T m (Deps, Either (Tree Pure T.TypeError) (Val (a, IResult UVar V.Term), InferState))
+loadInfer sugarContext scope v =
+    loadNewDeps sugarDeps scope v
+    <&>
+    \deps ->
+    ( deps
+    , do
+        addScope <- Infer.loadDeps deps
+        local addScope (inferNode v)
+        & runPureInfer scope (sugarContext ^. ConvertM.scInferContext)
+        <&> _1 %~ (^. ExprLens.itermAnn)
+    )
+    where
+        sugarDeps = sugarContext ^. ConvertM.scFrozenDeps . Property.pVal
 
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
     T m (Tree (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
-    loadInfer scope (sugarContext ^. ConvertM.scFrozenDeps . Property.pVal, v)
-    <&> snd
-    & (`evalStateT` (sugarContext ^. ConvertM.scInferContext))
-    & runExceptT
-    <&> either (error . prettyShow) id
-    <&> annotations %~ mkPayload
-    <&> (EntityId.randomizeExprAndParams . Random.genFromHashable)
-        (holePl ^. Input.entityId)
-    <&> prepareUnstoredPayloads
-    <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
-    & transaction
-    >>= convertBinder
-    <&> annotations %~ (,) neverShowAnnotations
-    >>= annotations (convertPayload Annotations.None)
-    & ConvertM.run sugarContext
+    do
+        (val, inferCtx) <-
+            loadInfer sugarContext scope v
+            <&> snd
+            <&> assertSuccessfulInfer
+            <&> makePayloads
+            <&> _1 %~ (EntityId.randomizeExprAndParams . Random.genFromHashable)
+                (holePl ^. Input.entityId)
+            <&> _1 %~ prepareUnstoredPayloads
+            <&> _1 %~ Input.initLocalsInScope (holePl ^. Input.localsInScope)
+            & transaction
+        convertBinder val
+            <&> annotations %~ (,) neverShowAnnotations
+            >>= annotations (convertPayload Annotations.None)
+            & ConvertM.run (sugarContext & ConvertM.scInferContext .~ inferCtx)
     where
-        mkPayload (inferPl, x) entityId = (inferPl, entityId, x)
-        scope = holePl ^. Input.inferred . Infer.plScope
+        scope = holePl ^. Input.inferResult . irScope
+        makePayloads (term, inferCtx) =
+            ( annotations mkPayload term
+                & runPureInfer scope inferCtx
+                & assertSuccessfulInfer
+                & fst
+            , inferCtx
+            )
+        mkPayload (x, inferPl) =
+            applyBindings (inferPl ^. irType)
+            <&>
+            \typ entityId ->
+            (inferPl, typ, entityId, x)
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
@@ -321,24 +360,25 @@ getLocalScopeGetVars sugarContext par
 -- | Runs inside a forked transaction
 writeResult ::
     Monad m =>
-    Preconversion m a -> ValP m -> ResultVal m a ->
+    Preconversion m a -> InferState -> ValP m -> ResultVal m a ->
     T m (Val (Input.Payload m ()))
-writeResult preConversion holeStored inferredVal =
+writeResult preConversion inferContext holeStored inferredVal =
     do
         writtenExpr <-
             inferredVal
             & annotations %~ intoStorePoint
             & writeExprMStored (Property.value holeStored)
             <&> ExprIRef.addProperties (holeStored ^. Property.pSet)
+            <&> addBindingsAll
             <&> annotations %~ toPayload
             <&> Input.preparePayloads
             <&> annotations %~ snd
         (holeStored ^. Property.pSet) (writtenExpr ^. ann . _1 . Property.pVal)
         writtenExpr & annotations %~ snd & preConversion & pure
     where
-        intoStorePoint (inferred, (mStorePoint, a)) =
+        intoStorePoint ((mStorePoint, a), inferred) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
-        toPayload (stored, (inferred, wasStored, a)) =
+        toPayload (stored, (inferRes, resolved, wasStored, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
             ( eId
             , \varRefs ->
@@ -347,7 +387,8 @@ writeResult preConversion holeStored inferredVal =
                 , Input.Payload
                   { Input._varRefsOfLambda = varRefs
                   , Input._userData = a
-                  , Input._inferred = inferred
+                  , Input._inferredType = resolved
+                  , Input._inferResult = inferRes
                   , Input._evalResults = CurAndPrev noEval noEval
                   , Input._stored = stored
                   , Input._entityId = eId
@@ -359,64 +400,75 @@ writeResult preConversion holeStored inferredVal =
             where
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
-
-exceptTtoListT :: Monad m => ExceptT err m a -> ListT m a
-exceptTtoListT = ListClass.joinL . fmap (ListClass.fromList . (^.. Lens._Right)) . runExceptT
+        addBindingsAll x =
+            (annotations . Lens._2) addBindings x
+            & runPureInfer (x ^. ann . Lens._2 . Lens._1 . irScope) inferContext
+            & assertSuccessfulInfer
+            & fst
+        addBindings (inferRes, wasStored, a) =
+            applyBindings (inferRes ^. irType)
+            <&>
+            \resolved -> (inferRes, resolved, wasStored, a)
 
 detachValIfNeeded ::
-    a -> T.Type -> Val (Infer.Payload, a) ->
-    State Infer.Context (Val (Infer.Payload, a))
-detachValIfNeeded emptyPl holeType x =
+    a -> IResult UVar V.Term -> Val (a, IResult UVar V.Term) ->
+    -- TODO: PureInfer?
+    State InferState (Val (a, IResult UVar V.Term))
+detachValIfNeeded emptyPl holeIRes x =
     do
-        unifyResult <-
-            unify holeType (x ^. ann . _1 . Infer.plType) & liftInfer
-        updated <- Update.inferredVal x & liftUpdate
-        case unifyResult of
-            Right{} -> pure updated
-            Left{} -> detachVal emptyPl holeType updated & liftUpdate
+        unifyRes <-
+            do
+                r <- unify (holeIRes ^. irType) xType
+                -- Verify occurs checks.
+                -- TODO: share with applyBindings that happens for sugaring.
+                s <- State.get
+                _ <- annotations (applyBindings . (^. _2 . irType)) x
+                r <$ State.put s
+            & liftPureInfer
+        let mkFragmentExpr =
+                FuncType xType holeType & T.TFun & newTerm
+                <&> \funcType ->
+                let withTyp typ =
+                        Ann (emptyPl, x ^. ann . _2 & irType .~ typ)
+                    func = V.BLeaf V.LHole & withTyp funcType
+                in  func `V.Apply` x & V.BApp & withTyp holeType
+        case unifyRes of
+            Right{} -> pure x
+            Left{} ->
+                liftPureInfer mkFragmentExpr
+                <&> assertSuccessfulInfer
     where
-        liftUpdate = State.gets . Update.run
-        liftInfer = stateEitherSequence . Infer.run
-
-detachVal ::
-    a -> T.Type -> Val (Infer.Payload, a) ->
-    Update (Val (Infer.Payload, a))
-detachVal emptyPl resultType x =
-    update resultType <&> mk
-    where
-        mk updatedType =
-            V.Apply func x & V.BApp
-            & Ann (plSameScope updatedType, emptyPl)
-        plSameScope typ = inferPl & Infer.plType .~ typ
-        inferPl = x ^. ann . _1
-        func = V.BLeaf V.LHole & Ann (plSameScope funcType, emptyPl)
-        funcType = T.TFun (inferPl ^. Infer.plType) resultType
-
-stateEitherSequence :: Monad m => StateT s (Either l) r -> StateT s m (Either l r)
-stateEitherSequence (StateT f) =
-    StateT $ \s0 ->
-    pure $
-    case f s0 of
-    Right (r, s1) -> (Right r, s1)
-    Left l -> (Left l, s0)
+        xType = x ^. ann . _2 . irType
+        liftPureInfer ::
+            PureInfer a -> State InferState (Either (Tree Pure T.TypeError) a)
+        liftPureInfer act =
+            do
+                st <- Lens.use id
+                runPureInfer scope st act
+                    & Lens._Right %%~ \(r, newSt) -> r <$ (id .= newSt)
+        holeType = holeIRes ^. irType
+        scope = holeIRes ^. irScope
 
 mkResultVals ::
     Monad m =>
-    ConvertM.Context m -> Infer.Scope -> Val () ->
-    ResultGen m (Infer.Dependencies, ResultVal m ())
-mkResultVals sugarContext scope base =
-    do
-        (seedDeps, inferResult) <-
-            loadInfer scope (sugarDeps, base)
-            <&> _2 . annotations . _2 %~ (\() -> emptyPl)
-            & mapStateT exceptTtoListT
-        form <- Suggest.termTransformsWithModify (txn . Load.nominal) emptyPl inferResult
-        newDeps <- loadNewDeps seedDeps scope form & txn
-        pure (newDeps, form)
+    ConvertM.Context m -> Tree V.Scope UVar -> Val () ->
+    ResultGen m (Deps, ResultVal m ())
+mkResultVals sugarContext scope seed =
+    -- TODO: This uses state from context but we're in StateT.
+    -- This is a mess..
+    loadInfer sugarContext scope seed & txn
+    >>=
+    \case
+    (_, Left{}) -> empty
+    (newDeps, Right (inferResult, newInferState)) ->
+        do
+            id .= newInferState
+            form <-
+                Suggest.termTransformsWithModify () inferResult
+                & mapStateT ListClass.fromList
+            pure (newDeps, form & annotations . _1 %~ (,) Nothing)
     where
         txn = lift . lift
-        emptyPl = (Nothing, ())
-        sugarDeps = sugarContext ^. ConvertM.scFrozenDeps . Property.pVal
 
 mkResult ::
     Monad m =>
@@ -426,7 +478,8 @@ mkResult ::
 mkResult preConversion sugarContext updateDeps holePl x =
     do
         updateDeps
-        writeResult preConversion (holePl ^. Input.stored) x
+        writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
+            (holePl ^. Input.stored) x
         <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
         <&> (convertBinder >=> annotations (convertPayload Annotations.None) . (annotations %~ (,) showAnn))
         >>= ConvertM.run sugarContext
@@ -451,14 +504,13 @@ toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 toScoredResults ::
     (Monad f, Monad m) =>
     a -> Preconversion m a -> ConvertM.Context m -> Input.Payload m dummy ->
-    StateT Infer.Context f
-    (Infer.Dependencies, ResultVal m a) ->
+    StateT InferState f (Deps, ResultVal m a) ->
     f ( HoleResultScore
       , T m (HoleResult InternalName (T m) (T m))
       )
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
-    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) typ
+    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) holeInferRes
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =
@@ -466,11 +518,15 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scInferContext .~ inferContext
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( resultScore (x & annotations %~ fst)
+    in  ( x & annotations %%~ applyBindings . (^. Lens._2 . irType)
+          & runPureInfer (holeInferRes ^. irScope) inferContext
+          & assertSuccessfulInfer
+          & fst
+          & resultScore
         , mkResult preConversion newSugarContext updateDeps holePl x
         )
     where
-        typ = holePl ^. Input.inferred . Infer.plType
+        holeInferRes = holePl ^. Input.inferResult
 
 mkResults ::
     Monad m =>
@@ -480,7 +536,7 @@ mkResults ::
     , T m (HoleResult InternalName (T m) (T m))
     )
 mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
-    mkResultVals sugarContext (holePl ^. Input.inferred . Infer.plScope) base
+    mkResultVals sugarContext (holePl ^. Input.inferResult . irScope) base
     >>= _2 %%~ postProcess
     & toScoredResults emptyPl preConversion sugarContext holePl
 

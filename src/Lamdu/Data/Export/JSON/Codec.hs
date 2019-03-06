@@ -1,13 +1,17 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE FlexibleContexts, TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts, TemplateHaskell, TypeFamilies #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           AST (Ann(..), monoChildren, Tree)
-import           AST.Term.Nominal (ToNom(..))
+import           Algebra.Lattice (BoundedJoinSemiLattice(..))
+import           AST (Ann(..), monoChildren, Tree, Pure(..), _Pure)
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
+import qualified AST.Term.Row as Row
+import           AST.Term.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Data.Aeson ((.=), (.:))
@@ -20,23 +24,15 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
+import           Lamdu.Calc.Definition
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Type (Type, Row)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Constraints (Constraints(..))
-import qualified Lamdu.Calc.Type.Constraints as Constraints
-import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import           Lamdu.Calc.Type.Nominal (Nominal(..))
-import           Lamdu.Calc.Type.Scheme (Scheme(..))
-import           Lamdu.Calc.Type.Vars (TypeVars(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
-import qualified Lamdu.Infer as Infer
 
 import           Lamdu.Prelude hiding ((.=))
 
@@ -52,7 +48,7 @@ data Entity
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag TagOrder (Maybe Text) T.Tag
-    | EntityNominal T.Tag T.NominalId (Maybe Nominal)
+    | EntityNominal T.Tag T.NominalId (Maybe (Tree Pure (NominalDecl T.Type)))
     | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
 Lens.makePrisms ''Entity
 
@@ -192,12 +188,12 @@ decodeTagId :: Decoder T.Tag
 decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
-encodeFlatComposite :: Encoder FlatComposite
-encodeFlatComposite (FlatComposite fields rest) =
-    case rest of
-    Nothing -> encodedFields fields
-    Just (T.Var name) ->
-        AesonTypes.toJSON [encodedFields fields, encodeIdent name]
+encodeFlatComposite :: Encoder (Tree (Row.FlatRowExtends T.Tag T.Type T.Row) Pure)
+encodeFlatComposite (Row.FlatRowExtends fields rest) =
+    case rest ^. _Pure of
+    T.REmpty -> encodedFields fields
+    T.RVar (T.Var name) -> AesonTypes.toJSON [encodedFields fields, encodeIdent name]
+    T.RExtend{} -> error "RExtend in tail of flat row"
     where
         encodedFields = encodeIdentMap T.tagName encodeType
 
@@ -210,117 +206,124 @@ jsum parsers =
         swapEither (Left x) = Right x
         swapEither (Right x) = Left x
 
-decodeFlatComposite :: Decoder FlatComposite
+decodeFlatComposite :: Decoder (Tree (Row.FlatRowExtends T.Tag T.Type T.Row) Pure)
 decodeFlatComposite json =
     jsum
     [ do
           (encodedFields, encodedIdent) <- Aeson.parseJSON json
           fields <- decodeFields encodedFields
           tv <- decodeIdent encodedIdent <&> T.Var
-          FlatComposite fields (Just tv) & pure
+          Row.FlatRowExtends fields (Pure (T.RVar tv)) & pure
 
     , Aeson.parseJSON json
       >>= decodeFields
-      <&> (`FlatComposite` Nothing)
+      <&> (`Row.FlatRowExtends` Pure T.REmpty)
     ]
     where
         decodeFields = decodeIdentMap T.Tag decodeType
 
-encodeComposite :: Encoder Row
-encodeComposite = encodeFlatComposite . FlatComposite.fromComposite
+encodeComposite :: Encoder (Tree Pure T.Row)
+encodeComposite x = encodeFlatComposite (x ^. T.flatRow)
 
-decodeComposite :: Decoder Row
-decodeComposite = fmap FlatComposite.toComposite . decodeFlatComposite
+decodeComposite :: Decoder (Tree Pure T.Row)
+decodeComposite x =
+    decodeFlatComposite x <&> unflatten
+    where
+        unflatten (Row.FlatRowExtends extends rest) =
+            -- It appears that we've accidentally relies on sorted order of fields.
+            -- Using a foldl here will cause typing "1+2" appear as "2+1"!!
+            foldr f rest (Map.toList extends)
+            where
+                f (key, val) acc = RowExtend key val acc & T.RExtend & Pure
 
-encodeType :: Encoder Type
-encodeType (T.TFun a b) = Aeson.object ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
-encodeType (T.TRecord composite) = Aeson.object ["record" .= encodeComposite composite]
-encodeType (T.TVariant composite) = Aeson.object ["variant" .= encodeComposite composite]
-encodeType (T.TVar (T.Var name)) = Aeson.object ["typeVar" .= encodeIdent name]
-encodeType (T.TInst tId params) =
-    ("nomId" .= encodeIdent (T.nomId tId)) :
-    encodeSquash "nomParams" (encodeIdentMap T.typeParamId encodeType) params
+encodeType :: Encoder (Tree Pure T.Type)
+encodeType (Pure t) =
+    case t of
+    T.TFun (FuncType a b) -> ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
+    T.TRecord composite   -> ["record" .= encodeComposite composite]
+    T.TVariant composite  -> ["variant" .= encodeComposite composite]
+    T.TVar (T.Var name)   -> ["typeVar" .= encodeIdent name]
+    T.TInst (NominalInst tId params) ->
+        ("nomId" .= encodeIdent (T.nomId tId)) :
+        encodeSquash "nomTypeArgs" (encodeIdentMap T.tvName encodeType) (params ^. T.tType . _QVarInstances) ++
+        encodeSquash "nomRowArgs" (encodeIdentMap T.tvName encodeComposite) (params ^. T.tRow . _QVarInstances)
     & Aeson.object
 
-decodeType :: Decoder Type
+decodeType :: Decoder (Tree Pure T.Type)
 decodeType json =
     Aeson.withObject "Type" ?? json $ \o ->
     jsum
-    [ T.TFun
+    [ FuncType
         <$> (o .: "funcParam" >>= decodeType)
         <*> (o .: "funcResult" >>= decodeType)
+        <&> T.TFun
     , o .: "record" >>= decodeComposite <&> T.TRecord
     , o .: "variant" >>= decodeComposite <&> T.TVariant
     , o .: "typeVar" >>= decodeIdent <&> T.Var <&> T.TVar
-    , do
-          nomId <- o .: "nomId" >>= decodeIdent <&> T.NominalId
-          params <- decodeSquashed "nomParams" (decodeIdentMap T.ParamId decodeType) o
-          T.TInst nomId params & pure
+    , NominalInst
+        <$> (o .: "nomId" >>= decodeIdent <&> T.NominalId)
+        <*> (T.Types
+            <$> (decodeSquashed "nomTypeArgs" (decodeIdentMap T.Var decodeType) o <&> QVarInstances)
+            <*> (decodeSquashed "nomRowArgs" (decodeIdentMap T.Var decodeComposite) o <&> QVarInstances)
+            )
+        <&> T.TInst
     ]
+    <&> Pure
 
-encodeCompositeVarConstraints :: Constraints.CompositeVar -> [Encoded]
-encodeCompositeVarConstraints (Constraints.CompositeVar forbidden) =
-    Set.toList forbidden
-    <&> T.tagName
-    <&> encodeIdent
+encodeCompositeVarConstraints :: T.RConstraints -> [Encoded]
+encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
+    | scopeLevel == bottom =
+        Set.toList forbidden
+        <&> T.tagName
+        <&> encodeIdent
+    | otherwise =
+        -- We only encode top-level types, no skolem escape considerations...
+        error "encodeCompositeVarConstraints does not support inner-scoped types"
 
 decodeCompositeConstraints ::
-    [Encoded] -> AesonTypes.Parser Constraints.CompositeVar
+    [Encoded] -> AesonTypes.Parser T.RConstraints
 decodeCompositeConstraints json =
     traverse decodeIdent json <&> map T.Tag <&> Set.fromList
-    <&> Constraints.CompositeVar
+    <&> (`T.RowConstraints` bottom)
 
-encodeTypeVars :: Encoder (TypeVars, Constraints)
-encodeTypeVars (TypeVars tvs rvs, cs) =
-    concat
-    [ encodeTVs "typeVars" tvs
-    , encodeTVs "rowVars" rvs
-    , encodeSquash "constraints" Aeson.object
-      (encodeConstraints "rowVars" cs)
-    ] & Aeson.object
-    where
-        encodeConstraints name (Constraints constraints) =
-            encodeSquash name
-            (encodeIdentMap T.tvName encodeCompositeVarConstraints)
-            constraints
-        encodeTVs name =
-            encodeSquash name
-            (Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList)
+encodeTypeVars :: Tree T.Types QVars -> [AesonTypes.Pair]
+encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
+    encodeSquash "typeVars"
+    (Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList)
+    (Map.keysSet tvs)
+    ++
+    encodeSquash "rowVars"
+    (encodeIdentMap T.tvName encodeCompositeVarConstraints)
+    rvs
 
-decodeTypeVars :: Decoder (TypeVars, Constraints)
-decodeTypeVars =
-    Aeson.withObject "TypeVars" $ \obj ->
-    do
-        let getTVs name = decodeSquashed name decodeTVs obj
-        tvs <-
-            TypeVars
-            <$> getTVs "typeVars"
-            <*> getTVs "rowVars"
-        decodedConstraints <-
-            decodeSquashed "constraints"
-            ( Aeson.withObject "constraints" $ \constraints ->
-              decodeConstraints "rowVars" constraints <&> Constraints
-            ) obj
-        pure (tvs, decodedConstraints)
-    where
-        decodeConstraints name =
-            decodeSquashed name (decodeIdentMap T.Var decodeCompositeConstraints)
-        decodeTV = fmap T.Var . decodeIdent
-        decodeTVs = fmap Set.fromList . traverse decodeTV
+decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (Tree T.Types QVars)
+decodeTypeVars obj =
+    T.Types
+    <$> ( decodeSquashed "typeVars"
+        ( \tvs ->
+            Aeson.parseJSON tvs
+            >>= traverse decodeIdent
+            <&> map (\name -> (T.Var name, bottom))
+            <&> Map.fromList
+        ) obj
+        <&> QVars
+        )
+    <*> (decodeSquashed "rowVars" (decodeIdentMap T.Var decodeCompositeConstraints) obj
+        <&> QVars)
 
-encodeScheme :: Encoder Scheme
-encodeScheme (Scheme tvs constraints typ) =
+encodeScheme :: Encoder (Tree Pure T.Scheme)
+encodeScheme (Pure (Scheme tvs typ)) =
     ("schemeType" .= encodeType typ) :
-    encodeSquash "schemeBinders" encodeTypeVars (tvs, constraints)
+    encodeTypeVars tvs
     & Aeson.object
 
-decodeScheme :: Decoder Scheme
+decodeScheme :: Decoder (Tree Pure T.Scheme)
 decodeScheme =
     Aeson.withObject "scheme" $ \obj ->
     do
-        (tvs, constraints) <- decodeSquashed "schemeBinders" decodeTypeVars obj
+        tvs <- decodeTypeVars obj
         typ <- obj .: "schemeType" >>= decodeType
-        Scheme tvs constraints typ & pure
+        Scheme tvs typ & Pure & pure
 
 encodeLeaf :: V.Leaf -> AesonTypes.Object
 encodeLeaf =
@@ -451,10 +454,10 @@ encodeDefExpr (Definition.Expr x frozenDeps) =
         encodedDeps =
             encodeSquash "defTypes"
                 (encodeIdentMap V.vvName encodeScheme)
-                (frozenDeps ^. Infer.depsGlobalTypes) ++
+                (frozenDeps ^. depsGlobalTypes) ++
             encodeSquash "nominals"
                 (encodeIdentMap T.nomId encodeNominal)
-                (frozenDeps ^. Infer.depsNominals)
+                (frozenDeps ^. depsNominals)
 
 encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
 encodeDefBody (Definition.BodyBuiltin name) = HashMap.fromList ["builtin" .= encodeFFIName name]
@@ -467,7 +470,7 @@ decodeDefExpr obj =
     <*> decodeSquashed "frozenDeps" (Aeson.withObject "deps" decodeDeps) obj
     where
         decodeDeps o =
-            Infer.Deps
+            Deps
             <$> decodeSquashed "defTypes" (decodeIdentMap V.Var decodeScheme) o
             <*> decodeSquashed "nominals"
                 (decodeIdentMap T.NominalId decodeNominal) o
@@ -489,18 +492,18 @@ decodeRepl obj =
 insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (Aeson.toJSON v)
 
-encodeNominal :: Nominal -> Aeson.Object
-encodeNominal (Nominal paramsMap nominalType) =
-    "nomType" .= encodeScheme nominalType :
-    encodeSquash "typeParams"
-    (encodeIdentMap T.typeParamId (encodeIdent . T.tvName)) paramsMap
+encodeNominal :: Tree Pure (NominalDecl T.Type) -> Aeson.Object
+encodeNominal (Pure (NominalDecl params nominalType)) =
+    ("nomType" .= encodeScheme (Pure nominalType))
+    : encodeTypeVars params
     & HashMap.fromList
 
-decodeNominal :: Aeson.Object -> AesonTypes.Parser Nominal
+decodeNominal :: Aeson.Object -> AesonTypes.Parser (Tree Pure (NominalDecl T.Type))
 decodeNominal obj =
-    Nominal
-    <$> decodeSquashed "typeParams" (decodeIdentMap T.ParamId (fmap T.Var . decodeIdent)) obj
-    <*> (obj .: "nomType" >>= decodeScheme)
+    NominalDecl
+    <$> decodeTypeVars obj
+    <*> (obj .: "nomType" >>= decodeScheme <&> (^. _Pure))
+    <&> Pure
 
 encodeTagged :: Text -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
 encodeTagged idAttrName encoder ((tag, ident), x) =
@@ -593,14 +596,14 @@ decodeTaggedLamVar json =
     <&> \((tag, ident), (lamI, mParamList)) ->
     (mParamList, tag, lamI, V.Var ident)
 
-encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe Nominal)
+encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe (Tree Pure (NominalDecl T.Type)))
 encodeTaggedNominal ((tag, T.NominalId nomId), mNom) =
     foldMap encodeNominal mNom
-    & insertField "nom" (encodeIdent nomId)
-    & insertField "tag" (encodeTagId tag)
+    & Lens.at "nom" ?~ encodeIdent nomId
+    & Lens.at "tag" ?~ encodeTagId tag
     & Aeson.Object
 
-decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser ((T.Tag, T.NominalId), Maybe Nominal)
+decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser ((T.Tag, T.NominalId), Maybe (Tree Pure (NominalDecl T.Type)))
 decodeTaggedNominal json =
     decodeTagged "nom" decodeMNom json <&> _1 . _2 %~ T.NominalId
     where

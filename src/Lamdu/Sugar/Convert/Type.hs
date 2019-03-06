@@ -5,10 +5,15 @@ module Lamdu.Sugar.Convert.Type
     , convertScheme
     ) where
 
-import qualified Control.Lens as Lens
+import           AST (Tree, Pure(..))
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Term.Nominal (NominalInst(..))
+import           AST.Term.Row (RowExtend(..))
+import qualified AST.Term.Scheme as S
+-- import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
+import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import           Lamdu.Sugar.Internal
@@ -20,8 +25,9 @@ import           Lamdu.Prelude
 
 convertComposite ::
     MonadTransaction n m =>
-    EntityId -> T.Row -> m (CompositeFields InternalName (Type InternalName))
-convertComposite entityId (T.RExtend tag typ rest) =
+    EntityId -> Tree Pure T.Row ->
+    m (CompositeFields InternalName (Type InternalName))
+convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         convertComposite (EntityId.ofRestOfComposite entityId) rest
@@ -33,28 +39,34 @@ convertComposite entityId (T.RExtend tag typ rest) =
             , _tagInstance = EntityId.ofTag entityId tag
             , _tagVal = tag
             }
-convertComposite _ (T.RVar v) =
+convertComposite _ (Pure (T.RVar v)) =
     CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
-convertComposite _ T.REmpty = CompositeFields mempty Nothing & pure
+convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
-convertType :: MonadTransaction n m => EntityId -> T.Type -> m (Type InternalName)
-convertType entityId typ =
+convertType :: MonadTransaction n m => EntityId -> Tree Pure T.Type -> m (Type InternalName)
+convertType entityId (Pure typ) =
     case typ of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure
-    T.TFun param res ->
+    T.TFun (FuncType param res) ->
         TFun
         <$> convertType (ofFunParam entityId) param
         <*> convertType (ofFunResult entityId) res
-    T.TInst tid args ->
-        TInst
-        <$> ConvertTId.convert tid
-        <*> Lens.itraverse convertParam args
+    T.TInst (NominalInst tid args)
+        | Map.null rParams ->
+            TInst
+            <$> ConvertTId.convert tid
+            <*> (Map.toList tParams & traverse convertTypeParam)
+        | otherwise -> error "Currently row-params are unsupported"
         where
-            convertParam p = convertType (EntityId.ofTInstParam p entityId)
+            T.Types (S.QVarInstances tParams) (S.QVarInstances rParams) = args
+            convertTypeParam (tv, val) =
+                (,)
+                <$> taggedName tv
+                <*> convertType (EntityId.ofTInstParam tv entityId) val
     T.TRecord composite -> TRecord <$> convertComposite entityId composite
     T.TVariant composite -> TVariant <$> convertComposite entityId composite
     <&> Type entityId
 
-convertScheme :: MonadTransaction n m => EntityId -> Scheme.Scheme -> m (Scheme InternalName)
-convertScheme entityId (Scheme.Scheme tvs cs typ) =
-    Scheme tvs cs <$> convertType entityId typ
+convertScheme :: MonadTransaction n m => EntityId -> Tree Pure T.Scheme -> m (Scheme InternalName)
+convertScheme entityId (Pure (S.Scheme tvs typ)) =
+    Scheme tvs <$> convertType entityId typ

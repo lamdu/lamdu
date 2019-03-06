@@ -3,15 +3,19 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import           AST (ann)
+import           AST (Tree, Pure, ann)
+import           AST.Infer (irType)
+import           AST.Term.Scheme (saveScheme)
+import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
+import           Lamdu.Calc.Infer (runPureInfer)
 import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Calc.Type.Scheme as Scheme
+import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder (convertDefinitionBinder)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -28,7 +32,7 @@ type T = Transaction
 
 convert ::
     (Monoid a, Monad m) =>
-    Scheme.Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
+    Tree Pure T.Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
     ConvertM m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m a))
 convert defType defExpr defI =
     do
@@ -36,10 +40,12 @@ convert defType defExpr defI =
             convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
-                defExpr ^. Definition.expr . ann . Input.inferredType
-                & Infer.makeScheme inferContext
-        unless (Scheme.alphaEq defType inferredType) $
-            fail "Def type mismatches its inferred type!"
+                generalize (defExpr ^. Definition.expr . ann . Input.inferResult . irType)
+                >>= saveScheme
+                & runPureInfer V.emptyScope inferContext
+                & (^?! Lens._Right . Lens._1)
+        unless (T.alphaEq defType inferredType) $
+            fail $ "Def type mismatches its inferred type! " <> show (defType, inferredType)
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
         DefinitionBodyExpression DefinitionExpression
             { _deType = defTypeS

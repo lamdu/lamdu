@@ -14,8 +14,9 @@ module Lamdu.Expr.IRef
     , readValI, writeValI, newValI
     ) where
 
-import           AST (ToKnot(..), Tree, monoChildren)
+import           AST (ToKnot(..), Tree, Pure, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val)
+import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
@@ -24,7 +25,6 @@ import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Nominal (Nominal)
 import           Lamdu.Data.Definition (Definition)
 import           Lamdu.Data.Tag (Tag(..))
 import           Revision.Deltum.IRef (IRef)
@@ -48,8 +48,9 @@ defI (V.Var (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 tagI :: T.Tag -> IRef m Tag
 tagI (T.Tag (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
-nominalI :: T.NominalId -> IRef m Nominal
-nominalI (T.NominalId (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
+nominalI :: T.NominalId -> IRef m (Tree Pure (NominalDecl T.Type))
+nominalI (T.NominalId (Identifier bs)) =
+    UUIDUtils.fromSBS16 bs & IRef.unsafeFromUUID
 
 readTagInfo :: Monad m => T.Tag -> T m Tag
 readTagInfo tag =

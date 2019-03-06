@@ -5,7 +5,6 @@ let config = {
                 ghc862 = pkgs.haskell.packages.ghc862.override {
                     overrides = self: super: rec {
                         hsc2hs = haskell.lib.dontCheck super.hsc2hs;
-                        AlgoW = self.callPackage ./nix/AlgoW.nix {};
                         freetype2 = self.callPackage ./nix/freetype2.nix {};
                         bindings-freetype-gl = self.callPackage ./nix/bindings-freetype-gl.nix {};
                         freetype-gl = self.callPackage ./nix/FreetypeGL.nix {};

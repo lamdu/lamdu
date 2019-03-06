@@ -7,7 +7,8 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
-import           AST (Ann(..), annotations, monoChildren, ToKnot(..))
+import           AST (Tree, Pure(..), Ann(..), annotations, monoChildren, ToKnot(..))
+import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
@@ -29,7 +30,6 @@ import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Nominal (Nominal)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -245,7 +245,7 @@ importLamVar paramList tag lamUUID var =
     where
         lamI = IRef.unsafeFromUUID lamUUID & ToKnot
 
-importNominal :: T.Tag -> T.NominalId -> Maybe Nominal -> T ViewM ()
+importNominal :: T.Tag -> T.NominalId -> Maybe (Tree Pure (NominalDecl T.Type)) -> T ViewM ()
 importNominal tag nomId nominal =
     do
         Property.setP (Anchors.assocTag nomId) tag
@@ -263,7 +263,7 @@ importOne (Codec.EntitySchemaVersion _) =
 
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
-    if ver == 8
+    if ver == 9
     then traverse_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail

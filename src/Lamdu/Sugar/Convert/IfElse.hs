@@ -2,15 +2,15 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
-import           AST (Tree)
+import           AST (Tree, _Pure)
 import           AST.Knot.Ann (Ann(..), ann, val)
+import           AST.Term.Nominal (nId)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
 import           Lamdu.Expr.IRef (ValI)
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -34,7 +34,7 @@ convertIfElse setToVal caseBody =
                 -- In "case _»Nom of ..." the case expression doesn't absorb the FromNom
                 -- (and also in case of fragment)
                 tryIfElse (nom ^. nVal)
-            _ | arg ^? ann . pInput . Input.inferred . Infer.plType . T._TInst . _1 == Just boolTid ->
+            _ | arg ^? ann . pInput . Input.inferredType . _Pure . T._TInst . nId == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
     where

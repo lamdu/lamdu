@@ -9,16 +9,18 @@ module Lamdu.Cache
     , make, FencedCache.Cache, FencedCache.fence
     ) where
 
-import           AST (annotations)
+import           AST (Tree, Pure, annotations)
+import           AST.Infer (ITerm, iAnnotations)
+import           AST.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
-import           Control.Monad.State (StateT(..))
+import           Control.Monad.RWS (RWST(..))
 import           Data.Cache.Fenced (Decl, function)
 import qualified Data.Cache.Fenced as FencedCache
+import           Lamdu.Calc.Infer (InferState, PureInfer(..), runPureInfer)
 import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Infer as Infer
-import           Lamdu.Infer (InferCtx(..))
-import qualified Lamdu.Infer.Error as Infer
 import           Lamdu.Sugar.Convert.Load (unmemoizedInfer, InferFunc)
 
 import           Lamdu.Prelude
@@ -27,9 +29,11 @@ import           Lamdu.Prelude
 -- inside "a" and *entire* output is inside "b"
 type MemoableInferFunc =
     ( Definition.Expr (Val ())
-    , Infer.Scope
-    , Infer.Context
-    ) -> Either Infer.Error (Val Infer.Payload, Infer.Context)
+    , Tree V.Scope UVar
+    , InferState
+    ) ->
+    Either (Tree Pure T.TypeError)
+    (Tree (ITerm () UVar) V.Term, InferState)
 
 newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc
@@ -44,21 +48,19 @@ instance HasFunctions Functions where
 -- | We know that inferMemoized retains the shape, so we strip the
 -- payload and cover it after
 infer :: Functions -> InferFunc a
-infer funcs defExpr scope =
-    fmap unvoid . Infer . StateT $
-    \ctx ->
-    inferMemoized funcs (defExpr <&> annotations .~ (), scope, ctx)
+infer funcs defExpr =
+    fmap unvoid . PureInfer . RWST $
+    \env s ->
+    inferMemoized funcs (defExpr <&> annotations .~ (), env, s)
+    <&> \(iterm, s') -> (iterm, s', ())
     where
+        origExpr = defExpr ^. Definition.expr
         unvoid resExpr =
-            defExpr ^. Definition.expr
-            & Lens.unsafePartsOf annotations %~ zip (resExpr ^.. annotations)
+            resExpr
+            & Lens.unsafePartsOf iAnnotations .~ origExpr ^.. annotations
 
 memoableInfer :: MemoableInferFunc
-memoableInfer (expr, scope, ctx) =
-    unmemoizedInfer expr scope
-    & Infer.run
-    & (`runStateT` ctx)
-    & Lens._Right . _1 . annotations %~ \(x, ~()) -> x
+memoableInfer (expr, env, state) = unmemoizedInfer expr & runPureInfer env state
 
 decl :: Decl Functions
 decl =

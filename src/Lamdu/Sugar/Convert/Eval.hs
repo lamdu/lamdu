@@ -4,7 +4,10 @@ module Lamdu.Sugar.Convert.Eval
     ( results, param, completion
     ) where
 
+import           AST (Tree, Pure(..))
 import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.Nominal (NominalInst(..))
+import           AST.Term.Scheme (QVarInstances(..))
 import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
@@ -37,9 +40,9 @@ nullToNothing m
     | Map.null m = Nothing
     | otherwise = Just m
 
-convertPrimVal :: T.Type -> V.PrimVal -> ResBody name a
-convertPrimVal (T.TInst tid fields) p
-    | Map.null fields
+convertPrimVal :: Tree Pure T.Type -> V.PrimVal -> ResBody name a
+convertPrimVal (Pure (T.TInst (NominalInst tid (T.Types (QVarInstances tp) (QVarInstances rp))))) p
+    | Map.null tp && Map.null rp
       && tid == Builtins.textTid =
         case PrimVal.toKnown p of
         PrimVal.Bytes x -> decodeUtf8' x & either (const (RBytes x)) RText
@@ -49,7 +52,7 @@ convertPrimVal _ p =
     PrimVal.Bytes x -> RBytes x
     PrimVal.Float x -> RFloat x
 
-type ERV = ER.Val T.Type
+type ERV = ER.Val (Tree Pure T.Type)
 
 flattenRecord :: ERV -> Either EvalTypeError ([(T.Tag, ERV)], Map T.Tag ERV)
 flattenRecord (Ann _ ER.RRecEmpty) = Right ([], Map.empty)
@@ -73,10 +76,10 @@ convertNullaryInject entityId (V.Inject tag (Ann _ ER.RRecEmpty)) =
     RInject (ResInject (mkTagInfo entityId tag) Nothing) & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
-convertList :: EntityId -> T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
+convertList :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
 convertList entityId typ (V.Inject _ x) =
     do
-        T.TInst tid _ <- Just typ
+        Pure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.listTid)
         (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
@@ -84,21 +87,21 @@ convertList entityId typ (V.Inject _ x) =
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
             & ResList & RList & ResVal entityId & Just
 
-simpleInject :: EntityId -> V.Inject (ER.Val T.Type) -> ResVal InternalName
+simpleInject :: EntityId -> V.Inject ERV -> ResVal InternalName
 simpleInject entityId (V.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
     & ResInject (mkTagInfo entityId tag) & RInject
     & ResVal entityId
 
-convertInject :: EntityId -> T.Type -> V.Inject ERV -> ResVal InternalName
+convertInject :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> ResVal InternalName
 convertInject entityId typ inj =
     convertNullaryInject entityId inj
     <|> convertList entityId typ inj
     & fromMaybe (simpleInject entityId inj)
 
 convertPlainRecord ::
-    EntityId -> Either EvalTypeError [(T.Tag, ER.Val T.Type)] ->
+    EntityId -> Either EvalTypeError [(T.Tag, ERV)] ->
     ResVal InternalName
 convertPlainRecord entityId (Left err) = RError err & ResVal entityId
 convertPlainRecord entityId (Right fields) =
@@ -111,12 +114,12 @@ convertPlainRecord entityId (Right fields) =
             & (,) (mkTagInfo entityId tag)
 
 convertTree ::
-    EntityId -> T.Type -> Either e (Map T.Tag ERV) ->
+    EntityId -> Tree Pure T.Type -> Either e (Map T.Tag ERV) ->
     Maybe (ResVal InternalName)
 convertTree entityId typ fr =
     do
         Right fields <- Just fr
-        T.TInst tid _ <- Just typ
+        Pure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.treeTid)
         root <- fields ^? Lens.ix Builtins.rootTag
         subtrees <- fields ^? Lens.ix Builtins.subtreesTag
@@ -132,7 +135,7 @@ convertTree entityId typ fr =
             & EntityId.ofEvalArrayIdx idx
             & convertVal
 
-convertRecord :: EntityId -> T.Type -> ERV -> ResVal InternalName
+convertRecord :: EntityId -> Tree Pure T.Type -> ERV -> ResVal InternalName
 convertRecord entityId typ v =
     convertTree entityId typ (fr <&> snd)
     & fromMaybe (convertPlainRecord entityId (fr <&> fst))
@@ -165,7 +168,7 @@ convertRecordArray entityId rows =
                traverse (`List.lookup` rowFields) tags
                & fromMaybe (error "makeArray: tags mismatch")
 
-convertArray :: EntityId -> T.Type -> [ER.Val T.Type] -> ResVal InternalName
+convertArray :: EntityId -> Tree Pure T.Type -> [ERV] -> ResVal InternalName
 convertArray entityId _typ vs =
     convertRecordArray entityId vsS
     & fromMaybe (RArray vsS & ResVal entityId)

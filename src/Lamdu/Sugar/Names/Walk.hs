@@ -90,15 +90,18 @@ toTBody ::
     m (TBody (NewName m) (Type (NewName m)))
 toTBody (TVar tv) = opGetName Nothing TypeVar tv <&> TVar
 toTBody (TFun a b) = TFun <$> toType a <*> toType b
-toTBody (TInst tid params) = TInst <$> toTId tid <*> traverse toType params
 toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
 toTBody (TVariant composite) = TVariant <$> toCompositeFields composite
+toTBody (TInst tid params) =
+    TInst <$> toTId tid <*> traverse f params
+    where
+        f (k, v) = (,) <$> opGetName Nothing TypeVar k <*> toType v
 
 toType :: MonadNaming m => Type (OldName m) -> m (Type (NewName m))
 toType = tBody %%~ toTBody
 
 toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
-toScheme (Scheme tvs cs typ) = Scheme tvs cs <$> toType typ
+toScheme (Scheme tvs typ) = Scheme tvs <$> toType typ
 
 toDefinitionOutdatedType ::
     MonadNaming m =>

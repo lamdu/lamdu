@@ -1,59 +1,60 @@
+{-# LANGUAGE TypeOperators, FlexibleContexts #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
-import           AST (Tree, Tie, Ann(..))
+import           AST (Tree, Tie, Ann(..), Pure(..), _Pure, Recursive)
+import           AST.Class.Combinators (And, proxyNoConstraint, NoConstraint)
+import           AST.Class.HasChild (HasChild)
+import qualified AST.Class.HasChild as HasChild
+import qualified AST.Term.Nominal as N
 import           AST.Term.Row (RowExtend(..))
+import qualified AST.Term.Row as Row
+import           AST.Term.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
+import           AST.Unify (QVarHasInstance)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (schemeType)
 import           Lamdu.Eval.Results (Val, Body(..))
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Infer (applyNominal)
 
 import           Lamdu.Prelude
 
-extractRecordTypeField :: T.Tag -> T.Type -> Maybe (T.Type, T.Type)
+extractRecordTypeField :: T.Tag -> Tree Pure T.Type -> Maybe (Tree Pure T.Type, Tree Pure T.Type)
 extractRecordTypeField tag typ =
     do
-        comp <- typ ^? T._TRecord
-        let flat = FlatComposite.fromComposite comp
-        fieldType <- flat ^. FlatComposite.fields . Lens.at tag
+        flat <- typ ^? _Pure . T._TRecord . T.flatRow
+        fieldType <- flat ^. Row.freExtends . Lens.at tag
         Just
             ( fieldType
-            , flat
-              & FlatComposite.fields . Lens.at tag .~ Nothing
-              & FlatComposite.toComposite & T.TRecord
+            , T.flatRow # (flat & Row.freExtends . Lens.at tag .~ Nothing)
+              & T.TRecord & Pure
             )
 
-extractVariantTypeField :: T.Tag -> T.Type -> Maybe T.Type
+extractVariantTypeField :: T.Tag -> Tree Pure T.Type -> Maybe (Tree Pure T.Type)
 extractVariantTypeField tag typ =
-    do
-        comp <- typ ^? T._TVariant
-        FlatComposite.fromComposite comp ^. FlatComposite.fields . Lens.at tag
+    typ ^? _Pure . T._TVariant . T.flatRow
+    >>= (^. Row.freExtends . Lens.at tag)
 
-type AddTypes val f = (T.Type -> val -> Tie f Body) -> T.Type -> Body f
+type AddTypes val f = (Tree Pure T.Type -> val -> Tie f Body) -> Tree Pure T.Type -> Body f
 
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack
 
 addTypesRecExtend ::
     Tree (RowExtend T.Tag val val) k ->
-    (T.Type -> Tree k val -> Tree f Body) ->
-    T.Type ->
+    (Tree Pure T.Type -> Tree k val -> Tree f Body) ->
+    Tree Pure T.Type ->
     Tree Body f
 addTypesRecExtend (RowExtend tag val rest) go typ =
     case extractRecordTypeField tag typ of
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
-        case typ of
+        case typ ^. _Pure of
         T.TVar{} ->
             RowExtend tag
             (go typ val)
@@ -75,23 +76,23 @@ addTypesInject (V.Inject tag val) go typ =
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
-        case typ of
+        case typ ^. _Pure of
         T.TVar{} -> go typ val & V.Inject tag & RInject
         _ -> "addTypesInject got " ++ show typ & typeError
     Just valType -> go valType val & V.Inject tag & RInject
 
 addTypesArray :: [val] -> AddTypes val f
 addTypesArray items go typ =
-    case typ ^? T._TInst . _2 . Lens.ix Builtins.valTypeParamId of
+    case typ ^? _Pure . T._TInst . N.nArgs . HasChild.getChild . _QVarInstances . Lens.ix Builtins.valTypeParamId of
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
-        case typ of
+        case typ ^. _Pure of
         T.TVar{} -> items <&> go typ & RArray
         _ -> "addTypesArray got " ++ show typ & typeError
     Just paramType -> items <&> go paramType & RArray
 
-addTypes :: Map T.NominalId N.Nominal -> T.Type -> Val () -> Val T.Type
+addTypes :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Val () -> Val (Tree Pure T.Type)
 addTypes nomsMap typ (Ann () b) =
     case b of
     RRecExtend recExtend -> recurse (addTypesRecExtend recExtend)
@@ -105,14 +106,24 @@ addTypes nomsMap typ (Ann () b) =
     where
         recurse f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 
+applyNominal ::
+    Recursive
+        (HasChild (N.NomVarTypes typ) `And` QVarHasInstance Ord `And` NoConstraint)
+        typ =>
+    Tree Pure (N.NominalDecl typ) ->
+    Tree (N.NomVarTypes typ) (QVarInstances Pure) ->
+    Tree Pure (Scheme (N.NomVarTypes typ) typ)
+applyNominal nom params =
+    N.applyNominal proxyNoConstraint (Identity . Pure) nom params
+    & runIdentity & Pure
+
 -- Will loop forever for bottoms like: newtype Void = Void Void
-unwrapTInsts :: Map T.NominalId N.Nominal -> T.Type -> T.Type
+unwrapTInsts :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Tree Pure T.Type
 unwrapTInsts nomsMap typ =
-    case typ of
-    T.TInst tid params ->
+    case typ ^. _Pure of
+    T.TInst (N.NominalInst tid params) ->
         Map.lookup tid nomsMap
-        <&> applyNominal params
-        <&> (^. schemeType)
+        <&> (\nominalInst -> applyNominal nominalInst params ^. _Pure . sTyp)
         <&> unwrapTInsts nomsMap
         & fromMaybe typ
     _ -> typ

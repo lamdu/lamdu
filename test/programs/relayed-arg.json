@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 8
+        "schemaVersion": 9
     },
     {
         "tagOrder": 0,
@@ -34,11 +34,9 @@
             "schemeType": {
                 "typeVar": "61"
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "61"
-                ]
-            }
+            "typeVars": [
+                "61"
+            ]
         },
         "val": {
             "hole": {},
@@ -65,13 +63,11 @@
                     "typeVar": "6c35"
                 }
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "6c35",
-                    "7433",
-                    "7434"
-                ]
-            }
+            "typeVars": [
+                "6c35",
+                "7433",
+                "7434"
+            ]
         },
         "val": {
             "lamVar": "94496880b6034251a4b0ad86d0fd3fb1",
@@ -90,11 +86,9 @@
                         "schemeType": {
                             "typeVar": "61"
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "61"
-                            ]
-                        }
+                        "typeVars": [
+                            "61"
+                        ]
                     },
                     "141b93fe48c04af6922313328bbc8ca9": {
                         "schemeType": {
@@ -112,13 +106,11 @@
                                 "typeVar": "6c35"
                             }
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "6c35",
-                                "7433",
-                                "7434"
-                            ]
-                        }
+                        "typeVars": [
+                            "6c35",
+                            "7433",
+                            "7434"
+                        ]
                     }
                 }
             },

@@ -95,7 +95,7 @@ ofFunResult = augment "TFunResult"
 ofFragmentUnder :: Int -> EntityId -> EntityId
 ofFragmentUnder idx = augment (BS.pack [fromIntegral idx]) . augment "Fragment"
 
-ofTInstParam :: T.ParamId -> EntityId -> EntityId
+ofTInstParam :: T.TypeVar -> EntityId -> EntityId
 ofTInstParam p (EntityId uuid) = EntityId $ UUIDUtils.combine (UniqueId.toUUID p) uuid
 
 currentTypeOf :: EntityId -> EntityId

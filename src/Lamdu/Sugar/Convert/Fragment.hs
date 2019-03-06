@@ -1,31 +1,35 @@
 -- | Convert applied holes to Fragments
 
+{-# LANGUAGE TypeFamilies #-}
+
 module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole
-    , mkOptionFromFragment
       -- Used by Convert.GetVar:
     , fragmentVar
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, Pure, monoChildren)
+import           AST.Infer (IResult(..), irScope, irType)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Unify (unify, applyBindings, newTerm)
+import           AST.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
+import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
+import           Control.Monad.State (State, runState, StateT(..), mapStateT)
+import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Trans.State (State, runState, StateT(..), mapStateT, evalStateT)
-import qualified Control.Monad.Trans.State as State
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
+import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Expr.Load as Load
-import qualified Lamdu.Infer as Infer
-import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
@@ -63,7 +67,7 @@ mkOptions ::
 mkOptions sugarContext argI argS exprPl =
     Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
     <&> (pure fragmentOptions <>)
-    <&> (\mkOpts -> Hole.addWithoutDups <$> mkOpts <*> mkSuggested)
+    <&> (\mkOpts -> mkOpts <&> (`Hole.addWithoutDups` mkSuggested))
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
@@ -77,23 +81,28 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Input.Payload m a ->
-    T m [HoleOption InternalName (T m) (T m)]
+    [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
-    Suggest.termTransforms Load.nominal Nothing (argI & annotations %~ onPl)
-    <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-    <&> Lens.mapped %~ onSuggestion
+    runStateT
+    (Suggest.termTransforms Nothing (argI & annotations %~ onPl))
+    (sugarContext ^. ConvertM.scInferContext)
+    <&> onSuggestion
     where
-        onPl pl = (pl ^. Input.inferred, Just pl)
+        onPl pl = (Just pl, pl ^. Input.inferResult)
         onSuggestion (sugg, newInferCtx) =
             mkOptionFromFragment
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
-            exprPl (sugg & annotations . _1 %~ (^. Infer.plType))
+            exprPl sugg
 
-checkTypeMatch :: Monad m => T.Type -> T.Type -> ConvertM m Bool
+checkTypeMatch :: Monad m => Tree UVar T.Type -> Tree UVar T.Type -> ConvertM m Bool
 checkTypeMatch x y =
     Lens.view ConvertM.scInferContext
-    <&> evalStateT (Infer.run (unify x y))
+    <&> check
     <&> Lens.has Lens._Right
+    where
+        check ctx =
+            unify x y >> applyBindings x
+            & runPureInfer V.emptyScope ctx
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
@@ -105,8 +114,8 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
     do
         guard (Lens.has ExprLens.valHole funcI)
         isTypeMatch <-
-            checkTypeMatch (argI ^. ann . Input.inferredType)
-            (exprPl ^. Input.inferredType) & lift
+            checkTypeMatch (argI ^. ann . Input.inferResult . irType)
+            (exprPl ^. Input.inferResult . irType) & lift
         postProcess <- lift ConvertM.postProcessAssert
         do
             sugarContext <- Lens.view id
@@ -141,6 +150,14 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI
 
+liftPureInfer :: Tree V.Scope UVar -> PureInfer a -> StateT InferState (Either (Tree Pure T.TypeError)) a
+liftPureInfer scope act =
+    do
+        st <- Lens.use id
+        case runPureInfer scope st act of
+            Left x -> throwError x
+            Right (r, newSt) -> r <$ (id .= newSt)
+
 exceptToListT :: Monad m => Either t a -> ListT m a
 exceptToListT (Left _) = mempty
 exceptToListT (Right x) = pure x
@@ -161,28 +178,39 @@ holeResultsEmplaceFragment rawFragmentExpr x =
             -- that results in a unification type error, fall back to
             -- emplacing another fragment wrapping the fragmentExpr:
             ListClass.fromList
-            [ fragmentExpr
-              <$ (mapStateT exceptToListT . Infer.run . unify fragmentType)
-                  (fst pl ^. Infer.plType)
-            , V.Apply
-                (Ann (fst pl & Infer.plType %~ (`T.TFun` fragmentType), (Nothing, NotFragment)) (V.BLeaf V.LHole))
+            [ do
+                _ <- unify fragmentType (snd pl ^. irType)
+                -- Perform occurs checks
+                -- TODO: Share with occurs check that happens for sugaring?
+                t <- State.get
+                _ <- annotations (applyBindings . (^. Input.inferResult . irType)) rawFragmentExpr
+                _ <- annotations (applyBindings . (^. _2 . irType)) x
+                -- Roll back state after occurs checks
+                fragmentExpr <$ State.put t
+                & liftPureInfer (snd pl ^. irScope)
+                & mapStateT exceptToListT
+            , FuncType (snd pl ^. irType) fragmentType & T.TFun & newTerm
+                & liftPureInfer (snd pl ^. irScope) & mapStateT exceptToListT
+                <&>
+                \t ->
+                V.Apply
+                (Ann ((Nothing, NotFragment), snd pl & irType .~ t) (V.BLeaf V.LHole))
                 fragmentExpr
-                & V.BApp & Ann (fst pl, (Nothing, NotFragment))
-                & pure
+                & V.BApp & Ann ((Nothing, NotFragment), snd pl)
             ]
             & lift
             & join
             & mapStateT (ListClass.take 1)
         fragmentExpr = rawFragmentExpr & annotations %~ onFragmentPayload
         onFragmentPayload pl =
-            ( pl ^. Input.inferred
-            , (Just (pl ^. Input.stored . Property.pVal), IsFragment)
+            ( (Just (pl ^. Input.stored . Property.pVal), IsFragment)
+            , pl ^. Input.inferResult
             )
-        fragmentType = rawFragmentExpr ^. ann . Input.inferredType
+        fragmentType = rawFragmentExpr ^. ann . Input.inferResult . irType
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment :: Hole.ResultVal n () -> Hole.ResultVal n IsFragment
-markNotFragment = annotations %~ _2 . _2 .~ NotFragment
+markNotFragment = annotations %~ _1 . _2 .~ NotFragment
 
 -- TODO: Unify type according to IsFragment, avoid magic var
 fragmentVar :: V.Var
@@ -229,27 +257,22 @@ emplaceInHoles replaceHole =
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::
-    Infer.Payload ->
-    Val (T.Type, Maybe (Input.Payload m a)) ->
-    State Infer.Context (Hole.ResultVal m IsFragment)
+    IResult UVar V.Term ->
+    Val (Maybe (Input.Payload m a), IResult UVar V.Term) ->
+    State InferState (Hole.ResultVal m IsFragment)
 mkResultValFragment inferred x =
-    x & annotations %~ onPl
-    & Hole.detachValIfNeeded emptyPl (inferred ^. Infer.plType)
+    x & annotations . _1 %~ onPl
+    & Hole.detachValIfNeeded emptyPl inferred
     where
         emptyPl = (Nothing, NotFragment)
-        onPl (typ, mInputPl) =
-            ( inferred & Infer.plType .~ typ
-            , case mInputPl of
-              Nothing -> emptyPl
-              Just inputPl ->
-                (inputPl ^. Input.stored & Property.value & Just, IsFragment)
-            )
+        onPl Nothing = emptyPl
+        onPl (Just inputPl) = (inputPl ^. Input.stored & Property.value & Just, IsFragment)
 
 mkOptionFromFragment ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a ->
-    Val (T.Type, Maybe (Input.Payload m a)) ->
+    Val (Maybe (Input.Payload m a), IResult UVar V.Term) ->
     HoleOption InternalName (T m) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
@@ -257,16 +280,14 @@ mkOptionFromFragment sugarContext exprPl x =
     , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
-            newDeps <-
-                Hole.loadNewDeps (depsProp ^. Property.pVal)
-                (exprPl ^. Input.inferred . Infer.plScope) x
+            newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) scope x
             let newSugarContext =
                     sugarContext
                     & ConvertM.scInferContext .~ inferContext
                     & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
             let updateDeps = (depsProp ^. Property.pSet) newDeps
             pure
-                ( resultScore (result & annotations %~ fst)
+                ( resultScore resolved
                 , Hole.mkResult (replaceFragment topEntityId 0) newSugarContext
                     updateDeps exprPl result
                 )
@@ -276,9 +297,15 @@ mkOptionFromFragment sugarContext exprPl x =
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferContext) =
             runState
-            (mkResultValFragment (exprPl ^. Input.inferred) x)
+            (mkResultValFragment (exprPl ^. Input.inferResult) x)
             (sugarContext ^. ConvertM.scInferContext)
+        resolved =
+            annotations (applyBindings . (^. Lens._2 . irType)) result
+            & runPureInfer scope inferContext
+            & Hole.assertSuccessfulInfer
+            & fst
+        scope = exprPl ^. Input.inferResult . irScope
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
         baseExpr = pruneExpr x
-        pruneExpr (Ann (_, Just{}) _) = P.hole
+        pruneExpr (Ann (Just{}, _) _) = P.hole
         pruneExpr (Ann _ b) = b & monoChildren %~ pruneExpr & Ann ()

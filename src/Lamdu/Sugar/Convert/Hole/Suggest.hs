@@ -1,260 +1,256 @@
-{-# LANGUAGE TupleSections, TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( forType
     , termTransforms
     , termTransformsWithModify
     ) where
 
-import           AST (monoChildren)
+import           AST (Tree, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Infer
+import           AST.Term.FuncType
+import           AST.Term.Nominal
 import           AST.Term.Row (RowExtend(..))
-import           Control.Applicative ((<|>))
+import           AST.Unify
+import           AST.Unify.Binding (UVar)
+import           AST.Unify.Term
+import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
-import           Control.Monad (mzero)
-import           Control.Monad.Trans.State (StateT(..), mapStateT)
-import qualified Data.List.Class as ListClass
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import           Control.Monad.State (StateT)
+import qualified Control.Monad.State as State
+import           Lamdu.Calc.Infer (PureInfer, InferState, runPureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Nominal (Nominal)
-import qualified Lamdu.Calc.Type.Nominal as Nominal
-import           Lamdu.Calc.Type.Scheme (schemeType)
-import           Lamdu.Infer (Context, Payload(..))
-import qualified Lamdu.Infer as Infer
-import           Lamdu.Infer.Unify (unify)
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
-type Nominals = Map T.NominalId Nominal
+type UType m = Tree (UVarOf m) T.Type
+type URow m = Tree (UVarOf m) T.Row
 
-loadNominalsForType :: Monad m => (T.NominalId -> m (Maybe Nominal)) -> Type -> m Nominals
-loadNominalsForType loadNominal typ =
-    go Map.empty (typ ^. ExprLens.typeTIds . Lens.to Set.singleton)
-    <&> Map.mapMaybe id
-    where
-        go res toLoad
-            | Set.null toLoad = pure res
-            | otherwise =
-                do
-                    nominals <- Map.fromSet loadNominal toLoad & sequenceA
-                    let result = res <> nominals
-                    let newTIds =
-                            nominals
-                            ^. Lens.traversed . Lens._Just
-                            . Nominal.nomType . schemeType
-                            . ExprLens.typeTIds . Lens.to Set.singleton
-                            & (`Set.difference` Map.keysSet result)
-                    go result newTIds
+-- | Term with unifiable type annotations
+type TypedTerm m = Tree (Ann (UType m)) V.Term
+
+type AnnotatedTerm a = Tree (Ann (a, IResult UVar V.Term)) V.Term
 
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
-    Monad m =>
-    (T.NominalId -> m (Maybe Nominal)) -> a ->
-    Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
-termTransforms loadNominal empty src =
-    loadNominalsForType loadNominal
-    (src ^. ann . _1 . Infer.plType)
-    <&> \nominals -> termTransformsH nominals empty src
+    a -> AnnotatedTerm a ->
+    StateT InferState [] (AnnotatedTerm a)
+termTransforms def src =
+    src ^. ann . _2 . irType & semiPruneLookup & liftInfer (src ^. ann . _2 . irScope)
+    <&> (^? _2 . _UTerm . uBody . T._TRecord)
+    >>=
+    \case
+    Just row | Lens.nullOf (val . V._BRecExtend) src ->
+        pure src
+        <|> transformGetFields def src row
+    _ -> termTransformsWithoutSplit def src
 
-termTransformsH ::
-    Nominals -> a -> Val (Payload, a) ->
-    StateT Context [] (Val (Payload, a))
-termTransformsH nominals empty src =
-    case srcInferPl ^. Infer.plType of
-    T.TRecord composite
-        | Lens.nullOf (val . V._BRecExtend) src ->
-        src : (composite ^.. ExprLens.compositeFields <&> getField) & lift
-        where
-            getField (tag, typ) =
-                V.GetField src tag
-                & V.BGetField
-                & Ann (Payload typ (srcInferPl ^. Infer.plScope), empty)
-    _ -> termTransformsWithoutSplit nominals empty src
-    where
-        srcInferPl = src ^. ann . _1
+transformGetFields ::
+    a -> AnnotatedTerm a -> Tree UVar T.Row ->
+    StateT InferState [] (AnnotatedTerm a)
+transformGetFields def src row =
+    semiPruneLookup row & liftInfer (src ^. ann . _2 . irScope)
+    <&> (^? _2 . _UTerm . uBody . T._RExtend)
+    >>=
+    \case
+    Nothing -> empty
+    Just (RowExtend tag typ rest) ->
+        pure (Ann (def, IResult typ (src ^. ann . _2 . irScope)) (V.BGetField (V.GetField src tag)))
+        <|> transformGetFields def src rest
 
-prependOpt :: a -> StateT Context [] a -> StateT Context [] a
-prependOpt opt = Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
+liftInfer :: Tree V.Scope UVar -> PureInfer a -> StateT InferState [] a
+liftInfer scope act =
+    do
+        s <- State.get
+        case runPureInfer scope s act of
+            Left{} -> empty
+            Right (r, newState) -> r <$ State.put newState
 
 termTransformsWithoutSplit ::
-    Nominals -> a -> Val (Payload, a) ->
-    StateT Context [] (Val (Payload, a))
-termTransformsWithoutSplit nominals empty src =
-    prependOpt src $
-    case srcType of
-    T.TInst name _params
-        | Lens.has (Lens.ix name) nominals
-        && Lens.nullOf V._BToNom srcVal ->
-        -- TODO: Expose primitives from Infer to do this without partiality
-        do
-            fromNomType <- Infer.inferFromNom nominals name srcScope
-            let T.TFun _ innerType = fromNomType
-            V.BApp V.Apply
-                { V._applyFunc = V.LFromNom name & V.BLeaf & mkRes fromNomType
-                , V._applyArg = src
-                } & mkRes innerType & pure
-        & Infer.run
-        & mapStateT
-            (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
-        >>= termTransformsWithoutSplit nominals empty
-    T.TFun argType resType | Lens.nullOf V._BLam srcVal ->
-        if Lens.has (ExprLens.valLeafs . V._LHole) arg
-            then
-                -- If the suggested argument has holes in it
-                -- then stop suggesting there to avoid "overwhelming"..
-                pure applied
-            else termTransformsWithoutSplit nominals empty applied
-        where
-            arg =
-                forTypeWithoutSplit (Payload argType srcScope)
-                & annotations %~ (, empty)
-            applied = V.Apply src arg & V.BApp & mkRes resType
-    T.TVariant composite | Lens.nullOf V._BInject srcVal ->
-        Infer.freshInferredVar srcScope "s"
-        & Infer.run
-        & mapStateT
-            (either (error "Infer.freshInferredVar shouldn't fail") pure)
-        <&>
-        \dstType ->
-        suggestCaseWith composite (Payload dstType srcScope)
-        & annotations %~ (, empty)
-        & (`V.Apply` src) & V.BApp & mkRes dstType
-    _ -> mzero
+    a -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
+termTransformsWithoutSplit _ src
+    | Lens.has (val . V._BApp . V.applyFunc . val . V._BLam) src =
+        -- Don't modify a redex from the outside.
+        -- Such transform are more suitable in it!
+        pure src
+termTransformsWithoutSplit def src =
+    pure src <|>
+    do
+        (s1, typ) <- src ^. ann . _2 . irType & semiPruneLookup & liftInfer srcScope
+        case typ ^? _UTerm . uBody of
+            Just (T.TInst (NominalInst name _params))
+                | Lens.nullOf (val . V._BToNom) src ->
+                    do
+                        (fromNomTyp, _) <- V.LFromNom name & V.BLeaf & infer
+                        resultType <- newUnbound
+                        _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
+                        V.Apply (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
+                            & V.BApp & mkResult resultType & pure
+                    & liftInfer srcScope
+                    >>= termTransformsWithoutSplit def
+            Just (T.TVariant row) | Lens.nullOf (val . V._BInject) src ->
+                do
+                    dstType <- newUnbound
+                    caseType <- FuncType s1 dstType & T.TFun & newTerm
+                    suggestCaseWith row dstType
+                        <&> Ann caseType
+                        <&> annotations %~ (\t -> (def, IResult t srcScope))
+                        <&> (`V.Apply` src) <&> V.BApp <&> mkResult dstType
+                & liftInfer srcScope
+            _ | Lens.nullOf (val . V._BLam) src ->
+                -- Apply if compatible with a function
+                do
+                    argType <- liftInfer srcScope newUnbound
+                    resType <- liftInfer srcScope newUnbound
+                    _ <-
+                        FuncType argType resType & T.TFun & newTerm
+                        >>= unify s1
+                        & liftInfer srcScope
+                    arg <-
+                        forTypeWithoutSplit argType & liftInfer srcScope
+                        <&> annotations %~ (\t -> (def, IResult t srcScope))
+                    let applied = V.Apply src arg & V.BApp & mkResult resType
+                    if Lens.has (ExprLens.valLeafs . V._LHole) arg
+                        then
+                            -- If the suggested argument has holes in it
+                            -- then stop suggesting there to avoid "overwhelming"..
+                            pure applied
+                        else termTransformsWithoutSplit def applied
+            _ -> empty
     where
-        srcInferPl = src ^. ann . _1
-        srcType = srcInferPl ^. Infer.plType
-        srcScope = srcInferPl ^. Infer.plScope
-        mkRes typ = Ann (Payload typ srcScope, empty)
-        srcVal = src ^. val
+        mkResult t = Ann (def, IResult t srcScope)
+        srcScope = src ^. ann . _2 . irScope
 
 -- | Suggest values that fit a type, may "split" once, to suggest many
 -- injects for a sum type. These are offerred in holes (not fragments).
-forType :: Payload -> [Val Payload]
-forType pl@(Payload (T.TVariant comp) scope) =
-    case comp of
-    T.RVar{} -> [V.BLeaf V.LHole]
-    _ -> comp ^.. ExprLens.compositeFields <&> inject
-    <&> Ann pl
-    where
-        inject (tag, innerTyp) =
-            forTypeWithoutSplit (Payload innerTyp scope) & V.Inject tag & V.BInject
-forType typ = [forTypeWithoutSplit typ]
+forType ::
+    (Unify m T.Type, Unify m T.Row) => UType m -> m [TypedTerm m]
+forType t =
+    do
+        -- TODO: DSL for matching/deref'ing UVar structure
+        (_, typ) <- semiPruneLookup t
+        case typ ^? _UTerm . uBody . T._TVariant of
+            Nothing -> forTypeUTermWithoutSplit typ <&> Ann t <&> (:[])
+            Just r -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann t
 
-forTypeWithoutSplit :: Payload -> Val Payload
-forTypeWithoutSplit (Payload (T.TRecord composite) scope) =
-    suggestRecordWith composite scope
-forTypeWithoutSplit (Payload (T.TFun (T.TVariant composite) r) scope) =
-    suggestCaseWith composite (Payload r scope)
-forTypeWithoutSplit pl@(Payload typ scope) =
-    case typ of
-    T.TFun _ r ->
-        -- TODO: add var to the scope?
-        forTypeWithoutSplit (Payload r scope) & V.Lam "var" & V.BLam
-    _ -> V.BLeaf V.LHole
-    & Ann pl
+forVariant ::
+    (Unify m T.Type, Unify m T.Row) =>
+    URow m ->
+    [Tree V.Term (Ann (UType m))] ->
+    m [Tree V.Term (Ann (UType m))]
+forVariant r def =
+    semiPruneLookup r <&> (^? _2 . _UTerm . uBody . T._RExtend) >>=
+    \case
+    Nothing -> pure def
+    Just extend -> forVariantExtend extend
 
-suggestRecordWith :: T.Row -> Infer.Scope -> Val Payload
-suggestRecordWith recordType scope =
-    case recordType of
-    T.RVar{} -> V.BLeaf V.LHole
-    T.REmpty -> V.BLeaf V.LRecEmpty
-    T.RExtend f t r ->
-        RowExtend f
-        (valueSimple (Payload t scope))
-        (suggestRecordWith r scope)
-        & V.BRecExtend
-    & Ann (Payload (T.TRecord recordType) scope)
+forVariantExtend ::
+    (Unify m T.Type, Unify m T.Row) =>
+    Tree (RowExtend T.Tag T.Type T.Row) (UVarOf m) ->
+    m [Tree V.Term (Ann (UType m))]
+forVariantExtend (RowExtend tag typ rest) =
+    (:)
+    <$> (forTypeWithoutSplit typ <&> V.Inject tag <&> V.BInject)
+    <*> forVariant rest []
 
-suggestCaseWith :: T.Row -> Payload -> Val Payload
-suggestCaseWith variantType resultPl@(Payload resultType scope) =
-    case variantType of
-    T.RVar{} -> V.BLeaf V.LHole
-    T.REmpty -> V.BLeaf V.LAbsurd
-    T.RExtend tag fieldType rest ->
+forTypeWithoutSplit ::
+    (Unify m T.Type, Unify m T.Row) =>
+    UType m -> m (TypedTerm m)
+forTypeWithoutSplit t = semiPruneLookup t <&> snd >>= forTypeUTermWithoutSplit <&> Ann t
+
+forTypeUTermWithoutSplit ::
+    (Unify m T.Type, Unify m T.Row) =>
+    Tree (UTerm (UVarOf m)) T.Type -> m (Tree V.Term (Ann (UType m)))
+forTypeUTermWithoutSplit t =
+    case t ^? _UTerm . uBody of
+    Just (T.TRecord row) -> suggestRecord row
+    Just (T.TFun (FuncType param result)) ->
+        semiPruneLookup param <&> (^? _2 . _UTerm . uBody . T._TVariant) >>=
+        \case
+        Just row -> suggestCaseWith row result
+        Nothing -> forTypeWithoutSplit result <&> V.Lam "var" <&> V.BLam
+    _ -> V.BLeaf V.LHole & pure
+
+suggestRecord ::
+    (Unify m T.Type, Unify m T.Row) => URow m -> m (Tree V.Term (Ann (UType m)))
+suggestRecord r =
+    semiPruneLookup r <&> (^? _2 . _UTerm . uBody) >>=
+    \case
+    Just T.REmpty -> V.BLeaf V.LRecEmpty & pure
+    Just (T.RExtend (RowExtend tag typ rest)) ->
         RowExtend tag
-        (valueSimple (Payload (T.TFun fieldType resultType) scope))
-        (suggestCaseWith rest resultPl)
-        & V.BCase
-    & Ann (Payload (T.TFun (T.TVariant variantType) resultType) scope)
+        <$> autoLambdas typ
+        <*> (Ann <$> newTerm (T.TRecord rest) <*> suggestRecord rest)
+        <&> V.BRecExtend
+    _ -> V.BLeaf V.LHole & pure
 
-valueSimple :: Payload -> Val Payload
-valueSimple pl@(Payload typ scope) =
-    case typ of
-    T.TFun _ r ->
-        -- TODO: add var to the scope?
-        valueSimple (Payload r scope) & V.Lam "var" & V.BLam
-    _ -> V.BLeaf V.LHole
-    & Ann pl
+suggestCaseWith ::
+    (Unify m T.Type, Unify m T.Row) =>
+    URow m -> UType m -> m (Tree V.Term (Ann (UType m)))
+suggestCaseWith variantType resultType =
+    semiPruneLookup variantType <&> (^? _2 . _UTerm . uBody) >>=
+    \case
+    Just T.REmpty -> V.BLeaf V.LAbsurd & pure
+    Just (T.RExtend (RowExtend tag fieldType rest)) ->
+        RowExtend tag
+        <$> (Ann
+                <$> mkCaseType fieldType
+                <*> (autoLambdas resultType <&> V.Lam "var" <&> V.BLam))
+        <*> (Ann
+                <$> (T.TVariant rest & newTerm >>= mkCaseType)
+                <*> suggestCaseWith rest resultType)
+        <&> V.BCase
+        where
+            mkCaseType which = FuncType which resultType & T.TFun & newTerm
+    _ ->
+        -- TODO: Maybe this should be a lambda, like a TFun from non-variant
+        V.BLeaf V.LHole & pure
 
-fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
-fillHoles empty (Ann pl (V.BLeaf V.LHole)) =
-    forTypeWithoutSplit (pl ^. _1)
-    & annotations %~ (, empty)
-    & ann . _2 .~ (pl ^. _2)
-fillHoles empty (Ann pl (V.BApp (V.Apply func arg))) =
+autoLambdas :: Unify m T.Type => UType m -> m (TypedTerm m)
+autoLambdas typ =
+    semiPruneLookup typ <&> (^? _2 . _UTerm . uBody . T._TFun . funcOut) >>=
+    \case
+    Just result -> autoLambdas result <&> V.Lam "var" <&> V.BLam
+    Nothing -> V.BLeaf V.LHole & pure
+    <&> Ann typ
+
+fillHoles :: a -> AnnotatedTerm a -> PureInfer (AnnotatedTerm a)
+fillHoles def (Ann pl (V.BLeaf V.LHole)) =
+    forTypeWithoutSplit (pl ^. _2 . irType)
+    <&> annotations %~ (\t -> (def, IResult t (pl ^. _2 . irScope)))
+fillHoles def (Ann pl (V.BApp (V.Apply func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
-    fillHoles empty arg & V.Apply func & V.BApp & Ann pl
+    fillHoles def arg <&> V.Apply func <&> V.BApp <&> Ann pl
 fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
-    v
-fillHoles empty x = x & val . monoChildren %~ fillHoles empty
+    pure v
+fillHoles def x = (val . monoChildren) (fillHoles def) x
 
 -- | Transform by wrapping OR modifying a term. Used by both holes and
 -- fragments to expand "seed" terms. Holes include these as results
 -- whereas fragments emplace their content inside holes of these
 -- results.
 termTransformsWithModify ::
-    ListClass.List m =>
-    (T.NominalId -> StateT Context m (Maybe Nominal)) -> a -> Val (Payload, a) ->
-    StateT Context m (Val (Payload, a))
-termTransformsWithModify _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
-termTransformsWithModify _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+    a -> AnnotatedTerm a ->
+    StateT InferState [] (AnnotatedTerm a)
+termTransformsWithModify _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
+termTransformsWithModify _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
     -- Variant:<hole> ==> Variant.
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
-termTransformsWithModify loadNominal empty x =
-    case inferPl ^. Infer.plType of
-    T.TVar tv
-        | any (`Lens.has` x)
-            [ ExprLens.valVar
-            , ExprLens.valGetField . V.getFieldRecord . ExprLens.valVar
-            ] ->
-            -- a variable that's compatible with a function type
-            pure x <|>
-            do
-                arg <- freshVar "af"
-                res <- freshVar "af"
-                let varTyp = T.TFun arg res
-                unify varTyp (T.TVar tv)
-                    & Infer.run & mapStateT assertSuccess
-                V.BLeaf V.LHole
-                    & Ann (plSameScope arg)
-                    & V.Apply x & V.BApp
-                    & Ann (plSameScope res)
-                    & pure
-        where
-            assertSuccess (Left err) =
-                fail $
-                "Unify of a tv with function type should always succeed, but failed: " ++
-                prettyShow err
-            assertSuccess (Right t) = pure t
-            freshVar = Infer.run . Infer.freshInferredVar (inferPl ^. Infer.plScope)
-            scope = inferPl ^. Infer.plScope
-            plSameScope t = (Infer.Payload t scope, empty)
-    T.TRecord{} | Lens.has ExprLens.valVar x ->
+termTransformsWithModify def src =
+    src ^. ann . _2 . irType & semiPruneLookup & liftInfer srcScope
+    <&> (^? _2 . _UTerm . uBody)
+    >>=
+    \case
+    Just T.TRecord{} | Lens.has ExprLens.valVar src ->
         -- A "params record" (or just a let item which is a record..)
-        pure x
+        pure src
     _ ->
-        x
-        & fillHoles empty
-        & termTransforms loadNominal empty
-        <&> mapStateT ListClass.fromList
-        & join
+        fillHoles def src & liftInfer srcScope
+        >>= termTransforms def
     where
-        inferPl = x ^. ann . _1
+        srcScope = src ^. ann . _2 . irScope

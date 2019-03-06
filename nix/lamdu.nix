@@ -1,10 +1,10 @@
-{ mkDerivation, aeson, aeson-diff, aeson-pretty, AlgoW, ansi-wl-pprint, base
+{ mkDerivation, aeson, aeson-diff, aeson-pretty, ansi-wl-pprint, base
 , base-compat, base-orphans, base16-bytestring, binary, bytestring
 , Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
 , deepseq-generics, directory, edit-distance, ekg-core
 , executable-path, filepath, generic-random, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
-, language-ecmascript, lens, lens-aeson, leveldb-haskell, List, mtl
+, language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
 , nodejs-exec, OpenGL, optparse-applicative, pretty, process, QuickCheck
 , random, safe-exceptions, split, StateVar, stdenv, stm, syntax-tree
 , template-haskell, temporary, test-framework, test-framework-hunit
@@ -40,12 +40,12 @@ mkDerivation {
   enableExecutableProfiling = false;
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [
-    aeson aeson-pretty AlgoW ansi-wl-pprint base base-compat base-orphans
+    aeson aeson-pretty ansi-wl-pprint base base-compat base-orphans
     base16-bytestring binary bytestring constraints containers cryptohash-sha256
     data-default deepseq deepseq-generics directory edit-distance
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus
-    language-ecmascript lens lens-aeson leveldb-haskell List mtl
+    language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
     nodejs-exec OpenGL optparse-applicative pretty process random
     safe-exceptions split StateVar stm syntax-tree temporary text time timeit
     transformers unordered-containers uuid uuid-types vector
@@ -56,7 +56,7 @@ mkDerivation {
     base base-compat directory process template-haskell time
   ];
   testHaskellDepends = [
-    aeson aeson-diff aeson-pretty AlgoW base bytestring Cabal
+    aeson aeson-diff aeson-pretty base bytestring Cabal
     containers deepseq deepseq-generics directory filepath
     generic-random GLFW-b HUnit lamdu-calculus lens lens-aeson List mtl
     nodejs-exec pretty process QuickCheck random split syntax-tree test-framework

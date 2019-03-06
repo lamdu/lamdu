@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 8
+        "schemaVersion": 9
     },
     {
         "tagOrder": 0,
@@ -45,11 +45,9 @@
                     "typeVar": "6131"
                 }
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "6131"
-                ]
-            }
+            "typeVars": [
+                "6131"
+            ]
         },
         "val": {
             "lamVar": "d852a0789d16442590005ba054341671",
@@ -73,11 +71,9 @@
                                 "typeVar": "6131"
                             }
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "6131"
-                            ]
-                        }
+                        "typeVars": [
+                            "6131"
+                        ]
                     }
                 }
             },

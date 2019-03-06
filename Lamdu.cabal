@@ -88,7 +88,7 @@ Test-Suite Tests
   build-depends:
       base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
     , aeson-diff, deepseq, deepseq-generics, generic-random, lens-aeson, QuickCheck, split, yaml
-    , Lamdu, AlgoW, lamdu-calculus, syntax-tree, nodejs-exec
+    , Lamdu, lamdu-calculus, syntax-tree, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
   ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
@@ -98,8 +98,7 @@ Library
   hs-source-dirs: src
   default-language: Haskell2010
   default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric
-  build-depends:    AlgoW
-                  , aeson >= 1.1
+  build-depends:    aeson >= 1.1
                   , aeson-diff
                   , aeson-pretty
                   , ansi-wl-pprint
@@ -121,8 +120,9 @@ Library
                   , GLFW-b >= 3.2.1.2
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
-                  , lamdu-calculus < 0.2
+                  , lamdu-calculus >= 0.2
                   , language-ecmascript >= 0.18
+                  , lattices
                   , lens >= 4.1
                   , lens-aeson
                   , leveldb-haskell >= 0.6
@@ -261,6 +261,7 @@ Library
                   , Lamdu.Data.Export.JSON.Migration.ToVersion6
                   , Lamdu.Data.Export.JSON.Migration.ToVersion7
                   , Lamdu.Data.Export.JSON.Migration.ToVersion8
+                  , Lamdu.Data.Export.JSON.Migration.ToVersion9
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
@@ -333,7 +334,6 @@ Library
                   , Lamdu.GUI.VersionControl.Config
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
-                  , Lamdu.Infer.Trans
                   , Lamdu.Main.Env
                   , Lamdu.Name
                   , Lamdu.Opts

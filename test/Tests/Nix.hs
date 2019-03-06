@@ -69,11 +69,7 @@ verifyStackDep dep =
             & maybe (fail ("stack.yaml dependency with no " <> show key <> "?")) (pure . Text.unpack)
 
 packageNameFromGitUrl :: String -> String
-packageNameFromGitUrl url
-    | repoName == "Algorithm-W-Step-By-Step" = "AlgoW"
-    | otherwise = repoName
-    where
-        repoName = splitOn "/" url & last
+packageNameFromGitUrl = last . splitOn "/"
 
 cabalDepsTest :: Test
 cabalDepsTest =

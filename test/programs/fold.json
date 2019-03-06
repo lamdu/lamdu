@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 8
+        "schemaVersion": 9
     },
     {
         "tagOrder": 0,
@@ -87,8 +87,8 @@
                                     "record": {}
                                 },
                                 "funcResult": {
-                                    "nomParams": {
-                                        "42493a76616c00000000000000000000": {
+                                    "nomTypeArgs": {
+                                        "61": {
                                             "typeVar": "61"
                                         }
                                     },
@@ -106,10 +106,10 @@
                 }
             }
         },
-        "typeParams": {
-            "42493a76616c00000000000000000000": "61"
-        },
         "tag": "1b6990743fcc77560fdb139d1ac01a2c",
+        "typeVars": [
+            "61"
+        ],
         "nom": "42493a73747265616d00000000000000"
     },
     {
@@ -180,8 +180,8 @@
                 "funcParam": {
                     "record": {
                         "1b6990743fcc77560fdb139d1ac01a2c": {
-                            "nomParams": {
-                                "42493a76616c00000000000000000000": {
+                            "nomTypeArgs": {
+                                "61": {
                                     "typeVar": "6e3332"
                                 }
                             },
@@ -211,12 +211,10 @@
                     "typeVar": "6c3337"
                 }
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "6c3337",
-                    "6e3332"
-                ]
-            }
+            "typeVars": [
+                "6c3337",
+                "6e3332"
+            ]
         },
         "frozenDeps": {
             "nominals": {
@@ -231,8 +229,8 @@
                                                 "record": {}
                                             },
                                             "funcResult": {
-                                                "nomParams": {
-                                                    "42493a76616c00000000000000000000": {
+                                                "nomTypeArgs": {
+                                                    "61": {
                                                         "typeVar": "61"
                                                     }
                                                 },
@@ -250,9 +248,9 @@
                             }
                         }
                     },
-                    "typeParams": {
-                        "42493a76616c00000000000000000000": "61"
-                    }
+                    "typeVars": [
+                        "61"
+                    ]
                 }
             }
         },
@@ -401,8 +399,8 @@
                             "funcParam": {
                                 "record": {
                                     "1b6990743fcc77560fdb139d1ac01a2c": {
-                                        "nomParams": {
-                                            "42493a76616c00000000000000000000": {
+                                        "nomTypeArgs": {
+                                            "61": {
                                                 "typeVar": "6e3332"
                                             }
                                         },
@@ -432,12 +430,10 @@
                                 "typeVar": "6c3337"
                             }
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "6c3337",
-                                "6e3332"
-                            ]
-                        }
+                        "typeVars": [
+                            "6c3337",
+                            "6e3332"
+                        ]
                     },
                     "acb176a8b8764d2f8092176df7895169": {
                         "schemeType": {
@@ -469,8 +465,8 @@
                                                     "record": {}
                                                 },
                                                 "funcResult": {
-                                                    "nomParams": {
-                                                        "42493a76616c00000000000000000000": {
+                                                    "nomTypeArgs": {
+                                                        "61": {
                                                             "typeVar": "61"
                                                         }
                                                     },
@@ -488,9 +484,9 @@
                                 }
                             }
                         },
-                        "typeParams": {
-                            "42493a76616c00000000000000000000": "61"
-                        }
+                        "typeVars": [
+                            "61"
+                        ]
                     }
                 }
             },

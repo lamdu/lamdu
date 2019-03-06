@@ -11,9 +11,11 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, Pure(..), _Pure, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Term.Row (RowExtend(..))
+import           AST.Term.FuncType (FuncType(..), funcIn)
+import           AST.Term.Nominal (NominalInst(..))
+import           AST.Term.Row (RowExtend(..), FlatRowExtends(..))
 import qualified AST.Term.Row as Row
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
@@ -28,8 +30,6 @@ import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -66,8 +66,8 @@ Lens.makeLenses ''ConventionalParams
 
 data FieldParam = FieldParam
     { fpTag :: T.Tag
-    , fpFieldType :: T.Type
-    , fpValue :: EvalScopes [(ScopeId, ER.Val T.Type)]
+    , fpFieldType :: Tree Pure T.Type
+    , fpValue :: EvalScopes [(ScopeId, ER.Val (Tree Pure T.Type))]
     }
 
 data StoredLam m = StoredLam
@@ -500,10 +500,10 @@ convertToRecordParams =
         fixUsages (wrapArgWithRecord mkNewArg oldParam newParam)
             binderKind storedLam
 
-lamParamType :: Input.Payload m a -> T.Type
+lamParamType :: Input.Payload m a -> Tree Pure T.Type
 lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
-    lamExprPl ^? Input.inferredType . T._TFun . _1
+    lamExprPl ^? Input.inferredType . _Pure . T._TFun . funcIn
 
 makeNonRecordParamActions ::
     Monad m =>
@@ -535,9 +535,9 @@ makeNonRecordParamActions binderKind storedLam =
     where
         param = storedLam ^. slLam . V.lamIn
 
-mkVarInfo :: T.Type -> VarInfo
-mkVarInfo T.TFun{} = VarFunction
-mkVarInfo (T.TInst tid _) | tid == Builtins.mutTid = VarAction
+mkVarInfo :: Tree Pure T.Type -> VarInfo
+mkVarInfo (Pure T.TFun{}) = VarFunction
+mkVarInfo (Pure (T.TInst (NominalInst tid _))) | tid == Builtins.mutTid = VarAction
 mkVarInfo _ = VarNormal
 
 mkFuncParam ::
@@ -570,7 +570,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
         funcParamActions <- makeNonRecordParamActions binderKind storedLam
         funcParam <-
             case lamParamType lamExprPl of
-            T.TRecord T.REmpty
+            Pure (T.TRecord (Pure T.REmpty))
                 | null (lamExprPl ^. Input.varRefsOfLambda) ->
                     mkFuncParam (EntityId.ofBinder param) lamExprPl info <&> NullParam
                 where
@@ -636,7 +636,7 @@ convertLamParams ::
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
-makeFieldParam :: Input.Payload m a -> (T.Tag, T.Type) -> FieldParam
+makeFieldParam :: Input.Payload m a -> (T.Tag, Tree Pure T.Type) -> FieldParam
 makeFieldParam lambdaPl (tag, typeExpr) =
     FieldParam
     { fpTag = tag
@@ -661,9 +661,9 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
         tagsInOuterScope <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
-        case lambdaPl ^. Input.inferredType of
-            T.TFun (T.TRecord composite) _
-                | FlatComposite fieldsMap Nothing <- FlatComposite.fromComposite composite
+        case lambdaPl ^. Input.inferredType . _Pure of
+            T.TFun (FuncType (Pure (T.TRecord composite)) _)
+                | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
                 , let fields = Map.toList fieldsMap
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda

@@ -2,17 +2,21 @@ module Lamdu.Sugar.Convert.GetVar
     ( convert, globalNameRef
     ) where
 
+import           Algebra.Lattice (BoundedJoinSemiLattice(..))
+import           AST (Pure(..), _Pure)
+import           AST.Term.Row (freExtends)
+import qualified AST.Term.Scheme as S
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
+import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
@@ -51,7 +55,11 @@ inlineDef globalId dest =
                     Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
                     newDefExpr <- DataOps.newHole
                     def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
-                        & Def.defType .~ Scheme.any
+                        & Def.defType .~
+                            Pure S.Scheme
+                            { S._sForAlls = T.Types (S.QVars (mempty & Lens.at "a" ?~ bottom)) (S.QVars mempty)
+                            , S._sTyp = T.TVar "a" & Pure
+                            }
                         & Transaction.writeIRef defI
                     setP (Anchors.assocDefinitionState defI) DeletedDefinition
                     postProcess
@@ -135,7 +143,8 @@ convertParamsRecord param exprPl =
     GetParamsRecord ParamsRecordVarRef
     { _prvFieldNames =
         exprPl
-        ^.. Input.inferredType . T._TRecord . ExprLens.compositeFieldTags
+        ^.. Input.inferredType . _Pure . T._TRecord . T.flatRow
+        . freExtends . Lens.to Map.toList . traverse . Lens._1
         <&> nameWithContext param
     } <$ check
     where

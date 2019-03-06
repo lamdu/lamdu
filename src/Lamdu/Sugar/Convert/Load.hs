@@ -1,31 +1,36 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, TupleSections, TypeApplications #-}
 module Lamdu.Sugar.Convert.Load
-    ( assertInferSuccess
-    , InferResult(..), irVal, irCtx
+    ( InferResult(..), irVal, irCtx
     , inferDef
     , inferDefExpr
     , makeNominalsMap
-    , loadInferPrepareInput
     , readValAndAddProperties
     , InferFunc, unmemoizedInfer
     ) where
 
-import           AST (ann, annotations)
+import           AST (Tree, Pure(..), _Pure, annotations, Ann)
+import           AST.Infer (ITerm, iType, irType, inferNode, IResult)
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Term.Nominal (NominalDecl, nScheme)
+import           AST.Term.Scheme (sTyp)
+import           AST.Unify (unify)
+import qualified AST.Unify as Unify
+import           AST.Unify.Binding (UVar)
+import           AST.Unify.Generalize (GTerm(..))
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
-import           Control.Monad.Transaction (transaction)
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
+import           Lamdu.Calc.Infer (PureInfer, runPureInfer, InferState(..), loadDeps, emptyPureInferState, varGen)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Nominal as N
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
@@ -33,50 +38,43 @@ import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Infer (Infer)
-import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Error as Infer
-import qualified Lamdu.Infer.Trans as InferT
-import           Lamdu.Infer.Unify (unify)
-import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Convert.Input (EvalResultsForExpr(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import           Text.PrettyPrint.HughesPJClass (pPrint)
 
 import           Lamdu.Prelude
 
 type T = Transaction
 
-assertInferSuccess :: HasCallStack => Either Infer.Error a -> a
-assertInferSuccess = either (error . ("Type inference failed: " ++) . show . pPrint) id
-
 type InferFunc a =
-    Definition.Expr (Val a) -> Infer.Scope -> Infer (Val (Infer.Payload, a))
+    Definition.Expr (Val a) ->
+    PureInfer (Tree (ITerm a UVar) V.Term)
 
 unmemoizedInfer :: InferFunc a
-unmemoizedInfer defExpr scope =
-    Infer.infer (defExpr ^. Definition.exprFrozenDeps) scope
-    (defExpr ^. Definition.expr)
+unmemoizedInfer defExpr =
+    do
+        addDeps <- loadDeps (defExpr ^. Definition.exprFrozenDeps)
+        inferNode (defExpr ^. Definition.expr)
+            & Reader.local addDeps
 
 propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
 
 preparePayloads ::
-    Map NominalId N.Nominal ->
+    Map NominalId (Tree Pure (NominalDecl T.Type)) ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValP m) ->
-    Val (Input.Payload m ())
+    Tree (Ann (ValP m, Tree Pure T.Type, IResult UVar V.Term)) V.Term ->
+    Tree (Ann (Input.Payload m ())) V.Term
 preparePayloads nomsMap evalRes inferredVal =
     inferredVal
     & annotations %~ f
     & Input.preparePayloads
     & Input.initLocalsInScope []
     where
-        f (inferPl, valIProp) =
+        f (valIProp, typ, inferRes) =
             ( eId
             , \varRefs ->
               Input.Payload
@@ -84,13 +82,13 @@ preparePayloads nomsMap evalRes inferredVal =
               , Input._entityId = eId
               , Input._localsInScope = []
               , Input._stored = valIProp
-              , Input._inferred = inferPl
+              , Input._inferredType = typ
+              , Input._inferResult = inferRes
               , Input._evalResults = evalRes <&> exprEvalRes typ execId
               , Input._userData = ()
               }
             )
             where
-                typ = inferPl ^. Infer.plType
                 eId = propEntityId valIProp
                 execId = Property.value valIProp
         exprEvalRes typ pl r =
@@ -98,20 +96,21 @@ preparePayloads nomsMap evalRes inferredVal =
             { _eResults = r ^. erExprValues . Lens.ix pl <&> addTypes nomsMap typ
             , _eAppliesOfLam =
                 case typ of
-                T.TFun paramType _ ->
+                Pure (T.TFun (FuncType paramType _)) ->
                     r ^. erAppliesOfLam . Lens.ix pl
                     <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
                 _ | r ^. erAppliesOfLam & Map.null -> Map.empty
                   | otherwise -> error "Have non-empty erAppliesOfLam for non-function-type"
             }
 
-makeNominalsMap :: Monad m => [T.Type] -> T m (Map NominalId N.Nominal)
-makeNominalsMap types =
-    traverse_ loadForType types
+makeNominalsMap ::
+    Monad m =>
+    [NominalId] -> T m (Map NominalId (Tree Pure (NominalDecl T.Type)))
+makeNominalsMap tids =
+    traverse_ loadForTid tids
     & (`State.execStateT` mempty)
     <&> Map.mapMaybe id
     where
-        loadForType typ = typ ^.. ExprLens.typeTIds & traverse_ loadForTid
         loadForTid tid =
             do
                 loaded <- State.get
@@ -119,23 +118,8 @@ makeNominalsMap types =
                     do
                         nom <- ExprLoad.nominal tid & lift
                         Map.insert tid nom loaded & State.put
-                        nom ^.. Lens._Just . N.nomType . Scheme.schemeType
-                            & traverse_ loadForType
-
-loadInferPrepareInput ::
-    Monad m =>
-    CurAndPrev (EvalResults (ValI m)) ->
-    Val (Infer.Payload, ValP m) ->
-    T m (Infer (Val (Input.Payload m [EntityId])))
-loadInferPrepareInput evalRes x =
-    do
-        nomsMap <- x ^.. annotations . _1 . Infer.plType & makeNominalsMap
-        preparePayloads nomsMap evalRes x
-            & annotations %~ setUserData
-            & ParamList.loadForLambdas
-    where
-        setUserData pl =
-            pl & Input.userData %~ \() -> [pl ^. Input.entityId]
+                        nom ^.. Lens._Just . _Pure . nScheme . sTyp . ExprLens.tIds
+                            & traverse_ loadForTid
 
 readValAndAddProperties ::
     Monad m => ValP m -> T m (Val (ValP m))
@@ -147,45 +131,71 @@ readValAndAddProperties prop =
 
 data InferResult m = InferResult
     { _irVal :: Val (Input.Payload m [EntityId])
-    , _irCtx :: Infer.Context
+    , _irCtx :: InferState
     }
 Lens.makeLenses ''InferResult
 
-runInferResult ::
-    (HasCallStack, Monad m) =>
-    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    Infer (Val (Infer.Payload, ValP m)) ->
-    T m (Either Infer.Error (InferResult m))
-runInferResult monitors results act =
-    do
-        inferredVal <- InferT.liftInfer act
-        loadInferPrepareInput results inferredVal & transaction
-            >>= InferT.liftInfer
-        & InferT.run monitors
-        <&> fmap toResult
+resolve ::
+    Val (ValP m, IResult UVar V.Term) ->
+    PureInfer (Tree (Ann (ValP m, Tree Pure T.Type, IResult UVar V.Term)) V.Term)
+resolve =
+    annotations f
     where
-        toResult (x, ctx) = InferResult x ctx
+        f (stored, inferred) =
+            inferred ^. irType & Unify.applyBindings
+            <&> \x -> (stored, x, inferred)
+
+runInferResult ::
+    Monad m =>
+    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    PureInfer (Tree (ITerm (ValP m) UVar) V.Term) ->
+    T m (Either (Tree Pure T.TypeError) (InferResult m))
+runInferResult _monitors evalRes act =
+    -- TODO: use _monitors
+    case runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act of
+    Left x -> Left x & pure
+    Right (inferredTerm, inferState0) ->
+        ParamList.loadForLambdas iterm
+        >>=
+        \doLoad ->
+        case runPureInfer V.emptyScope inferState0 doLoad of
+        Left x -> Left x & pure
+        Right (_, inferState1) ->
+            case resolve iterm & runPureInfer V.emptyScope inferState1 of
+            Left x -> Left x & pure
+            Right (resolvedTerm, _inferState2) ->
+                resolvedTerm ^.. annotations . _2 . ExprLens.tIds
+                & makeNominalsMap
+                <&>
+                \nomsMap ->
+                InferResult
+                (preparePayloads nomsMap evalRes resolvedTerm & annotations %~ setUserData)
+                inferState1
+                & Right
+        where
+            iterm = inferredTerm ^. ExprLens.itermAnn
+    where
+        setUserData pl = pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 
 inferDef ::
-    (HasCallStack, Monad m) =>
+    Monad m =>
     InferFunc (ValP m) -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) -> V.Var ->
-    T m (Either Infer.Error (InferResult m))
+    T m (Either (Tree Pure T.TypeError) (InferResult m))
 inferDef infer monitors results defExpr defVar =
     do
-        defTv <- Infer.freshInferredVar Infer.emptyScope "r"
-        let scope = Infer.insertTypeOf defVar defTv Infer.emptyScope
-        inferredVal <- infer defExpr scope
-        let inferredType = inferredVal ^. ann . _1 . Infer.plType
-        unify inferredType defTv
-        Update.inferredVal inferredVal & Update.liftInfer
+        defTv <- Unify.newUnbound
+        inferredVal <-
+            infer defExpr
+            & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ GMono defTv)
+        inferredVal <$ unify defTv (inferredVal ^. iType)
     & runInferResult monitors results
 
 inferDefExpr ::
-    (HasCallStack, Monad m) =>
+    Monad m =>
     InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) ->
-    T m (Either Infer.Error (InferResult m))
+    T m (Either (Tree Pure T.TypeError) (InferResult m))
 inferDefExpr infer monitors results defExpr =
-    infer defExpr Infer.emptyScope & runInferResult monitors results
+    infer defExpr & runInferResult monitors results

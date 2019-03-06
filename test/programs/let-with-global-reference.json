@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 8
+        "schemaVersion": 9
     },
     {
         "tagOrder": 0,
@@ -33,11 +33,9 @@
             "schemeType": {
                 "typeVar": "61"
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "61"
-                ]
-            }
+            "typeVars": [
+                "61"
+            ]
         },
         "val": {
             "hole": {},
@@ -52,11 +50,9 @@
                         "schemeType": {
                             "typeVar": "61"
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "61"
-                            ]
-                        }
+                        "typeVars": [
+                            "61"
+                        ]
                     }
                 }
             },

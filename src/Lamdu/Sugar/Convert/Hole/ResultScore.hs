@@ -2,39 +2,47 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
 
-import           AST (monoChildren)
-import           AST.Knot.Ann (Ann(..), val)
+import           AST (Tree, Pure(..), monoChildren)
+import           AST.Knot.Ann (val, ann)
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Term.Nominal (NominalInst(..))
+import           AST.Term.Row (RowExtend(..))
+import           AST.Term.Scheme (QVarInstances(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Type (Type(..), Row(..))
-import qualified Lamdu.Infer as Infer
+import           Lamdu.Calc.Type (Type(..), Row(..), Types(..))
 import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
 
 import           Lamdu.Prelude
 
-resultTypeScore :: Type -> [Int]
-resultTypeScore (TVar _) = [0]
-resultTypeScore (TInst _ p) = 1 : maximum ([] : map resultTypeScore (Map.elems p))
-resultTypeScore (TFun a r) = 2 : max (resultTypeScore a) (resultTypeScore r)
-resultTypeScore (TVariant c) = 2 : compositeTypeScore c
-resultTypeScore (TRecord c) = 2 : compositeTypeScore c
+resultTypeScore :: Tree Pure Type -> [Int]
+resultTypeScore (Pure x) =
+    case x of
+    TVar{} -> [0]
+    TFun (FuncType a r) -> 2 : max (resultTypeScore a) (resultTypeScore r)
+    TVariant c -> 2 : compositeTypeScore c
+    TRecord c -> 2 : compositeTypeScore c
+    TInst (NominalInst _ (Types (QVarInstances t) (QVarInstances r))) ->
+        1 : maximum ([] : map resultTypeScore (Map.elems t) <> map compositeTypeScore (Map.elems r))
 
-compositeTypeScore :: Row -> [Int]
-compositeTypeScore REmpty = []
-compositeTypeScore (RVar _) = [1]
-compositeTypeScore (RExtend _ t r) =
-    max (resultTypeScore t) (compositeTypeScore r)
+compositeTypeScore :: Tree Pure Row -> [Int]
+compositeTypeScore (Pure x) =
+    case x of
+    REmpty -> []
+    RVar{} -> [1]
+    RExtend (RowExtend _ t r) ->
+        max (resultTypeScore t) (compositeTypeScore r)
 
-score :: Val Infer.Payload -> [Int]
-score (Ann pl body) =
-    (if Lens.has ExprLens.valBodyHole body then 1 else 0) :
-    resultTypeScore (pl ^. Infer.plType) ++
-    (body ^.. monoChildren >>= score)
+score :: Val (Tree Pure Type) -> [Int]
+score x =
+    (if Lens.has ExprLens.valBodyHole (x ^. val) then 1 else 0) :
+    resultTypeScore (x ^. ann) ++
+    (x ^.. val . monoChildren >>= score)
 
-resultScore :: Val Infer.Payload -> HoleResultScore
+resultScore :: Val (Tree Pure Type) -> HoleResultScore
 resultScore x =
     HoleResultScore
     { _hrsNumFragments = numFragments x
@@ -49,4 +57,4 @@ numFragments x =
     else 0
 
 appliedHole :: Lens.Traversal' (Val a) ()
-appliedHole = ExprLens.valApply . V.applyFunc . ExprLens.valHole
+appliedHole = val . V._BApp . V.applyFunc . val . V._BLeaf . V._LHole

@@ -1,21 +1,25 @@
+{-# LANGUAGE TypeFamilies, TypeApplications #-}
+
 module Tests.Stdlib (test) where
 
+import           AST (Pure(..), Tree, children_)
+import qualified AST.Term.Scheme as S
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
 import qualified Data.Char as Char
 import           Data.List (sort)
 import           Data.Map ((!))
 import qualified Data.Map as Map
+import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import qualified Lamdu.Infer as Infer
 import           Test.Lamdu.FreshDb (readFreshDb)
 
 import           Test.Lamdu.Prelude
@@ -94,7 +98,7 @@ verifyNoBrokenDefsTest =
 
 verifyDefs :: (T.Tag -> Text) -> [Def.Definition v (presMode, T.Tag, V.Var)] -> IO ()
 verifyDefs tagName defs =
-    defs ^.. Lens.folded . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . Infer.depsGlobalTypes
+    defs ^.. Lens.folded . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes
     <&> Map.toList & concat
     & traverse_ (uncurry verifyGlobalType)
     where
@@ -104,7 +108,7 @@ verifyDefs tagName defs =
             case defTypes ^. Lens.at var of
             Nothing -> assertString ("Missing def referred in frozen deps: " ++ identHex (V.vvName var))
             Just (tag, x)
-                | Scheme.alphaEq x typ -> pure ()
+                | T.alphaEq x typ -> pure ()
                 | otherwise ->
                     assertString
                     ("Frozen def type mismatch for " ++ show (tagName tag) ++ ":\n" ++
@@ -119,18 +123,21 @@ verifySchemes =
         verifyDef def =
             do
                 def ^. Def.defType & verifyScheme
-                def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . Infer.depsGlobalTypes . traverse
+                def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . traverse
                     & traverse_ verifyScheme
-        verifyScheme s = verifyType (s ^. Scheme.schemeForAll) (s ^. Scheme.schemeType)
-        verifyType s (T.TVar v)
-            | Infer.typeVars s ^. Lens.contains v = pure ()
-            | otherwise = assertString ("Type variable not declared " ++ show v)
-        verifyType s (T.TFun a b) = verifyType s a >> verifyType s b
-        verifyType s (T.TInst _ params) = traverse_ (verifyType s) params
-        verifyType s (T.TRecord r) = verifyRow s r
-        verifyType s (T.TVariant r) = verifyRow s r
-        verifyRow s (T.RVar v)
-            | Infer.rowVars s ^. Lens.contains v = pure ()
-            | otherwise = assertString ("Row variable not declared " ++ show v)
-        verifyRow s (T.RExtend _ t r) = verifyType s t >> verifyRow s r
-        verifyRow _ T.REmpty{} = pure ()
+        verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
+
+class VerifyTypeInScheme t where
+    verifyTypeInScheme :: Tree T.Types S.QVars -> Tree Pure t -> IO ()
+
+instance VerifyTypeInScheme T.Type where
+    verifyTypeInScheme s (Pure (T.TVar v))
+        | Lens.has (T.tType . S._QVars . Lens.ix v) s = pure ()
+        | otherwise = assertString ("Type variable not declared " ++ show v)
+    verifyTypeInScheme s (Pure t) = children_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t
+
+instance VerifyTypeInScheme T.Row where
+    verifyTypeInScheme s (Pure (T.RVar v))
+        | Lens.has (T.tRow . S._QVars . Lens.ix v) s = pure ()
+        | otherwise = assertString ("Row variable not declared " ++ show v)
+    verifyTypeInScheme s (Pure t) = children_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t

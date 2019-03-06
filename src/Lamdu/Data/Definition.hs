@@ -7,16 +7,16 @@ module Lamdu.Data.Definition
     , pruneDefExprDeps
     ) where
 
+import           AST (Tree, Pure)
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Lamdu.Calc.Definition (Deps, depsGlobalTypes, depsNominals)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
-import           Lamdu.Calc.Type.Scheme (Scheme)
-import           Lamdu.Infer (Dependencies)
-import qualified Lamdu.Infer as Infer
+import           Lamdu.Calc.Type (Scheme)
 
 import           Lamdu.Prelude
 
@@ -31,19 +31,19 @@ instance Show FFIName where
 
 data Expr valExpr = Expr
     { _expr :: valExpr
-    , _exprFrozenDeps :: Dependencies
+    , _exprFrozenDeps :: Deps
     } deriving (Generic, Show, Functor, Foldable, Traversable, Eq, Ord)
 
 data Body valExpr
     = BodyExpr (Expr valExpr)
     | BodyBuiltin FFIName
-    deriving (Generic, Show, Functor, Foldable, Traversable, Eq, Ord)
+    deriving (Generic, Show, Functor, Foldable, Traversable, Eq)
 
 data Definition valExpr a = Definition
     { _defBody :: Body valExpr
-    , _defType :: Scheme -- TODO: typeExpr
+    , _defType :: Tree Pure Scheme
     , _defPayload :: a
-    } deriving (Generic, Functor, Foldable, Traversable, Eq, Ord)
+    } deriving (Generic, Functor, Foldable, Traversable, Eq)
 
 instance Binary FFIName
 instance Binary valExpr => Binary (Expr valExpr)
@@ -55,11 +55,11 @@ Lens.makeLenses ''Definition
 Lens.makeLenses ''Expr
 
 -- Prune dependencies of an Expr after edits.
-pruneDefExprDeps :: Expr (Val a) -> Infer.Dependencies
+pruneDefExprDeps :: Expr (Val a) -> Deps
 pruneDefExprDeps defExpr =
     defExpr ^. exprFrozenDeps
-    & Infer.depsGlobalTypes %~ setMapIntersection valVars
-    & Infer.depsNominals %~ setMapIntersection valNoms
+    & depsGlobalTypes %~ setMapIntersection valVars
+    & depsNominals %~ setMapIntersection valNoms
     where
         val = defExpr ^. expr
         valVars = val ^..  ExprLens.valGlobals mempty & Set.fromList

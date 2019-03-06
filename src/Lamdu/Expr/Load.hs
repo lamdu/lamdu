@@ -3,12 +3,12 @@ module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
-import           AST (annotations)
+import           AST (Tree, Pure, annotations)
+import           AST.Term.Nominal (NominalDecl)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Nominal (Nominal)
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI, ValI, ValP)
@@ -55,7 +55,9 @@ def defI =
             <&> Definition.defBody . Definition._BodyExpr . Definition.expr .~ e
             >>= Transaction.writeIRef defI
 
-nominal :: Monad m => T.NominalId -> T m (Maybe Nominal)
+nominal ::
+    Monad m =>
+    T.NominalId -> T m (Maybe (Tree Pure (NominalDecl T.Type)))
 nominal tid =
     Transaction.irefExists iref
     >>=

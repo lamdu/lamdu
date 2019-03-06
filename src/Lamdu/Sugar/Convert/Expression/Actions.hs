@@ -5,10 +5,13 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , makeSetToLiteral
     ) where
 
-import           AST (Tree, overChildren)
+import           AST (Tree, Pure(..), overChildren)
+import           AST.Infer (irType)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Term.Nominal (ToNom(..))
+import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
+import qualified AST.Term.Scheme as S
 import           AST.Term.Row (RowExtend(..))
+import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
@@ -20,16 +23,15 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Cache as Cache
+import           Lamdu.Calc.Infer (runPureInfer)
+import           Lamdu.Calc.Definition (depsGlobalTypes, depsNominals)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.Nominal as N
-import           Lamdu.Calc.Type.Scheme (mono)
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Annotations as Ann
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -68,8 +70,11 @@ mkExtractToDef exprPl =
     \(ctx, postProcess, infer) ->
     do
         let scheme =
-                Infer.makeScheme (ctx ^. ConvertM.scInferContext)
-                (exprPl ^. Input.inferredType)
+                generalize (exprPl ^. Input.inferResult . irType)
+                >>= S.saveScheme
+                & runPureInfer V.emptyScope (ctx ^. ConvertM.scInferContext)
+                & Lens._Left %~ (\x -> x :: Tree Pure T.TypeError)
+                & (^?! Lens._Right . Lens._1)
         let deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
         newDefI <-
             Definition.Definition
@@ -83,7 +88,7 @@ mkExtractToDef exprPl =
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValI
         (exprPl ^. Input.stored . Property.pSet) getVarI
-        Infer.depsGlobalTypes . Lens.at param ?~ scheme
+        depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
         postProcess
         EntityId.ofIRef newDefI & pure
@@ -330,7 +335,9 @@ convertPayload mode (showAnn, pl) =
     , _plData = pl ^. pInput . Input.userData
     }
 
-valFromLiteral :: Monad m => ConvertM m (Literal Identity -> (Val T.Type, T m ()))
+valFromLiteral ::
+    Monad m =>
+    ConvertM m (Literal Identity -> (Val (Tree Pure T.Type), T m ()))
 valFromLiteral =
     Lens.view ConvertM.scFrozenDeps
     <&>
@@ -344,20 +351,25 @@ valFromLiteral =
             & literalExpr
             & ToNom Builtins.textTid
             & V.BToNom
-            & Ann (T.TInst Builtins.textTid mempty)
+            & Ann (Pure (T.TInst (NominalInst Builtins.textTid noParams)))
         , Property.pureModify frozenDeps (<> textDep)
         )
     where
         literalExpr v =
-            V.LLiteral prim & V.BLeaf & Ann (T.TInst (prim ^. V.primType) mempty)
+            V.LLiteral prim & V.BLeaf
+            & Ann (Pure (T.TInst (NominalInst (prim ^. V.primType) noParams)))
             where
                 prim = PrimVal.fromKnown v
+        noParams = T.Types (S.QVarInstances mempty) (S.QVarInstances mempty)
         textDep =
             mempty
-            { Infer._depsNominals =
+            & depsNominals .~
                 Map.singleton Builtins.textTid
-                N.Nominal
-                { N._nomType = T.TInst Builtins.bytesTid mempty & mono
-                , N._nomParams = mempty
-                }
-            }
+                ( Pure NominalDecl
+                { _nParams = T.Types (S.QVars mempty) (S.QVars mempty)
+                , _nScheme =
+                    S.Scheme
+                    { S._sForAlls = T.Types (S.QVars mempty) (S.QVars mempty)
+                    , S._sTyp = NominalInst Builtins.bytesTid noParams & T.TInst & Pure
+                    }
+                })

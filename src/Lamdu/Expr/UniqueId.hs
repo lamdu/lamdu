@@ -31,7 +31,6 @@ class    ToUUID a           where toUUID :: a -> UUID
 instance ToUUID Identifier  where toUUID (Identifier bs) = UUIDUtils.fromSBS16 bs
 instance ToUUID V.Var       where toUUID = toUUID . V.vvName
 instance ToUUID T.NominalId where toUUID = toUUID . T.nomId
-instance ToUUID T.ParamId   where toUUID = toUUID . T.typeParamId
 instance ToUUID T.Tag       where toUUID = toUUID . T.tagName
 instance ToUUID (IRef m a)  where toUUID = IRef.uuid
 instance ToUUID (Branch m)  where toUUID = Branch.uuid

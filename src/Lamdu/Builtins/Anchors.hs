@@ -63,5 +63,5 @@ rootTag = bi "root"
 subtreesTag :: Tag
 subtreesTag = bi "subtrees"
 
-valTypeParamId :: T.ParamId
+valTypeParamId :: T.TypeVar
 valTypeParamId = bi "val"

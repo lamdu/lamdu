@@ -5,6 +5,9 @@ module Lamdu.GUI.CodeEdit
     , ReplEdit.ExportRepl(..), ExportActions(..), HasExportActions(..)
     ) where
 
+import           Algebra.Lattice (BoundedJoinSemiLattice(..))
+import           AST (Pure(..))
+import           AST.Term.Scheme (Scheme(..), QVars(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -26,7 +29,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Calc.Type.Scheme as Scheme
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -181,7 +184,11 @@ makeNewDefinition cp =
         holeI <- DataOps.newHole
         Definition
             (Definition.BodyExpr (Definition.Expr holeI mempty))
-            Scheme.any ()
+            ( Pure Scheme
+            { _sForAlls =
+                T.Types (QVars (mempty & Lens.at "a" ?~ bottom)) (QVars mempty)
+            , _sTyp = T.TVar "a" & Pure
+            }) ()
             & DataOps.newPublicDefinitionWithPane cp
     <&> WidgetIds.fromIRef
 

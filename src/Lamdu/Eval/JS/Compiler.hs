@@ -7,7 +7,7 @@ module Lamdu.Eval.JS.Compiler
     , compileRepl, Mode(..), loggingEnabled
     ) where
 
-import           AST (Tree)
+import           AST (Tree, Pure)
 import           AST.Knot.Ann (Ann(..), val)
 import           AST.Term.Nominal (ToNom(..))
 import           AST.Term.Row (RowExtend(..))
@@ -28,19 +28,17 @@ import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
+import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Term.Utils as Flatten
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Scheme (Scheme)
-import qualified Lamdu.Calc.Type.Scheme as Scheme
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Eval.Results (WhichGlobal(..), encodeWhichGlobal)
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import qualified Lamdu.Infer as Infer
 import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
 import qualified Language.ECMAScript3.Syntax.CodeGen as JS
@@ -59,7 +57,7 @@ data Actions m = Actions
     { readAssocName :: T.Tag -> m Text
     , readAssocTag :: UUID -> m T.Tag
     , readGlobal :: V.Var -> m (Definition.Definition (Val ValId) ())
-    , readGlobalType :: V.Var -> m Scheme
+    , readGlobalType :: V.Var -> m (Tree Pure T.Scheme)
     , output :: String -> m ()
     , loggingMode :: Mode
     }
@@ -76,7 +74,7 @@ data Env m = Env
     { _envActions :: Actions m
     , _envLocals :: Map V.Var LocalVarName
     , _envMode :: Mode
-    , _envExpectedTypes :: Map V.Var Scheme
+    , _envExpectedTypes :: Map V.Var (Tree Pure T.Scheme)
     , _envCurrentGlobal :: WhichGlobal
     }
 Lens.makeLenses ''Env
@@ -90,7 +88,7 @@ data State = State
     { _freshId :: Int
     , _names :: Map (NameKind, Text) (Map UUID Text)
     , _globalVarNames :: Map V.Var GlobalVarName
-    , _globalTypes :: Map V.Var Scheme
+    , _globalTypes :: Map V.Var (Tree Pure T.Scheme)
     }
 Lens.makeLenses ''State
 
@@ -347,7 +345,7 @@ withLocalVar v act =
 
 compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
 compileDefExpr (Definition.Expr x frozenDeps) =
-    compileVal x & local (envExpectedTypes .~ frozenDeps ^. Infer.depsGlobalTypes)
+    compileVal x & local (envExpectedTypes .~ frozenDeps ^. depsGlobalTypes)
 
 compileGlobal :: Monad m => V.Var -> M m CodeGen
 compileGlobal globalId =
@@ -399,7 +397,7 @@ compileGlobalVar valId var =
                 scheme <-
                     Lens.use (globalTypes . Lens.at var)
                     >>= maybe newGlobalType pure
-                if Scheme.alphaEq scheme expectedType
+                if T.alphaEq scheme expectedType
                     then loadGlobal
                     else throwErr valId "BrokenDef" "Dependency type needs update"
         newGlobalType =

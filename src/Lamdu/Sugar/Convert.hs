@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           AST (Tree, Children, Recursive)
+import           AST (Tree, Pure, Children, Recursive)
 import           AST.Knot.Ann (Ann, ann, annotations, val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
@@ -20,7 +20,7 @@ import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Calc.Type.Scheme as Scheme
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
@@ -54,6 +54,7 @@ import qualified Lamdu.Sugar.OrderTags as OrderTags
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 import           Lamdu.Prelude
 
@@ -61,7 +62,7 @@ type T = Transaction
 
 convertDefIBuiltin ::
     (MonadTransaction n m, Monad f) =>
-    Scheme.Scheme -> Definition.FFIName -> DefI f ->
+    Tree Pure T.Scheme -> Definition.FFIName -> DefI f ->
     m (DefinitionBody InternalName i (T f) a)
 convertDefIBuiltin scheme name defI =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
@@ -106,18 +107,22 @@ trimParamAnnotation Annotations.Types (AnnotationVal x) =
     maybe AnnotationNone AnnotationType (x ^. annotationType)
 trimParamAnnotation Annotations.Types x = x
 
+assertInferSuccess :: HasCallStack => Either (Tree Pure T.TypeError) a -> a
+assertInferSuccess =
+    either (error . ("Type inference failed: " ++) . show . pPrint) id
+
 convertInferDefExpr ::
     forall m.
     (HasCallStack, Monad m) =>
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
-    Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
+    Tree Pure T.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
             Load.inferDef cachedInfer monitors evalRes defExpr defVar
-            <&> Load.assertInferSuccess
+            <&> assertInferSuccess
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr postProcess
         let context =
@@ -199,7 +204,7 @@ convertRepl config cache monitors annMode evalRes cp =
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
         Load.InferResult valInferred newInferContext <-
             Load.inferDefExpr cachedInfer monitors evalRes defExpr
-            <&> Load.assertInferSuccess
+            <&> assertInferSuccess
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
         let context =
@@ -217,9 +222,10 @@ convertRepl config cache monitors annMode evalRes cp =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
                 }
-        nomsMap <-
-            valInferred ^.. annotations . Input.inferredType & Load.makeNominalsMap
         let typ = valInferred ^. ann . Input.inferredType
+        nomsMap <-
+            valInferred ^.. annotations . Input.inferredType . ExprLens.tIds
+            & Load.makeNominalsMap
         let completion =
                 evalRes
                 <&> (^. ER.erCompleted)

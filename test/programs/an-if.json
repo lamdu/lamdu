@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 8
+        "schemaVersion": 9
     },
     {
         "tagOrder": 0,
@@ -93,11 +93,9 @@
                     "nomId": "426f6f6c000000000000000000000000"
                 }
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "61"
-                ]
-            }
+            "typeVars": [
+                "61"
+            ]
         }
     },
     {
@@ -120,11 +118,9 @@
                                 "nomId": "426f6f6c000000000000000000000000"
                             }
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "61"
-                            ]
-                        }
+                        "typeVars": [
+                            "61"
+                        ]
                     }
                 },
                 "nominals": {

@@ -3,9 +3,11 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
-import           AST (monoChildren)
+import           AST (Tree, Pure(..), _Pure, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Term.Row (RowExtend(..))
+import           AST.Term.FuncType (funcIn, funcOut)
+import           AST.Term.Row (RowExtend(..), freExtends, freRest)
+import           AST.Term.Scheme (sTyp)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
@@ -13,18 +15,16 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Lamdu.Calc.Definition (depsGlobalTypes)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import           Lamdu.Calc.Type.Scheme (Scheme, schemeType, alphaEq)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
@@ -160,27 +160,28 @@ changeFuncArg change usedDefVar =
         mFix _ _ = Nothing
 
 isPartSame ::
-    Lens.Getting (Monoid.First T.Type) T.Type T.Type -> Scheme -> Scheme -> Bool
+    Lens.Getting (Monoid.First (Tree Pure T.Type)) (Tree Pure T.Type) (Tree Pure T.Type) ->
+    Tree Pure T.Scheme -> Tree Pure T.Scheme -> Bool
 isPartSame part preType newType =
     do
-        prePart <- preType & schemeType %%~ (^? part)
-        newPart <- newType & schemeType %%~ (^? part)
-        alphaEq prePart newPart & guard
+        prePart <- (_Pure . sTyp) (^? part) preType
+        newPart <- (_Pure . sTyp) (^? part) newType
+        T.alphaEq prePart newPart & guard
     & Lens.has Lens._Just
 
-argChangeType :: Scheme -> Scheme -> ArgChange
+argChangeType :: Tree Pure T.Scheme -> Tree Pure T.Scheme -> ArgChange
 argChangeType prevArg newArg =
     do
-        prevProd <- prevArg ^? schemeType . T._TRecord <&> FlatComposite.fromComposite
-        prevProd ^? FlatComposite.extension . Lens._Nothing
-        newProd <- newArg ^? schemeType . T._TRecord <&> FlatComposite.fromComposite
-        newProd ^? FlatComposite.extension . Lens._Nothing
-        let prevTags = prevProd ^. FlatComposite.fields & Map.keysSet
-        let newTags = newProd ^. FlatComposite.fields & Map.keysSet
+        prevProd <- prevArg ^? _Pure . sTyp . _Pure . T._TRecord . T.flatRow
+        prevProd ^? freRest . _Pure . T._REmpty
+        newProd <- newArg ^? _Pure . sTyp . _Pure . T._TRecord . T.flatRow
+        newProd ^? freRest . _Pure . T._REmpty
+        let prevTags = prevProd ^. freExtends & Map.keysSet
+        let newTags = newProd ^. freExtends & Map.keysSet
         let changedTags =
                 Map.intersectionWith fieldChange
-                (prevProd ^. FlatComposite.fields)
-                (newProd ^. FlatComposite.fields)
+                (prevProd ^. freExtends)
+                (newProd ^. freExtends)
                 & Map.mapMaybe id
         ArgRecordChange RecordChange
             { fieldsAdded = Set.difference newTags prevTags
@@ -191,30 +192,32 @@ argChangeType prevArg newArg =
     & fromMaybe ArgChange
     where
         fieldChange prevField newField
-            | alphaEq prevFieldScheme newFieldScheme = Nothing
+            | T.alphaEq prevFieldScheme newFieldScheme = Nothing
             | otherwise = argChangeType prevFieldScheme newFieldScheme & Just
             where
-                prevFieldScheme = prevArg & schemeType .~ prevField
-                newFieldScheme = newArg & schemeType .~ newField
+                prevFieldScheme = prevArg & _Pure . sTyp .~ prevField
+                newFieldScheme = newArg & _Pure . sTyp .~ newField
 
 fixDefExpr ::
-    Monad m => Scheme -> Scheme -> V.Var -> Val (ValP m) -> T m ()
+    Monad m =>
+    Tree Pure T.Scheme -> Tree Pure T.Scheme ->
+    V.Var -> Val (ValP m) -> T m ()
 fixDefExpr prevType newType usedDefVar defExpr =
     ( -- Function result changed (arg is the same).
         changeFuncRes usedDefVar defExpr <$
-        guard (isPartSame (T._TFun . _1) prevType newType)
+        guard (isPartSame (_Pure . T._TFun . funcIn) prevType newType)
     ) <|>
     do
-        isPartSame (T._TFun . _2) prevType newType & guard
+        isPartSame (_Pure . T._TFun . funcOut) prevType newType & guard
         -- Function arg changed (result is the same).
-        prevArg <- prevType & schemeType %%~ (^? T._TFun . _1)
-        newArg <- newType & schemeType %%~ (^? T._TFun . _1)
+        prevArg <- (_Pure . sTyp) (^? _Pure . T._TFun . funcIn) prevType
+        newArg <- (_Pure . sTyp) (^? _Pure . T._TFun . funcIn) newType
         changeFuncArg (argChangeType prevArg newArg) usedDefVar defExpr & pure
     & fromMaybe (SubExprs.onGetVars (DataOps.applyHoleTo <&> void) usedDefVar defExpr)
 
 updateDefType ::
     Monad m =>
-    Scheme -> Scheme -> V.Var ->
+    Tree Pure T.Scheme -> Tree Pure T.Scheme -> V.Var ->
     Def.Expr (Val (ValP m)) -> (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcess.Result ->
     T m ()
@@ -222,7 +225,7 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
         defExpr
             <&> (^. ann . Property.pVal)
-            & Def.exprFrozenDeps . Infer.depsGlobalTypes . Lens.at usedDefVar ?~ newType
+            & Def.exprFrozenDeps . depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
         x <- typeCheck
         case x of
@@ -236,7 +239,7 @@ scan ::
     T m PostProcess.Result ->
     T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ())))
 scan entityId defExpr setDefExpr typeCheck =
-    defExpr ^. Def.exprFrozenDeps . Infer.depsGlobalTypes
+    defExpr ^. Def.exprFrozenDeps . depsGlobalTypes
     & Map.toList & traverse (uncurry scanDef) <&> mconcat
     where
         scanDef globalVar usedType =
@@ -244,7 +247,7 @@ scan entityId defExpr setDefExpr typeCheck =
             <&> (^. Def.defType)
             >>= processDef globalVar usedType
         processDef globalVar usedType newUsedDefType
-            | alphaEq usedType newUsedDefType = pure Map.empty
+            | T.alphaEq usedType newUsedDefType = pure Map.empty
             | otherwise =
                 do
                     usedTypeS <- ConvertType.convertScheme (EntityId.usedTypeOf entityId) usedType

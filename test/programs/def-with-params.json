@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 8
+        "schemaVersion": 9
     },
     {
         "tagOrder": 0,
@@ -36,13 +36,11 @@
                     "typeVar": "6c35"
                 }
             },
-            "schemeBinders": {
-                "typeVars": [
-                    "6c35",
-                    "7433",
-                    "7434"
-                ]
-            }
+            "typeVars": [
+                "6c35",
+                "7433",
+                "7434"
+            ]
         },
         "val": {
             "lamVar": "1506ac396f874c16b1f3dbb7bdd1a50e",
@@ -73,13 +71,11 @@
                                 "typeVar": "6c35"
                             }
                         },
-                        "schemeBinders": {
-                            "typeVars": [
-                                "6c35",
-                                "7433",
-                                "7434"
-                            ]
-                        }
+                        "typeVars": [
+                            "6c35",
+                            "7433",
+                            "7434"
+                        ]
                     }
                 }
             },

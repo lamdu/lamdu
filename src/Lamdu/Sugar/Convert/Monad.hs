@@ -19,22 +19,23 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectedSetToVal, postProcessAssert, postProcessWith
     ) where
 
+import           AST (Tree, Pure)
+import           AST.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified Lamdu.Cache as Cache
+import           Lamdu.Calc.Definition (Deps)
+import           Lamdu.Calc.Infer (InferState)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.Scheme (Scheme(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Error as Infer
 import           Lamdu.Sugar.Config (Config)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
@@ -61,13 +62,13 @@ data TagFieldParam
 
 data OuterScopeInfo m = OuterScopeInfo
     { _osiPos :: ExprIRef.ValP m
-    , _osiScope :: Infer.Scope
+    , _osiScope :: Tree V.Scope UVar
     }
 Lens.makeLenses ''OuterScopeInfo
 
 data RecursiveRef m = RecursiveRef
     { _rrDefI :: ExprIRef.DefI m
-    , _rrDefType :: Scheme
+    , _rrDefType :: Tree Pure T.Scheme
     }
 Lens.makeLenses ''RecursiveRef
 
@@ -92,7 +93,7 @@ instance Monad m => MonadTransaction m (ConvertM m) where
     transaction = ConvertM . lift
 
 data Context m = Context
-    { _scInferContext :: Infer.Context
+    { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
     , -- Check whether the definition is valid after an edit,
@@ -100,7 +101,7 @@ data Context m = Context
       _scPostProcessRoot :: T m PostProcess.Result
     , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ()))
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
-    , _scFrozenDeps :: Property (T m) Infer.Dependencies
+    , _scFrozenDeps :: Property (T m) Deps
     , _scDebugMonitors :: Debug.Monitors
     , _scCacheFunctions :: Cache.Functions
     , _scConfig :: Config
@@ -138,7 +139,7 @@ typeProtectedSetToVal =
                     _ <- checkOk
                     pure res
 
-postProcessWith :: Monad m => ConvertM m ((Infer.Error -> T m ()) -> T m ())
+postProcessWith :: Monad m => ConvertM m ((Tree Pure T.TypeError -> T m ()) -> T m ())
 postProcessWith =
     Lens.view scPostProcessRoot
     <&> \postProcess onError ->

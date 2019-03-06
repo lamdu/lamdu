@@ -3,8 +3,11 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, monoChildren, _Pure)
 import           AST.Knot.Ann (Ann(..), ann, val)
+import           AST.Term.FuncType (funcIn)
+import           AST.Term.Row (freExtends, freRest)
+import           AST.Term.Scheme (sTyp)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
@@ -15,13 +18,11 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Lamdu.Calc.Definition (Deps, depsGlobalTypes)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
-import qualified Lamdu.Calc.Type.Scheme as CalcScheme
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
@@ -72,20 +73,20 @@ noDuplicates x = length x == Set.size (Set.fromList x)
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
-    V.Var -> Composite name i o expr -> Infer.Dependencies -> m ()
+    V.Var -> Composite name i o expr -> Deps -> m ()
 validateDefParamsMatchArgs var record frozenDeps =
     do
         defArgs <-
             frozenDeps ^?
-                Infer.depsGlobalTypes . Lens.at var . Lens._Just
-                . CalcScheme.schemeType . T._TFun . _1 . T._TRecord
+                depsGlobalTypes . Lens.at var . Lens._Just
+                . _Pure . sTyp . _Pure . T._TFun . funcIn
+                . _Pure . T._TRecord . T.flatRow
             & maybeToMPlus
-        let flatArgs = FlatComposite.fromComposite defArgs
-        flatArgs ^? FlatComposite.extension . Lens._Nothing & maybeToMPlus
+        defArgs ^? freRest . _Pure . T._REmpty & maybeToMPlus
         let sFields =
                 record ^.. cItems . traverse . ciTag . tagInfo . tagVal
                 & Set.fromList
-        guard (sFields == Map.keysSet (flatArgs ^. FlatComposite.fields))
+        guard (sFields == Map.keysSet (defArgs ^. freExtends))
 
 convertLabeled ::
     (Monad m, Foldable f, Monoid a) =>

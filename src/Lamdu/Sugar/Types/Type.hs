@@ -1,19 +1,18 @@
 -- | Sugaring of Lamdu.Calc.Type modules/ASTs
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Type
-    ( Scheme(..), schemeForAll, schemeConstraints, schemeType
-    , TypeVars(..), Constraints(..)
-    , NominalId, ParamId
+    ( Scheme(..), schemeForAll, schemeType
+    , T.NominalId
     , CompositeFields(..), compositeFields, compositeExtension
     , TBody(..), _TVar, _TFun, _TInst, _TRecord, _TVariant
     , Type(..), tPayload, tBody
     , TId(..), tidName, tidTId
     ) where
 
+import           AST (Tree)
+import           AST.Term.Scheme (QVars)
 import qualified Control.Lens as Lens
-import           Lamdu.Calc.Type (NominalId, ParamId)
-import           Lamdu.Calc.Type.Constraints (Constraints(..))
-import           Lamdu.Calc.Type.Vars (TypeVars(..))
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag (TagInfo)
 
@@ -26,7 +25,7 @@ data CompositeFields name a = CompositeFields
 
 data TId name = TId
     { _tidName :: name
-    , _tidTId :: NominalId
+    , _tidTId :: T.NominalId
     } deriving (Eq, Ord, Show, Generic)
 
 data TBody name a
@@ -34,7 +33,7 @@ data TBody name a
       -- ^ A type variable
     | TFun a a
       -- ^ A (non-dependent) function of the given parameter and result types
-    | TInst (TId name) (Map ParamId a)
+    | TInst (TId name) [(name, a)]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
     | TRecord (CompositeFields name a)
@@ -49,8 +48,7 @@ data Type name = Type
     } deriving (Show, Generic)
 
 data Scheme name = Scheme
-    { _schemeForAll :: TypeVars
-    , _schemeConstraints :: Constraints
+    { _schemeForAll :: Tree T.Types QVars
     , _schemeType :: Type name
     } deriving (Show, Generic)
 

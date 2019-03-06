@@ -4,6 +4,7 @@ module Test.Lamdu.SugarStubs where
 
 import           AST (Tree, Tie)
 import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.Scheme (QVars(..))
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Functor.Const (Const(..))
@@ -146,14 +147,15 @@ def typ var tag body =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
         { Sugar._deType =
             Sugar.Scheme
-            { Sugar._schemeForAll = mempty
-            , Sugar._schemeConstraints = mempty
+            { Sugar._schemeForAll = emptyForalls
             , Sugar._schemeType = typ
             }
         , Sugar._dePresentationMode = Nothing
         , Sugar._deContent = body
         }
     }
+    where
+        emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
 repl (Ann pl x) =

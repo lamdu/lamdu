@@ -2,14 +2,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
-        , varRefsOfLambda, entityId, inferred, stored, evalResults, userData, localsInScope
+        , varRefsOfLambda, entityId, inferredType, inferResult, stored, evalResults, userData, localsInScope
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
-    , inferredType
     , preparePayloads
     , initLocalsInScope
     ) where
 
-import           AST (Ann(..), monoChildren)
+import           AST (Tree, Pure, Ann(..), monoChildren)
+import           AST.Infer.Term (IResult)
+import           AST.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
@@ -18,19 +19,21 @@ import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValP)
-import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
 data EvalResultsForExpr = EvalResultsForExpr
-    { _eResults :: Map ER.ScopeId (ER.Val Type)
-    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val Type)]
+    { _eResults :: Map ER.ScopeId (ER.Val (Tree Pure Type))
+    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val (Tree Pure Type))]
     }
 
 data Payload m a = Payload
     { _entityId :: EntityId
-    , _inferred :: Infer.Payload
+    , _inferredType :: Tree Pure Type
+    , -- The inference result before binding universal quantifiers,
+      -- Useful for resuming inference in holes.
+      _inferResult :: IResult UVar V.Term
     , _localsInScope :: [V.Var]
     , _stored :: ValP m
     , _evalResults :: CurAndPrev EvalResultsForExpr
@@ -41,9 +44,6 @@ data Payload m a = Payload
 
 Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload
-
-inferredType :: Lens' (Payload m a) Type
-inferredType = inferred . Infer.plType
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty

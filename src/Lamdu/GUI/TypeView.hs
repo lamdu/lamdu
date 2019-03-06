@@ -5,9 +5,7 @@ module Lamdu.GUI.TypeView
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.Map as Map
 import qualified Data.Text as Text
-import           Data.Text.Encoding (decodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -20,11 +18,8 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
-import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Calc.Identifier (Identifier(..))
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -62,22 +57,12 @@ horizSetCompositeRow r =
 sanitize :: Text -> Text
 sanitize = Text.replace "\0" ""
 
-text ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    Text -> m (WithTextPos View)
-text = Label.make . sanitize
-
 grammar ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
     Text -> m (WithTextPos View)
 grammar = Styled.grammarLabel . sanitize
-
-showIdentifier ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    Identifier -> m (WithTextPos View)
-showIdentifier (Identifier bs) = text (decodeUtf8 bs)
 
 parensAround ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
@@ -120,23 +105,23 @@ makeTInst ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
-    Prec -> Sugar.TId (Name f) -> Map Sugar.ParamId (Sugar.Type (Name f)) ->
+    Prec -> Sugar.TId (Name f) -> [(Name f, Sugar.Type (Name f))] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
         nameView <- NameView.make (tid ^. Sugar.tidName)
         hspace <- Spacer.stdHSpace
         let afterName paramsView = nameView /|/ hspace /|/ paramsView
-        let makeTypeParam (T.ParamId tParamId, arg) =
+        let makeTypeParam (tParamId, arg) =
                 do
-                    paramIdView <- showIdentifier tParamId
+                    paramIdView <- NameView.make tParamId
                     typeView <- makeInternal (Prec 0) arg
                     pure
                         [ Align.fromWithTextPos 1 paramIdView
                         , Aligned 0.5 hspace
                         , Align.fromWithTextPos 0 typeView
                         ]
-        case Map.toList typeParams of
+        case typeParams of
             [] -> pure nameView
             [(_, arg)] ->
                 makeInternal (Prec 0) arg

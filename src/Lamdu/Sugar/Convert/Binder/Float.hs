@@ -4,8 +4,10 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, Pure(..), monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val)
+import           AST.Term.FuncType (FuncType(..))
+import           AST.Term.Row (FlatRowExtends(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
@@ -13,9 +15,8 @@ import qualified Data.Set as Set
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Definition as Def
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Calc.Type.FlatComposite (FlatComposite(..))
-import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
@@ -24,7 +25,6 @@ import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import qualified Lamdu.Infer as Infer
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
@@ -33,6 +33,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.PostProcess (makeScheme)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -57,19 +58,16 @@ moveToGlobalScope =
             >>= (Load.inferDef infer (ctx ^. ConvertM.scDebugMonitors)
                     (pure EvalResults.empty) ?? param)
         scheme <-
-            case inferRes of
+            case inferRes >>= makeScheme of
             Left err -> fail ("extract to global scope failed inference: " ++ show (prettyShow err))
-            Right (Load.InferResult inferredVal inferContext) ->
-                inferredVal ^. ann . Input.inferred . Infer.plType
-                & Infer.makeScheme inferContext
-                & pure
+            Right x -> pure x
         let defExprI = defExpr <&> Property.value
         DataOps.newPublicDefinitionToIRef
             (ctx ^. ConvertM.scCodeAnchors)
             (Definition.Definition (Definition.BodyExpr defExprI) scheme ())
             (ExprIRef.defI param)
-        Infer.depsGlobalTypes . Lens.at param ?~ scheme
-            & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
+        Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
+            (Def.depsGlobalTypes . Lens.at param ?~ scheme)
         -- Prune outer def's deps (some used only in inner) and update
         -- our type which may become generalized due to
         -- extraction/generalization of the inner type
@@ -154,9 +152,9 @@ addLetParam ::
 addLetParam var redex =
     case storedRedex ^. Redex.arg . val of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.arg . ann . Input.inferred . Infer.plType of
-        T.TFun (T.TRecord composite) _
-            | FlatComposite fieldsMap Nothing <- FlatComposite.fromComposite composite
+        case redex ^. Redex.arg . ann . Input.inferredType of
+        Pure (T.TFun (FuncType (Pure (T.TRecord composite)) _))
+            | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
             , let fields = Map.toList fieldsMap
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord
@@ -188,8 +186,7 @@ processLet redex =
                 Just outerScopeInfo ->
                     filter (`Map.notMember` outerScope) usedLocalVars
                     where
-                        outerScope =
-                            outerScopeInfo ^. ConvertM.osiScope & Infer.scopeToTypeMap
+                        outerScope = outerScopeInfo ^. ConvertM.osiScope . V.scopeVarTypes
         case varsExitingScope of
             [] -> sameLet (redex <&> (^. Input.stored)) & pure & pure
             [x] -> addLetParam x redex
@@ -225,14 +222,13 @@ makeFloatLetToOuterScope setTopLevel redex =
                         case ctx ^. ConvertM.scScopeInfo . ConvertM.siRecursiveRef of
                         Nothing -> id
                         Just (ConvertM.RecursiveRef defI defType) ->
-                            Infer.depsGlobalTypes . Lens.at (ExprIRef.globalId defI) ?~ defType
+                            Def.depsGlobalTypes . Lens.at (ExprIRef.globalId defI) ?~ defType
                     innerDefExpr = Definition.Expr newLetP innerDeps
                     innerDeps =
                         -- Outer deps, pruned:
                         ctx ^. ConvertM.scFrozenDeps . Property.pVal
                         & addRecursiveRefAsDep
-                        & Definition.Expr (redex ^. Redex.arg)
-                        & Definition.pruneDefExprDeps
+                        & Def.pruneDeps (redex ^. Redex.arg)
             Just outerScopeInfo ->
                 EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal) <$
                 DataOps.redexWrapWithGivenParam param

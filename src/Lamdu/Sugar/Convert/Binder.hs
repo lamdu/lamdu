@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Binder
 import           AST (Knot, Tree, Children(..), overChildren, monoChildren)
 import           AST.Class.Recursive (Recursive(..), foldMapRecursive)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Infer (irScope)
 import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
@@ -21,7 +22,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams, cpAddFirstParam, mkVarInfo)
@@ -100,7 +100,7 @@ convertLet float pl redex =
         pure Ann
             { _val =
                 BinderLet Let
-                { _lVarInfo = redex ^. Redex.arg . ann . Input.inferred . Infer.plType & mkVarInfo
+                { _lVarInfo = redex ^. Redex.arg . ann . Input.inferredType & mkVarInfo
                 , _lValue = value & ann . pActions %~ fixValueNodeActions
                 , _lDelete = del
                 , _lName = tag
@@ -155,7 +155,7 @@ localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
     { _osiPos = x ^. Input.stored
-    , _osiScope = x ^. Input.inferred . Infer.plScope
+    , _osiScope = x ^. Input.inferResult . irScope
     }
     & ConvertM.local
 
