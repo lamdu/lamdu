@@ -14,9 +14,11 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.State (StateT)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.List as List
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -270,10 +272,18 @@ fileImportAll :: FilePath -> IO (T ViewM ())
 fileImportAll importPath =
     do
         putStrLn $ "importing from: " ++ show importPath
-        LBS.readFile importPath <&> Aeson.eitherDecode
+        migrated <-
+            LBS.readFile importPath <&> Aeson.eitherDecode
             >>= either fail pure
             >>= Migration.migrateAsNeeded
-            <&> Aeson.fromJSON
-            <&> \case
-                Aeson.Error str -> fail str
-                Aeson.Success entities -> importEntities entities
+        case Aeson.fromJSON migrated of
+            Aeson.Error str -> fail str
+            Aeson.Success entities
+                | reencoded == migrated -> importEntities entities & pure
+                | otherwise ->
+                    "JSON codec ignored fields:\n" <>
+                    LBSChar.unpack
+                    (AesonPretty.encodePretty (Aeson.toJSON (AesonDiff.diff reencoded migrated)))
+                    & fail
+                where
+                    reencoded = Aeson.toJSON entities

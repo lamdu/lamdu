@@ -68,13 +68,12 @@ addFrozenDeps nominalMap frozenDefTypes defObj =
             Just val -> scanNomIds val
         unless (Set.null (usedNoms `Set.difference` Map.keysSet nominalMap))
             (Left "undefined noms used")
-        let frozenNominals =
-                Map.setMapIntersection usedNoms nominalMap
-                & Aeson.toJSON
+        let frozenNominals = Map.setMapIntersection usedNoms nominalMap
         let frozenDeps =
                 mempty
                 & Lens.at "defTypes" ?~ frozenDefTypes
-                & Lens.at "nominals" ?~ frozenNominals
+                & Lens.at "nominals" .~
+                    (Aeson.toJSON frozenNominals <$ guard (frozenNominals /= mempty))
                 & Aeson.Object
         defObj
             & Lens.at "frozenDeps" ?~ frozenDeps
