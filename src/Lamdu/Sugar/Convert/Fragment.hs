@@ -264,7 +264,7 @@ mkOptionFromFragment sugarContext exprPl x =
             pure
                 ( resultScore (result & annotations %~ fst)
                 , Hole.mkResult (replaceFragment topEntityId 0) newSugarContext
-                    updateDeps stored result
+                    updateDeps exprPl result
                 )
             <&> pure & ListClass.joinL
     }
@@ -274,8 +274,7 @@ mkOptionFromFragment sugarContext exprPl x =
             runState
             (mkResultValFragment (exprPl ^. Input.inferred) x)
             (sugarContext ^. ConvertM.scInferContext)
-        stored = exprPl ^. Input.stored
-        topEntityId = Property.value stored & EntityId.ofValI
+        topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
         baseExpr = pruneExpr x
         pruneExpr (Ann (_, Just{}) _) = P.hole
         pruneExpr (Ann _ b) = b & monoChildren %~ pruneExpr & Ann ()

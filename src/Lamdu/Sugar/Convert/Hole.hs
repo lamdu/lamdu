@@ -171,19 +171,6 @@ getGlobals sugarContext =
 getTags :: Monad m => ConvertM.Context m -> T m [T.Tag]
 getTags = getListing Anchors.tags
 
-locals :: ConvertM.Context m -> Input.Payload f a -> [V.Var]
-locals sugarContext holePl =
-    holePl ^. Input.inferredScope
-    & Infer.scopeToTypeMap
-    & Map.keys
-    & filter (not . isRecursiveRef)
-    where
-        recursiveVar =
-            sugarContext
-            ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef . Lens._Just .
-            ConvertM.rrDefI . Lens.to ExprIRef.globalId
-        isRecursiveRef varId = recursiveVar == Just varId
-
 mkNominalOptions :: [(T.NominalId, N.Nominal)] -> [Val ()]
 mkNominalOptions nominals =
     do
@@ -216,8 +203,7 @@ mkOptions resultProcessor holePl =
         globals <- getGlobals sugarContext
         tags <- getTags sugarContext
         concat
-            [ locals sugarContext holePl
-                & concatMap (getLocalScopeGetVars sugarContext)
+            [ holePl ^. Input.localsInScope >>= getLocalScopeGetVars sugarContext
             , globals <&> P.var . ExprIRef.globalId
             , tags <&> (`P.inject` P.hole)
             , nominalOptions
@@ -282,6 +268,7 @@ prepareUnstoredPayloads v =
               Input.Payload
               { Input._varRefsOfLambda = varRefs
               , Input._userData = x
+              , Input._localsInScope = []
               , Input._inferred = inferPl
               , Input._entityId = eId
               , Input._stored = error "TODO: Nothing stored?!"
@@ -315,6 +302,7 @@ sugar sugarContext holePl v =
     <&> (EntityId.randomizeExprAndParams . Random.genFromHashable)
         (holePl ^. Input.entityId)
     <&> prepareUnstoredPayloads
+    <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
     & transaction
     >>= convertBinder
     <&> annotations %~ (,) neverShowAnnotations
@@ -344,7 +332,7 @@ mkLiteralOptions holePl =
     pure
     ( HoleResultScore 0 []
     , fixedVal & annotations %~ convPl
-        & mkResult id sugarContext updateDeps (holePl ^. Input.stored)
+        & mkResult id sugarContext updateDeps holePl
     )
     where
         emptyPl = (Nothing, ())
@@ -399,6 +387,7 @@ writeResult preConversion holeStored inferredVal =
                   , Input._evalResults = CurAndPrev noEval noEval
                   , Input._stored = stored
                   , Input._entityId = eId
+                  , Input._localsInScope = []
                   }
                 )
               )
@@ -473,13 +462,14 @@ mkResultVals sugarContext scope base =
 
 mkResult ::
     Monad m =>
-    Preconversion m a -> ConvertM.Context m -> T m () -> ValP m ->
+    Preconversion m a -> ConvertM.Context m -> T m () -> Input.Payload m b ->
     ResultVal m a ->
     T m (HoleResult InternalName (T m) (T m))
-mkResult preConversion sugarContext updateDeps stored x =
+mkResult preConversion sugarContext updateDeps holePl x =
     do
         updateDeps
-        writeResult preConversion stored x
+        writeResult preConversion (holePl ^. Input.stored) x
+        <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
         <&> (convertBinder >=> annotations (convertPayload Input.None) . (annotations %~ (,) neverShowAnnotations))
         >>= ConvertM.run sugarContext
         & Transaction.fork
@@ -515,10 +505,9 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
     in  ( resultScore (x & annotations %~ fst)
-        , mkResult preConversion newSugarContext updateDeps stored x
+        , mkResult preConversion newSugarContext updateDeps holePl x
         )
     where
-        stored = holePl ^. Input.stored
         typ = holePl ^. Input.inferred . Infer.plType
 
 mkResults ::

@@ -20,6 +20,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Calc.Type.FlatComposite as FlatComposite
 import qualified Lamdu.Calc.Type.Scheme as CalcScheme
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
@@ -105,12 +106,12 @@ convertLabeled subexprs funcS argS exprPl =
         isLengthAtLeast 2 (record ^. cItems) & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
         let var = sBinderVar ^. bvVar
-        let scope = exprPl ^. Input.inferred . Infer.plScope & Infer.scopeToTypeMap
         -- If it is an external (non-recursive) def (i.e: not in
         -- scope), make sure the def (frozen) type is inferred to have
         -- closed record of same parameters
+        recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
         validateDefParamsMatchArgs var record frozenDeps
-            & unless (var `Map.member` scope)
+            & unless (Just var == (recursiveRef <&> (^. ConvertM.rrDefI) <&> ExprIRef.globalId))
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. ciTag . tagInfo

@@ -2,11 +2,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
-        , varRefsOfLambda, entityId, inferred, stored, evalResults, userData
+        , varRefsOfLambda, entityId, inferred, stored, evalResults, userData, localsInScope
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , AnnotationMode(..), _Evaluation, _Types, _None
-    , inferredType, inferredScope
+    , inferredType
     , preparePayloads
+    , initLocalsInScope
     ) where
 
 import           AST (Ann(..), monoChildren)
@@ -31,6 +32,7 @@ data EvalResultsForExpr = EvalResultsForExpr
 data Payload m a = Payload
     { _entityId :: EntityId
     , _inferred :: Infer.Payload
+    , _localsInScope :: [V.Var]
     , _stored :: ValP m
     , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
@@ -47,9 +49,6 @@ Lens.makePrisms ''AnnotationMode
 
 inferredType :: Lens' (Payload m a) Type
 inferredType = inferred . Infer.plType
-
-inferredScope :: Lens' (Payload m a) Infer.Scope
-inferredScope = inferred . Infer.plScope
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
@@ -76,3 +75,10 @@ preparePayloads =
             where
                 childrenVars = Map.unionsWith (++) (b ^.. monoChildren . Lens._Wrapped . _1)
                 b = body & monoChildren %~ Lens.Const . go
+
+initLocalsInScope :: [V.Var] -> Val (Payload m a) -> Val (Payload m a)
+initLocalsInScope locals (Ann pl body) =
+    case body of
+    V.BLam (V.Lam var b) -> initLocalsInScope (var : locals) b & V.Lam var & V.BLam
+    x -> x & monoChildren %~ initLocalsInScope locals
+    & Ann (pl & localsInScope <>~ locals)

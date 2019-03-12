@@ -18,7 +18,6 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Infer as Infer
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Fragment as ConvertFragment
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -90,11 +89,7 @@ convertGlobal ::
 convertGlobal var exprPl =
     do
         ctx <- Lens.view id
-        let recursiveVar =
-                ctx ^? ConvertM.scScopeInfo . ConvertM.siRecursiveRef .
-                Lens._Just . ConvertM.rrDefI
-        let isRecursiveRef = recursiveVar == Just defI
-        notInScope || isRecursiveRef & guard
+        notElem var (exprPl ^. Input.localsInScope) & guard
         lifeState <- Anchors.assocDefinitionState defI & getP
         let defForm =
                 case lifeState of
@@ -118,10 +113,6 @@ convertGlobal var exprPl =
             } & pure
     where
         defI = ExprIRef.defI var
-        notInScope =
-            exprPl ^. Input.inferred . Infer.plScope
-            & Infer.scopeToTypeMap
-            & Lens.has (Lens.at var . Lens._Nothing)
 
 convertGetLet ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))

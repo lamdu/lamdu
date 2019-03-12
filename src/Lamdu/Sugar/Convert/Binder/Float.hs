@@ -178,14 +178,10 @@ processLet :: Monad m => Redex (Input.Payload m a) -> ConvertM m (T m (ValP m))
 processLet redex =
     do
         scopeInfo <- Lens.view ConvertM.scScopeInfo
-        let mRecursiveRef = scopeInfo ^. ConvertM.siRecursiveRef
-        let mDefI = mRecursiveRef ^? Lens._Just . ConvertM.rrDefI <&> ExprIRef.globalId
-        let isRecursiveDefRef var = mDefI == Just var
         let usedLocalVars =
                 redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
                 & ordNub
-                & filter (not . isRecursiveDefRef)
-                & filter (`Map.member` innerScope)
+                & filter (`Set.member` innerScopeLocalVars)
         let varsExitingScope =
                 case scopeInfo ^. ConvertM.siMOuter of
                 Nothing -> usedLocalVars
@@ -199,9 +195,8 @@ processLet redex =
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
     where
-        innerScope =
-            redex ^. Redex.arg . ann . Input.inferred . Infer.plScope
-            & Infer.scopeToTypeMap
+        innerScopeLocalVars =
+            redex ^. Redex.arg . ann . Input.localsInScope & Set.fromList
 
 makeFloatLetToOuterScope ::
     Monad m =>

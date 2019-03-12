@@ -71,7 +71,10 @@ preparePayloads ::
     Val (Infer.Payload, ValP m) ->
     Val (Input.Payload m ())
 preparePayloads nomsMap evalRes inferredVal =
-    inferredVal & annotations %~ f & Input.preparePayloads
+    inferredVal
+    & annotations %~ f
+    & Input.preparePayloads
+    & Input.initLocalsInScope []
     where
         f (inferPl, valIProp) =
             ( eId
@@ -79,6 +82,7 @@ preparePayloads nomsMap evalRes inferredVal =
               Input.Payload
               { Input._varRefsOfLambda = varRefs
               , Input._entityId = eId
+              , Input._localsInScope = []
               , Input._stored = valIProp
               , Input._inferred = inferPl
               , Input._evalResults = evalRes <&> exprEvalRes typ execId
