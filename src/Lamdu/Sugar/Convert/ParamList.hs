@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
@@ -29,21 +29,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-class Monad (M a) => ParamListPayload a where
-    type M a :: * -> *
-    iref :: a -> ExprIRef.ValP (M a)
-    inferPl :: Lens' a Infer.Payload
-
-instance Monad m => ParamListPayload (Input.Payload m a) where
-    type M (Input.Payload m a) = m
-    iref x = x ^. Input.stored
-    inferPl = Input.inferred
-
-instance Monad m => ParamListPayload (Infer.Payload, ExprIRef.ValP m) where
-    type M (Infer.Payload, ExprIRef.ValP m) = m
-    iref (_, x) = x
-    inferPl = _1
-
 loadStored :: Monad m => ExprIRef.ValP m -> T m (Maybe ParamList)
 loadStored = Property.getP . assocFieldParamList . Property.value
 
@@ -56,13 +41,13 @@ mkFuncType scope paramList =
         step tag rest = T.RExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
-    ParamListPayload a => Val a -> InferT.M (T (M a)) (Val a)
+    Monad m => Val (Input.Payload m a) -> InferT.M (T m) (Val (Input.Payload m a))
 loadForLambdas x =
     do
         Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList x
         x
-            & annotations . inferPl . Infer.plType %%~ update
-            >>= annotations . inferPl . Infer.plScope %%~ update
+            & annotations . Input.inferred . Infer.plType %%~ update
+            >>= annotations . Input.inferred . Infer.plScope %%~ update
             & Update.run & State.gets
     where
         loadLambdaParamList (Ann _ V.BLam {}) pl = loadUnifyParamList pl
@@ -70,12 +55,12 @@ loadForLambdas x =
 
         loadUnifyParamList pl =
             do
-                mParamList <- loadStored (iref pl) & InferT.liftInner
+                mParamList <- loadStored (pl ^. Input.stored) & InferT.liftInner
                 case mParamList of
                     Nothing -> pure ()
                     Just paramList ->
                         do
                             funcType <-
-                                mkFuncType (pl ^. inferPl . Infer.plScope) paramList
-                            unify (pl ^. inferPl . Infer.plType) funcType
+                                mkFuncType (pl ^. Input.inferred . Infer.plScope) paramList
+                            unify (pl ^. Input.inferred . Infer.plType) funcType
                         & InferT.liftInfer
