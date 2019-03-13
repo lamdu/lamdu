@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions, convertPayload
-    , valFromLiteral
+    , makeSetToLiteral
     ) where
 
 import           AST (Tree, overChildren)

@@ -24,7 +24,6 @@ import qualified Data.Binary as Binary
 import           Data.Bits (xor)
 import qualified Data.ByteString.Extended as BS
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Functor.Identity (Identity(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
@@ -53,7 +52,7 @@ import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
 import           Lamdu.Sugar.Annotations (neverShowAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload, valFromLiteral)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload, makeSetToLiteral)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -85,7 +84,7 @@ convert :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m
 convert holePl =
     Hole
     <$> mkOptions holeResultProcessor holePl
-    <*> mkLiteralOptions holePl
+    <*> makeSetToLiteral holePl
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
@@ -311,30 +310,6 @@ sugar sugarContext holePl v =
     where
         mkPayload (inferPl, x) entityId = (inferPl, entityId, x)
         scope = holePl ^. Input.inferred . Infer.plScope
-
-mkLiteralOptions ::
-    Monad m =>
-    Input.Payload m a ->
-    ConvertM m (Literal Identity -> T m EntityId)
-mkLiteralOptions holePl =
-    valFromLiteral
-    <&>
-    \valFromLit lit ->
-    do
-        let (x, updateDeps) = valFromLit lit
-        let typ = x ^. ann
-        let fixedVal
-                | inferredType == typ || Lens.has T._TVar inferredType = x
-                | otherwise =
-                    V.Apply (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
-                    & V.BApp
-                    & Ann inferredType
-        updateDeps
-        writeResult id (holePl ^. Input.stored) (fixedVal & annotations %~ convPl)
-    <&> (^. ann . Input.entityId)
-    where
-        convPl t = (Infer.Payload t Infer.emptyScope, (Nothing, ()))
-        inferredType = holePl ^. Input.inferred . Infer.plType
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
 getLocalScopeGetVars sugarContext par
