@@ -13,13 +13,10 @@ import           AST (Tree, monoChildren)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
-import           Data.Property (Property)
-import qualified Data.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Formatting (Format(..))
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -42,14 +39,6 @@ ofName (Name.Stored storedName) =
     ]
     where
         Name.TagText displayName textCollision = storedName ^. Name.snDisplayText
-
-formatProp :: Format a => Property m a -> Text
-formatProp i = i ^. Property.pVal & format
-
-formatLiteral :: Literal (Property m) -> Text
-formatLiteral (LiteralNum i) = formatProp i
-formatLiteral (LiteralText i) = formatProp i
-formatLiteral (LiteralBytes i) = formatProp i
 
 expr :: Expression (Name o) i o a -> [Text]
 expr = ofBody . (^. val)
@@ -83,7 +72,7 @@ ofBody =
     -- isExactMatch (see below) is used to filter each entry.
     BodyInject (Inject tag _) ->
         (<>) <$> ofName (tag ^. tagInfo . tagName) <*> [":", "."]
-    BodyLiteral i -> [formatLiteral i]
+    BodyLiteral {} -> []
     BodyGetVar GetParamsRecord {} -> ["Params"]
     BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
