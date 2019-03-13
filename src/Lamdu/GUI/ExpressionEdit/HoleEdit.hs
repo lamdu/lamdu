@@ -67,7 +67,7 @@ make hole pl =
                 | otherwise = (mempty, mempty)
         ExprEventMap.add options pl
             <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
-                    (Just (hole ^. Sugar.holeOptionLiteral)) pl allowedHoleSearchTerm ?? Menu.AnyPlace
+                    pl allowedHoleSearchTerm ?? Menu.AnyPlace
                     <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
                 )
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)

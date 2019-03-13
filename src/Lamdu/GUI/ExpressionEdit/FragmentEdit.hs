@@ -61,8 +61,7 @@ make fragment pl =
         fragmentExprGui <-
             makeFragmentExprEdit fragment & GuiState.assignCursor myId innerId
         hover <- Hover.hover
-        searchAreaGui <-
-            SearchArea.make (fragment ^. Sugar.fOptions) Nothing pl allowedFragmentSearchTerm
+        searchAreaGui <- SearchArea.make (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm
         isHoleResult <- ExprGuiM.isHoleResult
         let mkSearchArea
                 | isHoleResult = const Element.empty

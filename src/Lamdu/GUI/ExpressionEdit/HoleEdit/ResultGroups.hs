@@ -10,7 +10,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
-import           Data.Functor.Identity (Identity(..))
 import           Data.List (sortOn, nubBy)
 import qualified Data.List.Class as ListClass
 import           Data.MRUMemo (memo)
@@ -22,7 +21,6 @@ import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Config as Config
-import           Lamdu.Formatting (Format(..))
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
@@ -159,19 +157,13 @@ isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 makeAll ::
     Monad i =>
     [Sugar.HoleOption (Name o1) i o1] ->
-    Maybe (Sugar.OptionLiteral (Name o1) i o1) ->
     SearchMenu.ResultsContext ->
     ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
-makeAll options mOptionLiteral ctx =
+makeAll options ctx =
     do
         config <- Lens.view (Config.config . Config.completion)
-        literalGroups <-
-            (mOptionLiteral <&> makeLiteralGroups searchTerm) ^.. (Lens._Just . traverse)
-            & sequenceA
-            & ExprGuiM.im
         traverse mkGroup options
             <&> holeMatches searchTerm
-            <&> (literalGroups <>)
             <&> ListClass.fromList
             <&> ListClass.mapL (makeResultGroup ctx)
             <&> ListClass.catMaybes
@@ -200,37 +192,6 @@ mkGroup option =
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }
-
-tryBuildLiteral ::
-    (Format a, Monad i) =>
-    Text ->
-    (Identity a -> Sugar.Literal Identity) ->
-    Sugar.OptionLiteral (Name o) i o ->
-    Text ->
-    Maybe (i (Group i o))
-tryBuildLiteral identText mkLiteral optionLiteral searchTerm =
-    tryParse searchTerm
-    <&> Identity
-    <&> mkLiteral
-    <&> optionLiteral
-    <&> Lens.mapped %~ f
-    where
-        f x =
-            Group
-            { _groupSearchTerms = [searchTerm]
-            , _groupResults = pure x
-            , _groupId = WidgetIds.hash identText
-            }
-
-makeLiteralGroups ::
-    Monad i =>
-    Text ->
-    Sugar.OptionLiteral (Name o) i o ->
-    [i (Group i o)]
-makeLiteralGroups searchTerm optionLiteral =
-    [ tryBuildLiteral "Num"   Sugar.LiteralNum   optionLiteral searchTerm
-    , tryBuildLiteral "Bytes" Sugar.LiteralBytes optionLiteral searchTerm
-    ] ^.. Lens.traverse . Lens._Just
 
 unicodeAlts :: Text -> [Text]
 unicodeAlts haystack =

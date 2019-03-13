@@ -138,11 +138,10 @@ filterSearchTermEvents allowedTerms searchTerm
 make ::
     (Monad i, Monad o) =>
     i [Sugar.HoleOption (Name o) i o] ->
-    Maybe (Sugar.OptionLiteral (Name o) i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
     ExprGuiM i o (Menu.Placement -> Gui Responsive o)
-make mkOptions mOptionLiteral pl allowedTerms =
+make mkOptions pl allowedTerms =
     do
         config <- Lens.view Config.config
         let fdWrap =
@@ -218,7 +217,7 @@ make mkOptions mOptionLiteral pl allowedTerms =
                 && allowedTerms txt
             }
         filteredOptions opts ctx =
-            ResultGroups.makeAll opts mOptionLiteral ctx
+            ResultGroups.makeAll opts ctx
             <&> Lens.mapped %~ makeResultOption pl ctx
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)
