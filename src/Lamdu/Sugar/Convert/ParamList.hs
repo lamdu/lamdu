@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.ParamList
 
 import           AST (Ann(..), annotations)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -18,7 +17,6 @@ import           Lamdu.Data.Meta (ParamList)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Infer (Infer)
 import qualified Lamdu.Infer as Infer
-import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (update)
 import qualified Lamdu.Infer.Update as Update
@@ -41,26 +39,26 @@ mkFuncType scope paramList =
         step tag rest = T.RExtend tag <$> Infer.freshInferredVar scope "t" <*> rest
 
 loadForLambdas ::
-    Monad m => Val (Input.Payload m a) -> InferT.M (T m) (Val (Input.Payload m a))
+    Monad m => Val (Input.Payload m a) -> T m (Infer (Val (Input.Payload m a)))
 loadForLambdas x =
+    Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
+    <&> \exprWithLoadActions ->
     do
-        Lens.itraverseOf_ ExprLens.subExprPayloads loadLambdaParamList x
+        exprWithLoadActions ^.. annotations & sequence_ -- runs all the load actions via mconcat
         x
             & annotations . Input.inferred . Infer.plType %%~ update
             >>= annotations . Input.inferred . Infer.plScope %%~ update
-            & Update.run & State.gets
+            & Update.liftInfer
     where
         loadLambdaParamList (Ann _ V.BLam {}) pl = loadUnifyParamList pl
-        loadLambdaParamList _ _ = pure ()
+        loadLambdaParamList _ _ = pure (pure ())
 
         loadUnifyParamList pl =
-            do
-                mParamList <- loadStored (pl ^. Input.stored) & InferT.liftInner
-                case mParamList of
-                    Nothing -> pure ()
-                    Just paramList ->
-                        do
-                            funcType <-
-                                mkFuncType (pl ^. Input.inferred . Infer.plScope) paramList
-                            unify (pl ^. Input.inferred . Infer.plType) funcType
-                        & InferT.liftInfer
+            loadStored (pl ^. Input.stored)
+            <&> \case
+            Nothing -> pure ()
+            Just paramList ->
+                do
+                    funcType <-
+                        mkFuncType (pl ^. Input.inferred . Infer.plScope) paramList
+                    unify (pl ^. Input.inferred . Infer.plType) funcType

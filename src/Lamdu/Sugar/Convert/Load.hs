@@ -126,12 +126,10 @@ loadInferPrepareInput ::
     Monad m =>
     CurAndPrev (EvalResults (ValI m)) ->
     Val (Infer.Payload, ValP m) ->
-    InferT.M (T m) (Val (Input.Payload m [EntityId]))
+    T m (Infer (Val (Input.Payload m [EntityId])))
 loadInferPrepareInput evalRes x =
     do
-        nomsMap <-
-            x ^.. annotations . _1 . Infer.plType
-            & makeNominalsMap & transaction
+        nomsMap <- x ^.. annotations . _1 . Infer.plType & makeNominalsMap
         preparePayloads nomsMap evalRes x
             & annotations %~ setUserData
             & ParamList.loadForLambdas
@@ -159,11 +157,12 @@ runInferResult ::
     Infer (Val (Infer.Payload, ValP m)) ->
     T m (Either Infer.Error (InferResult m))
 runInferResult monitors results act =
-    act
-    & InferT.liftInfer
-    >>= loadInferPrepareInput results
-    & InferT.run monitors
-    <&> fmap toResult
+    do
+        inferredVal <- InferT.liftInfer act
+        loadInferPrepareInput results inferredVal & transaction
+            >>= InferT.liftInfer
+        & InferT.run monitors
+        <&> fmap toResult
     where
         toResult (x, ctx) = InferResult x ctx
 
