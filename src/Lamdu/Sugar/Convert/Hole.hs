@@ -315,28 +315,25 @@ sugar sugarContext holePl v =
 mkLiteralOptions ::
     Monad m =>
     Input.Payload m a ->
-    ConvertM m (Literal Identity -> T m (HoleResultScore, T m (HoleResult InternalName (T m) (T m))))
+    ConvertM m (Literal Identity -> T m EntityId)
 mkLiteralOptions holePl =
-    (,) <$> Lens.view id <*> valFromLiteral
+    valFromLiteral
     <&>
-    \(sugarContext, valFromLit) lit ->
-    let (x, updateDeps) = valFromLit lit
-        typ = x ^. ann
-        fixedVal
-            | inferredType == typ || Lens.has T._TVar inferredType = x
-            | otherwise =
-                V.Apply (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
-                & V.BApp
-                & Ann inferredType
-    in
-    pure
-    ( HoleResultScore 0 []
-    , fixedVal & annotations %~ convPl
-        & mkResult id sugarContext updateDeps holePl
-    )
+    \valFromLit lit ->
+    do
+        let (x, updateDeps) = valFromLit lit
+        let typ = x ^. ann
+        let fixedVal
+                | inferredType == typ || Lens.has T._TVar inferredType = x
+                | otherwise =
+                    V.Apply (Ann (T.TFun typ inferredType) (V.BLeaf V.LHole)) x
+                    & V.BApp
+                    & Ann inferredType
+        updateDeps
+        writeResult id (holePl ^. Input.stored) (fixedVal & annotations %~ convPl)
+    <&> (^. ann . Input.entityId)
     where
-        emptyPl = (Nothing, ())
-        convPl t = (Infer.Payload t Infer.emptyScope, emptyPl)
+        convPl t = (Infer.Payload t Infer.emptyScope, (Nothing, ()))
         inferredType = holePl ^. Input.inferred . Infer.plType
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]

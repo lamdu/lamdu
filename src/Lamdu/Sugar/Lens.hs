@@ -130,12 +130,8 @@ holeTransformExprs ::
     (Tree (Ann (Payload n0 i o ())) (Binder n0 i o) ->
         i (Tree (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
     Hole n0 i o -> Hole n1 i o
-holeTransformExprs onExpr hole =
-    hole
-    { _holeOptions = hole ^. holeOptions <&> traverse %~ holeOptionTransformExprs onExpr
-    , _holeOptionLiteral =
-        hole ^. holeOptionLiteral <&> Lens.mapped . Lens._2 %~ (>>= holeResultConverted onExpr)
-    }
+holeTransformExprs onExpr =
+    holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr
 
 assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction

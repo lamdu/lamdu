@@ -27,7 +27,6 @@ module Lamdu.Sugar.Types.Expression
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
     , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
-    , OptionLiteral
     , Hole(..), holeOptions, holeOptionLiteral, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
@@ -105,16 +104,13 @@ data HoleOption name i o = HoleOption
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic
 
-type OptionLiteral name i o =
-    Literal Identity -> i (HoleResultScore, i (HoleResult name i o))
-
 data Hole name i o = Hole
     { _holeOptions :: i [HoleOption name i o]
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
     , -- TODO: this is mostly duplicate of NodeActions setToLiteral functionality..
-      _holeOptionLiteral :: OptionLiteral name i o
+      _holeOptionLiteral :: Literal Identity -> o EntityId
     , -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
       _holeMDelete :: Maybe (o EntityId)
