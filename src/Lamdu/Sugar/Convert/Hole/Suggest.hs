@@ -11,8 +11,7 @@ import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad (mzero)
-import           Control.Monad.Trans.State (StateT(..), mapStateT)
+import           Control.Monad.Trans.State (State, StateT(..), mapStateT)
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -75,13 +74,17 @@ valueConversionH nominals empty src =
                 V.GetField src tag
                 & V.BGetField
                 & Ann (Payload typ (srcInferPl ^. Infer.plScope), empty)
-    _ -> valueConversionNoSplit nominals empty src
+    _ ->
+        valueConversionNoSplit nominals empty src
+        & mapStateT toOptions
     where
         srcInferPl = src ^. ann . _1
+        toOptions (Lens.Identity (Nothing, _)) = []
+        toOptions (Lens.Identity (Just r, ctx)) = [(r, ctx)]
 
 valueConversionNoSplit ::
     Nominals -> a -> Val (Payload, a) ->
-    StateT Context [] (Val (Payload, a))
+    State Context (Maybe (Val (Payload, a)))
 valueConversionNoSplit nominals empty src =
     case srcType of
     T.TInst name _params
@@ -104,7 +107,7 @@ valueConversionNoSplit nominals empty src =
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
-                pure applied
+                Just applied & pure
             else valueConversionNoSplit nominals empty applied
         where
             arg =
@@ -121,7 +124,8 @@ valueConversionNoSplit nominals empty src =
         suggestCaseWith composite (Payload dstType srcScope)
         & annotations %~ (, empty)
         & (`V.Apply` src) & V.BApp & mkRes dstType
-    _ -> mzero
+        & Just
+    _ -> pure Nothing
     where
         srcInferPl = src ^. ann . _1
         srcType = srcInferPl ^. Infer.plType
