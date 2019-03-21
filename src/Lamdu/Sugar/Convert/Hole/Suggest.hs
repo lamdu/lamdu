@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, TypeFamilies, ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , applyForms
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
@@ -15,7 +15,6 @@ import           Control.Monad (mzero)
 import           Control.Monad.Trans.State (StateT(..), mapStateT)
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
-import           Data.Semigroup (All)
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -83,7 +82,6 @@ prependOpt :: a -> StateT Context [] a -> StateT Context [] a
 prependOpt opt = Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
 
 valueConversionNoSplit ::
-    forall a.
     Nominals -> a -> Val (Payload, a) ->
     StateT Context [] (Val (Payload, a))
 valueConversionNoSplit nominals empty src =
@@ -91,7 +89,7 @@ valueConversionNoSplit nominals empty src =
     case srcType of
     T.TInst name _params
         | Lens.has (Lens.ix name) nominals
-        && bodyNot V._BToNom ->
+        && Lens.nullOf V._BToNom srcVal ->
         -- TODO: Expose primitives from Infer to do this without partiality
         do
             fromNomType <- Infer.inferFromNom nominals name srcScope
@@ -104,7 +102,7 @@ valueConversionNoSplit nominals empty src =
         & mapStateT
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
         >>= valueConversionNoSplit nominals empty
-    T.TFun argType resType | bodyNot V._BLam ->
+    T.TFun argType resType | Lens.nullOf V._BLam srcVal ->
         if Lens.has (ExprLens.valLeafs . V._LHole) arg
             then
                 -- If the suggested argument has holes in it
@@ -116,7 +114,7 @@ valueConversionNoSplit nominals empty src =
                 valueNoSplit (Payload argType srcScope)
                 & annotations %~ (, empty)
             applied = V.Apply src arg & V.BApp & mkRes resType
-    T.TVariant composite | bodyNot V._BInject ->
+    T.TVariant composite | Lens.nullOf V._BInject srcVal ->
         Infer.freshInferredVar srcScope "s"
         & Infer.run
         & mapStateT
@@ -132,11 +130,7 @@ valueConversionNoSplit nominals empty src =
         srcType = srcInferPl ^. Infer.plType
         srcScope = srcInferPl ^. Infer.plScope
         mkRes typ = Ann (Payload typ srcScope, empty)
-        bodyNot ::
-            Lens.LensLike' (Lens.Const All)
-            (Tree V.Term (Ann (Payload, a)))
-            w -> Bool
-        bodyNot f = Lens.nullOf (val . f) src
+        srcVal = src ^. val
 
 value :: Payload -> [Val Payload]
 value pl@(Payload (T.TVariant comp) scope) =
