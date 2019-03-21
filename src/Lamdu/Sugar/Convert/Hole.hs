@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, TupleSections, TypeFamilies, ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification, TypeFamilies, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Hole
     , mkOptions, detachValIfNeeded, sugar, loadNewDeps
     , mkResult
     , mkOption, addWithoutDups
-    , BaseExpr(..)
     ) where
 
 import           AST (Tree, ToKnot(..), Ann(..), ann, annotations)
@@ -90,12 +89,6 @@ convert holePl =
     >>= addActions [] holePl
     <&> ann . pActions . mSetToHole .~ Nothing
 
-data BaseExpr = SuggestedExpr (Val Infer.Payload) | SeedExpr (Val ())
-
-getBaseExprVal :: BaseExpr -> Val ()
-getBaseExprVal (SuggestedExpr v) = v & annotations .~ ()
-getBaseExprVal (SeedExpr v) = v
-
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
     , rpPostProcess :: ResultVal m () -> ResultGen m (ResultVal m a)
@@ -112,16 +105,14 @@ holeResultProcessor =
 
 mkOption ::
     Monad m =>
-    ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> BaseExpr ->
+    ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> Val () ->
     HoleOption InternalName (T m) (T m)
 mkOption sugarContext resultProcessor holePl x =
     HoleOption
-    { _hoVal = baseExpr
-    , _hoSugaredBaseExpr = sugar sugarContext holePl baseExpr
+    { _hoVal = x
+    , _hoSugaredBaseExpr = sugar sugarContext holePl x
     , _hoResults = mkResults resultProcessor sugarContext holePl x
     }
-    where
-        baseExpr = getBaseExprVal x
 
 mkHoleSuggesteds ::
     Monad m =>
@@ -130,7 +121,7 @@ mkHoleSuggesteds ::
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferred
     & Suggest.value
-    <&> SuggestedExpr
+    <&> annotations .~ ()
     <&> mkOption sugarContext resultProcessor holePl
 
 addWithoutDups ::
@@ -212,7 +203,6 @@ mkOptions resultProcessor holePl =
               , P.abs "NewLambda" P.hole P.$$ P.hole
               ]
             ]
-            <&> SeedExpr
             <&> mkOption sugarContext resultProcessor holePl
             & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
             & pure
@@ -245,7 +235,7 @@ loadNewDeps currentDeps scope x =
     where
         scopeVars = Infer.scopeToTypeMap scope & Map.keysSet
         newDeps ::
-            forall x r. Ord r =>
+            Ord r =>
             Getting' Infer.Dependencies (Map r x) -> Folding' (Val a) r -> [r]
         newDeps depsLens valLens =
             Set.fromList (x ^.. valLens)
@@ -410,23 +400,17 @@ stateEitherSequence (StateT f) =
 
 mkResultVals ::
     Monad m =>
-    ConvertM.Context m -> Infer.Scope -> BaseExpr ->
+    ConvertM.Context m -> Infer.Scope -> Val () ->
     ResultGen m (Infer.Dependencies, ResultVal m ())
 mkResultVals sugarContext scope base =
-    case base of
-    SeedExpr seed ->
-        do
-            (seedDeps, inferResult) <-
-                loadInfer scope (sugarDeps, seed)
-                <&> _2 . annotations . _2 %~ (\() -> emptyPl)
-                & mapStateT exceptTtoListT
-            form <- Suggest.applyForms (txn . Load.nominal) emptyPl inferResult
-            newDeps <- loadNewDeps seedDeps scope form & txn
-            pure (newDeps, form)
-    SuggestedExpr sugg ->
-        (,)
-        <$> (loadNewDeps sugarDeps scope sugg & txn)
-        ?? (sugg & annotations %~ (, (Nothing, ())))
+    do
+        (seedDeps, inferResult) <-
+            loadInfer scope (sugarDeps, base)
+            <&> _2 . annotations . _2 %~ (\() -> emptyPl)
+            & mapStateT exceptTtoListT
+        form <- Suggest.applyForms (txn . Load.nominal) emptyPl inferResult
+        newDeps <- loadNewDeps seedDeps scope form & txn
+        pure (newDeps, form)
     where
         txn = lift . lift
         emptyPl = (Nothing, ())
@@ -484,7 +468,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
 
 mkResults ::
     Monad m =>
-    ResultProcessor m -> ConvertM.Context m -> Input.Payload m dummy -> BaseExpr ->
+    ResultProcessor m -> ConvertM.Context m -> Input.Payload m dummy -> Val () ->
     ListT (T m)
     ( HoleResultScore
     , T m (HoleResult InternalName (T m) (T m))

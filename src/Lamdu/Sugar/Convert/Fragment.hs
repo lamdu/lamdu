@@ -66,7 +66,6 @@ mkOptions sugarContext argI argS exprPl =
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
             [ P.app P.hole P.hole | Lens.nullOf (val . _BodyLam) argS ]
-            <&> Hole.SeedExpr
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
