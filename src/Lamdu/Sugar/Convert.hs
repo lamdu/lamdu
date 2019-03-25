@@ -122,6 +122,7 @@ convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr def
         let context =
                 Context
                 { _scInferContext = newInferContext
+                , _scConfig = config
                 , _scCodeAnchors = cp
                 , _scScopeInfo =
                     emptyScopeInfo
@@ -203,6 +204,7 @@ convertRepl config cache monitors annMode evalRes cp =
         let context =
                 Context
                 { _scInferContext = newInferContext
+                , _scConfig = config
                 , _scCodeAnchors = cp
                 , _scScopeInfo = emptyScopeInfo Nothing
                 , _scDebugMonitors = monitors

@@ -49,7 +49,8 @@ import qualified Lamdu.Infer.Trans as InferT
 import           Lamdu.Infer.Unify (unify)
 import           Lamdu.Infer.Update (Update, update)
 import qualified Lamdu.Infer.Update as Update
-import           Lamdu.Sugar.Annotations (neverShowAnnotations)
+import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
+import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload, makeSetToLiteral)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
@@ -426,7 +427,7 @@ mkResult preConversion sugarContext updateDeps holePl x =
         updateDeps
         writeResult preConversion (holePl ^. Input.stored) x
         <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
-        <&> (convertBinder >=> annotations (convertPayload Input.None) . (annotations %~ (,) neverShowAnnotations))
+        <&> (convertBinder >=> annotations (convertPayload Input.None) . (annotations %~ (,) showAnn))
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
@@ -438,6 +439,10 @@ mkResult preConversion sugarContext updateDeps holePl x =
                 -- TODO: Remove this 'run', mkResult to be wholly in ConvertM
                 ConvertM.run sugarContext ConvertM.postProcessAssert & join
         }
+    where
+        showAnn
+            | sugarContext ^. ConvertM.scConfig . Config.showAllAnnotations = alwaysShowAnnotations
+            | otherwise = neverShowAnnotations
 
 toStateT :: Applicative m => State s a -> StateT s m a
 toStateT = mapStateT $ \(Lens.Identity act) -> pure act
