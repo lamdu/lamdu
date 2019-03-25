@@ -26,6 +26,8 @@ import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
 import qualified Lamdu.Style as Style
+import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
+import qualified Lamdu.Themes as Themes
 import qualified Test.Lamdu.Theme as TestTheme
 
 import           Test.Lamdu.Prelude
@@ -69,7 +71,7 @@ make =
                 { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
-            , _eSettings = initial
+            , _eSettings = initial Themes.initial Evaluation
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =

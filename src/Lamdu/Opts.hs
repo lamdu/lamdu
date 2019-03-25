@@ -1,6 +1,8 @@
 {-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Opts
-    ( EditorOpts(..), eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled, eoEkgPort
+    ( EditorOpts(..)
+      , eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled
+      , eoEkgPort, eoAnnotationsMode
     , ImportOpts(..), importPath, importImplicitPrelude
     , Command(..), _DeleteDb, _Undo, _Editor
     , CommandWithDb(..), cCommand, cLamduDB
@@ -14,6 +16,7 @@ import           Data.List.Split (splitOn)
 import           Data.Word (Word16)
 import           GUI.Momentu (WindowMode(..))
 import           Lamdu.Eval.JS.Types (JSDebugPaths(..))
+import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import           Options.Applicative ((<|>))
 import qualified Options.Applicative as P
 
@@ -25,6 +28,7 @@ data EditorOpts = EditorOpts
     , _eoWindowTitle :: String
     , _eoSubpixelEnabled :: Bool
     , _eoEkgPort :: Maybe Word16
+    , _eoAnnotationsMode :: AnnotationMode
     }
 
 data ImportOpts = ImportOpts
@@ -102,6 +106,18 @@ jsDebugOpts =
             where
                 parts = splitOn ":" str
 
+annotationsMode :: P.Parser AnnotationMode
+annotationsMode =
+    P.flag' Types
+    ( P.long "types"
+      <> P.help "Start Lamdu with type annotations"
+    )
+    <|> P.flag' None
+    ( P.long "concise"
+      <> P.help "Start Lamdu without annotations"
+    )
+    <|> pure Evaluation
+
 editorOpts :: P.Parser EditorOpts
 editorOpts =
     EditorOpts
@@ -129,6 +145,7 @@ editorOpts =
                 )
             )
         )
+    <*> annotationsMode
 
 command :: P.Parser Command
 command = (Editor <$> editorOpts) <|> subcommands

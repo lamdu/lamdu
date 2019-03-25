@@ -40,6 +40,7 @@ data Payload m a = Payload
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
+-- TODO: Move to a saner place (imported by Opts)
 data AnnotationMode = Evaluation | Types | None
     deriving (Eq, Ord, Show, Enum, Bounded)
 

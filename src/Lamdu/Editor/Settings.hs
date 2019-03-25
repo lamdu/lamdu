@@ -4,7 +4,6 @@ module Lamdu.Editor.Settings
 
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           Lamdu.Settings (Settings(..))
-import qualified Lamdu.Sugar.Convert.Input as AnnotationMode
 import qualified Lamdu.Themes as Themes
 import qualified Control.Lens.Extended as Lens
 import           Data.IORef
@@ -18,11 +17,11 @@ import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 
 import           Lamdu.Prelude
 
-initial :: Settings
-initial =
+initial :: Themes.Selection -> AnnotationMode -> Settings
+initial theme annotationMode =
     Settings
-    { _sAnnotationMode = AnnotationMode.Evaluation
-    , _sSelectedTheme = Themes.initial
+    { _sAnnotationMode = annotationMode
+    , _sSelectedTheme = theme
     , _sHelpShown = HelpNotShown
     }
 
@@ -39,13 +38,15 @@ settingsChangeHandler configSampler evaluator mOld new =
             Nothing -> f (new ^. lens)
             Just old -> when (old ^. lens /= new ^. lens) $ f (new ^. lens)
 
-newProp :: Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
-newProp configSampler evaluator =
+newProp :: Themes.Selection -> AnnotationMode -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
+newProp theme annMode configSampler evaluator =
     do
-        settingsChangeHandler configSampler evaluator Nothing initial
-        newIORef initial <&> Property.fromIORef
+        settingsChangeHandler configSampler evaluator Nothing initialSettings
+        newIORef initialSettings <&> Property.fromIORef
             <&> Property.mkProperty . Lens.mapped .
                 Lens.filteredBy Property.pVal <.> Property.pSet . Lens.imapped %@~
                 \(oldVal, newVal) ->
                     -- Callback to notify update  AFTER we set the property:
                     (*> settingsChangeHandler configSampler evaluator (Just oldVal) newVal)
+    where
+        initialSettings = initial theme annMode
