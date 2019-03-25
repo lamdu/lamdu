@@ -20,7 +20,7 @@ Data-files:          fonts/DejaVuSans.ttf
                    , fonts/Purisa.ttf
                    , config.json
                    , themes/default.json
-                   , themes/light.json
+                   , themes/dark.json
                    , themes/retro.json
                    , freshdb.json
                    , js/README
