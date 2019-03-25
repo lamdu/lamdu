@@ -245,7 +245,6 @@ makeComposite o c mkPre mkPost mkField composite =
                         pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
             fieldsView /-/ extView & Align.toWithTextPos
                 & (Styled.addValPadding ??)
-                >>= addTypeBG
     where
         addAnimIdPrefix i row =
             row <&> Reader.local (Element.animIdPrefix %~ AnimId.augmentId i)
