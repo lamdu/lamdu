@@ -94,8 +94,10 @@ make cp gp width =
         env <- Lens.view id
         annMode <- Lens.view (Settings.settings . Settings.sAnnotationMode)
         workArea <-
-            loadWorkArea (env ^. Cache.functions) (env ^. Debug.monitors)
-            annMode theEvalResults cp & transaction
+            loadWorkArea (env ^. config . Config.sugar)
+            (env ^. Cache.functions) (env ^. Debug.monitors)
+            annMode theEvalResults cp
+            & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans

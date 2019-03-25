@@ -13,6 +13,7 @@
             "naming": false
         }
     },
+    "sugar": [],
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],
         "enlargeKeys"   : [ "Cmd+Equal" ],

@@ -342,6 +342,7 @@ Library
                   , Lamdu.Settings
                   , Lamdu.Style
                   , Lamdu.Sugar.Annotations
+                  , Lamdu.Sugar.Config
                   , Lamdu.Sugar.Convert
                   , Lamdu.Sugar.Convert.Apply
                   , Lamdu.Sugar.Convert.Binder

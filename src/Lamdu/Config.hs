@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Lamdu.Debug.Tasks as Debug
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
+import qualified Lamdu.Sugar.Config as Sugar
 
 import           Lamdu.Prelude
 
@@ -106,6 +107,7 @@ data Config = Config
     , _export :: Export
     , _pane :: Pane
     , _versionControl :: VersionControl.Config
+    , _sugar :: Sugar.Config
     , _completion :: Completion
     , _literal :: Literal
     , _eval :: Eval
