@@ -31,7 +31,7 @@ floatTid :: T.NominalId
 floatTid = bi "float"
 
 listTid :: T.NominalId
-listTid = bi "list"
+listTid = bi "stream"
 
 arrayTid :: T.NominalId
 arrayTid = bi "array"
