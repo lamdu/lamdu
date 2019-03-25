@@ -73,16 +73,16 @@ convertNullaryInject entityId (V.Inject tag (Ann _ ER.RRecEmpty)) =
     RInject (ResInject (mkTagInfo entityId tag) Nothing) & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
-convertStream :: EntityId -> T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
-convertStream entityId typ (V.Inject _ x) =
+convertList :: EntityId -> T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
+convertList entityId typ (V.Inject _ x) =
     do
         T.TInst tid _ <- Just typ
-        guard (tid == Builtins.streamTid)
+        guard (tid == Builtins.listTid)
         (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
         ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . val & maybeToMPlus
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
-            & ResStream & RStream & ResVal entityId & Just
+            & ResList & RList & ResVal entityId & Just
 
 simpleInject :: EntityId -> V.Inject (ER.Val T.Type) -> ResVal InternalName
 simpleInject entityId (V.Inject tag x) =
@@ -94,7 +94,7 @@ simpleInject entityId (V.Inject tag x) =
 convertInject :: EntityId -> T.Type -> V.Inject ERV -> ResVal InternalName
 convertInject entityId typ inj =
     convertNullaryInject entityId inj
-    <|> convertStream entityId typ inj
+    <|> convertList entityId typ inj
     & fromMaybe (simpleInject entityId inj)
 
 convertPlainRecord ::

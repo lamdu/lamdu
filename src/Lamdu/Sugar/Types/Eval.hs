@@ -12,11 +12,11 @@ module Lamdu.Sugar.Types.Eval
     , ResRecord(..), recordFields
     , ResTable(..), rtHeaders, rtRows
     , ResTree(..), rtRoot, rtSubtrees
-    , ResStream(..), rsHead
+    , ResList(..), rsHead
     , ResInject(..), riTag, riVal
     , ResBody(..)
     , _RRecord, _RInject, _RFunc, _RArray, _RError, _RBytes, _RFloat
-    , _RStream, _RTree, _RText
+    , _RList, _RTree, _RText
     , ResVal(..), resPayload, resBody
     ) where
 
@@ -48,7 +48,7 @@ data ResTable name v = ResTable
     , _rtRows :: [[v]] -- All rows are same length as each other and the headers
     } deriving (Show, Functor, Foldable, Traversable, Generic)
 
-newtype ResStream v = ResStream
+newtype ResList v = ResList
     { _rsHead :: v
     } deriving (Show, Functor, Foldable, Traversable, Generic)
 
@@ -62,7 +62,7 @@ data ResBody name v
     | RFloat Double
     -- Sugared forms:
     | RTable (ResTable name v)
-    | RStream (ResStream v)
+    | RList (ResList v)
     | RTree (ResTree v)
     | RText Text
     deriving (Show, Functor, Foldable, Traversable, Generic)
@@ -107,7 +107,7 @@ type EvalCompletion name o = CurAndPrev (Maybe (EvalCompletionResult name o))
 Lens.makeLenses ''EvalException
 Lens.makeLenses ''ResInject
 Lens.makeLenses ''ResRecord
-Lens.makeLenses ''ResStream
+Lens.makeLenses ''ResList
 Lens.makeLenses ''ResTable
 Lens.makeLenses ''ResTree
 Lens.makeLenses ''ResVal

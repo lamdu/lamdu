@@ -188,7 +188,7 @@ deriving instance Eq (Sugar.OpenCompositeActions Unit)
 deriving instance Eq a => Eq (Sugar.CaseArg Unit a)
 deriving instance Eq a => Eq (Sugar.CaseKind Unit a)
 deriving instance Eq a => Eq (Sugar.CompositeTail Unit a)
-deriving instance Eq a => Eq (Sugar.ResStream a)
+deriving instance Eq a => Eq (Sugar.ResList a)
 deriving instance Eq a => Eq (Sugar.ResTree a)
 deriving instance Eq n => Eq (Sugar.AddFirstParam n Unit Unit)
 deriving instance Eq n => Eq (Sugar.AddNextParam n Unit Unit)
@@ -286,7 +286,7 @@ instance NFData a => NFData (Property f a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseArg (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CaseKind (T o) a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.CompositeTail (T o) a) where rnf = genericRnf
-instance NFData a => NFData (Sugar.ResStream a) where rnf = genericRnf
+instance NFData a => NFData (Sugar.ResList a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.ResTree a) where rnf = genericRnf
 instance NFData a => NFData (Sugar.SpecialArgs a) where rnf = genericRnf
 instance NFData n => NFData (Sugar.Annotation n (T i)) where rnf = genericRnf

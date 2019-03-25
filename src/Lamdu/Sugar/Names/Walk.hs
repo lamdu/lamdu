@@ -152,7 +152,7 @@ toResBody f =
     RFloat   x -> RFloat x & pure
     RText    x -> RText x & pure
     RArray   x -> RArray x & pure
-    RStream  x -> RStream x & pure
+    RList    x -> RList x & pure
     RTree    x -> RTree x & pure
     RTable   x -> (rtHeaders . traverse) (toTagInfoOf Tag) x <&> RTable
     RRecord  x -> toResRecord x <&> RRecord

@@ -137,10 +137,10 @@ makeRecord (Sugar.ResRecord fields) =
     traverse (uncurry makeField) fields <&> GridView.make <&> snd
     <&> Align.WithTextPos 0
 
-makeStream ::
+makeList ::
     (Monad i, Monad o) =>
-    Sugar.ResStream (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
-makeStream (Sugar.ResStream head_) =
+    Sugar.ResList (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
+makeList (Sugar.ResList head_) =
     do
         o <- Label.make "["
         inner <- makeInner head_
@@ -200,7 +200,7 @@ makeInner (Sugar.ResVal entityId body) =
     Sugar.RArray x -> makeArray x
     Sugar.RTree x -> makeTree x
     Sugar.RTable x -> makeTable x
-    Sugar.RStream x -> makeStream x
+    Sugar.RList x -> makeList x
     & advanceDepth
     & Reader.local (Element.animIdPrefix .~ animId)
     where
