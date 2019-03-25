@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
+    , MarkAnnotations
     , markNodeAnnotations
     , neverShowAnnotations
     ) where

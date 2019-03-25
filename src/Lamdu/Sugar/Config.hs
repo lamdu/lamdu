@@ -9,7 +9,9 @@ import           Data.List.Lens (prefixed)
 
 import           Lamdu.Prelude
 
-data Config = Config {} deriving (Eq, Show)
+newtype Config = Config
+    { _showAllAnnotations :: Bool
+    } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
     {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Config

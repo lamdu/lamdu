@@ -13,7 +13,9 @@
             "naming": false
         }
     },
-    "sugar": [],
+    "sugar": {
+        "showAllAnnotations": false
+    },
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],
         "enlargeKeys"   : [ "Cmd+Equal" ],

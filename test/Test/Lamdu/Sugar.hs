@@ -126,4 +126,7 @@ testProgram program action =
             (runDbTransaction ?? runAction (action cache))
 
 sugarConfig :: Config
-sugarConfig = Config {}
+sugarConfig =
+    Config
+    { _showAllAnnotations = False
+    }

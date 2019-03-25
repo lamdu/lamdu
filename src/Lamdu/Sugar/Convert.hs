@@ -1,11 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, FlexibleContexts #-}
 
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           AST (ann, annotations)
-import           AST.Knot.Ann (val)
+import           AST (Tree, Children, Recursive)
+import           AST.Knot.Ann (Ann, ann, annotations, val)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
@@ -29,8 +29,8 @@ import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Sugar.Annotations (markNodeAnnotations)
-import           Lamdu.Sugar.Config (Config)
+import           Lamdu.Sugar.Annotations (ShowAnnotation(..), MarkAnnotations, markNodeAnnotations)
+import           Lamdu.Sugar.Config (Config, showAllAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
@@ -112,7 +112,7 @@ convertInferDefExpr ::
     Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
-convertInferDefExpr _config cache monitors annMode evalRes cp defType defExpr defI =
+convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
             Load.inferDef cachedInfer monitors evalRes defExpr defVar
@@ -141,7 +141,7 @@ convertInferDefExpr _config cache monitors annMode evalRes cp defType defExpr de
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            <&> _DefinitionBodyExpression . deContent %~ markNodeAnnotations
+            <&> _DefinitionBodyExpression . deContent %~ markAnnotations config
             >>= (_DefinitionBodyExpression . deContent . annotations) (convertPayload annMode)
             & ConvertM.run context
             <&> _DefinitionBodyExpression . deContent . val %~
@@ -174,6 +174,15 @@ convertDefBody config cache monitors annMode evalRes cp (Definition.Definition b
     Definition.BodyExpr defExpr ->
         convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr defI
 
+markAnnotations ::
+    (MarkAnnotations t, Recursive Children t) =>
+    Config ->
+    Tree (Ann a) t ->
+    Tree (Ann (ShowAnnotation, a)) t
+markAnnotations config
+    | config ^. showAllAnnotations = annotations %~ (,) (ShowAnnotation True True True)
+    | otherwise = markNodeAnnotations
+
 convertRepl ::
     forall m.
     (HasCallStack, Monad m) =>
@@ -182,7 +191,7 @@ convertRepl ::
     T m
     (Repl InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
-convertRepl _config cache monitors annMode evalRes cp =
+convertRepl config cache monitors annMode evalRes cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
@@ -214,7 +223,7 @@ convertRepl _config cache monitors annMode evalRes cp =
                 <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
             convertBinder valInferred
-            <&> markNodeAnnotations
+            <&> markAnnotations config
             >>= annotations (convertPayload annMode)
             & ConvertM.run context
             <&> val %~
