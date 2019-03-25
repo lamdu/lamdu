@@ -4,7 +4,7 @@ module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
     , MarkAnnotations
     , markNodeAnnotations
-    , neverShowAnnotations
+    , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
 import           AST (Tree, Knot, overChildren)
@@ -35,6 +35,9 @@ showAnnotationWhenVerbose =
     , _showInTypeMode = True
     , _showInEvalMode = True
     }
+
+alwaysShowAnnotations :: ShowAnnotation
+alwaysShowAnnotations = ShowAnnotation True True True
 
 neverShowAnnotations :: ShowAnnotation
 neverShowAnnotations = ShowAnnotation False False False

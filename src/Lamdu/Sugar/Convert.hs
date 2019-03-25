@@ -29,7 +29,7 @@ import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Sugar.Annotations (ShowAnnotation(..), MarkAnnotations, markNodeAnnotations)
+import           Lamdu.Sugar.Annotations (ShowAnnotation, MarkAnnotations, markNodeAnnotations, alwaysShowAnnotations)
 import           Lamdu.Sugar.Config (Config, showAllAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
@@ -180,7 +180,7 @@ markAnnotations ::
     Tree (Ann a) t ->
     Tree (Ann (ShowAnnotation, a)) t
 markAnnotations config
-    | config ^. showAllAnnotations = annotations %~ (,) (ShowAnnotation True True True)
+    | config ^. showAllAnnotations = annotations %~ (,) alwaysShowAnnotations
     | otherwise = markNodeAnnotations
 
 convertRepl ::
