@@ -884,6 +884,11 @@
     },
     {
         "tagOrder": 0,
+        "tag": "d52d7597bbc64b418ee63dce6a39e27c",
+        "name": "random"
+    },
+    {
+        "tagOrder": 0,
         "tag": "d6afbca3dd6e94f68e324ad5b35dd6ec",
         "name": "zipWith"
     },
@@ -13139,6 +13144,45 @@
                 "funcResult": {
                     "nomId": "42493a666c6f61740000000000000000"
                 }
+            }
+        }
+    },
+    {
+        "tag": "d52d7597bbc64b418ee63dce6a39e27c",
+        "defPresentationMode": "Verbose",
+        "builtin": [
+            "IO",
+            "random"
+        ],
+        "def": "a709a64e10194021a6a5b283a50dac12",
+        "typ": {
+            "schemeType": {
+                "nomParams": {
+                    "73000000000000000000000000000000": {
+                        "nomParams": {
+                            "65666600000000000000000000000000": {
+                                "variant": [
+                                    {
+                                        "66696c65000000000000000000000000": {
+                                            "record": {}
+                                        }
+                                    },
+                                    "6f74686572"
+                                ]
+                            }
+                        },
+                        "nomId": "72616e646f6d00000000000000000000"
+                    },
+                    "42493a76616c00000000000000000000": {
+                        "nomId": "42493a666c6f61740000000000000000"
+                    }
+                },
+                "nomId": "42493a53540000000000000000000000"
+            },
+            "schemeBinders": {
+                "rowVars": [
+                    "6f74686572"
+                ]
             }
         }
     },

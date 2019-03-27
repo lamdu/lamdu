@@ -310,7 +310,8 @@ module.exports = {
                         };
                     }
                 }
-            }
+            },
+            random: cont => cont(Math.random())
         }
     }
 };
