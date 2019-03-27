@@ -10,9 +10,10 @@ migrateVal :: Aeson.Value -> Either Text Aeson.Value
 migrateVal (Aeson.Object obj) =
     case (obj ^. Lens.at "recordTypeVars", obj ^. Lens.at "variantTypeVars") of
     (Nothing, Nothing) -> pure obj
-    (Just (Aeson.Array x), Nothing) -> rowVars x
-    (Nothing, Just (Aeson.Array x)) -> rowVars x
-    (Just (Aeson.Array rs), Just (Aeson.Array vs)) -> rowVars (rs <> vs)
+    (Just x, Nothing) -> rowVars x
+    (Nothing, Just x) -> rowVars x
+    (Just (Aeson.Array rs), Just (Aeson.Array vs)) -> rowVars (Aeson.Array (rs <> vs))
+    (Just (Aeson.Object rs), Just (Aeson.Object vs)) -> rowVars (Aeson.Object (rs <> vs))
     _ -> Left "Unexpected format of row vars"
     >>= traverse migrateVal <&> Aeson.Object
     where
@@ -20,7 +21,7 @@ migrateVal (Aeson.Object obj) =
             obj
             & Lens.at "recordTypeVars" .~ Nothing
             & Lens.at "variantTypeVars" .~ Nothing
-            & Lens.at "rowVars" ?~ Aeson.Array x
+            & Lens.at "rowVars" ?~ x
             & pure
 migrateVal (Aeson.Array vals) = traverse migrateVal vals <&> Aeson.Array
 migrateVal x = pure x
