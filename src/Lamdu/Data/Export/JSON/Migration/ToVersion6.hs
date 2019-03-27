@@ -2,6 +2,8 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion6 (migrate) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
+import           Data.List (sortOn)
+import           Data.Vector.Lens (vector)
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
@@ -12,8 +14,10 @@ migrateVal (Aeson.Object obj) =
     (Nothing, Nothing) -> pure obj
     (Just x, Nothing) -> rowVars x
     (Nothing, Just x) -> rowVars x
-    (Just (Aeson.Array rs), Just (Aeson.Array vs)) -> rowVars (Aeson.Array (rs <> vs))
-    (Just (Aeson.Object rs), Just (Aeson.Object vs)) -> rowVars (Aeson.Object (rs <> vs))
+    (Just (Aeson.Array rs), Just (Aeson.Array vs)) ->
+        rs <> vs & Lens.from vector %~ sortOn show & Aeson.Array & rowVars
+    (Just (Aeson.Object rs), Just (Aeson.Object vs)) ->
+        rs <> vs & Aeson.Object & rowVars
     _ -> Left "Unexpected format of row vars"
     >>= traverse migrateVal <&> Aeson.Object
     where
