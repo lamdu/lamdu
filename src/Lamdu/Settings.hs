@@ -6,13 +6,13 @@ module Lamdu.Settings
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
-import           Lamdu.Sugar.Convert.Input (AnnotationMode)
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
 
 data Settings = Settings
-    { _sAnnotationMode :: AnnotationMode
+    { _sAnnotationMode :: Annotations.Mode
     , _sSelectedTheme :: Themes.Selection
     , _sHelpShown :: IsHelpShown
     }

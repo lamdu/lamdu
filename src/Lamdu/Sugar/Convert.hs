@@ -15,6 +15,7 @@ import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -96,20 +97,20 @@ canInlineDefinition defExpr recursiveVars var entityId =
     where
         f pl v = v == var && entityId `notElem` pl ^. Input.userData
 
-trimParamAnnotation :: Input.AnnotationMode -> Annotation name i -> Annotation name i
-trimParamAnnotation Input.None _ = AnnotationNone
-trimParamAnnotation Input.Evaluation (AnnotationVal x) =
+trimParamAnnotation :: Annotations.Mode -> Annotation name i -> Annotation name i
+trimParamAnnotation Annotations.None _ = AnnotationNone
+trimParamAnnotation Annotations.Evaluation (AnnotationVal x) =
     x & annotationType .~ Nothing & AnnotationVal
-trimParamAnnotation Input.Evaluation _ = AnnotationNone
-trimParamAnnotation Input.Types (AnnotationVal x) =
+trimParamAnnotation Annotations.Evaluation _ = AnnotationNone
+trimParamAnnotation Annotations.Types (AnnotationVal x) =
     maybe AnnotationNone AnnotationType (x ^. annotationType)
-trimParamAnnotation Input.Types x = x
+trimParamAnnotation Annotations.Types x = x
 
 convertInferDefExpr ::
     forall m.
     (HasCallStack, Monad m) =>
     Config -> Cache.Functions -> Debug.Monitors ->
-    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Scheme.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr defI =
@@ -165,7 +166,7 @@ convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr def
 convertDefBody ::
     (HasCallStack, Monad m) =>
     Config -> Cache.Functions -> Debug.Monitors ->
-    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m
     (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
@@ -188,7 +189,7 @@ convertRepl ::
     forall m.
     (HasCallStack, Monad m) =>
     Config -> Cache.Functions -> Debug.Monitors ->
-    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
+    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m
     (Repl InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
@@ -257,7 +258,7 @@ loadAnnotatedDef getDefI x =
 loadPanes ::
     Monad m =>
     Config -> Cache.Functions -> Debug.Monitors ->
-    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) ->
+    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m -> EntityId ->
     T m
     [Pane InternalName (T m) (T m)
@@ -316,7 +317,7 @@ loadPanes config cache monitors annMode evalRes cp replEntityId =
 loadWorkArea ::
     (HasCallStack, Monad m) =>
     Config -> Cache.Functions -> Debug.Monitors ->
-    Input.AnnotationMode -> CurAndPrev (EvalResults (ValI m)) ->
+    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m
     (WorkArea InternalName (T m) (T m)

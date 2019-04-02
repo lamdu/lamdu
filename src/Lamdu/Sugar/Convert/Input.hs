@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferred, stored, evalResults, userData, localsInScope
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
-    , AnnotationMode(..), _Evaluation, _Types, _None
     , inferredType
     , preparePayloads
     , initLocalsInScope
@@ -40,13 +39,8 @@ data Payload m a = Payload
     , _userData :: a
     } deriving (Functor, Foldable, Traversable)
 
--- TODO: Move to a saner place (imported by Opts)
-data AnnotationMode = Evaluation | Types | None
-    deriving (Eq, Ord, Show, Enum, Bounded)
-
 Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload
-Lens.makePrisms ''AnnotationMode
 
 inferredType :: Lens' (Payload m a) Type
 inferredType = inferred . Infer.plType

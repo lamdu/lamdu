@@ -14,11 +14,11 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.FocusDirection as Direction
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
@@ -34,6 +34,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
@@ -51,7 +52,6 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
-import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -189,7 +189,7 @@ makeScopeNavEdit func myId curCursor =
         let mkScopeEventMap l r = makeScopeEventMap l r curCursor (void . setScope)
         Lens.view (Settings.settings . Settings.sAnnotationMode)
             >>= \case
-            Evaluation ->
+            Annotations.Evaluation ->
                 (Widget.makeFocusableWidget ?? myId)
                 <*> ( traverse (uncurry (makeScopeNavArrow setScope)) scopes
                         <&> Glue.hbox <&> (^. Align.tValue)

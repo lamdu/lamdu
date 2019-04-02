@@ -229,6 +229,7 @@ Library
                   , Graphics.DrawingCombinators.Extended
                   , Graphics.UI.GLFW.Instances
                   , Graphics.UI.GLFW.Utils
+                  , Lamdu.Annotations
                   , Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.PrimVal
                   , Lamdu.Cache

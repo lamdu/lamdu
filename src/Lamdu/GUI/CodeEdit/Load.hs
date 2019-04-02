@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Data.Property (MkProperty')
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -20,7 +21,6 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Config as SugarConf
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import           Lamdu.Sugar.Convert.Input (AnnotationMode)
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -47,7 +47,7 @@ getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 loadWorkArea ::
     (HasCallStack, Monad m) =>
     SugarConf.Config -> Cache.Functions -> Debug.Monitors ->
-    AnnotationMode -> CurAndPrev (EvalResults (ValI m)) ->
+    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m
     (Sugar.WorkArea (Name (T m)) (T m) (T m)

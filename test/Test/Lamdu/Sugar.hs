@@ -8,6 +8,7 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Anchors (Code(..), paneDef)
@@ -21,7 +22,6 @@ import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Config (Config(..))
-import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
@@ -115,7 +115,7 @@ convertWorkArea ::
     (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
 convertWorkArea cache =
-    loadWorkArea sugarConfig cache noopMonitors Input.None (pure EvalResults.empty) codeAnchors
+    loadWorkArea sugarConfig cache noopMonitors Annotations.None (pure EvalResults.empty) codeAnchors
     >>= validate
 
 testProgram :: FilePath -> (Cache.Functions -> T ViewM a) -> IO a

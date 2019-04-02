@@ -13,12 +13,13 @@ import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
+import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Graphics.UI.GLFW.Utils (printGLVersion)
+import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
@@ -44,7 +45,6 @@ import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (FontInfo(..))
 import qualified Lamdu.Style as Style
-import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import qualified Lamdu.Themes as Themes
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
@@ -209,7 +209,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
-                Evaluation ->
+                Annotations.Evaluation ->
                     EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
                 _ -> DbLayout.runDbTransaction db action
         let measureLayout w =

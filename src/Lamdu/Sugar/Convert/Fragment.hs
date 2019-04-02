@@ -16,6 +16,7 @@ import           Control.Monad.Trans.State (State, runState, StateT(..), mapStat
 import qualified Control.Monad.Trans.State as State
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
@@ -115,7 +116,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
             options <-
                 argS
                 & annotations %~ (,) showAnn
-                & annotations (convertPayload Input.None)
+                & annotations (convertPayload Annotations.None)
                 >>= (mkOptions sugarContext argI ?? exprPl)
             BodyFragment Fragment
                 { _fExpr =

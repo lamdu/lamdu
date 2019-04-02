@@ -16,6 +16,7 @@ import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Config (Config, HasConfig(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
@@ -26,7 +27,6 @@ import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
 import qualified Lamdu.Style as Style
-import           Lamdu.Sugar.Convert.Input (AnnotationMode(..))
 import qualified Lamdu.Themes as Themes
 import qualified Test.Lamdu.Theme as TestTheme
 
@@ -71,7 +71,7 @@ make =
                 { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
-            , _eSettings = initial Themes.initial Evaluation
+            , _eSettings = initial Themes.initial Annotations.Evaluation
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =

@@ -30,6 +30,7 @@ import qualified Data.Property as Property
 import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
@@ -296,7 +297,7 @@ sugar sugarContext holePl v =
     & transaction
     >>= convertBinder
     <&> annotations %~ (,) neverShowAnnotations
-    >>= annotations (convertPayload Input.None)
+    >>= annotations (convertPayload Annotations.None)
     & ConvertM.run sugarContext
     where
         mkPayload (inferPl, x) entityId = (inferPl, entityId, x)
@@ -427,7 +428,7 @@ mkResult preConversion sugarContext updateDeps holePl x =
         updateDeps
         writeResult preConversion (holePl ^. Input.stored) x
         <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
-        <&> (convertBinder >=> annotations (convertPayload Input.None) . (annotations %~ (,) showAnn))
+        <&> (convertBinder >=> annotations (convertPayload Annotations.None) . (annotations %~ (,) showAnn))
         >>= ConvertM.run sugarContext
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->

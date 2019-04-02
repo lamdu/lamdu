@@ -16,6 +16,7 @@ import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Cache as Cache
@@ -293,15 +294,15 @@ makeTypeAnnotation payload =
 
 makeAnnotation ::
     Monad m =>
-    Input.AnnotationMode -> Ann.ShowAnnotation -> Input.Payload m a ->
+    Annotations.Mode -> Ann.ShowAnnotation -> Input.Payload m a ->
     ConvertM m (Annotation InternalName (T m))
-makeAnnotation Input.None showAnn pl
+makeAnnotation Annotations.None showAnn pl
     | showAnn ^. Ann.showExpanded = makeTypeAnnotation pl <&> AnnotationType
     | otherwise = pure AnnotationNone
-makeAnnotation Input.Types showAnn pl
+makeAnnotation Annotations.Types showAnn pl
     | showAnn ^. Ann.showInTypeMode = makeTypeAnnotation pl <&> AnnotationType
     | otherwise = pure AnnotationNone
-makeAnnotation Input.Evaluation showAnn pl
+makeAnnotation Annotations.Evaluation showAnn pl
     | showAnn ^. Ann.showInEvalMode =
         guard (showAnn ^. Ann.showExpanded)
         & Lens._Just (const (makeTypeAnnotation pl))
@@ -315,7 +316,7 @@ makeAnnotation Input.Evaluation showAnn pl
 
 convertPayload ::
     Monad m =>
-    Input.AnnotationMode -> (Ann.ShowAnnotation, ConvertPayload m a) ->
+    Annotations.Mode -> (Ann.ShowAnnotation, ConvertPayload m a) ->
     ConvertM m (Payload InternalName (T m) (T m) a)
 convertPayload mode (showAnn, pl) =
     makeAnnotation mode showAnn (pl ^. pInput)
