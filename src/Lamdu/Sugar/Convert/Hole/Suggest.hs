@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
-    ( value
+    ( forType
     , valueConversion
     , applyForms
     ) where
@@ -110,7 +110,7 @@ valueConversionNoSplit nominals empty src =
             else valueConversionNoSplit nominals empty applied
         where
             arg =
-                valueNoSplit (Payload argType srcScope)
+                forTypeWithoutSplit (Payload argType srcScope)
                 & annotations %~ (, empty)
             applied = V.Apply src arg & V.BApp & mkRes resType
     T.TVariant composite | Lens.nullOf V._BInject srcVal ->
@@ -131,27 +131,29 @@ valueConversionNoSplit nominals empty src =
         mkRes typ = Ann (Payload typ srcScope, empty)
         srcVal = src ^. val
 
-value :: Payload -> [Val Payload]
-value pl@(Payload (T.TVariant comp) scope) =
+-- | Suggest values that fit a type, may "split" once, to suggest many
+-- injects for a sum type
+forType :: Payload -> [Val Payload]
+forType pl@(Payload (T.TVariant comp) scope) =
     case comp of
     T.RVar{} -> [V.BLeaf V.LHole]
     _ -> comp ^.. ExprLens.compositeFields <&> inject
     <&> Ann pl
     where
         inject (tag, innerTyp) =
-            valueNoSplit (Payload innerTyp scope) & V.Inject tag & V.BInject
-value typ = [valueNoSplit typ]
+            forTypeWithoutSplit (Payload innerTyp scope) & V.Inject tag & V.BInject
+forType typ = [forTypeWithoutSplit typ]
 
-valueNoSplit :: Payload -> Val Payload
-valueNoSplit (Payload (T.TRecord composite) scope) =
+forTypeWithoutSplit :: Payload -> Val Payload
+forTypeWithoutSplit (Payload (T.TRecord composite) scope) =
     suggestRecordWith composite scope
-valueNoSplit (Payload (T.TFun (T.TVariant composite) r) scope) =
+forTypeWithoutSplit (Payload (T.TFun (T.TVariant composite) r) scope) =
     suggestCaseWith composite (Payload r scope)
-valueNoSplit pl@(Payload typ scope) =
+forTypeWithoutSplit pl@(Payload typ scope) =
     case typ of
     T.TFun _ r ->
         -- TODO: add var to the scope?
-        valueNoSplit (Payload r scope) & V.Lam "var" & V.BLam
+        forTypeWithoutSplit (Payload r scope) & V.Lam "var" & V.BLam
     _ -> V.BLeaf V.LHole
     & Ann pl
 
@@ -190,7 +192,7 @@ valueSimple pl@(Payload typ scope) =
 
 fillHoles :: a -> Val (Payload, a) -> Val (Payload, a)
 fillHoles empty (Ann pl (V.BLeaf V.LHole)) =
-    valueNoSplit (pl ^. _1)
+    forTypeWithoutSplit (pl ^. _1)
     & annotations %~ (, empty)
     & ann . _2 .~ (pl ^. _2)
 fillHoles empty (Ann pl (V.BApp (V.Apply func arg))) =

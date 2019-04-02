@@ -122,7 +122,7 @@ mkHoleSuggesteds ::
     [HoleOption InternalName (T m) (T m)]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferred
-    & Suggest.value
+    & Suggest.forType
     <&> annotations .~ ()
     <&> mkOption sugarContext resultProcessor holePl
 
