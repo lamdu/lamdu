@@ -49,7 +49,7 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 
-resolver: lts-13.1
+resolver: lts-13.15
 
 flags:
   Lamdu:
