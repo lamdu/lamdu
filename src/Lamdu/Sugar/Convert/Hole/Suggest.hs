@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( forType
-    , valueConversion
+    , termTransforms
     , applyForms
     ) where
 
@@ -51,19 +51,19 @@ loadNominalsForType loadNominal typ =
                             & (`Set.difference` Map.keysSet result)
                     go result newTIds
 
-valueConversion ::
+termTransforms ::
     Monad m =>
     (T.NominalId -> m (Maybe Nominal)) -> a ->
     Val (Payload, a) -> m (StateT Context [] (Val (Payload, a)))
-valueConversion loadNominal empty src =
+termTransforms loadNominal empty src =
     loadNominalsForType loadNominal
     (src ^. ann . _1 . Infer.plType)
-    <&> \nominals -> valueConversionH nominals empty src
+    <&> \nominals -> termTransformsH nominals empty src
 
-valueConversionH ::
+termTransformsH ::
     Nominals -> a -> Val (Payload, a) ->
     StateT Context [] (Val (Payload, a))
-valueConversionH nominals empty src =
+termTransformsH nominals empty src =
     case srcInferPl ^. Infer.plType of
     T.TRecord composite
         | Lens.nullOf (val . V._BRecExtend) src ->
@@ -73,17 +73,17 @@ valueConversionH nominals empty src =
                 V.GetField src tag
                 & V.BGetField
                 & Ann (Payload typ (srcInferPl ^. Infer.plScope), empty)
-    _ -> valueConversionNoSplit nominals empty src
+    _ -> termTransformsWithoutSplit nominals empty src
     where
         srcInferPl = src ^. ann . _1
 
 prependOpt :: a -> StateT Context [] a -> StateT Context [] a
 prependOpt opt = Lens._Wrapped . Lens.imapped %@~ (:) . (,) opt
 
-valueConversionNoSplit ::
+termTransformsWithoutSplit ::
     Nominals -> a -> Val (Payload, a) ->
     StateT Context [] (Val (Payload, a))
-valueConversionNoSplit nominals empty src =
+termTransformsWithoutSplit nominals empty src =
     prependOpt src $
     case srcType of
     T.TInst name _params
@@ -100,14 +100,14 @@ valueConversionNoSplit nominals empty src =
         & Infer.run
         & mapStateT
             (either (error "Infer of FromNom on non-opaque Nominal shouldn't fail") pure)
-        >>= valueConversionNoSplit nominals empty
+        >>= termTransformsWithoutSplit nominals empty
     T.TFun argType resType | Lens.nullOf V._BLam srcVal ->
         if Lens.has (ExprLens.valLeafs . V._LHole) arg
             then
                 -- If the suggested argument has holes in it
                 -- then stop suggesting there to avoid "overwhelming"..
                 pure applied
-            else valueConversionNoSplit nominals empty applied
+            else termTransformsWithoutSplit nominals empty applied
         where
             arg =
                 forTypeWithoutSplit (Payload argType srcScope)
@@ -246,7 +246,7 @@ applyForms loadNominal empty x =
     _ ->
         x
         & fillHoles empty
-        & valueConversion loadNominal empty
+        & termTransforms loadNominal empty
         <&> mapStateT ListClass.fromList
         & join
     where

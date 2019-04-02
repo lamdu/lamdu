@@ -79,7 +79,7 @@ mkAppliedHoleSuggesteds ::
     Input.Payload m a ->
     T m [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
-    Suggest.valueConversion Load.nominal Nothing (argI & annotations %~ onPl)
+    Suggest.termTransforms Load.nominal Nothing (argI & annotations %~ onPl)
     <&> (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> Lens.mapped %~ onSuggestion
     where
