@@ -2,7 +2,6 @@
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( value
     , valueConversion
-    , fillHoles
     , applyForms
     ) where
 
