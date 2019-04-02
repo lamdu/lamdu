@@ -410,7 +410,7 @@ mkResultVals sugarContext scope base =
             loadInfer scope (sugarDeps, base)
             <&> _2 . annotations . _2 %~ (\() -> emptyPl)
             & mapStateT exceptTtoListT
-        form <- Suggest.applyForms (txn . Load.nominal) emptyPl inferResult
+        form <- Suggest.termTransformsWithModify (txn . Load.nominal) emptyPl inferResult
         newDeps <- loadNewDeps seedDeps scope form & txn
         pure (newDeps, form)
     where

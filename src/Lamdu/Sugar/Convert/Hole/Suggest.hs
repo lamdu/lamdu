@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( forType
     , termTransforms
-    , applyForms
+    , termTransformsWithModify
     ) where
 
 import           AST (monoChildren)
@@ -51,6 +51,8 @@ loadNominalsForType loadNominal typ =
                             & (`Set.difference` Map.keysSet result)
                     go result newTIds
 
+-- | These are offered in fragments (not holes). They transform a term
+-- by wrapping it in a larger term where it appears once.
 termTransforms ::
     Monad m =>
     (T.NominalId -> m (Maybe Nominal)) -> a ->
@@ -132,7 +134,7 @@ termTransformsWithoutSplit nominals empty src =
         srcVal = src ^. val
 
 -- | Suggest values that fit a type, may "split" once, to suggest many
--- injects for a sum type
+-- injects for a sum type. These are offerred in holes (not fragments).
 forType :: Payload -> [Val Payload]
 forType pl@(Payload (T.TVariant comp) scope) =
     case comp of
@@ -203,15 +205,20 @@ fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     v
 fillHoles empty x = x & val . monoChildren %~ fillHoles empty
 
-applyForms ::
+-- | Transform by wrapping OR modifying a term. Used by both holes and
+-- fragments to expand "seed" terms. Holes include these as results
+-- whereas fragments emplace their content inside holes of these
+-- results.
+termTransformsWithModify ::
     ListClass.List m =>
     (T.NominalId -> StateT Context m (Maybe Nominal)) -> a -> Val (Payload, a) ->
     StateT Context m (Val (Payload, a))
-applyForms _ _ v@(Ann _ V.BLam {}) = pure v
-applyForms _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+termTransformsWithModify _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
+termTransformsWithModify _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+    -- Variant:<hole> ==> Variant.
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
-applyForms loadNominal empty x =
+termTransformsWithModify loadNominal empty x =
     case inferPl ^. Infer.plType of
     T.TVar tv
         | any (`Lens.has` x)
