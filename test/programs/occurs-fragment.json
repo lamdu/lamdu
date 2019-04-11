@@ -1,0 +1,37 @@
+[
+    {
+        "schemaVersion": 8
+    },
+    {
+        "tag": null,
+        "lamId": "8f3e9696-8b91-44d4-7642-13a47157f294",
+        "lamVar": "7624c3483f77ee52311755d6c87aadcf",
+        "lamFieldParams": null
+    },
+    {
+        "repl": {
+            "val": {
+                "lamVar": "7624c3483f77ee52311755d6c87aadcf",
+                "id": "8f3e9696-8b91-44d4-7642-13a47157f294",
+                "lamBody": {
+                    "applyFunc": {
+                        "var": "7624c3483f77ee52311755d6c87aadcf",
+                        "id": "351d337b-5281-40eb-25b7-7bb423e0945f"
+                    },
+                    "applyArg": {
+                        "applyFunc": {
+                            "hole": {},
+                            "id": "65c8c1ee-1407-4a45-3427-569d2a21e353"
+                        },
+                        "applyArg": {
+                            "var": "7624c3483f77ee52311755d6c87aadcf",
+                            "id": "8092bdea-6dc9-1c98-9536-199621753705"
+                        },
+                        "id": "9ead9840-26eb-482d-2f8d-eecb93b58701"
+                    },
+                    "id": "8f656221-1399-424e-0f6c-d7096e5f5975"
+                }
+            }
+        }
+    }
+]
