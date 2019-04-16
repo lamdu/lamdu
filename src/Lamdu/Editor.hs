@@ -69,7 +69,7 @@ stateStorageInIRef db stateIRef =
 
 withMVarProtection :: a -> (MVar (Maybe a) -> IO b) -> IO b
 withMVarProtection val =
-    E.bracket (newMVar (Just val)) (\mvar -> modifyMVar_ mvar (\_ -> pure Nothing))
+    E.bracket (newMVar (Just val)) (`modifyMVar_` (\_ -> pure Nothing))
 
 newEvaluator ::
     IO () -> MVar (Maybe (Transaction.Store DbM)) -> Opts.EditorOpts -> IO EvalManager.Evaluator
