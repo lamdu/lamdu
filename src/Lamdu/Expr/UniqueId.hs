@@ -1,9 +1,9 @@
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances, DataKinds, FlexibleInstances #-}
 module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
-import           AST (ToKnot(..), Tie)
+import           AST (Knot(Knot), ToKnot, _ToKnot, Tie)
 import qualified Data.ByteString as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -37,8 +37,8 @@ instance ToUUID (Branch m)  where toUUID = Branch.uuid
 instance ToUUID (T.Var a) where
     toUUID (T.Var (Identifier x)) =
         x <> BS.replicate (16 - BS.length x) 0 & UUIDUtils.fromSBS16
-instance ToUUID (f (Tie k (ToKnot f))) =>
-         ToUUID (ToKnot f k) where toUUID = toUUID . getToKnot
+instance ToUUID (f (Tie ('Knot k) (ToKnot f))) =>
+         ToUUID (ToKnot f ('Knot k)) where toUUID = toUUID . (^. _ToKnot)
 
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id

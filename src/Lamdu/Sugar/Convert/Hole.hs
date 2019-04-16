@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Hole
     , assertSuccessfulInfer
     ) where
 
-import           AST (Tree, Pure(..), ToKnot(..), _Pure)
+import           AST (Tree, Pure(..), _ToKnot, _Pure)
 import           AST.Infer (IResult(..), irScope, inferNode, irType)
 import           AST.Knot.Ann (Ann(..), ann, annotations)
 import           AST.Term.FuncType (FuncType(..))
@@ -563,7 +563,7 @@ randomizeNonStoredRefs uniqueIdent gen v =
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> ToKnot <&> Just
+            <&> IRef.unsafeFromUUID <&> (Lens._Just . _ToKnot #)
         f (Just x) = Just x & pure
 
 writeExprMStored ::

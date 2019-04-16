@@ -7,7 +7,7 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
-import           AST (ToKnot(..), annotations)
+import           AST (_ToKnot, annotations)
 import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
@@ -122,7 +122,7 @@ replIRef = DbLayout.repl DbLayout.codeIRefs
 startBG ::
     Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) ->
     IO (Eval.Evaluator (ValI m))
-startBG = Eval.start toUUID (ToKnot . IRef.unsafeFromUUID)
+startBG = Eval.start toUUID ((_ToKnot #) . IRef.unsafeFromUUID)
 
 start :: Evaluator -> IO ()
 start evaluator =
