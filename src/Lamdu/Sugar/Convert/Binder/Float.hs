@@ -153,8 +153,8 @@ addLetParam var redex =
     case storedRedex ^. Redex.arg . val of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
         case redex ^. Redex.arg . ann . Input.inferredType of
-        Pure (T.TFun (FuncType (Pure (T.TRecord composite)) _))
-            | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
+        MkPure (T.TFun (FuncType (MkPure (T.TRecord composite)) _))
+            | FlatRowExtends fieldsMap (MkPure T.REmpty) <- composite ^. T.flatRow
             , let fields = Map.toList fieldsMap
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord

@@ -536,8 +536,8 @@ makeNonRecordParamActions binderKind storedLam =
         param = storedLam ^. slLam . V.lamIn
 
 mkVarInfo :: Tree Pure T.Type -> VarInfo
-mkVarInfo (Pure T.TFun{}) = VarFunction
-mkVarInfo (Pure (T.TInst (NominalInst tid _))) | tid == Builtins.mutTid = VarAction
+mkVarInfo (MkPure T.TFun{}) = VarFunction
+mkVarInfo (MkPure (T.TInst (NominalInst tid _))) | tid == Builtins.mutTid = VarAction
 mkVarInfo _ = VarNormal
 
 mkFuncParam ::
@@ -570,7 +570,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
         funcParamActions <- makeNonRecordParamActions binderKind storedLam
         funcParam <-
             case lamParamType lamExprPl of
-            Pure (T.TRecord (Pure T.REmpty))
+            MkPure (T.TRecord (MkPure T.REmpty))
                 | null (lamExprPl ^. Input.varRefsOfLambda) ->
                     mkFuncParam (EntityId.ofBinder param) lamExprPl info <&> NullParam
                 where
@@ -662,8 +662,8 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
         case lambdaPl ^. Input.inferredType . _Pure of
-            T.TFun (FuncType (Pure (T.TRecord composite)) _)
-                | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
+            T.TFun (FuncType (MkPure (T.TRecord composite)) _)
+                | FlatRowExtends fieldsMap (MkPure T.REmpty) <- composite ^. T.flatRow
                 , let fields = Map.toList fieldsMap
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda

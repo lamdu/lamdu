@@ -6,7 +6,7 @@ module Lamdu.GUI.CodeEdit
     ) where
 
 import           Algebra.Lattice (BoundedJoinSemiLattice(..))
-import           AST (Pure(..))
+import           AST (_Pure)
 import           AST.Term.Scheme (Scheme(..), QVars(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
@@ -184,10 +184,10 @@ makeNewDefinition cp =
         holeI <- DataOps.newHole
         Definition
             (Definition.BodyExpr (Definition.Expr holeI mempty))
-            ( Pure Scheme
-            { _sForAlls =
-                T.Types (QVars (mempty & Lens.at "a" ?~ bottom)) (QVars mempty)
-            , _sTyp = T.TVar "a" & Pure
+            ( _Pure # Scheme
+                { _sForAlls =
+                    T.Types (QVars (mempty & Lens.at "a" ?~ bottom)) (QVars mempty)
+                , _sTyp = _Pure # T.TVar "a"
             }) ()
             & DataOps.newPublicDefinitionWithPane cp
     <&> WidgetIds.fromIRef

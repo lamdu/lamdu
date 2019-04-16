@@ -41,7 +41,7 @@ nullToNothing m
     | otherwise = Just m
 
 convertPrimVal :: Tree Pure T.Type -> V.PrimVal -> ResBody name a
-convertPrimVal (Pure (T.TInst (NominalInst tid (T.Types (QVarInstances tp) (QVarInstances rp))))) p
+convertPrimVal (MkPure (T.TInst (NominalInst tid (T.Types (QVarInstances tp) (QVarInstances rp))))) p
     | Map.null tp && Map.null rp
       && tid == Builtins.textTid =
         case PrimVal.toKnown p of
@@ -79,7 +79,7 @@ convertNullaryInject _ _ = Nothing
 convertList :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
 convertList entityId typ (V.Inject _ x) =
     do
-        Pure (T.TInst (NominalInst tid _)) <- Just typ
+        MkPure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.listTid)
         (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
@@ -119,7 +119,7 @@ convertTree ::
 convertTree entityId typ fr =
     do
         Right fields <- Just fr
-        Pure (T.TInst (NominalInst tid _)) <- Just typ
+        MkPure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.treeTid)
         root <- fields ^? Lens.ix Builtins.rootTag
         subtrees <- fields ^? Lens.ix Builtins.subtreesTag

@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
 
-import           AST (Tree, Pure(..), monoChildren)
+import           AST (Tree, Pure, _Pure, monoChildren)
 import           AST.Knot.Ann (val, ann)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalInst(..))
@@ -19,8 +19,8 @@ import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
 import           Lamdu.Prelude
 
 resultTypeScore :: Tree Pure Type -> [Int]
-resultTypeScore (Pure x) =
-    case x of
+resultTypeScore x =
+    case x ^. _Pure of
     TVar{} -> [0]
     TFun (FuncType a r) -> 2 : max (resultTypeScore a) (resultTypeScore r)
     TVariant c -> 2 : compositeTypeScore c
@@ -29,8 +29,8 @@ resultTypeScore (Pure x) =
         1 : maximum ([] : map resultTypeScore (Map.elems t) <> map compositeTypeScore (Map.elems r))
 
 compositeTypeScore :: Tree Pure Row -> [Int]
-compositeTypeScore (Pure x) =
-    case x of
+compositeTypeScore x =
+    case x ^. _Pure of
     REmpty -> []
     RVar{} -> [1]
     RExtend (RowExtend _ t r) ->

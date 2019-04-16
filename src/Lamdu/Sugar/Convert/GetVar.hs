@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.GetVar
     ) where
 
 import           Algebra.Lattice (BoundedJoinSemiLattice(..))
-import           AST (Pure(..), _Pure)
+import           AST (_Pure)
 import           AST.Term.Row (freExtends)
 import qualified AST.Term.Scheme as S
 import qualified Control.Lens as Lens
@@ -56,9 +56,9 @@ inlineDef globalId dest =
                     newDefExpr <- DataOps.newHole
                     def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
                         & Def.defType .~
-                            Pure S.Scheme
+                            _Pure # S.Scheme
                             { S._sForAlls = T.Types (S.QVars (mempty & Lens.at "a" ?~ bottom)) (S.QVars mempty)
-                            , S._sTyp = T.TVar "a" & Pure
+                            , S._sTyp = _Pure # T.TVar "a"
                             }
                         & Transaction.writeIRef defI
                     setP (Anchors.assocDefinitionState defI) DeletedDefinition

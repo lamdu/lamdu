@@ -30,8 +30,7 @@ extractRecordTypeField tag typ =
         fieldType <- flat ^. Row.freExtends . Lens.at tag
         Just
             ( fieldType
-            , T.flatRow # (flat & Row.freExtends . Lens.at tag .~ Nothing)
-              & T.TRecord & Pure
+            , _Pure . T._TRecord . T.flatRow # (flat & Row.freExtends . Lens.at tag .~ Nothing)
             )
 
 extractVariantTypeField :: T.Tag -> Tree Pure T.Type -> Maybe (Tree Pure T.Type)
@@ -114,8 +113,10 @@ applyNominal ::
     Tree (N.NomVarTypes typ) (QVarInstances Pure) ->
     Tree Pure (Scheme (N.NomVarTypes typ) typ)
 applyNominal nom params =
-    N.applyNominal proxyNoConstraint (Identity . Pure) nom params
-    & runIdentity & Pure
+    _Pure #
+    ( N.applyNominal proxyNoConstraint (Lens._Wrapped . _Pure #) nom params
+    & runIdentity
+    )
 
 -- Will loop forever for bottoms like: newtype Void = Void Void
 unwrapTInsts :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Tree Pure T.Type

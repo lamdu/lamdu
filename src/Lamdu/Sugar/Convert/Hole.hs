@@ -181,7 +181,7 @@ getTags = getListing Anchors.tags
 mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [Val ()]
 mkNominalOptions nominals =
     do
-        (tid, Pure nominal) <- nominals
+        (tid, MkPure nominal) <- nominals
         mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
         mkDirectNoms tid =

@@ -213,11 +213,11 @@ decodeFlatComposite json =
           (encodedFields, encodedIdent) <- Aeson.parseJSON json
           fields <- decodeFields encodedFields
           tv <- decodeIdent encodedIdent <&> T.Var
-          Row.FlatRowExtends fields (Pure (T.RVar tv)) & pure
+          Row.FlatRowExtends fields (_Pure . T._RVar # tv) & pure
 
     , Aeson.parseJSON json
       >>= decodeFields
-      <&> (`Row.FlatRowExtends` Pure T.REmpty)
+      <&> (`Row.FlatRowExtends` (_Pure # T.REmpty))
     ]
     where
         decodeFields = decodeIdentMap T.Tag decodeType
@@ -234,10 +234,10 @@ decodeComposite x =
             -- Using a foldl here will cause typing "1+2" appear as "2+1"!!
             foldr f rest (Map.toList extends)
             where
-                f (key, val) acc = RowExtend key val acc & T.RExtend & Pure
+                f (key, val) acc = _Pure . T._RExtend # RowExtend key val acc
 
 encodeType :: Encoder (Tree Pure T.Type)
-encodeType (Pure t) =
+encodeType (MkPure t) =
     case t of
     T.TFun (FuncType a b) -> ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
     T.TRecord composite   -> ["record" .= encodeComposite composite]
@@ -268,7 +268,7 @@ decodeType json =
             )
         <&> T.TInst
     ]
-    <&> Pure
+    <&> (_Pure #)
 
 encodeCompositeVarConstraints :: T.RConstraints -> [Encoded]
 encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
@@ -312,7 +312,7 @@ decodeTypeVars obj =
         <&> QVars)
 
 encodeScheme :: Encoder (Tree Pure T.Scheme)
-encodeScheme (Pure (Scheme tvs typ)) =
+encodeScheme (MkPure (Scheme tvs typ)) =
     ("schemeType" .= encodeType typ) :
     encodeTypeVars tvs
     & Aeson.object
@@ -323,7 +323,7 @@ decodeScheme =
     do
         tvs <- decodeTypeVars obj
         typ <- obj .: "schemeType" >>= decodeType
-        Scheme tvs typ & Pure & pure
+        _Pure # Scheme tvs typ & pure
 
 encodeLeaf :: V.Leaf -> AesonTypes.Object
 encodeLeaf =
@@ -493,8 +493,8 @@ insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (Aeson.toJSON v)
 
 encodeNominal :: Tree Pure (NominalDecl T.Type) -> Aeson.Object
-encodeNominal (Pure (NominalDecl params nominalType)) =
-    ("nomType" .= encodeScheme (Pure nominalType))
+encodeNominal (MkPure (NominalDecl params nominalType)) =
+    ("nomType" .= encodeScheme (_Pure # nominalType))
     : encodeTypeVars params
     & HashMap.fromList
 
@@ -503,7 +503,7 @@ decodeNominal obj =
     NominalDecl
     <$> decodeTypeVars obj
     <*> (obj .: "nomType" >>= decodeScheme <&> (^. _Pure))
-    <&> Pure
+    <&> (_Pure #)
 
 encodeTagged :: Text -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
 encodeTagged idAttrName encoder ((tag, ident), x) =

@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , makeSetToLiteral
     ) where
 
-import           AST (Tree, Pure(..), overChildren)
+import           AST (Tree, Pure(..), _Pure, overChildren)
 import           AST.Infer (irType)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
@@ -351,13 +351,13 @@ valFromLiteral =
             & literalExpr
             & ToNom Builtins.textTid
             & V.BToNom
-            & Ann (Pure (T.TInst (NominalInst Builtins.textTid noParams)))
+            & Ann (MkPure (T.TInst (NominalInst Builtins.textTid noParams)))
         , Property.pureModify frozenDeps (<> textDep)
         )
     where
         literalExpr v =
             V.LLiteral prim & V.BLeaf
-            & Ann (Pure (T.TInst (NominalInst (prim ^. V.primType) noParams)))
+            & Ann (MkPure (T.TInst (NominalInst (prim ^. V.primType) noParams)))
             where
                 prim = PrimVal.fromKnown v
         noParams = T.Types (S.QVarInstances mempty) (S.QVarInstances mempty)
@@ -365,11 +365,11 @@ valFromLiteral =
             mempty
             & depsNominals .~
                 Map.singleton Builtins.textTid
-                ( Pure NominalDecl
+                ( _Pure # NominalDecl
                 { _nParams = T.Types (S.QVars mempty) (S.QVars mempty)
                 , _nScheme =
                     S.Scheme
                     { S._sForAlls = T.Types (S.QVars mempty) (S.QVars mempty)
-                    , S._sTyp = NominalInst Builtins.bytesTid noParams & T.TInst & Pure
+                    , S._sTyp = _Pure . T._TInst # NominalInst Builtins.bytesTid noParams
                     }
                 })

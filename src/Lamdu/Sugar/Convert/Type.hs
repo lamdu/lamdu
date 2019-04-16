@@ -27,7 +27,7 @@ convertComposite ::
     MonadTransaction n m =>
     EntityId -> Tree Pure T.Row ->
     m (CompositeFields InternalName (Type InternalName))
-convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
+convertComposite entityId (MkPure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         convertComposite (EntityId.ofRestOfComposite entityId) rest
@@ -39,12 +39,12 @@ convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
             , _tagInstance = EntityId.ofTag entityId tag
             , _tagVal = tag
             }
-convertComposite _ (Pure (T.RVar v)) =
+convertComposite _ (MkPure (T.RVar v)) =
     CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
-convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
+convertComposite _ (MkPure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType :: MonadTransaction n m => EntityId -> Tree Pure T.Type -> m (Type InternalName)
-convertType entityId (Pure typ) =
+convertType entityId (MkPure typ) =
     case typ of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure
     T.TFun (FuncType param res) ->
@@ -68,5 +68,5 @@ convertType entityId (Pure typ) =
     <&> Type entityId
 
 convertScheme :: MonadTransaction n m => EntityId -> Tree Pure T.Scheme -> m (Scheme InternalName)
-convertScheme entityId (Pure (S.Scheme tvs typ)) =
+convertScheme entityId (MkPure (S.Scheme tvs typ)) =
     Scheme tvs <$> convertType entityId typ
