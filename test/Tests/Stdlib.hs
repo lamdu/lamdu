@@ -25,6 +25,7 @@ test =
     testGroup "Stdlib"
     [ testCase "sensible-tags" verifyTagsTest
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
+    , testCase "schemes" verifySchemes
     ]
 
 verifyTagsTest :: IO ()
@@ -108,3 +109,28 @@ verifyDefs tagName defs =
                     assertString
                     ("Frozen def type mismatch for " ++ show (tagName tag) ++ ":\n" ++
                     prettyShow x ++ "\nvs\n" ++ prettyShow typ)
+
+verifySchemes :: IO ()
+verifySchemes =
+    do
+        db <- readFreshDb
+        db ^.. Lens.folded . JsonCodec._EntityDef & traverse_ verifyDef
+    where
+        verifyDef def =
+            do
+                def ^. Def.defType & verifyScheme
+                def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . Infer.depsGlobalTypes . traverse
+                    & traverse_ verifyScheme
+        verifyScheme s = verifyType (s ^. Scheme.schemeForAll) (s ^. Scheme.schemeType)
+        verifyType s (T.TVar v)
+            | Infer.typeVars s ^. Lens.contains v = pure ()
+            | otherwise = assertString ("Type variable not declared " ++ show v)
+        verifyType s (T.TFun a b) = verifyType s a >> verifyType s b
+        verifyType s (T.TInst _ params) = traverse_ (verifyType s) params
+        verifyType s (T.TRecord r) = verifyRow s r
+        verifyType s (T.TVariant r) = verifyRow s r
+        verifyRow s (T.RVar v)
+            | Infer.rowVars s ^. Lens.contains v = pure ()
+            | otherwise = assertString ("Row variable not declared " ++ show v)
+        verifyRow s (T.RExtend _ t r) = verifyType s t >> verifyRow s r
+        verifyRow _ T.REmpty{} = pure ()
