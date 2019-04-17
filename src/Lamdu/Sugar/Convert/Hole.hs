@@ -261,7 +261,9 @@ loadNewDeps currentDeps scope x =
         newDepVars = newDeps depsGlobalTypes (ExprLens.valGlobals scopeVars)
         newNoms = newDeps depsNominals ExprLens.valNominals
 
--- Unstored and without eval results (e.g: hole result)
+-- Unstored and without eval results.
+-- Used for hole's base exprs, to perform sugaring and get names from sugared exprs.
+-- TODO: We shouldn't need to perform sugaring for base exprs, and this should be removed.
 prepareUnstoredPayloads ::
     Val (IResult UVar V.Term, Tree Pure T.Type, EntityId, a) ->
     Val (Input.Payload m a)
@@ -278,11 +280,17 @@ prepareUnstoredPayloads v =
               , Input._inferredType = typ
               , Input._inferResult = inferPl
               , Input._entityId = eId
-              , Input._stored = error "TODO: Nothing stored?!"
+              , Input._stored =
+                Property.Property
+                (_ToKnot # IRef.unsafeFromUUID fakeStored)
+                (error "stored output of base expr used!")
               , Input._evalResults =
-                  CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
+                CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
               }
             )
+            where
+                -- TODO: Which code reads this?
+                EntityId.EntityId fakeStored = eId
 
 assertSuccessfulInfer ::
     HasCallStack =>
