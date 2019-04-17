@@ -54,7 +54,7 @@ compile repl =
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])
-            , Compiler.loggingMode = Compiler.FastSilent
+            , Compiler.loggingMode = Compiler.Fast Compiler.ReleaseDontMemoDefs
             , Compiler.readAssocTag = lift . getP . Anchors.assocTag
             , Compiler.readAssocName = fmap (^. tagName) . lift . ExprIRef.readTagInfo
             , Compiler.readGlobal =

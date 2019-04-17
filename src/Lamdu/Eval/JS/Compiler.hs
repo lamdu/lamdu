@@ -4,7 +4,7 @@
 module Lamdu.Eval.JS.Compiler
     ( Actions(..)
     , ValId(..)
-    , compileRepl, Mode(..), loggingEnabled
+    , compileRepl, Mode(..), MemoDefs(..), loggingEnabled
     ) where
 
 import           AST (Tree, Pure)
@@ -50,7 +50,12 @@ import           Lamdu.Prelude
 
 newtype ValId = ValId UUID
 
-data Mode = FastSilent | SlowLogging LoggingInfo
+data MemoDefs
+    = MemoDefs -- Compatible with SlowLogging mode and used when running from Lamdu
+    | ReleaseDontMemoDefs
+    deriving Show
+
+data Mode = Fast MemoDefs | SlowLogging LoggingInfo
     deriving Show
 
 data Actions m = Actions
@@ -196,7 +201,7 @@ topLevelDecls mode =
       ] <&> void
     ) ++
     case mode of
-    FastSilent -> []
+    Fast{} -> []
     SlowLogging{} ->
         ( [ [jsstmt|var scopeId_0 = 0;|]
           , [jsstmt|var scopeCounter = 1;|]
@@ -371,35 +376,41 @@ throwErr valId errName desc =
 
 compileGlobalVar :: Monad m => ValId -> V.Var -> M m CodeGen
 compileGlobalVar valId var =
-    Lens.view (envExpectedTypes . Lens.at var)
-    >>= maybe loadGlobal verifyType
+    do
+        mode <- Lens.view envMode
+        let useGlobal =
+                case mode of
+                Fast ReleaseDontMemoDefs -> JS.var
+                _ -> \x -> JS.var x `JS.call` []
+        let globalWrapper =
+                case mode of
+                Fast ReleaseDontMemoDefs -> codeGenExpression
+                _ -> (rts "memo" `JS.call`) . (: []) . JS.lambda [] . codeGenLamStmts
+        let newGlobal =
+                do
+                    varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
+                    globalVarNames . Lens.at var ?= varName
+                    compileGlobal var
+                        <&> globalWrapper
+                        <&> varinit varName
+                        >>= ppOut
+                    pure varName
+        let loadGlobal =
+                Lens.use (globalVarNames . Lens.at var)
+                >>= maybe newGlobal pure
+                <&> useGlobal
+                <&> codeGenFromExpr
+        let verifyType expectedType =
+                do
+                    scheme <-
+                        Lens.use (globalTypes . Lens.at var)
+                        >>= maybe newGlobalType pure
+                    if T.alphaEq scheme expectedType
+                        then loadGlobal
+                        else throwErr valId "BrokenDef" "Dependency type needs update"
+        Lens.view (envExpectedTypes . Lens.at var)
+            >>= maybe loadGlobal verifyType
     where
-        loadGlobal =
-            Lens.use (globalVarNames . Lens.at var)
-            >>= maybe newGlobal pure
-            <&> useGlobal
-            <&> codeGenFromExpr
-        useGlobal varName = JS.var varName `JS.call` []
-        newGlobal =
-            do
-                varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
-                globalVarNames . Lens.at var ?= varName
-                compileGlobal var
-                    <&> codeGenLamStmts
-                    <&> JS.lambda []
-                    <&> (: [])
-                    <&> (rts "memo" `JS.call`)
-                    <&> varinit varName
-                    >>= ppOut
-                pure varName
-        verifyType expectedType =
-            do
-                scheme <-
-                    Lens.use (globalTypes . Lens.at var)
-                    >>= maybe newGlobalType pure
-                if T.alphaEq scheme expectedType
-                    then loadGlobal
-                    else throwErr valId "BrokenDef" "Dependency type needs update"
         newGlobalType =
             do
                 scheme <- performAction (`readGlobalType` var)
@@ -559,7 +570,7 @@ compileLambda :: Monad m => Tree (V.Lam V.Var V.Term) (Ann ValId) -> ValId -> M 
 compileLambda (V.Lam v res) valId =
     Lens.view envMode
     >>= \case
-        FastSilent -> compileRes <&> mkLambda
+        Fast{} -> compileRes <&> mkLambda
         SlowLogging loggingInfo ->
             do
                 ((varName, lamStmts), logUsed) <-
@@ -570,12 +581,12 @@ compileLambda (V.Lam v res) valId =
                 let stmts =
                         slowLoggingLambdaPrefix logUsed parentScopeDepth valId
                         (JS.var varName)
-                fastLam <- compileRes & local (envMode .~ FastSilent) <&> mkLambda
+                fastLam <- compileRes & local (envMode .~ Fast MemoDefs) <&> mkLambda
                 rts "wrap" `JS.call`
                     [fastLam, JS.lambda [varName] (stmts ++ lamStmts)] & pure
             where
                 parentScopeDepth = loggingInfo ^. liScopeDepth
-    <&> optimizeExpr
+    >>= optimizeExpr
     <&> codeGenFromExpr
     where
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
@@ -592,8 +603,8 @@ maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 maybeLogSubexprResult valId codeGen =
     Lens.view envMode
     >>= \case
-    FastSilent -> pure codeGen
-    SlowLogging _ -> logSubexprResult valId codeGen
+    Fast{} -> pure codeGen
+    SlowLogging{} -> logSubexprResult valId codeGen
 
 logSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 logSubexprResult valId codeGen =
@@ -606,11 +617,11 @@ compileAppliedFunc valId func arg' =
     do
         mode <- Lens.view envMode
         case (func ^. val, mode) of
-            (V.BCase case_, FastSilent) ->
+            (V.BCase case_, Fast{}) ->
                 compileCaseOnVar valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
-            (V.BLam (V.Lam v res), FastSilent) ->
+            (V.BLam (V.Lam v res), Fast{}) ->
                 compileVal res <&> codeGenLamStmts & withLocalVar v
                 <&> \(vId, lamStmts) ->
                 CodeGen
@@ -624,39 +635,48 @@ compileAppliedFunc valId func arg' =
                 compileVal func
                 <&> codeGenExpression
                 <&> ($$ arg')
-                <&> optimizeExpr
+                >>= optimizeExpr
                 <&> codeGenFromExpr
 
-optimizeExpr :: JSS.Expression () -> JSS.Expression ()
-optimizeExpr x@(JSS.CallExpr () func [arg])
-    | func == def "toArray" =
-        arrayLit arg
-        & maybe x (JSS.ArrayLit ())
-    | func == def "map" =
-        -- Check mapping with "id" (when unwrapping nominals..)
-        case arg of
-        JSS.ObjectLit ()
-            [ (_, str)
-            , (k, JSS.FuncExpr () Nothing [lamParam] [JSS.ReturnStmt () (Just (JSS.VarRef () lamRet))])
-            ] | k == key "mapping" && lamParam == lamRet
-            -> str
-        _ -> x
+optimizeExpr :: Monad m => JSS.Expression () -> M m (JSS.Expression ())
+optimizeExpr x@(JSS.CallExpr () func [arg]) =
+    do
+        def <-
+            Lens.view envMode
+            <&>
+            \case
+            Fast ReleaseDontMemoDefs -> JSS.VarRef () . JSS.Id ()
+            _ -> \g -> JSS.CallExpr () (JSS.VarRef () (JSS.Id () g)) []
+        let arrayLit (JSS.CallExpr () cons [JSS.ObjectLit ()
+                [(k0, v0), (k1, JSS.FuncExpr () Nothing [_] [JSS.ReturnStmt () (Just v1)])]
+                ])
+                | cons == def "_3a__3a_" && k0 == key "infixl" && k1 == key "infixr" =
+                    arrayLit v1 <&> (v0 :)
+                | otherwise = Nothing
+            arrayLit (JSS.ObjectLit () [(k0, JSS.StringLit () "empty"), (k1, JSS.ObjectLit () [])])
+                | k0 == key "tag" && k1 == key "data" =
+                    Just []
+            arrayLit _ = Nothing
+        let r
+                | func == def "toArray" =
+                    arrayLit arg
+                    & maybe x (JSS.ArrayLit ())
+                | func == def "map" =
+                    -- Check mapping with "id" (when unwrapping nominals..)
+                    case arg of
+                    JSS.ObjectLit ()
+                        [ (_, str)
+                        , (k, JSS.FuncExpr () Nothing [lamParam] [JSS.ReturnStmt () (Just (JSS.VarRef () lamRet))])
+                        ] | k == key "mapping" && lamParam == lamRet
+                        -> str
+                    _ -> x
+                | otherwise = x
+        pure r
     where
-        arrayLit (JSS.CallExpr () cons [JSS.ObjectLit ()
-            [(k0, v0), (k1, JSS.FuncExpr () Nothing [_] [JSS.ReturnStmt () (Just v1)])]
-            ])
-            | cons == def "_3a__3a_" && k0 == key "infixl" && k1 == key "infixr" =
-                arrayLit v1 <&> (v0 :)
-            | otherwise = Nothing
-        arrayLit (JSS.ObjectLit () [(k0, JSS.StringLit () "empty"), (k1, JSS.ObjectLit () [])])
-            | k0 == key "tag" && k1 == key "data" =
-                Just []
-        arrayLit _ = Nothing
-        def g = JSS.CallExpr () (JSS.VarRef () (JSS.Id () g)) []
         key n = JSS.PropId () (JSS.Id () n)
 optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.CallExpr () func [JSS.VarRef () var]))])
-    | param == var = func
-optimizeExpr x = x
+    | param == var = pure func
+optimizeExpr x = pure x
 
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf x valId =
