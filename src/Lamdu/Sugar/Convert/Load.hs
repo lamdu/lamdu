@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Load
     ) where
 
 import           AST (Tree, Pure(..), _Pure, annotations, Ann)
-import           AST.Infer (ITerm, iType, irType, inferNode, IResult)
+import           AST.Infer (ITerm, iType, irType, infer, IResult)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalDecl, nScheme)
 import           AST.Term.Scheme (sTyp)
@@ -57,8 +57,7 @@ unmemoizedInfer :: InferFunc a
 unmemoizedInfer defExpr =
     do
         addDeps <- loadDeps (defExpr ^. Definition.exprFrozenDeps)
-        inferNode (defExpr ^. Definition.expr)
-            & Reader.local addDeps
+        infer (defExpr ^. Definition.expr) & Reader.local addDeps
 
 propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
@@ -183,11 +182,11 @@ inferDef ::
     CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) -> V.Var ->
     T m (Either (Tree Pure T.TypeError) (InferResult m))
-inferDef infer monitors results defExpr defVar =
+inferDef inferFunc monitors results defExpr defVar =
     do
         defTv <- Unify.newUnbound
         inferredVal <-
-            infer defExpr
+            inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ GMono defTv)
         inferredVal <$ unify defTv (inferredVal ^. iType)
     & runInferResult monitors results
@@ -197,5 +196,5 @@ inferDefExpr ::
     InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) ->
     T m (Either (Tree Pure T.TypeError) (InferResult m))
-inferDefExpr infer monitors results defExpr =
-    infer defExpr & runInferResult monitors results
+inferDefExpr inferFunc monitors results defExpr =
+    inferFunc defExpr & runInferResult monitors results

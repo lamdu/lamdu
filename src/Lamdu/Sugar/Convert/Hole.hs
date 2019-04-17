@@ -12,7 +12,7 @@ module Lamdu.Sugar.Convert.Hole
     ) where
 
 import           AST (Tree, Pure(..), _ToKnot, _Pure)
-import           AST.Infer (IResult(..), irScope, inferNode, irType)
+import           AST.Infer (IResult(..), irType, irScope, infer)
 import           AST.Knot.Ann (Ann(..), ann, annotations)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (ToNom(..), NominalDecl, nScheme)
@@ -308,7 +308,7 @@ loadInfer sugarContext scope v =
     ( deps
     , do
         addScope <- Infer.loadDeps deps
-        local addScope (inferNode v)
+        local addScope (infer v)
         & runPureInfer scope (sugarContext ^. ConvertM.scInferContext)
         <&> _1 %~ (^. ExprLens.itermAnn)
     )

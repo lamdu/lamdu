@@ -2,11 +2,11 @@ packages:
 - '.'
 - location:
     git: https://github.com/lamdu/syntax-tree
-    commit: 4e0def63b08b467d52618fd59f20b7020371fbe2
+    commit: 9e4e5e5805bccd28b9254c9a286fe384aee69ce2
   extra-dep: True
 - location:
     git: https://github.com/lamdu/lamdu-calculus
-    commit: bb9b13542630c7fa7d2931b9ddb509ee6a8fd704
+    commit: 962c2fc42194eaf3f53e5399df1ca679974a270e
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators

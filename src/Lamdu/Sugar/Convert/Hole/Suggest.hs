@@ -81,7 +81,7 @@ termTransformsWithoutSplit def src =
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (val . V._BToNom) src ->
                     do
-                        (fromNomTyp, _) <- V.LFromNom name & V.BLeaf & infer
+                        (fromNomTyp, _) <- V.LFromNom name & V.BLeaf & inferBody
                         resultType <- newUnbound
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.Apply (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
