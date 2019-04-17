@@ -44,8 +44,7 @@ termTransforms def src =
     >>=
     \case
     Just row | Lens.nullOf (val . V._BRecExtend) src ->
-        pure src
-        <|> transformGetFields def src row
+        transformGetFields def src row
     _ -> termTransformsWithoutSplit def src
 
 transformGetFields ::
@@ -71,14 +70,12 @@ liftInfer scope act =
 
 termTransformsWithoutSplit ::
     a -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
-termTransformsWithoutSplit _ src
-    | Lens.has (val . V._BApp . V.applyFunc . val . V._BLam) src =
+termTransformsWithoutSplit def src =
+    do
         -- Don't modify a redex from the outside.
         -- Such transform are more suitable in it!
-        pure src
-termTransformsWithoutSplit def src =
-    pure src <|>
-    do
+        Lens.nullOf (val . V._BApp . V.applyFunc . val . V._BLam) src & guard
+
         (s1, typ) <- src ^. ann . _2 . irType & semiPruneLookup & liftInfer srcScope
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
@@ -90,7 +87,7 @@ termTransformsWithoutSplit def src =
                         V.Apply (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
                             & V.BApp & mkResult resultType & pure
                     & liftInfer srcScope
-                    >>= termTransformsWithoutSplit def
+                    >>= termOptionalTransformsWithoutSplit def
             Just (T.TVariant row) | Lens.nullOf (val . V._BInject) src ->
                 do
                     dstType <- newUnbound
@@ -113,16 +110,23 @@ termTransformsWithoutSplit def src =
                         forTypeWithoutSplit argType & liftInfer srcScope
                         <&> annotations %~ (\t -> (def, IResult t srcScope))
                     let applied = V.Apply src arg & V.BApp & mkResult resType
-                    if Lens.has (ExprLens.valLeafs . V._LHole) arg
-                        then
+                    pure applied
+                        <|>
+                        do
                             -- If the suggested argument has holes in it
                             -- then stop suggesting there to avoid "overwhelming"..
-                            pure applied
-                        else termTransformsWithoutSplit def applied
+                            Lens.nullOf (ExprLens.valLeafs . V._LHole) arg & guard
+                            termTransformsWithoutSplit def applied
             _ -> empty
     where
         mkResult t = Ann (def, IResult t srcScope)
         srcScope = src ^. ann . _2 . irScope
+
+termOptionalTransformsWithoutSplit ::
+    a -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
+termOptionalTransformsWithoutSplit def src =
+    pure src <|>
+    termTransformsWithoutSplit def src
 
 -- | Suggest values that fit a type, may "split" once, to suggest many
 -- injects for a sum type. These are offerred in holes (not fragments).
@@ -250,7 +254,8 @@ termTransformsWithModify def src =
         -- A "params record" (or just a let item which is a record..)
         pure src
     _ ->
-        fillHoles def src & liftInfer srcScope
-        >>= termTransforms def
+        do
+            t <- fillHoles def src & liftInfer srcScope
+            pure t <|> termTransforms def t
     where
         srcScope = src ^. ann . _2 . irScope
