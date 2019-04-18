@@ -167,7 +167,7 @@ verticalDisambigTest =
                 box =
                     Options.box disambig [unitItem, unitItem]
                     <&> (<>[]) -- to avoid ambiguous type var
-        unitItem = Element.assymetricPad 0 1 Element.empty
+        unitItem = Element.pad 0 1 Element.empty
         disambig =
             Options.disambiguationNone
-            & Options.disambVert .~ Element.assymetricPad (Vector2 0.5 0) 0
+            & Options.disambVert .~ Element.pad (Vector2 0.5 0) 0

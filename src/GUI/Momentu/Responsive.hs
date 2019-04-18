@@ -125,14 +125,14 @@ instance (Functor f, a ~ f State.Update) => Element (Responsive a) where
     hoverLayers = Widget.widget %~ Element.hoverLayers
     empty = Responsive Element.empty Element.empty (const Element.empty)
     scale = error "Responsive: scale not Implemented"
-    assymetricPad topLeft bottomRight w =
+    pad topLeft bottomRight w =
         Responsive
-        { _rWide = w ^. rWide & Element.assymetricPad topLeft bottomRight
-        , _rWideDisambig = w ^. rWideDisambig & Element.assymetricPad topLeft bottomRight
+        { _rWide = w ^. rWide & Element.pad topLeft bottomRight
+        , _rWideDisambig = w ^. rWideDisambig & Element.pad topLeft bottomRight
         , _rNarrow =
             w ^. rNarrow
             & Lens.argument . layoutWidth -~ topLeft ^. _1 + bottomRight ^. _1
-            <&> Element.assymetricPad topLeft bottomRight
+            <&> Element.pad topLeft bottomRight
         }
 
 instance Widget.HasWidget Responsive where widget = alignedWidget . Align.tValue
@@ -267,7 +267,7 @@ taggedList =
     let preWidth = items ^.. traverse . tagPre . Element.width & maximum
         postWidth = items ^.. traverse . tagPost . Element.width & maximum
         renderItem ((pre, post), item) =
-            ( Element.assymetricPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
+            ( Element.pad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
                 /|/ item
             , post
             )
@@ -276,7 +276,7 @@ taggedList =
             where
                 renderRow (item, post) =
                     item /|/
-                    Element.assymetricPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
+                    Element.pad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
                 itemWidth = xs ^.. traverse . _1 . Element.width & maximum
         idx =
             NarrowLayoutParams

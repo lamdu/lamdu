@@ -241,7 +241,7 @@ toWidgetWithKeys keys size sChildren =
             -- -- Each child is set to the size of the entire grid and
             -- -- then translated to its place in order to fix the
             -- -- Surrounding parameters of all children
-            Element.assymetricPad
+            Element.pad
             (rect ^. Rect.topLeft)
             (size - (rect ^. Rect.bottomRight)) widget
         translatedChildren = sChildren & each2d %~ translateChildWidget

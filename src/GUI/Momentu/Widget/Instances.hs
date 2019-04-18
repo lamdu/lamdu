@@ -51,7 +51,7 @@ instance (Functor f, a ~ f Update) => Element (Widget a) where
         & Element.setLayers . Element.layers %~ (mempty :)
         & enterResult . enterResultLayer +~ 1
     empty = fromView Element.empty
-    assymetricPad leftAndTop rightAndBottom w =
+    pad leftAndTop rightAndBottom w =
         w
         & wState .~ translate leftAndTop w
         & wSize +~ leftAndTop + rightAndBottom

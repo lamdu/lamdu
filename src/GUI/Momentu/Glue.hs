@@ -32,8 +32,8 @@ glueH ::
     (a -> b -> c) -> Orientation -> a -> b -> c
 glueH f orientation v0 v1 =
     f
-    (Element.assymetricPad v0pre v0post v0)
-    (Element.assymetricPad v1pre v1post v1)
+    (Element.pad v0pre v0post v0)
+    (Element.pad v1pre v1post v1)
     where
         v0pre = 0
         v0post = v1s & perp -~ v0s ^. perp & perp %~ max 0

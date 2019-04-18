@@ -25,7 +25,7 @@ Lens.makeLenses ''View
 instance Element View where
     setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
     hoverLayers = Element.setLayers . Element.layers %~ (mempty:)
-    assymetricPad leftAndTop rightAndBottom x =
+    pad leftAndTop rightAndBottom x =
         x
         & vSize +~ leftAndTop + rightAndBottom
         & vAnimLayers %~ Element.translateLayers leftAndTop

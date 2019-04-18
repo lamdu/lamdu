@@ -49,14 +49,14 @@ render x = x ^. layers . Lens.reversed . traverse
 class Element a where
     setLayers :: Lens.IndexedSetter' Size a Layers
     hoverLayers :: a -> a
-    assymetricPad :: Vector2 R -> Vector2 R -> a -> a
+    pad :: Vector2 R -> Vector2 R -> a -> a
     scale :: Vector2 R -> a -> a
     empty :: a
 
 -- Different `SetLayers`s do additional things when padding
 -- (Moving focal points, alignments, etc)
 padAround :: Element a => Vector2 R -> a -> a
-padAround p = assymetricPad p p
+padAround p = pad p p
 
 class Element a => SizedElement a where size :: Lens.Getter a Size
 
@@ -83,6 +83,6 @@ subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
 padToSize :: SizedElement a => Size -> Vector2 R -> a -> a
 padToSize newSize alignment x =
-    assymetricPad (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
+    pad (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size

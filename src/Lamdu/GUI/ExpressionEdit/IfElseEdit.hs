@@ -136,7 +136,7 @@ renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
         -- TODO: better way to make space between rows in grid??
-        let spaceAbove = (<&> Element.assymetricPad (Vector2 0 vspace) 0)
+        let spaceAbove = (<&> Element.pad (Vector2 0 vspace) 0)
         let prepareRows [] = []
             prepareRows [x, y] = [prep2 x, spaceAbove (prep2 y)]
             prepareRows (x:xs) = x : (xs <&> spaceAbove)

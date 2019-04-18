@@ -49,7 +49,7 @@ Lens.makeLenses ''StatusWidget
 instance Functor f => Element (StatusWidget f) where
     setLayers = widget . setLayers
     hoverLayers = widget %~ hoverLayers
-    assymetricPad x y = widget %~ assymetricPad x y
+    pad x y = widget %~ pad x y
     scale x = widget %~ scale x
     empty = StatusWidget Element.empty mempty
 

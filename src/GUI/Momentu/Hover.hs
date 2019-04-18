@@ -66,7 +66,7 @@ Lens.makeLenses ''Hover
 instance Element a => Element (Hover a) where
     setLayers = unHover . Element.setLayers
     hoverLayers = unHover %~ Element.hoverLayers
-    assymetricPad p0 p1 = unHover %~ Element.assymetricPad p0 p1
+    pad p0 p1 = unHover %~ Element.pad p0 p1
     scale r = unHover %~ Element.scale r
     empty = Hover Element.empty
 
@@ -79,10 +79,10 @@ instance (Functor f, a ~ f State.Update) => Element (AnchoredWidget a) where
     setLayers = anchored . Element.setLayers
     hoverLayers = anchored %~ Element.hoverLayers
     empty = AnchoredWidget 0 Element.empty
-    assymetricPad tl br (AnchoredWidget point w) =
+    pad tl br (AnchoredWidget point w) =
         AnchoredWidget
         { _anchorPoint = point + tl
-        , _anchored = Element.assymetricPad tl br w
+        , _anchored = Element.pad tl br w
         }
     scale ratio (AnchoredWidget point w) =
         AnchoredWidget
@@ -197,7 +197,7 @@ emplaceAt ::
     Gui AnchoredWidget f ->
     Gui Widget f
 emplaceAt h place =
-    Element.assymetricPad translation postPad (h ^. anchored)
+    Element.pad translation postPad (h ^. anchored)
     where
         postPad =
             place ^. Element.size - h ^. Element.size - translation <&> max 0

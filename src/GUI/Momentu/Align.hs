@@ -51,14 +51,14 @@ instance SizedElement a => Element (Aligned a) where
     setLayers = value . Element.setLayers
     hoverLayers = value %~ Element.hoverLayers
     empty = Aligned 0 Element.empty
-    assymetricPad topLeftPadding bottomRightPadding (Aligned ratio w) =
+    pad topLeftPadding bottomRightPadding (Aligned ratio w) =
         Aligned
         { _alignmentRatio =
             (ratio * (w ^. Element.size) + topLeftPadding) / paddedWidget ^. Element.size
         , _value = paddedWidget
         }
         where
-            paddedWidget = Element.assymetricPad topLeftPadding bottomRightPadding w
+            paddedWidget = Element.pad topLeftPadding bottomRightPadding w
     scale ratio = value %~ Element.scale ratio
 
 instance SizedElement a => SizedElement (Aligned a) where size = value . Element.size
@@ -67,10 +67,10 @@ instance SizedElement a => Element (WithTextPos a) where
     setLayers = tValue . Element.setLayers
     hoverLayers = tValue %~ Element.hoverLayers
     empty = WithTextPos 0 Element.empty
-    assymetricPad tl br (WithTextPos y w) =
+    pad tl br (WithTextPos y w) =
         WithTextPos
         { _textTop = y + tl ^. _2
-        , _tValue = Element.assymetricPad tl br w
+        , _tValue = Element.pad tl br w
         }
     scale ratio (WithTextPos y w) =
         WithTextPos
@@ -150,7 +150,7 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
         bGlueTranslation = 0 & l .~ aw ^. Element.size . l
         aToB = bAbsAlign - aAbsAlign & l .~ 0
         bToA = -aToB
-        syncAlign move = Element.assymetricPad (max 0 move) 0
+        syncAlign move = Element.pad (max 0 move) 0
 
 {-# INLINE asTuple #-}
 asTuple :: Lens.Iso (Aligned a) (Aligned b) (Vector2 R, a) (Vector2 R, b)
