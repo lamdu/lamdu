@@ -2,11 +2,21 @@
 module Lamdu.I18N.Texts where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
+import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
 
+class HasTexts env where texts :: Lens' env Texts
+instance HasTexts Texts where texts = id
+
 data Texts = Texts
-    { _assign :: Text -- Assignment
+    { -- TODO: Should this still be called "Texts?"
+      -- Using a boolean for the JSON instance
+      _isLeftToRight :: Bool
+    , _assign :: Text -- Assignment
     , _relay :: Text -- Apply
     , _let_ :: Text
     , _toNom :: Text
@@ -44,7 +54,12 @@ data Texts = Texts
     , _newDefinitionButton :: Text
     , _undeleteButton :: Text
     }
-Lens.makeLenses ''Texts
-
+    deriving (Eq, Ord, Show)
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
+
+Lens.makeLenses ''Texts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+
+instance HasConfigFolder Texts where
+    configFolder _ = "languages"

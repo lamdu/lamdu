@@ -19,7 +19,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
-import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -189,12 +188,23 @@ makeScopeNavEdit func myId curCursor =
                 (mempty <$) .
                 Property.set chosenScopeProp . Just
         let mkScopeEventMap l r = makeScopeEventMap l r curCursor (void . setScope)
+        (arrowPrev, arrowNext) <-
+            Lens.view Element.layoutDir <&>
+            \case
+            Element.LeftToRight -> ("◀", "▶")
+            Element.RightToLeft -> ("▶", "◀")
+        let scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
+            scopes =
+                [ (arrowPrev, sMPrevParamScope curCursor)
+                , (" ", Nothing)
+                , (arrowNext, sMNextParamScope curCursor)
+                ]
         Lens.view (Settings.settings . Settings.sAnnotationMode)
             >>= \case
             Annotations.Evaluation ->
                 (Widget.makeFocusableWidget ?? myId)
-                <*> ( traverse (uncurry (makeScopeNavArrow setScope)) scopes
-                        <&> Glue.hbox <&> (^. Align.tValue)
+                <*> ( Glue.hbox <*> traverse (uncurry (makeScopeNavArrow setScope)) scopes
+                        <&> (^. Align.tValue)
                     )
                 <&> Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys <> blockEventMap)
@@ -206,12 +216,6 @@ makeScopeNavEdit func myId curCursor =
     where
         leftKeys = [MetaKey noMods MetaKey.Key'Left]
         rightKeys = [MetaKey noMods MetaKey.Key'Right]
-        scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
-        scopes =
-            [ ("◀", sMPrevParamScope curCursor)
-            , (" ", Nothing)
-            , ("▶", sMNextParamScope curCursor)
-            ]
 
 data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
@@ -434,10 +438,11 @@ make pMode defEventMap tag color assignment =
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         addFirstParamEventMap <-
             ParamEdit.eventMapAddFirstParam myId (assignmentBody ^. SugarLens.assignmentBodyAddFirstParam)
+        (|---|) <- Glue.mkGlue ?? Glue.Vertical
         defNameEdit <-
             TagEdit.makeBinderTagEdit color tag
             <&> Align.tValue %~ Widget.weakerEvents (rhsJumperEquals <> addFirstParamEventMap)
-            <&> (/-/ fromMaybe Element.empty mPresentationEdit)
+            <&> (|---| fromMaybe Element.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
         mParamEdit <-
             case mParamsEdit of

@@ -33,8 +33,8 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.I18N.Languages (texts)
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Texts, texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -54,14 +54,20 @@ rawText animIdSuffix txt =
     (TextView.make ?? txt) <*> Element.subAnimId animIdSuffix
 
 text ::
-    (MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    AnimId -> Lens.ALens Texts t Text b -> f (WithTextPos View)
-text animIdSuffix txtLens = rawText animIdSuffix (texts ^# txtLens)
+    ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Texts.HasTexts env
+    ) =>
+    AnimId -> Lens.ALens' Texts Text -> f (WithTextPos View)
+text animIdSuffix txtLens =
+    Lens.view (texts . Lens.cloneLens txtLens)
+    >>= rawText animIdSuffix
 
 label ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Texts.HasTexts env
+    ) =>
     Lens.ALens' Texts Text -> m (WithTextPos View)
-label = Label.make . (texts ^#)
+label lens = Lens.view texts <&> (^# lens) >>= Label.make
 
 addValBG ::
     ( MonadReader env m, Element a
@@ -145,8 +151,9 @@ withColor textColor act =
 
 actionable ::
     ( Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , GuiState.HasCursor env, Config.HasConfig env, HasTheme env, Applicative f
-    , MonadReader env m
+    , GuiState.HasCursor env, Config.HasConfig env, HasTheme env
+    , Texts.HasTexts env
+    , Applicative f, MonadReader env m
     ) =>
     Widget.Id -> Lens.ALens' Texts Text -> E.Doc -> f Widget.Id ->
     m (TextWidget f)
@@ -162,7 +169,7 @@ actionable myId txtLens doc action =
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> Label.make (texts ^# txtLens)
+            <*> label txtLens
             & Reader.local (TextView.color .~ color)
             & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap

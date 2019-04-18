@@ -14,7 +14,8 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue ((/-/), (/|/), hbox, vbox)
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -88,7 +89,8 @@ makeTable (Sugar.ResTable headers valss) =
             if null (drop tableCutoff rows)
             then pure Element.empty
             else Label.make "…"
-        Aligned 0.5 table /-/ Aligned 0.5 remainView ^. Align.value & pure
+        pure (Aligned 0.5 table) /-/ pure (Aligned 0.5 remainView)
+            <&> (^. Align.value)
 
 makeArray ::
     (Monad i, Monad o) =>
@@ -96,18 +98,23 @@ makeArray ::
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
-        opener <- Label.make "["
-        closer <- Label.make "]"
-        opener : itemViews ++ [closer] & hbox & pure
+        (preLabel, postLabel) <-
+            Lens.view Element.layoutDir <&>
+            \case
+            Element.LeftToRight -> ("[", "]")
+            Element.RightToLeft -> ("]", "[")
+        opener <- Label.make preLabel
+        closer <- Label.make postLabel
+        Glue.hbox ?? opener : itemViews ++ [closer]
     where
         makeItem idx val =
-            [ [ Label.make ", " | idx > 0 ]
-            , [ makeInner val
-                | idx < arrayCutoff ]
-            , [ Label.make "…" | idx == arrayCutoff ]
-            ] & concat
-            & sequence
-            <&> hbox
+            Glue.hbox
+            <*> ( [ [ Label.make ", " | idx > 0 ]
+                    , [ makeInner val
+                      | idx < arrayCutoff ]
+                    , [ Label.make "…" | idx == arrayCutoff ]
+                    ] & concat & sequence
+                )
             & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
 
 makeTree ::
@@ -117,15 +124,15 @@ makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
         subtreeViews <- zipWithM makeItem [0..cutoff] subtrees
-        rootView : subtreeViews & vbox & pure
+        Glue.vbox ?? (rootView : subtreeViews)
     where
         makeItem idx val =
-            [ [ Label.make "* " ]
-            , [ makeInner val | idx < cutoff ]
-            , [ Label.make "…" | idx == cutoff ]
-            ] & concat
-            & sequence
-            <&> hbox
+            Glue.hbox <*>
+            ( [ [ Label.make "* " ]
+                , [ makeInner val | idx < cutoff ]
+                , [ Label.make "…" | idx == cutoff ]
+                ] & concat & sequence
+            )
             & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
         cutoff = 4
 
@@ -142,28 +149,26 @@ makeList ::
     Sugar.ResList (ResVal (Name f)) -> ExprGuiM i o (WithTextPos View)
 makeList (Sugar.ResList head_) =
     do
-        o <- Label.make "["
-        inner <- makeInner head_
-        c <- Label.make ", …]" <&> (^. Align.tValue)
-        o /|/ inner
-            & Align.tValue %~ (hGlueAlign 1 ?? c)
-            & pure
+        (preLabel, postLabel) <-
+            Lens.view Element.layoutDir <&>
+            \case
+            Element.LeftToRight -> ("[", ", …]")
+            Element.RightToLeft -> ("]", "[… ,")
+        c <- Label.make postLabel <&> (^. Align.tValue)
+        Label.make preLabel /|/ makeInner head_
+            >>= Align.tValue (hGlueAlign 1 ?? c)
     where
-        hGlueAlign align l r = (Aligned align l /|/ Aligned align r) ^. Align.value
+        hGlueAlign align l r =
+            (pure (Aligned align l) /|/ pure (Aligned align r)) <&> (^. Align.value)
 
 makeInject ::
     (Monad i, Monad o) =>
-    Sugar.ResInject (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
+    Sugar.ResInject (Name f) (ResVal (Name g)) ->
+    ExprGuiM i o (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
-    do
-        tagView <- makeTagView tag
-        case mVal of
-            Nothing -> pure tagView
-            Just val ->
-                do
-                    s <- Spacer.stdHSpace
-                    i <- makeInner val
-                    tagView /|/ s /|/ i & pure
+    case mVal of
+    Nothing -> makeTagView tag
+    Just val -> makeTagView tag /|/ Spacer.stdHSpace /|/ makeInner val
 
 depthCounts :: ResVal name -> [Int]
 depthCounts v =

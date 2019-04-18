@@ -22,6 +22,9 @@ Data-files:          fonts/DejaVuSans.ttf
                    , themes/default.json
                    , themes/light.json
                    , themes/retro.json
+                   , languages/english.json
+                   , languages/hebrew.json
+                   , languages/rtl-english.mixin.json
                    , freshdb.json
                    , js/README
                    , js/anchors.js
@@ -336,7 +339,6 @@ Library
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
                   , Lamdu.I18N.Texts
-                  , Lamdu.I18N.Languages
                   , Lamdu.Main.Env
                   , Lamdu.Name
                   , Lamdu.Opts

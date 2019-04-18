@@ -115,7 +115,7 @@ makeResultOption pl ctx results =
 
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env
+    , Spacer.HasStdSpacing env, Element.HasLayoutDir env
     ) =>
     Sugar.Payload (Name g) i o a0 -> m View
 makeInferredTypeAnnotation pl =
@@ -161,9 +161,8 @@ make mkOptions pl allowedTerms =
             then
                 do
                     annotation <-
-                        (/-/)
-                        <$> Annotation.annotationSpacer
-                        <*> makeInferredTypeAnnotation pl
+                        Annotation.annotationSpacer
+                        /-/ makeInferredTypeAnnotation pl
                     options <- ExprGuiM.im mkOptions
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not

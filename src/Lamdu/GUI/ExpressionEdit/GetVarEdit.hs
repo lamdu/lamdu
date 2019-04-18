@@ -56,6 +56,7 @@ import           Lamdu.Prelude
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasLayoutDir env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
     m (TextWidget f)
@@ -67,13 +68,15 @@ makeSimpleView color name myId =
 makeParamsRecord ::
     ( MonadReader env m, HasTheme env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
+    , Element.HasLayoutDir env, Texts.HasTexts env
     , Applicative f
     ) =>
     Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Gui Responsive f)
 makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
-        sequence
+        (Options.box ?? Options.disambiguationNone)
+            <*> sequence
             [ grammar (label Texts.paramsRecordOpener) <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
@@ -89,7 +92,7 @@ makeParamsRecord myId paramsRecordVar =
                 )
               )
             , grammar (label Texts.paramsRecordCloser) <&> Responsive.fromTextView
-            ] <&> Options.box Options.disambiguationNone <&> respondToCursor
+            ] <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
 
@@ -167,28 +170,29 @@ definitionTypeChangeBox ::
     ( MonadReader env m
     , Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
-    , HasConfig env, Applicative f
+    , HasConfig env, Element.HasLayoutDir env, Texts.HasTexts env
+    , Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
-        updateLabel <- Styled.actionable myId Texts.defUpdateHeader updateDoc update
-        toLabel <- Styled.info (label Texts.defUpdateTo)
-
         oldTypeRow <- Styled.info (label Texts.defUpdateWas)
-        hspace <- Spacer.stdHSpace
-        let newTypeRow = updateLabel /|/ hspace /|/ toLabel
+        newTypeRow <-
+            Styled.actionable myId Texts.defUpdateHeader
+            updateDoc update
+            /|/ Spacer.stdHSpace
+            /|/ Styled.info (label Texts.defUpdateTo)
 
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)
 
-        Grid.make
+        Grid.make ??
             [ [ Align.fromWithTextPos 0 (oldTypeRow <&> Widget.fromView)
               , Align.fromWithTextPos 0 (oldTypeView <&> Widget.fromView) ]
             , [ Align.fromWithTextPos 0 newTypeRow
               , Align.fromWithTextPos 0 (newTypeView <&> Widget.fromView) ]
-            ] & snd & Align.WithTextPos 0 & pure
+            ] <&> snd <&> Align.WithTextPos 0
     where
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         updateDoc = E.Doc ["Edit", "Update definition type"]
@@ -201,7 +205,8 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
-    , GuiState.HasCursor env, Hover.HasStyle env
+    , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
+    , Texts.HasTexts env
     , Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->

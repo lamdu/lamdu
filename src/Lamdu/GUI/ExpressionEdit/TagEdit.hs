@@ -18,7 +18,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -170,7 +170,7 @@ fuzzyMaker = memo Fuzzy.make
 makeOptions ::
     ( Monad i, Applicative o, MonadReader env m
     , GuiState.HasCursor env, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
@@ -243,7 +243,9 @@ type HasSearchTermEnv env =
     )
 
 makeHoleSearchTerm ::
-    (MonadReader env m, Applicative o, HasSearchTermEnv env) =>
+    ( MonadReader env m, Applicative o, HasSearchTermEnv env
+    , Element.HasLayoutDir env
+    ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
     m (SearchMenu.Term o)
@@ -277,11 +279,12 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                         (TextView.make ?? "(new)") <*> Element.subAnimId ["label"]
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
+                    Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
                     let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
                     let termWithHover termW =
                             let hoverOptions =
-                                    [ anchor (termW /|/ space) /|/ hNewTagLabel
-                                    , hNewTagLabel /|/ anchor (space /|/ termW)
+                                    [ anchor (termW ||| space) ||| hNewTagLabel
+                                    , hNewTagLabel ||| anchor (space ||| termW)
                                     ] <&> (^. Align.tValue)
                             in  anchor termW
                                 <&> Hover.hoverInPlaceOf hoverOptions
@@ -308,6 +311,7 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 makeTagView ::
     ( MonadReader env m, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
+    , Element.HasLayoutDir env
     ) =>
     Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
@@ -335,6 +339,7 @@ makeTagEditWith ::
     ( Monad i, Applicative o, MonadReader env n
     , GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
+    , Element.HasLayoutDir env
     ) =>
     (n (TextWidget o) ->
      ExprGuiM i o (TextWidget o)) ->
@@ -457,7 +462,9 @@ makeParamTag =
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
-    (MonadReader env m, HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env m, HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    ) =>
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =
     NameView.make name

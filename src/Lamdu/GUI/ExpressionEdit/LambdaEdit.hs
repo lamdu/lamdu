@@ -9,7 +9,7 @@ import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
@@ -39,26 +39,34 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 addScopeEdit ::
-    Applicative o => Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o
-addScopeEdit mScopeEdit = (/-/ maybe Element.empty (WithTextPos 0) mScopeEdit)
+    (MonadReader env m, Applicative o, Element.HasLayoutDir env) =>
+    m (Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o)
+addScopeEdit =
+    Glue.mkGlue ?? Glue.Vertical
+    <&> (\(|---|) mScopeEdit ->
+                (|---| maybe Element.empty (WithTextPos 0) mScopeEdit))
 
 mkLhsEdits ::
-    Applicative o =>
-    Maybe (Gui Responsive o) ->
-    Maybe (Gui Widget o) -> [Gui Responsive o]
-mkLhsEdits mParamsEdit mScopeEdit =
-    mParamsEdit <&> addScopeEdit mScopeEdit & (^.. Lens._Just)
+    (MonadReader env m, Applicative o, Element.HasLayoutDir env) =>
+    m
+    (Maybe (Gui Responsive o) ->
+     Maybe (Gui Widget o) -> [Gui Responsive o])
+mkLhsEdits =
+    addScopeEdit <&> \add mParamsEdit mScopeEdit ->
+    mParamsEdit ^.. Lens._Just <&> add mScopeEdit
 
 mkExpanded ::
     ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env, Element.HasAnimIdPrefix env
+    , Texts.HasTexts env
     ) =>
-    f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) ->
-     [Gui Responsive o])
+    f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
 mkExpanded =
-    grammar (label Texts.arrow) <&> Responsive.fromTextView
-    <&> \labelEdit mParamsEdit mScopeEdit ->
-    mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
+    (,)
+    <$> mkLhsEdits
+    <*> (grammar (label Texts.arrow) <&> Responsive.fromTextView)
+    <&> \(lhsEdits, labelEdit) mParamsEdit mScopeEdit ->
+    lhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
@@ -66,6 +74,7 @@ lamId = (`Widget.joinId` ["lam"])
 mkShrunk ::
     ( Monad o, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasLayoutDir env, Texts.HasTexts env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
@@ -83,15 +92,16 @@ mkShrunk paramIds myId =
             <*> grammar (label Texts.lam)
             <&> Responsive.fromWithTextPos
             & Reader.local (TextView.underline ?~ LightLambda.underline theme)
+        addScopeEd <- addScopeEdit
         pure $ \mScopeEdit ->
-            [ addScopeEdit mScopeEdit lamLabel
+            [ addScopeEd mScopeEdit lamLabel
               & Widget.weakerEvents expandEventMap
             ]
 
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
-    , HasConfig env
+    , HasConfig env, Element.HasLayoutDir env, Texts.HasTexts env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f
@@ -133,7 +143,7 @@ make lam pl =
             func pl (WidgetIds.fromEntityId bodyId)
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
-            (_, Sugar.NullParam{}) -> mkLhsEdits mParamsEdit mScopeEdit & pure
+            (_, Sugar.NullParam{}) -> mkLhsEdits ?? mParamsEdit ?? mScopeEdit
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
         stdWrapParentExpr pl

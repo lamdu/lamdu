@@ -65,21 +65,19 @@ makeNamePartEditor color namePartStr setter myId =
 
 make ::
     ( MonadReader env f, HasTheme env, GuiState.HasCursor env
-    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Monad o
+    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    , Monad o
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
     f (TextWidget o)
 make def myId =
     do
         colors <- Lens.view (Theme.theme . Theme.textColors)
-        moduleName <-
-            makeNamePartEditor (colors ^. TextColors.foreignModuleColor)
+        makeNamePartEditor (colors ^. TextColors.foreignModuleColor)
             modulePathStr modulePathSetter (builtinFFIPath myId)
-        varName <-
-            makeNamePartEditor (colors ^. TextColors.foreignVarColor) name nameSetter
-            (builtinFFIName myId)
-        dot <- Label.make "."
-        moduleName /|/ dot /|/ varName & pure
+            /|/ Label.make "."
+            /|/ makeNamePartEditor (colors ^. TextColors.foreignVarColor) name
+            nameSetter (builtinFFIName myId)
     & GuiState.assignCursor myId (builtinFFIName myId)
     where
         Sugar.DefinitionBuiltin

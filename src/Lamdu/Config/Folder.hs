@@ -1,8 +1,13 @@
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, TemplateHaskell #-}
+
 module Lamdu.Config.Folder
-    ( Selection, getFiles, getNames
+    ( Selection(..), _Selection
+    , getFiles, getNames
     , HasConfigFolder(..)
     ) where
 
+import qualified Control.Lens as Lens
+import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import qualified Lamdu.Paths as Paths
 import qualified System.Directory as Directory
@@ -11,7 +16,9 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
-type Selection = Text
+newtype Selection a = Selection { getSelection :: Text }
+    deriving (Eq, Ord, Show)
+Lens.makePrisms ''Selection
 
 class HasConfigFolder a where
     configFolder :: proxy a -> FilePath
@@ -24,7 +31,8 @@ getFiles p =
             <&> FilePath.takeDirectory <&> (</> configFolder p)
         Directory.getDirectoryContents dir
             <&> filter ((== ".json") . FilePath.takeExtension)
+            <&> filter ((/= ".mixin") . FilePath.takeExtension . FilePath.dropExtension)
             <&> map (dir </>)
 
-getNames :: HasConfigFolder a => proxy a -> IO [Selection]
-getNames p = getFiles p <&> map (Text.pack . FilePath.takeFileName . FilePath.dropExtension)
+getNames :: forall a. HasConfigFolder a => IO [Selection a]
+getNames = getFiles (Proxy @a) <&> map (Selection . Text.pack . FilePath.takeFileName . FilePath.dropExtension)

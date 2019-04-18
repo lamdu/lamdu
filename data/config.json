@@ -69,6 +69,7 @@
     "delBackwardKeys"          : [ "Backspace" ],
     "quitKeys"                 : [ "Cmd+Q" ],
     "changeThemeKeys"          : [ "Alt+T" ],
+    "changeLanguageKeys"       : [],
     "addNextParamKeys"         : [ "Space" ],
     "paramOrderBeforeKeys"     : [ "Alt+Up" ],
     "paramOrderAfterKeys"      : [ "Alt+Down" ],

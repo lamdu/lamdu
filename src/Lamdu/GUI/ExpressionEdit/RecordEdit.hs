@@ -15,7 +15,8 @@ import           GUI.Momentu.Animation.Id (augmentId)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
@@ -84,9 +85,8 @@ makeUnit pl =
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
         addFieldEventMap <- mkAddFieldEventMap myId
         stdWrap pl
-            <*> ( (/|/)
-                    <$> grammar (label Texts.recordOpener)
-                    <*> grammar (label Texts.recordCloser)
+            <*> ( grammar (label Texts.recordOpener)
+                    /|/ grammar (label Texts.recordCloser)
                     <&> makeFocusable
                     <&> Align.tValue %~ Widget.weakerEvents
                         (addFieldEventMap <> addFieldWithSearchTermEventMap myId)
@@ -139,7 +139,8 @@ make (Sugar.Composite fields recordTail addField) pl =
             & E.charGroup Nothing (E.Doc ["Navigation", "Go to parent"]) "}"
 
 makeRecord ::
-    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
+    , Spacer.HasStdSpacing env, Element.HasLayoutDir env, Texts.HasTexts env
     , Applicative o
     ) =>
     (Gui Responsive o -> m (Gui Responsive o)) ->
@@ -148,26 +149,28 @@ makeRecord ::
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
-    do
-        opener <- grammar (label Texts.recordOpener)
-        Responsive.taggedList
-            <*> addPostTags fieldGuis
-            >>= postProcess
-            <&> (opener /|/)
+    ( grammar (label Texts.recordOpener)
+        /|/ (Responsive.taggedList
+                <*> addPostTags fieldGuis
+                >>= postProcess)
+    )
 
 addPostTags ::
-    (MonadReader env m, Theme.HasTheme env, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, Texts.HasTexts env
+    ) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
 addPostTags items =
-    Lens.itraverse f items
+    do
+        let f idx item =
+                grammar (label txt)
+                & Reader.local (Element.animIdPrefix %~ augmentId idx)
+                <&> \lbl -> item & Responsive.tagPost .~ (lbl <&> Widget.fromView)
+                where
+                    txt | idx < lastIdx = Texts.recordSep
+                        | otherwise = Texts.recordCloser
+        Lens.itraverse f items
     where
-        f idx item =
-            grammar (label txt)
-            & Reader.local (Element.animIdPrefix %~ augmentId idx)
-            <&> \lbl -> item & Responsive.tagPost .~ (lbl <&> Widget.fromView)
-            where
-                txt | idx < lastIdx = Texts.recordSep
-                    | otherwise = Texts.recordCloser
         lastIdx = length items - 1
 
 makeAddFieldRow ::
@@ -200,13 +203,13 @@ makeFieldRow ::
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
-        tagLabel <-
-            TagEdit.makeRecordTag tag
-            <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-        hspace <- Spacer.stdHSpace
         fieldGui <- ExprGuiM.makeSubexpression fieldExpr
+        pre <-
+            ( TagEdit.makeRecordTag tag
+                <&> Align.tValue %~ Widget.weakerEvents itemEventMap
+            ) /|/ Spacer.stdHSpace
         pure Responsive.TaggedItem
-            { Responsive._tagPre = tagLabel /|/ hspace
+            { Responsive._tagPre = pre
             , Responsive._taggedItem = Widget.weakerEvents itemEventMap fieldGui
             , Responsive._tagPost = Element.empty
             }
@@ -233,8 +236,10 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
             Styled.addValPadding <*> ExprGuiM.makeSubexpression rest
             <&> Widget.weakerEvents restEventMap
         animId <- Lens.view Element.animIdPrefix
-        Responsive.vboxWithSeparator False
-            (separationBar (theme ^. Theme.textColors) animId <&> (/-/ vspace))
+        (|---|) <- Glue.mkGlue ?? Glue.Vertical
+        vbox <- Responsive.vboxWithSeparator
+        vbox False
+            (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
             fieldsGui restExpr
             & pure
 

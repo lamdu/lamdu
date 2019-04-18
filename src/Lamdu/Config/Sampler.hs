@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig
-    , sThemePath, sTheme, setTheme
+    , sThemePath, sTheme, sTextsPath, sTexts, setSelection
     , getSample
     ) where
 
@@ -10,13 +10,14 @@ import           Control.Concurrent.Extended (ThreadId, threadDelay, forkIOUnmas
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
-import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Folder (HasConfigFolder(..))
+import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..))
 import           Lamdu.Config.Theme (Theme)
+import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
@@ -34,36 +35,40 @@ data Sample = Sample
     , _sConfig :: Config
     , _sThemePath :: FilePath
     , _sTheme :: Theme
+    , _sTextsPath :: FilePath
+    , _sTexts :: Texts
     } deriving (Eq)
 Lens.makeLenses ''Sample
 
 data Sampler = Sampler
     { _sThreadId :: ThreadId
     , getSample :: IO Sample
-    , setTheme :: Text -> IO ()
+    , setSelection :: Selection Theme -> Selection Texts -> IO ()
     }
 
-withMTime :: FilePath -> IO (Config, FilePath, Theme) -> IO Sample
+withMTime :: FilePath -> IO (Config, (FilePath, Theme), (FilePath, Texts)) -> IO Sample
 withMTime _sConfigPath act =
     do
-        (_sConfig, _sThemePath, _sTheme) <- act
+        (_sConfig, (_sThemePath, _sTheme), (_sTextsPath, _sTexts)) <- act
         sVersion <- traverse getModificationTime [_sConfigPath, _sThemePath]
         pure Sample{..}
 
-calcThemePath :: FilePath -> Text -> FilePath
-calcThemePath configPath theme =
-    takeDirectory configPath </> configFolder (Proxy @Theme) </>
-    Text.unpack theme ++ ".json"
+loadFromFolder :: (HasConfigFolder a, FromJSON a) => FilePath -> Selection a -> IO (FilePath, a)
+loadFromFolder configPath selection =
+    AesonConfig.load path <&> (,) path
+    where
+        path =
+            takeDirectory configPath </> configFolder selection </>
+            Text.unpack (getSelection selection) ++ ".json"
 
-load :: Text -> FilePath -> IO Sample
-load themeName configPath =
+load :: Selection Theme -> Selection Texts -> FilePath -> IO Sample
+load themeName langName configPath =
     do
         config <- AesonConfig.load configPath
-        theme <- AesonConfig.load themePath
-        pure (config, themePath, theme)
+        (,,) config
+            <$> loadFromFolder configPath themeName
+            <*> loadFromFolder configPath langName
     & withMTime configPath
-    where
-        themePath = calcThemePath configPath themeName
 
 maybeReload :: Sample -> FilePath -> IO (Maybe Sample)
 maybeReload old newConfigPath =
@@ -72,16 +77,16 @@ maybeReload old newConfigPath =
             traverse getModificationTime [old ^. sConfigPath, old ^. sThemePath]
         if mtime == sVersion old
             then pure Nothing
-            else load theme newConfigPath <&> Just
+            else load (f sThemePath) (f sTextsPath) newConfigPath <&> Just
     where
-        theme = old ^. sThemePath & takeFileName & dropExtension & Text.pack
+        f l = old ^. l & takeFileName & dropExtension & Text.pack & Selection
 
-new :: (Sample -> IO ()) -> Text -> IO Sampler
-new sampleUpdated initialTheme =
+new :: (Sample -> IO ()) -> Selection Theme -> Selection Texts -> IO Sampler
+new sampleUpdated initialTheme initialLang =
     do
         ref <-
             getConfigPath
-            >>= load initialTheme
+            >>= load initialTheme initialLang
             >>= E.evaluate
             >>= newMVar
         tid <-
@@ -98,11 +103,11 @@ new sampleUpdated initialTheme =
         pure Sampler
             { _sThreadId = tid
             , getSample = readMVar ref
-            , setTheme =
-                \theme ->
+            , setSelection =
+                \theme lang ->
                 takeMVar ref
                 >> getConfigPath
-                >>= load theme
+                >>= load theme lang
                 >>= E.evaluate
                 >>= putMVar ref
             }

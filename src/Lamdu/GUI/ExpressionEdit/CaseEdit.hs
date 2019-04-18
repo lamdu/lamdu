@@ -12,7 +12,8 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -58,8 +59,8 @@ make ::
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
-        let responsiveLabel textLens =
-                grammar (label textLens) <&> Responsive.fromTextView
+        let responsiveLabel lens =
+                grammar (label lens) <&> Responsive.fromTextView
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
             <*> grammar (label Texts.case_)
@@ -116,18 +117,17 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         config <- Lens.view Config.config
         addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap config delete
-        tagLabel <-
-            TagEdit.makeVariantTag tag
-            <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-            <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
-                then addBg
-                else id
-        hspace <- Spacer.stdHSpace
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
-        colonLabel <- grammar (label Texts.inject)
+        pre <-
+            ( TagEdit.makeVariantTag tag
+                <&> Align.tValue %~ Widget.weakerEvents itemEventMap
+                <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
+                    then addBg
+                    else id
+            ) /|/ grammar (label Texts.inject) /|/ Spacer.stdHSpace
         pure Responsive.TaggedItem
-            { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
+            { Responsive._tagPre = pre
             , Responsive._taggedItem = altExprGui
             , Responsive._tagPost = Element.empty
             }
@@ -197,10 +197,11 @@ makeOpenCase actions rest animId altsGui =
             Styled.addValPadding
             <*> ExprGuiM.makeSubexpression rest
             <&> Widget.weakerEvents (openCaseEventMap config actions)
-        Responsive.vboxWithSeparator False
-            (separationBar (theme ^. Theme.textColors) animId <&> (/-/ vspace))
-            altsGui restExpr
-            & pure
+        (|---|) <- Glue.mkGlue ?? Glue.Vertical
+        vbox <- Responsive.vboxWithSeparator
+        vbox False
+            (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
+            altsGui restExpr & pure
 
 openCaseEventMap ::
     Monad o =>

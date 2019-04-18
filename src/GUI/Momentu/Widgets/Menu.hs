@@ -33,7 +33,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/), (/-/))
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Hover (Hover)
 import qualified GUI.Momentu.Hover as Hover
@@ -231,25 +231,28 @@ toOptionList xs True = Truncated xs
 
 layoutOption ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , State.HasCursor env, Hover.HasStyle env, HasConfig env, Applicative f
+    , State.HasCursor env, Hover.HasStyle env, HasConfig env
+    , Element.HasLayoutDir env
+    , Applicative f
     ) =>
     Widget.R ->
     (Widget.Id, TextWidget f, Submenu m f) ->
     m (TextWidget f)
 layoutOption maxOptionWidth (optionId, rendered, submenu) =
     case submenu of
-    SubmenuEmpty -> padToWidth maxOptionWidth rendered & pure
+    SubmenuEmpty -> padToWidth maxOptionWidth rendered
     SubmenuItems action ->
         do
             isSelected <- State.isSubCursor ?? optionId
             submenuSymbol <- makeSubmenuSymbol isSelected
-            let base =
-                    padToWidth
-                    (maxOptionWidth - submenuSymbol ^. Element.width) rendered
-                    /|/ submenuSymbol
+            base <-
+                padToWidth (maxOptionWidth - submenuSymbol ^. Element.width)
+                rendered
+                /|/ pure submenuSymbol
             if isSelected
                 then do
                     hover <- Hover.hover
+                    hoverBeside <- Hover.hoverBesideOptionsAxis
                     (_, submenus) <-
                         action <&> FullList
                         >>= make (optionId `Widget.joinId` ["submenu"]) 0
@@ -257,13 +260,13 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
                     anchored
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
-                        (Hover.hoverBesideOptionsAxis Horizontal
+                        (hoverBeside Horizontal
                          (submenus <&> hover <&> Hover.sequenceHover) anchored <&> (^. Align.tValue))
                         & pure
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
     where
-        padToWidth w = Element.padToSize (Vector2 w 0) 0
+        padToWidth w r = Element.padToSize ?? Vector2 w 0 ?? 0 ?? r
 
 instance Semigroup (OptionList a) where
     TooMany <> y = y
@@ -318,6 +321,7 @@ noResultsId = (`Widget.joinId` ["no results"])
 make ::
     ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
     , Element.HasAnimIdPrefix env, HasConfig env, State.HasCursor env
+    , Element.HasLayoutDir env
     , Applicative f
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
@@ -359,6 +363,7 @@ make myId minWidth options =
                     if olIsTruncated options
                     then Label.make "..." <&> Align.tValue %~ Widget.fromView
                     else pure Element.empty
+                vbox <- Glue.vbox
                 pure
                     ( maybe NoPickFirstResult PickFirstResult mPickFirstResult
                     , (blockEvents <&> (Align.tValue %~)) <*>
@@ -366,7 +371,7 @@ make myId minWidth options =
                             { _forward = id
                             , _backward = reverse
                             } ?? (laidOutOptions ++ [hiddenOptionsWidget])
-                            <&> Glue.vbox
+                            <&> vbox
                         )
                     )
 
@@ -376,6 +381,7 @@ data Placement = Above | Below | AnyPlace
 
 hoverOptions ::
     ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env
     , Applicative f
     ) =>
     m ( Placement ->
@@ -385,30 +391,30 @@ hoverOptions ::
         [Hover (Gui Hover.AnchoredWidget f)]
       )
 hoverOptions =
-    Hover.hover <&>
-    \hover pos annotation results searchTerm ->
+    (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> (Glue.mkPoly ?? Glue.Vertical) <*> Hover.hover
+    <&> \(Glue.Poly (|||), Glue.Poly (|---|), hover) pos annotation results searchTerm ->
     let resultsAbove alignment =
             results ^. Hover.backward
             & Align.tValue %~ hover
             & Align.fromWithTextPos alignment
-        annotatedTerm alignment = searchTerm & Widget.widget %~ (/-/ annotation) & Aligned alignment
-        aboveRight = resultsAbove 0 /-/ annotatedTerm 0
-        aboveLeft = resultsAbove 1 /-/ annotatedTerm 1
+        annotatedTerm alignment = searchTerm & Widget.widget %~ (|---| annotation) & Aligned alignment
+        aboveRight = resultsAbove 0 |---| annotatedTerm 0
+        aboveLeft = resultsAbove 1 |---| annotatedTerm 1
         annotatedResultsBelow =
-            (results ^. Hover.forward) /-/ annotation
+            (results ^. Hover.forward) |---| annotation
             & Align.tValue %~ hover
         resultsBelow = results ^. Hover.forward & Align.tValue %~ hover
         belowRight =
             Aligned 0 searchTerm
-            /-/
+            |---|
             Align.fromWithTextPos 0 annotatedResultsBelow
         belowLeft =
             Aligned 1 searchTerm
-            /-/
+            |---|
             Align.fromWithTextPos 1 annotatedResultsBelow
-        centerRight = annotatedTerm 0.5 /|/ Align.fromWithTextPos 0.5 resultsBelow
-        rightAbove = annotatedTerm 1 /|/ resultsAbove 1
-        leftAbove = resultsAbove 1 /|/ annotatedTerm 1
+        centerRight = annotatedTerm 0.5 ||| Align.fromWithTextPos 0.5 resultsBelow
+        rightAbove = annotatedTerm 1 ||| resultsAbove 1
+        leftAbove = resultsAbove 1 ||| annotatedTerm 1
     in
     case pos of
     Above ->
@@ -433,7 +439,8 @@ hoverOptions =
 makeHovered ::
     ( Applicative f, State.HasCursor env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Hover.HasStyle env, MonadReader env m
+    , Element.HasLayoutDir env, Hover.HasStyle env
+    , MonadReader env m
     ) =>
     Widget.Id -> View ->
     OptionList (Option m f) ->

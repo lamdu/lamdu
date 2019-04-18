@@ -81,6 +81,7 @@ makeBranchSelector ::
     ( MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , VersionControl.HasConfig env, VersionControl.HasTheme env
+    , Element.HasLayoutDir env
     , Monad n
     ) =>
     (forall a. Transaction n a -> mw a) ->

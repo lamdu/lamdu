@@ -34,6 +34,8 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Folder (Selection)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -47,6 +49,8 @@ import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)
+import           Lamdu.I18N.Texts (Texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
@@ -61,21 +65,24 @@ type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
-helpEnv :: (MonadReader env m, HasConfig env, HasStyle env) => m EventMapHelp.Env
+helpEnv ::
+    (MonadReader env m, HasConfig env, HasStyle env, Element.HasLayoutDir env) =>
+    m EventMapHelp.Env
 helpEnv =
-    (,) <$> Lens.view Config.config <*> Lens.view Style.style
-    <&> \(config, style) ->
+    Lens.view id <&> \env ->
     EventMapHelp.Env
     { EventMapHelp._eConfig =
         EventMapHelp.Config
-        { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
+        { EventMapHelp._configOverlayDocKeys =
+            env ^. Config.config . Config.helpKeys
         }
-    , EventMapHelp._eStyle = style ^. Style.help
+    , EventMapHelp._eStyle = env ^. Style.style . Style.help
     , EventMapHelp._eAnimIdPrefix = ["help box"]
+    , EventMapHelp._eLayoutDir = env ^. Element.layoutDir
     }
 
 addHelp ::
-    (MonadReader env m, HasConfig env, HasStyle env) =>
+    (MonadReader env m, HasConfig env, HasStyle env, Element.HasLayoutDir env) =>
     Vector2 R -> m (Widget (f a) -> Widget (f a))
 addHelp size =
     helpEnv
@@ -100,14 +107,16 @@ type Ctx env =
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
     , Menu.HasConfig env
+    , Element.HasLayoutDir env
     , SearchMenu.HasTermStyle env
+    , Texts.HasTexts env
     )
 
 layout ::
     Ctx env =>
-    [Text] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Texts] -> Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
-layout themeNames settingsProp =
+layout themeNames langNames settingsProp =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
@@ -121,9 +130,8 @@ layout themeNames settingsProp =
             <&> _1 %~ StatusBar.hoist viewToDb
             <&> _2 . Lens.mapped %~ viewToDb
         statusBar <-
-            StatusBar.make gotoDefinition themeNames settingsProp
+            StatusBar.make gotoDefinition themeNames langNames settingsProp
             (fullSize ^. _1) vcActions
-        topPadding <- Spacer.vspaceLines (theTheme ^. Theme.topPadding)
         let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
 
         versionControlCfg <- Lens.view (Config.config . Config.versionControl)
@@ -132,12 +140,15 @@ layout themeNames settingsProp =
         quitKeys <- Lens.view (Config.config . Config.quitKeys)
         let quitEventMap = E.keysEventMap quitKeys (E.Doc ["Quit"]) (error "Quit")
 
-        statusBarWidget /-/ topPadding /-/ codeEdit
-            & Scroll.focusAreaInto fullSize
-            & Widget.weakerEventsWithoutPreevents
-                (statusBar ^. StatusBar.globalEventMap <> quitEventMap
-                    <> vcEventMap)
-            & (maybeAddHelp fullSize ??)
+        maybeAddHelp fullSize <*>
+            ( pure statusBarWidget
+                /-/ Spacer.vspaceLines (theTheme ^. Theme.topPadding)
+                /-/ pure codeEdit
+                <&> Scroll.focusAreaInto fullSize
+                <&> Widget.weakerEventsWithoutPreevents
+                    (statusBar ^. StatusBar.globalEventMap <> quitEventMap
+                        <> vcEventMap)
+            )
     where
         maybeAddHelp size =
             case settingsProp ^. Property.pVal . Settings.sHelpShown of
@@ -146,9 +157,9 @@ layout themeNames settingsProp =
 
 make ::
     Ctx env =>
-    [Text] -> Property IO Settings -> env ->
+    [Selection Theme] -> [Selection Texts] -> Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
-make themeNames settingsProp env =
-    layout themeNames settingsProp
+make themeNames langNames settingsProp env =
+    layout themeNames langNames settingsProp
     & GuiState.assignCursor mempty defaultCursor
     & (`runReaderT` env)

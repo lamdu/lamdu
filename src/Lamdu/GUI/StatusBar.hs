@@ -18,6 +18,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (HasConfig)
+import           Lamdu.Config.Folder (Selection)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -26,6 +28,7 @@ import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
+import           Lamdu.I18N.Texts (Texts)
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.VersionControl.Actions as VCActions
 
@@ -36,13 +39,13 @@ make ::
     , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
-    , HasConfig env
+    , HasConfig env, Element.HasLayoutDir env
     ) =>
     StatusWidget (IOTrans n) ->
-    [Text] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Texts] -> Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))
-make gotoDefinition themeNames settingsProp width vcActions =
+make gotoDefinition themeNames langNames settingsProp width vcActions =
     do
         branchChoice <-
             VersionControlGUI.makeBranchSelector
@@ -50,18 +53,21 @@ make gotoDefinition themeNames settingsProp width vcActions =
         branchSelector <- StatusBar.makeStatusWidget "Branch" branchChoice
 
         statusWidgets <-
-            SettingsGui.makeStatusWidgets themeNames settingsProp
+            SettingsGui.makeStatusWidgets themeNames langNames settingsProp
             <&> SettingsGui.hoist IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
         bgColor <-
             Draw.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
-        StatusBar.combine
-            ??  [ statusWidgets ^. SettingsGui.annotationWidget
-                , statusWidgets ^. SettingsGui.themeWidget
-                , branchSelector
-                , statusWidgets ^. SettingsGui.helpWidget
-                ]
-            <&> StatusBar.combineEdges width gotoDefinition
-            <&> StatusBar.widget . Align.tValue %~ Element.padToSize (Vector2 width 0) 0
+        padToSize <- Element.padToSize
+        (StatusBar.combineEdges ?? width ?? gotoDefinition)
+            <*> ( StatusBar.combine ??
+                    [ statusWidgets ^. SettingsGui.annotationWidget
+                    , statusWidgets ^. SettingsGui.themeWidget
+                    , branchSelector
+                    , statusWidgets ^. SettingsGui.languageWidget
+                    , statusWidgets ^. SettingsGui.helpWidget
+                    ]
+                )
+            <&> StatusBar.widget . Align.tValue %~ padToSize (Vector2 width 0) 0
             <&> StatusBar.widget %~ bgColor

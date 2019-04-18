@@ -3,7 +3,9 @@ module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
     , HasAnimIdPrefix(..), subAnimId
     , Layers(..), layers, translateLayers, addLayersAbove, render
-    , padAround
+    , LayoutDir(..), _LeftToRight, _RightToLeft
+    , HasLayoutDir(..)
+    , pad, padAround
     , topLayer, bottomLayer
     , width, height
     , tint
@@ -49,14 +51,32 @@ render x = x ^. layers . Lens.reversed . traverse
 class Element a where
     setLayers :: Lens.IndexedSetter' Size a Layers
     hoverLayers :: a -> a
-    pad :: Vector2 R -> Vector2 R -> a -> a
+    padImpl :: Vector2 R -> Vector2 R -> a -> a
     scale :: Vector2 R -> a -> a
     empty :: a
+
+data LayoutDir
+    = LeftToRight -- ^ e.g: latin languages
+    | RightToLeft -- ^ e.g: Hebrew/Arabic
+    deriving (Eq, Ord, Show)
+
+class HasLayoutDir env where layoutDir :: Lens' env LayoutDir
+instance HasLayoutDir LayoutDir where layoutDir = id
+
+pad ::
+    (MonadReader env m, Element a, HasLayoutDir env) =>
+    m (Vector2 R -> Vector2 R -> a -> a)
+pad =
+    Lens.view layoutDir <&>
+    \case
+    LeftToRight -> padImpl
+    RightToLeft ->
+        \(Vector2 r t) (Vector2 l b) -> padImpl (Vector2 l t) (Vector2 r b)
 
 -- Different `SetLayers`s do additional things when padding
 -- (Moving focal points, alignments, etc)
 padAround :: Element a => Vector2 R -> a -> a
-padAround p = pad p p
+padAround p = padImpl p p
 
 class Element a => SizedElement a where size :: Lens.Getter a Size
 
@@ -81,8 +101,12 @@ instance HasAnimIdPrefix [ByteString] where animIdPrefix = id
 subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
-padToSize :: SizedElement a => Size -> Vector2 R -> a -> a
-padToSize newSize alignment x =
-    pad (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
-    where
-        sizeDiff = max <$> 0 <*> newSize - x ^. size
+padToSize ::
+    (MonadReader env m, SizedElement a, HasLayoutDir env) =>
+    m (Size -> Vector2 R -> a -> a)
+padToSize =
+    pad <&> \p newSize alignment x ->
+    let sizeDiff = max <$> 0 <*> newSize - x ^. size
+    in  p (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
+
+Lens.makePrisms ''LayoutDir

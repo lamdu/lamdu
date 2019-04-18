@@ -114,19 +114,22 @@ withFd =
 
 textEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Monad o
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env
+    , Element.HasLayoutDir env, Texts.HasTexts env
+    , Monad o
     ) =>
     Property o Text ->
     Sugar.Payload name i o ExprGui.Payload ->
     m (TextWidget o)
 textEdit prop pl =
     do
-        left <- label Texts.textOpener
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
-        right <-
-            label Texts.textCloser
-            <&> Element.padToSize (text ^. Element.size & _1 .~ 0) 1
-        withFd ?? myId ?? left /|/ text /|/ right
+        (withFd ?? myId) <*>
+            label Texts.textOpener
+            /|/ pure text
+            /|/ ( (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
+                    <*> label Texts.textCloser
+                )
     & withStyle Style.text
     where
         empty = TextEdit.Modes "" ""

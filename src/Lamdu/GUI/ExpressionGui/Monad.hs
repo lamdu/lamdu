@@ -52,6 +52,8 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Texts (Texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings, HasSettings(..))
 import           Lamdu.Style (Style, HasStyle(..))
@@ -80,7 +82,9 @@ data Askable i o = Askable
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
     , _aIsHoleResult :: Bool
+    , _aLayoutDir :: Element.LayoutDir
     , aIom :: forall x. i x -> o x
+    , _aTexts :: Texts
     }
 
 newtype ExprGuiM i (o :: * -> *) a =
@@ -105,6 +109,8 @@ instance SearchMenu.HasTermStyle (Askable i o) where
 instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
+instance Element.HasLayoutDir (Askable i o) where layoutDir = aLayoutDir
+instance Texts.HasTexts (Askable i o) where texts = aTexts
 
 im :: Monad i => i a -> ExprGuiM i o a
 im = ExprGuiM . lift
@@ -190,7 +196,8 @@ withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env
+    , Texts.HasTexts env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
@@ -215,5 +222,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
     , _aIsHoleResult = False
+    , _aLayoutDir = env ^. Element.layoutDir
+    , _aTexts = env ^. Texts.texts
     , aIom = liftIom
     }

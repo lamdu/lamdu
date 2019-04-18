@@ -51,7 +51,7 @@ instance (Functor f, a ~ f Update) => Element (Widget a) where
         & Element.setLayers . Element.layers %~ (mempty :)
         & enterResult . enterResultLayer +~ 1
     empty = fromView Element.empty
-    pad leftAndTop rightAndBottom w =
+    padImpl leftAndTop rightAndBottom w =
         w
         & wState .~ translate leftAndTop w
         & wSize +~ leftAndTop + rightAndBottom
@@ -88,8 +88,8 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
 
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
-    glue orientation =
-        Glue.glueH (glueStates orientation Forward) orientation
+    glue layoutDir orientation =
+        Glue.glueH (glueStates orientation Forward) layoutDir orientation
 
 glueStates ::
     Applicative f =>

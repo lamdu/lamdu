@@ -31,8 +31,6 @@ module GUI.Momentu
 
     -- | GUI Layout
     , (/-/), (/|/), Glued
-    , above -- ^ A named alias for `/-/`
-    , leftOf -- ^ A named alias for `/|/`
 
     -- | Widget alignment
     , Align.Aligned(..), Align.alignmentRatio, Align.value
@@ -78,7 +76,7 @@ import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Font as Font
-import           GUI.Momentu.Glue ((/-/), (/|/), Glued, Glue)
+import           GUI.Momentu.Glue ((/-/), (/|/), Glued)
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -118,9 +116,3 @@ parseMetaKey = MetaKey.parse
 
 formatMetaKey :: MetaKey -> Text
 formatMetaKey = MetaKey.format
-
-above :: Glue a b => a -> b -> Glued a b
-above = (/-/)
-
-leftOf :: Glue a b => a -> b -> Glued a b
-leftOf = (/|/)

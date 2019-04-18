@@ -52,7 +52,7 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue (Glue(..), GluesTo, (/|/), (/-/))
+import           GUI.Momentu.Glue (Glue(..), GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
@@ -86,14 +86,14 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
          , SizedElement b
          ) => Glue (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
-    glue orientation l v =
+    glue dir orientation l v =
         Responsive
-        { _rWide = glue orientation wide v
-        , _rWideDisambig = glue orientation wide v
+        { _rWide = glue dir orientation wide v
+        , _rWideDisambig = glue dir orientation wide v
         , _rNarrow =
             l ^. rNarrow
             & Lens.argument %~ adjustNarrowLayoutParams orientation v
-            <&> (glue orientation ?? v)
+            <&> (glue dir orientation ?? v)
         }
         where
             wide =
@@ -105,14 +105,14 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
          , SizedElement a
          ) => Glue (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
-    glue orientation v l =
+    glue dir orientation v l =
         Responsive
-        { _rWide = glue orientation v wide
-        , _rWideDisambig = glue orientation v wide
+        { _rWide = glue dir orientation v wide
+        , _rWideDisambig = glue dir orientation v wide
         , _rNarrow =
             l ^. rNarrow
             & Lens.argument %~ adjustNarrowLayoutParams orientation v
-            <&> glue orientation v
+            <&> glue dir orientation v
         }
         where
             wide =
@@ -125,14 +125,14 @@ instance (Functor f, a ~ f State.Update) => Element (Responsive a) where
     hoverLayers = Widget.widget %~ Element.hoverLayers
     empty = Responsive Element.empty Element.empty (const Element.empty)
     scale = error "Responsive: scale not Implemented"
-    pad topLeft bottomRight w =
+    padImpl topLeft bottomRight w =
         Responsive
-        { _rWide = w ^. rWide & Element.pad topLeft bottomRight
-        , _rWideDisambig = w ^. rWideDisambig & Element.pad topLeft bottomRight
+        { _rWide = w ^. rWide & Element.padImpl topLeft bottomRight
+        , _rWideDisambig = w ^. rWideDisambig & Element.padImpl topLeft bottomRight
         , _rNarrow =
             w ^. rNarrow
             & Lens.argument . layoutWidth -~ topLeft ^. _1 + bottomRight ^. _1
-            <&> Element.pad topLeft bottomRight
+            <&> Element.padImpl topLeft bottomRight
         }
 
 instance Widget.HasWidget Responsive where widget = alignedWidget . Align.tValue
@@ -202,12 +202,13 @@ verticalLayout vert items =
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
-    Applicative f =>
-    [Gui Responsive f] -> Gui Responsive f
+    (MonadReader env m, Element.HasLayoutDir env, Applicative f) =>
+    m ([Gui Responsive f] -> Gui Responsive f)
 vbox =
+    Glue.vbox <&> \vert ->
     verticalLayout VerticalLayout
     { _vContexts = Lens.reindexed (const idx) Lens.traversed
-    , _vLayout = Glue.vbox
+    , _vLayout = vert
     }
     where
         idx =
@@ -217,37 +218,40 @@ vbox =
             }
 
 vboxSpaced ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Applicative f) =>
+    ( MonadReader env m, Spacer.HasStdSpacing env, Element.HasLayoutDir env
+    , Applicative f
+    ) =>
     m ([Gui Responsive f] -> Gui Responsive f)
 vboxSpaced =
-    Spacer.stdVSpace
-    <&> fromView
-    <&> List.intersperse
-    <&> Lens.mapped %~ vbox
+    (,) <$> vbox <*> Spacer.stdVSpace
+    <&>
+    (\(vert, space) -> List.intersperse (fromView space) <&> vert)
 
 vboxWithSeparator ::
-    Applicative f =>
-    Bool -> (Widget.R -> View) ->
-    Gui Responsive f -> Gui Responsive f ->
-    Gui Responsive f
-vboxWithSeparator needDisamb makeSeparator top bottom =
-    Vector2 top bottom
-    & verticalLayout VerticalLayout
-    { _vContexts = Lens.reindexed (const idx) Lens.traversed
-    , _vLayout =
-        \(Vector2 t b) ->
-        t
-        /-/
-        makeSeparator (max (t ^. Element.width) (b ^. Element.width))
-        /-/
-        b
-    }
-    where
-        idx =
+    (MonadReader env m, Element.HasLayoutDir env, Applicative f) =>
+    m
+    (Bool -> (Widget.R -> View) ->
+     Gui Responsive f -> Gui Responsive f ->
+     Gui Responsive f)
+vboxWithSeparator =
+    Glue.mkPoly ?? Vertical
+    <&> \(Glue.Poly (|---|)) needDisamb makeSeparator top bottom ->
+    let idx =
             NarrowLayoutParams
             { _layoutWidth = 0
             , _layoutNeedDisambiguation = needDisamb
             }
+    in  Vector2 top bottom
+        & verticalLayout VerticalLayout
+        { _vContexts = Lens.reindexed (const idx) Lens.traversed
+        , _vLayout =
+            \(Vector2 t b) ->
+            t
+            |---|
+            makeSeparator (max (t ^. Element.width) (b ^. Element.width))
+            |---|
+            b
+        }
 
 data TaggedItem a = TaggedItem
     { _tagPre :: WithTextPos (Widget a)
@@ -258,25 +262,31 @@ data TaggedItem a = TaggedItem
 Lens.makeLenses ''TaggedItem
 
 taggedList ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Applicative f) =>
+    ( MonadReader env m, Spacer.HasStdSpacing env, Applicative f
+    , Element.HasLayoutDir env
+    ) =>
     m ([Gui TaggedItem f] -> Gui Responsive f)
 taggedList =
-    Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0
+    (,,,)
+    <$> Element.pad
+    <*> (Glue.mkGlue ?? Glue.Horizontal)
+    <*> Glue.vbox
+    <*> (Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0)
     <&>
-    \vspace items ->
+    \(doPad, (/|/), vboxed, vspace) items ->
     let preWidth = items ^.. traverse . tagPre . Element.width & maximum
         postWidth = items ^.. traverse . tagPost . Element.width & maximum
         renderItem ((pre, post), item) =
-            ( Element.pad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
+            ( doPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
                 /|/ item
             , post
             )
         renderItems xs =
-            xs <&> renderRow & List.intersperse vspace & Glue.vbox
+            xs <&> renderRow & List.intersperse vspace & vboxed
             where
                 renderRow (item, post) =
                     item /|/
-                    Element.pad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
+                    doPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
                 itemWidth = xs ^.. traverse . _1 . Element.width & maximum
         idx =
             NarrowLayoutParams

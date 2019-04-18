@@ -18,7 +18,8 @@ import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue (GluesTo, (/|/), hbox)
+import           GUI.Momentu.Glue (GluesTo, (/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.State (Gui)
@@ -49,7 +50,7 @@ Lens.makeLenses ''StatusWidget
 instance Functor f => Element (StatusWidget f) where
     setLayers = widget . setLayers
     hoverLayers = widget %~ hoverLayers
-    pad x y = widget %~ pad x y
+    padImpl x y = widget %~ padImpl x y
     scale x = widget %~ scale x
     empty = StatusWidget Element.empty mempty
 
@@ -64,15 +65,16 @@ makeLabeledWidget ::
     ( MonadReader env m
     , GluesTo (WithTextPos View) a b
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasLayoutDir env
     ) => Text -> a -> m b
 makeLabeledWidget headerText w =
-    Label.make (headerText <> " ")
-    & Styled.withColor TextColors.infoTextColor
-    <&> (/|/ w)
+    Styled.withColor TextColors.infoTextColor (Label.make (headerText <> " "))
+    /|/ pure w
 
 makeStatusWidget ::
     ( MonadReader env m, Functor f
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasLayoutDir env
     ) => Text -> TextWidget f -> m (StatusWidget f)
 makeStatusWidget headerText w =
     makeLabeledWidget headerText w
@@ -81,7 +83,7 @@ makeStatusWidget headerText w =
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Text -> Property f a -> [(Text, a)] ->
     m (TextWidget f)
@@ -100,7 +102,7 @@ makeChoice headerText prop choiceVals =
 makeSwitchWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
-    , GuiState.HasCursor env, Hover.HasStyle env
+    , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
     Text -> Property f a -> [(Text, a)] ->
     m (TextWidget f)
@@ -125,7 +127,7 @@ makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , HasConfig env, HasTheme env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env
+    , Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
     Text -> Lens' Config [MetaKey] ->
     Property f a -> [(Text, a)] ->
@@ -143,7 +145,7 @@ makeBoundedSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
     , HasConfig env, HasTheme env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env
+    , Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
     Text -> Lens' Config [MetaKey] ->
     Property f a ->
@@ -161,11 +163,11 @@ hspacer = do
 
 combine ::
     ( MonadReader env m, Applicative f
-    , HasStdSpacing env, HasTheme env
+    , Element.HasLayoutDir env, HasStdSpacing env, HasTheme env
     ) => m ([StatusWidget f] -> StatusWidget f)
 combine =
-    hspacer
-    <&> \space statusWidgets ->
+    (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> Glue.hbox <*> hspacer
+    <&> \(Glue.Poly (|||), hbox, space) statusWidgets ->
     StatusWidget
     { _widget =
         case statusWidgets of
@@ -173,20 +175,22 @@ combine =
         (x:xs) ->
             xs
             <&> (^. widget)
-            <&> (space /|/)
+            <&> (space |||)
             & hbox
-            & ((x ^. widget) /|/)
+            & ((x ^. widget) |||)
     , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
     }
 
 combineEdges ::
-    Applicative f =>
-    R -> StatusWidget f -> StatusWidget f -> StatusWidget f
-combineEdges width (StatusWidget xw xe) (StatusWidget yw ye) =
-    StatusWidget
-    { _widget = xw /|/ Spacer.makeHorizontal padding /|/ yw
-    , _globalEventMap = xe <> ye
-    }
-    where
-        padding = max 0 (width - combinedWidths)
+    ( MonadReader env m, Applicative f, Element.HasLayoutDir env
+    ) =>
+    m (R -> StatusWidget f -> StatusWidget f -> StatusWidget f)
+combineEdges =
+    Glue.mkPoly ?? Glue.Horizontal
+    <&> \(Glue.Poly (|||)) width (StatusWidget xw xe) (StatusWidget yw ye) ->
+    let padding = max 0 (width - combinedWidths)
         combinedWidths = xw ^. Element.width + yw ^. Element.width
+    in  StatusWidget
+        { _widget = xw ||| Spacer.makeHorizontal padding ||| yw
+        , _globalEventMap = xe <> ye
+        }

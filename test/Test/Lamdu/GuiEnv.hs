@@ -11,6 +11,7 @@ import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Draw (Color(..))
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
@@ -18,11 +19,13 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Config (Config, HasConfig(..))
+import           Lamdu.Config.Folder (Selection(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Texts (Texts, HasTexts(..))
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
@@ -41,6 +44,8 @@ data Env =
     , _eSettings :: Settings
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
+    , _eLayoutDir :: Element.LayoutDir
+    , _eTexts :: Texts
     }
 Lens.makeLenses ''Env
 instance HasTheme Env where theme = eTheme
@@ -53,12 +58,15 @@ instance HasConfig Env where config = eConfig
 instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
+instance Element.HasLayoutDir Env where layoutDir = eLayoutDir
+instance HasTexts Env where texts = eTexts
 
 make :: IO Env
 make =
     do
         testConfig <- Paths.getDataFileName "config.json" >>= AesonConfig.load
         testTheme <- TestConfig.loadConfigObject "default"
+        testLang <- TestConfig.loadConfigObject "english"
         font <-
             testTheme ^. fonts . Fonts.base & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)
@@ -70,7 +78,7 @@ make =
                 { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
-            , _eSettings = initial "default" Annotations.Evaluation
+            , _eSettings = initial (Selection "default") (Selection "english") Annotations.Evaluation
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =
@@ -86,6 +94,8 @@ make =
                 , TextEdit._sEmptyStringsColors = pure (Color 1 1 1 1)
                 }
             , _eAnimIdPrefix = []
+            , _eLayoutDir = Element.LeftToRight -- TODO: Test other directions
+            , _eTexts = testLang
             }
 
 prop :: a -> MkProperty Identity Unit a

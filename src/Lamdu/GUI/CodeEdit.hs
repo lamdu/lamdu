@@ -87,6 +87,8 @@ make ::
     , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , SearchMenu.HasTermStyle env
     , Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env
+    , Texts.HasTexts env
     , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->

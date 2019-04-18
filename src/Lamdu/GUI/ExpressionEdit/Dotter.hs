@@ -22,7 +22,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -40,7 +40,8 @@ import           Lamdu.Prelude
 
 add ::
     ( MonadReader env m, TextView.HasStyle env, HasConfig env
-    , Element.HasAnimIdPrefix env, Applicative o
+    , Element.HasLayoutDir env, Element.HasAnimIdPrefix env
+    , Applicative o
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -48,8 +49,9 @@ add pl =
     do
         ev <- eventMap pl
         label <- Label.make "?"
+        (|||) <- Glue.mkGlue ?? Glue.Horizontal
         let f r =
-                r /|/ label
+                r ||| label
                 & Widget.setFocused
                 & Widget.weakerEvents ev
                 & Widget.widget %~ Widget.addPreEventWith (liftA2 mappend) preEvent
@@ -73,7 +75,8 @@ eventMap pl =
 -- sure it activates it when it's jumped to
 with ::
     ( MonadReader env m, GuiState.HasCursor env, TextView.HasStyle env
-    , HasConfig env, Element.HasAnimIdPrefix env, Applicative o
+    , HasConfig env, Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    , Applicative o
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)

@@ -59,13 +59,12 @@ makeLetEdit item =
                     (E.Doc ["Navigation", "Jump to first use"])
                     . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
-        letLabel <- grammar (label Texts.let_)
-        space <- Spacer.stdHSpace
-        letEquation <-
-            AssignmentEdit.make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder
-            <&> Widget.weakerEvents eventMap
-            <&> Element.padAround (theme ^. Theme.letItemPadding)
-        letLabel /|/ space /|/ letEquation & pure
+        grammar (label Texts.let_)
+            /|/ Spacer.stdHSpace
+            /|/ (AssignmentEdit.make Nothing mempty (item ^. Sugar.lName)
+                    TextColors.letColor binder
+                    <&> Widget.weakerEvents eventMap
+                    <&> Element.padAround (theme ^. Theme.letItemPadding))
     where
         bodyId = item ^. Sugar.lBody . ann & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue

@@ -52,11 +52,14 @@ makeIfThen ::
     ExprGuiM i o (Row (Gui Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
-        ifGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
+        ifGui <-
+            ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
+            /|/ grammar (label Texts.condColon)
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
-        ifLabel <- grammar (label Texts.if_)
-        colon <- grammar (label Texts.condColon)
-        let keyword = prefixLabel /|/ ifLabel & Responsive.fromTextView
+        keyword <-
+            pure prefixLabel
+            /|/ grammar (label Texts.if_)
+            <&> Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
                 foldMap
@@ -65,7 +68,7 @@ makeIfThen prefixLabel animId ifElse =
                 (ifElse ^. Sugar.iElse . ann .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
-            (Widget.weakerEvents eventMap (ifGui /|/ colon))
+            (Widget.weakerEvents eventMap ifGui)
             (Widget.weakerEvents eventMap thenGui)
             & pure
 
@@ -79,7 +82,8 @@ makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
         <*> (grammar (label Texts.condColon)
-            & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
+                & Reader.local (Element.animIdPrefix .~ elseAnimId)
+                <&> Responsive.fromTextView)
     ) <*> ExprGuiM.makeSubexpression (Ann pl expr)
     <&> pure
     where
@@ -114,46 +118,49 @@ makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , ResponsiveExpr.HasStyle env
+    , Element.HasLayoutDir env, ResponsiveExpr.HasStyle env
     ) => f (Row (Gui Responsive o) -> Gui Responsive o)
 verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
+        obox <- Options.box
         vbox <- Responsive.vboxSpaced
         pure $
             \row ->
             vbox
-            [ Options.box Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
+            [ obox Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
             , indent (row ^. rIndentId) (row ^. rResult)
             ]
 
 renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , ResponsiveExpr.HasStyle env
+    , Element.HasLayoutDir env, ResponsiveExpr.HasStyle env
     ) => Maybe AnimId -> f ([Row (Gui Responsive o)] -> Gui Responsive o)
 renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
         -- TODO: better way to make space between rows in grid??
-        let spaceAbove = (<&> Element.pad (Vector2 0 vspace) 0)
+        obox <- Options.box
+        pad <- Element.pad
+        let -- When there's only "if" and "else", we want to merge the predicate with the keyword
+            -- because there are no several predicates to be aligned
+            prep2 row =
+                row
+                & rKeyword .~ obox Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
+                & rPredicate .~ Element.empty
+        let spaceAbove = (<&> pad (Vector2 0 vspace) 0)
         let prepareRows [] = []
             prepareRows [x, y] = [prep2 x, spaceAbove (prep2 y)]
             prepareRows (x:xs) = x : (xs <&> spaceAbove)
         vert <- verticalRowRender
         addParens <- maybe (pure id) (ResponsiveExpr.addParens ??) mParensId
         vbox <- Responsive.vboxSpaced
+        table <- Options.table
         pure $
             \rows ->
             vbox (rows <&> vert)
-            & Options.tryWideLayout Options.table (Compose (prepareRows rows))
+            & Options.tryWideLayout table (Compose (prepareRows rows))
             & Responsive.rWideDisambig %~ addParens
-    where
-        -- When there's only "if" and "else", we want to merge the predicate with the keyword
-        -- because there are no several predicates to be aligned
-        prep2 row =
-            row
-            & rKeyword .~ Options.box Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
-            & rPredicate .~ Element.empty
 
 make ::
     (Monad i, Monad o) =>

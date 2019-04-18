@@ -14,7 +14,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
@@ -105,7 +105,7 @@ makeIndicator tag enabledColor text =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
-    , HasTheme env, HasConfig env
+    , Element.HasLayoutDir env, HasTheme env, HasConfig env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -128,10 +128,12 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
                 hspace <- Spacer.stdHSpace
                 vspace <- Spacer.stdVSpace
                 hover <- Hover.hover
+                Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
+                Glue.Poly (|---|) <- Glue.mkPoly ?? Glue.Vertical
                 let hDescLabel f = hover (f descLabel) & Hover.sequenceHover
                 let hoverOptions =
-                        [ anchor indicator /|/ hDescLabel (hspace /|/)
-                        , anchor indicator /-/ hDescLabel (vspace /-/)
+                        [ anchor indicator ||| hDescLabel (hspace |||)
+                        , anchor indicator |---| hDescLabel (vspace |---|)
                         ] <&> (^. Align.tValue)
                 anchor indicator
                     <&> Hover.hoverInPlaceOf hoverOptions
@@ -158,7 +160,7 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
-    , HasTheme env, HasConfig env
+    , Element.HasLayoutDir env, HasTheme env, HasConfig env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))
@@ -195,6 +197,9 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
+        (|---|) <- Glue.mkGlue ?? Glue.Vertical
+        let centeredBelow down up =
+                (Aligned 0.5 up |---| Aligned 0.5 down) ^. value
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
             sequence
@@ -210,6 +215,5 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExprPl)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
-        centeredBelow down up = (Aligned 0.5 up /-/ Aligned 0.5 down) ^. value
         replExprPl = replExpr ^. SugarLens.binderResultExpr
         replExprId = WidgetIds.fromExprPayload replExprPl

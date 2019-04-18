@@ -51,14 +51,14 @@ instance SizedElement a => Element (Aligned a) where
     setLayers = value . Element.setLayers
     hoverLayers = value %~ Element.hoverLayers
     empty = Aligned 0 Element.empty
-    pad topLeftPadding bottomRightPadding (Aligned ratio w) =
+    padImpl topLeftPadding bottomRightPadding (Aligned ratio w) =
         Aligned
         { _alignmentRatio =
             (ratio * (w ^. Element.size) + topLeftPadding) / paddedWidget ^. Element.size
         , _value = paddedWidget
         }
         where
-            paddedWidget = Element.pad topLeftPadding bottomRightPadding w
+            paddedWidget = Element.padImpl topLeftPadding bottomRightPadding w
     scale ratio = value %~ Element.scale ratio
 
 instance SizedElement a => SizedElement (Aligned a) where size = value . Element.size
@@ -67,10 +67,10 @@ instance SizedElement a => Element (WithTextPos a) where
     setLayers = tValue . Element.setLayers
     hoverLayers = tValue %~ Element.hoverLayers
     empty = WithTextPos 0 Element.empty
-    pad tl br (WithTextPos y w) =
+    padImpl tl br (WithTextPos y w) =
         WithTextPos
         { _textTop = y + tl ^. _2
-        , _tValue = Element.pad tl br w
+        , _tValue = Element.padImpl tl br w
         }
     scale ratio (WithTextPos y w) =
         WithTextPos
@@ -86,61 +86,61 @@ instance ( SizedElement (Glued a b)
          , SizedElement b, Glue a b
          ) => Glue (Aligned a) (Aligned b) where
     type Glued (Aligned a) (Aligned b) = Aligned (Glued a b)
-    glue o a b =
-        glueHelper fst o (a ^. absAligned) (b ^. absAligned) ^. Lens.from absAligned
+    glue d o a b =
+        glueHelper fst d o (a ^. absAligned) (b ^. absAligned) ^. Lens.from absAligned
 
 instance ( SizedElement a
          , SizedElement b
          , Glue a b ) => Glue (WithTextPos a) (WithTextPos b) where
     type Glued (WithTextPos a) (WithTextPos b) = WithTextPos (Glued a b)
     -- | Vertical glue takes the top text pos
-    glue o (WithTextPos ay a) (WithTextPos by b) =
+    glue d o (WithTextPos ay a) (WithTextPos by b) =
         WithTextPos y glued
         where
             (Vector2 0 y, glued) =
-                glueHelper fst o (Vector2 0 ay, a) (Vector2 0 by, b)
+                glueHelper fst d o (Vector2 0 ay, a) (Vector2 0 by, b)
 
 instance Glue a (Widget b) => Glue (WithTextPos a) (Widget b) where
     type Glued (WithTextPos a) (Widget b) = WithTextPos (Glued a (Widget b))
-    glue o (WithTextPos y a) b = WithTextPos y (glue o a b)
+    glue d o (WithTextPos y a) b = WithTextPos y (glue d o a b)
 
 instance (SizedElement (Widget a), Glue (Widget a) b) =>
          Glue (Widget a) (WithTextPos b) where
     type Glued (Widget a) (WithTextPos b) = WithTextPos (Glued (Widget a) b)
-    glue o a (WithTextPos y b) =
+    glue d o a (WithTextPos y b) =
         WithTextPos
         { _textTop =
             case o of
             Dir.Vertical -> y + a ^. Element.height
             Dir.Horizontal -> y
-        , _tValue = glue o a b
+        , _tValue = glue d o a b
         }
 
 instance Glue a View => Glue (WithTextPos a) View where
     type Glued (WithTextPos a) View = WithTextPos (Glued a View)
-    glue o (WithTextPos y a) b = WithTextPos y (glue o a b)
+    glue d o (WithTextPos y a) b = WithTextPos y (glue d o a b)
 
 instance Glue View a => Glue View (WithTextPos a) where
     type Glued View (WithTextPos a) = WithTextPos (Glued View a)
-    glue o a (WithTextPos y b) =
+    glue d o a (WithTextPos y b) =
         WithTextPos
         { _textTop =
             case o of
             Dir.Vertical -> y + a ^. Element.height
             Dir.Horizontal -> y
-        , _tValue = glue o a b
+        , _tValue = glue d o a b
         }
 
 glueHelper ::
     (Glue a b, Element b, SizedElement a) =>
-    ((Vector2 R, Vector2 R) -> Vector2 R) -> Dir.Orientation ->
+    ((Vector2 R, Vector2 R) -> Vector2 R) -> Element.LayoutDir -> Dir.Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, Glued a b)
-glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
+glueHelper chooseAlign layoutDir orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     ( chooseAlign
         ( aAbsAlign + max 0 aToB
         , bAbsAlign + max 0 bToA + bGlueTranslation
         )
-    , glue orientation (syncAlign aToB aw) (syncAlign bToA bw)
+    , glue layoutDir orientation (syncAlign aToB aw) (syncAlign bToA bw)
     )
     where
         l :: Lens' (Vector2 a) a
@@ -150,7 +150,8 @@ glueHelper chooseAlign orientation (aAbsAlign, aw) (bAbsAlign, bw) =
         bGlueTranslation = 0 & l .~ aw ^. Element.size . l
         aToB = bAbsAlign - aAbsAlign & l .~ 0
         bToA = -aToB
-        syncAlign move = Element.pad (max 0 move) 0
+        syncAlign :: Element a => Vector2 R -> a -> a
+        syncAlign move = Element.pad layoutDir (max 0 move) 0
 
 {-# INLINE asTuple #-}
 asTuple :: Lens.Iso (Aligned a) (Aligned b) (Vector2 R, a) (Vector2 R, b)
@@ -174,12 +175,17 @@ absAligned =
             | size == 0 = 0
             | otherwise = align / size
 
-boxAlign :: (SizedElement a, GluesTo a a a) => Dir.Orientation -> Widget.R -> [a] -> a
-boxAlign orientation r xs =
-    Glue.box orientation (xs <&> Aligned (pure r)) ^. value
+boxAlign ::
+    (MonadReader env m, SizedElement a, GluesTo a a a, Element.HasLayoutDir env) =>
+    m (Dir.Orientation -> Widget.R -> [a] -> a)
+boxAlign = Glue.box <&> \box o r xs -> box o (xs <&> Aligned (pure r)) ^. value
 
-vboxAlign :: (SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
-vboxAlign = boxAlign Dir.Vertical
+vboxAlign ::
+    (MonadReader env m, SizedElement a, GluesTo a a a, Element.HasLayoutDir env) =>
+    m (Widget.R -> [a] -> a)
+vboxAlign = boxAlign ?? Dir.Vertical
 
-hboxAlign :: (SizedElement a, GluesTo a a a) => Widget.R -> [a] -> a
-hboxAlign = boxAlign Dir.Horizontal
+hboxAlign ::
+    (MonadReader env m, SizedElement a, GluesTo a a a, Element.HasLayoutDir env) =>
+    m (Widget.R -> [a] -> a)
+hboxAlign = boxAlign ?? Dir.Horizontal

@@ -32,6 +32,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -66,10 +67,12 @@ data Env = Env
     { _eConfig :: Config
     , _eStyle :: Style
     , _eAnimIdPrefix :: AnimId
+    , _eLayoutDir :: Element.LayoutDir
     }
 Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eStyle . styleText
+instance Element.HasLayoutDir Env where layoutDir = eLayoutDir
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -97,6 +100,7 @@ defaultEnv font =
     { _eConfig = defaultConfig
     , _eStyle = defaultStyle font
     , _eAnimIdPrefix = ["help box"]
+    , _eLayoutDir = Element.LeftToRight
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -132,11 +136,12 @@ addAnimIds animId (Branch a cs) =
 
 makeShortcutKeyView :: MonadReader Env m => [E.InputDoc] -> m View
 makeShortcutKeyView inputDocs =
-    inputDocs
-    <&> (<> " ")
-    & traverse Label.make
-    <&> map (^. Align.tValue)
-    <&> Align.vboxAlign 1
+    (Align.vboxAlign ?? 1)
+    <*>
+    (inputDocs
+        <&> (<> " ")
+        & traverse Label.make
+        <&> map (^. Align.tValue))
     & Reader.local setColor
     where
         setColor env =
@@ -181,46 +186,49 @@ make size eventMap =
 
 makeTooltip :: MonadReader Env m => [ModKey] -> m View
 makeTooltip helpKeys =
-    (/|/)
-    <$> (Label.make "Show help" <&> (^. Align.tValue))
-    <*> makeShortcutKeyView (helpKeys <&> ModKey.pretty)
+    (Label.make "Show help" <&> (^. Align.tValue))
+    /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
-indent :: R -> View -> View
-indent width = (Spacer.makeHorizontal width /|/)
+mkIndent ::
+    (MonadReader env m, Element.HasLayoutDir env) =>
+    m (R -> View -> View)
+mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
 
 fontHeight :: (MonadReader env m, TextView.HasStyle env) => m R
 fontHeight =
     Lens.view (TextView.style . TextView.styleFont) <&> Font.height
 
 makeFlatTreeView ::
-    (MonadReader env m, TextView.HasStyle env) =>
+    (MonadReader env m, TextView.HasStyle env, Element.HasLayoutDir env) =>
     m (Vector2 R -> [(View, View)] -> View)
 makeFlatTreeView =
-    fontHeight <&> Spacer.makeHorizontal
-    <&>
-    \space size pairs ->
+    (,)
+    <$> Align.hboxAlign
+    <*> (fontHeight <&> Spacer.makeHorizontal)
+    <&> \(box, space) size pairs ->
     let colViews =
             pairs
             & columns (size ^. _2) pairHeight
             <&> map toRow
             <&> GridView.make
             <&> snd
-    in
-    List.intersperse space colViews & Align.hboxAlign 1
+    in  List.intersperse space colViews & box 1
     where
         toRow (titleView, docView) = [Aligned 0 titleView, Aligned (Vector2 1 0) docView]
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
-    (MonadReader env m, TextView.HasStyle env) =>
+    (MonadReader env m, TextView.HasStyle env, Element.HasLayoutDir env) =>
     m (Vector2 R -> [Tree View View] -> View)
 makeTreeView =
     do
+        indent <- mkIndent
         indentWidth <- fontHeight
+        box <- Align.vboxAlign
         let go ts = ts <&> fromTree & mconcat
             fromTree (Leaf inputDocsView) = ([], [inputDocsView])
             fromTree (Branch titleView ts) =
-                ( (titleView, Align.vboxAlign 1 inputDocs) :
+                ( (titleView, box 1 inputDocs) :
                     (Lens.traversed . _1 %~ indent indentWidth) titles
                 , [] )
                 where

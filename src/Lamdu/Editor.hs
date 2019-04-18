@@ -1,5 +1,5 @@
 -- | The GUI editor
-{-# LANGUAGE NamedFieldPuns, RankNTypes, DisambiguateRecordFields, TypeApplications #-}
+{-# LANGUAGE NamedFieldPuns, RankNTypes, DisambiguateRecordFields #-}
 module Lamdu.Editor
     ( run
     ) where
@@ -11,9 +11,9 @@ import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
-import           Data.Proxy (Proxy(..))
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (Gui)
@@ -24,8 +24,9 @@ import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as ConfigFolder
-import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
+import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme, sTexts)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -41,6 +42,8 @@ import qualified Lamdu.Eval.Manager as EvalManager
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
+import           Lamdu.I18N.Texts (Texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
@@ -167,11 +170,11 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [ConfigFolder.Selection] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Texts] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
-makeMainGui themeNames settingsProp dbToIO env =
-    GUIMain.make themeNames settingsProp env
+makeMainGui themeNames langNames settingsProp dbToIO env =
+    GUIMain.make themeNames langNames settingsProp env
     <&> Lens.mapped %~
     \act ->
     act ^. ioTrans . Lens._Wrapped
@@ -208,6 +211,11 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 , _animIdPrefix = mempty
                 , _debugMonitors = monitors
                 , _cachedFunctions = cachedFunctions
+                , _layoutDir =
+                    if sample ^. sTexts . Texts.isLeftToRight
+                    then Element.LeftToRight
+                    else Element.RightToLeft
+                , _texts = sample ^. sTexts
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
@@ -222,9 +230,10 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 where
                     Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                     f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
-        themeNames <- ConfigFolder.getNames (Proxy @Theme)
+        themeNames <- ConfigFolder.getNames
+        langNames <- ConfigFolder.getNames
         let bgColor = env ^. Env.theme . Theme.backgroundColor
-        dbToIO $ makeMainGui themeNames settingsProp dbToIO env
+        dbToIO $ makeMainGui themeNames langNames settingsProp dbToIO env
             <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where
@@ -243,7 +252,7 @@ run opts rawDb =
             traverse Debug.makeCounters ekg
             >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
         -- Load config as early as possible, before we open any windows/etc
-        configSampler <- ConfigSampler.new (const refresh) initialTheme
+        configSampler <- ConfigSampler.new (const refresh) initialTheme initialLanguage
         (cache, cachedFunctions) <- Cache.make
         let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let db = Transaction.onStoreM reportDb rawDb
@@ -259,12 +268,13 @@ run opts rawDb =
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <-
-                    EditorSettings.newProp initialTheme (opts ^. Opts.eoAnnotationsMode)
+                    EditorSettings.newProp initialTheme initialLanguage (opts ^. Opts.eoAnnotationsMode)
                     configSampler evaluator
                 runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
-        initialTheme = "default"
+        initialTheme = Selection "default"
+        initialLanguage = Selection "english"
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled

@@ -53,19 +53,18 @@ data IsSelected = Selected | NotSelected
 type HoverFunc f = Gui AnchoredWidget f -> Hover (Gui AnchoredWidget f)
 
 makeInner ::
-    (Applicative f, Eq childId) =>
-    HoverFunc f ->
-    (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
-     Widget.Id -> Gui Widget f -> Gui Widget f) ->
-    Property f childId ->
-    [(childId, Gui Widget f)] -> Config -> Widget.Id ->
-    Gui Widget f
-makeInner hover fd (Property curChild choose) children config myId =
-    widget True
-    & (if anyChildFocused then hoverAsClosed else id)
-    & Element.padToSize (0 & perp .~ maxDim) 0
-    where
-        orientation = cwcOrientation config
+    (Applicative f, Eq childId, MonadReader env m, Element.HasLayoutDir env) =>
+    m
+    (HoverFunc f ->
+     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
+      Widget.Id -> Gui Widget f -> Gui Widget f) ->
+     Property f childId ->
+     [(childId, Gui Widget f)] -> Config -> Widget.Id ->
+     Gui Widget f)
+makeInner =
+    (,) <$> Element.padToSize <*> Glue.box
+    <&> \(padToSize, box) hover fd (Property curChild choose) children config myId ->
+    let orientation = cwcOrientation config
         perp :: Lens' (Vector2 a) a
         perp = axis (perpendicular orientation)
         maxDim = children <&> (^. _2 . Element.size . perp) & maximum
@@ -77,7 +76,7 @@ makeInner hover fd (Property curChild choose) children config myId =
             <&> prependEntryAction
             & filterVisible allowExpand
             <&> snd
-            & Glue.box orientation
+            & box orientation
             & fd (cwcFDConfig config) FocusDelegator.FocusEntryParent myId
         filterVisible allowExpand
             | allowExpand && anyChildFocused = id
@@ -96,12 +95,16 @@ makeInner hover fd (Property curChild choose) children config myId =
             , choose item
             , w
             )
+    in  widget True
+        & (if anyChildFocused then hoverAsClosed else id)
+        & padToSize (0 & perp .~ maxDim) 0
 
 make ::
     ( Eq childId, MonadReader env m, Applicative f
     , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env
     ) =>
     m
     (Property f childId -> [(childId, Gui Widget f)] ->
      Config -> Widget.Id -> Gui Widget f)
-make = makeInner <$> Hover.hover <*> FocusDelegator.make
+make = makeInner <*> Hover.hover <*> FocusDelegator.make

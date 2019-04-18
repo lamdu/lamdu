@@ -9,7 +9,7 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -47,6 +47,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
 make ::
     ( MonadReader env m
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasLayoutDir env
     ) =>
     Name f -> m (WithTextPos View)
 make name =
@@ -58,10 +59,11 @@ make name =
             makeCollisionSuffixLabel NameTheme.tagCollisionSuffixBGColor tagCollision
             <&> Lens._Just %~ Aligned 0.5
         animId <- Element.subAnimId ["name"]
+        (|||) <- Glue.mkGlue ?? Glue.Horizontal
         TextView.make ?? visibleName ?? animId
             <&> Aligned 0.5
-            <&> maybe id (flip (/|/)) mTextSuffixLabel
-            <&> maybe id (flip (/|/)) mTagSuffixLabel
+            <&> maybe id (flip (|||)) mTextSuffixLabel
+            <&> maybe id (flip (|||)) mTagSuffixLabel
             <&> (^. Align.value)
     where
         (Name.TagText visibleName textCollision, tagCollision) = Name.visible name

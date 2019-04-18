@@ -86,14 +86,9 @@ mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
             <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*>
                     ( sequence
-                    [
-                        do
-                            lbl <- grammar (label textLens)
-                            nameGui <-
-                                NameView.make
-                                (tid ^. Sugar.tidName)
-                            Widget.makeFocusableView ?? nameId
-                                <&> (Align.tValue %~) ?? lbl /|/ nameGui
+                    [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
+                        <*> grammar (label textLens)
+                            /|/ NameView.make (tid ^. Sugar.tidName)
                         <&> Responsive.fromWithTextPos
                         & Reader.local (TextView.color .~ nomColor)
                         <&> Widget.weakerEvents eventMap

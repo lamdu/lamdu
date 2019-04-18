@@ -104,7 +104,7 @@ gridStrollTest =
     where
         makeGrid :: Int -> Gui Widget Identity
         makeGrid pos =
-            Grid.make
+            Grid.make Element.LeftToRight
             [ [ Aligned 0 (mkWidget pos 0)
               , Aligned 0 (mkWidget pos 1)
               ]
@@ -165,9 +165,10 @@ verticalDisambigTest =
                     , Responsive._layoutNeedDisambiguation = needDisamb
                     }
                 box =
-                    Options.box disambig [unitItem, unitItem]
+                    -- TODO: Test other layout directions
+                    Options.box Element.LeftToRight disambig [unitItem, unitItem]
                     <&> (<>[]) -- to avoid ambiguous type var
-        unitItem = Element.pad 0 1 Element.empty
+        unitItem = Element.pad Element.LeftToRight 0 1 Element.empty
         disambig =
             Options.disambiguationNone
-            & Options.disambVert .~ Element.pad (Vector2 0.5 0) 0
+            & Options.disambVert .~ Element.pad Element.LeftToRight (Vector2 0.5 0) 0

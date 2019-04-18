@@ -100,11 +100,13 @@ makeArgRow ::
     ExprGuiM i o (Gui Responsive.TaggedItem o)
 makeArgRow arg =
     do
-        argTag <- TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName) (arg ^. Sugar.aaTag . Sugar.tagInstance)
-        space <- Spacer.stdHSpace
         expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
+        pre <-
+            TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName)
+            (arg ^. Sugar.aaTag . Sugar.tagInstance)
+            /|/ Spacer.stdHSpace
         pure Responsive.TaggedItem
-            { Responsive._tagPre = argTag /|/ space <&> Widget.fromView
+            { Responsive._tagPre = pre <&> Widget.fromView
             , Responsive._taggedItem = expr
             , Responsive._tagPost = Element.empty
             }

@@ -119,6 +119,7 @@ data Config = Config
     , _helpKeys :: [MetaKey]
     , _quitKeys :: [MetaKey]
     , _changeThemeKeys :: [MetaKey]
+    , _changeLanguageKeys :: [MetaKey]
     , _nextAnnotationModeKeys :: [MetaKey]
     , _previousCursorKeys :: [MetaKey]
 

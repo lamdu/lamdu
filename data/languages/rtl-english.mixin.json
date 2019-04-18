@@ -1,0 +1,19 @@
+{
+    "imports": ["english.json"],
+    "isLeftToRight": false,
+    "relay": "⇐",
+    "toNom": "»",
+    "fromNom": "«",
+    "repl": "⋘",
+    "if_": " if",
+    "condColon": " :",
+    "paramsRecordOpener": "} Params",
+    "paramsRecordCloser": "{",
+    "arrow": "←",
+    "textOpener": "”",
+    "textCloser": "„",
+    "recordOpener": "}",
+    "recordCloser": "{",
+    "newDefinitionButton": "New...",
+    "undeleteButton": "Undelete..."
+}

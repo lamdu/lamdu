@@ -18,7 +18,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -32,9 +32,9 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.EvalView as EvalView
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -197,6 +197,7 @@ annotationSpacer =
 addAnnotationH ::
     ( Functor f, MonadReader env m, HasTheme env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env
     ) =>
     m (WithTextPos View) ->
     WideAnnotationBehavior ->
@@ -209,17 +210,20 @@ addAnnotationH f wideBehavior =
         vspace <- annotationSpacer
         annotationLayout <- f <&> (^. Align.tValue)
         processAnn <- processAnnotationGui wideBehavior
+        padToSize <- Element.padToSize
         let annotation minWidth w =
                 processAnn (w ^. Element.width) annotationLayout
-                & Element.padToSize (Vector2 theMinWidth 0) 0
+                & padToSize (Vector2 theMinWidth 0) 0
                 where
                     theMinWidth = minWidth (w ^. Element.width)
-        let onAlignedWidget minWidth w = w /-/ vspace /-/ annotation minWidth w
+        (|---|) <- Glue.mkGlue ?? Glue.Vertical
+        let onAlignedWidget minWidth w =
+                w |---| vspace |---| annotation minWidth w
         pure $ \minWidth -> onAlignedWidget minWidth
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
     m (Gui Widget f -> Gui Widget f)

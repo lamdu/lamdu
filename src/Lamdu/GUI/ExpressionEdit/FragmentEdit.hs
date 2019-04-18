@@ -10,7 +10,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
@@ -69,6 +69,7 @@ make fragment pl =
         let searchAreaAbove = mkSearchArea Menu.Above
         let searchAreaBelow = mkSearchArea Menu.Below
         addAnnotation <- maybeAddAnnotationPl pl <&> (Align.tValue %~)
+        Glue.Poly (|---|) <- Glue.mkPoly ?? Glue.Vertical
         let f fragmentExpr above below
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =
@@ -77,8 +78,8 @@ make fragment pl =
                     addAnnotation fragmentExpr
                     where
                         options =
-                            [ hoverFragmentExpr /-/ (below <&> hover)
-                            , (above <&> hover) /-/ hoverFragmentExpr
+                            [ hoverFragmentExpr |---| (below <&> hover)
+                            , (above <&> hover) |---| hoverFragmentExpr
                             ]
                             <&> (^. Align.tValue)
                         hoverFragmentExpr =

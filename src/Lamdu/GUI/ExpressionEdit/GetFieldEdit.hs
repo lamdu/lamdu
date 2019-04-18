@@ -44,8 +44,8 @@ make (Sugar.GetField recExpr tag) pl =
             TagEdit.makeRecordTag tag
             <&> Lens.mapped %~ Widget.weakerEvents delEventMap
         stdWrapParentExpr pl
-            ?? Options.box Options.disambiguationNone
+            <*> (Options.box ?? Options.disambiguationNone ??
                 [ recExprEdit
                 , Responsive.fromTextView dotLabel
                 , Responsive.fromWithTextPos tagEdit
-                ]
+                ])

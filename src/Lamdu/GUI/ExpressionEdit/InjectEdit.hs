@@ -36,7 +36,7 @@ import           Lamdu.Prelude
 
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Texts.HasTexts env
     ) => Lens.ALens' Texts Text -> f (WithTextPos View)
 injectIndicator = grammar . text ["injectIndicator"]
 
@@ -50,7 +50,6 @@ makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
         arg <- ExprGuiM.makeSubexpression val
-        colon <- injectIndicator Texts.inject
         config <- Lens.view Config.config
         let replaceParentEventMap replaceParent =
                 -- Deleting the inject is replacing the whole expr
@@ -61,7 +60,7 @@ makeInject val tag pl =
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
             ( TagEdit.makeVariantTag tag
-                <&> (/|/ colon)
+                /|/ injectIndicator Texts.inject
                 <&> Lens.mapped %~ Widget.weakerEvents (foldMap replaceParentEventMap mReplaceParent)
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
@@ -91,11 +90,9 @@ makeNullaryInject nullary tag pl =
     True -> makeInject (emptyRec nullary) tag pl
     False ->
         stdWrapParentExpr pl <*>
-        do
-            dot <- injectIndicator Texts.nullaryInject
-            TagEdit.makeVariantTag tag <&> (/|/ dot)
-                <&> Responsive.fromWithTextPos
-                <&> Widget.weakerEvents expandNullaryVal
+        (TagEdit.makeVariantTag tag /|/ injectIndicator Texts.nullaryInject
+            <&> Responsive.fromWithTextPos
+            <&> Widget.weakerEvents expandNullaryVal)
     where
         expandNullaryVal =
             GuiState.updateCursor nullaryRecEntityId & pure & const

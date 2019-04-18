@@ -13,7 +13,8 @@ import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
+import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
@@ -67,18 +68,18 @@ grammar = Styled.grammar . Label.make . sanitize
 
 parensAround ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     WithTextPos View -> m (WithTextPos View)
 parensAround view =
     do
         openParenView <- grammar "("
         closeParenView <- grammar ")"
-        hbox [openParenView, view, closeParenView] & pure
+        Glue.hbox ?? [openParenView, view, closeParenView]
 
 parens ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
@@ -87,32 +88,31 @@ parens parent my view
 
 makeTFun ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Prec -> Sugar.Type (Name f) -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeTFun parentPrecedence a b =
-    case a ^. Sugar.tBody of
-    Sugar.TRecord (Sugar.CompositeFields [] Nothing) -> [grammar "| "]
-    _ ->
-        [ makeInternal (Prec 1) a
-        , grammar " → "
-        ]
-    ++ [makeInternal (Prec 0) b]
-    & sequence
-    <&> hbox
-    >>= parens parentPrecedence (Prec 0)
+    Glue.hbox <*>
+    ( case a ^. Sugar.tBody of
+        Sugar.TRecord (Sugar.CompositeFields [] Nothing) -> [grammar "| "]
+        _ ->
+            [ makeInternal (Prec 1) a
+            , grammar " → "
+            ]
+        ++ [makeInternal (Prec 0) b]
+        & sequence
+    ) >>= parens parentPrecedence (Prec 0)
 
 makeTInst ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Prec -> Sugar.TId (Name f) -> [(Name f, Sugar.Type (Name f))] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
-        nameView <- NameView.make (tid ^. Sugar.tidName)
         hspace <- Spacer.stdHSpace
-        let afterName paramsView = nameView /|/ hspace /|/ paramsView
+        let afterName paramsView = mkNameView /|/ pure hspace /|/ paramsView
         let makeTypeParam (tParamId, arg) =
                 do
                     paramIdView <- NameView.make tParamId
@@ -123,10 +123,10 @@ makeTInst parentPrecedence tid typeParams =
                         , Align.fromWithTextPos 0 typeView
                         ]
         case typeParams of
-            [] -> pure nameView
+            [] -> mkNameView
             [(_, arg)] ->
                 makeInternal (Prec 0) arg
-                <&> afterName
+                & afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
                 traverse makeTypeParam params
@@ -134,7 +134,9 @@ makeTInst parentPrecedence tid typeParams =
                 <&> Align.toWithTextPos
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG
-                <&> afterName
+                & afterName
+    where
+        mkNameView = NameView.make (tid ^. Sugar.tidName)
 
 addTypeBG ::
     (Element a, MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
@@ -157,6 +159,7 @@ makeEmptyComposite = grammar "Ø"
 makeField ::
     ( MonadReader env m, HasTheme env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env
     ) =>
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
@@ -167,7 +170,7 @@ makeField (tag, fieldType) =
 
 makeVariantField ::
     ( MonadReader env m, Spacer.HasStdSpacing env
-    , HasTheme env, Element.HasAnimIdPrefix env
+    , HasTheme env, Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
@@ -188,7 +191,7 @@ gridViewTopLeftAlign views =
 
 makeComposite ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Text -> Text ->
     m (WithTextPos View) -> m (WithTextPos View) ->
@@ -225,12 +228,10 @@ makeComposite o c mkPre mkPost mkField composite =
                         let sqr =
                                 View.unitSquare sqrId
                                 & Element.scale (Vector2 barWidth 10)
-                        varView <- NameView.make var
-                        pre <- mkPre
-                        let lastLine = (pre /|/ varView) ^. Align.tValue
-                        pure (Aligned 0.5 sqr /-/ Aligned 0.5 lastLine)
-            fieldsView /-/ extView & Align.toWithTextPos
-                & (Styled.addValPadding ??)
+                        lastLine <- mkPre /|/ NameView.make var <&> (^. Align.tValue)
+                        pure (Aligned 0.5 sqr) /-/ pure (Aligned 0.5 lastLine)
+            Styled.addValPadding
+                <*> (pure fieldsView /-/ pure extView <&> Align.toWithTextPos)
     where
         addAnimIdPrefix i row =
             row <&> Reader.local (Element.animIdPrefix %~ AnimId.augmentId i)
@@ -243,7 +244,7 @@ makeComposite o c mkPre mkPost mkField composite =
 
 makeInternal ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasLayoutDir env, Element.HasAnimIdPrefix env
     ) =>
     Prec -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeInternal parentPrecedence (Sugar.Type entityId tbody) =
@@ -260,14 +261,14 @@ makeInternal parentPrecedence (Sugar.Type entityId tbody) =
 
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Sugar.Type (Name f) -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
 makeScheme ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     ) =>
     Sugar.Scheme (Name f) -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)

@@ -34,6 +34,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
@@ -72,7 +73,7 @@ wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFoc
 
 makeGui ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
     ) =>
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc cache env =
@@ -88,7 +89,7 @@ makeGui afterDoc cache env =
                 paneGuis <-
                     workArea ^.. Sugar.waPanes . traverse . Sugar.paneDefinition
                     & traverse (DefinitionEdit.make mempty)
-                Responsive.vbox (replGui : paneGuis) & pure
+                Responsive.vbox ?? (replGui : paneGuis)
             & ExprGuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui
             then pure gui
@@ -102,7 +103,7 @@ focusedWidget gui =
 
 makeFocusedWidget ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
     ) =>
     String -> Cache.Functions -> env ->
     T ViewM (Widget.Focused (T ViewM GuiState.Update))
@@ -111,7 +112,7 @@ makeFocusedWidget afterDoc cache env =
 
 mApplyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
     T ViewM (Maybe GuiState.Update)
@@ -131,7 +132,7 @@ mApplyEvent cache env virtCursor event =
 
 applyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env
 applyEvent cache env virtCursor event =

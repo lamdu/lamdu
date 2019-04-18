@@ -145,24 +145,31 @@ addNavEventmap keys navDests eMap =
                 (EventMap.Doc ["Navigation", "Move", dirName])
 
 make ::
-    (Traversable vert, Traversable horiz, Applicative f) =>
-    vert (horiz (Aligned (Gui Widget f))) ->
-    (vert (horiz (Aligned ())), Gui Widget f)
-make = makeWithKeys (stdKeys <&> MetaKey.toModKey)
+    ( Traversable vert, Traversable horiz, MonadReader env m
+    , Element.HasLayoutDir env, Applicative f
+    ) =>
+    m
+    (vert (horiz (Aligned (Gui Widget f))) ->
+     (vert (horiz (Aligned ())), Gui Widget f))
+make = makeWithKeys ?? (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
-    (Traversable vert, Traversable horiz, Applicative f) =>
-    Keys ModKey ->
-    vert (horiz (Aligned (Gui Widget f))) ->
-    (vert (horiz (Aligned ())), Gui Widget f)
-makeWithKeys keys children =
-    ( content & each2d %~ void
-    , toList content <&> toList
-      & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
-      & toWidgetWithKeys keys size
-    )
-    where
-        (size, content) = GridView.makePlacements children
+    ( Traversable vert, Traversable horiz, MonadReader env m
+    , Element.HasLayoutDir env, Applicative f
+    ) =>
+    m
+    (Keys ModKey ->
+     vert (horiz (Aligned (Gui Widget f))) ->
+     (vert (horiz (Aligned ())), Gui Widget f))
+makeWithKeys =
+    Lens.view Element.layoutDir <&>
+    \dir keys children ->
+    let (size, content) = GridView.makePlacements children
+    in  ( content & each2d %~ void
+        , toList content <&> toList
+          & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
+          & toWidgetWithKeys dir keys size
+        )
 
 each2d :: (Traversable vert, Traversable horiz) => Lens.IndexedTraversal Cursor (vert (horiz a)) (vert (horiz b)) a b
 each2d =
@@ -173,10 +180,10 @@ each2d =
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
     Applicative f =>
-    Keys ModKey -> Widget.Size ->
+    Element.LayoutDir -> Keys ModKey -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f
-toWidgetWithKeys keys size sChildren =
+toWidgetWithKeys dir keys size sChildren =
     Widget
     { _wSize = size
     , _wState =
@@ -241,7 +248,7 @@ toWidgetWithKeys keys size sChildren =
             -- -- Each child is set to the size of the entire grid and
             -- -- then translated to its place in order to fix the
             -- -- Surrounding parameters of all children
-            Element.pad
+            Element.pad dir
             (rect ^. Rect.topLeft)
             (size - (rect ^. Rect.bottomRight)) widget
         translatedChildren = sChildren & each2d %~ translateChildWidget

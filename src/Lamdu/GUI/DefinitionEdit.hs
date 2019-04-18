@@ -64,17 +64,12 @@ makeBuiltinDefinition ::
     Sugar.DefinitionBuiltin (Name g) o ->
     ExprGuiM i o (TextWidget o)
 makeBuiltinDefinition def builtin =
-    do
-        nameEdit <- TagEdit.makeBinderTagEdit TextColors.definitionColor name
-        equals <- Label.make " = "
-        builtinEdit <- BuiltinEdit.make builtin myId
-        typeView <-
-            topLevelSchemeTypeView (builtin ^. Sugar.biType)
+    TagEdit.makeBinderTagEdit TextColors.definitionColor name
+    /|/ Label.make " = "
+    /|/ BuiltinEdit.make builtin myId
+    /-/ ( topLevelSchemeTypeView (builtin ^. Sugar.biType)
             & Reader.local (Element.animIdPrefix .~ animId ++ ["builtinType"])
-        (nameEdit /|/ equals /|/ builtinEdit)
-            /-/
-            typeView
-            & pure
+        )
     where
         name = def ^. Sugar.drName
         animId = myId & Widget.toAnimId
@@ -118,7 +113,7 @@ make defEventMap def =
                             defGui
                             & Responsive.alignedWidget . Align.tValue .> Widget.wFocused %@~ wholeFocused
                             & style
-                    Responsive.vbox [buttonGui, defGuiStyled] & pure
+                    Responsive.vbox ?? [buttonGui, defGuiStyled]
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
