@@ -126,7 +126,7 @@ textEdit prop pl =
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         right <-
             Label.make (grammar ^. Grammar.textCloser)
-            <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
+            <&> Element.padToSize (text ^. Element.size & _1 .~ 0) 1
         withFd ?? myId ?? left /|/ text /|/ right
     & withStyle Style.text
     where

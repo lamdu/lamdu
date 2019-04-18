@@ -63,7 +63,7 @@ makeInner ::
 makeInner hover fd (Property curChild choose) children config myId =
     widget True
     & (if anyChildFocused then hoverAsClosed else id)
-    & Element.padToSizeAlign (0 & perp .~ maxDim) 0
+    & Element.padToSize (0 & perp .~ maxDim) 0
     where
         orientation = cwcOrientation config
         perp :: Lens' (Vector2 a) a

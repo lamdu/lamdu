@@ -210,7 +210,7 @@ addAnnotationH f wideBehavior =
         processAnn <- processAnnotationGui wideBehavior
         let annotation minWidth w =
                 processAnn (w ^. Element.width) annotationLayout
-                & Element.padToSizeAlign (Vector2 theMinWidth 0) 0
+                & Element.padToSize (Vector2 theMinWidth 0) 0
                 where
                     theMinWidth = minWidth (w ^. Element.width)
         let onAlignedWidget minWidth w = w /-/ vspace /-/ annotation minWidth w

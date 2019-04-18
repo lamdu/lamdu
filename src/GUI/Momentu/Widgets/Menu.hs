@@ -263,7 +263,7 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
     where
-        padToWidth w = Element.padToSizeAlign (Vector2 w 0) 0
+        padToWidth w = Element.padToSize (Vector2 w 0) 0
 
 instance Semigroup (OptionList a) where
     TooMany <> y = y

@@ -64,5 +64,5 @@ make gotoDefinition themeNames settingsProp width vcActions =
                 , statusWidgets ^. SettingsGui.helpWidget
                 ]
             <&> StatusBar.combineEdges width gotoDefinition
-            <&> StatusBar.widget . Align.tValue %~ Element.padToSizeAlign (Vector2 width 0) 0
+            <&> StatusBar.widget . Align.tValue %~ Element.padToSize (Vector2 width 0) 0
             <&> StatusBar.widget %~ bgColor

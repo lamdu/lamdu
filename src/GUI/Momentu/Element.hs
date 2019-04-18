@@ -7,7 +7,7 @@ module GUI.Momentu.Element
     , topLayer, bottomLayer
     , width, height
     , tint
-    , padToSizeAlign
+    , padToSize
     ) where
 
 import qualified Control.Lens as Lens
@@ -81,8 +81,8 @@ instance HasAnimIdPrefix [ByteString] where animIdPrefix = id
 subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
-padToSizeAlign :: SizedElement a => Size -> Vector2 R -> a -> a
-padToSizeAlign newSize alignment x =
+padToSize :: SizedElement a => Size -> Vector2 R -> a -> a
+padToSize newSize alignment x =
     assymetricPad (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size
