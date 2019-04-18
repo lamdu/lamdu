@@ -14,8 +14,8 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
-import qualified GUI.Momentu as Momentu
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -37,11 +37,11 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -198,10 +198,10 @@ make mkOptions pl allowedTerms =
                 theme <- Lens.view (Theme.theme . Theme.hole)
                 frameWidth <- Spacer.stdFontHeight <&> pure <&> (* theme ^. Theme.holeFrameWidth)
                 addFrame <-
-                    Momentu.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
+                    MDraw.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
                     & Reader.local (Element.animIdPrefix .~ animId <> ["hole-frame"])
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
-                    <&> SearchMenu.termWidget %~ addFrame . Momentu.pad (frameWidth & _2 .~ 0)
+                    <&> SearchMenu.termWidget %~ addFrame . Element.pad (frameWidth & _2 .~ 0)
         animId =
             pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make

@@ -3,6 +3,7 @@ module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
     , HasAnimIdPrefix(..), subAnimId
     , Layers(..), layers, translateLayers, addLayersAbove, render
+    , pad
     , topLayer, bottomLayer
     , width, height
     , tint
@@ -48,13 +49,14 @@ render x = x ^. layers . Lens.reversed . traverse
 class Element a where
     setLayers :: Lens.IndexedSetter' Size a Layers
     hoverLayers :: a -> a
-    -- Different `SetLayers`s do additional things when padding
-    -- (Moving focal points, alignments, etc)
-    pad :: Vector2 R -> a -> a
-    pad p = assymetricPad p p
     assymetricPad :: Vector2 R -> Vector2 R -> a -> a
     scale :: Vector2 R -> a -> a
     empty :: a
+
+-- Different `SetLayers`s do additional things when padding
+-- (Moving focal points, alignments, etc)
+pad :: Element a => Vector2 R -> a -> a
+pad p = assymetricPad p p
 
 class Element a => SizedElement a where size :: Lens.Getter a Size
 

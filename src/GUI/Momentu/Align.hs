@@ -51,14 +51,14 @@ instance SizedElement a => Element (Aligned a) where
     setLayers = value . Element.setLayers
     hoverLayers = value %~ Element.hoverLayers
     empty = Aligned 0 Element.empty
-    pad padding (Aligned ratio w) =
+    assymetricPad topLeftPadding bottomRightPadding (Aligned ratio w) =
         Aligned
-        { _alignmentRatio = (ratio * (w ^. Element.size) + padding) / paddedWidget ^. Element.size
+        { _alignmentRatio =
+            (ratio * (w ^. Element.size) + topLeftPadding) / paddedWidget ^. Element.size
         , _value = paddedWidget
         }
         where
-            paddedWidget = Element.pad padding w
-    assymetricPad = error "TODO: implement Aligned's assymetricPad"
+            paddedWidget = Element.assymetricPad topLeftPadding bottomRightPadding w
     scale ratio = value %~ Element.scale ratio
 
 instance SizedElement a => SizedElement (Aligned a) where size = value . Element.size
