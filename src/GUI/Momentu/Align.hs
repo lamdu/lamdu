@@ -58,7 +58,7 @@ instance SizedElement a => Element (Aligned a) where
         }
         where
             paddedWidget = Element.pad padding w
-    assymetricPad = error "Aligned: assymetricPad not implemented"
+    assymetricPad = error "TODO: implement Aligned's assymetricPad"
     scale ratio = value %~ Element.scale ratio
 
 instance SizedElement a => SizedElement (Aligned a) where size = value . Element.size
