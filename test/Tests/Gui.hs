@@ -94,14 +94,14 @@ makeGui afterDoc cache env =
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
-focusedWidget :: Responsive a -> Either String (Widget.Focused a)
+focusedWidget :: HasCallStack => Responsive a -> Either String (Widget.Focused a)
 focusedWidget gui =
     widget <$ verifyLayers (widget ^. Widget.fLayers)
     where
         widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
 makeFocusedWidget ::
-    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
     String -> Cache.Functions -> env ->
@@ -110,7 +110,7 @@ makeFocusedWidget afterDoc cache env =
     makeGui afterDoc cache env >>= either fail pure . focusedWidget
 
 mApplyEvent ::
-    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
@@ -130,7 +130,7 @@ mApplyEvent cache env virtCursor event =
             & sequenceA
 
 applyEvent ::
-    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
     , HasSettings env, HasStyle env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env
@@ -152,7 +152,7 @@ dummyVirt = VirtualCursor (Rect 0 0)
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
-testLambdaDelete :: Test
+testLambdaDelete :: HasCallStack => Test
 testLambdaDelete =
     testCase "delete-lambda" $
     GuiEnv.make >>=
@@ -197,7 +197,7 @@ testFragmentSize =
 
 -- | Test for issue #375
 -- https://trello.com/c/KFLJPNmO/375-operator-precedence-crosses-lambda-boundaries-add-test
-testOpPrec :: Test
+testOpPrec :: HasCallStack => Test
 testOpPrec =
     testCase "apply-operator" $
     GuiEnv.make >>=
@@ -233,7 +233,7 @@ workAreaEq x y =
                 (Sugar.Payload (Name Unit) Unit Unit a)
 
 testKeyboardDirAndBack ::
-    Cache.Functions -> GuiEnv.Env -> VirtualCursor ->
+    HasCallStack => Cache.Functions -> GuiEnv.Env -> VirtualCursor ->
     MetaKey -> MetaKey -> T ViewM ()
 testKeyboardDirAndBack cache posEnv posVirt way back =
     mApplyEvent cache posEnv posVirt (simpleKeyEvent way)
@@ -266,7 +266,7 @@ rectWithin (Rect (Vector2 x0 y0) (Vector2 w0 h0)) (Rect (Vector2 x1 y1) (Vector2
     x0 >= x1 && y0 >= y1 && x0 + w0 <= x1 + w1 && y0 + h0 <= h1 + h1
 
 testTabNavigation ::
-    Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
+    HasCallStack => Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testTabNavigation cache env virtCursor =
     do
         w0 <- makeFocusedWidget "mApplyEvent" cache env
@@ -320,7 +320,7 @@ testConsistentKeyboardNavigation cache posEnv posVirt =
     where
         k = MetaKey noMods
 
-testActions :: Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
+testActions :: HasCallStack => Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testActions cache env virtCursor =
     do
         w <- makeFocusedWidget "" cache env
@@ -349,7 +349,7 @@ testProgramGuiAtPos cache baseEnv enter =
     where
         virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
 
-programTest :: GuiEnv.Env -> FilePath -> Test
+programTest :: HasCallStack => GuiEnv.Env -> FilePath -> Test
 programTest baseEnv filename =
     testCase filename . testProgram filename $
     \cache ->
