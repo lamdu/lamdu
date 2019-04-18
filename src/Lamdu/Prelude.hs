@@ -1,7 +1,7 @@
 module Lamdu.Prelude
     ( module X
     , traceId, traceIdVia, trace, traceShowM, traceM
-    , todo
+    , todo, warn
     ) where
 
 -- .@~ is missing in Control.Lens.Operators in lens-4.15.3
@@ -37,6 +37,10 @@ traceIdVia f prefix x = Trace.trace (prefix ++ show (f x)) x
 {-# WARNING trace "Leaving traces in the code" #-}
 trace :: String -> a -> a
 trace = Trace.trace
+
+{-# WARNING warn "Leaving warn in the code" #-}
+warn :: String -> a -> a
+warn _ = id
 
 {-# WARNING traceShowM "Leaving traces in the code" #-}
 traceShowM :: (Show a, Applicative f) => a -> f ()
