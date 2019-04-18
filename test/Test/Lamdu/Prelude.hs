@@ -20,7 +20,8 @@ import           Text.PrettyPrint.HughesPJClass as X (prettyShow)
 -- colors disabled
 runTest :: Test -> IO ()
 runTest test =
-    defaultMainWithOpts [test] mempty { ropt_color_mode = Just ColorNever }
+    defaultMainWithOpts [test]
+    mempty { ropt_color_mode = Just ColorNever, ropt_threads = Just 1 }
 
 assertSetEquals :: (Ord a, Show a) => String -> Set a -> Set a -> IO ()
 assertSetEquals msg expected actual
