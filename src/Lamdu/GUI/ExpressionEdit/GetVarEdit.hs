@@ -41,6 +41,8 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
@@ -73,7 +75,7 @@ makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
-            [ Label.make "Params {" <&> Responsive.fromTextView
+            [ Label.make (grammar ^. Grammar.paramsRecordOpener) <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
@@ -87,7 +89,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , Label.make "}" <&> Responsive.fromTextView
+            , Label.make (grammar ^. Grammar.paramsRecordCloser) <&> Responsive.fromTextView
             ] <&> Options.box Options.disambiguationNone <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
@@ -172,10 +174,12 @@ definitionTypeChangeBox ::
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
-        updateLabel <- Styled.actionable myId "Update" updateDoc update
-        toLabel <- Styled.infoLabel "to: "
+        updateLabel <-
+            Styled.actionable myId (grammar ^. Grammar.defUpdateHeader)
+            updateDoc update
+        toLabel <- Styled.infoLabel (grammar ^. Grammar.defUpdateTo)
 
-        oldTypeRow <- Styled.infoLabel "Type was: "
+        oldTypeRow <- Styled.infoLabel (grammar ^. Grammar.defUpdateWas)
         hspace <- Spacer.stdHSpace
         let newTypeRow = updateLabel /|/ hspace /|/ toLabel
 

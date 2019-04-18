@@ -39,6 +39,8 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
@@ -120,10 +122,10 @@ textEdit ::
     m (TextWidget o)
 textEdit prop pl =
     do
-        left <- Label.make "“"
+        left <- Label.make (grammar ^. Grammar.textOpener)
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         right <-
-            Label.make "„"
+            Label.make (grammar ^. Grammar.textCloser)
             <&> Element.padToSizeAlign (text ^. Element.size & _1 .~ 0) 1
         withFd ?? myId ?? left /|/ text /|/ right
     & withStyle Style.text

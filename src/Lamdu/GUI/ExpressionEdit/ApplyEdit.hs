@@ -23,6 +23,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -115,7 +117,9 @@ mkRelayedArgs ::
 mkRelayedArgs args =
     do
         argEdits <- traverse (\(Ann a v) -> GetVarEdit.make (v ^. Lens._Wrapped) a) args
-        collapsed <- Styled.grammarLabel "➾" <&> Responsive.fromTextView
+        collapsed <-
+            Styled.grammarLabel (grammar ^. Grammar.relay)
+            <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
 
 mkBoxed ::

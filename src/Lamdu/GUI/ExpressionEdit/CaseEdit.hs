@@ -35,6 +35,8 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -60,14 +62,14 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 Styled.grammarLabel text <&> Responsive.fromTextView
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
-            <*> Styled.grammarLabel "case"
+            <*> Styled.grammarLabel (grammar ^. Grammar.case_)
             <&> Responsive.fromWithTextPos
-        ofLabel <- responsiveLabel "of"
+        ofLabel <- responsiveLabel (grammar ^. Grammar.of_)
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase ->
                 do
-                    lambdaLabel <- responsiveLabel "λ"
+                    lambdaLabel <- responsiveLabel (grammar ^. Grammar.lam)
                     Options.boxSpaced
                         ?? Options.disambiguationNone
                         ?? [caseLabel, lambdaLabel, ofLabel]
@@ -123,7 +125,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         hspace <- Spacer.stdHSpace
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
-        colonLabel <- Styled.grammarLabel ":"
+        colonLabel <- Styled.grammarLabel (grammar ^. Grammar.inject)
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
             , Responsive._taggedItem = altExprGui
@@ -151,7 +153,7 @@ makeAltsWidget mActiveTag alts addAlt altsId =
         case existingAltWidgets ++ newAlts of
             [] ->
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
-                <*> Styled.grammarLabel "Ø"
+                <*> Styled.grammarLabel (grammar ^. Grammar.absurd)
                 <&> Responsive.fromWithTextPos
             altWidgtes -> Responsive.taggedList ?? altWidgtes
 

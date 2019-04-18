@@ -22,6 +22,8 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -46,7 +48,7 @@ makeToNom ::
     ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> ExprGuiM.makeBinder
-    & mkNomGui id "ToNominal" "«" mDel pl
+    & mkNomGui id "ToNominal" (grammar ^. Grammar.toNom) mDel pl
     where
         mDel =
             nom ^. Sugar.nVal . ann . Sugar.plActions .
@@ -60,7 +62,7 @@ makeFromNom ::
     ExprGuiM i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" "»" mDel pl
+    & mkNomGui reverse "FromNominal" (grammar ^. Grammar.fromNom) mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
 

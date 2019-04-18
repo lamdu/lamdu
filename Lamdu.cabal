@@ -318,6 +318,7 @@ Library
                   , Lamdu.GUI.ExpressionGui.Monad
                   , Lamdu.GUI.ExpressionGui.Payload
                   , Lamdu.GUI.ExpressionGui.Wrap
+                  , Lamdu.GUI.Grammar
                   , Lamdu.GUI.IOTrans
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main

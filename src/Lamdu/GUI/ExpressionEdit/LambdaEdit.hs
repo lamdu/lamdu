@@ -29,6 +29,8 @@ import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -55,7 +57,7 @@ mkExpanded ::
     f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) ->
      [Gui Responsive o])
 mkExpanded =
-    Styled.grammarLabel "→" <&> Responsive.fromTextView
+    Styled.grammarLabel (grammar ^. Grammar.arrow) <&> Responsive.fromTextView
     <&> \labelEdit mParamsEdit mScopeEdit ->
     mkLhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
@@ -79,7 +81,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
-            <*> Styled.grammarLabel "λ"
+            <*> Styled.grammarLabel (grammar ^. Grammar.lam)
             <&> Responsive.fromWithTextPos
             & Reader.local (TextView.underline ?~ LightLambda.underline theme)
         pure $ \mScopeEdit ->

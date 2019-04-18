@@ -37,6 +37,8 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -82,7 +84,9 @@ makeUnit pl =
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
         addFieldEventMap <- mkAddFieldEventMap myId
         stdWrap pl
-            <*> ( (/|/) <$> Styled.grammarLabel "{" <*> Styled.grammarLabel "}"
+            <*> ( (/|/)
+                    <$> Styled.grammarLabel (grammar ^. Grammar.recordOpener)
+                    <*> Styled.grammarLabel (grammar ^. Grammar.recordCloser)
                     <&> makeFocusable
                     <&> Align.tValue %~ Widget.weakerEvents
                         (addFieldEventMap <> addFieldWithSearchTermEventMap myId)
@@ -145,7 +149,7 @@ makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
     do
-        opener <- Styled.grammarLabel "{"
+        opener <- Styled.grammarLabel (grammar ^. Grammar.recordOpener)
         Responsive.taggedList
             <*> addPostTags fieldGuis
             >>= postProcess
@@ -162,8 +166,8 @@ addPostTags items =
             & Reader.local (Element.animIdPrefix %~ augmentId idx)
             <&> \label -> item & Responsive.tagPost .~ (label <&> Widget.fromView)
             where
-                txt | idx < lastIdx = ","
-                    | otherwise = "}"
+                txt | idx < lastIdx = grammar ^. Grammar.recordSep
+                    | otherwise = grammar ^. Grammar.recordCloser
         lastIdx = length items - 1
 
 makeAddFieldRow ::

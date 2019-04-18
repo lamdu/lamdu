@@ -26,6 +26,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Grammar (grammar)
+import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -58,7 +60,7 @@ makeLetEdit item =
                     (E.Doc ["Navigation", "Jump to first use"])
                     . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
-        letLabel <- Styled.grammarLabel "let"
+        letLabel <- Styled.grammarLabel (grammar ^. Grammar.let_)
         space <- Spacer.stdHSpace
         letEquation <-
             AssignmentEdit.make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder
