@@ -5,7 +5,6 @@ module GUI.Momentu.Widget.Instances
     , glueStates
     , translateFocusedGeneric, translateUpdate
     , translate, fromView
-    , StrollOrder(..)
     , combineEnterPoints, combineMEnters
     , eventMapMaker
     , strollAheadKeys, strollBackKeys
@@ -90,16 +89,13 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
     glue orientation =
-        Glue.glueH (glueStates orientation (StrollOrder Forward)) orientation
-
-newtype StrollOrder = StrollOrder Order
+        Glue.glueH (glueStates orientation Forward) orientation
 
 glueStates ::
     Applicative f =>
-    Orientation -> StrollOrder -> Gui Widget f -> Gui Widget f -> Gui Widget f
-glueStates orientation (StrollOrder order) w0 w1 =
-    w0
-    & wState .~ combineStates orientation order (w0 ^. wState) (w1 ^. wState)
+    Orientation -> Order -> Gui Widget f -> Gui Widget f -> Gui Widget f
+glueStates orientation order w0 w1 =
+    w0 & wState .~ combineStates orientation order (w0 ^. wState) (w1 ^. wState)
 
 combineStates ::
     Applicative f =>
