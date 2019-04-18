@@ -7,7 +7,7 @@ module GUI.Momentu.Glue
     ) where
 
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Direction (Orientation(..))
+import           GUI.Momentu.Direction (Orientation(..), axis, perpendicular)
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 
@@ -31,17 +31,19 @@ glueH ::
     (SizedElement a, SizedElement b) =>
     (a -> b -> c) -> Orientation -> a -> b -> c
 glueH f orientation v0 v1 =
-    f (v0 & Element.size .~ newSize)
-    ( Element.assymetricPad t 0 v1
-    & Element.size .~ newSize
-    )
+    f
+    (Element.assymetricPad v0pre v0post v0)
+    (Element.assymetricPad v1pre v1post v1)
     where
-        Vector2 w0 h0 = v0 ^. Element.size
-        Vector2 w1 h1 = v1 ^. Element.size
-        (newSize, t) =
-            case orientation of
-            Horizontal -> (Vector2 (w0 + w1) (max h0 h1), Vector2 w0 0)
-            Vertical -> (Vector2 (max w0 w1) (h0 + h1), Vector2 0 h0)
+        v0pre = 0
+        v0post = v1s & perp -~ v0s ^. perp & perp %~ max 0
+        v1pre = v0s & perp .~ 0
+        v1post = v0s & ax .~ 0 & perp -~ v1s ^. perp & perp %~ max 0
+        ax = axis orientation
+        perp :: Lens' (Vector2 a) a
+        perp = axis (perpendicular orientation)
+        v0s = v0 ^. Element.size
+        v1s = v1 ^. Element.size
 
 box :: (Element a, GluesTo a a a) => Orientation -> [a] -> a
 box orientation = foldr (glue orientation) Element.empty
