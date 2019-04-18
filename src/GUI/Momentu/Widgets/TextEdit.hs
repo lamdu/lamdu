@@ -128,7 +128,7 @@ makeInternal s str emptyStrings mode myId =
             | Text.null str = (emptyStrings ^. mode, TextView.color .~ emptyColor)
             | otherwise = (Text.take 5000 str, id)
         v = TextView.make (setColor (s ^. sTextViewStyle)) displayStr animId
-            & Element.pad (Vector2 (s ^. sCursorWidth / 2) 0)
+            & Element.padAround (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 makeUnfocused ::

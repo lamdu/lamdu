@@ -201,7 +201,8 @@ make mkOptions pl allowedTerms =
                     MDraw.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
                     & Reader.local (Element.animIdPrefix .~ animId <> ["hole-frame"])
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
-                    <&> SearchMenu.termWidget %~ addFrame . Element.pad (frameWidth & _2 .~ 0)
+                    <&> SearchMenu.termWidget %~
+                        addFrame . Element.padAround (frameWidth & _2 .~ 0)
         animId =
             pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
         widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make

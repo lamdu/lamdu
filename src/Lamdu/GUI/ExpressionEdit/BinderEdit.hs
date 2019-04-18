@@ -65,7 +65,7 @@ makeLetEdit item =
         letEquation <-
             AssignmentEdit.make Nothing mempty (item ^. Sugar.lName) TextColors.letColor binder
             <&> Widget.weakerEvents eventMap
-            <&> Element.pad (theme ^. Theme.letItemPadding)
+            <&> Element.padAround (theme ^. Theme.letItemPadding)
         letLabel /|/ space /|/ letEquation & pure
     where
         bodyId = item ^. Sugar.lBody . ann & WidgetIds.fromExprPayload

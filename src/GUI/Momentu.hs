@@ -16,7 +16,7 @@ module GUI.Momentu
     , AnimId
 
     -- | Element class
-    , Element(..), Element.tint, Element.width, Element.height, Element.pad
+    , Element(..), Element.tint, Element.width, Element.height, Element.padAround
 
     -- | Widget
     , Widget

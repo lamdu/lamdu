@@ -3,7 +3,7 @@ module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
     , HasAnimIdPrefix(..), subAnimId
     , Layers(..), layers, translateLayers, addLayersAbove, render
-    , pad
+    , padAround
     , topLayer, bottomLayer
     , width, height
     , tint
@@ -55,8 +55,8 @@ class Element a where
 
 -- Different `SetLayers`s do additional things when padding
 -- (Moving focal points, alignments, etc)
-pad :: Element a => Vector2 R -> a -> a
-pad p = assymetricPad p p
+padAround :: Element a => Vector2 R -> a -> a
+padAround p = assymetricPad p p
 
 class Element a => SizedElement a where size :: Lens.Getter a Size
 

@@ -178,9 +178,9 @@ addFrame =
             if gui ^. Element.size == 0 then gui
             else
             gui
-            & Element.pad (s ^. bgPadding)
+            & Element.padAround (s ^. bgPadding)
             & Draw.backgroundColor (animId <> ["hover bg"]) (s ^. bgColor)
-            & Element.pad (s ^. framePadding)
+            & Element.padAround (s ^. framePadding)
             & Draw.backgroundColor (animId <> ["hover frame"]) (s ^. frameColor)
 
 hover ::

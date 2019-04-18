@@ -5,9 +5,9 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
 import           AST (Tree, Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
-import qualified GUI.Momentu as Momentu
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
@@ -132,6 +132,6 @@ makeFragmentExprEdit fragment =
                 Sugar.TypeMismatch {} -> Theme.errorColor
         let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
         fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
-        Momentu.addInnerFrame
+        MDraw.addInnerFrame
             ?? frameColor ?? frameWidth
-            ?? Momentu.pad (frameWidth & _2 .~ 0) fragmentExprGui
+            ?? Element.padAround (frameWidth & _2 .~ 0) fragmentExprGui

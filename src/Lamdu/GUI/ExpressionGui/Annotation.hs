@@ -126,7 +126,8 @@ processAnnotationGui wideAnnotationBehavior =
                     annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
                     & (/ annotationWidth) & min heightShrinkRatio & pure
                 maybeTooNarrow
-                    | minWidth > annotationWidth = Element.pad (Vector2 ((minWidth - annotationWidth) / 2) 0)
+                    | minWidth > annotationWidth =
+                        Element.padAround (Vector2 ((minWidth - annotationWidth) / 2) 0)
                     | otherwise = id
 
 data EvalResDisplay name = EvalResDisplay
@@ -162,7 +163,7 @@ makeEvalView mNeighbours evalRes =
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
                 <&> Lens.mapped %~ Element.scale (evalTheme ^. Theme.neighborsScaleFactor)
-                <&> Lens.mapped %~ Element.pad (evalTheme ^. Theme.neighborsPadding)
+                <&> Lens.mapped %~ Element.padAround (evalTheme ^. Theme.neighborsPadding)
                 <&> fromMaybe Element.empty
         (prev, next) <-
             case mNeighbours of

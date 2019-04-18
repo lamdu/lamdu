@@ -80,7 +80,7 @@ makeWidget resultId holeResultConverted =
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
-            <&> Element.pad padding
+            <&> Element.padAround padding
             & ExprGuiM.withLocalIsHoleResult
 
 make ::
