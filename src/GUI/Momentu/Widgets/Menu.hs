@@ -25,6 +25,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
+import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
@@ -237,13 +238,14 @@ layoutOption ::
     m (TextWidget f)
 layoutOption maxOptionWidth (optionId, rendered, submenu) =
     case submenu of
-    SubmenuEmpty -> rendered & Element.width .~ maxOptionWidth & pure
+    SubmenuEmpty -> padToWidth maxOptionWidth rendered & pure
     SubmenuItems action ->
         do
             isSelected <- State.isSubCursor ?? optionId
             submenuSymbol <- makeSubmenuSymbol isSelected
             let base =
-                    (rendered & Element.width .~ maxOptionWidth - submenuSymbol ^. Element.width)
+                    padToWidth
+                    (maxOptionWidth - submenuSymbol ^. Element.width) rendered
                     /|/ submenuSymbol
             if isSelected
                 then do
@@ -260,6 +262,8 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
                         & pure
                 else pure base
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optionId)
+    where
+        padToWidth w = Element.padToSizeAlign (Vector2 w 0) 0
 
 instance Semigroup (OptionList a) where
     TooMany <> y = y

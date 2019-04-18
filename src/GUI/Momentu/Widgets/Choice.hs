@@ -9,7 +9,8 @@ module GUI.Momentu.Widgets.Choice
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
-import           GUI.Momentu.Direction (Orientation(..))
+import           Data.Vector.Vector2 (Vector2(..))
+import           GUI.Momentu.Direction (Orientation(..), perpendicular, axis)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -62,15 +63,12 @@ makeInner ::
 makeInner hover fd (Property curChild choose) children config myId =
     widget True
     & (if anyChildFocused then hoverAsClosed else id)
-    & axis .~ maxDim
+    & Element.padToSizeAlign (0 & perp .~ maxDim) 0
     where
         orientation = cwcOrientation config
-        axis :: Element.SizedElement a => Lens' a Widget.R
-        axis =
-            case orientation of
-            Vertical -> Element.width
-            Horizontal -> Element.height
-        maxDim = children <&> (^. _2 . axis) & maximum
+        perp :: Lens' (Vector2 a) a
+        perp = axis (perpendicular orientation)
+        maxDim = children <&> (^. _2 . Element.size . perp) & maximum
         hoverAsClosed open =
             [hover (Hover.anchor open)]
             `Hover.hoverInPlaceOf` Hover.anchor (widget False)

@@ -9,7 +9,6 @@ module GUI.Momentu.Element
     , padToSizeAlign
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
@@ -57,7 +56,7 @@ class Element a where
     scale :: Vector2 R -> a -> a
     empty :: a
 
-class Element a => SizedElement a where size :: Lens' a Size
+class Element a => SizedElement a where size :: Lens.Getter a Size
 
 bottomLayer :: Element a => Lens.IndexedSetter' Size a Anim.Frame
 bottomLayer = setLayers <. (layers . Lens.ix 0)
@@ -68,10 +67,10 @@ topLayer = setLayers <. (layers . Lens.reversed . Lens.ix 0)
 tint :: Element a => Draw.Color -> a -> a
 tint color = setLayers . layers . traverse . Anim.unitImages %~ Draw.tint color
 
-width :: SizedElement a => Lens' a R
+width :: SizedElement a => Lens.Getter a R
 width = size . _1
 
-height :: SizedElement a => Lens' a R
+height :: SizedElement a => Lens.Getter a R
 height = size . _2
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
@@ -82,8 +81,6 @@ subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
 padToSizeAlign :: SizedElement a => Size -> Vector2 R -> a -> a
 padToSizeAlign newSize alignment x =
-    x
-    & setLayers %~ translateLayers (sizeDiff * alignment)
-    & size %~ liftA2 max newSize
+    assymetricPad (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
     where
         sizeDiff = max <$> 0 <*> newSize - x ^. size

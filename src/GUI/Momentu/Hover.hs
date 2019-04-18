@@ -197,9 +197,10 @@ emplaceAt ::
     Gui AnchoredWidget f ->
     Gui Widget f
 emplaceAt h place =
-    Element.assymetricPad translation 0 (h ^. anchored)
-    & Element.size .~ place ^. Element.size
+    Element.assymetricPad translation postPad (h ^. anchored)
     where
+        postPad =
+            place ^. Element.size - h ^. Element.size - translation <&> max 0
         translation = place ^. anchorPoint - h ^. anchorPoint
 
 -- TODO: Second argument here is really only (anchorPoint,size), take

@@ -18,7 +18,7 @@ focusAreaInto ::
 focusAreaInto regionSize widget =
     widget
     & Widget.wState .~ Widget.translate translation2d widget
-    & Element.size .~ regionSize
+    & Widget.wSize .~ regionSize
     where
         translation2d =
             translation1d <$> widget ^. Element.size <*> regionSize <*> focalCenter

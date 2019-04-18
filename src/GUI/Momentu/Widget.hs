@@ -34,7 +34,6 @@ module GUI.Momentu.Widget
     -- Operations:
     , translate
     , translateFocused, combineEnterPoints
-    , padToSizeAlign
 
     , makeFocusableView
     , makeFocusableWidget
@@ -205,15 +204,6 @@ translateFocused ::
     Vector2 R -> (Surrounding -> Gui Focused f) ->
     Surrounding -> Gui Focused f
 translateFocused pos = translateFocusedGeneric (fmap (translateUpdate pos)) pos
-
-padToSizeAlign ::
-    Functor f => Size -> Vector2 R -> Gui Widget f -> Gui Widget f
-padToSizeAlign newSize alignment w =
-    w
-    & wState .~ translate (sizeDiff * alignment) w
-    & Element.size %~ (max <$> newSize <*>)
-    where
-        sizeDiff = max <$> 0 <*> newSize - w ^. Element.size
 
 setFocused :: HasWidget w => w a -> w a
 setFocused = widget %~ \w -> setFocusedWith (Rect 0 (w ^. wSize)) mempty w

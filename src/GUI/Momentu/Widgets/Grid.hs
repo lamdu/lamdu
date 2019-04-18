@@ -180,7 +180,7 @@ toWidgetWithKeys keys size sChildren =
     Widget
     { _wSize = size
     , _wState =
-        case states ^@? each2d <. Widget._StateFocused of
+        case translatedChildren ^@? each2d <. Widget.wState . Widget._StateFocused of
         Nothing ->
             Widget.StateUnfocused Widget.Unfocused
             { _uLayers = unfocusedLayers
@@ -238,14 +238,16 @@ toWidgetWithKeys keys size sChildren =
     }
     where
         translateChildWidget (rect, widget) =
-            widget
-            -- Each child is set to the size of the entire grid and
-            -- then translated to its place in order to fix the
-            -- Surrounding parameters of all children
-            & Element.size .~ size
-            & Widget.translate (rect ^. Rect.topLeft)
-        states = sChildren & each2d %~ translateChildWidget
-        unfocused = states & each2d %~ (^? Widget._StateUnfocused)
+            -- -- Each child is set to the size of the entire grid and
+            -- -- then translated to its place in order to fix the
+            -- -- Surrounding parameters of all children
+            Element.assymetricPad
+            (rect ^. Rect.topLeft)
+            (size - (rect ^. Rect.bottomRight)) widget
+        translatedChildren = sChildren & each2d %~ translateChildWidget
+        unfocused =
+            translatedChildren
+            & each2d %~ (^? Widget.wState . Widget._StateUnfocused)
         unfocusedMEnters = unfocused & each2d %~ (>>= (^. Widget.uMEnter))
         unfocusedLayers = unfocused ^. each2d . Lens._Just . Widget.uLayers
 

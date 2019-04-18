@@ -54,11 +54,11 @@ instance (Functor f, a ~ f Update) => Element (Widget a) where
     assymetricPad leftAndTop rightAndBottom w =
         w
         & wState .~ translate leftAndTop w
-        & Element.size +~ leftAndTop + rightAndBottom
+        & wSize +~ leftAndTop + rightAndBottom
     scale mult w =
         w
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
-        & Element.size *~ mult
+        & wSize *~ mult
         & wFocused . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & eventMapMaker . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult

@@ -27,11 +27,11 @@ instance Element View where
     hoverLayers = Element.setLayers . Element.layers %~ (mempty:)
     assymetricPad leftAndTop rightAndBottom x =
         x
-        & Element.size +~ leftAndTop + rightAndBottom
+        & vSize +~ leftAndTop + rightAndBottom
         & vAnimLayers %~ Element.translateLayers leftAndTop
     scale ratio x =
         x
-        & Element.size *~ ratio
+        & vSize *~ ratio
         & animFrames %~ Anim.scale ratio
     empty = make 0 mempty
 

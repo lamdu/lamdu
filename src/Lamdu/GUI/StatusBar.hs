@@ -8,6 +8,7 @@ module Lamdu.GUI.StatusBar
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
@@ -63,5 +64,5 @@ make gotoDefinition themeNames settingsProp width vcActions =
                 , statusWidgets ^. SettingsGui.helpWidget
                 ]
             <&> StatusBar.combineEdges width gotoDefinition
-            <&> StatusBar.widget . Align.tValue . Element.width .~ width
+            <&> StatusBar.widget . Align.tValue %~ Element.padToSizeAlign (Vector2 width 0) 0
             <&> StatusBar.widget %~ bgColor
