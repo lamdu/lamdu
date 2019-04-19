@@ -1,11 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.GUI.Grammar where
+module Lamdu.I18N.Texts where
 
 import qualified Control.Lens as Lens
 
 import           Lamdu.Prelude
 
-data Grammar = Grammar
+data Texts = Texts
     { _assign :: Text -- Assignment
     , _relay :: Text -- Apply
     , _let_ :: Text
@@ -42,40 +42,7 @@ data Grammar = Grammar
     , _recordSep :: Text
     , _recordCloser :: Text
     }
-Lens.makeLenses ''Grammar
+Lens.makeLenses ''Texts
 
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
-
-grammar :: Grammar
-grammar =
-    Grammar
-    { _assign = "="
-    , _relay = "➾"
-    , _let_ = "let"
-    , _toNom = "«"
-    , _fromNom = "»"
-    , _repl = "⋙"
-    , _case_ = "case"
-    , _of_ = "of"
-    , _absurd = "Ø"
-    , _if_ = "if "
-    , _else_ = "else"
-    , _condColon = ": "
-    , _elseShort = "el"
-    , _inject = ":"
-    , _nullaryInject = "."
-    , _paramsRecordOpener = "Params {"
-    , _paramsRecordCloser = "}"
-    , _defUpdateHeader = "Update"
-    , _defUpdateTo = "to: "
-    , _defUpdateWas = "Type was: "
-    , _defer = "|"
-    , _lam = "λ"
-    , _arrow = "→"
-    , _textOpener = "“"
-    , _textCloser = "„"
-    , _recordOpener = "{"
-    , _recordSep = ","
-    , _recordCloser = "}"
-    }

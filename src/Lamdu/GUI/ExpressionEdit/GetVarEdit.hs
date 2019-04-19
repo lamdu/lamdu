@@ -37,17 +37,17 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
-import           Lamdu.GUI.Grammar (grammar)
-import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Languages (texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
@@ -75,7 +75,7 @@ makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
-            [ Label.make (grammar ^. Grammar.paramsRecordOpener) <&> Responsive.fromTextView
+            [ Label.make (texts ^. Texts.paramsRecordOpener) <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
@@ -89,7 +89,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , Label.make (grammar ^. Grammar.paramsRecordCloser) <&> Responsive.fromTextView
+            , Label.make (texts ^. Texts.paramsRecordCloser) <&> Responsive.fromTextView
             ] <&> Options.box Options.disambiguationNone <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
@@ -175,11 +175,11 @@ definitionTypeChangeBox ::
 definitionTypeChangeBox info getVarId =
     do
         updateLabel <-
-            Styled.actionable myId (grammar ^. Grammar.defUpdateHeader)
+            Styled.actionable myId (texts ^. Texts.defUpdateHeader)
             updateDoc update
-        toLabel <- Styled.infoLabel (grammar ^. Grammar.defUpdateTo)
+        toLabel <- Styled.infoLabel (texts ^. Texts.defUpdateTo)
 
-        oldTypeRow <- Styled.infoLabel (grammar ^. Grammar.defUpdateWas)
+        oldTypeRow <- Styled.infoLabel (texts ^. Texts.defUpdateWas)
         hspace <- Spacer.stdHSpace
         let newTypeRow = updateLabel /|/ hspace /|/ toLabel
 

@@ -21,14 +21,14 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
-import           Lamdu.GUI.Grammar (grammar)
-import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Languages (texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -51,7 +51,7 @@ makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
         arg <- ExprGuiM.makeSubexpression val
-        colon <- injectIndicator (grammar ^. Grammar.inject)
+        colon <- injectIndicator (texts ^. Texts.inject)
         config <- Lens.view Config.config
         let replaceParentEventMap replaceParent =
                 -- Deleting the inject is replacing the whole expr
@@ -93,7 +93,7 @@ makeNullaryInject nullary tag pl =
     False ->
         stdWrapParentExpr pl <*>
         do
-            dot <- injectIndicator (grammar ^. Grammar.nullaryInject)
+            dot <- injectIndicator (texts ^. Texts.nullaryInject)
             TagEdit.makeVariantTag tag <&> (/|/ dot)
                 <&> Responsive.fromWithTextPos
                 <&> Widget.weakerEvents expandNullaryVal

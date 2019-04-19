@@ -28,10 +28,10 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
-import           Lamdu.GUI.Grammar (grammar)
-import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Languages (texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -55,8 +55,8 @@ makeIfThen prefixLabel animId ifElse =
     do
         ifGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
-        label <- Styled.grammarLabel (grammar ^. Grammar.if_)
-        colon <- Styled.grammarLabel (grammar ^. Grammar.condColon)
+        label <- Styled.grammarLabel (texts ^. Texts.if_)
+        colon <- Styled.grammarLabel (texts ^. Texts.condColon)
         let keyword = prefixLabel /|/ label & Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
@@ -78,8 +78,8 @@ makeElseBody ::
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
-        <$> (Styled.grammarLabel (grammar ^. Grammar.else_) <&> Responsive.fromTextView)
-        <*> (Styled.grammarLabel (grammar ^. Grammar.condColon)
+        <$> (Styled.grammarLabel (texts ^. Texts.else_) <&> Responsive.fromTextView)
+        <*> (Styled.grammarLabel (texts ^. Texts.condColon)
             & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
     ) <*> ExprGuiM.makeSubexpression (Ann pl expr)
     <&> pure
@@ -90,7 +90,7 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
-        elseLabel <- Styled.grammarLabel (grammar ^. Grammar.elseShort)
+        elseLabel <- Styled.grammarLabel (texts ^. Texts.elseShort)
         letEventMap <-
             foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
         (:)

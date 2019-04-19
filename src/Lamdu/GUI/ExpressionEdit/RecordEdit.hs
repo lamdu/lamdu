@@ -33,14 +33,14 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
-import           Lamdu.GUI.Grammar (grammar)
-import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Languages (texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -85,8 +85,8 @@ makeUnit pl =
         addFieldEventMap <- mkAddFieldEventMap myId
         stdWrap pl
             <*> ( (/|/)
-                    <$> Styled.grammarLabel (grammar ^. Grammar.recordOpener)
-                    <*> Styled.grammarLabel (grammar ^. Grammar.recordCloser)
+                    <$> Styled.grammarLabel (texts ^. Texts.recordOpener)
+                    <*> Styled.grammarLabel (texts ^. Texts.recordCloser)
                     <&> makeFocusable
                     <&> Align.tValue %~ Widget.weakerEvents
                         (addFieldEventMap <> addFieldWithSearchTermEventMap myId)
@@ -149,7 +149,7 @@ makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
     do
-        opener <- Styled.grammarLabel (grammar ^. Grammar.recordOpener)
+        opener <- Styled.grammarLabel (texts ^. Texts.recordOpener)
         Responsive.taggedList
             <*> addPostTags fieldGuis
             >>= postProcess
@@ -166,8 +166,8 @@ addPostTags items =
             & Reader.local (Element.animIdPrefix %~ augmentId idx)
             <&> \label -> item & Responsive.tagPost .~ (label <&> Widget.fromView)
             where
-                txt | idx < lastIdx = grammar ^. Grammar.recordSep
-                    | otherwise = grammar ^. Grammar.recordCloser
+                txt | idx < lastIdx = texts ^. Texts.recordSep
+                    | otherwise = texts ^. Texts.recordCloser
         lastIdx = length items - 1
 
 makeAddFieldRow ::

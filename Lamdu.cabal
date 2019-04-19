@@ -318,7 +318,6 @@ Library
                   , Lamdu.GUI.ExpressionGui.Monad
                   , Lamdu.GUI.ExpressionGui.Payload
                   , Lamdu.GUI.ExpressionGui.Wrap
-                  , Lamdu.GUI.Grammar
                   , Lamdu.GUI.IOTrans
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
@@ -335,6 +334,8 @@ Library
                   , Lamdu.GUI.VersionControl.Config
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
+                  , Lamdu.I18N.Texts
+                  , Lamdu.I18N.Languages
                   , Lamdu.Main.Env
                   , Lamdu.Name
                   , Lamdu.Opts

@@ -46,12 +46,12 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
-import           Lamdu.GUI.Grammar (grammar)
-import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Languages (texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -255,7 +255,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         do
             nullParamGui <-
                 (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
-                <*> Styled.grammarLabel (grammar ^. Grammar.defer)
+                <*> Styled.grammarLabel (texts ^. Texts.defer)
             fromParamList delVarBackwardsId rhsId
                 [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
         where
@@ -447,7 +447,7 @@ make pMode defEventMap tag color assignment =
                 ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
-        equals <- Label.make (grammar ^. Grammar.assign)
+        equals <- Label.make (texts ^. Texts.assign)
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
         hbox [ defNameEdit :
                 (mParamEdit ^.. Lens._Just) ++

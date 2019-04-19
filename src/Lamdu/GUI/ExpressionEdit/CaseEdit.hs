@@ -30,15 +30,15 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
-import           Lamdu.GUI.Grammar (grammar)
-import qualified Lamdu.GUI.Grammar as Grammar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Languages (texts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -62,14 +62,14 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 Styled.grammarLabel text <&> Responsive.fromTextView
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
-            <*> Styled.grammarLabel (grammar ^. Grammar.case_)
+            <*> Styled.grammarLabel (texts ^. Texts.case_)
             <&> Responsive.fromWithTextPos
-        ofLabel <- responsiveLabel (grammar ^. Grammar.of_)
+        ofLabel <- responsiveLabel (texts ^. Texts.of_)
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase ->
                 do
-                    lambdaLabel <- responsiveLabel (grammar ^. Grammar.lam)
+                    lambdaLabel <- responsiveLabel (texts ^. Texts.lam)
                     Options.boxSpaced
                         ?? Options.disambiguationNone
                         ?? [caseLabel, lambdaLabel, ofLabel]
@@ -125,7 +125,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         hspace <- Spacer.stdHSpace
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
-        colonLabel <- Styled.grammarLabel (grammar ^. Grammar.inject)
+        colonLabel <- Styled.grammarLabel (texts ^. Texts.inject)
         pure Responsive.TaggedItem
             { Responsive._tagPre = tagLabel /|/ colonLabel /|/ hspace
             , Responsive._taggedItem = altExprGui
@@ -153,7 +153,7 @@ makeAltsWidget mActiveTag alts addAlt altsId =
         case existingAltWidgets ++ newAlts of
             [] ->
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
-                <*> Styled.grammarLabel (grammar ^. Grammar.absurd)
+                <*> Styled.grammarLabel (texts ^. Texts.absurd)
                 <&> Responsive.fromWithTextPos
             altWidgtes -> Responsive.taggedList ?? altWidgtes
 
