@@ -38,7 +38,7 @@ injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) => Lens.ALens' Texts Text -> f (WithTextPos View)
-injectIndicator = text grammar ["injectIndicator"]
+injectIndicator = grammar . text ["injectIndicator"]
 
 makeInject ::
     (Monad i, Monad o) =>

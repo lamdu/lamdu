@@ -55,8 +55,8 @@ rawText animIdSuffix txt =
 
 text ::
     (MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
-    (f (WithTextPos View) -> view) -> AnimId -> Lens.ALens' Texts Text -> view
-text style animIdSuffix txtLens = rawText animIdSuffix (texts ^# txtLens) & style
+    AnimId -> Lens.ALens Texts t Text b -> f (WithTextPos View)
+text animIdSuffix txtLens = rawText animIdSuffix (texts ^# txtLens)
 
 label ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
