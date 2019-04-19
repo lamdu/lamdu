@@ -5,9 +5,9 @@ module Lamdu.GUI.CodeEdit
     , ReplEdit.ExportRepl(..), ExportActions(..), HasExportActions(..)
     ) where
 
-import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import           AST (_Pure)
 import           AST.Term.Scheme (Scheme(..), QVars(..))
+import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -54,6 +54,7 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import qualified Lamdu.Settings as Settings
@@ -202,7 +203,7 @@ makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
         makeNewDefinition cp
-            >>= Styled.actionableRaw newDefId "New..." newDefinitionDoc
+            >>= Styled.actionable newDefId Texts.newDefinitionButton newDefinitionDoc
             <&> (^. Align.tValue)
 
 jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))

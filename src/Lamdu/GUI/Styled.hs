@@ -6,7 +6,7 @@ module Lamdu.GUI.Styled
     , addValBG, addBgColor
     , addValPadding, addValFrame
     , deletedDef, deletedUse
-    , actionable, actionableRaw
+    , actionable
     , withColor
     , nameAtBinder
     ) where
@@ -150,16 +150,7 @@ actionable ::
     ) =>
     Widget.Id -> Lens.ALens' Texts Text -> E.Doc -> f Widget.Id ->
     m (TextWidget f)
-actionable myId txtLens = actionableRaw myId (texts ^# txtLens)
-
-actionableRaw ::
-    ( Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , GuiState.HasCursor env, Config.HasConfig env, HasTheme env, Applicative f
-    , MonadReader env m
-    ) =>
-    Widget.Id -> Text -> E.Doc -> f Widget.Id ->
-    m (TextWidget f)
-actionableRaw myId txt doc action =
+actionable myId txtLens doc action =
     do
         color <- Lens.view (Theme.theme . Theme.textColors . TextColors.actionTextColor)
         underlineWidth <- Lens.view (Theme.theme . Theme.narrowUnderlineWidth)
@@ -171,7 +162,7 @@ actionableRaw myId txt doc action =
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> Label.make txt
+            <*> Label.make (texts ^# txtLens)
             & Reader.local (TextView.color .~ color)
             & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap

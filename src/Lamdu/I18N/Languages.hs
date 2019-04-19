@@ -37,6 +37,8 @@ english =
     , _recordOpener = "{"
     , _recordSep = ","
     , _recordCloser = "}"
+    , _newDefinitionButton = "New..."
+    , _undeleteButton = "Undelete..."
     }
 
 -- TODO: This will come from reader

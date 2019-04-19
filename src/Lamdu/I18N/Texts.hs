@@ -41,6 +41,8 @@ data Texts = Texts
       _recordOpener :: Text
     , _recordSep :: Text
     , _recordCloser :: Text
+    , _newDefinitionButton :: Text
+    , _undeleteButton :: Text
     }
 Lens.makeLenses ''Texts
 
