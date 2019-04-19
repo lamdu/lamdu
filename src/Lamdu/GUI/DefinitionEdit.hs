@@ -38,7 +38,7 @@ undeleteButton ::
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ["Undelete"] <&> Widget.Id
-        Styled.actionable actionId "Undelete..." doc undelete
+        Styled.actionableRaw actionId "Undelete..." doc undelete
     where
         doc = E.Doc ["Edit", "Definition", "Undelete"]
 

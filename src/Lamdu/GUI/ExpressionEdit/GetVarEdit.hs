@@ -27,7 +27,6 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
@@ -44,9 +43,9 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Languages (texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -75,7 +74,7 @@ makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         sequence
-            [ Label.make (texts ^. Texts.paramsRecordOpener) <&> Responsive.fromTextView
+            [ grammar (label Texts.paramsRecordOpener) <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
@@ -89,7 +88,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , Label.make (texts ^. Texts.paramsRecordCloser) <&> Responsive.fromTextView
+            , grammar (label Texts.paramsRecordCloser) <&> Responsive.fromTextView
             ] <&> Options.box Options.disambiguationNone <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
@@ -174,12 +173,10 @@ definitionTypeChangeBox ::
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
-        updateLabel <-
-            Styled.actionable myId (texts ^. Texts.defUpdateHeader)
-            updateDoc update
-        toLabel <- Styled.infoLabel (texts ^. Texts.defUpdateTo)
+        updateLabel <- Styled.actionable myId Texts.defUpdateHeader updateDoc update
+        toLabel <- Styled.info (label Texts.defUpdateTo)
 
-        oldTypeRow <- Styled.infoLabel (texts ^. Texts.defUpdateWas)
+        oldTypeRow <- Styled.info (label Texts.defUpdateWas)
         hspace <- Spacer.stdHSpace
         let newTypeRow = updateLabel /|/ hspace /|/ toLabel
 

@@ -18,6 +18,7 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
@@ -62,7 +63,7 @@ grammar ::
     , Element.HasAnimIdPrefix env
     ) =>
     Text -> m (WithTextPos View)
-grammar = Styled.grammarLabelRaw . sanitize
+grammar = Styled.grammar . Label.make . sanitize
 
 parensAround ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env

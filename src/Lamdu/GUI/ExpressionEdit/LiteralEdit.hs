@@ -25,7 +25,6 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -39,8 +38,8 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
+import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Languages (texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
@@ -122,10 +121,10 @@ textEdit ::
     m (TextWidget o)
 textEdit prop pl =
     do
-        left <- Label.make (texts ^. Texts.textOpener)
+        left <- label Texts.textOpener
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         right <-
-            Label.make (texts ^. Texts.textCloser)
+            label Texts.textCloser
             <&> Element.padToSize (text ^. Element.size & _1 .~ 0) 1
         withFd ?? myId ?? left /|/ text /|/ right
     & withStyle Style.text

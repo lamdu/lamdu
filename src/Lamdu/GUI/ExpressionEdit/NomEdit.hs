@@ -23,7 +23,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.NameView as NameView
-import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.I18N.Texts as Texts
@@ -88,12 +88,12 @@ mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
                     ( sequence
                     [
                         do
-                            label <- Styled.grammarLabel textLens
+                            lbl <- grammar (label textLens)
                             nameGui <-
                                 NameView.make
                                 (tid ^. Sugar.tidName)
                             Widget.makeFocusableView ?? nameId
-                                <&> (Align.tValue %~) ?? label /|/ nameGui
+                                <&> (Align.tValue %~) ?? lbl /|/ nameGui
                         <&> Responsive.fromWithTextPos
                         & Reader.local (TextView.color .~ nomColor)
                         <&> Widget.weakerEvents eventMap

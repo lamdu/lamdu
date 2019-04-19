@@ -1,12 +1,12 @@
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled
-    ( infoLabel
-    , grammarLabel, grammarLabelRaw, grammarText
+    ( grammar, info
+    , text, label
     , addValBG, addBgColor
     , addValPadding, addValFrame
     , deletedDef, deletedUse
-    , actionable
+    , actionable, actionableRaw
     , withColor
     , nameAtBinder
     ) where
@@ -41,36 +41,27 @@ import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
 
-infoLabel ::
-    ( MonadReader env m
-    , HasTheme env
-    , TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
-    ) => Text -> m (WithTextPos View)
-infoLabel text = Label.make text & withColor TextColors.infoTextColor
+info :: (MonadReader env m, HasTheme env, TextView.HasStyle env) => m a -> m a
+info = withColor TextColors.infoTextColor
 
-grammarLabel ::
-    ( MonadReader env m
-    , HasTheme env
-    , TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
-    ) => Lens.ALens' Texts Text -> m (WithTextPos View)
-grammarLabel textLens = grammarLabelRaw (texts ^# textLens)
+grammar :: (MonadReader env m, HasTheme env, TextView.HasStyle env) => m a -> m a
+grammar = withColor TextColors.grammarColor
 
-grammarLabelRaw ::
-    ( MonadReader env m
-    , HasTheme env
-    , TextView.HasStyle env
-    , Element.HasAnimIdPrefix env
-    ) => Text -> m (WithTextPos View)
-grammarLabelRaw text = Label.make text & withColor TextColors.grammarColor
+rawText ::
+    (MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    AnimId -> Text -> f (WithTextPos View)
+rawText animIdSuffix txt =
+    (TextView.make ?? txt) <*> Element.subAnimId animIdSuffix
 
-grammarText ::
-    ( MonadReader env m
-    , HasTheme env
-    , TextView.HasStyle env
-    ) => m (Text -> AnimId -> WithTextPos View)
-grammarText = TextView.make & withColor TextColors.grammarColor
+text ::
+    (MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    (f (WithTextPos View) -> view) -> AnimId -> Lens.ALens' Texts Text -> view
+text style animIdSuffix txtLens = rawText animIdSuffix (texts ^# txtLens) & style
+
+label ::
+    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    Lens.ALens' Texts Text -> m (WithTextPos View)
+label = Label.make . (texts ^#)
 
 addValBG ::
     ( MonadReader env m, Element a
@@ -157,9 +148,18 @@ actionable ::
     , GuiState.HasCursor env, Config.HasConfig env, HasTheme env, Applicative f
     , MonadReader env m
     ) =>
+    Widget.Id -> Lens.ALens' Texts Text -> E.Doc -> f Widget.Id ->
+    m (TextWidget f)
+actionable myId txtLens = actionableRaw myId (texts ^# txtLens)
+
+actionableRaw ::
+    ( Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , GuiState.HasCursor env, Config.HasConfig env, HasTheme env, Applicative f
+    , MonadReader env m
+    ) =>
     Widget.Id -> Text -> E.Doc -> f Widget.Id ->
     m (TextWidget f)
-actionable myId text doc action =
+actionableRaw myId txt doc action =
     do
         color <- Lens.view (Theme.theme . Theme.textColors . TextColors.actionTextColor)
         underlineWidth <- Lens.view (Theme.theme . Theme.narrowUnderlineWidth)
@@ -171,7 +171,7 @@ actionable myId text doc action =
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> Label.make text
+            <*> Label.make txt
             & Reader.local (TextView.color .~ color)
             & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap

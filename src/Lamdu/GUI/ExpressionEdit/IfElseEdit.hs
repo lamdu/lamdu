@@ -28,7 +28,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
-import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
@@ -54,9 +54,9 @@ makeIfThen prefixLabel animId ifElse =
     do
         ifGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
-        label <- Styled.grammarLabel Texts.if_
-        colon <- Styled.grammarLabel Texts.condColon
-        let keyword = prefixLabel /|/ label & Responsive.fromTextView
+        ifLabel <- grammar (label Texts.if_)
+        colon <- grammar (label Texts.condColon)
+        let keyword = prefixLabel /|/ ifLabel & Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
                 foldMap
@@ -77,8 +77,8 @@ makeElseBody ::
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
-        <$> (Styled.grammarLabel Texts.else_ <&> Responsive.fromTextView)
-        <*> (Styled.grammarLabel Texts.condColon
+        <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
+        <*> (grammar (label Texts.condColon)
             & Reader.local (Element.animIdPrefix .~ elseAnimId) <&> Responsive.fromTextView)
     ) <*> ExprGuiM.makeSubexpression (Ann pl expr)
     <&> pure
@@ -89,7 +89,7 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
-        elseLabel <- Styled.grammarLabel Texts.elseShort
+        elseLabel <- grammar (label Texts.elseShort)
         letEventMap <-
             foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
         (:)

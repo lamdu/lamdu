@@ -38,8 +38,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, makeBinder)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
+import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Languages (texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -199,7 +199,7 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             <*>
             sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
-              <*> Label.make (texts ^. Texts.repl)
+              <*> label Texts.repl
               <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExprPl buttonExtractKeys)
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
