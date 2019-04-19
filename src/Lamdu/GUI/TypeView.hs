@@ -62,7 +62,7 @@ grammar ::
     , Element.HasAnimIdPrefix env
     ) =>
     Text -> m (WithTextPos View)
-grammar = Styled.grammarLabel . sanitize
+grammar = Styled.grammarLabelRaw . sanitize
 
 parensAround ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env

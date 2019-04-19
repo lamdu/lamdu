@@ -25,7 +25,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Languages (texts)
+import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -48,7 +48,7 @@ makeToNom ::
     ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> ExprGuiM.makeBinder
-    & mkNomGui id "ToNominal" (texts ^. Texts.toNom) mDel pl
+    & mkNomGui id "ToNominal" Texts.toNom mDel pl
     where
         mDel =
             nom ^. Sugar.nVal . ann . Sugar.plActions .
@@ -62,18 +62,18 @@ makeFromNom ::
     ExprGuiM i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" (texts ^. Texts.fromNom) mDel pl
+    & mkNomGui reverse "FromNominal" Texts.fromNom mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
 
 mkNomGui ::
     (Monad i, Monad o) =>
     ([Gui Responsive o] -> [Gui Responsive o]) ->
-    Text -> Text -> Maybe (o Sugar.EntityId) ->
+    Text -> Lens.ALens' Texts Text -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
     ExprGuiM i o (Gui Responsive o)
-mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
+mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (Theme.theme . Theme.textColors . TextColors.nomColor)
         config <- Lens.view Config.config
@@ -88,7 +88,7 @@ mkNomGui ordering nomStr str mDel pl (Sugar.Nominal tid val) =
                     ( sequence
                     [
                         do
-                            label <- Styled.grammarLabel str
+                            label <- Styled.grammarLabel textLens
                             nameGui <-
                                 NameView.make
                                 (tid ^. Sugar.tidName)

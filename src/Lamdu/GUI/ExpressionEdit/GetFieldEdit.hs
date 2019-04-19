@@ -31,7 +31,7 @@ make ::
 make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <- ExprGuiM.makeSubexpression recExpr
-        dotLabel <- Styled.grammarLabel "."
+        dotLabel <- Styled.grammarLabelRaw "."
         config <- Lens.view Config.config
         let mkDelEventMap del =
                 del <&> WidgetIds.fromEntityId

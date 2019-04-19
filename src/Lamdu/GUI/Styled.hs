@@ -1,7 +1,8 @@
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled
-    ( infoLabel, grammarLabel, grammarText
+    ( infoLabel
+    , grammarLabel, grammarLabelRaw, grammarText
     , addValBG, addBgColor
     , addValPadding, addValFrame
     , deletedDef, deletedUse
@@ -32,6 +33,8 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.I18N.Languages (texts)
+import           Lamdu.I18N.Texts (Texts)
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -51,8 +54,16 @@ grammarLabel ::
     , HasTheme env
     , TextView.HasStyle env
     , Element.HasAnimIdPrefix env
+    ) => Lens.ALens' Texts Text -> m (WithTextPos View)
+grammarLabel textLens = grammarLabelRaw (texts ^# textLens)
+
+grammarLabelRaw ::
+    ( MonadReader env m
+    , HasTheme env
+    , TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
     ) => Text -> m (WithTextPos View)
-grammarLabel text = Label.make text & withColor TextColors.grammarColor
+grammarLabelRaw text = Label.make text & withColor TextColors.grammarColor
 
 grammarText ::
     ( MonadReader env m

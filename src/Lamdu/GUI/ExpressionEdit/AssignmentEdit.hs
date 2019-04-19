@@ -255,7 +255,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         do
             nullParamGui <-
                 (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
-                <*> Styled.grammarLabel (texts ^. Texts.defer)
+                <*> Styled.grammarLabel Texts.defer
             fromParamList delVarBackwardsId rhsId
                 [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
         where
