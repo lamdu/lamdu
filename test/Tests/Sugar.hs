@@ -24,6 +24,7 @@ test :: Test
 test =
     testGroup "sugar-tests"
     [ delDefParam
+    , updateDef
     , delParam
     , delInfixArg
     , paramAnnotations
@@ -237,6 +238,19 @@ delDefParam =
             val . _BodyFunction .
             fParams . _Params . traverse .
             fpInfo . piActions . fpDelete
+
+updateDef :: Test
+updateDef =
+    testSugarActions "update-def-type.json" [void . (^?! openDef), void . (^?! action)]
+    & testCase "update-def-type"
+    where
+        openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
+        action =
+            waPanes . traverse . paneDefinition .
+            drBody . _DefinitionBodyExpression . deContent .
+            val . _BodyFunction . fBody .
+            val . _BinderExpr . _BodyLabeledApply . aFunc .
+            val . Lens._Wrapped . bvForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent
 
 testReplaceParent :: Test
 testReplaceParent =
