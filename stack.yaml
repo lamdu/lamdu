@@ -32,14 +32,6 @@ packages:
     git: https://github.com/lamdu/nodejs-exec
     commit: 6a8b5c7897b822f523414fe2c0e666ecb8d4ab4b
   extra-dep: True
-- location:
-    git: https://github.com/lamdu/GLFW-b
-    commit: a5222ed7ff5cb670b707cadb06bfe900339672f7
-  extra-dep: True
-- location:
-    git: https://github.com/lamdu/bindings-GLFW
-    commit: 8407bd91daa13e4c7f4cf0b29c736b038bc5c9de
-  extra-dep: True
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
