@@ -205,7 +205,7 @@ makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
         makeNewDefinition cp
-            >>= Styled.actionable newDefId Texts.newDefinitionButton newDefinitionDoc
+            >>= Styled.actionable newDefId (Texts.codeButtons . Texts.newDefinitionButton) newDefinitionDoc
             <&> (^. Align.tValue)
 
 jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))

@@ -60,7 +60,7 @@ makeInject val tag pl =
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
             ( TagEdit.makeVariantTag tag
-                /|/ injectIndicator Texts.inject
+                /|/ injectIndicator (Texts.code . Texts.inject)
                 <&> Lens.mapped %~ Widget.weakerEvents (foldMap replaceParentEventMap mReplaceParent)
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
@@ -90,7 +90,7 @@ makeNullaryInject nullary tag pl =
     True -> makeInject (emptyRec nullary) tag pl
     False ->
         stdWrapParentExpr pl <*>
-        (TagEdit.makeVariantTag tag /|/ injectIndicator Texts.nullaryInject
+        (TagEdit.makeVariantTag tag /|/ injectIndicator (Texts.code . Texts.nullaryInject)
             <&> Responsive.fromWithTextPos
             <&> Widget.weakerEvents expandNullaryVal)
     where

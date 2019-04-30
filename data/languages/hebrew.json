@@ -1,18 +1,22 @@
 {
     "imports": ["rtl-english.mixin.json"],
-    "let_": "יהי",
-    "case_": "םאתה",
-    "of_": "ל",
-    "if_": " םא",
-    "else_": "תרחא",
-    "elseShort": " וא",
-    "inject": ":",
-    "nullaryInject": ".",
-    "paramsRecordOpener": "} םירטמרפ",
-    "paramsRecordCloser": "{",
-    "defUpdateHeader": "ןכדע",
-    "defUpdateTo": " :ל",
-    "defUpdateWas": " :היה סופיט",
-    "newDefinitionButton": "...שדח",
-    "undeleteButton": "...רזחש"
+    "code": {
+        "let_": "יהי",
+        "case_": "םאתה",
+        "of_": "ל",
+        "if_": " םא",
+        "else_": "תרחא",
+        "elseShort": " וא",
+        "inject": ":",
+        "nullaryInject": ".",
+        "paramsRecordOpener": "} םירטמרפ",
+        "paramsRecordCloser": "{"
+    },
+    "codeButtons": {
+        "defUpdateHeader": "ןכדע",
+        "defUpdateTo": " :ל",
+        "defUpdateWas": " :היה סופיט",
+        "newDefinitionButton": "...שדח",
+        "undeleteButton": "...רזחש"
+    }
 }

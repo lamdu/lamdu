@@ -77,7 +77,7 @@ makeParamsRecord myId paramsRecordVar =
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         (Options.box ?? Options.disambiguationNone)
             <*> sequence
-            [ grammar (label Texts.paramsRecordOpener) <&> Responsive.fromTextView
+            [ grammar (label (Texts.code . Texts.paramsRecordOpener)) <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
@@ -91,7 +91,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , grammar (label Texts.paramsRecordCloser) <&> Responsive.fromTextView
+            , grammar (label (Texts.code . Texts.paramsRecordCloser)) <&> Responsive.fromTextView
             ] <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
@@ -177,12 +177,12 @@ definitionTypeChangeBox ::
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
-        oldTypeRow <- Styled.info (label Texts.defUpdateWas)
+        oldTypeRow <- Styled.info (label (Texts.codeButtons . Texts.defUpdateWas))
         newTypeRow <-
-            Styled.actionable myId Texts.defUpdateHeader
+            Styled.actionable myId (Texts.codeButtons . Texts.defUpdateHeader)
             updateDoc update
             /|/ Spacer.stdHSpace
-            /|/ Styled.info (label Texts.defUpdateTo)
+            /|/ Styled.info (label (Texts.codeButtons . Texts.defUpdateTo))
 
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)

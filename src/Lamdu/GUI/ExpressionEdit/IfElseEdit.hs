@@ -54,11 +54,11 @@ makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
             ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
-            /|/ grammar (label Texts.condColon)
+            /|/ grammar (label (Texts.code . Texts.condColon))
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             pure prefixLabel
-            /|/ grammar (label Texts.if_)
+            /|/ grammar (label (Texts.code . Texts.if_))
             <&> Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
@@ -80,8 +80,8 @@ makeElseBody ::
     ExprGuiM i o [Row (Gui Responsive o)]
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
-        <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
-        <*> (grammar (label Texts.condColon)
+        <$> (grammar (label (Texts.code . Texts.else_)) <&> Responsive.fromTextView)
+        <*> (grammar (label (Texts.code . Texts.condColon))
                 & Reader.local (Element.animIdPrefix .~ elseAnimId)
                 <&> Responsive.fromTextView)
     ) <*> ExprGuiM.makeSubexpression (Ann pl expr)
@@ -93,7 +93,7 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
         mOuterScopeId <- ExprGuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
-        elseLabel <- grammar (label Texts.elseShort)
+        elseLabel <- grammar (label (Texts.code . Texts.elseShort))
         letEventMap <-
             foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
         (:)

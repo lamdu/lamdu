@@ -64,7 +64,7 @@ mkExpanded ::
 mkExpanded =
     (,)
     <$> mkLhsEdits
-    <*> (grammar (label Texts.arrow) <&> Responsive.fromTextView)
+    <*> (grammar (label (Texts.code . Texts.arrow)) <&> Responsive.fromTextView)
     <&> \(lhsEdits, labelEdit) mParamsEdit mScopeEdit ->
     lhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
@@ -89,7 +89,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view Theme.theme
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
-            <*> grammar (label Texts.lam)
+            <*> grammar (label (Texts.code . Texts.lam))
             <&> Responsive.fromWithTextPos
             & Reader.local (TextView.underline ?~ LightLambda.underline theme)
         addScopeEd <- addScopeEdit

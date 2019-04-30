@@ -259,7 +259,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         do
             nullParamGui <-
                 (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
-                <*> grammar (label Texts.defer)
+                <*> grammar (label (Texts.code . Texts.defer))
             fromParamList delVarBackwardsId rhsId
                 [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
         where
@@ -452,7 +452,7 @@ make pMode defEventMap tag color assignment =
                 ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
-        equals <- grammar (label Texts.assign)
+        equals <- grammar (label (Texts.code . Texts.assign))
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
         hbox [ defNameEdit :
                 (mParamEdit ^.. Lens._Just) ++

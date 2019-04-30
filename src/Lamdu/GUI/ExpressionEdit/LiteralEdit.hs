@@ -125,10 +125,10 @@ textEdit prop pl =
     do
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         (withFd ?? myId) <*>
-            label Texts.textOpener
+            label (Texts.code . Texts.textOpener)
             /|/ pure text
             /|/ ( (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
-                    <*> label Texts.textCloser
+                    <*> label (Texts.code . Texts.textCloser)
                 )
     & withStyle Style.text
     where

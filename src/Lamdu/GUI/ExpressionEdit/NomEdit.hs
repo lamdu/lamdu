@@ -48,7 +48,7 @@ makeToNom ::
     ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> ExprGuiM.makeBinder
-    & mkNomGui id "ToNominal" Texts.toNom mDel pl
+    & mkNomGui id "ToNominal" (Texts.code . Texts.toNom) mDel pl
     where
         mDel =
             nom ^. Sugar.nVal . ann . Sugar.plActions .
@@ -62,7 +62,7 @@ makeFromNom ::
     ExprGuiM i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" Texts.fromNom mDel pl
+    & mkNomGui reverse "FromNominal" (Texts.code . Texts.fromNom) mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
 

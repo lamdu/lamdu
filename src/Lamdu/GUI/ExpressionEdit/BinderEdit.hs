@@ -59,7 +59,7 @@ makeLetEdit item =
                     (E.Doc ["Navigation", "Jump to first use"])
                     . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
-        grammar (label Texts.let_)
+        grammar (label (Texts.code . Texts.let_))
             /|/ Spacer.stdHSpace
             /|/ (AssignmentEdit.make Nothing mempty (item ^. Sugar.lName)
                     TextColors.letColor binder

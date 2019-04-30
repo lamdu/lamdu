@@ -85,8 +85,8 @@ makeUnit pl =
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
         addFieldEventMap <- mkAddFieldEventMap myId
         stdWrap pl
-            <*> ( grammar (label Texts.recordOpener)
-                    /|/ grammar (label Texts.recordCloser)
+            <*> ( grammar (label (Texts.code . Texts.recordOpener))
+                    /|/ grammar (label (Texts.code . Texts.recordCloser))
                     <&> makeFocusable
                     <&> Align.tValue %~ Widget.weakerEvents
                         (addFieldEventMap <> addFieldWithSearchTermEventMap myId)
@@ -149,7 +149,7 @@ makeRecord ::
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
-    ( grammar (label Texts.recordOpener)
+    ( grammar (label (Texts.code . Texts.recordOpener))
         /|/ (Responsive.taggedList
                 <*> addPostTags fieldGuis
                 >>= postProcess)
@@ -163,7 +163,7 @@ addPostTags ::
 addPostTags items =
     do
         let f idx item =
-                grammar (label txt)
+                grammar (label (Texts.code . txt))
                 & Reader.local (Element.animIdPrefix %~ augmentId idx)
                 <&> \lbl -> item & Responsive.tagPost .~ (lbl <&> Widget.fromView)
                 where

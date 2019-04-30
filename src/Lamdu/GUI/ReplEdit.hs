@@ -204,7 +204,7 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             <*>
             sequence
             [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
-              <*> label Texts.repl
+              <*> label (Texts.code . Texts.repl)
               <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExprPl buttonExtractKeys)
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result

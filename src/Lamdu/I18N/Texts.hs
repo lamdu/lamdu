@@ -9,14 +9,8 @@ import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
 
-class HasTexts env where texts :: Lens' env Texts
-instance HasTexts Texts where texts = id
-
-data Texts = Texts
-    { -- TODO: Should this still be called "Texts?"
-      -- Using a boolean for the JSON instance
-      _isLeftToRight :: Bool
-    , _assign :: Text -- Assignment
+data CodeTexts = CodeTexts
+    { _assign :: Text -- Assignment
     , _relay :: Text -- Apply
     , _let_ :: Text
     , _toNom :: Text
@@ -37,9 +31,6 @@ data Texts = Texts
     , -- Getvar
       _paramsRecordOpener :: Text
     , _paramsRecordCloser :: Text
-    , _defUpdateHeader :: Text
-    , _defUpdateTo :: Text
-    , _defUpdateWas :: Text
     , -- Lambda:
       _defer :: Text
     , _lam :: Text
@@ -51,8 +42,28 @@ data Texts = Texts
       _recordOpener :: Text
     , _recordSep :: Text
     , _recordCloser :: Text
-    , _newDefinitionButton :: Text
+    }
+    deriving (Eq, Ord, Show)
+Lens.makeLenses ''CodeTexts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeTexts
+
+data CodeButtonTexts = CodeButtonTexts
+    { _newDefinitionButton :: Text
     , _undeleteButton :: Text
+    , _defUpdateHeader :: Text
+    , _defUpdateTo :: Text
+    , _defUpdateWas :: Text
+    }
+    deriving (Eq, Ord, Show)
+Lens.makeLenses ''CodeButtonTexts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeButtonTexts
+
+data Texts = Texts
+    { -- TODO: Should this still be called "Texts?"
+      -- Using a boolean for the JSON instance
+      _isLeftToRight :: Bool
+    , _code :: CodeTexts
+    , _codeButtons :: CodeButtonTexts
     }
     deriving (Eq, Ord, Show)
 -- Get-field's dot is currently omitted from the symbols,
@@ -63,3 +74,6 @@ deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} 
 
 instance HasConfigFolder Texts where
     configFolder _ = "languages"
+
+class HasTexts env where texts :: Lens' env Texts
+instance HasTexts Texts where texts = id
