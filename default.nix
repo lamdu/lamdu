@@ -11,6 +11,9 @@ let config = {
                         graphics-drawingcombinators = self.callPackage ./nix/graphics-drawingcombinators.nix {};
                         syntax-tree = self.callPackage ./nix/syntax-tree.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
+                        bindings-GLFW = haskell.lib.dontCheck (self.callPackage ./nix/bindings-GLFW.nix {});
+                        GLFW-b = haskell.lib.dontCheck # cannot run X code in a build
+                                 (self.callPackage ./nix/GLFW-b.nix {});
                         nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
                         testing-feat = self.callHackage "testing-feat" "1.1.0.0" {};
                         aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
