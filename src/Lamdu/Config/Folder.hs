@@ -1,5 +1,5 @@
 module Lamdu.Config.Folder
-    ( Selection, initial, getFiles, getNames
+    ( Selection, getFiles, getNames
     ) where
 
 import qualified Data.Text as Text
@@ -24,6 +24,3 @@ getFiles =
 
 getNames :: IO [Selection]
 getNames = getFiles <&> map (Text.pack . FilePath.takeFileName . FilePath.dropExtension)
-
-initial :: Selection
-initial = "default"

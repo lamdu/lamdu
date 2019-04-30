@@ -241,7 +241,7 @@ run opts rawDb =
             traverse Debug.makeCounters ekg
             >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
         -- Load config as early as possible, before we open any windows/etc
-        configSampler <- ConfigSampler.new (const refresh) theme
+        configSampler <- ConfigSampler.new (const refresh) initialTheme
         (cache, cachedFunctions) <- Cache.make
         let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let db = Transaction.onStoreM reportDb rawDb
@@ -257,12 +257,12 @@ run opts rawDb =
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <-
-                    EditorSettings.newProp theme (opts ^. Opts.eoAnnotationsMode)
+                    EditorSettings.newProp initialTheme (opts ^. Opts.eoAnnotationsMode)
                     configSampler evaluator
                 runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
-        theme = ConfigFolder.initial
+        initialTheme = "default"
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled

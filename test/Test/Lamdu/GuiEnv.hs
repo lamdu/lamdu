@@ -18,7 +18,6 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Config (Config, HasConfig(..))
-import qualified Lamdu.Config.Folder as ConfigFolder
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
@@ -71,7 +70,7 @@ make =
                 { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
-            , _eSettings = initial ConfigFolder.initial Annotations.Evaluation
+            , _eSettings = initial "default" Annotations.Evaluation
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =
