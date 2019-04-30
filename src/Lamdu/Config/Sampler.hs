@@ -17,7 +17,7 @@ import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..))
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
@@ -36,17 +36,17 @@ data Sample = Sample
     , _sThemePath :: FilePath
     , _sTheme :: Theme
     , _sTextsPath :: FilePath
-    , _sTexts :: Texts
+    , _sTexts :: Language
     } deriving (Eq)
 Lens.makeLenses ''Sample
 
 data Sampler = Sampler
     { _sThreadId :: ThreadId
     , getSample :: IO Sample
-    , setSelection :: Selection Theme -> Selection Texts -> IO ()
+    , setSelection :: Selection Theme -> Selection Language -> IO ()
     }
 
-withMTime :: FilePath -> IO (Config, (FilePath, Theme), (FilePath, Texts)) -> IO Sample
+withMTime :: FilePath -> IO (Config, (FilePath, Theme), (FilePath, Language)) -> IO Sample
 withMTime _sConfigPath act =
     do
         (_sConfig, (_sThemePath, _sTheme), (_sTextsPath, _sTexts)) <- act
@@ -61,7 +61,7 @@ loadFromFolder configPath selection =
             takeDirectory configPath </> configFolder selection </>
             Text.unpack (getSelection selection) ++ ".json"
 
-load :: Selection Theme -> Selection Texts -> FilePath -> IO Sample
+load :: Selection Theme -> Selection Language -> FilePath -> IO Sample
 load themeName langName configPath =
     do
         config <- AesonConfig.load configPath
@@ -81,7 +81,7 @@ maybeReload old newConfigPath =
     where
         f l = old ^. l & takeFileName & dropExtension & Text.pack & Selection
 
-new :: (Sample -> IO ()) -> Selection Theme -> Selection Texts -> IO Sampler
+new :: (Sample -> IO ()) -> Selection Theme -> Selection Language -> IO Sampler
 new sampleUpdated initialTheme initialLang =
     do
         ref <-

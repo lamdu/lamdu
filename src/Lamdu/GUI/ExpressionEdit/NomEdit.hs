@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE NoMonomorphismRestriction, RankNTypes #-}
 module Lamdu.GUI.ExpressionEdit.NomEdit
     ( makeFromNom, makeToNom
     ) where
@@ -69,7 +69,7 @@ makeFromNom nom pl =
 mkNomGui ::
     (Monad i, Monad o) =>
     ([Gui Responsive o] -> [Gui Responsive o]) ->
-    Text -> Lens.ALens' Texts Text -> Maybe (o Sugar.EntityId) ->
+    Text -> (forall a. Lens.ALens' (Texts a) a) -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
     ExprGuiM i o (Gui Responsive o)

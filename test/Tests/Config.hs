@@ -10,7 +10,7 @@ import           Data.Proxy (Proxy(..), asProxyTypeOf)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), getFiles)
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.Paths as Paths
 
 import           Test.Lamdu.Prelude
@@ -20,7 +20,7 @@ test =
     do
         verifyJson (Proxy @Config) "config.json"
         verifyConfigFolder (Proxy @Theme)
-        verifyConfigFolder (Proxy @Texts)
+        verifyConfigFolder (Proxy @Language)
     & testCase "config-parses"
 
 verifyConfigFolder ::

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes #-}
 module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where
@@ -37,8 +37,8 @@ import           Lamdu.Prelude
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env, Texts.HasTexts env
-    ) => Lens.ALens' Texts Text -> f (WithTextPos View)
-injectIndicator = grammar . text ["injectIndicator"]
+    ) => (forall a. Lens.ALens' (Texts a) a) -> f (WithTextPos View)
+injectIndicator l = grammar (text ["injectIndicator"] l)
 
 makeInject ::
     (Monad i, Monad o) =>

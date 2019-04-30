@@ -25,7 +25,7 @@ import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Texts, HasTexts(..))
+import           Lamdu.I18N.Texts (Language, HasTexts(..))
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
@@ -45,7 +45,7 @@ data Env =
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
     , _eLayoutDir :: Element.LayoutDir
-    , _eTexts :: Texts
+    , _eTexts :: Language
     }
 Lens.makeLenses ''Env
 instance HasTheme Env where theme = eTheme

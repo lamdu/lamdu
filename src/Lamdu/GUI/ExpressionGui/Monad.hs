@@ -52,7 +52,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings, HasSettings(..))
@@ -84,7 +84,7 @@ data Askable i o = Askable
     , _aIsHoleResult :: Bool
     , _aLayoutDir :: Element.LayoutDir
     , aIom :: forall x. i x -> o x
-    , _aTexts :: Texts
+    , _aTexts :: Language
     }
 
 newtype ExprGuiM i (o :: * -> *) a =

@@ -49,7 +49,7 @@ import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
@@ -114,7 +114,7 @@ type Ctx env =
 
 layout ::
     Ctx env =>
-    [Selection Theme] -> [Selection Texts] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
 layout themeNames langNames settingsProp =
     do
@@ -157,7 +157,7 @@ layout themeNames langNames settingsProp =
 
 make ::
     Ctx env =>
-    [Selection Theme] -> [Selection Texts] -> Property IO Settings -> env ->
+    [Selection Theme] -> [Selection Language] -> Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
 make themeNames langNames settingsProp env =
     layout themeNames langNames settingsProp

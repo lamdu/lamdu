@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled
@@ -13,6 +14,7 @@ module Lamdu.GUI.Styled
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Binary.Extended (encodeS)
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
@@ -25,7 +27,6 @@ import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
@@ -33,7 +34,7 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.I18N.Texts (Texts, texts)
+import           Lamdu.I18N.Texts (Texts(..), texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -57,17 +58,23 @@ text ::
     ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Texts.HasTexts env
     ) =>
-    AnimId -> Lens.ALens' Texts Text -> f (WithTextPos View)
+    AnimId -> (forall a. Lens.ALens' (Texts a) a) -> f (WithTextPos View)
 text animIdSuffix txtLens =
     Lens.view (texts . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
+
+textIds :: Texts [ByteString]
+textIds = Texts.dummyTexts & Lens.traversed %@~ const . (:[]) . encodeS
 
 label ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Texts.HasTexts env
     ) =>
-    Lens.ALens' Texts Text -> m (WithTextPos View)
-label lens = Lens.view texts <&> (^# lens) >>= Label.make
+    (forall a. Lens.ALens' (Texts a) a) -> m (WithTextPos View)
+label lens =
+    TextView.make
+    <*> (Lens.view texts <&> (^# lens))
+    <*> Element.subAnimId (textIds ^# lens)
 
 addValBG ::
     ( MonadReader env m, Element a
@@ -155,7 +162,7 @@ actionable ::
     , Texts.HasTexts env
     , Applicative f, MonadReader env m
     ) =>
-    Widget.Id -> Lens.ALens' Texts Text -> E.Doc -> f Widget.Id ->
+    Widget.Id -> (forall a. Lens.ALens' (Texts a) a) -> E.Doc -> f Widget.Id ->
     m (TextWidget f)
 actionable myId txtLens doc action =
     do

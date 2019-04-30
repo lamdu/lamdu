@@ -28,7 +28,7 @@ import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.VersionControl.Actions as VCActions
 
@@ -42,7 +42,7 @@ make ::
     , HasConfig env, Element.HasLayoutDir env
     ) =>
     StatusWidget (IOTrans n) ->
-    [Selection Theme] -> [Selection Texts] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))
 make gotoDefinition themeNames langNames settingsProp width vcActions =

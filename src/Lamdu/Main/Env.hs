@@ -34,7 +34,7 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Prelude
 import           Lamdu.Settings (Settings(..))
@@ -53,7 +53,7 @@ data Env = Env
     , _debugMonitors :: Debug.Monitors
     , _cachedFunctions :: Cache.Functions
     , _layoutDir :: Element.LayoutDir
-    , _texts :: Texts
+    , _texts :: Language
     }
 Lens.makeLenses ''Env
 

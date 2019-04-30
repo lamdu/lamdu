@@ -42,7 +42,7 @@ import qualified Lamdu.Eval.Manager as EvalManager
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
@@ -170,7 +170,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [Selection Theme] -> [Selection Texts] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
 makeMainGui themeNames langNames settingsProp dbToIO env =

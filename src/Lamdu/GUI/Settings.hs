@@ -18,7 +18,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection, _Selection)
 import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (Language)
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 
@@ -46,7 +46,7 @@ makeStatusWidgets ::
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Element.HasLayoutDir env, Hover.HasStyle env
     ) =>
-    [Selection Theme] -> [Selection Texts] ->
+    [Selection Theme] -> [Selection Language] ->
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets

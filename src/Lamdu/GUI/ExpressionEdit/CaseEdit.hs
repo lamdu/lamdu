@@ -59,18 +59,17 @@ make ::
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         config <- Lens.view Config.config
-        let responsiveLabel lens =
-                grammar (label lens) <&> Responsive.fromTextView
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
             <*> grammar (label (Texts.code . Texts.case_))
             <&> Responsive.fromWithTextPos
-        ofLabel <- responsiveLabel (Texts.code . Texts.of_)
+        ofLabel <- grammar (label (Texts.code . Texts.of_)) <&> Responsive.fromTextView
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase ->
                 do
-                    lambdaLabel <- responsiveLabel (Texts.code . Texts.lam)
+                    lambdaLabel <-
+                        grammar (label (Texts.code . Texts.lam)) <&> Responsive.fromTextView
                     Options.boxSpaced
                         ?? Options.disambiguationNone
                         ?? [caseLabel, lambdaLabel, ofLabel]

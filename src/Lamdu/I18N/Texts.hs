@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module Lamdu.I18N.Texts where
 
 import qualified Control.Lens as Lens
@@ -9,71 +9,82 @@ import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
 
-data CodeTexts = CodeTexts
-    { _assign :: Text -- Assignment
-    , _relay :: Text -- Apply
-    , _let_ :: Text
-    , _toNom :: Text
-    , _fromNom :: Text
-    , _repl :: Text
+data CodeTexts a = CodeTexts
+    { _assign :: a -- Assignment
+    , _relay :: a -- Apply
+    , _let_ :: a
+    , _toNom :: a
+    , _fromNom :: a
+    , _repl :: a
     , -- Case
-      _case_ :: Text
-    , _of_ :: Text
-    , _absurd :: Text
+      _case_ :: a
+    , _of_ :: a
+    , _absurd :: a
     , -- If:
-      _if_ :: Text
-    , _condColon :: Text -- Colon after if's condition
-    , _else_ :: Text
-    , _elseShort :: Text -- "el" in "elif"
+      _if_ :: a
+    , _condColon :: a -- Colon after if's condition
+    , _else_ :: a
+    , _elseShort :: a -- "el" in "elif"
     , -- Inject
-      _inject :: Text
-    , _nullaryInject :: Text
+      _inject :: a
+    , _nullaryInject :: a
     , -- Getvar
-      _paramsRecordOpener :: Text
-    , _paramsRecordCloser :: Text
+      _paramsRecordOpener :: a
+    , _paramsRecordCloser :: a
     , -- Lambda:
-      _defer :: Text
-    , _lam :: Text
-    , _arrow :: Text
-    , -- Literal text:
-      _textOpener :: Text
-    , _textCloser :: Text
+      _defer :: a
+    , _lam :: a
+    , _arrow :: a
+    , -- Literal a:
+      _textOpener :: a
+    , _textCloser :: a
     , -- Record:
-      _recordOpener :: Text
-    , _recordSep :: Text
-    , _recordCloser :: Text
+      _recordOpener :: a
+    , _recordSep :: a
+    , _recordCloser :: a
     }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 Lens.makeLenses ''CodeTexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeTexts
 
-data CodeButtonTexts = CodeButtonTexts
-    { _newDefinitionButton :: Text
-    , _undeleteButton :: Text
-    , _defUpdateHeader :: Text
-    , _defUpdateTo :: Text
-    , _defUpdateWas :: Text
+data CodeButtonTexts a = CodeButtonTexts
+    { _newDefinitionButton :: a
+    , _undeleteButton :: a
+    , _defUpdateHeader :: a
+    , _defUpdateTo :: a
+    , _defUpdateWas :: a
     }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 Lens.makeLenses ''CodeButtonTexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeButtonTexts
 
-data Texts = Texts
+data Texts a = Texts
     { -- TODO: Should this still be called "Texts?"
       -- Using a boolean for the JSON instance
       _isLeftToRight :: Bool
-    , _code :: CodeTexts
-    , _codeButtons :: CodeButtonTexts
+    , _code :: CodeTexts a
+    , _codeButtons :: CodeButtonTexts a
     }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
 
 Lens.makeLenses ''Texts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
 
-instance HasConfigFolder Texts where
+type Language = Texts Text
+
+instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class HasTexts env where texts :: Lens' env Texts
-instance HasTexts Texts where texts = id
+class HasTexts env where texts :: Lens' env Language
+instance HasTexts (Texts Text) where texts = id
+
+-- TODO: Better way to do this? Auto-generated applicative instance?
+dummyTexts :: Texts ()
+dummyTexts =
+    Texts
+    { _isLeftToRight = True
+    , _code = CodeTexts () () () () () () () () () () () () () () () () () () () () () () () () ()
+    , _codeButtons = CodeButtonTexts () () () () ()
+    }
