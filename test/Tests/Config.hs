@@ -8,8 +8,9 @@ import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Data.Proxy (Proxy(..), asProxyTypeOf)
 import           Lamdu.Config (Config)
-import qualified Lamdu.Config.Folder as ConfigFolder
+import           Lamdu.Config.Folder (HasConfigFolder(..), getFiles)
 import           Lamdu.Config.Theme (Theme)
+import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.Paths as Paths
 
 import           Test.Lamdu.Prelude
@@ -18,8 +19,14 @@ test :: Test
 test =
     do
         verifyJson (Proxy @Config) "config.json"
-        ConfigFolder.getFiles (Proxy @Theme) >>= traverse_ (verifyJson (Proxy @Theme))
+        verifyConfigFolder (Proxy @Theme)
+        verifyConfigFolder (Proxy @Texts)
     & testCase "config-parses"
+
+verifyConfigFolder ::
+    (HasConfigFolder a, Aeson.FromJSON a, Aeson.ToJSON a) =>
+    Proxy a -> IO ()
+verifyConfigFolder p = getFiles p >>= traverse_ (verifyJson p)
 
 verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
 verifyJson proxy jsonPath =
