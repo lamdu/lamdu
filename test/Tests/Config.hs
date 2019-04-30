@@ -18,7 +18,7 @@ test :: Test
 test =
     do
         verifyJson (Proxy @Config) "config.json"
-        ConfigFolder.getFiles ConfigFolder.themes >>= traverse_ (verifyJson (Proxy @Theme))
+        ConfigFolder.getFiles (Proxy @Theme) >>= traverse_ (verifyJson (Proxy @Theme))
     & testCase "config-parses"
 
 verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()

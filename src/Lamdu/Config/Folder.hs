@@ -1,6 +1,6 @@
 module Lamdu.Config.Folder
     ( Selection, getFiles, getNames
-    , themes
+    , HasConfigFolder(..)
     ) where
 
 import qualified Data.Text as Text
@@ -13,18 +13,18 @@ import           Lamdu.Prelude
 
 type Selection = Text
 
-getFiles :: FilePath -> IO [FilePath]
-getFiles folder =
+class HasConfigFolder a where
+    configFolder :: proxy a -> FilePath
+
+getFiles :: HasConfigFolder a => proxy a -> IO [FilePath]
+getFiles p =
     do
-        themesDir <-
+        dir <-
             Paths.getDataFileName "config.json"
-            <&> FilePath.takeDirectory <&> (</> folder)
-        Directory.getDirectoryContents themesDir
+            <&> FilePath.takeDirectory <&> (</> configFolder p)
+        Directory.getDirectoryContents dir
             <&> filter ((== ".json") . FilePath.takeExtension)
-            <&> map (themesDir </>)
+            <&> map (dir </>)
 
-getNames :: FilePath -> IO [Selection]
-getNames folder = getFiles folder <&> map (Text.pack . FilePath.takeFileName . FilePath.dropExtension)
-
-themes :: FilePath
-themes = "themes"
+getNames :: HasConfigFolder a => proxy a -> IO [Selection]
+getNames p = getFiles p <&> map (Text.pack . FilePath.takeFileName . FilePath.dropExtension)

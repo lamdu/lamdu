@@ -32,6 +32,7 @@ import qualified GUI.Momentu.Responsive.Expression as Expression
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Graphics.DrawingCombinators as Draw
+import           Lamdu.Config.Folder (HasConfigFolder(..))
 import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
@@ -169,3 +170,6 @@ instance HasTheme Theme where theme = id
 
 instance Expression.HasStyle Theme where style = indent
 instance Hover.HasStyle Theme where style = hover
+
+instance HasConfigFolder Theme where
+    configFolder _ = "themes"

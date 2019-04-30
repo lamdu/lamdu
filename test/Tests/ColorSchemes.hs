@@ -1,8 +1,10 @@
+{-# LANGUAGE TypeApplications #-}
 module Tests.ColorSchemes (test) where
 
 import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
 import qualified Data.Map as Map
+import           Data.Proxy (Proxy(..))
 import           GUI.Momentu.Draw (Color(..))
 import qualified Lamdu.Config.Folder as ConfigFolder
 import           Lamdu.Config.Theme (Theme)
@@ -12,7 +14,7 @@ import           Test.Lamdu.Prelude
 
 test :: Test
 test =
-    ConfigFolder.getFiles ConfigFolder.themes >>= traverse_ verifyTheme
+    ConfigFolder.getFiles (Proxy @Theme) >>= traverse_ verifyTheme
     & testCase "color-scheme"
 
 verifyTheme :: FilePath -> IO ()

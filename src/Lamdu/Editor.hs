@@ -1,5 +1,5 @@
 -- | The GUI editor
-{-# LANGUAGE NamedFieldPuns, RankNTypes, DisambiguateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns, RankNTypes, DisambiguateRecordFields, TypeApplications #-}
 module Lamdu.Editor
     ( run
     ) where
@@ -11,6 +11,7 @@ import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
+import           Data.Proxy (Proxy(..))
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
@@ -26,6 +27,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Folder as ConfigFolder
 import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
@@ -220,7 +222,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 where
                     Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                     f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
-        themeNames <- ConfigFolder.getNames ConfigFolder.themes
+        themeNames <- ConfigFolder.getNames (Proxy @Theme)
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         dbToIO $ makeMainGui themeNames settingsProp dbToIO env
             <&> M.backgroundColor backgroundId bgColor

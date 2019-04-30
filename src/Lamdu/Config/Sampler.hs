@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards, TypeApplications #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig
@@ -11,9 +11,11 @@ import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.Config as AesonConfig
+import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
+import           Lamdu.Config.Folder (HasConfigFolder(..))
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
@@ -50,7 +52,7 @@ withMTime _sConfigPath act =
 
 calcThemePath :: FilePath -> Text -> FilePath
 calcThemePath configPath theme =
-    takeDirectory configPath </> "themes" </>
+    takeDirectory configPath </> configFolder (Proxy @Theme) </>
     Text.unpack theme ++ ".json"
 
 load :: Text -> FilePath -> IO Sample
