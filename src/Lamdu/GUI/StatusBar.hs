@@ -27,7 +27,6 @@ import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.Settings (Settings)
-import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl.Actions as VCActions
 
 import           Lamdu.Prelude
@@ -40,7 +39,7 @@ make ::
     , HasConfig env
     ) =>
     StatusWidget (IOTrans n) ->
-    [Themes.Selection] -> Property IO Settings ->
+    [Text] -> Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))
 make gotoDefinition themeNames settingsProp width vcActions =

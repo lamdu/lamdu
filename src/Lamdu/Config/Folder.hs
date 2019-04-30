@@ -1,4 +1,4 @@
-module Lamdu.Themes
+module Lamdu.Config.Folder
     ( Selection, initial, getFiles, getNames
     ) where
 

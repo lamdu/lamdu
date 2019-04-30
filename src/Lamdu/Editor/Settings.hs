@@ -13,11 +13,10 @@ import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Eval.Manager as EvalManager
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
-import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
 
-initial :: Themes.Selection -> Annotations.Mode -> Settings
+initial :: Text -> Annotations.Mode -> Settings
 initial theme annotationMode =
     Settings
     { _sAnnotationMode = annotationMode
@@ -38,7 +37,7 @@ settingsChangeHandler configSampler evaluator mOld new =
             Nothing -> f (new ^. lens)
             Just old -> when (old ^. lens /= new ^. lens) $ f (new ^. lens)
 
-newProp :: Themes.Selection -> Annotations.Mode -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
+newProp :: Text -> Annotations.Mode -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
 newProp theme annMode configSampler evaluator =
     do
         settingsChangeHandler configSampler evaluator Nothing initialSettings

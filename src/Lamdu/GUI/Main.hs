@@ -51,7 +51,6 @@ import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Style as Style
-import qualified Lamdu.Themes as Themes
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
 import           Revision.Deltum.Transaction (Transaction)
@@ -106,7 +105,7 @@ type Ctx env =
 
 layout ::
     Ctx env =>
-    [Themes.Selection] -> Property IO Settings ->
+    [Text] -> Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
 layout themeNames settingsProp =
     do
@@ -147,7 +146,7 @@ layout themeNames settingsProp =
 
 make ::
     Ctx env =>
-    [Themes.Selection] -> Property IO Settings -> env ->
+    [Text] -> Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
 make themeNames settingsProp env =
     layout themeNames settingsProp

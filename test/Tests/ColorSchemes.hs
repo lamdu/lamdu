@@ -4,15 +4,15 @@ import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
 import qualified Data.Map as Map
 import           GUI.Momentu.Draw (Color(..))
+import qualified Lamdu.Config.Folder as ConfigFolder
 import           Lamdu.Config.Theme (Theme)
-import qualified Lamdu.Themes as Themes
 import           System.FilePath (takeFileName)
 
 import           Test.Lamdu.Prelude
 
 test :: Test
 test =
-    Themes.getFiles >>= traverse_ verifyTheme
+    ConfigFolder.getFiles >>= traverse_ verifyTheme
     & testCase "color-scheme"
 
 verifyTheme :: FilePath -> IO ()

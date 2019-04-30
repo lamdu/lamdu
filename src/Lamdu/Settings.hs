@@ -7,13 +7,12 @@ module Lamdu.Settings
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified Lamdu.Annotations as Annotations
-import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
 
 data Settings = Settings
     { _sAnnotationMode :: Annotations.Mode
-    , _sSelectedTheme :: Themes.Selection
+    , _sSelectedTheme :: Text
     , _sHelpShown :: IsHelpShown
     }
 Lens.makeLenses ''Settings

@@ -19,7 +19,6 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
-import qualified Lamdu.Themes as Themes
 
 import           Lamdu.Prelude
 
@@ -44,7 +43,7 @@ makeStatusWidgets ::
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env
     ) =>
-    [Themes.Selection] -> Property f Settings -> m (StatusWidgets f)
+    [Text] -> Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames prop =
     StatusWidgets
     <$> StatusBar.makeBoundedSwitchStatusWidget "Annotations"

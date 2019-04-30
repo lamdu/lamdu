@@ -23,6 +23,7 @@ import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Folder as ConfigFolder
 import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import qualified Lamdu.Config.Theme as Theme
@@ -45,7 +46,6 @@ import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (FontInfo(..))
 import qualified Lamdu.Style as Style
-import qualified Lamdu.Themes as Themes
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -165,7 +165,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [Themes.Selection] -> Property IO Settings ->
+    [ConfigFolder.Selection] -> Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
 makeMainGui themeNames settingsProp dbToIO env =
@@ -220,7 +220,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 where
                     Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                     f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
-        themeNames <- Themes.getNames
+        themeNames <- ConfigFolder.getNames
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         dbToIO $ makeMainGui themeNames settingsProp dbToIO env
             <&> M.backgroundColor backgroundId bgColor
@@ -262,7 +262,7 @@ run opts rawDb =
                 runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
-        theme = Themes.initial
+        theme = ConfigFolder.initial
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled

@@ -236,6 +236,7 @@ Library
                   , Lamdu.Calc.Term.Utils
                   , Lamdu.CharClassification
                   , Lamdu.Config
+                  , Lamdu.Config.Folder
                   , Lamdu.Config.Sampler
                   , Lamdu.Config.Theme
                   , Lamdu.Config.Theme.Fonts
@@ -402,7 +403,6 @@ Library
                   , Lamdu.Sugar.Types.Simple
                   , Lamdu.Sugar.Types.Tag
                   , Lamdu.Sugar.Types.Type
-                  , Lamdu.Themes
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
                   , Numeric.Extended
