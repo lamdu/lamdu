@@ -220,7 +220,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 where
                     Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                     f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
-        themeNames <- ConfigFolder.getNames
+        themeNames <- ConfigFolder.getNames ConfigFolder.themes
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         dbToIO $ makeMainGui themeNames settingsProp dbToIO env
             <&> M.backgroundColor backgroundId bgColor

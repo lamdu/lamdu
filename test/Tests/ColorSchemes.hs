@@ -12,7 +12,7 @@ import           Test.Lamdu.Prelude
 
 test :: Test
 test =
-    ConfigFolder.getFiles >>= traverse_ verifyTheme
+    ConfigFolder.getFiles ConfigFolder.themes >>= traverse_ verifyTheme
     & testCase "color-scheme"
 
 verifyTheme :: FilePath -> IO ()
