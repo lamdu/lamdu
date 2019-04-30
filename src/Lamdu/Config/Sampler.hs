@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig
@@ -42,11 +42,11 @@ data Sampler = Sampler
     }
 
 withMTime :: FilePath -> IO (Config, FilePath, Theme) -> IO Sample
-withMTime configPath act =
+withMTime _sConfigPath act =
     do
-        (config, themePath, theme) <- act
-        mtimesAfter <- traverse getModificationTime [configPath, themePath]
-        Sample mtimesAfter configPath config themePath theme & pure
+        (_sConfig, _sThemePath, _sTheme) <- act
+        sVersion <- traverse getModificationTime [_sConfigPath, _sThemePath]
+        pure Sample{..}
 
 calcThemePath :: FilePath -> Text -> FilePath
 calcThemePath configPath theme =
