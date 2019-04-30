@@ -27,7 +27,7 @@ import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
 import qualified Lamdu.Style as Style
-import qualified Test.Lamdu.Theme as TestTheme
+import qualified Test.Lamdu.Config as TestConfig
 
 import           Test.Lamdu.Prelude
 
@@ -58,7 +58,7 @@ make :: IO Env
 make =
     do
         testConfig <- Paths.getDataFileName "config.json" >>= AesonConfig.load
-        testTheme <- TestTheme.load
+        testTheme <- TestConfig.loadConfigObject "default"
         font <-
             testTheme ^. fonts . Fonts.base & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)

@@ -1,18 +1,21 @@
-{-# LANGUAGE TypeApplications #-}
-module Test.Lamdu.Theme (load) where
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+module Test.Lamdu.Config (loadConfigObject) where
 
+import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Proxy (Proxy(..))
 import           Lamdu.Config.Folder (HasConfigFolder(..))
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Paths as Paths
 import           System.FilePath ((</>), takeDirectory)
 
 import           Test.Lamdu.Prelude
 
-load :: IO Theme
-load =
+loadConfigObject ::
+    forall a.
+    (FromJSON a, HasConfigFolder a) =>
+    FilePath -> IO a
+loadConfigObject selection =
     Paths.getDataFileName "config.json"
     <&> takeDirectory
-    <&> (\x -> x </> configFolder (Proxy @Theme) </> "default.json")
+    <&> (\x -> x </> configFolder (Proxy @a) </> (selection <> ".json"))
     >>= AesonConfig.load
