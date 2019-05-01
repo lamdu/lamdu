@@ -84,14 +84,14 @@ makeChoice headerText prop choiceVals =
             <&> (^. Align.tValue)
             <&> (,) val
 
-makeSwitchWidget ::
+labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
     , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
     , HasTexts env
     ) =>
     TextLens -> Property f a -> [(Text, a)] -> m (TextWidget f)
-makeSwitchWidget headerText prop choiceVals =
+labeledChoice headerText prop choiceVals =
     info (label headerText) /|/ makeChoice headerText prop choiceVals
 
 makeSwitchEventMap ::
@@ -121,7 +121,7 @@ makeSwitchStatusWidget ::
     m (StatusWidget f)
 makeSwitchStatusWidget headerText keysGetter prop choiceVals =
     do
-        w <- makeSwitchWidget headerText prop choiceVals
+        w <- labeledChoice headerText prop choiceVals
         e <- makeSwitchEventMap headerText keysGetter prop (map snd choiceVals)
         pure StatusWidget
             { _widget = w
