@@ -142,8 +142,9 @@ parseNum newText
     | otherwise = tryParse newText
 
 numEdit ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
-    , GuiState.HasState env, Monad o
+    ( MonadReader env m, Monad o
+    , HasConfig env, HasStyle env, Menu.HasConfig env
+    , GuiState.HasState env, Element.HasLayoutDir env
     ) =>
     Property o Double ->
     Sugar.Payload name i o ExprGui.Payload ->

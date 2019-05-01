@@ -45,7 +45,7 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
     ( Applicative f, MonadReader env m, GuiState.HasCursor env
-    , TextEdit.HasStyle env
+    , TextEdit.HasStyle env, Element.HasLayoutDir env
     ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     m (TextWidget f)

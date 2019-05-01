@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia #-}
 module GUI.Momentu.Widgets.TextEdit
-    ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
+    ( Style(..)
+        , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
     , HasStyle(..)
     , Modes(..), focused, unfocused
     , EmptyStrings
@@ -110,10 +111,10 @@ cursorRects s str =
         lineHeight = TextView.lineHeight s
 
 makeInternal ::
-    Style -> Text -> EmptyStrings ->
     (forall a. Lens.Getting a (Modes a) a) ->
+    Style -> Text -> EmptyStrings -> Element.LayoutDir ->
     Widget.Id -> TextWidget ((,) Text)
-makeInternal s str emptyStrings mode myId =
+makeInternal mode s str emptyStrings dir myId =
     v
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter ?~
@@ -121,17 +122,15 @@ makeInternal s str emptyStrings mode myId =
         (enterFromDirection (v ^. Element.size) s str myId)
     where
         emptyColor = s ^. sEmptyStringsColors . mode
-        (displayStr, setColor)
-            | Text.null str = (emptyStrings ^. mode, TextView.color .~ emptyColor)
-            | otherwise = (Text.take 5000 str, id)
-        v = TextView.make (setColor s) displayStr animId
+        emptyView = mkView (emptyStrings ^. mode) (TextView.color .~ emptyColor)
+        nonEmptyView =
+            mkView (Text.take 5000 str) id
+            & Align.tValue %~ Element.padToSize dir (emptyView ^. Element.size) 0
+        v = if Text.null str then emptyView else nonEmptyView
+        mkView displayStr setColor =
+            TextView.make (setColor s) displayStr animId
             & Element.padAround (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
-
-makeUnfocused ::
-    EmptyStrings -> Style -> Text -> Widget.Id ->
-    TextWidget ((,) Text)
-makeUnfocused empty s str = makeInternal s str empty unfocused
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -172,10 +171,10 @@ eventResult myId newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    Cursor -> EmptyStrings -> Style -> Text -> Widget.Id ->
+    Style -> Text -> EmptyStrings -> Element.LayoutDir -> Cursor -> Widget.Id ->
     TextWidget ((,) Text)
-makeFocused cursor empty s str myId =
-    makeInternal s str empty focused myId
+makeFocused s str empty dir cursor myId =
+    makeInternal focused s str empty dir myId
     & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
@@ -363,7 +362,9 @@ getCursor =
                 decodeCursor _ = Text.length str
 
 make ::
-    (MonadReader env m, State.HasCursor env, HasStyle env) =>
+    ( MonadReader env m, State.HasCursor env, HasStyle env
+    , Element.HasLayoutDir env
+    ) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
         TextWidget ((,) Text)
       )
@@ -371,7 +372,8 @@ make =
     do
         get <- getCursor
         s <- Lens.view style
+        dir <- Lens.view Element.layoutDir
         pure $ \empty str myId ->
             case get str myId of
-            Nothing -> makeUnfocused empty s str myId
-            Just pos -> makeFocused pos empty s str myId
+            Nothing -> makeInternal unfocused s str empty dir myId
+            Just pos -> makeFocused s str empty dir pos myId

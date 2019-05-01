@@ -125,7 +125,9 @@ defaultEmptyStrings = TextEdit.Modes "  " "  "
 --   * no pick of first result / no Menu.HasConfig needed --> use
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
-    (MonadReader env m, TextEdit.HasStyle env, HasState env, Applicative f) =>
+    ( MonadReader env m, Applicative f
+    , TextEdit.HasStyle env, HasState env, Element.HasLayoutDir env
+    ) =>
     Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
 basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
     do
@@ -208,8 +210,9 @@ addSearchTermStyle myId act =
     & addSearchTermEmptyColors
 
 searchTermEdit ::
-    ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
-    , Applicative f
+    ( MonadReader env m, Applicative f, HasTermStyle env
+    , TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
+    , Element.HasLayoutDir env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =

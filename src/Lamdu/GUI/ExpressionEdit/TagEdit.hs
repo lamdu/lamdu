@@ -66,7 +66,8 @@ disallowedNameChars :: String
 disallowedNameChars = ",[]\\`()"
 
 makeTagNameEdit ::
-    ( MonadReader env m, TextEdit.HasStyle env, GuiState.HasCursor env, Applicative f
+    ( MonadReader env m, Applicative f
+    , TextEdit.HasStyle env, GuiState.HasCursor env, Element.HasLayoutDir env
     ) =>
     Name.StoredName f -> Widget.Id ->
     m (TextWidget f)

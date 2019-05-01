@@ -98,7 +98,7 @@ makeBranchSelector rwtransaction rtransaction actions =
     where
         empty =
             TextEdit.Modes
-            { TextEdit._unfocused = "unnamed branch"
+            { TextEdit._unfocused = "(?)"
             , TextEdit._focused = ""
             }
         makeBranchNameEdit branch =
