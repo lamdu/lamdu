@@ -105,9 +105,7 @@ instance Semigroup LogUsed where
     LogUsed <> _ = LogUsed
     _ <> LogUsed = LogUsed
     _ <> _ = LogUnused
-instance Monoid LogUsed where
-    mempty = LogUnused
-    mappend = (<>)
+instance Monoid LogUsed where mempty = LogUnused
 
 newtype M m a = M { unM :: RWST (Env m) LogUsed State m a }
     deriving newtype

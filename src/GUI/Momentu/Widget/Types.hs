@@ -70,9 +70,7 @@ instance Semigroup (PreEvents a) where
     _ <> BlockEvents = BlockEvents
     PreEvents xs <> PreEvents ys = PreEvents (xs ++ ys)
 
-instance Monoid (PreEvents a) where
-    mempty = PreEvents []
-    mappend = (<>)
+instance Monoid (PreEvents a) where mempty = PreEvents []
 
 data Focused a = Focused
     { -- When browsing sub-menus each selected menu is considered focal.

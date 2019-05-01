@@ -102,7 +102,6 @@ instance Semigroup Info where
 
 instance Monoid Info where
     mempty = NoClash mempty
-    mappend = (<>)
 
 -- | Collide two Clash Infos with one another. The Infos come from
 -- scopes that are above/below one another, and so directly collide,

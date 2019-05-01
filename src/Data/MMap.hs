@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingVia #-}
 -- | A Data.Map wrapper with saner Semigroup/Monoid instances
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TypeFamilies, FlexibleInstances, MultiParamTypeClasses #-}
 module Data.MMap
@@ -13,15 +14,21 @@ import           Control.Lens.Operators
 import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map.Extended as Map
+import           Data.Monoid.Extended (ExtendSemigroup(..))
 import           Data.Semigroup (Semigroup(..))
 import           Data.Set (Set)
+import           GHC.Generics (Generic)
 
 import           Prelude hiding (filter)
 
 -- | A Map with a sensible Monoid/Semigroup instance
 newtype MMap k v = MMap (Map k v)
     deriving newtype (Eq, Ord, Show, Read, Binary, Functor, Foldable)
-    deriving stock Traversable
+    deriving stock (Generic, Traversable)
+    deriving Monoid via ExtendSemigroup (MMap k v)
+
+instance (Ord k, Semigroup v) => Semigroup (MMap k v) where
+    MMap m1 <> MMap m2 = Map.unionWith (<>) m1 m2 & MMap
 
 Lens.makePrisms ''MMap
 
@@ -33,13 +40,6 @@ type instance Lens.Index (MMap k v) = k
 type instance Lens.IxValue (MMap k v) = v
 instance Ord k => Lens.Ixed (MMap k v) where ix k = _MMap . Lens.ix k
 instance Ord k => Lens.At (MMap k v) where at k = _MMap . Lens.at k
-
-instance (Ord k, Semigroup v) => Semigroup (MMap k v) where
-    MMap m1 <> MMap m2 = Map.unionWith (<>) m1 m2 & MMap
-
-instance (Ord k, Semigroup v) => Monoid (MMap k v) where
-    mempty = MMap Map.empty
-    mappend = (<>)
 
 fromList :: Ord k => [(k, v)] -> MMap k v
 fromList = MMap . Map.fromList

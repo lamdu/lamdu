@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, PatternGuards, NoMonomorphismRestriction #-}
+{-# LANGUAGE DerivingVia, StandaloneDeriving #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
@@ -27,6 +28,7 @@ import           Data.Foldable (asum)
 import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe)
 import qualified Data.Maybe as Maybe
+import           Data.Monoid.Extended (ExtendSemigroup(..))
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import           GHC.Stack (CallStack, callStack, withFrozenCallStack)
@@ -120,7 +122,13 @@ data EventMap a = EventMap
     , _emDropHandlers :: [DropHandler a]
     , _emCharGroupHandlers :: [CharGroupHandler a]
     , _emAllCharsHandler :: [AllCharsHandler a]
-    } deriving (Generic, Functor)
+    }
+    deriving stock (Generic, Functor)
+
+Lens.makeLenses ''EventMap
+
+instance Semigroup (EventMap a) where (<>) = overrides
+deriving via ExtendSemigroup (EventMap a) instance Monoid (EventMap a)
 
 prettyKeyEvent :: KeyEvent -> InputDoc
 prettyKeyEvent (KeyEvent ModKey.KeyState'Pressed modKey) = ModKey.pretty modKey
@@ -134,15 +142,6 @@ emDocs f e =
     <*> (Lens.traverse .> dropHandlerDocs) f (_emDropHandlers e)
     <*> (Lens.traverse .> cgDocs) f (_emCharGroupHandlers e)
     <*> (Lens.traverse .> chDocs) f (_emAllCharsHandler e)
-
-Lens.makeLenses ''EventMap
-
-instance Semigroup (EventMap a) where
-    (<>) = overrides
-
-instance Monoid (EventMap a) where
-    mempty = EventMap mempty mempty mempty mempty
-    mappend = (<>)
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides

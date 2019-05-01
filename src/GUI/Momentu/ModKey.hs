@@ -22,7 +22,6 @@ instance Semigroup GLFW.ModifierKeys where
         GLFW.ModifierKeys (a0||a1) (b0||b1) (c0||c1) (d0||d1)
 instance Monoid GLFW.ModifierKeys where
     mempty = GLFW.ModifierKeys False False False False
-    mappend = (<>)
 
 ctrlMods :: GLFW.ModifierKeys
 ctrlMods = mempty { GLFW.modifierKeysControl = True }

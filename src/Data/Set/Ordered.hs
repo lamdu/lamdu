@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, GeneralizedNewtypeDeriving #-}
 module Data.Set.Ordered
     ( OrderedSet
     , singleton
@@ -8,19 +8,23 @@ module Data.Set.Ordered
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
+import           Data.Monoid.Extended (ExtendSemigroup(..))
 import           Data.Semigroup (Semigroup(..))
+import           GHC.Generics (Generic)
+
 import qualified Prelude
 import           Prelude hiding (filter, null)
 
 newtype OrderedSet a = OrderedSet { _orderedSet :: [a] }
-    deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
-Lens.makeLenses ''OrderedSet
+    deriving newtype (Eq, Ord, Functor, Foldable)
+    deriving stock (Generic, Show, Traversable)
+    deriving Monoid via (ExtendSemigroup (OrderedSet a))
 
 instance Eq a => Semigroup (OrderedSet a) where
-    OrderedSet xs <> OrderedSet ys = OrderedSet (xs ++ Prelude.filter (`notElem` xs) ys)
-instance Eq a => Monoid (OrderedSet a) where
-    mempty = OrderedSet []
-    mappend = (<>)
+    OrderedSet xs <> OrderedSet ys =
+        OrderedSet (xs <> Prelude.filter (`notElem` xs) ys)
+
+Lens.makeLenses ''OrderedSet
 
 singleton :: a -> OrderedSet a
 singleton = OrderedSet . (:[])

@@ -1,4 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell, NoMonomorphismRestriction, TupleSections #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell #-}
+{-# LANGUAGE NoMonomorphismRestriction, TupleSections, DerivingVia #-}
+
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     , -- re-export for tests
@@ -17,6 +19,7 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Monoid.Extended (ExtendSemigroup(..))
 import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -98,6 +101,9 @@ data P1Out = P1Out
         -- ^ Type vars met
     , _p1Texts :: MMap DisplayText (Set T.Tag)
     }
+    deriving stock Generic
+    deriving Monoid via ExtendSemigroup P1Out
+-- TODO: Use a newtype for clash that uses collide and derive semigroup for it
 instance Semigroup P1Out where
     P1Out xGlobals xLocals xContexts xTvs xTexts <>
         P1Out yGlobals yLocals yContexts yTvs yTexts =
@@ -107,9 +113,6 @@ instance Semigroup P1Out where
         (xContexts <> yContexts)
         (xTvs <> yTvs)
         (xTexts <> yTexts)
-instance Monoid P1Out where
-    mempty = P1Out mempty mempty mempty mempty mempty
-    mappend = (<>)
 Lens.makeLenses ''P1Out
 
 data P1KindedName o = P1StoredName Annotated.Name (StoredText o) | P1AnonName UUID

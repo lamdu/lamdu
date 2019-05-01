@@ -35,9 +35,7 @@ instance Semigroup Layers where
         where
             rest = Layers xs <> Layers ys
 
-instance Monoid Layers where
-    mempty = Layers []
-    mappend = (<>)
+instance Monoid Layers where mempty = Layers []
 
 addLayersAbove :: Layers -> Layers -> Layers
 addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)

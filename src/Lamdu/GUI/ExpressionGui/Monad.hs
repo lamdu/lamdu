@@ -155,7 +155,6 @@ instance (Monad i, Semigroup a) => Semigroup (ExprGuiM i o a) where
 
 instance (Monad i, Monoid a) => Monoid (ExprGuiM i o a) where
     mempty = pure mempty
-    mappend = (<>)
 
 instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
     transaction = im . transaction

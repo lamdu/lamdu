@@ -176,6 +176,7 @@ Library
                   , Data.MRUMemo
                   , Data.Map.Extended
                   , Data.Maybe.Extended
+                  , Data.Monoid.Extended
                   , Data.Property
                   , Data.Set.Ordered
                   , Data.UUID.Utils
