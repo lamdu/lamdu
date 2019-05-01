@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia #-}
 module Lamdu.I18N.Texts where
 
 import qualified Control.Lens as Lens
@@ -43,7 +43,8 @@ data CodeTexts a = CodeTexts
     , _recordSep :: a
     , _recordCloser :: a
     }
-    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 CodeTexts)
 Lens.makeLenses ''CodeTexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeTexts
 
@@ -54,7 +55,8 @@ data CodeUITexts a = CodeUITexts
     , _defUpdateTo :: a
     , _defUpdateWas :: a
     }
-    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 CodeUITexts)
 Lens.makeLenses ''CodeUITexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUITexts
 
@@ -65,7 +67,7 @@ data Texts a = Texts
     , _code :: CodeTexts a
     , _codeUI :: CodeUITexts a
     }
-    deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Eq, Ord, Show, Functor, Foldable, Traversable)
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
 
@@ -80,11 +82,10 @@ instance HasConfigFolder Language where
 class HasTexts env where texts :: Lens' env Language
 instance HasTexts (Texts Text) where texts = id
 
--- TODO: Better way to do this? Auto-generated applicative instance?
 dummyTexts :: Texts ()
 dummyTexts =
     Texts
     { _isLeftToRight = True
-    , _code = CodeTexts () () () () () () () () () () () () () () () () () () () () () () () () ()
-    , _codeUI = CodeUITexts () () () () ()
+    , _code = pure ()
+    , _codeUI = pure ()
     }
