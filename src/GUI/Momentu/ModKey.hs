@@ -48,10 +48,8 @@ super :: GLFW.Key -> ModKey
 super = ModKey superMods
 
 data ModKey = ModKey GLFW.ModifierKeys GLFW.Key
-    deriving (Generic, Show, Eq, Ord)
-
-instance ToJSON ModKey
-instance FromJSON ModKey
+    deriving stock (Generic, Show, Eq, Ord)
+    deriving anyclass (ToJSON, FromJSON)
 
 prettyKey :: GLFW.Key -> Text
 prettyKey k

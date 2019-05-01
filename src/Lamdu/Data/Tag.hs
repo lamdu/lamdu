@@ -12,7 +12,7 @@ import           Lamdu.Prelude
 data Tag = Tag
     { _tagName :: Text
     , _tagOrder :: Int
-    } deriving Generic
+    }
+    deriving stock Generic
+    deriving anyclass Binary
 Lens.makeLenses ''Tag
-
-instance Binary Tag

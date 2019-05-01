@@ -40,8 +40,10 @@ type T = Transaction
 
 newtype Pane m = Pane
     { paneDef :: DefI m
-    } deriving (Eq, Ord, Show, Generic)
-instance Binary (Pane m)
+    }
+    deriving newtype (Eq, Ord)
+    deriving stock (Show, Generic)
+    deriving anyclass Binary
 
 data Gui f = Gui
     { preJumps :: f [WidgetId.Id]

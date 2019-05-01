@@ -23,7 +23,9 @@ import           Lamdu.Prelude
 data FFIName = FFIName
     { fModule :: [Text]
     , fName :: Text
-    } deriving (Generic, Eq, Ord)
+    }
+    deriving stock (Generic, Eq, Ord)
+    deriving anyclass Binary
 
 instance Show FFIName where
     show (FFIName path name) =
@@ -32,23 +34,22 @@ instance Show FFIName where
 data Expr valExpr = Expr
     { _expr :: valExpr
     , _exprFrozenDeps :: Deps
-    } deriving (Generic, Show, Functor, Foldable, Traversable, Eq, Ord)
+    }
+    deriving stock (Generic, Show, Functor, Foldable, Traversable, Eq, Ord)
+    deriving anyclass Binary
 
 data Body valExpr
     = BodyExpr (Expr valExpr)
     | BodyBuiltin FFIName
     deriving (Generic, Show, Functor, Foldable, Traversable, Eq)
+    deriving anyclass Binary
 
 data Definition valExpr a = Definition
     { _defBody :: Body valExpr
     , _defType :: Tree Pure Scheme
     , _defPayload :: a
     } deriving (Generic, Functor, Foldable, Traversable, Eq)
-
-instance Binary FFIName
-instance Binary valExpr => Binary (Expr valExpr)
-instance Binary valExpr => Binary (Body valExpr)
-instance (Binary valExpr, Binary a) => Binary (Definition valExpr a)
+    deriving anyclass Binary
 
 Lens.makePrisms ''Body
 Lens.makeLenses ''Definition

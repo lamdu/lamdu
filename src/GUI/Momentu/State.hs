@@ -42,8 +42,9 @@ Lens.makeLenses ''VirtualCursor
 data GUIState = GUIState
     { _sCursor :: Id
     , _sWidgetStates :: Map Id ByteString
-    } deriving Generic
-instance Binary GUIState
+    }
+    deriving stock Generic
+    deriving anyclass Binary
 Lens.makeLenses ''GUIState
 
 data Update = Update

@@ -11,8 +11,9 @@ import qualified System.Directory as Directory
 
 import           Lamdu.Prelude
 
-newtype MissingFont = MissingFont FilePath deriving (Show, Typeable)
-instance E.Exception MissingFont
+newtype MissingFont = MissingFont FilePath
+    deriving stock (Generic, Show, Typeable)
+    deriving anyclass E.Exception
 
 openFont :: Font.LCDSubPixelEnabled -> Float -> FilePath -> IO Font
 openFont subpixel size path =

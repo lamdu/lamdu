@@ -20,11 +20,12 @@ newtype Version m = Version { versionIRef :: IRef m (VersionData m) }
     deriving newtype (Eq, Ord, Binary)
 
 data VersionData m = VersionData
-    { depth :: Int
-    , parent :: Maybe (Version m)
-    , changes :: [Change]
-    } deriving (Eq, Ord, Read, Show, Generic)
-instance Binary (VersionData m)
+    { depth :: !Int
+    , parent :: !(Maybe (Version m))
+    , changes :: ![Change]
+    }
+    deriving stock (Eq, Ord, Read, Show, Generic)
+    deriving anyclass Binary
 
 type T = Transaction
 

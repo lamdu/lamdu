@@ -33,10 +33,11 @@ newtype View m = View (IRef m (ViewData m))
     deriving newtype (Eq, Ord, Binary, Show, Read)
 
 data BranchData m = BranchData
-    { _brVersion :: Version m
-    , _brViews :: [View m]
-    } deriving (Eq, Ord, Read, Show, Generic)
-instance Binary (BranchData m)
+    { _brVersion :: !(Version m)
+    , _brViews :: ![View m]
+    }
+    deriving stock (Eq, Ord, Read, Show, Generic)
+    deriving anyclass Binary
 
 newtype Branch m = Branch { unBranch :: IRef m (BranchData m) }
     deriving newtype (Eq, Ord, Read, Show, Binary)

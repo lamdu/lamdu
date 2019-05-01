@@ -13,15 +13,15 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Prelude
 
 data DefinitionState = DeletedDefinition | LiveDefinition
-    deriving (Eq, Ord, Show, Generic)
-instance Binary DefinitionState
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass Binary
 
 data SpecialArgs a
     = Verbose
     | Object a
     | Infix a a
-    deriving (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
-instance Binary a => Binary (SpecialArgs a)
+    deriving stock (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
+    deriving anyclass Binary
 
 type PresentationMode = SpecialArgs T.Tag
 

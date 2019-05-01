@@ -13,6 +13,7 @@ import           Control.Lens.Operators
 import           Control.Monad (when, void)
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Generics (Generic)
 import           GUI.Momentu.Main.Events
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
@@ -30,8 +31,8 @@ data Next
     deriving (Show, Eq, Ord)
 
 data EventLoopDisallowedWhenMasked = EventLoopDisallowedWhenMasked
-    deriving (Show, Typeable)
-instance E.Exception EventLoopDisallowedWhenMasked
+    deriving stock (Generic, Show, Typeable)
+    deriving anyclass E.Exception
 
 mouseButtonEvent ::
     GLFW.Window -> (Event -> IO a) -> GLFW.MouseButton -> GLFW.MouseButtonState ->
