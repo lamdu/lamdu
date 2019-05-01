@@ -5,8 +5,7 @@ module Lamdu.Editor.Fonts
 import qualified Control.Lens.Extended as Lens
 import           Data.MRUMemo (memoIO)
 import qualified GUI.Momentu as M
-import           Lamdu.Config.Sampler (sTheme)
-import qualified Lamdu.Config.Sampler as ConfigSampler
+import           Lamdu.Config.Sampler (Sample, sData, sConfigPath, sThemeData)
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (FontSize, Fonts(..))
@@ -17,11 +16,11 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
-prependConfigPath :: ConfigSampler.Sample -> Fonts FilePath -> Fonts FilePath
+prependConfigPath :: Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
     Lens.mapped %~ f
     where
-        dir = FilePath.takeDirectory (sample ^. ConfigSampler.sConfigPath)
+        dir = FilePath.takeDirectory (sample ^. sData . sConfigPath)
         f "" = "" -- Debug font!
         f x = dir </> x
 
@@ -34,11 +33,11 @@ assignFontSizes theme fonts =
         baseTextSize = theme ^. Theme.baseTextSize
         helpTextSize = theme ^. Theme.help . Theme.helpTextSize
 
-curSampleFonts :: ConfigSampler.Sample -> Fonts (FontSize, FilePath)
+curSampleFonts :: Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =
-    sample ^. sTheme . Theme.fonts
+    sample ^. sThemeData . Theme.fonts
     & prependConfigPath sample
-    & assignFontSizes (sample ^. sTheme)
+    & assignFontSizes (sample ^. sThemeData)
 
 defaultFontPath :: FilePath -> FilePath
 defaultFontPath configPath =
@@ -48,7 +47,7 @@ defaultFontPath configPath =
 
 makeGetFonts ::
     Font.LCDSubPixelEnabled ->
-    IO (M.Zoom -> ConfigSampler.Sample -> IO (Fonts M.Font))
+    IO (M.Zoom -> Sample -> IO (Fonts M.Font))
 makeGetFonts subpixel =
     Font.new subpixel & uncurry & memoIO
     <&> f
@@ -57,6 +56,6 @@ makeGetFonts subpixel =
             do
                 sizeFactor <- M.getZoomFactor zoom
                 cachedLoadFonts
-                    ( defaultFontPath (sample ^. ConfigSampler.sConfigPath)
+                    ( defaultFontPath (sample ^. sData . sConfigPath)
                     , curSampleFonts sample <&> _1 *~ sizeFactor
                     )

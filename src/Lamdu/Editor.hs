@@ -26,7 +26,7 @@ import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as ConfigFolder
-import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme, sLanguage)
+import           Lamdu.Config.Sampler (Sampler, sConfigData, sThemeData, sLanguageData)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -124,7 +124,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
         let makeWidget env =
                 do
                     sample <- ConfigSampler.getSample configSampler
-                    when (sample ^. sConfig . Config.debug . Config.printCursor)
+                    when (sample ^. sConfigData . Config.debug . Config.printCursor)
                         (putStrLn ("Cursor: " <> show (env ^. M.cursor)))
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
                     Cache.fence cache
@@ -137,7 +137,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                         <&> (^. Fonts.base) <&> Font.height <&> FontInfo
         let mkConfigTheme =
                 ConfigSampler.getSample configSampler
-                <&> \sample -> (sample ^. sConfig, sample ^. sTheme)
+                <&> \sample -> (sample ^. sConfigData, sample ^. sThemeData)
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
             { makeWidget = makeWidget
@@ -150,12 +150,12 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                       \zoom ->
                       do
                           sample <- ConfigSampler.getSample configSampler
-                          if sample ^. sConfig . Config.debug . Config.debugShowFPS
+                          if sample ^. sConfigData . Config.debug . Config.debugShowFPS
                               then getFonts zoom sample <&> (^. Fonts.debugInfo) <&> Just
                               else pure Nothing
                     , virtualCursorColor =
                         ConfigSampler.getSample configSampler
-                        <&> (^. sConfig . Config.debug . Config.virtualCursorShown)
+                        <&> (^. sConfigData . Config.debug . Config.virtualCursorShown)
                         <&> \case
                             False -> Nothing
                             True -> Just (M.Color 1 1 0 0.5)
@@ -163,7 +163,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     , jumpToSource = jumpToSource
                     , jumpToSourceKeys =
                         ConfigSampler.getSample configSampler
-                        <&> (^. sConfig . Config.debug . Config.jumpToSourceKeys)
+                        <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
                     }
                 }
             }
@@ -200,22 +200,22 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
         let env = Env
                 { _evalRes = evalResults
                 , _exportActions =
-                    exportActions (sample ^. sConfig)
+                    exportActions (sample ^. sConfigData)
                     (evalResults ^. current)
                     (EvalManager.executeReplIOProcess evaluator)
-                , _config = sample ^. sConfig
-                , _theme = sample ^. sTheme
+                , _config = sample ^. sConfigData
+                , _theme = sample ^. sThemeData
                 , _settings = Property.value settingsProp
-                , _style = Style.make fonts (sample ^. sTheme)
+                , _style = Style.make fonts (sample ^. sThemeData)
                 , _mainLoop = mainLoopEnv
                 , _animIdPrefix = mempty
                 , _debugMonitors = monitors
                 , _cachedFunctions = cachedFunctions
                 , _layoutDir =
-                    if sample ^. sLanguage . Texts.isLeftToRight
+                    if sample ^. sLanguageData . Texts.isLeftToRight
                     then Element.LeftToRight
                     else Element.RightToLeft
-                , _texts = sample ^. sLanguage
+                , _texts = sample ^. sLanguageData
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
@@ -239,7 +239,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
     where
         monitors =
             Debug.addBreakPoints
-            (sample ^. sConfig . Config.debug . Config.breakpoints)
+            (sample ^. sConfigData . Config.debug . Config.breakpoints)
             perfMonitors
 
 run :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
