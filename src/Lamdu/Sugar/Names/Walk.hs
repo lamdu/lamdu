@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeFamilies, RecordWildCards, NamedFieldPuns, TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts, TypeFamilies, NamedFieldPuns, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag
@@ -183,11 +183,11 @@ toPayload ::
     MonadNaming m =>
     Payload (OldName m) (IM m) o a ->
     m (Payload (NewName m) (IM m) o a)
-toPayload Payload{..} =
+toPayload payload@Payload{_plAnnotation, _plActions} =
     do
         _plAnnotation <- toAnnotation _plAnnotation
         _plActions <- toNodeActions _plActions
-        pure Payload{..}
+        pure payload{_plAnnotation, _plActions}
 
 toNode ::
     MonadNaming m =>
@@ -204,13 +204,13 @@ toLet ::
     MonadNaming m =>
     Tree (Let (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
     m (Tree (Let (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
-toLet Let{..} =
+toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
             unCPS (withTag TaggedVar _lVarInfo _lName)
             (toNode toBinder _lBody)
         _lValue <- toAssignment _lValue
-        pure Let{..}
+        pure let_{_lName, _lBody, _lValue}
 
 toBinder ::
     MonadNaming m =>
@@ -235,8 +235,9 @@ toFunction ::
     m
     (Tree (Function (NewName m) (IM m) o)
         (Ann (Payload (NewName m) (IM m) o a)))
-toFunction Function{..} =
-    (\(_fParams, _fBody) _fAddFirstParam -> Function{..})
+toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
+    (\(_fParams, _fBody) _fAddFirstParam ->
+         func{_fParams, _fBody, _fAddFirstParam})
     <$> unCPS (withBinderParams _fParams) (toNode toBinder _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
@@ -247,8 +248,8 @@ toBinderPlain ::
     m
     (Tree (AssignPlain (NewName m) (IM m) o)
         (Ann (Payload (NewName m) (IM m) o a)))
-toBinderPlain AssignPlain{..} =
-    (\_apBody _apAddFirstParam -> AssignPlain{..})
+toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
+    (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
     <$> toBinder _apBody
     <*> toAddFirstParam _apAddFirstParam
 
@@ -279,7 +280,7 @@ toTagSelection ::
     MonadNaming m =>
     TagSelection (OldName m) (IM m) o a ->
     m (TagSelection (NewName m) (IM m) o a)
-toTagSelection t@TagSelection{..} =
+toTagSelection t =
     opRun
     <&>
     \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagInfoOf Tag))
@@ -320,7 +321,8 @@ toLabeledApply ::
     m
     (Tree (LabeledApply (NewName m) (IM m) o)
         (Ann (Payload (NewName m) (IM m) o a)))
-toLabeledApply app@LabeledApply{..} =
+toLabeledApply
+    app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aRelayedArgs} =
     LabeledApply
     <$> toNode (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
     <*> traverse toExpression _aSpecialArgs
@@ -344,7 +346,7 @@ toFragment ::
     m
     (Tree (Fragment (NewName m) (IM m) o)
         (Ann (Payload (NewName m) (IM m) o a)))
-toFragment Fragment{..} =
+toFragment Fragment{_fExpr, _fHeal, _fOptions} =
     do
         run <- opRun
         newExpr <- toExpression _fExpr
@@ -363,8 +365,8 @@ toComposite ::
     (a -> m b) ->
     Composite (OldName m) (IM m) o a ->
     m (Composite (NewName m) (IM m) o b)
-toComposite expr Composite{..} =
-    (\_cItems _cAddItem -> Composite{..})
+toComposite expr Composite{_cItems, _cAddItem, _cTail} =
+    (\_cItems _cAddItem -> Composite{_cItems, _cAddItem, _cTail})
     <$> (traverse . ciTag) (toTagOf Tag) _cItems
     <*> toTagSelection _cAddItem
     >>= traverse expr
@@ -494,13 +496,13 @@ toDef ::
     MonadNaming m =>
     Definition (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Definition (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toDef Definition{..} =
+toDef def@Definition{_drName, _drBody} =
     do
         -- NOTE: A global def binding is not considered a binder, as
         -- it exists everywhere, not just inside the binding
         _drName <- toTagOf GlobalDef _drName
         _drBody <- toDefinitionBody _drBody
-        pure Definition{..}
+        pure def{_drName, _drBody}
 
 toPane ::
     MonadNaming m =>
