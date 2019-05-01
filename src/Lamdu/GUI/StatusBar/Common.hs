@@ -17,7 +17,7 @@ import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue (GluesTo, (/|/))
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
@@ -35,9 +35,9 @@ import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.I18N.Texts (Language, Texts, HasTexts(..))
 import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.GUI.Styled (info, label)
 
 import           Lamdu.Prelude
 
@@ -61,18 +61,6 @@ hoist f (StatusWidget w e) =
     , _globalEventMap = e <&> f
     }
 
-makeLabeledWidget ::
-    ( MonadReader env m
-    , GluesTo (WithTextPos View) a b
-    , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Element.HasLayoutDir env
-    , HasTexts env
-    ) =>
-    (forall z. Lens.ALens' (Texts z) z) -> a -> m b
-makeLabeledWidget l w =
-    Styled.withColor TextColors.infoTextColor (Styled.label l)
-    /|/ pure w
-
 makeStatusWidget ::
     ( MonadReader env m, Functor f
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
@@ -81,7 +69,7 @@ makeStatusWidget ::
     ) =>
     (forall a. Lens.ALens' (Texts a) a) -> TextWidget f -> m (StatusWidget f)
 makeStatusWidget headerText w =
-    makeLabeledWidget headerText w
+    info (label headerText) /|/ pure w
     <&> (`StatusWidget` mempty)
 
 makeChoice ::
@@ -114,9 +102,7 @@ makeSwitchWidget ::
     (forall z. Lens.ALens' (Texts z) z) -> Property f a -> [(Text, a)] ->
     m (TextWidget f)
 makeSwitchWidget headerText prop choiceVals =
-    do
-        choice <- makeChoice headerText prop choiceVals
-        makeLabeledWidget headerText choice
+    info (label headerText) /|/ makeChoice headerText prop choiceVals
 
 makeSwitchEventMap ::
     ( MonadReader env m, HasConfig env, HasTexts env
