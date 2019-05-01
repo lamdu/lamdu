@@ -7,5 +7,9 @@
         "defer": "|",
         "lam": "λ",
         "recordSep": ","
+    },
+    "statusBar": {
+        "annotations": "",
+        "branch": "⎇"
     }
 }
