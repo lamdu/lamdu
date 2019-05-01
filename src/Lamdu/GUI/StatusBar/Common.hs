@@ -1,7 +1,9 @@
 -- | Common utilities for status bar widgets
 {-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
+    , Header(..), labelHeader, LabelConstraints
     , hoist
     , makeSwitchStatusWidget, makeBoundedSwitchStatusWidget
     , fromWidget, combine, combineEdges
@@ -64,6 +66,20 @@ fromWidget :: TextWidget f -> StatusWidget f
 fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
+data Header w = Header
+    { headerTextLens :: TextLens
+    , headerWidget :: w
+    }
+
+type LabelConstraints env m =
+    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env, HasTexts env
+    )
+
+labelHeader ::
+    LabelConstraints env m => TextLens -> Header (m (WithTextPos View))
+labelHeader textLens = Header textLens (info (label textLens))
+
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
@@ -86,13 +102,14 @@ makeChoice headerText prop choiceVals =
 
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
     , HasTexts env
+    , Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
-    TextLens -> Property f a -> [(Text, a)] -> m (TextWidget f)
-labeledChoice headerText prop choiceVals =
-    info (label headerText) /|/ makeChoice headerText prop choiceVals
+    Header (m w) -> Property f a -> [(Text, a)] -> m (TextWidget f)
+labeledChoice header prop choiceVals =
+    headerWidget header /|/ makeChoice (headerTextLens header) prop choiceVals
 
 makeSwitchEventMap ::
     ( MonadReader env m, HasConfig env, HasTexts env
@@ -113,16 +130,19 @@ makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
-    , HasConfig env, HasTheme env, HasTexts env
+    , HasConfig env, HasTexts env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
+    , Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
-    TextLens -> Lens' Config [MetaKey] -> Property f a -> [(Text, a)] ->
-    m (StatusWidget f)
-makeSwitchStatusWidget headerText keysGetter prop choiceVals =
+    Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
+    [(Text, a)] -> m (StatusWidget f)
+makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
-        w <- labeledChoice headerText prop choiceVals
-        e <- makeSwitchEventMap headerText keysGetter prop (map snd choiceVals)
+        w <- labeledChoice header prop choiceVals
+        e <-
+            makeSwitchEventMap (headerTextLens header) keysGetter prop
+            (map snd choiceVals)
         pure StatusWidget
             { _widget = w
             , _globalEventMap = e
@@ -130,14 +150,15 @@ makeSwitchStatusWidget headerText keysGetter prop choiceVals =
 
 makeBoundedSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
-    , HasConfig env, HasTheme env, HasTexts env
+    , HasConfig env, HasTexts env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
+    , Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
-    TextLens -> Lens' Config [MetaKey] -> Property f a ->
+    Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
     m (StatusWidget f)
-makeBoundedSwitchStatusWidget headerText keysGetter prop =
-    makeSwitchStatusWidget headerText keysGetter prop choiceVals
+makeBoundedSwitchStatusWidget header keysGetter prop =
+    makeSwitchStatusWidget header keysGetter prop choiceVals
     where
         choiceVals = [minBound..maxBound] <&> \val -> (Text.pack (show val), val)
 

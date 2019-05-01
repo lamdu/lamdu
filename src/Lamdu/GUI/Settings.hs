@@ -1,5 +1,5 @@
 -- | Widget to edit the settings
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Lamdu.GUI.Settings
      ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
      , hoist
@@ -8,9 +8,11 @@ module Lamdu.GUI.Settings
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property, composeLens)
+import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import           Lamdu.Config (HasConfig)
@@ -41,6 +43,12 @@ hoist f (StatusWidgets x y z a) =
     where
         h = StatusBar.hoist f
 
+header ::
+    StatusBar.LabelConstraints env m =>
+    (forall a. Lens' (Texts.StatusBarTexts a) a) ->
+    StatusBar.Header (m (WithTextPos View))
+header lens = StatusBar.labelHeader (Texts.statusBar . lens)
+
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasStdSpacing env, HasTexts env
@@ -51,15 +59,15 @@ makeStatusWidgets ::
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
-    <$> StatusBar.makeBoundedSwitchStatusWidget (Texts.statusBar . Texts.annotations)
+    <$> StatusBar.makeBoundedSwitchStatusWidget (header Texts.annotations)
         Config.nextAnnotationModeKeys annotationModeProp
-    <*> StatusBar.makeSwitchStatusWidget (Texts.statusBar . Texts.theme)
+    <*> StatusBar.makeSwitchStatusWidget (header Texts.theme)
         Config.changeThemeKeys themeProp
         (themeNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (Texts.statusBar . Texts.language)
+    <*> StatusBar.makeSwitchStatusWidget (header Texts.language)
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (Texts.statusBar . Texts.help)
+    <*> StatusBar.makeSwitchStatusWidget (header Texts.help)
         Config.helpKeys helpProp helpVals
     where
         helpVals =
