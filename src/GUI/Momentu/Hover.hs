@@ -20,8 +20,6 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.List.Extended (minimumOn)
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
-import           Generic.Data (Generically1(..))
-import           GHC.Generics (Generic1)
 import           GUI.Momentu.Align (Aligned(..), value)
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.Draw as Draw

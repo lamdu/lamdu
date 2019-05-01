@@ -19,8 +19,6 @@ import           Data.List.Extended (genericLength, minimumOn)
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Generic.Data (Generically1(..))
-import           GHC.Generics (Generic1)
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim

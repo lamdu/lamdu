@@ -7,8 +7,6 @@ module Lamdu.Precedence
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import           Generic.Data (Generically1(..))
-import           GHC.Generics (Generic1)
 
 import           Lamdu.Prelude
 

@@ -7,8 +7,6 @@ module Control.Monad.Unit
     ) where
 
 import Data.Semigroup (Semigroup)
-import Generic.Data (Generically(..), Generically1(..))
-import GHC.Generics (Generic1)
 import Lamdu.Prelude
 
 data Unit a = Unit

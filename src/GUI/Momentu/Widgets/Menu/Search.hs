@@ -34,8 +34,6 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
-import           Generic.Data (Generically1(..))
-import           GHC.Generics (Generic1)
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw

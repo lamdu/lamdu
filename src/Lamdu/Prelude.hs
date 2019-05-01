@@ -21,7 +21,8 @@ import           Data.Semigroup as X (Semigroup(..))
 import           Data.Set as X (Set)
 import           Data.Text as X (Text)
 import qualified Debug.Trace as Trace
-import           GHC.Generics as X (Generic)
+import           Generic.Data as X (Generically(..), Generically1(..))
+import           GHC.Generics as X (Generic, Generic1)
 import           GHC.Stack.Types as X (HasCallStack)
 
 import           Prelude.Compat as X hiding (return)

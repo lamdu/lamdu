@@ -9,8 +9,6 @@ module Data.CurAndPrev
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Generic.Data (Generically(..), Generically1(..))
-import           GHC.Generics (Generic1)
 
 import           Lamdu.Prelude
 

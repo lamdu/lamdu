@@ -17,8 +17,6 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Generic.Data (Generically1(..))
-import           GHC.Generics (Generic1)
 import           Graphics.DrawingCombinators ((%%), R)
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
