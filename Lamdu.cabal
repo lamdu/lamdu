@@ -120,7 +120,7 @@ Library
                   , ekg-core
                   , filepath >= 1.1
                   , edit-distance
-                  , GLFW-b >= 3.2.1.2
+                  , GLFW-b >= 3.2.1.0
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
                   , lamdu-calculus >= 0.2
