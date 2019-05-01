@@ -177,12 +177,12 @@ definitionTypeChangeBox ::
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
-        oldTypeRow <- Styled.info (label (Texts.codeButtons . Texts.defUpdateWas))
+        oldTypeRow <- Styled.info (label (Texts.codeUI . Texts.defUpdateWas))
         newTypeRow <-
-            Styled.actionable myId (Texts.codeButtons . Texts.defUpdateHeader)
+            Styled.actionable myId (Texts.codeUI . Texts.defUpdateHeader)
             updateDoc update
             /|/ Spacer.stdHSpace
-            /|/ Styled.info (label (Texts.codeButtons . Texts.defUpdateTo))
+            /|/ Styled.info (label (Texts.codeUI . Texts.defUpdateTo))
 
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)

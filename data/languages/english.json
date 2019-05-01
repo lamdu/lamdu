@@ -9,7 +9,7 @@
         "elseShort": "el",
         "paramsRecordOpener": "Params {"
     },
-    "codeButtons": {
+    "codeUI": {
         "defUpdateHeader": "Update",
         "defUpdateTo": "to: ",
         "defUpdateWas": "Type was: ",

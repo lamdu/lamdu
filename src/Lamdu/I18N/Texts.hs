@@ -47,7 +47,7 @@ data CodeTexts a = CodeTexts
 Lens.makeLenses ''CodeTexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeTexts
 
-data CodeButtonTexts a = CodeButtonTexts
+data CodeUITexts a = CodeUITexts
     { _newDefinitionButton :: a
     , _undeleteButton :: a
     , _defUpdateHeader :: a
@@ -55,15 +55,15 @@ data CodeButtonTexts a = CodeButtonTexts
     , _defUpdateWas :: a
     }
     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-Lens.makeLenses ''CodeButtonTexts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeButtonTexts
+Lens.makeLenses ''CodeUITexts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUITexts
 
 data Texts a = Texts
     { -- TODO: Should this still be called "Texts?"
       -- Using a boolean for the JSON instance
       _isLeftToRight :: Bool
     , _code :: CodeTexts a
-    , _codeButtons :: CodeButtonTexts a
+    , _codeUI :: CodeUITexts a
     }
     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 -- Get-field's dot is currently omitted from the symbols,
@@ -86,5 +86,5 @@ dummyTexts =
     Texts
     { _isLeftToRight = True
     , _code = CodeTexts () () () () () () () () () () () () () () () () () () () () () () () () ()
-    , _codeButtons = CodeButtonTexts () () () () ()
+    , _codeUI = CodeUITexts () () () () ()
     }
