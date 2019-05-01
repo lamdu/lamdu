@@ -5,7 +5,7 @@ module Lamdu.Editor.Fonts
 import qualified Control.Lens.Extended as Lens
 import           Data.MRUMemo (memoIO)
 import qualified GUI.Momentu as M
-import           Lamdu.Config.Sampler (Sample, sData, sConfigPath, sThemeData)
+import           Lamdu.Config.Sampler (Sample, sData, sConfig, sThemeData, filePath)
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (FontSize, Fonts(..))
@@ -20,7 +20,7 @@ prependConfigPath :: Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
     Lens.mapped %~ f
     where
-        dir = FilePath.takeDirectory (sample ^. sData . sConfigPath)
+        dir = FilePath.takeDirectory (sample ^. sData . sConfig . filePath)
         f "" = "" -- Debug font!
         f x = dir </> x
 
@@ -56,6 +56,6 @@ makeGetFonts subpixel =
             do
                 sizeFactor <- M.getZoomFactor zoom
                 cachedLoadFonts
-                    ( defaultFontPath (sample ^. sData . sConfigPath)
+                    ( defaultFontPath (sample ^. sData . sConfig . filePath)
                     , curSampleFonts sample <&> _1 *~ sizeFactor
                     )
