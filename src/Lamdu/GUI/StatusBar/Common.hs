@@ -4,8 +4,7 @@ module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
     , hoist
     , makeSwitchStatusWidget, makeBoundedSwitchStatusWidget
-    , makeStatusWidget
-    , combine, combineEdges
+    , fromWidget, combine, combineEdges
     ) where
 
 import qualified Control.Lens as Lens
@@ -61,16 +60,9 @@ hoist f (StatusWidget w e) =
     , _globalEventMap = e <&> f
     }
 
-makeStatusWidget ::
-    ( MonadReader env m, Functor f
-    , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Element.HasLayoutDir env
-    , HasTexts env
-    ) =>
-    TextLens -> TextWidget f -> m (StatusWidget f)
-makeStatusWidget headerText w =
-    info (label headerText) /|/ pure w
-    <&> (`StatusWidget` mempty)
+fromWidget :: TextWidget f -> StatusWidget f
+fromWidget w =
+    StatusWidget { _widget = w, _globalEventMap = mempty }
 
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a

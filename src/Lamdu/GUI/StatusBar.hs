@@ -12,6 +12,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -26,6 +27,7 @@ import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Settings as SettingsGui
 import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
+import           Lamdu.GUI.Styled (info, label)
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.Texts (Language, HasTexts)
@@ -48,10 +50,11 @@ make ::
     m (StatusWidget (IOTrans n))
 make gotoDefinition themeNames langNames settingsProp width vcActions =
     do
-        branchChoice <-
-            VersionControlGUI.makeBranchSelector
-            IOTrans.liftTrans transaction vcActions
-        branchSelector <- StatusBar.makeStatusWidget (Texts.statusBar . Texts.branch) branchChoice
+        branchSelector <-
+            info (label (Texts.statusBar . Texts.branch))
+            /|/ VersionControlGUI.makeBranchSelector IOTrans.liftTrans
+                transaction vcActions
+            <&> StatusBar.fromWidget
 
         statusWidgets <-
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp
