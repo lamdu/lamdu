@@ -20,7 +20,7 @@
         "annotations": "Annotations ",
         "branch": "Branch ",
         "help": "Help ",
-        "language": "Language ",
-        "theme": "Theme "
+        "language": "",
+        "theme": ""
     }
 }
