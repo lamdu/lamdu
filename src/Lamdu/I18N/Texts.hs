@@ -60,12 +60,25 @@ data CodeUITexts a = CodeUITexts
 Lens.makeLenses ''CodeUITexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUITexts
 
+data StatusBarTexts a = StatusBarTexts
+    { _annotations :: a
+    , _branch :: a
+    , _help :: a
+    , _language :: a
+    , _theme :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 StatusBarTexts)
+Lens.makeLenses ''StatusBarTexts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''StatusBarTexts
+
 data Texts a = Texts
     { -- TODO: Should this still be called "Texts?"
       -- Using a boolean for the JSON instance
       _isLeftToRight :: Bool
     , _code :: CodeTexts a
     , _codeUI :: CodeUITexts a
+    , _statusBar :: StatusBarTexts a
     }
     deriving stock (Eq, Ord, Show, Functor, Foldable, Traversable)
 -- Get-field's dot is currently omitted from the symbols,
@@ -88,4 +101,5 @@ dummyTexts =
     { _isLeftToRight = True
     , _code = pure ()
     , _codeUI = pure ()
+    , _statusBar = pure ()
     }

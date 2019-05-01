@@ -15,5 +15,12 @@
         "defUpdateWas": "Type was: ",
         "newDefinitionButton": "New...",
         "undeleteButton": "Undelete..."
+    },
+    "statusBar": {
+        "annotations": "Annotations ",
+        "branch": "Branch ",
+        "help": "Help ",
+        "language": "Language ",
+        "theme": "Theme "
     }
 }

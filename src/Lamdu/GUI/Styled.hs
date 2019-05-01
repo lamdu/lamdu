@@ -10,6 +10,7 @@ module Lamdu.GUI.Styled
     , actionable
     , withColor
     , nameAtBinder
+    , textIds
     ) where
 
 import qualified Control.Lens as Lens

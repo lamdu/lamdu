@@ -28,7 +28,8 @@ import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Texts (Language, HasTexts)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.VersionControl.Actions as VCActions
 
@@ -39,7 +40,7 @@ make ::
     , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
-    , HasConfig env, Element.HasLayoutDir env
+    , HasConfig env, Element.HasLayoutDir env, HasTexts env
     ) =>
     StatusWidget (IOTrans n) ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings ->
@@ -50,7 +51,7 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
         branchChoice <-
             VersionControlGUI.makeBranchSelector
             IOTrans.liftTrans transaction vcActions
-        branchSelector <- StatusBar.makeStatusWidget "Branch" branchChoice
+        branchSelector <- StatusBar.makeStatusWidget (Texts.statusBar . Texts.branch) branchChoice
 
         statusWidgets <-
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp

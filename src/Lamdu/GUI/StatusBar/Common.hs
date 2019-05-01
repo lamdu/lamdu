@@ -11,7 +11,6 @@ module Lamdu.GUI.StatusBar.Common
 import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Element (Element(..))
@@ -37,6 +36,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.I18N.Texts (Language, Texts, HasTexts(..))
 import qualified Lamdu.GUI.Styled as Styled
 
 import           Lamdu.Prelude
@@ -66,16 +66,20 @@ makeLabeledWidget ::
     , GluesTo (WithTextPos View) a b
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Element.HasLayoutDir env
-    ) => Text -> a -> m b
-makeLabeledWidget headerText w =
-    Styled.withColor TextColors.infoTextColor (Label.make (headerText <> " "))
+    , HasTexts env
+    ) =>
+    (forall z. Lens.ALens' (Texts z) z) -> a -> m b
+makeLabeledWidget l w =
+    Styled.withColor TextColors.infoTextColor (Styled.label l)
     /|/ pure w
 
 makeStatusWidget ::
     ( MonadReader env m, Functor f
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
     , Element.HasLayoutDir env
-    ) => Text -> TextWidget f -> m (StatusWidget f)
+    , HasTexts env
+    ) =>
+    (forall a. Lens.ALens' (Texts a) a) -> TextWidget f -> m (StatusWidget f)
 makeStatusWidget headerText w =
     makeLabeledWidget headerText w
     <&> (`StatusWidget` mempty)
@@ -84,16 +88,18 @@ makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    , HasTexts env
     ) =>
-    Text -> Property f a -> [(Text, a)] ->
+    (forall z. Lens.ALens' (Texts z) z) -> Property f a -> [(Text, a)] ->
     m (TextWidget f)
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
-        Choice.make ?? prop ?? choices ?? Choice.defaultConfig headerText ?? myId
+        text <- Lens.view texts <&> (^# headerText)
+        Choice.make ?? prop ?? choices ?? Choice.defaultConfig text ?? myId
             <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
     where
-        myId = Widget.Id [encodeUtf8 headerText]
+        myId = Widget.Id ("status" : Styled.textIds ^# headerText)
         mkChoice (text, val) =
             Label.makeFocusable text
             <&> (^. Align.tValue)
@@ -103,8 +109,9 @@ makeSwitchWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, HasTheme env
     , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
+    , HasTexts env
     ) =>
-    Text -> Property f a -> [(Text, a)] ->
+    (forall z. Lens.ALens' (Texts z) z) -> Property f a -> [(Text, a)] ->
     m (TextWidget f)
 makeSwitchWidget headerText prop choiceVals =
     do
@@ -112,24 +119,31 @@ makeSwitchWidget headerText prop choiceVals =
         makeLabeledWidget headerText choice
 
 makeSwitchEventMap ::
-    (MonadReader env m, HasConfig env, Eq a, Functor f) =>
-    Text -> Lens' Config [MetaKey] ->
+    ( MonadReader env m, HasConfig env, HasTexts env
+    , Eq a, Functor f
+    ) =>
+    Lens.ALens' Language Text ->
+    Lens' Config [MetaKey] ->
     Property f a -> [a] ->
     m (Gui EventMap f)
 makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
-    Lens.view (Config.config . keysGetter)
-    <&> \keys ->
-    let newVal = dropWhile (/= curVal) choiceVals ++ choiceVals & tail & head
-    in  setVal newVal
-        & E.keysEventMap keys (E.Doc ["Status bar", "Switch " <> headerText])
+    do
+        keys <- Lens.view (Config.config . keysGetter)
+        text <- Lens.view (texts . Lens.cloneLens headerText)
+        setVal newVal
+            & E.keysEventMap keys (E.Doc ["Status bar", "Switch " <> text])
+            & pure
+    where
+        newVal = dropWhile (/= curVal) choiceVals ++ choiceVals & tail & head
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
-    , HasConfig env, HasTheme env
+    , HasConfig env, HasTheme env, HasTexts env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
-    Text -> Lens' Config [MetaKey] ->
+    (forall z. Lens.ALens' (Texts z) z) ->
+    Lens' Config [MetaKey] ->
     Property f a -> [(Text, a)] ->
     m (StatusWidget f)
 makeSwitchStatusWidget headerText keysGetter prop choiceVals =
@@ -143,11 +157,12 @@ makeSwitchStatusWidget headerText keysGetter prop choiceVals =
 
 makeBoundedSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
-    , HasConfig env, HasTheme env
+    , HasConfig env, HasTheme env, HasTexts env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
-    Text -> Lens' Config [MetaKey] ->
+    (forall z. Lens.ALens' (Texts z) z) ->
+    Lens' Config [MetaKey] ->
     Property f a ->
     m (StatusWidget f)
 makeBoundedSwitchStatusWidget headerText keysGetter prop =

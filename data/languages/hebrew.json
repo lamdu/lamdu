@@ -18,5 +18,12 @@
         "defUpdateWas": " :היה סופיט",
         "newDefinitionButton": "...שדח",
         "undeleteButton": "...רזחש"
+    },
+    "statusBar": {
+        "annotations": " תויצטונא",
+        "branch": " ףנע",
+        "help": " הרזע",
+        "language": " הפש",
+        "theme": " ןונגס"
     }
 }
