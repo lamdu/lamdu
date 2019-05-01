@@ -1,0 +1,62 @@
+{
+    "animationTimePeriodSec": 0.11,
+    "animationRemainInPeriod": 0.2,
+    "stdSpacing": [1.0, 0.3],
+    "baseTextSize": 16,
+    "maxEvalViewSize": 32,
+    "typeIndicatorFrameWidth": [3.0, 3.0],
+    "valFramePadding": [7.0, 7.0],
+    "letItemPadding": [5, 5],
+    "presentationChoiceScaleFactor": [0.5, 0.5],
+    "topPadding": 0.5,
+    "statusBar": {
+        "hspaces": 5
+    },
+    "deleted": {
+        "useDiagonalWidth": 0.1
+    },
+    "hover": {
+        "framePadding": [1, 1],
+        "bgPadding": [7.0, 7.0]
+    },
+    "fonts": {
+        "base"        : "fonts/DejaVuSans.ttf",
+        "help"        : "fonts/DejaVuSans.ttf",
+        "autoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
+        "binders"     : "fonts/DejaVuSans-Bold.ttf",
+        "literalText" : "fonts/DejaVuSerif.ttf",
+        "literalBytes": "fonts/DejaVuSansMono.ttf",
+        "debugInfo"   : "fonts/DejaVuSansMono.ttf"
+    },
+    "help": {
+        "textSize": 9
+    },
+    "searchTerm": {
+        "emptyStrings": {
+            "focused": "  ",
+            "unfocused": "  "
+        }
+    },
+    "hole": {
+        "resultPadding": [1.0, 0.5],
+        "frameWidth": [0.04, 0.04]
+    },
+    "name": {
+        "collisionSuffixScaleFactor": [0.5, 0.5]
+    },
+    "eval": {
+        "staleResultTint": [0.5, 0.5, 0.5, 0.5],
+        "neighborsScaleFactor": [0.65, 0.65],
+        "neighborsPadding": [3, 3]
+    },
+    "indent": {
+        "indentBarWidth": 1.5,
+        "indentBarGap": 0.75
+    },
+    "valAnnotation": {
+        "spacing": 0.1,
+        "widthExpansionLimit": 34,
+        "shrinkAtLeast": 80,
+        "maxHeight": 20
+    }
+}

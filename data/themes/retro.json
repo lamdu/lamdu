@@ -1,5 +1,5 @@
 {
-    "imports": ["default.json"],
+    "imports": ["dark.json"],
     "animationTimePeriodSec": 0,
     "animationRemainInPeriod": 0.2,
     "fonts": {

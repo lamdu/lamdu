@@ -65,7 +65,7 @@ make :: IO Env
 make =
     do
         testConfig <- Paths.getDataFileName "config.json" >>= AesonConfig.load
-        testTheme <- TestConfig.loadConfigObject "default"
+        testTheme <- TestConfig.loadConfigObject "dark"
         testLang <- TestConfig.loadConfigObject "english"
         font <-
             testTheme ^. fonts . Fonts.base & Paths.getDataFileName
@@ -78,7 +78,7 @@ make =
                 { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
-            , _eSettings = initial (Selection "default") (Selection "english") Annotations.Evaluation
+            , _eSettings = initial (Selection "dark") (Selection "english") Annotations.Evaluation
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =

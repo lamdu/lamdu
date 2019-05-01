@@ -273,7 +273,7 @@ run opts rawDb =
                 runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
-        initialTheme = Selection "default"
+        initialTheme = Selection "dark"
         initialLanguage = Selection "english"
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
