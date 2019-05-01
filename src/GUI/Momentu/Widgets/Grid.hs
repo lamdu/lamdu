@@ -165,8 +165,12 @@ makeWithKeys =
     Lens.view Element.layoutDir <&>
     \dir keys children ->
     let (size, content) = GridView.makePlacements children
+        orderRow =
+            case dir of
+            Element.LeftToRight -> id
+            Element.RightToLeft -> reverse
     in  ( content & each2d %~ void
-        , toList content <&> toList
+        , toList content <&> orderRow . toList
           & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
           & toWidgetWithKeys dir keys size
         )
