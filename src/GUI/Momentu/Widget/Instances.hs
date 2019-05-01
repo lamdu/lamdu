@@ -19,7 +19,7 @@ import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Orientation(..), Order(..), reverseOrder, applyOrder)
 import qualified GUI.Momentu.Direction as Dir
-import           GUI.Momentu.Element (Element, SizedElement)
+import           GUI.Momentu.Element (Element, SizedElement, LayoutDir(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
@@ -89,29 +89,29 @@ instance (Functor f, a ~ f Update) => Glue View (Widget a) where
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
     glue layoutDir orientation =
-        Glue.glueH (glueStates orientation Forward) layoutDir orientation
+        Glue.glueH (glueStates layoutDir orientation Forward) layoutDir orientation
 
 glueStates ::
     Applicative f =>
-    Orientation -> Order -> Gui Widget f -> Gui Widget f -> Gui Widget f
-glueStates orientation order w0 w1 =
-    w0 & wState .~ combineStates orientation order (w0 ^. wState) (w1 ^. wState)
+    LayoutDir -> Orientation -> Order -> Gui Widget f -> Gui Widget f -> Gui Widget f
+glueStates dir orientation order w0 w1 =
+    w0 & wState .~ combineStates dir orientation order (w0 ^. wState) (w1 ^. wState)
 
 combineStates ::
     Applicative f =>
-    Orientation -> Order ->
+    LayoutDir -> Orientation -> Order ->
     Gui State f -> Gui State f -> Gui State f
-combineStates _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates o order (StateUnfocused u0) (StateUnfocused u1) =
+combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates _ o order (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
     (applyOrder order (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
     (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
         e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates orientation order (StateUnfocused u) (StateFocused f) =
-    combineStates orientation (reverseOrder order)
+combineStates dir orientation order (StateUnfocused u) (StateFocused f) =
+    combineStates dir orientation (reverseOrder order)
     (StateFocused f) (StateUnfocused u)
-combineStates orientation order (StateFocused f) (StateUnfocused u) =
+combineStates dir orientation order (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~
         unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Point))
@@ -148,7 +148,7 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
             & enter
             & (^. enterResultEvent)
             & EventMap.keyPresses
-                (dirKey orientation order stdDirKeys <&> ModKey mempty)
+                (dirKey dir orientation order stdDirKeys <&> ModKey mempty)
             (EventMap.Doc ["Navigation", "Move", Dir.englishName orientation order])
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
@@ -160,11 +160,13 @@ combineStates orientation order (StateFocused f) (StateUnfocused u) =
                 (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
                 (pure fwd)
         dirCons =
-            case (orientation, order) of
-            (Horizontal, Backward) -> FromRight
-            (Horizontal, Forward ) -> FromLeft
-            (Vertical  , Backward) -> FromBelow
-            (Vertical  , Forward ) -> FromAbove
+            case (dir, orientation, order) of
+            (_, Vertical  , Backward) -> FromBelow
+            (_, Vertical  , Forward ) -> FromAbove
+            (LeftToRight, Horizontal, Backward) -> FromRight
+            (LeftToRight, Horizontal, Forward ) -> FromLeft
+            (RightToLeft, Horizontal, Backward) -> FromLeft
+            (RightToLeft, Horizontal, Forward ) -> FromRight
 
 strollAheadKeys :: [MetaKey]
 strollAheadKeys = [MetaKey MetaKey.noMods MetaKey.Key'Tab]

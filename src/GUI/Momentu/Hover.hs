@@ -117,7 +117,7 @@ instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (AnchoredWidget a) (
         Glue.glueH f dir orientation ow0 ow1 & Hover
         where
             f (AnchoredWidget pos w0) w1 =
-                Widget.glueStates orientation Forward w0 w1
+                Widget.glueStates dir orientation Forward w0 w1
                 & AnchoredWidget pos
 
 instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget b) where
@@ -130,7 +130,7 @@ instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (
                 -- The hover is always logically "after" the
                 -- lower-layer widgets, no matter if it is glued
                 -- before/after geometrically
-                AnchoredWidget pos (Widget.glueStates orientation Backward w0 w1)
+                AnchoredWidget pos (Widget.glueStates dir orientation Backward w0 w1)
 
 data Ordered a = Ordered
     { _forward :: a
