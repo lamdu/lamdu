@@ -15,6 +15,7 @@ module GUI.Momentu.Widgets.TextView
 
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
+import qualified Data.Text.Bidi as Bidi
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -64,7 +65,7 @@ lineHeight s = s ^. styleFont & Font.height
 
 fontRender :: Style -> Text -> RenderedText (Draw.Image ())
 fontRender s =
-    Font.render (s ^. styleFont) (s ^. styleColor) (s ^. styleUnderline)
+    Font.render (s ^. styleFont) (s ^. styleColor) (s ^. styleUnderline) . Bidi.toVisual
 
 nestedFrame ::
     Show a =>

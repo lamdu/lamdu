@@ -2,25 +2,25 @@
     "imports": ["right-to-left.mixin.json"],
     "code": {
         "let_": "יהי",
-        "case_": "םאתה",
+        "case_": "התאם",
         "of_": "ל",
-        "if_": " םא",
-        "else_": "תרחא",
-        "elseShort": " וא",
+        "if_": "אם ",
+        "else_": "אחרת",
+        "elseShort": "או ",
         "inject": ":",
         "nullaryInject": ".",
-        "paramsRecordOpener": "} םירטמרפ",
+        "paramsRecordOpener": "פרמטרים }",
         "paramsRecordCloser": "{"
     },
     "codeUI": {
-        "defUpdateHeader": "ןכדע",
-        "defUpdateTo": " :ל",
-        "defUpdateWas": " :היה סופיט",
-        "newDefinitionButton": "...שדח",
-        "undeleteButton": "...רזחש"
+        "defUpdateHeader": "עדכן",
+        "defUpdateTo": "ל: ",
+        "defUpdateWas": "היה טיפוס: ",
+        "newDefinitionButton": "חדש...",
+        "undeleteButton": "שחזר..."
     },
     "statusBar": {
-        "help": " הרזע",
+        "help": "עזרה ",
         "language": "",
         "theme": ""
     }

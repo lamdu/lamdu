@@ -9,7 +9,7 @@
 , random, safe-exceptions, split, StateVar, stdenv, stm, syntax-tree
 , template-haskell, temporary, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers
-, unordered-containers, uuid, uuid-types, vector, yaml
+, unicode-properties, unordered-containers, uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal
 }:
 mkDerivation {
@@ -48,7 +48,7 @@ mkDerivation {
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
     nodejs-exec OpenGL optparse-applicative pretty process random
     safe-exceptions split StateVar stm syntax-tree temporary text time timeit
-    transformers unordered-containers uuid uuid-types vector
+    transformers unicode-properties unordered-containers uuid uuid-types vector
     zip-archive
   ];
   buildDepends = [ gitMinimal ];
