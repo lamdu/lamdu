@@ -50,13 +50,7 @@ stackDepsTest =
         & testCase "verify-stack"
     where
         -- Nix files that don't reflect stack.yaml dependencies
-        extraNixFiles =
-            [ "lamdu.nix"
-            , -- GLFW-b build is customized in nix.
-              -- TODO: Does it have to be?
-              "GLFW-b.nix"
-            , "bindings-GLFW.nix"
-            ]
+        extraNixFiles = ["lamdu.nix"]
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
