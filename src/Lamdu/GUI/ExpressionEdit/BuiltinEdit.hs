@@ -59,7 +59,7 @@ makeNamePartEditor color namePartStr setter myId =
     where
         empty =
             TextEdit.Modes
-            { TextEdit._unfocused = "unnamed builtin"
+            { TextEdit._unfocused = "(?)"
             , TextEdit._focused = ""
             }
 
