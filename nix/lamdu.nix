@@ -1,7 +1,7 @@
 { mkDerivation, aeson, aeson-diff, aeson-pretty, ansi-wl-pprint, base
 , base-compat, base-orphans, base16-bytestring, binary, bytestring
 , Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
-, deepseq-generics, directory, edit-distance, ekg-core
+, directory, edit-distance, ekg-core
 , executable-path, filepath, generic-random, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
@@ -42,7 +42,7 @@ mkDerivation {
   libraryHaskellDepends = [
     aeson aeson-pretty ansi-wl-pprint base base-compat base-orphans
     base16-bytestring binary bytestring constraints containers cryptohash-sha256
-    data-default deepseq deepseq-generics directory edit-distance
+    data-default deepseq directory edit-distance
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
@@ -57,7 +57,7 @@ mkDerivation {
   ];
   testHaskellDepends = [
     aeson aeson-diff aeson-pretty base bytestring Cabal
-    containers deepseq deepseq-generics directory filepath
+    containers deepseq directory filepath
     generic-random GLFW-b HUnit lamdu-calculus lens lens-aeson List mtl
     nodejs-exec pretty process QuickCheck random split syntax-tree test-framework
     test-framework-hunit test-framework-quickcheck2 text uuid-types

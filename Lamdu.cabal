@@ -90,7 +90,7 @@ Test-Suite Tests
                , Tests.WidgetGlue
   build-depends:
       base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
-    , aeson-diff, deepseq, deepseq-generics, generic-random, lens-aeson, QuickCheck, split, yaml
+    , aeson-diff, deepseq, generic-random, lens-aeson, QuickCheck, split, yaml
     , Lamdu, lamdu-calculus, syntax-tree, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
@@ -115,7 +115,6 @@ Library
                   , constraints
                   , data-default >= 0.5
                   , deepseq
-                  , deepseq-generics >= 0.1
                   , directory >= 1.0.1.1
                   , ekg-core
                   , filepath >= 1.1

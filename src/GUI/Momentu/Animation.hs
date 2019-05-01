@@ -14,7 +14,6 @@ module GUI.Momentu.Animation
     ) where
 
 import           Control.DeepSeq (NFData(..), deepseq)
-import           Control.DeepSeq.Generics (genericRnf)
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation.Id
@@ -42,7 +41,7 @@ newtype Frame = Frame
     { _frameImages :: [Image]
     } deriving (Generic)
 Lens.makeLenses ''Frame
-instance NFData Frame where rnf = genericRnf
+instance NFData Frame
 
 {-# INLINE images #-}
 images :: Lens.Traversal' Frame Image

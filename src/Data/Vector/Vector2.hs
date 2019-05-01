@@ -7,7 +7,6 @@ where
 
 import           Control.Applicative (liftA2)
 import           Control.DeepSeq (NFData(..))
-import           Control.DeepSeq.Generics (genericRnf)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Aeson.Types as Aeson
@@ -25,8 +24,7 @@ data Vector2 a = Vector2 !a !a
     -- (Vectors aren't ordinals!). Useful to have in a binary search
     -- tree though.
 instance Binary a => Binary (Vector2 a)
-
-instance NFData a => NFData (Vector2 a) where rnf = genericRnf
+instance NFData a => NFData (Vector2 a)
 
 instance Aeson.ToJSON a => Aeson.ToJSON (Vector2 a) where
     toJSON (Vector2 x y) = Aeson.toJSON (x, y)

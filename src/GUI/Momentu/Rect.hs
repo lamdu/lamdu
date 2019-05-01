@@ -13,7 +13,6 @@ module GUI.Momentu.Rect
     ) where
 
 import           Control.DeepSeq (NFData(..))
-import           Control.DeepSeq.Generics (genericRnf)
 import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
@@ -30,7 +29,7 @@ data Rect = Rect
     } deriving (Show, Generic, Eq, Ord)
 Lens.makeLenses ''Rect
 
-instance NFData Rect where rnf = genericRnf
+instance NFData Rect
 
 {-# INLINE topLeftAndSize #-}
 topLeftAndSize :: Traversal' Rect (Vector2 R)
