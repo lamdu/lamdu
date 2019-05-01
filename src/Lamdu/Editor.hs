@@ -26,7 +26,7 @@ import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as ConfigFolder
-import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme, sTexts)
+import           Lamdu.Config.Sampler (Sampler, sConfig, sTheme, sLanguage)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -212,10 +212,10 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 , _debugMonitors = monitors
                 , _cachedFunctions = cachedFunctions
                 , _layoutDir =
-                    if sample ^. sTexts . Texts.isLeftToRight
+                    if sample ^. sLanguage . Texts.isLeftToRight
                     then Element.LeftToRight
                     else Element.RightToLeft
-                , _texts = sample ^. sTexts
+                , _texts = sample ^. sLanguage
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of

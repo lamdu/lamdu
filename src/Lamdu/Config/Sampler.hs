@@ -2,7 +2,7 @@
 module Lamdu.Config.Sampler
     ( Sampler, new
     , Sample(..), sConfigPath, sConfig
-    , sThemePath, sTheme, sTextsPath, sTexts, setSelection
+    , sThemePath, sTheme, sLanguagePath, sLanguage, setSelection
     , getSample
     ) where
 
@@ -35,8 +35,8 @@ data Sample = Sample
     , _sConfig :: Config
     , _sThemePath :: FilePath
     , _sTheme :: Theme
-    , _sTextsPath :: FilePath
-    , _sTexts :: Language
+    , _sLanguagePath :: FilePath
+    , _sLanguage :: Language
     } deriving (Eq)
 Lens.makeLenses ''Sample
 
@@ -49,7 +49,7 @@ data Sampler = Sampler
 withMTime :: FilePath -> IO (Config, (FilePath, Theme), (FilePath, Language)) -> IO Sample
 withMTime _sConfigPath act =
     do
-        (_sConfig, (_sThemePath, _sTheme), (_sTextsPath, _sTexts)) <- act
+        (_sConfig, (_sThemePath, _sTheme), (_sLanguagePath, _sLanguage)) <- act
         sVersion <- traverse getModificationTime [_sConfigPath, _sThemePath]
         pure Sample{..}
 
@@ -77,7 +77,7 @@ maybeReload old newConfigPath =
             traverse getModificationTime [old ^. sConfigPath, old ^. sThemePath]
         if mtime == sVersion old
             then pure Nothing
-            else load (f sThemePath) (f sTextsPath) newConfigPath <&> Just
+            else load (f sThemePath) (f sLanguagePath) newConfigPath <&> Just
     where
         f l = old ^. l & takeFileName & dropExtension & Text.pack & Selection
 
