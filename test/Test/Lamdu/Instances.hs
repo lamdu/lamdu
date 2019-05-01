@@ -132,8 +132,7 @@ instance HasPrecedence InternalName where
     precedence (InternalName _ (T.Tag (Identifier ident))) =
         precedence (BS8.head ident)
 
-instance NFData (Transaction m a) where
-    rnf = pure () -- Cheating
+instance NFData (Transaction m a) where rnf = pure () -- Cheating
 
 instance Eq (Unit a) where _ == _ = True
 instance Eq (a -> Unit b) where _ == _ = True

@@ -26,10 +26,10 @@ type R = Double
 data Rect = Rect
     { _topLeft :: !(Vector2 R)
     , _size :: !(Vector2 R)
-    } deriving (Show, Generic, Eq, Ord)
+    }
+    deriving stock (Show, Generic, Eq, Ord)
+    deriving anyclass NFData
 Lens.makeLenses ''Rect
-
-instance NFData Rect
 
 {-# INLINE topLeftAndSize #-}
 topLeftAndSize :: Traversal' Rect (Vector2 R)

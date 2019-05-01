@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, GeneralizedNewtypeDeriving #-}
 
 module GUI.Momentu.Animation
     ( R, Size
@@ -35,15 +35,18 @@ data Image = Image
     , _iRect :: !Rect
     } deriving (Generic)
 Lens.makeLenses ''Image
+
+-- Custom instance that skips iUnitImage which has no real idea of forcing
 instance NFData Image where
     rnf (Image animId _image rect) = animId `deepseq` rect `deepseq` ()
 
 newtype Frame = Frame
     { _frameImages :: [Image]
-    } deriving stock Generic
+    }
+    deriving stock Generic
+    deriving newtype NFData
     deriving (Semigroup, Monoid) via Generically Frame
 Lens.makeLenses ''Frame
-instance NFData Frame
 
 {-# INLINE images #-}
 images :: Lens.Traversal' Frame Image
