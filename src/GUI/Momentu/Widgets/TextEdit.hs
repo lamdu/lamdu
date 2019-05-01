@@ -124,7 +124,7 @@ makeInternal s str emptyStrings mode myId =
         (displayStr, setColor)
             | Text.null str = (emptyStrings ^. mode, TextView.color .~ emptyColor)
             | otherwise = (Text.take 5000 str, id)
-        v = TextView.make (setColor (s ^. sTextViewStyle)) displayStr animId
+        v = TextView.make (setColor s) displayStr animId
             & Element.padAround (Vector2 (s ^. sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
