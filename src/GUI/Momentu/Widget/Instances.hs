@@ -102,12 +102,12 @@ combineStates ::
     LayoutDir -> Orientation -> Order ->
     Gui State f -> Gui State f -> Gui State f
 combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates _ o order (StateUnfocused u0) (StateUnfocused u1) =
+combineStates d o order (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
     (applyOrder order (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
     (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
-        e = combineMEnters o (u0 ^. uMEnter) (u1 ^. uMEnter)
+        e = combineMEnters d o (u0 ^. uMEnter) (u1 ^. uMEnter)
 combineStates dir orientation order (StateUnfocused u) (StateFocused f) =
     combineStates dir orientation (reverseOrder order)
     (StateFocused f) (StateUnfocused u)
@@ -175,18 +175,18 @@ strollBackKeys :: [MetaKey]
 strollBackKeys = [MetaKey.shift MetaKey.Key'Tab]
 
 combineMEnters ::
-    Orientation ->
+    LayoutDir -> Orientation ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a)
-combineMEnters = unionMaybeWith . combineEnters
+combineMEnters d = unionMaybeWith . combineEnters d
 
 combineEnters ::
-    Orientation ->
+    LayoutDir -> Orientation ->
     (FocusDirection -> EnterResult a) ->
     (FocusDirection -> EnterResult a) ->
     FocusDirection -> EnterResult a
-combineEnters o e0 e1 dir = chooseEnter o dir (e0 dir) (e1 dir)
+combineEnters ldir o e0 e1 dir = chooseEnter ldir o dir (e0 dir) (e1 dir)
 
 combineEnterPoints ::
     (Vector2 R -> EnterResult a) -> (Vector2 R -> EnterResult a) ->
@@ -208,22 +208,24 @@ closer axis r r0 r1
     | otherwise = r1
 
 chooseEnter ::
-    Orientation -> FocusDirection ->
+    LayoutDir -> Orientation -> FocusDirection ->
     EnterResult a -> EnterResult a -> EnterResult a
-chooseEnter _          FromOutside r0 _  = r0 -- left-biased
-chooseEnter _          (Point p) r0 r1 = closerGeometric p r0 r1
-chooseEnter Horizontal FromLeft{}  r0 _  = r0
-chooseEnter Vertical   FromAbove{} r0 _  = r0
-chooseEnter Horizontal FromRight{} _  r1 = r1
-chooseEnter Vertical   FromBelow{} _  r1 = r1
-chooseEnter Horizontal (FromAbove r) r0 r1 =
+chooseEnter _ _          FromOutside r0 _  = r0 -- left-biased
+chooseEnter _ _          (Point p) r0 r1 = closerGeometric p r0 r1
+chooseEnter _ Vertical   FromAbove{} r0 _  = r0
+chooseEnter _ Vertical   FromBelow{} _  r1 = r1
+chooseEnter _ Horizontal (FromAbove r) r0 r1 =
     closer Rect.horizontalRange r r0 r1
-chooseEnter Horizontal (FromBelow r) r0 r1 =
+chooseEnter _ Horizontal (FromBelow r) r0 r1 =
     closer Rect.horizontalRange r r0 r1
-chooseEnter Vertical (FromLeft r) r0 r1 =
+chooseEnter _ Vertical (FromLeft r) r0 r1 =
     closer Rect.verticalRange r r0 r1
-chooseEnter Vertical (FromRight r) r0 r1 =
+chooseEnter _ Vertical (FromRight r) r0 r1 =
     closer Rect.verticalRange r r0 r1
+chooseEnter LeftToRight Horizontal FromLeft{}  r0 _  = r0
+chooseEnter LeftToRight Horizontal FromRight{} _  r1 = r1
+chooseEnter RightToLeft Horizontal FromLeft{}  _  r1 = r1
+chooseEnter RightToLeft Horizontal FromRight{} r0 _  = r0
 
 stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)

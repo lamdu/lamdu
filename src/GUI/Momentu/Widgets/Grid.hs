@@ -57,10 +57,11 @@ data NavDests a = NavDests
 
 mkNavDests ::
     Functor f =>
+    Element.LayoutDir ->
     Cursor -> State.VirtualCursor ->
     [[Maybe (FocusDirection -> Gui Widget.EnterResult f)]] ->
     Gui NavDests f
-mkNavDests (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
+mkNavDests dir (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
     NavDests
     { cursorLeft    = reverse colsLeft  & enterHoriz FromRight
     , cursorUp     = reverse rowsAbove & enterVert  FromBelow
@@ -90,7 +91,7 @@ mkNavDests (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
         prevArea = virtCursor ^. State.vcRect
         enterFrom orientation axis cons lns =
             lns
-            <&> foldl' (WidgetGlue.combineMEnters orientation) Nothing
+            <&> foldl' (WidgetGlue.combineMEnters dir orientation) Nothing
             & msum
             ?? cons (prevArea ^# axis)
             <&> setVirt axis
@@ -203,7 +204,7 @@ toWidgetWithKeys dir keys size sChildren =
             \surrounding ->
             let focusedChild = makeFocusedChild surrounding
                 addNavDests eventContext =
-                    mkNavDests cursor (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
+                    mkNavDests dir cursor (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
                     & addNavEventmap keys
                 (before, after) = break ((>= cursor) . fst) (sortOn fst (unfocused ^@.. each2d))
                 -- TODO: DRY with Widget's Glue instance
