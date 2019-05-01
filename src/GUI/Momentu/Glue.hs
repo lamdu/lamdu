@@ -24,7 +24,7 @@ class (Glued b a ~ Glued a b) => Glue a b where
 
 type GluesTo a b c = (Glue a b, Glue b a, Glued a b ~ c)
 
-newtype Poly = Poly { polyGlue :: forall a b c. GluesTo a b c => a -> b -> c }
+newtype Poly = Poly { polyGlue :: forall a b. Glue a b => a -> b -> Glued a b }
 
 mkPoly ::
     (MonadReader env m, Element.HasLayoutDir env) => m (Orientation -> Poly)
@@ -35,7 +35,7 @@ mkPoly =
 mkGlue ::
     (MonadReader env m, Element.HasLayoutDir env, Glue a b) =>
     m (Orientation -> a -> b -> Glued a b)
-mkGlue = Lens.view Element.layoutDir <&> glue
+mkGlue = mkPoly <&> (polyGlue .)
 
 -- Horizontal glue
 (/|/) ::
