@@ -1,4 +1,7 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies, FlexibleContexts, UndecidableInstances, PolymorphicComponents #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, UndecidableInstances, PolymorphicComponents #-}
+{-# LANGUAGE DerivingVia  #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --
@@ -19,12 +22,12 @@ module Lamdu.GUI.ExpressionGui.Monad
     ) where
 
 import           AST (Tree, Ann(..), ann)
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
+import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
@@ -90,6 +93,7 @@ data Askable i o = Askable
 newtype ExprGuiM i (o :: * -> *) a =
     ExprGuiM (ReaderT (Askable i o) i a)
     deriving newtype (Functor, Applicative, Monad, MonadReader (Askable i o))
+    deriving (Semigroup, Monoid) via (Monoid.Ap (ExprGuiM i o) a)
 
 Lens.makeLenses ''Askable
 
@@ -149,12 +153,6 @@ readMScopeId = Lens.view aMScopeId
 withLocalMScopeId ::
     MonadReader (Askable i o) m => CurAndPrev (Maybe ScopeId) -> m a -> m a
 withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
-
-instance (Monad i, Semigroup a) => Semigroup (ExprGuiM i o a) where
-    (<>) = liftA2 (<>)
-
-instance (Monad i, Monoid a) => Monoid (ExprGuiM i o a) where
-    mempty = pure mempty
 
 instance MonadTransaction n i => MonadTransaction n (ExprGuiM i o) where
     transaction = im . transaction

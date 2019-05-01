@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Revision.Deltum.Transaction
     ( Transaction, run
@@ -17,7 +18,7 @@ module Revision.Deltum.Transaction
     )
 where
 
-import           Control.Applicative ((<|>), liftA2)
+import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -26,6 +27,7 @@ import qualified Control.Monad.Trans.State as State
 import           Data.Binary.Extended (Binary, encodeS, decodeS)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, isJust)
+import qualified Data.Monoid as Monoid
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
@@ -69,10 +71,7 @@ newtype Transaction m a =
     Transaction (ReaderT (Askable m) (StateT ChangesMap m) a)
     deriving stock Generic
     deriving newtype (Functor, Applicative, Monad)
-instance (Monad m, Semigroup a) => Semigroup (Transaction m a) where
-    (<>) = liftA2 (<>)
-instance (Monad m, Monoid a) => Monoid (Transaction m a) where
-    mempty = pure mempty
+    deriving (Semigroup, Monoid) via Monoid.Ap (Transaction m) a
 
 type T = Transaction
 
