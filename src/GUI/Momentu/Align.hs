@@ -86,61 +86,63 @@ instance ( SizedElement (Glued a b)
          , SizedElement b, Glue a b
          ) => Glue (Aligned a) (Aligned b) where
     type Glued (Aligned a) (Aligned b) = Aligned (Glued a b)
-    glue d o a b =
-        glueHelper fst d o (a ^. absAligned) (b ^. absAligned) ^. Lens.from absAligned
+    glue texts d o a b =
+        glueHelper fst texts d o (a ^. absAligned) (b ^. absAligned) ^.
+        Lens.from absAligned
 
 instance ( SizedElement a
          , SizedElement b
          , Glue a b ) => Glue (WithTextPos a) (WithTextPos b) where
     type Glued (WithTextPos a) (WithTextPos b) = WithTextPos (Glued a b)
     -- | Vertical glue takes the top text pos
-    glue d o (WithTextPos ay a) (WithTextPos by b) =
+    glue texts d o (WithTextPos ay a) (WithTextPos by b) =
         WithTextPos y glued
         where
             (Vector2 0 y, glued) =
-                glueHelper fst d o (Vector2 0 ay, a) (Vector2 0 by, b)
+                glueHelper fst texts d o (Vector2 0 ay, a) (Vector2 0 by, b)
 
 instance Glue a (Widget b) => Glue (WithTextPos a) (Widget b) where
     type Glued (WithTextPos a) (Widget b) = WithTextPos (Glued a (Widget b))
-    glue d o (WithTextPos y a) b = WithTextPos y (glue d o a b)
+    glue texts d o (WithTextPos y a) b = WithTextPos y (glue texts d o a b)
 
 instance (SizedElement (Widget a), Glue (Widget a) b) =>
          Glue (Widget a) (WithTextPos b) where
     type Glued (Widget a) (WithTextPos b) = WithTextPos (Glued (Widget a) b)
-    glue d o a (WithTextPos y b) =
+    glue texts d o a (WithTextPos y b) =
         WithTextPos
         { _textTop =
             case o of
             Dir.Vertical -> y + a ^. Element.height
             Dir.Horizontal -> y
-        , _tValue = glue d o a b
+        , _tValue = glue texts d o a b
         }
 
 instance Glue a View => Glue (WithTextPos a) View where
     type Glued (WithTextPos a) View = WithTextPos (Glued a View)
-    glue d o (WithTextPos y a) b = WithTextPos y (glue d o a b)
+    glue texts d o (WithTextPos y a) b = WithTextPos y (glue texts d o a b)
 
 instance Glue View a => Glue View (WithTextPos a) where
     type Glued View (WithTextPos a) = WithTextPos (Glued View a)
-    glue d o a (WithTextPos y b) =
+    glue texts d o a (WithTextPos y b) =
         WithTextPos
         { _textTop =
             case o of
             Dir.Vertical -> y + a ^. Element.height
             Dir.Horizontal -> y
-        , _tValue = glue d o a b
+        , _tValue = glue texts d o a b
         }
 
 glueHelper ::
     (Glue a b, Element b, SizedElement a) =>
-    ((Vector2 R, Vector2 R) -> Vector2 R) -> Dir.Layout -> Dir.Orientation ->
+    ((Vector2 R, Vector2 R) -> Vector2 R) ->
+    Dir.Texts Text -> Dir.Layout -> Dir.Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, Glued a b)
-glueHelper chooseAlign layoutDir orientation (aAbsAlign, aw) (bAbsAlign, bw) =
+glueHelper chooseAlign texts layoutDir orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     ( chooseAlign
         ( aAbsAlign + max 0 aToB
         , bAbsAlign + max 0 bToA + bGlueTranslation
         )
-    , glue layoutDir orientation (syncAlign aToB aw) (syncAlign bToA bw)
+    , glue texts layoutDir orientation (syncAlign aToB aw) (syncAlign bToA bw)
     )
     where
         l :: Lens' (Vector2 a) a
@@ -176,16 +178,16 @@ absAligned =
             | otherwise = align / size
 
 boxAlign ::
-    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasTexts env) =>
     m (Dir.Orientation -> Widget.R -> [a] -> a)
 boxAlign = Glue.box <&> \box o r xs -> box o (xs <&> Aligned (pure r)) ^. value
 
 vboxAlign ::
-    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasTexts env) =>
     m (Widget.R -> [a] -> a)
 vboxAlign = boxAlign ?? Dir.Vertical
 
 hboxAlign ::
-    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasTexts env) =>
     m (Widget.R -> [a] -> a)
 hboxAlign = boxAlign ?? Dir.Horizontal

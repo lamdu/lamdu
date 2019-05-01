@@ -106,7 +106,7 @@ makeIndicator tag enabledColor text =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
-    , Dir.HasLayoutDir env, HasTheme env, HasConfig env
+    , HasTheme env, HasConfig env, Dir.HasTexts env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -161,7 +161,7 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
-    , Dir.HasLayoutDir env, HasTheme env, HasConfig env
+    , HasTheme env, HasConfig env, Dir.HasTexts env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))

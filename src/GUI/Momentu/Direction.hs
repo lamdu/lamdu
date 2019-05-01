@@ -1,10 +1,12 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module GUI.Momentu.Direction
     ( Orientation(..), _Horizontal, _Vertical
     , perpendicular, axis, rectRange
     , Order(..), _Forward, _Backward
     , reverseOrder, applyOrder
-    , englishName
+    , Texts(..), left, right, up, down, navigation, move
+    , HasTexts(..)
+    , textLens
     , Layout(..), _LeftToRight, _RightToLeft
     , HasLayoutDir(..)
     ) where
@@ -12,7 +14,7 @@ module GUI.Momentu.Direction
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
-import           Data.String (IsString(..))
+import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Rect (Rect, R)
 import qualified GUI.Momentu.Rect as Rect
@@ -55,11 +57,27 @@ applyOrder :: Order -> (a -> a -> b) -> a -> a -> b
 applyOrder Forward = id
 applyOrder Backward = flip
 
-englishName :: IsString a => Orientation -> Order -> a
-englishName Horizontal Backward = "left"
-englishName Horizontal Forward = "right"
-englishName Vertical Backward = "up"
-englishName Vertical Forward = "down"
+data Texts a = Texts
+    { _left :: a
+    , _right :: a
+    , _up :: a
+    , _down :: a
+    , _navigation :: a
+    , _move :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
 
-Lens.makePrisms ''Orientation
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+
+class HasLayoutDir env => HasTexts env where texts :: Lens' env (Texts Text)
+
+Lens.makeLenses ''Texts
 Lens.makePrisms ''Order
+Lens.makePrisms ''Orientation
+
+textLens :: Functor f => Orientation -> Order -> Lens.LensLike' f (Texts a) a
+textLens Horizontal Backward = left
+textLens Horizontal Forward = right
+textLens Vertical Backward = up
+textLens Vertical Forward = down

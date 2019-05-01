@@ -46,8 +46,8 @@ class HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
 disambiguators ::
-    ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Functor f, Dir.HasLayoutDir env
+    ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
+    , Dir.HasTexts env
     ) =>
     m (AnimId -> Gui Options.Disambiguators f)
 disambiguators =
@@ -57,8 +57,7 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    ( MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env
-    , Functor f) =>
+    (MonadReader env m, TextView.HasStyle env, Dir.HasTexts env, Functor f) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
     do
@@ -74,8 +73,8 @@ addParens =
             in  paren preLabel ||| w ||| paren postLabel
 
 indent ::
-    ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasLayoutDir env, Functor f
+    ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
+    , Dir.HasTexts env
     ) =>
     m (AnimId -> Gui Responsive f -> Gui Responsive f)
 indent =
@@ -98,8 +97,8 @@ totalBarWidth =
         stdSpace * (s ^. indentBarWidth + s ^. indentBarGap) & pure
 
 indentBar ::
-    ( MonadReader env m, HasStyle env, Dir.HasLayoutDir env
-    , Spacer.HasStdSpacing env
+    ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
+    , Dir.HasTexts env
     ) =>
     m (Widget.R -> AnimId -> View)
 indentBar =
@@ -117,15 +116,15 @@ indentBar =
             in  bar ||| Spacer.make (Vector2 gapWidth 0)
 
 boxSpacedDisambiguated ::
-    ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasLayoutDir env, Applicative f
+    ( MonadReader env m, Applicative f, HasStyle env, Spacer.HasStdSpacing env
+    , Dir.HasTexts env
     ) =>
     m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
-    ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasLayoutDir env, Applicative f
+    ( MonadReader env m, Applicative f, HasStyle env, Spacer.HasStdSpacing env
+    , Dir.HasTexts env
     ) =>
     m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedMDisamb =

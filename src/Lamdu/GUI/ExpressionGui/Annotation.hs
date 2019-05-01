@@ -198,7 +198,7 @@ annotationSpacer =
 addAnnotationH ::
     ( Functor f, MonadReader env m, HasTheme env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
-    , Dir.HasLayoutDir env
+    , Dir.HasTexts env -- TODO: An artifact constraint
     ) =>
     m (WithTextPos View) ->
     WideAnnotationBehavior ->
@@ -224,7 +224,8 @@ addAnnotationH f wideBehavior =
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
+    , Element.HasAnimIdPrefix env
+    , Dir.HasTexts env -- TODO: An artifact constraint
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
     m (Gui Widget f -> Gui Widget f)

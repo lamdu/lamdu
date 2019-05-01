@@ -21,9 +21,17 @@
             "undeleteButton": "שחזר..."
         },
         "statusBar": {
-            "help": "עזרה ",
+            "help": " עזרה",
             "language": "שפה",
             "theme": "תמה"
+        },
+        "dir": {
+            "left": "שמאלה",
+            "right": "ימינה",
+            "up": "למעלה",
+            "down": "למטה",
+            "move": "זוז",
+            "navigation": "ניווט"
         }
     }
 }

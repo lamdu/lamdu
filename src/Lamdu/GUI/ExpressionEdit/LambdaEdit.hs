@@ -40,7 +40,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 addScopeEdit ::
-    (MonadReader env m, Applicative o, Dir.HasLayoutDir env) =>
+    (MonadReader env m, Applicative o, Dir.HasTexts env) =>
     m (Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o)
 addScopeEdit =
     Glue.mkGlue ?? Glue.Vertical
@@ -48,7 +48,7 @@ addScopeEdit =
                 (|---| maybe Element.empty (WithTextPos 0) mScopeEdit))
 
 mkLhsEdits ::
-    (MonadReader env m, Applicative o, Dir.HasLayoutDir env) =>
+    (MonadReader env m, Applicative o, Dir.HasTexts env) =>
     m
     (Maybe (Gui Responsive o) ->
      Maybe (Gui Widget o) -> [Gui Responsive o])

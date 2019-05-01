@@ -69,11 +69,13 @@ data Env = Env
     , _eStyle :: Style
     , _eAnimIdPrefix :: AnimId
     , _eLayoutDir :: Dir.Layout
+    , _eTexts :: Dir.Texts Text
     }
 Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eStyle . styleText
 instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
+instance Dir.HasTexts Env where texts = eTexts
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -95,13 +97,14 @@ defaultConfig =
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
     }
 
-defaultEnv :: Font -> Env
-defaultEnv font =
+defaultEnv :: Dir.Texts Text -> Font -> Env
+defaultEnv texts font =
     Env
     { _eConfig = defaultConfig
     , _eStyle = defaultStyle font
     , _eAnimIdPrefix = ["help box"]
     , _eLayoutDir = Dir.LeftToRight
+    , _eTexts = texts
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -190,9 +193,7 @@ makeTooltip helpKeys =
     (Label.make "Show help" <&> (^. Align.tValue))
     /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
-mkIndent ::
-    (MonadReader env m, Dir.HasLayoutDir env) =>
-    m (R -> View -> View)
+mkIndent :: (MonadReader env m, Dir.HasTexts env) => m (R -> View -> View)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
 
 fontHeight :: (MonadReader env m, TextView.HasStyle env) => m R
@@ -200,7 +201,7 @@ fontHeight =
     Lens.view (TextView.style . TextView.styleFont) <&> Font.height
 
 makeFlatTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env) =>
+    (MonadReader env m, TextView.HasStyle env, Dir.HasTexts env) =>
     m (Vector2 R -> [(View, View)] -> View)
 makeFlatTreeView =
     (,,)
@@ -220,7 +221,7 @@ makeFlatTreeView =
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env) =>
+    (MonadReader env m, TextView.HasStyle env, Dir.HasTexts env) =>
     m (Vector2 R -> [Tree View View] -> View)
 makeTreeView =
     do

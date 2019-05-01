@@ -78,6 +78,7 @@ instance SearchMenu.HasTermStyle Env where termStyle = theme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
-instance Dir.HasLayoutDir Env where layoutDir = language . Texts.lDirection
+instance Dir.HasLayoutDir Env where layoutDir = language . Dir.layoutDir
+instance Dir.HasTexts Env where texts = Texts.language . Dir.texts
 instance Texts.HasLanguage Env where language = language
 

@@ -73,6 +73,7 @@ Test-Suite Tests
                , Test.Lamdu.Prelude
                , Test.Lamdu.Sugar
                , Test.Lamdu.SugarStubs
+               , Test.Momentu.Env
                , Tests.AnimIdClash
                , Tests.Codec
                , Tests.ColorSchemes

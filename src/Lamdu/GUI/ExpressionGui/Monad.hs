@@ -115,6 +115,7 @@ instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
 instance Dir.HasLayoutDir (Askable i o) where layoutDir = aLayoutDir
+instance Dir.HasTexts (Askable i o) where texts = aLanguage . Texts.lTexts . Texts.dir
 instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a

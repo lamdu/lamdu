@@ -13,6 +13,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
@@ -35,7 +36,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import           Lamdu.Sugar.Types (ResVal)
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified GUI.Momentu.Direction as Dir
 
 import           Lamdu.Prelude
 

@@ -283,9 +283,9 @@ enterWithSearchTerm searchTerm myId =
     <> State.updateWidgetState myId searchTerm
 
 make ::
-    ( MonadReader env m, HasState env, Menu.HasConfig env
+    ( MonadReader env m, Applicative f, HasState env, Menu.HasConfig env
     , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Dir.HasLayoutDir env, Applicative f
+    , Dir.HasTexts env
     ) =>
     (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->

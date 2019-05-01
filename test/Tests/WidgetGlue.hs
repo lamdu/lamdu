@@ -21,6 +21,7 @@ import           GUI.Momentu.Widget (R, Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 import           Generic.Random
 import qualified Graphics.UI.GLFW as GLFW
+import           Test.Momentu.Env (env)
 import           Test.QuickCheck
 
 import           Test.Lamdu.Prelude as X
@@ -61,13 +62,13 @@ toWidgetUnfocused (UnfocusedLeaf size x) =
     , Widget._uLayers = mempty
     } & Widget size
 toWidgetUnfocused (UnfocusedGlue orientation x y) =
-    glue Dir.LeftToRight orientation
+    glue (env ^. Dir.texts) Dir.LeftToRight orientation
     (toWidgetUnfocused x) (toWidgetUnfocused y)
 
 -- TODO: Test Dir.Layout
 glueFocused :: GluesTo a b c => GlueOrder -> Orientation -> a -> b -> c
-glueFocused FocusedFirst = glue Dir.LeftToRight
-glueFocused FocusedLast = glue Dir.LeftToRight <&> flip
+glueFocused FocusedFirst = glue (env ^. Dir.texts) Dir.LeftToRight
+glueFocused FocusedLast = glue (env ^. Dir.texts) Dir.LeftToRight <&> flip
 
 data Env = Env
     { _eAnimId :: AnimId

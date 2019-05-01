@@ -81,6 +81,7 @@ data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
     , _statusBar :: StatusBar a
+    , _dir :: Dir.Texts a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
@@ -105,10 +106,10 @@ deriveJSON Aeson.defaultOptions
 instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class Dir.HasLayoutDir env => HasLanguage env where
-    language :: Lens' env Language
+class Dir.HasTexts env => HasLanguage env where language :: Lens' env Language
 
 instance Dir.HasLayoutDir Language where layoutDir = lDirection
+instance Dir.HasTexts Language where texts = lTexts . dir
 instance HasLanguage Language where language = id
 
 texts :: HasLanguage env => Lens' env (Texts Text)

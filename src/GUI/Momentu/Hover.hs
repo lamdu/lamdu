@@ -98,7 +98,7 @@ instance (Functor f, a ~ f State.Update) => SizedElement (AnchoredWidget a) wher
 instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover View) where
     type Glued (AnchoredWidget a) (Hover View) =
         Hover (AnchoredWidget a)
-    glue d o ow (Hover ov) =
+    glue _ d o ow (Hover ov) =
         Glue.glueH f d o ow ov & Hover
         where
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
@@ -106,7 +106,7 @@ instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover View)
 instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a) where
     type Glued (Hover View) (AnchoredWidget a) =
         Hover (AnchoredWidget a)
-    glue d o (Hover ov) =
+    glue _ d o (Hover ov) =
         Glue.glueH f d o ov <&> Hover
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
@@ -114,24 +114,25 @@ instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a)
 instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widget b)) where
     type Glued (AnchoredWidget a) (Hover (Widget b)) =
         Hover (AnchoredWidget a)
-    glue dir orientation ow0 (Hover ow1) =
+    glue texts dir orientation ow0 (Hover ow1) =
         Glue.glueH f dir orientation ow0 ow1 & Hover
         where
             f (AnchoredWidget pos w0) w1 =
-                Widget.glueStates dir orientation Forward w0 w1
+                Widget.glueStates texts dir orientation Forward w0 w1
                 & AnchoredWidget pos
 
 instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget b) where
     type Glued (Hover (Widget a)) (AnchoredWidget b) =
         Hover (AnchoredWidget a)
-    glue dir orientation (Hover ow0) =
+    glue texts dir orientation (Hover ow0) =
         Glue.glueH f dir orientation ow0 <&> Hover
         where
             f w0 (AnchoredWidget pos w1) =
                 -- The hover is always logically "after" the
                 -- lower-layer widgets, no matter if it is glued
                 -- before/after geometrically
-                AnchoredWidget pos (Widget.glueStates dir orientation Backward w0 w1)
+                Widget.glueStates texts dir orientation Backward w0 w1
+                & AnchoredWidget pos
 
 data Ordered a = Ordered
     { _forward :: a
@@ -141,8 +142,7 @@ data Ordered a = Ordered
 Lens.makeLenses ''Ordered
 
 hoverBesideOptionsAxis ::
-    ( MonadReader env m, Dir.HasLayoutDir env
-    , GluesTo a b c
+    ( MonadReader env m, Dir.HasTexts env, GluesTo a b c
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (Orientation -> Ordered a -> b -> [c])
@@ -160,7 +160,7 @@ anchor :: Widget a -> AnchoredWidget a
 anchor = AnchoredWidget 0
 
 hoverBesideOptions ::
-    ( MonadReader env m, Dir.HasLayoutDir env, GluesTo a b c
+    ( MonadReader env m, Dir.HasTexts env, GluesTo a b c
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (a -> b -> [c])
@@ -253,9 +253,8 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
 
 hoverBeside ::
     ( GluesTo (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
-    , MonadReader env m, Dir.HasLayoutDir env, SizedElement w
-    , Element.HasAnimIdPrefix env, HasStyle env
-    , Functor f
+    , MonadReader env m, Functor f, SizedElement w
+    , Element.HasAnimIdPrefix env, HasStyle env, Dir.HasTexts env
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m

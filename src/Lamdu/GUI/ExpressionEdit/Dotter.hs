@@ -40,9 +40,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 add ::
-    ( MonadReader env m, TextView.HasStyle env, HasConfig env
-    , Dir.HasLayoutDir env, Element.HasAnimIdPrefix env
-    , Applicative o
+    ( MonadReader env m, Applicative o, TextView.HasStyle env, HasConfig env
+    , Element.HasAnimIdPrefix env, Dir.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -75,9 +74,9 @@ eventMap pl =
 -- | Each expression that may have a dotter should use this to make
 -- sure it activates it when it's jumped to
 with ::
-    ( MonadReader env m, GuiState.HasCursor env, TextView.HasStyle env
-    , HasConfig env, Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
-    , Applicative o
+    ( MonadReader env m, Applicative o, GuiState.HasCursor env
+    , TextView.HasStyle env, HasConfig env, Element.HasAnimIdPrefix env
+    , Dir.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)

@@ -21,32 +21,31 @@ import           Lamdu.Prelude
 
 class (Glued b a ~ Glued a b) => Glue a b where
     type Glued a b
-    glue :: Dir.Layout -> Orientation -> a -> b -> Glued a b
+    glue :: Dir.Texts Text -> Dir.Layout -> Orientation -> a -> b -> Glued a b
 
 type GluesTo a b c = (Glue a b, Glue b a, Glued a b ~ c)
 
 newtype Poly = Poly { polyGlue :: forall a b. Glue a b => a -> b -> Glued a b }
 
-mkPoly ::
-    (MonadReader env m, Dir.HasLayoutDir env) => m (Orientation -> Poly)
+mkPoly :: (MonadReader env m, Dir.HasTexts env) => m (Orientation -> Poly)
 mkPoly =
-    Lens.view Dir.layoutDir
-    <&> \dir orientation -> Poly (glue dir orientation)
+    (,) <$> Lens.view Dir.texts <*> Lens.view Dir.layoutDir
+    <&> \(texts, dir) orientation -> Poly (glue texts dir orientation)
 
 mkGlue ::
-    (MonadReader env m, Dir.HasLayoutDir env, Glue a b) =>
+    (MonadReader env m, Dir.HasTexts env, Glue a b) =>
     m (Orientation -> a -> b -> Glued a b)
 mkGlue = mkPoly <&> (polyGlue .)
 
 -- Horizontal glue
 (/|/) ::
-    (MonadReader env m, Dir.HasLayoutDir env, Glue a b) =>
+    (MonadReader env m, Dir.HasTexts env, Glue a b) =>
     m a -> m b -> m (Glued a b)
 l /|/ r = (mkGlue ?? Horizontal) <*> l <*> r
 
 -- Vertical glue
 (/-/) ::
-    (MonadReader env m, Dir.HasLayoutDir env, Glue a b) =>
+    (MonadReader env m, Dir.HasTexts env, Glue a b) =>
     m a -> m b -> m (Glued a b)
 l /-/ r = (mkGlue ?? Vertical) <*> l <*> r
 
@@ -69,16 +68,16 @@ glueH f direction orientation v0 v1 =
         v1s = v1 ^. Element.size
 
 box ::
-    (Element a, GluesTo a a a, Dir.HasLayoutDir env, MonadReader env m) =>
+    (Element a, GluesTo a a a, MonadReader env m, Dir.HasTexts env) =>
     m (Orientation -> [a] -> a)
 box = mkGlue <&> \g orientation -> foldr (g orientation) Element.empty
 
 hbox ::
-    (Element a, GluesTo a a a, Dir.HasLayoutDir env, MonadReader env m) =>
+    (Element a, GluesTo a a a, MonadReader env m, Dir.HasTexts env) =>
     m ([a] -> a)
 hbox = box ?? Horizontal
 
 vbox ::
-    (Element a, GluesTo a a a, Dir.HasLayoutDir env, MonadReader env m) =>
+    (Element a, GluesTo a a a, MonadReader env m, Dir.HasTexts env) =>
     m ([a] -> a)
 vbox = box ?? Vertical

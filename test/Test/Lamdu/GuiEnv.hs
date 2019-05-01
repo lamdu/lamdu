@@ -26,6 +26,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Texts (Language, HasLanguage(..))
+import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
@@ -59,6 +60,7 @@ instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
 instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
+instance Dir.HasTexts Env where texts = eLanguage . Texts.lTexts . Texts.dir
 instance HasLanguage Env where language = eLanguage
 
 make :: IO Env

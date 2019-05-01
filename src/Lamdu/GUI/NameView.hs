@@ -48,7 +48,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
 make ::
     ( MonadReader env m
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Dir.HasLayoutDir env
+    , Dir.HasTexts env -- TODO: This is unused - an artifact constraint
     ) =>
     Name f -> m (WithTextPos View)
 make name =

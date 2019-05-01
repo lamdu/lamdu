@@ -87,14 +87,14 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
          , SizedElement b
          ) => Glue (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
-    glue dir orientation l v =
+    glue texts dir orientation l v =
         Responsive
-        { _rWide = glue dir orientation wide v
-        , _rWideDisambig = glue dir orientation wide v
+        { _rWide = glue texts dir orientation wide v
+        , _rWideDisambig = glue texts dir orientation wide v
         , _rNarrow =
             l ^. rNarrow
             & Lens.argument %~ adjustNarrowLayoutParams orientation v
-            <&> (glue dir orientation ?? v)
+            <&> (glue texts dir orientation ?? v)
         }
         where
             wide =
@@ -106,14 +106,14 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
          , SizedElement a
          ) => Glue (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
-    glue dir orientation v l =
+    glue texts dir orientation v l =
         Responsive
-        { _rWide = glue dir orientation v wide
-        , _rWideDisambig = glue dir orientation v wide
+        { _rWide = glue texts dir orientation v wide
+        , _rWideDisambig = glue texts dir orientation v wide
         , _rNarrow =
             l ^. rNarrow
             & Lens.argument %~ adjustNarrowLayoutParams orientation v
-            <&> glue dir orientation v
+            <&> glue texts dir orientation v
         }
         where
             wide =
@@ -203,7 +203,7 @@ verticalLayout vert items =
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
-    (MonadReader env m, Dir.HasLayoutDir env, Applicative f) =>
+    (MonadReader env m, Applicative f, Dir.HasTexts env) =>
     m ([Gui Responsive f] -> Gui Responsive f)
 vbox =
     Glue.vbox <&> \vert ->
@@ -219,7 +219,7 @@ vbox =
             }
 
 vboxSpaced ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Dir.HasLayoutDir env
+    ( MonadReader env m, Spacer.HasStdSpacing env, Dir.HasTexts env
     , Applicative f
     ) =>
     m ([Gui Responsive f] -> Gui Responsive f)
@@ -229,7 +229,7 @@ vboxSpaced =
     (\(vert, space) -> List.intersperse (fromView space) <&> vert)
 
 vboxWithSeparator ::
-    (MonadReader env m, Dir.HasLayoutDir env, Applicative f) =>
+    (MonadReader env m, Applicative f, Dir.HasTexts env) =>
     m
     (Bool -> (Widget.R -> View) ->
      Gui Responsive f -> Gui Responsive f ->
@@ -264,7 +264,7 @@ Lens.makeLenses ''TaggedItem
 
 taggedList ::
     ( MonadReader env m, Spacer.HasStdSpacing env, Applicative f
-    , Dir.HasLayoutDir env
+    , Dir.HasTexts env
     ) =>
     m ([Gui TaggedItem f] -> Gui Responsive f)
 taggedList =

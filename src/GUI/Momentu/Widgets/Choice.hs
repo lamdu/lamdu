@@ -54,7 +54,7 @@ data IsSelected = Selected | NotSelected
 type HoverFunc f = Gui AnchoredWidget f -> Hover (Gui AnchoredWidget f)
 
 makeInner ::
-    (Applicative f, Eq childId, MonadReader env m, Dir.HasLayoutDir env) =>
+    (Applicative f, Eq childId, MonadReader env m, Dir.HasTexts env) =>
     m
     (HoverFunc f ->
      (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
@@ -103,7 +103,7 @@ makeInner =
 make ::
     ( Eq childId, MonadReader env m, Applicative f
     , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Dir.HasLayoutDir env
+    , Dir.HasTexts env
     ) =>
     m
     (Property f childId -> [(childId, Gui Widget f)] ->

@@ -27,6 +27,7 @@ import qualified GUI.Momentu.Widget as W
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified Graphics.UI.GLFW as GLFW
+import           Test.Momentu.Env (env)
 
 import           Test.Lamdu.Prelude
 
@@ -166,8 +167,7 @@ verticalDisambigTest =
                     , Responsive._layoutNeedDisambiguation = needDisamb
                     }
                 box =
-                    -- TODO: Test other layout directions
-                    Options.box Dir.LeftToRight disambig [unitItem, unitItem]
+                    Options.box env disambig [unitItem, unitItem]
                     <&> (<>[]) -- to avoid ambiguous type var
         unitItem = Element.pad Dir.LeftToRight 0 1 Element.empty
         disambig =

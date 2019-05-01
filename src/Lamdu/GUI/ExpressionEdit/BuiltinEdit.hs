@@ -65,9 +65,8 @@ makeNamePartEditor color namePartStr setter myId =
             }
 
 make ::
-    ( MonadReader env f, HasTheme env, GuiState.HasCursor env
-    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
-    , Monad o
+    ( MonadReader env f, Monad o, HasTheme env, GuiState.HasCursor env
+    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Dir.HasTexts env
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
     f (TextWidget o)

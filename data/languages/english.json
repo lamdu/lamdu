@@ -21,6 +21,14 @@
             "help": "Help ",
             "language": "Language",
             "theme": "Theme"
+        },
+        "dir": {
+            "left": "Left",
+            "right": "Right",
+            "up": "Up",
+            "down": "Down",
+            "move": "Move",
+            "navigation": "Navigation"
         }
     }
 }

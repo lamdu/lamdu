@@ -231,10 +231,10 @@ toOptionList xs False = FullList xs
 toOptionList xs True = Truncated xs
 
 layoutOption ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ( MonadReader env m, Applicative f
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env
     , State.HasCursor env, Hover.HasStyle env, HasConfig env
-    , Dir.HasLayoutDir env
-    , Applicative f
+    , Dir.HasTexts env
     ) =>
     Widget.R ->
     (Widget.Id, TextWidget f, Submenu m f) ->
@@ -320,10 +320,9 @@ noResultsId :: Widget.Id -> Widget.Id
 noResultsId = (`Widget.joinId` ["no results"])
 
 make ::
-    ( MonadReader env m, TextView.HasStyle env, Hover.HasStyle env
-    , Element.HasAnimIdPrefix env, HasConfig env, State.HasCursor env
-    , Dir.HasLayoutDir env
-    , Applicative f
+    ( MonadReader env m, Applicative f, TextView.HasStyle env
+    , Hover.HasStyle env, Element.HasAnimIdPrefix env, HasConfig env
+    , State.HasCursor env , Dir.HasTexts env
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
     m (PickFirstResult f, Hover.Ordered (TextWidget f))
@@ -381,9 +380,8 @@ make myId minWidth options =
 data Placement = Above | Below | AnyPlace
 
 hoverOptions ::
-    ( MonadReader env m, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Dir.HasLayoutDir env
-    , Applicative f
+    ( MonadReader env m, Applicative f, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env, Dir.HasTexts env
     ) =>
     m ( Placement ->
         View ->
@@ -440,8 +438,7 @@ hoverOptions =
 makeHovered ::
     ( Applicative f, State.HasCursor env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Dir.HasLayoutDir env, Hover.HasStyle env
-    , MonadReader env m
+    , Hover.HasStyle env, Dir.HasTexts env, MonadReader env m
     ) =>
     Widget.Id -> View ->
     OptionList (Option m f) ->

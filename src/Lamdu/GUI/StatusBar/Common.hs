@@ -167,8 +167,8 @@ hspacer = do
     Spacer.getSpaceSize <&> (^. _1) <&> (* hSpaceCount) <&> Spacer.makeHorizontal
 
 combine ::
-    ( MonadReader env m, Applicative f
-    , Dir.HasLayoutDir env, HasStdSpacing env, HasTheme env
+    ( MonadReader env m, Applicative f, HasStdSpacing env, HasTheme env
+    , Dir.HasTexts env
     ) => m ([StatusWidget f] -> StatusWidget f)
 combine =
     (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> Glue.hbox <*> hspacer
@@ -187,8 +187,7 @@ combine =
     }
 
 combineEdges ::
-    ( MonadReader env m, Applicative f, Dir.HasLayoutDir env
-    ) =>
+    (MonadReader env m, Applicative f, Dir.HasTexts env) =>
     m (R -> StatusWidget f -> StatusWidget f -> StatusWidget f)
 combineEdges =
     Glue.mkPoly ?? Glue.Horizontal

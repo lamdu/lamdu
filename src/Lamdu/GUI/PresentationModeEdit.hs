@@ -31,7 +31,7 @@ import           Lamdu.Prelude
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
-    , Hover.HasStyle env, Dir.HasLayoutDir env
+    , Hover.HasStyle env, Dir.HasTexts env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->

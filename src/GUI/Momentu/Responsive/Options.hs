@@ -80,7 +80,7 @@ makeWideLayouts disamb w =
     }
 
 hbox ::
-    (MonadReader env m, Dir.HasLayoutDir env, Applicative f) =>
+    (MonadReader env m, Dir.HasTexts env, Applicative f) =>
     m (HorizDisambiguator (f State.Update) -> ([TextWidget f] -> [TextWidget f]) -> Gui (WideLayoutOption []) f)
 hbox =
     Glue.hbox <&>
@@ -131,7 +131,7 @@ disambiguationNone :: Disambiguators a
 disambiguationNone = Disambiguators id id
 
 boxH ::
-    (Applicative f, MonadReader env m, Dir.HasLayoutDir env) =>
+    (Applicative f, MonadReader env m, Dir.HasTexts env) =>
     m
     ( ([TextWidget f] -> [TextWidget f]) ->
       ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
@@ -144,7 +144,7 @@ boxH =
     & tryWideLayout (horiz (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
-    (Applicative f, MonadReader env m, Dir.HasLayoutDir env) =>
+    (Applicative f, MonadReader env m, Dir.HasTexts env) =>
     m
     ( Gui Disambiguators f ->
       [Gui Responsive f] ->
@@ -152,8 +152,8 @@ box ::
 box = boxH ?? id ?? id
 
 boxSpaced ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Dir.HasLayoutDir env
-    , Applicative f
+    ( Applicative f, MonadReader env m, Spacer.HasStdSpacing env
+    , Dir.HasTexts env
     ) =>
     m (Gui Disambiguators f -> [Gui Responsive f] -> Gui Responsive f)
 boxSpaced =
