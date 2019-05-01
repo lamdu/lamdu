@@ -35,7 +35,7 @@ import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.I18N.Texts (Language, Texts, HasTexts(..))
+import           Lamdu.I18N.Texts (HasTexts(..), Language, TextLens)
 import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.GUI.Styled (info, label)
 
@@ -67,7 +67,7 @@ makeStatusWidget ::
     , Element.HasLayoutDir env
     , HasTexts env
     ) =>
-    (forall a. Lens.ALens' (Texts a) a) -> TextWidget f -> m (StatusWidget f)
+    TextLens -> TextWidget f -> m (StatusWidget f)
 makeStatusWidget headerText w =
     info (label headerText) /|/ pure w
     <&> (`StatusWidget` mempty)
@@ -78,8 +78,7 @@ makeChoice ::
     , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     , HasTexts env
     ) =>
-    (forall z. Lens.ALens' (Texts z) z) -> Property f a -> [(Text, a)] ->
-    m (TextWidget f)
+    TextLens -> Property f a -> [(Text, a)] -> m (TextWidget f)
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
@@ -99,8 +98,7 @@ makeSwitchWidget ::
     , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
     , HasTexts env
     ) =>
-    (forall z. Lens.ALens' (Texts z) z) -> Property f a -> [(Text, a)] ->
-    m (TextWidget f)
+    TextLens -> Property f a -> [(Text, a)] -> m (TextWidget f)
 makeSwitchWidget headerText prop choiceVals =
     info (label headerText) /|/ makeChoice headerText prop choiceVals
 
@@ -108,8 +106,7 @@ makeSwitchEventMap ::
     ( MonadReader env m, HasConfig env, HasTexts env
     , Eq a, Functor f
     ) =>
-    Lens.ALens' Language Text ->
-    Lens' Config [MetaKey] ->
+    Lens.ALens' Language Text -> Lens' Config [MetaKey] ->
     Property f a -> [a] ->
     m (Gui EventMap f)
 makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
@@ -128,9 +125,7 @@ makeSwitchStatusWidget ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
-    (forall z. Lens.ALens' (Texts z) z) ->
-    Lens' Config [MetaKey] ->
-    Property f a -> [(Text, a)] ->
+    TextLens -> Lens' Config [MetaKey] -> Property f a -> [(Text, a)] ->
     m (StatusWidget f)
 makeSwitchStatusWidget headerText keysGetter prop choiceVals =
     do
@@ -147,9 +142,7 @@ makeBoundedSwitchStatusWidget ::
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
     ) =>
-    (forall z. Lens.ALens' (Texts z) z) ->
-    Lens' Config [MetaKey] ->
-    Property f a ->
+    TextLens -> Lens' Config [MetaKey] -> Property f a ->
     m (StatusWidget f)
 makeBoundedSwitchStatusWidget headerText keysGetter prop =
     makeSwitchStatusWidget headerText keysGetter prop choiceVals

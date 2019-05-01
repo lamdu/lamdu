@@ -25,7 +25,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (TextLens)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -69,7 +69,7 @@ makeFromNom nom pl =
 mkNomGui ::
     (Monad i, Monad o) =>
     ([Gui Responsive o] -> [Gui Responsive o]) ->
-    Text -> (forall a. Lens.ALens' (Texts a) a) -> Maybe (o Sugar.EntityId) ->
+    Text -> TextLens -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
     ExprGuiM i o (Gui Responsive o)

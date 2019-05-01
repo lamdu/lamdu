@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
 module Lamdu.I18N.Texts where
 
 import qualified Control.Lens as Lens
@@ -94,6 +94,8 @@ instance HasConfigFolder Language where
 
 class HasTexts env where texts :: Lens' env Language
 instance HasTexts (Texts Text) where texts = id
+
+type TextLens = forall a. Lens' (Texts a) a
 
 dummyTexts :: Texts ()
 dummyTexts =

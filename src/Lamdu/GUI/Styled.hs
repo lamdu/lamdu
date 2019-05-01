@@ -35,7 +35,7 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.I18N.Texts (Texts(..), texts)
+import           Lamdu.I18N.Texts (Texts(..), texts, TextLens)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -59,7 +59,7 @@ text ::
     ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Texts.HasTexts env
     ) =>
-    AnimId -> (forall a. Lens.ALens' (Texts a) a) -> f (WithTextPos View)
+    AnimId -> TextLens -> f (WithTextPos View)
 text animIdSuffix txtLens =
     Lens.view (texts . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
@@ -71,7 +71,7 @@ label ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Texts.HasTexts env
     ) =>
-    (forall a. Lens.ALens' (Texts a) a) -> m (WithTextPos View)
+    TextLens -> m (WithTextPos View)
 label lens =
     TextView.make
     <*> (Lens.view texts <&> (^# lens))
@@ -163,8 +163,7 @@ actionable ::
     , Texts.HasTexts env
     , Applicative f, MonadReader env m
     ) =>
-    Widget.Id -> (forall a. Lens.ALens' (Texts a) a) -> E.Doc -> f Widget.Id ->
-    m (TextWidget f)
+    Widget.Id -> TextLens -> E.Doc -> f Widget.Id -> m (TextWidget f)
 actionable myId txtLens doc action =
     do
         color <- Lens.view (Theme.theme . Theme.textColors . TextColors.actionTextColor)

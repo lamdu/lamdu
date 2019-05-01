@@ -27,7 +27,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (text, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Texts)
+import           Lamdu.I18N.Texts (TextLens)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env, Texts.HasTexts env
-    ) => (forall a. Lens.ALens' (Texts a) a) -> f (WithTextPos View)
+    ) => TextLens -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)
 
 makeInject ::
