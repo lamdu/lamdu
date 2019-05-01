@@ -7,6 +7,7 @@ module Lamdu.Sugar.Names.Add
       InternalName(..), inTag, inContext, runPasses
     ) where
 
+import           Data.Coerce (coerce)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
@@ -19,7 +20,6 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Monoid.Extended (ExtendSemigroup(..))
 import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -90,8 +90,19 @@ getP0Name internalName =
 ---------- Pass 1 ------------
 ------------------------------
 
+newtype Collider = Collider Clash.Info
+instance Semigroup Collider where
+    Collider x <> Collider y = Collider (x `Clash.collide` y)
+
+-- 2 wrappers for coerce for readability/safety
+uncolliders :: MMap T.Tag Collider -> MMap T.Tag Clash.Info
+uncolliders = coerce
+
+colliders :: MMap T.Tag Clash.Info -> MMap T.Tag Collider
+colliders = coerce
+
 data P1Out = P1Out
-    { _p1Globals :: MMap T.Tag Clash.Info
+    { _p1Globals :: MMap T.Tag Collider
         -- ^ Used in P2 to check against local hole results
     , _p1Locals :: MMap T.Tag Clash.Info
         -- ^ Used in P2 to check against global hole results
@@ -102,17 +113,7 @@ data P1Out = P1Out
     , _p1Texts :: MMap DisplayText (Set T.Tag)
     }
     deriving stock Generic
-    deriving Monoid via ExtendSemigroup P1Out
--- TODO: Use a newtype for clash that uses collide and derive semigroup for it
-instance Semigroup P1Out where
-    P1Out xGlobals xLocals xContexts xTvs xTexts <>
-        P1Out yGlobals yLocals yContexts yTvs yTexts =
-        P1Out
-        (MMap.unionWith Clash.collide xGlobals yGlobals)
-        (xLocals <> yLocals)
-        (xContexts <> yContexts)
-        (xTvs <> yTvs)
-        (xTexts <> yTexts)
+    deriving (Semigroup, Monoid) via Generically P1Out
 Lens.makeLenses ''P1Out
 
 data P1KindedName o = P1StoredName Annotated.Name (StoredText o) | P1AnonName UUID
@@ -172,7 +173,7 @@ p1Tagged mDisambiguator nameType (P0Name prop internalName) =
     CPS $ \inner ->
     tellSome p1Texts (Lens.singletonAt displayText (Set.singleton tag))
     *> inner
-    & Writer.censor (p1lens %~ MMap.unionWith Clash.collide myTags)
+    & Writer.censor (p1lens <>~ myTags)
     & Writer.listen
     <&> Tuple.swap
     <&> _1 %~ \innerOut ->
@@ -184,8 +185,8 @@ p1Tagged mDisambiguator nameType (P0Name prop internalName) =
     where
         p1lens
             | Walk.isGlobal nameType = p1Globals
-            | otherwise              = p1Locals
-        myTags = Lens.singletonAt tag (Clash.infoOf aName)
+            | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
+        myTags = Lens.singletonAt tag (Collider (Clash.infoOf aName))
         tag = internalName ^. inTag
         displayText = displayOf prop
         aName =
@@ -269,7 +270,7 @@ initialP2Env (P1Out globals locals contexts tvs texts) =
     , _p2Texts = MMap.keysSet texts
     , _p2TagSuffixes = toSuffixMap collisions
     , _p2TextsAbove = MMap.keysSet globals & Set.map lookupText
-    , _p2TagsAbove = globals
+    , _p2TagsAbove = uncolliders globals
         -- ^ all globals are "above" everything, and locals add up as
         -- we descend
     , _p2Tags = top
@@ -280,7 +281,7 @@ initialP2Env (P1Out globals locals contexts tvs texts) =
             & fromMaybe (error "Cannot find global tag in tagTexts")
             & DisplayText
         tagTexts = makeTagTexts texts
-        top = MMap.unionWith Clash.collide locals globals
+        top = colliders locals <> globals & uncolliders
         -- TODO: Use OrderedSet for nice ordered suffixes
         collisions =
             MMap.filter Clash.isClash top
