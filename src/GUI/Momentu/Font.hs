@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 -- | A font attached to its size
 
 module GUI.Momentu.Font
@@ -17,6 +17,8 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
+import           Generic.Data (Generically1(..))
+import           GHC.Generics (Generic1)
 import           Graphics.DrawingCombinators ((%%), R)
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
@@ -36,12 +38,10 @@ Lens.makeLenses ''Underline
 data TextSize a = TextSize
     { _bounding :: a
     , _advance :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+    deriving Applicative via Generically1 TextSize
 Lens.makeLenses ''TextSize
 
-instance Applicative TextSize where
-    pure x = TextSize x x
-    TextSize f1 f2 <*> TextSize x1 x2 = TextSize (f1 x1) (f2 x2)
 instance Num a => Num (TextSize a) where
     fromInteger = pure . fromInteger
     (+) = liftA2 (+)

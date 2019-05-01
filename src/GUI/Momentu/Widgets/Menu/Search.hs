@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 
 module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
@@ -34,6 +34,8 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
+import           Generic.Data (Generically1(..))
+import           GHC.Generics (Generic1)
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
@@ -85,12 +87,9 @@ Lens.makeLenses ''Term
 data TermCtx a = TermCtx
     { _tcTextEdit :: a
     , _tcAdHoc :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+    deriving Applicative via Generically1 TermCtx
 Lens.makeLenses ''TermCtx
-
-instance Applicative TermCtx where
-    pure = join TermCtx
-    TermCtx f0 f1 <*> TermCtx x0 x1 = TermCtx (f0 x0) (f1 x1)
 
 -- | Whether search term is allowed in each search term context:
 type AllowedSearchTerm = Text -> TermCtx Bool

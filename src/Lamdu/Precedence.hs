@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.Precedence
     ( Precedence(..), before, after
     , HasPrecedence(..)
@@ -7,16 +7,16 @@ module Lamdu.Precedence
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
+import           Generic.Data (Generically1(..))
+import           GHC.Generics (Generic1)
 
 import           Lamdu.Prelude
 
 data Precedence a = Precedence
     { _before :: a
     , _after  :: a
-    } deriving (Show, Functor)
-instance Applicative Precedence where
-    pure = join Precedence
-    Precedence af bf <*> Precedence ax bx = Precedence (af ax) (bf bx)
+    } deriving stock (Generic, Generic1, Show, Functor)
+    deriving Applicative via Generically1 Precedence
 
 Lens.makeLenses ''Precedence
 

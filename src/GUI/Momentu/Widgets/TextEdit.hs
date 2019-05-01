@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..), sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
     , HasStyle(..)
@@ -19,6 +19,8 @@ import           Data.List.Extended (genericLength, minimumOn)
 import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
+import           Generic.Data (Generically1(..))
+import           GHC.Generics (Generic1)
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -45,12 +47,9 @@ type Cursor = Int
 data Modes a = Modes
     { _unfocused :: a
     , _focused :: a
-    } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+    } deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via Generically1 Modes
 Lens.makeLenses ''Modes
-
-instance Applicative Modes where
-    pure x = Modes x x
-    Modes f0 f1 <*> Modes x0 x1 = Modes (f0 x0) (f1 x1)
 
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier = (^?! prefixed "_")

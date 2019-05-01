@@ -1,5 +1,5 @@
 -- | Debug.Tasks data-type, to avoid Config dependency on debug code
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.Debug.Tasks
     ( Tasks(..), inference, sugaring, layout, database, naming
     ) where
@@ -8,6 +8,8 @@ import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.List.Lens (prefixed)
+import           Generic.Data (Generically1(..))
+import           GHC.Generics (Generic1)
 
 import           Lamdu.Prelude
 
@@ -17,12 +19,9 @@ data Tasks a = Tasks
     , _layout :: a
     , _database :: a
     , _naming :: a
-    } deriving (Eq, Show, Functor, Foldable, Traversable)
+    } deriving stock (Generic, Generic1, Eq, Show, Functor, Foldable, Traversable)
+    deriving Applicative via Generically1 Tasks
 Lens.makeLenses ''Tasks
 deriveJSON Aeson.defaultOptions
     {Aeson.fieldLabelModifier = (^?! prefixed "_")}
     ''Tasks
-
-instance Applicative Tasks where
-    pure x = Tasks x x x x x
-    Tasks f0 f1 f2 f3 f4 <*> Tasks x0 x1 x2 x3 x4 = Tasks (f0 x0) (f1 x1) (f2 x2) (f3 x3) (f4 x4)

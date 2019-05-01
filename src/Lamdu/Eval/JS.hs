@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, DerivingVia #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( module Lamdu.Eval.JS.Types
@@ -38,6 +38,7 @@ import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
+import           Generic.Data (Generically(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (Identifier(..), identHex)
 import           Lamdu.Calc.Term (Val)
@@ -73,12 +74,8 @@ Lens.makeLenses ''Actions
 data Dependencies srcId = Dependencies
     { subExprDeps :: Set srcId
     , globalDeps :: Set V.Var
-    }
-instance Ord srcId => Semigroup (Dependencies srcId) where
-    Dependencies x0 y0 <> Dependencies x1 y1 = Dependencies (x0 <> x1) (y0 <> y1)
-instance Ord srcId => Monoid (Dependencies srcId) where
-    mempty = Dependencies mempty mempty
-    mappend = (<>)
+    } deriving stock Generic
+    deriving (Semigroup, Monoid) via Generically (Dependencies srcId)
 
 data Evaluator srcId = Evaluator
     { stop :: IO ()

@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, RankNTypes, UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, UndecidableInstances, DerivingVia #-}
 module GUI.Momentu.Hover
     ( Style(..), frameColor, framePadding, bgColor, bgPadding
     , Hover, hover, sequenceHover
@@ -19,6 +20,8 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.List.Extended (minimumOn)
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
+import           Generic.Data (Generically1(..))
+import           GHC.Generics (Generic1)
 import           GUI.Momentu.Align (Aligned(..), value)
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.Draw as Draw
@@ -134,13 +137,9 @@ instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (
 data Ordered a = Ordered
     { _forward :: a
     , _backward :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+    deriving Applicative via Generically1 Ordered
 Lens.makeLenses ''Ordered
-
-instance Applicative Ordered where
-    pure = join Ordered
-    Ordered fa fb <*> Ordered xa xb =
-        Ordered (fa xa) (fb xb)
 
 hoverBesideOptionsAxis ::
     ( MonadReader env m, Element.HasLayoutDir env

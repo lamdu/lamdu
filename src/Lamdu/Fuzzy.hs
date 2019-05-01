@@ -1,5 +1,5 @@
 -- | A wrapper for the fuzzyset library that makes it a Fuzzy map
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.Fuzzy
     ( Fuzzy, make, matches
     , Distance(..), isFuzzy, distanceInts
@@ -16,6 +16,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector ((!))
 import qualified Data.Vector as Vector
+import           Generic.Data (Generically(..))
 import qualified Text.EditDistance as EditDistance
 import           Text.PrettyPrint (($+$), (<+>))
 import qualified Text.PrettyPrint as Pretty
@@ -23,21 +24,16 @@ import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 import           Lamdu.Prelude
 
-data Fuzzy a = Fuzzy (MMap Text a) (MMap Char (Fuzzy a))
+data Fuzzy a =
+    Fuzzy (MMap Text a) (MMap Char (Fuzzy a))
+    deriving stock Generic
+    deriving (Semigroup, Monoid) via Generically (Fuzzy a)
 
 pPrintMMap :: (k -> Pretty.Doc) -> (v -> Pretty.Doc) -> MMap k v -> Pretty.Doc
 pPrintMMap pk pv m =
     m ^@.. Lens.ifolded
     <&> (\(k, v) -> pk k <+> " => " <+> pv v)
     & Pretty.vcat
-
-instance Semigroup a => Semigroup (Fuzzy a) where
-    Fuzzy xs xmore <> Fuzzy ys ymore =
-        Fuzzy (xs <> ys) (xmore <> ymore)
-
-instance Semigroup a => Monoid (Fuzzy a) where
-    mempty = Fuzzy mempty mempty
-    mappend = (<>)
 
 instance Pretty a => Pretty (Fuzzy a) where
     pPrint (Fuzzy xs m) =

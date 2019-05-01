@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 
 module GUI.Momentu.Animation
     ( R, Size
@@ -16,6 +16,7 @@ module GUI.Momentu.Animation
 import           Control.DeepSeq (NFData(..), deepseq)
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
+import           Generic.Data (Generically(..))
 import           GUI.Momentu.Animation.Id
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
@@ -39,7 +40,8 @@ instance NFData Image where
 
 newtype Frame = Frame
     { _frameImages :: [Image]
-    } deriving (Generic)
+    } deriving stock Generic
+    deriving (Semigroup, Monoid) via Generically Frame
 Lens.makeLenses ''Frame
 instance NFData Frame
 
@@ -58,12 +60,6 @@ singletonFrame size animId =
     (Draw.scaleV (1 / size) %%)
     where
         singletonUnitImage image = Frame [Image animId image (Rect 0 1)]
-
-instance Semigroup Frame where
-    Frame m0 <> Frame m1 = Frame (m0 ++ m1)
-instance Monoid Frame where
-    mempty = Frame mempty
-    mappend = (<>)
 
 draw :: Frame -> Draw.Image ()
 draw frame =

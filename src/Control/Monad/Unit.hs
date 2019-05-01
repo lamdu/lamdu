@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingVia #-}
+
 -- | A trivial unit monad
 
 module Control.Monad.Unit
@@ -5,16 +7,14 @@ module Control.Monad.Unit
     ) where
 
 import Data.Semigroup (Semigroup)
+import Generic.Data (Generically(..), Generically1(..))
+import GHC.Generics (Generic1)
 import Lamdu.Prelude
 
 data Unit a = Unit
-    deriving (Functor, Foldable, Traversable)
-
-instance Semigroup (Unit a) where (<>) _ _ = Unit
-
-instance Applicative Unit where
-    pure _ = Unit
-    _ <*> _ = Unit
+    deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+    deriving Semigroup via Generically (Unit a)
+    deriving Applicative via Generically1 Unit
 
 instance Monad Unit where
     _ >>= _ = Unit
