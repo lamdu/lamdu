@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns #-}
 module Lamdu.Config.Sampler
     ( Sampler, new, setSelection
     , FiledConfig(..), filePath, fileData
@@ -81,7 +81,7 @@ withMTime _sConfigPath act =
     do
         (_sConfigData, _sTheme, _sLanguage) <- act
         let _sConfig = FiledConfig _sConfigPath _sConfigData
-        let sampleData = SampleData{..}
+        let sampleData = SampleData{_sConfig, _sTheme, _sLanguage}
         mtimes <- getSampleMTimes sampleData
         Sample mtimes sampleData & pure
 
