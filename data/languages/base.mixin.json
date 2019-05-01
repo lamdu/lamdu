@@ -1,0 +1,11 @@
+{
+    "code": {
+        "assign": "=",
+        "absurd": "Ø",
+        "inject": ":",
+        "nullaryInject": ".",
+        "defer": "|",
+        "lam": "λ",
+        "recordSep": ","
+    }
+}

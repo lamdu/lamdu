@@ -1,31 +1,13 @@
 {
-    "isLeftToRight": true,
+    "imports": ["left-to-right.mixin.json"],
     "code": {
-        "assign": "=",
-        "relay": "⇒",
         "let_": "let",
-        "toNom": "«",
-        "fromNom": "»",
-        "repl": "⋙",
         "case_": "case",
         "of_": "of",
-        "absurd": "Ø",
         "if_": "if ",
         "else_": "else",
-        "condColon": ": ",
         "elseShort": "el",
-        "inject": ":",
-        "nullaryInject": ".",
-        "paramsRecordOpener": "Params {",
-        "paramsRecordCloser": "}",
-        "defer": "|",
-        "lam": "λ",
-        "arrow": "→",
-        "textOpener": "“",
-        "textCloser": "„",
-        "recordOpener": "{",
-        "recordSep": ",",
-        "recordCloser": "}"
+        "paramsRecordOpener": "Params {"
     },
     "codeButtons": {
         "defUpdateHeader": "Update",

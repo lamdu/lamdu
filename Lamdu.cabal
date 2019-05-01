@@ -22,9 +22,11 @@ Data-files:          fonts/DejaVuSans.ttf
                    , themes/default.json
                    , themes/light.json
                    , themes/retro.json
+                   , languages/base.mixin.json
+                   , languages/left-to-right.mixin.json
+                   , languages/right-to-left.mixin.json
                    , languages/english.json
                    , languages/hebrew.json
-                   , languages/rtl-english.mixin.json
                    , freshdb.json
                    , js/README
                    , js/anchors.js

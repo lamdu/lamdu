@@ -1,14 +1,12 @@
 {
-    "imports": ["english.json"],
+    "imports": ["base.mixin.json"],
     "isLeftToRight": false,
     "code": {
         "relay": "⇐",
         "toNom": "»",
         "fromNom": "«",
         "repl": "⋘",
-        "if_": " if",
         "condColon": " :",
-        "paramsRecordOpener": "} Params",
         "paramsRecordCloser": "{",
         "arrow": "←",
         "textOpener": "”",
