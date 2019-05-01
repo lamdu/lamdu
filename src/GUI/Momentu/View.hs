@@ -4,11 +4,13 @@ module GUI.Momentu.View
     , animFrames
     , Size, R
     , unitSquare
+    , sprite
     ) where
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue)
@@ -51,4 +53,11 @@ unitSquare :: (MonadReader env m, Element.HasAnimIdPrefix env) => m View
 unitSquare =
     Lens.view Element.animIdPrefix
     <&> Anim.unitSquare
+    <&> make 1
+
+sprite ::
+    (MonadReader env m, Element.HasAnimIdPrefix env) => Draw.Sprite -> m View
+sprite s =
+    (Anim.sprite ?? s)
+    <$> Lens.view Element.animIdPrefix
     <&> make 1

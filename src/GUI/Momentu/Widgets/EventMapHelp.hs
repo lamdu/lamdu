@@ -25,7 +25,7 @@ import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, R)
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -46,7 +46,6 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
@@ -267,7 +266,7 @@ addHelpViewWith showingHelp size focus =
         helpView <-
             ( (.)
                 <$> (Element.tint <$> Lens.view (eStyle . styleTint))
-                <*> (MDraw.backgroundColor helpAnimId <$> Lens.view (eStyle . styleBGColor))
+                <*> (Draw.backgroundColor helpAnimId <$> Lens.view (eStyle . styleBGColor))
             ) <*>
             case showingHelp of
             HelpNotShown -> makeTooltip keys

@@ -13,6 +13,7 @@ import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
@@ -121,6 +122,8 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
     evaluator db mkSettingsProp cache cachedFunctions monitors =
     do
         getFonts <- EditorFonts.makeGetFonts subpixel
+        
+        sprite <- Draw.openSprite "data/fonts/globe.png"
         let makeWidget env =
                 do
                     sample <- ConfigSampler.getSample configSampler
@@ -129,7 +132,8 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     fonts <- getFonts (env ^. MainLoop.eZoom) sample
                     Cache.fence cache
                     mkSettingsProp ^. mkProperty
-                        >>= makeRootWidget cachedFunctions monitors fonts db evaluator sample env
+                        >>= makeRootWidget cachedFunctions monitors
+                            fonts sprite db evaluator sample env
         let mkFontInfo zoom =
                 do
                     sample <- ConfigSampler.getSample configSampler
@@ -170,11 +174,12 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
+    Draw.Sprite -> [Selection Theme] -> [Selection Language] ->
+    Property IO Settings ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
-makeMainGui themeNames langNames settingsProp dbToIO env =
-    GUIMain.make themeNames langNames settingsProp env
+makeMainGui sprite themeNames langNames settingsProp dbToIO env =
+    GUIMain.make sprite themeNames langNames settingsProp env
     <&> Lens.mapped %~
     \act ->
     act ^. ioTrans . Lens._Wrapped
@@ -190,11 +195,11 @@ backgroundId = ["background"]
 
 makeRootWidget ::
     HasCallStack =>
-    Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
+    Cache.Functions -> Debug.Monitors -> Fonts M.Font -> Draw.Sprite ->
     Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
     MainLoop.Env -> Property IO Settings ->
     IO (Gui Widget IO)
-makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEnv settingsProp =
+makeRootWidget cachedFunctions perfMonitors fonts sprite db evaluator sample mainLoopEnv settingsProp =
     do
         evalResults <- EvalManager.getResults evaluator
         let env = Env
@@ -233,7 +238,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
         themeNames <- ConfigFolder.getNames
         langNames <- ConfigFolder.getNames
         let bgColor = env ^. Env.theme . Theme.backgroundColor
-        dbToIO $ makeMainGui themeNames langNames settingsProp dbToIO env
+        dbToIO $ makeMainGui sprite themeNames langNames settingsProp dbToIO env
             <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where
@@ -271,7 +276,8 @@ run opts rawDb =
                     EditorSettings.newProp initialTheme initialLanguage (opts ^. Opts.eoAnnotationsMode)
                     configSampler evaluator
                 runMainLoop ekg stateStorage subpixel win mainLoop
-                    configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
+                    configSampler evaluator db mkSettingsProp cache
+                    cachedFunctions monitors
     where
         initialTheme = Selection "dark"
         initialLanguage = Selection "english"

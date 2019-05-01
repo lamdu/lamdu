@@ -16,6 +16,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
@@ -114,9 +115,10 @@ type Ctx env =
 
 layout ::
     Ctx env =>
+    Draw.Sprite ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
-layout themeNames langNames settingsProp =
+layout sprite themeNames langNames settingsProp =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
@@ -130,7 +132,7 @@ layout themeNames langNames settingsProp =
             <&> _1 %~ StatusBar.hoist viewToDb
             <&> _2 . Lens.mapped %~ viewToDb
         statusBar <-
-            StatusBar.make gotoDefinition themeNames langNames settingsProp
+            StatusBar.make sprite gotoDefinition themeNames langNames settingsProp
             (fullSize ^. _1) vcActions
         let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
 
@@ -157,9 +159,10 @@ layout themeNames langNames settingsProp =
 
 make ::
     Ctx env =>
+    Draw.Sprite ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
-make themeNames langNames settingsProp env =
-    layout themeNames langNames settingsProp
+make sprite themeNames langNames settingsProp env =
+    layout sprite themeNames langNames settingsProp
     & GuiState.assignCursor mempty defaultCursor
     & (`runReaderT` env)

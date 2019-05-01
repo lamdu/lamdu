@@ -9,10 +9,12 @@ module Lamdu.GUI.Settings
 import qualified Control.Lens as Lens
 import           Data.Property (Property, composeLens)
 import           GUI.Momentu.Align (WithTextPos(..))
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import           Lamdu.Config (HasConfig)
@@ -55,21 +57,26 @@ makeStatusWidgets ::
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Element.HasLayoutDir env, Hover.HasStyle env
     ) =>
-    [Selection Theme] -> [Selection Language] ->
+    Draw.Sprite -> [Selection Theme] -> [Selection Language] ->
     Property f Settings -> m (StatusWidgets f)
-makeStatusWidgets themeNames langNames prop =
+makeStatusWidgets sprite themeNames langNames prop =
     StatusWidgets
     <$> StatusBar.makeBoundedSwitchStatusWidget (header Texts.annotations)
         Config.nextAnnotationModeKeys annotationModeProp
     <*> StatusBar.makeSwitchStatusWidget (header Texts.theme)
         Config.changeThemeKeys themeProp
         (themeNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.language)
+    <*> StatusBar.makeSwitchStatusWidget languageHeader
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
     <*> StatusBar.makeSwitchStatusWidget (header Texts.help)
         Config.helpKeys helpProp helpVals
     where
+        languageHeader =
+            StatusBar.Header
+            { StatusBar.headerTextLens = Texts.statusBar . Texts.language
+            , StatusBar.headerWidget = View.sprite sprite
+            }
         helpVals =
             [ ("hidden", HelpNotShown)
             , ("shown", HelpShown)

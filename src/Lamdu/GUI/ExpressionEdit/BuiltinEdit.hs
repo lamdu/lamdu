@@ -8,7 +8,7 @@ import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -47,7 +47,7 @@ makeNamePartEditor ::
     ( Applicative f, MonadReader env m, GuiState.HasCursor env
     , TextEdit.HasStyle env, Element.HasLayoutDir env
     ) =>
-    MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
+    Draw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     m (TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent

@@ -6,7 +6,7 @@ module GUI.Momentu.Animation
     , Frame(..), frameImages, unitImages, images
     , draw
     , mapIdentities
-    , unitSquare, emptyRectangle
+    , unitSquare, emptyRectangle, sprite
     , coloredRectangle
     , translate, scale
     , singletonFrame
@@ -81,6 +81,9 @@ mapIdentities f = images . iAnimId %~ f
 
 unitSquare :: AnimId -> Frame
 unitSquare animId = singletonFrame 1 animId Draw.square
+
+sprite :: AnimId -> Draw.Sprite -> Frame
+sprite animId s = singletonFrame 1 animId (void (Draw.sprite s))
 
 emptyRectangle :: Vector2 R -> Vector2 R -> AnimId -> Frame
 emptyRectangle (Vector2 fX fY) totalSize@(Vector2 sX sY) animId =

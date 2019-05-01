@@ -15,7 +15,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -197,7 +197,7 @@ make mkOptions pl allowedTerms =
                 theme <- Lens.view (Theme.theme . Theme.hole)
                 frameWidth <- Spacer.stdFontHeight <&> pure <&> (* theme ^. Theme.holeFrameWidth)
                 addFrame <-
-                    MDraw.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
+                    Draw.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
                     & Reader.local (Element.animIdPrefix .~ animId <> ["hole-frame"])
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
                     <&> SearchMenu.termWidget %~

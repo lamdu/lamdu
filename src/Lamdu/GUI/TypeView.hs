@@ -10,7 +10,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation.Id as AnimId
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/))
@@ -146,7 +146,7 @@ addTypeBG view =
         color <- Lens.view (Theme.theme . Theme.typeFrameBGColor)
         bgId <- Element.subAnimId ["bg"]
         view
-            & MDraw.backgroundColor bgId color
+            & Draw.backgroundColor bgId color
             & pure
 
 makeEmptyComposite ::

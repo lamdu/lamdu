@@ -3,8 +3,9 @@
 module GUI.Momentu.Draw
     ( addInnerFrame, backgroundColor
     , alphaChannel
-    , Draw.line, Draw.convexPoly, Draw.sprite
+    , Draw.line, Draw.convexPoly
     , Draw.tint
+    , Draw.Sprite, Draw.openSprite, Draw.sprite
     , Draw.Color(..), Draw.R, Image
     ) where
 

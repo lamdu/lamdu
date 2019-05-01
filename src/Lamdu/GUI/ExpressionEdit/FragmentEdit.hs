@@ -7,7 +7,7 @@ import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -133,6 +133,6 @@ makeFragmentExprEdit fragment =
                 Sugar.TypeMismatch {} -> Theme.errorColor
         let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
         fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
-        MDraw.addInnerFrame
+        Draw.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Element.padAround (frameWidth & _2 .~ 0) fragmentExprGui

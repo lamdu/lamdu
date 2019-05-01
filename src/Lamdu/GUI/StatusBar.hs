@@ -44,11 +44,11 @@ make ::
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
     , HasConfig env, Element.HasLayoutDir env, HasTexts env
     ) =>
-    StatusWidget (IOTrans n) ->
+    Draw.Sprite -> StatusWidget (IOTrans n) ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))
-make gotoDefinition themeNames langNames settingsProp width vcActions =
+make sprite gotoDefinition themeNames langNames settingsProp width vcActions =
     do
         branchSelector <-
             info (label (Texts.statusBar . Texts.branch))
@@ -57,7 +57,7 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
             <&> StatusBar.fromWidget
 
         statusWidgets <-
-            SettingsGui.makeStatusWidgets themeNames langNames settingsProp
+            SettingsGui.makeStatusWidgets sprite themeNames langNames settingsProp
             <&> SettingsGui.hoist IOTrans.liftIO
 
         theTheme <- Lens.view Theme.theme
