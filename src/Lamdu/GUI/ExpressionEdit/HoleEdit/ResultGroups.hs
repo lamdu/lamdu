@@ -23,6 +23,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Config as Config
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
+import           Lamdu.I18N.Texts (Language, HasTexts(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -162,7 +163,8 @@ makeAll ::
 makeAll options ctx =
     do
         config <- Lens.view (Config.config . Config.completion)
-        traverse mkGroup options
+        lang <- Lens.view texts
+        traverse (mkGroup lang) options
             <&> holeMatches searchTerm
             <&> ListClass.fromList
             <&> ListClass.mapL (makeResultGroup ctx)
@@ -180,15 +182,16 @@ mkGroupId option =
 
 mkGroup ::
     Monad i =>
+    Language ->
     Sugar.HoleOption (Name o) i o ->
     i (Group i o)
-mkGroup option =
+mkGroup lang option =
     option ^. Sugar.hoSugaredBaseExpr
     <&>
     \sugaredBaseExpr ->
     Group
     { _groupSearchTerms =
-        sugaredBaseExpr ^. val & ValTerms.binder
+        sugaredBaseExpr ^. val & ValTerms.binder lang
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }
