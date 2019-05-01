@@ -15,7 +15,7 @@ newtype Env a b = Env { _envMapping :: a -> b }
 Lens.makeLenses ''Env
 
 newtype MapNames (m :: * -> *) a b x = MapNames (Reader (Env a b) x)
-    deriving (Functor, Applicative, Monad, MonadReader (Env a b))
+    deriving newtype (Functor, Applicative, Monad, MonadReader (Env a b))
 
 instance Monad m => MonadNaming (MapNames m a b) where
     type OldName (MapNames m a b) = a

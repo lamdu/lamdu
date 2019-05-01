@@ -60,7 +60,7 @@ Lens.makeLenses ''P0Env
 
 newtype Pass0LoadNames i o a =
     Pass0LoadNames { unPass0LoadNames :: ReaderT (P0Env i o) i a }
-    deriving (Functor, Applicative, Monad, MonadReader (P0Env i o))
+    deriving newtype (Functor, Applicative, Monad, MonadReader (P0Env i o))
 
 runPass0LoadNames :: P0Env i o -> Pass0LoadNames i o a -> i a
 runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
@@ -127,7 +127,7 @@ data P1Name o = P1Name
     }
 newtype Pass1PropagateUp (im :: * -> *) (am :: * -> *) a =
     Pass1PropagateUp (Writer P1Out a)
-    deriving (Functor, Applicative, Monad, MonadWriter P1Out)
+    deriving newtype (Functor, Applicative, Monad, MonadWriter P1Out)
 runPass1PropagateUp :: Pass1PropagateUp i o a -> (a, P1Out)
 runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
 
@@ -327,7 +327,7 @@ data P2Env = P2Env
 Lens.makeLenses ''P2Env
 
 newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
-    deriving (Functor, Applicative, Monad, MonadReader P2Env)
+    deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)
 
 runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames i o a -> a
 runPass2MakeNamesInitial p1out act =

@@ -20,7 +20,7 @@ type T = Transaction
 --    to write a JSON file)
 newtype IOTrans m a = IOTrans
     { _ioTrans :: Compose IO (Compose (T m) ((,) (IO ()))) a
-    } deriving (Functor, Applicative)
+    } deriving newtype (Functor, Applicative)
 Lens.makeLenses ''IOTrans
 
 trans ::

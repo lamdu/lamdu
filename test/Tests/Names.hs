@@ -20,7 +20,7 @@ import qualified Test.Lamdu.SugarStubs as Stub
 import           Test.Lamdu.Prelude
 
 newtype CollectNames name a = CollectNames { runCollectNames :: Writer [name] a }
-    deriving (Functor, Applicative, Monad, MonadWriter [name])
+    deriving newtype (Functor, Applicative, Monad, MonadWriter [name])
 
 instance Walk.MonadNaming (CollectNames name) where
     type OldName (CollectNames name) = name

@@ -30,7 +30,7 @@ import           Lamdu.Prelude
 -- This key is XOR'd with object keys to yield the IRef to each
 -- object's current version ref:
 newtype View m = View (IRef m (ViewData m))
-    deriving (Eq, Ord, Binary, Show, Read)
+    deriving newtype (Eq, Ord, Binary, Show, Read)
 
 data BranchData m = BranchData
     { _brVersion :: Version m
@@ -39,10 +39,10 @@ data BranchData m = BranchData
 instance Binary (BranchData m)
 
 newtype Branch m = Branch { unBranch :: IRef m (BranchData m) }
-    deriving (Eq, Ord, Read, Show, Binary)
+    deriving newtype (Eq, Ord, Read, Show, Binary)
 
 newtype ViewData m = ViewData { _vdBranch :: Branch m }
-    deriving (Eq, Ord, Show, Read, Binary)
+    deriving newtype (Eq, Ord, Show, Read, Binary)
 
 Lens.makeLenses ''BranchData
 Lens.makeLenses ''ViewData

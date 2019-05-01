@@ -16,7 +16,9 @@ import           Lamdu.Prelude
 
 newtype IRef (m :: * -> *) a = IRef
     { uuid :: UUID
-    } deriving (Eq, Ord, Read, Show, NFData, Binary)
+    }
+    deriving stock (Read, Show)
+    deriving newtype (Eq, Ord, NFData, Binary)
 
 -- Wrapper modules need to create an IRef
 unsafeFromUUID :: UUID -> IRef m a

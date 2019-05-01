@@ -110,7 +110,7 @@ instance Monoid LogUsed where
     mappend = (<>)
 
 newtype M m a = M { unM :: RWST (Env m) LogUsed State m a }
-    deriving
+    deriving newtype
         ( Functor, Applicative, Monad
         , MonadReader (Env m)
         , MonadWriter LogUsed

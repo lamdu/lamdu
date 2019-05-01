@@ -22,7 +22,7 @@ import Data.Monoid ((<>))
 import Prelude
 
 newtype WriterT w m a = WriterT { unWriterT :: StateT w m a }
-    deriving (Functor, Applicative, Monad, MonadTrans, Alternative)
+    deriving newtype (Functor, Applicative, Monad, MonadTrans, Alternative)
 
 instance MonadState s m => MonadState s (WriterT w m) where state = lift . state
 instance (Monad m, Monoid w) => MonadWriter w (WriterT w m) where

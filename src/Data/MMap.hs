@@ -20,7 +20,8 @@ import           Prelude hiding (filter)
 
 -- | A Map with a sensible Monoid/Semigroup instance
 newtype MMap k v = MMap (Map k v)
-    deriving (Eq, Ord, Show, Read, Binary, Functor, Foldable, Traversable)
+    deriving newtype (Eq, Ord, Show, Read, Binary, Functor, Foldable)
+    deriving stock Traversable
 
 Lens.makePrisms ''MMap
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE DerivingVia #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , curry, uncurry, sqrNorm
@@ -11,20 +12,22 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
-import           Data.Monoid.Generic (def_mempty)
-import           Data.Semigroup (Semigroup((<>)))
+import           Generic.Data (Generically(..), Generically1(..))
 import qualified Data.Tuple as Tuple
-import           GHC.Generics (Generic)
+import           GHC.Generics (Generic, Generic1)
 
 import           Prelude hiding (curry, uncurry)
 
 data Vector2 a = Vector2 !a !a
-    deriving (Generic, Eq, Ord, Show, Read, Functor, Foldable, Traversable)
+    deriving ( Generic, Generic1, Eq, Ord
+             , Show, Read, Functor, Foldable, Traversable
+             , NFData, Binary
+             )
+    deriving (Semigroup, Monoid) via Generically (Vector2 a)
+    deriving Applicative via Generically1 Vector2
     -- Note the Ord instance is obviously not a mathematical one
     -- (Vectors aren't ordinals!). Useful to have in a binary search
     -- tree though.
-instance Binary a => Binary (Vector2 a)
-instance NFData a => NFData (Vector2 a)
 
 instance Aeson.ToJSON a => Aeson.ToJSON (Vector2 a) where
     toJSON (Vector2 x y) = Aeson.toJSON (x, y)
@@ -67,17 +70,6 @@ uncurry f (Vector2 x y) = f x y
 
 sqrNorm :: Num a => Vector2 a -> a
 sqrNorm = uncurry (+) . (^ (2::Int))
-
-instance Applicative Vector2 where
-    pure x = Vector2 x x
-    Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)
-
-instance Semigroup a => Semigroup (Vector2 a) where
-    Vector2 x0 y0 <> Vector2 x1 y1 = Vector2 (x0 <> x1) (y0 <> y1)
-
-instance Monoid a => Monoid (Vector2 a) where
-    mempty = def_mempty
-    mappend = (<>)
 
 -- An improper Num instance, for convenience
 instance Num a => Num (Vector2 a) where

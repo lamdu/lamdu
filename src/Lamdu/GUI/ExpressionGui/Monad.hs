@@ -62,7 +62,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 newtype StoredEntityIds = StoredEntityIds [Sugar.EntityId]
-    deriving (Semigroup, Monoid)
+    deriving newtype (Semigroup, Monoid)
 
 data Askable i o = Askable
     { _aState :: GUIState
@@ -89,7 +89,7 @@ data Askable i o = Askable
 
 newtype ExprGuiM i (o :: * -> *) a =
     ExprGuiM (ReaderT (Askable i o) i a)
-    deriving (Functor, Applicative, Monad, MonadReader (Askable i o))
+    deriving newtype (Functor, Applicative, Monad, MonadReader (Askable i o))
 
 Lens.makeLenses ''Askable
 

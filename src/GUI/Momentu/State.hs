@@ -2,7 +2,7 @@
 -- TODO: Check if GHC bug reported on that.
 {-# OPTIONS_GHC -Wno-redundant-constraints  #-}
 
-{-# LANGUAGE TemplateHaskell, DefaultSignatures #-}
+{-# LANGUAGE TemplateHaskell, DefaultSignatures, DerivingVia #-}
 
 module GUI.Momentu.State
     ( VirtualCursor(..), vcRect
@@ -21,11 +21,11 @@ import           Data.Binary.Extended (Binary, decodeOrFail, encodeS)
 import           Data.ByteString.Extended as BS
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import           Data.Monoid.Generic (def_mempty, def_mappend)
 import           GUI.Momentu.Animation.Id (AnimId)
 import           GUI.Momentu.Rect (Rect)
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
+import           Generic.Data (Generically(..))
 
 import           Lamdu.Prelude
 
@@ -51,15 +51,10 @@ data Update = Update
     , _uPreferStroll :: Monoid.Any
     , _uWidgetStateUpdates :: Map Id ByteString
     , _uVirtualCursor :: Monoid.Last VirtualCursor
-    } deriving Generic
+    }
+    deriving stock Generic
+    deriving (Semigroup, Monoid) via Generically Update
 Lens.makeLenses ''Update
-
-instance Semigroup Update where
-    (<>) = def_mappend
-
-instance Monoid Update where
-    mempty = def_mempty
-    mappend = (<>)
 
 type Gui w f = w (f Update)
 

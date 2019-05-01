@@ -29,7 +29,8 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Prelude
 
 newtype ScopeId = ScopeId Int
-    deriving (Show, Eq, Ord, Binary, Generic)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, Binary)
 
 newtype EvalTypeError = EvalTypeError Text
     deriving (Show, Eq, Ord, Generic)

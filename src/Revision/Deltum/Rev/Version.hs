@@ -16,7 +16,8 @@ import qualified Revision.Deltum.Transaction as Transaction
 import           Lamdu.Prelude
 
 newtype Version m = Version { versionIRef :: IRef m (VersionData m) }
-    deriving (Eq, Ord, Read, Show, Binary)
+    deriving stock (Read, Show)
+    deriving newtype (Eq, Ord, Binary)
 
 data VersionData m = VersionData
     { depth :: Int

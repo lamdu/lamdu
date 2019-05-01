@@ -21,7 +21,7 @@ newtype Cache = Cache
     }
 
 newtype Decl a = Decl (WriterT (IO ()) IO a)
-    deriving (Functor, Applicative)
+    deriving newtype (Functor, Applicative)
 
 function :: Ord a => (a -> b) -> Decl (a -> b)
 function f =

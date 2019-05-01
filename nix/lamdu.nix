@@ -2,7 +2,7 @@
 , base-compat, base-orphans, base16-bytestring, binary, bytestring
 , Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
 , directory, edit-distance, ekg-core
-, executable-path, filepath, generic-random, GLFW-b
+, executable-path, filepath, generic-random, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
 , nodejs-exec, OpenGL, optparse-applicative, pretty, process, QuickCheck
@@ -42,7 +42,7 @@ mkDerivation {
   libraryHaskellDepends = [
     aeson aeson-pretty ansi-wl-pprint base base-compat base-orphans
     base16-bytestring binary bytestring constraints containers cryptohash-sha256
-    data-default deepseq directory edit-distance
+    data-default deepseq directory edit-distance generic-data
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl

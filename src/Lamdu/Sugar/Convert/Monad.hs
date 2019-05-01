@@ -87,7 +87,7 @@ data ScopeInfo m = ScopeInfo
 Lens.makeLenses ''ScopeInfo
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
-    deriving (Functor, Applicative, Monad, MonadReader (Context m))
+    deriving newtype (Functor, Applicative, Monad, MonadReader (Context m))
 
 instance Monad m => MonadTransaction m (ConvertM m) where
     transaction = ConvertM . lift

@@ -27,10 +27,10 @@ import           Lamdu.Prelude
 type T = Transaction
 
 newtype DbM a = DbM { dbM :: IO a }
-    deriving (Functor, Applicative, Monad, MonadIO)
+    deriving newtype (Functor, Applicative, Monad, MonadIO)
 
 newtype ViewM a = ViewM { viewM :: T DbM a }
-    deriving (Functor, Applicative, Monad)
+    deriving newtype (Functor, Applicative, Monad)
 
 runDbTransaction :: Transaction.Store DbM -> T DbM a -> IO a
 runDbTransaction store = dbM . Transaction.run store
