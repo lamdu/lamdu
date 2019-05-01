@@ -8,3 +8,4 @@
 :set -odir=ghci-out
 :set -outputdir=ghci-out
 :set -hide-package cryptohash
+:set -hide-package base-compat-batteries
