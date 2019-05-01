@@ -15,8 +15,7 @@ module Revision.Deltum.Transaction
     , assocDataRef, assocDataRefDef
     , fromIRef
     , mkPropertyFromIRef
-    )
-where
+    ) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
