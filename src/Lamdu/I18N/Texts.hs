@@ -108,5 +108,8 @@ instance HasConfigFolder Language where
 class Element.HasLayoutDir env => HasLanguage env where
     language :: Lens' env Language
 
+instance Element.HasLayoutDir Language where layoutDir = lDirection
+instance HasLanguage Language where language = id
+
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts
