@@ -46,12 +46,12 @@ class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 defaultFdConfig ::
     (MonadReader env m, HasTexts env) => m (E.Subtitle -> FocusDelegator.Config)
 defaultFdConfig =
-    Lens.view texts <&> \txt helpPrefix ->
+    Lens.view texts <&> \txt helpCategory ->
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-    , FocusDelegator.focusChildDoc = E.Doc [helpPrefix, txt ^. select]
+    , FocusDelegator.focusChildDoc = E.Doc [helpCategory, txt ^. select]
     , FocusDelegator.focusParentKeys = [MetaKey.Key'Enter, MetaKey.Key'Escape] <&> MetaKey noMods
-    , FocusDelegator.focusParentDoc = E.Doc [helpPrefix, txt ^. chooseSelected]
+    , FocusDelegator.focusParentDoc = E.Doc [helpCategory, txt ^. chooseSelected]
     }
 
 data Config = Config
@@ -61,9 +61,9 @@ data Config = Config
 
 defaultConfig :: (MonadReader env m, HasTexts env) => m (E.Subtitle -> Config)
 defaultConfig =
-    defaultFdConfig <&> \defFd helpPrefix ->
+    defaultFdConfig <&> \defFd helpCategory ->
     Config
-    { cwcFDConfig = defFd helpPrefix
+    { cwcFDConfig = defFd helpCategory
     , cwcOrientation = Vertical
     }
 
