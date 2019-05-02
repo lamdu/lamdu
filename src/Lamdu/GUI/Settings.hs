@@ -7,6 +7,7 @@ module Lamdu.GUI.Settings
      ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property, composeLens)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
@@ -45,8 +46,7 @@ hoist f (StatusWidgets x y z a) =
 
 header ::
     StatusBar.LabelConstraints env m =>
-    (forall a. Lens' (Texts.StatusBarTexts a) a) ->
-    StatusBar.Header (m (WithTextPos View))
+    OneOf Texts.StatusBarTexts -> StatusBar.Header (m (WithTextPos View))
 header lens = StatusBar.labelHeader (Texts.statusBar . lens)
 
 makeStatusWidgets ::
