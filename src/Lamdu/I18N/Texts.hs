@@ -79,6 +79,21 @@ deriveJSON Aeson.defaultOptions
         (Lens.ix 0 %~ toLower) . (^?! prefixed "_sb")
     } ''StatusBar
 
+data Versioning a = Versioning
+    { _branches :: a
+    , _rename :: a
+    , _doneRenaming :: a
+    , _edit :: a
+    , _undo :: a
+    , _redo :: a
+    , _select :: a
+    , _delete :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Versioning)
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Versioning
+Lens.makeLenses ''Versioning
+
 data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
@@ -86,6 +101,7 @@ data Texts a = Texts
     , _dir :: Dir.Texts a
     , _glue :: Glue.Texts a
     , _eventMap :: EventMap.Texts a
+    , _versioning :: Versioning a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)

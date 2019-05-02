@@ -22,6 +22,16 @@
             "language": "Language",
             "theme": "Theme"
         },
+        "versioning": {
+            "branches": "Branches",
+            "rename": "Rename",
+            "doneRenaming": "Done renaming",
+            "edit": "Edit",
+            "undo": "Undo",
+            "redo": "Redo",
+            "select": "Select",
+            "delete": "Delete"
+        },
         "dir": {
             "left": "Left",
             "right": "Right",

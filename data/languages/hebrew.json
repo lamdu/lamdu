@@ -25,6 +25,16 @@
             "language": "שפה",
             "theme": "תמה"
         },
+        "versioning": {
+            "branches": "ענפים",
+            "rename": "שנה שם",
+            "doneRenaming": "סיום שינוי שם",
+            "edit": "עריכה",
+            "undo": "בטל פעולה",
+            "redo": "בצע פעולה מחדש",
+            "select": "בחר",
+            "delete": "מחק"
+        },
         "dir": {
             "left": "שמאלה",
             "right": "ימינה",
