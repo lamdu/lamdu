@@ -53,7 +53,7 @@ data Env = Env
     , _debugMonitors :: Debug.Monitors
     , _cachedFunctions :: Cache.Functions
     , _layoutDir :: Element.LayoutDir
-    , _texts :: Language
+    , _language :: Language
     }
 Lens.makeLenses ''Env
 
@@ -79,5 +79,5 @@ instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Element.HasLayoutDir Env where layoutDir = layoutDir
-instance Texts.HasTexts Env where texts = texts
+instance Texts.HasLanguage Env where language = language
 

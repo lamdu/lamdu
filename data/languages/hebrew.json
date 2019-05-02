@@ -1,27 +1,29 @@
 {
     "imports": ["right-to-left.mixin.json"],
-    "code": {
-        "let_": "יהי",
-        "case_": "התאם",
-        "of_": "ל",
-        "if_": "אם ",
-        "else_": "אחרת",
-        "elseShort": "או ",
-        "inject": ":",
-        "nullaryInject": ".",
-        "paramsRecordOpener": "פרמטרים }",
-        "paramsRecordCloser": "{"
-    },
-    "codeUI": {
-        "defUpdateHeader": "עדכן",
-        "defUpdateTo": "ל: ",
-        "defUpdateWas": "היה טיפוס: ",
-        "newDefinitionButton": "חדש...",
-        "undeleteButton": "שחזר..."
-    },
-    "statusBar": {
-        "help": "עזרה ",
-        "language": "",
-        "theme": ""
+    "texts": {
+        "code": {
+            "let_": "יהי",
+            "case_": "התאם",
+            "of_": "ל",
+            "if_": "אם ",
+            "else_": "אחרת",
+            "elseShort": "או ",
+            "inject": ":",
+            "nullaryInject": ".",
+            "paramsRecordOpener": "פרמטרים }",
+            "paramsRecordCloser": "{"
+        },
+        "codeUI": {
+            "defUpdateHeader": "עדכן",
+            "defUpdateTo": "ל: ",
+            "defUpdateWas": "היה טיפוס: ",
+            "newDefinitionButton": "חדש...",
+            "undeleteButton": "שחזר..."
+        },
+        "statusBar": {
+            "help": "עזרה ",
+            "language": "",
+            "theme": ""
+        }
     }
 }

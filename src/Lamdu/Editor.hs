@@ -212,10 +212,10 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 , _debugMonitors = monitors
                 , _cachedFunctions = cachedFunctions
                 , _layoutDir =
-                    if sample ^. sLanguageData . Texts.isLeftToRight
+                    if sample ^. sLanguageData . Texts.lIsLeftToRight
                     then Element.LeftToRight
                     else Element.RightToLeft
-                , _texts = sample ^. sLanguageData
+                , _language = sample ^. sLanguageData
                 }
         let dbToIO action =
                 case settingsProp ^. Property.pVal . Settings.sAnnotationMode of

@@ -1,17 +1,19 @@
 {
     "imports": ["base.mixin.json"],
     "isLeftToRight": false,
-    "code": {
-        "relay": "⇐",
-        "toNom": "»",
-        "fromNom": "«",
-        "repl": "⋘",
-        "condColon": " :",
-        "paramsRecordCloser": "{",
-        "arrow": "←",
-        "textOpener": "”",
-        "textCloser": "„",
-        "recordOpener": "}",
-        "recordCloser": "{"
+    "texts": {
+        "code": {
+            "relay": "⇐",
+            "toNom": "»",
+            "fromNom": "«",
+            "repl": "⋘",
+            "condColon": " :",
+            "paramsRecordCloser": "{",
+            "arrow": "←",
+            "textOpener": "”",
+            "textCloser": "„",
+            "recordOpener": "}",
+            "recordCloser": "{"
+        }
     }
 }

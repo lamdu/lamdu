@@ -88,7 +88,7 @@ make ::
     , SearchMenu.HasTermStyle env
     , Element.HasAnimIdPrefix env
     , Element.HasLayoutDir env
-    , Texts.HasTexts env
+    , Texts.HasLanguage env
     , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->

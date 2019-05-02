@@ -109,7 +109,7 @@ type Ctx env =
     , Menu.HasConfig env
     , Element.HasLayoutDir env
     , SearchMenu.HasTermStyle env
-    , Texts.HasTexts env
+    , Texts.HasLanguage env
     )
 
 layout ::

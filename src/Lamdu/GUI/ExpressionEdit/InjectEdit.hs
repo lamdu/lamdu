@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env, Texts.HasTexts env
+    , Element.HasAnimIdPrefix env, Texts.HasLanguage env
     ) => OneOf Texts -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)
 

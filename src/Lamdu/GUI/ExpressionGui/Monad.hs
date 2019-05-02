@@ -87,7 +87,7 @@ data Askable i o = Askable
     , _aIsHoleResult :: Bool
     , _aLayoutDir :: Element.LayoutDir
     , aIom :: forall x. i x -> o x
-    , _aTexts :: Language
+    , _aLanguage :: Language
     }
 
 newtype ExprGuiM i (o :: * -> *) a =
@@ -114,7 +114,7 @@ instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
 instance Element.HasLayoutDir (Askable i o) where layoutDir = aLayoutDir
-instance Texts.HasTexts (Askable i o) where texts = aTexts
+instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a
 im = ExprGuiM . lift
@@ -194,7 +194,7 @@ run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
     , HasSettings env, HasStyle env, Element.HasLayoutDir env
-    , Texts.HasTexts env
+    , Texts.HasLanguage env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
@@ -220,6 +220,6 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aStyle = env ^. style
     , _aIsHoleResult = False
     , _aLayoutDir = env ^. Element.layoutDir
-    , _aTexts = env ^. Texts.texts
+    , _aLanguage = env ^. Texts.language
     , aIom = liftIom
     }

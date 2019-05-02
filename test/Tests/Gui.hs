@@ -73,7 +73,7 @@ wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFoc
 
 makeGui ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasLanguage env
     ) =>
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc cache env =
@@ -103,7 +103,7 @@ focusedWidget gui =
 
 makeFocusedWidget ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasLanguage env
     ) =>
     String -> Cache.Functions -> env ->
     T ViewM (Widget.Focused (T ViewM GuiState.Update))
@@ -112,7 +112,7 @@ makeFocusedWidget afterDoc cache env =
 
 mApplyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
     T ViewM (Maybe GuiState.Update)
@@ -132,7 +132,7 @@ mApplyEvent cache env virtCursor event =
 
 applyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasTexts env
+    , HasSettings env, HasStyle env, Element.HasLayoutDir env, Texts.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env
 applyEvent cache env virtCursor event =

@@ -25,7 +25,7 @@ import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Language, HasTexts(..))
+import           Lamdu.I18N.Texts (Language, HasLanguage(..))
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings)
 import           Lamdu.Style (HasStyle(..), Style)
@@ -45,7 +45,7 @@ data Env =
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
     , _eLayoutDir :: Element.LayoutDir
-    , _eTexts :: Language
+    , _eLanguage :: Language
     }
 Lens.makeLenses ''Env
 instance HasTheme Env where theme = eTheme
@@ -59,7 +59,7 @@ instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
 instance Element.HasLayoutDir Env where layoutDir = eLayoutDir
-instance HasTexts Env where texts = eTexts
+instance HasLanguage Env where language = eLanguage
 
 make :: IO Env
 make =
@@ -95,7 +95,7 @@ make =
                 }
             , _eAnimIdPrefix = []
             , _eLayoutDir = Element.LeftToRight -- TODO: Test other directions
-            , _eTexts = testLang
+            , _eLanguage = testLang
             }
 
 prop :: a -> MkProperty Identity Unit a

@@ -4,6 +4,7 @@ module Lamdu.I18N.Texts where
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
+import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
@@ -61,45 +62,51 @@ Lens.makeLenses ''CodeUI
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUI
 
 data StatusBar a = StatusBar
-    { _annotations :: a
-    , _branch :: a
-    , _help :: a
-    , _language :: a
-    , _theme :: a
+    { _sbAnnotations :: a
+    , _sbBranch :: a
+    , _sbHelp :: a
+    , _sbLanguage :: a
+    , _sbTheme :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 StatusBar)
 Lens.makeLenses ''StatusBar
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''StatusBar
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier =
+        (Lens.ix 0 %~ toLower) . (^?! prefixed "_sb")
+    } ''StatusBar
 
 data Texts a = Texts
-    { -- TODO: Should this still be called "Texts?"
-      -- Using a boolean for the JSON instance
-      _isLeftToRight :: Bool
-    , _code :: Code a
+    { _code :: Code a
     , _codeUI :: CodeUI a
     , _statusBar :: StatusBar a
     }
-    deriving stock (Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
 
 Lens.makeLenses ''Texts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
 
-type Language = Texts Text
+data Language = Language
+    { -- TODO: Should this still be called "Texts?"
+      -- Using a boolean for the JSON instance
+      _lIsLeftToRight :: Bool
+    , _lTexts :: Texts Text
+    } deriving (Eq, Show)
+
+Lens.makeLenses ''Language
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier =
+        (Lens.ix 0 %~ toLower) . (^?! prefixed "_l")
+    } ''Language
 
 instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class HasTexts env where texts :: Lens' env Language
-instance HasTexts (Texts Text) where texts = id
+class HasLanguage env where language :: Lens' env Language
+instance HasLanguage Language where language = id
 
-dummy :: Texts ()
-dummy =
-    Texts
-    { _isLeftToRight = True
-    , _code = pure ()
-    , _codeUI = pure ()
-    , _statusBar = pure ()
-    }
+texts :: HasLanguage env => Lens' env (Texts Text)
+texts = language . lTexts

@@ -1,15 +1,17 @@
 {
-    "code": {
-        "assign": "=",
-        "absurd": "Ø",
-        "inject": ":",
-        "nullaryInject": ".",
-        "defer": "|",
-        "lam": "λ",
-        "recordSep": ","
-    },
-    "statusBar": {
-        "annotations": "",
-        "branch": "⎇"
+    "texts": {
+        "code": {
+            "assign": "=",
+            "absurd": "Ø",
+            "inject": ":",
+            "nullaryInject": ".",
+            "defer": "|",
+            "lam": "λ",
+            "recordSep": ","
+        },
+        "statusBar": {
+            "annotations": "",
+            "branch": "⎇"
+        }
     }
 }

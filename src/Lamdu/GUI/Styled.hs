@@ -58,7 +58,7 @@ rawText animIdSuffix txt =
 
 text ::
     ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Texts.HasTexts env
+    , Texts.HasLanguage env
     ) =>
     AnimId -> OneOf Texts -> f (WithTextPos View)
 text animIdSuffix txtLens =
@@ -66,11 +66,11 @@ text animIdSuffix txtLens =
     >>= rawText animIdSuffix
 
 textIds :: Texts [ByteString]
-textIds = Texts.dummy & Lens.traversed %@~ const . (:[]) . encodeS
+textIds = pure () & Lens.traversed %@~ const . (:[]) . encodeS
 
 label ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Texts.HasTexts env
+    , Texts.HasLanguage env
     ) =>
     OneOf Texts -> m (WithTextPos View)
 label lens =
@@ -161,7 +161,7 @@ withColor textColor act =
 actionable ::
     ( Element.HasAnimIdPrefix env, TextView.HasStyle env
     , GuiState.HasCursor env, Config.HasConfig env, HasTheme env
-    , Texts.HasTexts env
+    , Texts.HasLanguage env
     , Applicative f, MonadReader env m
     ) =>
     Widget.Id -> OneOf Texts -> E.Doc -> f Widget.Id -> m (TextWidget f)

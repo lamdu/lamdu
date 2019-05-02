@@ -39,7 +39,7 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label)
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Texts (HasTexts(..), Language, Texts)
+import           Lamdu.I18N.Texts (HasLanguage(..), Texts, texts)
 
 import           Lamdu.Prelude
 
@@ -74,7 +74,7 @@ data Header w = Header
 
 type LabelConstraints env m =
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env, HasTexts env
+    , Element.HasAnimIdPrefix env, HasLanguage env
     )
 
 labelHeader ::
@@ -85,7 +85,7 @@ makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
-    , HasTexts env
+    , HasLanguage env
     ) =>
     OneOf Texts -> Property f a -> [(Text, a)] -> m (TextWidget f)
 makeChoice headerText prop choiceVals =
@@ -105,7 +105,7 @@ labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
-    , HasTexts env
+    , HasLanguage env
     , Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Property f a -> [(Text, a)] -> m (TextWidget f)
@@ -113,10 +113,10 @@ labeledChoice header prop choiceVals =
     headerWidget header /|/ makeChoice (headerTextLens header) prop choiceVals
 
 makeSwitchEventMap ::
-    ( MonadReader env m, HasConfig env, HasTexts env
+    ( MonadReader env m, HasConfig env, HasLanguage env
     , Eq a, Functor f
     ) =>
-    Lens.ALens' Language Text -> Lens' Config [MetaKey] ->
+    OneOf Texts -> Lens' Config [MetaKey] ->
     Property f a -> [a] ->
     m (Gui EventMap f)
 makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
@@ -131,7 +131,7 @@ makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
-    , HasConfig env, HasTexts env
+    , HasConfig env, HasLanguage env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
     , Glue.GluesTo w (TextWidget f) (TextWidget f)
@@ -151,7 +151,7 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
 
 makeBoundedSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
-    , HasConfig env, HasTexts env
+    , HasConfig env, HasLanguage env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Element.HasLayoutDir env
     , Glue.GluesTo w (TextWidget f) (TextWidget f)

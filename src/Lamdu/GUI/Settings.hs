@@ -21,7 +21,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection, _Selection)
 import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import           Lamdu.I18N.Texts (Language, HasTexts)
+import           Lamdu.I18N.Texts (Language, HasLanguage)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
@@ -51,7 +51,7 @@ header lens = StatusBar.labelHeader (Texts.statusBar . lens)
 
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
-    , HasConfig env, HasTheme env, HasStdSpacing env, HasTexts env
+    , HasConfig env, HasTheme env, HasStdSpacing env, HasLanguage env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Element.HasLayoutDir env, Hover.HasStyle env
     ) =>
@@ -59,15 +59,15 @@ makeStatusWidgets ::
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
-    <$> StatusBar.makeBoundedSwitchStatusWidget (header Texts.annotations)
+    <$> StatusBar.makeBoundedSwitchStatusWidget (header Texts.sbAnnotations)
         Config.nextAnnotationModeKeys annotationModeProp
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.theme)
+    <*> StatusBar.makeSwitchStatusWidget (header Texts.sbTheme)
         Config.changeThemeKeys themeProp
         (themeNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.language)
+    <*> StatusBar.makeSwitchStatusWidget (header Texts.sbLanguage)
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.help)
+    <*> StatusBar.makeSwitchStatusWidget (header Texts.sbHelp)
         Config.helpKeys helpProp helpVals
     where
         helpVals =

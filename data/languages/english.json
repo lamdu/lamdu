@@ -1,24 +1,26 @@
 {
     "imports": ["left-to-right.mixin.json"],
-    "code": {
-        "let_": "let",
-        "case_": "case",
-        "of_": "of",
-        "if_": "if ",
-        "else_": "else",
-        "elseShort": "el",
-        "paramsRecordOpener": "Params {"
-    },
-    "codeUI": {
-        "defUpdateHeader": "Update",
-        "defUpdateTo": "to: ",
-        "defUpdateWas": "Type was: ",
-        "newDefinitionButton": "New...",
-        "undeleteButton": "Undelete..."
-    },
-    "statusBar": {
-        "help": "Help ",
-        "language": "",
-        "theme": ""
+    "texts": {
+        "code": {
+            "let_": "let",
+            "case_": "case",
+            "of_": "of",
+            "if_": "if ",
+            "else_": "else",
+            "elseShort": "el",
+            "paramsRecordOpener": "Params {"
+        },
+        "codeUI": {
+            "defUpdateHeader": "Update",
+            "defUpdateTo": "to: ",
+            "defUpdateWas": "Type was: ",
+            "newDefinitionButton": "New...",
+            "undeleteButton": "Undelete..."
+        },
+        "statusBar": {
+            "help": "Help ",
+            "language": "",
+            "theme": ""
+        }
     }
 }
