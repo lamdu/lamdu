@@ -13,7 +13,6 @@ import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (Gui)
@@ -211,10 +210,7 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 , _animIdPrefix = mempty
                 , _debugMonitors = monitors
                 , _cachedFunctions = cachedFunctions
-                , _layoutDir =
-                    if sample ^. sLanguageData . Texts.lIsLeftToRight
-                    then Element.LeftToRight
-                    else Element.RightToLeft
+                , _layoutDir = sample ^. sLanguageData . Texts.lDirection
                 , _language = sample ^. sLanguageData
                 }
         let dbToIO action =

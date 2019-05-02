@@ -13,6 +13,8 @@ module GUI.Momentu.Element
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
@@ -57,6 +59,7 @@ data LayoutDir
     = LeftToRight -- ^ e.g: latin languages
     | RightToLeft -- ^ e.g: Hebrew/Arabic
     deriving (Eq, Ord, Show)
+deriveJSON Aeson.defaultOptions ''LayoutDir
 
 class HasLayoutDir env where layoutDir :: Lens' env LayoutDir
 instance HasLayoutDir LayoutDir where layoutDir = id

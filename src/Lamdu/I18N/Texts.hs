@@ -92,8 +92,7 @@ deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} 
 
 data Language = Language
     { -- TODO: Should this still be called "Texts?"
-      -- Using a boolean for the JSON instance
-      _lIsLeftToRight :: Bool
+      _lDirection :: Element.LayoutDir
     , _lTexts :: Texts Text
     } deriving (Eq, Show)
 

@@ -1,6 +1,6 @@
 {
     "imports": ["base.mixin.json"],
-    "isLeftToRight": false,
+    "direction": "RightToLeft",
     "texts": {
         "code": {
             "relay": "⇐",
