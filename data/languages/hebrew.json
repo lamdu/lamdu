@@ -52,6 +52,10 @@
             "stroll": "שיוט",
             "back": "אחורה",
             "ahead": "קדימה"
+        },
+        "choice": {
+            "select": "סמן",
+            "chooseSelected": "בחר"
         }
     }
 }

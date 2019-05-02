@@ -49,6 +49,10 @@
             "stroll": "Stroll",
             "back": "Back",
             "ahead": "Ahead"
+        },
+        "choice": {
+            "select": "Select",
+            "chooseSelected": "Choose selected"
         }
     }
 }

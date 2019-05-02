@@ -1,13 +1,18 @@
 -- | A vertical-expand (combo-like) choice widget
-
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module GUI.Momentu.Widgets.Choice
     ( make
     , defaultFdConfig
     , Config(..), defaultConfig
     , Orientation(..)
+    , Texts(..), select, chooseSelected
+    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 import           Data.Property (Property(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Direction (Orientation(..), perpendicular, axis)
@@ -26,13 +31,27 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 
 import           Lamdu.Prelude
 
-defaultFdConfig :: E.Subtitle -> FocusDelegator.Config
-defaultFdConfig helpPrefix =
+data Texts a = Texts
+    { _select :: a
+    , _chooseSelected :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+Lens.makeLenses ''Texts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+
+
+defaultFdConfig ::
+    (MonadReader env m, HasTexts env) => m (E.Subtitle -> FocusDelegator.Config)
+defaultFdConfig =
+    Lens.view texts <&> \txt helpPrefix ->
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-    , FocusDelegator.focusChildDoc = E.Doc [helpPrefix, "Select"]
+    , FocusDelegator.focusChildDoc = E.Doc [helpPrefix, txt ^. select]
     , FocusDelegator.focusParentKeys = [MetaKey.Key'Enter, MetaKey.Key'Escape] <&> MetaKey noMods
-    , FocusDelegator.focusParentDoc = E.Doc [helpPrefix, "Choose selected"]
+    , FocusDelegator.focusParentDoc = E.Doc [helpPrefix, txt ^. chooseSelected]
     }
 
 data Config = Config
@@ -40,10 +59,11 @@ data Config = Config
     , cwcOrientation :: Orientation
     }
 
-defaultConfig :: E.Subtitle -> Config
-defaultConfig helpPrefix =
+defaultConfig :: (MonadReader env m, HasTexts env) => m (E.Subtitle -> Config)
+defaultConfig =
+    defaultFdConfig <&> \defFd helpPrefix ->
     Config
-    { cwcFDConfig = defaultFdConfig helpPrefix
+    { cwcFDConfig = defFd helpPrefix
     , cwcOrientation = Vertical
     }
 

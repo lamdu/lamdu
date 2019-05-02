@@ -23,6 +23,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.State as GuiState
+import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -85,5 +86,6 @@ instance Dir.HasLayoutDir Env where layoutDir = language . Dir.layoutDir
 instance Dir.HasTexts Env where texts = Texts.language . Dir.texts
 instance Glue.HasTexts Env where texts = Texts.language . Glue.texts
 instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
+instance Choice.HasTexts Env where texts = Texts.language . Choice.texts
 instance Texts.HasLanguage Env where language = language
 

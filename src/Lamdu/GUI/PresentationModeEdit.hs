@@ -10,7 +10,6 @@ import           Data.Property (Property)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -22,6 +21,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -31,7 +31,7 @@ import           Lamdu.Prelude
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
-    , Hover.HasStyle env, Glue.HasTexts env
+    , Hover.HasStyle env, Texts.HasLanguage env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->
@@ -44,8 +44,9 @@ make myId (Sugar.Params params) prop =
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
                 (TextView.style . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
+        defConfig <- Choice.defaultConfig
         Choice.make ?? prop ?? pairs
-            ?? Choice.defaultConfig "Presentation Mode" ?? myId
+            ?? defConfig "Presentation Mode" ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagVal

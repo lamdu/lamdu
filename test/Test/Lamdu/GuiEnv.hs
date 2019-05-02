@@ -16,6 +16,7 @@ import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
+import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -64,6 +65,7 @@ instance Dir.HasLayoutDir Env where layoutDir = eDirLayout
 instance Dir.HasTexts Env where texts = language . Dir.texts
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts
+instance Choice.HasTexts Env where texts = language . Choice.texts
 instance HasLanguage Env where language = eLanguage
 
 make :: IO Env

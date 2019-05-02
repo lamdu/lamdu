@@ -90,8 +90,9 @@ makeChoice ::
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
+        defConf <- Choice.defaultConfig
         text <- Lens.view texts <&> (^# headerText)
-        Choice.make ?? prop ?? choices ?? Choice.defaultConfig text ?? myId
+        Choice.make ?? prop ?? choices ?? defConf text ?? myId
             <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
     where
         myId = Widget.Id ("status" : Styled.textIds ^# headerText)
