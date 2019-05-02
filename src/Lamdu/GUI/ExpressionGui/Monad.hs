@@ -117,9 +117,9 @@ instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
 instance Dir.HasLayoutDir (Askable i o) where layoutDir = aDirLayout
-instance Dir.HasTexts (Askable i o) where texts = aLanguage . Texts.lTexts . Texts.dir
+instance Dir.HasTexts (Askable i o) where texts = Texts.language . Dir.texts
 instance EventMap.HasTexts (Askable i o) where texts = Texts.language . EventMap.texts
-instance Glue.HasTexts (Askable i o) where texts = aLanguage . Texts.lTexts . Texts.glue
+instance Glue.HasTexts (Askable i o) where texts = Texts.language . Glue.texts
 instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a
