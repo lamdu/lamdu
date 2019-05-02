@@ -67,7 +67,8 @@ Lens.makeLenses ''CodeUI
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUI
 
 data StatusBar a = StatusBar
-    { _sbAnnotations :: a
+    { _sbStatusBar :: a
+    , _sbAnnotations :: a
     , _sbSwitchAnnotations :: a
     , _sbBranch :: a
     , _sbSwitchHelp :: a

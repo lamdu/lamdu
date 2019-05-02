@@ -22,6 +22,7 @@
             "quit": "יציאה"
         },
         "statusBar": {
+            "statusBar": "סרגל מצב",
             "help": "עזרה",
             "language": "שפה",
             "theme": "תמה",

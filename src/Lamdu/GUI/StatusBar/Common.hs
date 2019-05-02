@@ -39,7 +39,8 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label)
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Texts (HasLanguage(..), Texts, texts)
+import           Lamdu.I18N.Texts (HasLanguage(..), texts)
+import qualified Lamdu.I18N.Texts as Texts
 
 import           Lamdu.Prelude
 
@@ -68,8 +69,8 @@ fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
 data Header w = Header
-    { headerCategoryTextLens :: OneOf Texts
-    , headerSwitchTextLens :: OneOf Texts
+    { headerCategoryTextLens :: OneOf Texts.StatusBar
+    , headerSwitchTextLens :: OneOf Texts.StatusBar
     , headerWidget :: w
     }
 
@@ -79,12 +80,14 @@ type LabelConstraints env m =
     )
 
 labelHeader ::
-    LabelConstraints env m => OneOf Texts -> OneOf Texts -> Header (m (WithTextPos View))
+    LabelConstraints env m =>
+    OneOf Texts.StatusBar ->
+    OneOf Texts.StatusBar -> Header (m (WithTextPos View))
 labelHeader switchTextLens textLens =
     Header
     { headerCategoryTextLens = textLens
     , headerSwitchTextLens = switchTextLens
-    , headerWidget = info (label textLens)
+    , headerWidget = info (label (Texts.statusBar . textLens))
     }
 
 makeChoice ::
@@ -92,16 +95,16 @@ makeChoice ::
     , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasLanguage env
     ) =>
-    OneOf Texts -> Property f a -> [(Text, a)] -> m (TextWidget f)
+    OneOf Texts.StatusBar -> Property f a -> [(Text, a)] -> m (TextWidget f)
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals
         defConf <- Choice.defaultConfig
-        text <- Lens.view texts <&> (^# headerText)
+        text <- Lens.view (texts . Texts.statusBar . headerText)
         Choice.make ?? prop ?? choices ?? defConf text ?? myId
             <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
     where
-        myId = Widget.Id ("status" : Styled.textIds ^# headerText)
+        myId = Widget.Id ("status" : Styled.textIds ^# Texts.statusBar . headerText)
         mkChoice (text, val) =
             Label.makeFocusable text
             <&> (^. Align.tValue)
@@ -129,10 +132,14 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
         keys <- Lens.view (Config.config . keysGetter)
-        txt <- Lens.view (texts . headerSwitchTextLens header)
+        txt <- Lens.view (texts . Texts.statusBar)
         let e =
                 setVal newVal
-                & E.keysEventMap keys (E.Doc ["Status bar", txt])
+                & E.keysEventMap keys
+                (E.Doc
+                    [ txt ^. Texts.sbStatusBar
+                    , txt ^. headerSwitchTextLens header
+                    ])
         pure StatusWidget
             { _widget = w
             , _globalEventMap = e

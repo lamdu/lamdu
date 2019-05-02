@@ -9,7 +9,6 @@ module Lamdu.GUI.Settings
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property, composeLens)
-import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -44,24 +43,14 @@ hoist f (StatusWidgets x y z a) =
     where
         h = StatusBar.hoist f
 
-header ::
-    StatusBar.LabelConstraints env m =>
-    OneOf Texts.StatusBar ->
-    OneOf Texts.StatusBar ->
-    StatusBar.Header (m (WithTextPos View))
-header switchLens categoryLens =
-    StatusBar.labelHeader
-    (Texts.statusBar . switchLens)
-    (Texts.statusBar . categoryLens)
-
 unlabeledHeader ::
     Applicative f =>
     OneOf Texts.StatusBar ->
     OneOf Texts.StatusBar -> StatusBar.Header (f View)
 unlabeledHeader switchLens categoryLens =
     StatusBar.Header
-    { StatusBar.headerSwitchTextLens = Texts.statusBar . switchLens
-    , StatusBar.headerCategoryTextLens = Texts.statusBar . categoryLens
+    { StatusBar.headerSwitchTextLens = switchLens
+    , StatusBar.headerCategoryTextLens = categoryLens
     , StatusBar.headerWidget = pure Element.empty
     }
 
@@ -75,7 +64,7 @@ makeStatusWidgets ::
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> StatusBar.makeBoundedSwitchStatusWidget
-        (header Texts.sbSwitchAnnotations Texts.sbAnnotations)
+        (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
         Config.nextAnnotationModeKeys annotationModeProp
     <*> StatusBar.makeSwitchStatusWidget
         (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
@@ -86,7 +75,7 @@ makeStatusWidgets themeNames langNames prop =
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
     <*> StatusBar.makeSwitchStatusWidget
-        (header Texts.sbSwitchHelp Texts.sbHelp)
+        (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
         Config.helpKeys helpProp helpVals
     where
         helpVals =

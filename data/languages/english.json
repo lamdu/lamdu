@@ -19,6 +19,7 @@
             "quit": "Quit"
         },
         "statusBar": {
+            "statusBar": "Status Bar",
             "help": "Help",
             "language": "Language",
             "theme": "Theme",
