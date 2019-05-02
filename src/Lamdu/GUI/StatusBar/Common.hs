@@ -10,6 +10,7 @@ module Lamdu.GUI.StatusBar.Common
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
@@ -36,9 +37,9 @@ import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.I18N.Texts (HasTexts(..), Language, TextLens)
-import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.GUI.Styled (info, label)
+import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.I18N.Texts (HasTexts(..), Language, Texts)
 
 import           Lamdu.Prelude
 
@@ -67,7 +68,7 @@ fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
 data Header w = Header
-    { headerTextLens :: TextLens
+    { headerTextLens :: OneOf Texts
     , headerWidget :: w
     }
 
@@ -77,7 +78,7 @@ type LabelConstraints env m =
     )
 
 labelHeader ::
-    LabelConstraints env m => TextLens -> Header (m (WithTextPos View))
+    LabelConstraints env m => OneOf Texts -> Header (m (WithTextPos View))
 labelHeader textLens = Header textLens (info (label textLens))
 
 makeChoice ::
@@ -86,7 +87,7 @@ makeChoice ::
     , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
     , HasTexts env
     ) =>
-    TextLens -> Property f a -> [(Text, a)] -> m (TextWidget f)
+    OneOf Texts -> Property f a -> [(Text, a)] -> m (TextWidget f)
 makeChoice headerText prop choiceVals =
     do
         choices <- traverse mkChoice choiceVals

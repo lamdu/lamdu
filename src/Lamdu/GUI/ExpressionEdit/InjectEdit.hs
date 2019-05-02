@@ -4,7 +4,8 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
     ) where
 
 import           AST (Tree, Ann(..), ann)
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
+import           Control.Lens.Extended (OneOf)
 import           Data.Functor.Const (Const(..))
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
@@ -27,8 +28,8 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (text, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (TextLens)
 import qualified Lamdu.I18N.Texts as Texts
+import           Lamdu.I18N.Texts (Texts)
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -37,7 +38,7 @@ import           Lamdu.Prelude
 injectIndicator ::
     ( MonadReader env f, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env, Texts.HasTexts env
-    ) => TextLens -> f (WithTextPos View)
+    ) => OneOf Texts -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)
 
 makeInject ::

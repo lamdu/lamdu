@@ -95,8 +95,6 @@ instance HasConfigFolder Language where
 class HasTexts env where texts :: Lens' env Language
 instance HasTexts (Texts Text) where texts = id
 
-type TextLens = forall a. Lens' (Texts a) a
-
 dummyTexts :: Texts ()
 dummyTexts =
     Texts
