@@ -164,15 +164,12 @@ makeWithKeys ::
      vert (horiz (Aligned (Gui Widget f))) ->
      (vert (horiz (Aligned ())), Gui Widget f))
 makeWithKeys =
-    Lens.view Dir.layoutDir <&>
+    Lens.view Dir.layoutDir
+    <&>
     \dir keys children ->
     let (size, content) = GridView.makePlacements children
-        orderRow =
-            case dir of
-            Dir.LeftToRight -> id
-            Dir.RightToLeft -> reverse
     in  ( content & each2d %~ void
-        , toList content <&> orderRow . toList
+        , toList content <&> toList
           & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
           & toWidgetWithKeys dir keys size
         )

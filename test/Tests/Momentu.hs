@@ -51,7 +51,7 @@ propGridSensibleSize viewConfs =
     where
         isFinite x = not (isNaN x || isInfinite x)
         views = viewsFromConf viewConfs
-        (alignments, grid) = GridView.make views
+        (alignments, grid) = GridView.make Dir.LeftToRight views
         (size, placements) = GridView.makePlacements views
         goodPlacement (Aligned alignment (place, view)) =
             vSize == place ^. Rect.size &&

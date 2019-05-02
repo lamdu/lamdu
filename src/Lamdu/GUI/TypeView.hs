@@ -130,8 +130,7 @@ makeTInst parentPrecedence tid typeParams =
                 & afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
-                traverse makeTypeParam params
-                <&> gridViewTopLeftAlign
+                gridViewTopLeftAlign <*> traverse makeTypeParam params
                 <&> Align.toWithTextPos
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG
@@ -181,14 +180,17 @@ makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Not
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
 gridViewTopLeftAlign ::
-    (Traversable vert, Traversable horiz) =>
-    vert (horiz (Aligned View)) -> Aligned View
-gridViewTopLeftAlign views =
-    case alignPoints ^? traverse . traverse of
-    Nothing -> Aligned 0 view
-    Just x -> x & Align.value .~ view
-    where
-        (alignPoints, view) = GridView.make views
+    ( MonadReader env m, Dir.HasLayoutDir env
+    , Traversable vert, Traversable horiz
+    ) =>
+    m (vert (horiz (Aligned View)) -> Aligned View)
+gridViewTopLeftAlign =
+    GridView.make <&>
+    \mkGrid views ->
+    let (alignPoints, view) = mkGrid views
+    in  case alignPoints ^? traverse . traverse of
+        Nothing -> Aligned 0 view
+        Just x -> x & Align.value .~ view
 
 makeComposite ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
@@ -208,14 +210,14 @@ makeComposite o c mkPre mkPost mkField composite =
             opener <- grammar o
             closer <- grammar c
             fieldsView <-
-                traverse mkField fields
+                gridViewTopLeftAlign <*>
+                ( traverse mkField fields
                 <&> map toRow
                 <&> Lens.ix 0 . crPre .~ pure opener
                 <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
                 <&> Lens.imap addAnimIdPrefix
                 >>= traverse sequenceA
-                <&> map horizSetCompositeRow
-                <&> gridViewTopLeftAlign
+                <&> map horizSetCompositeRow )
                 <&> Align.alignmentRatio . _1 .~ 0.5
             let barWidth
                     | null fields = 150

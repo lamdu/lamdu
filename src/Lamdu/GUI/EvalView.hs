@@ -81,11 +81,12 @@ makeTable (Sugar.ResTable headers valss) =
         header <- traverse makeTagView headers
         rows <- take (tableCutoff-1) valss & traverse . traverse %%~ makeInner
         s <- Spacer.stdHSpace
-        let table =
-                header : rows <&> traverse %~ (^. Align.tValue)
+        table <-
+            GridView.make ??
+            ( header : rows <&> traverse %~ (^. Align.tValue)
                 <&> List.intersperse s
                 <&> traverse %~ Aligned 0.5
-                & GridView.make & snd & Align.WithTextPos 0
+            ) <&> snd <&> Align.WithTextPos 0
         remainView <-
             if null (drop tableCutoff rows)
             then pure Element.empty
@@ -142,7 +143,7 @@ makeRecord ::
     (Monad i, Monad o) =>
     Sugar.ResRecord (Name f) (ResVal (Name g)) -> ExprGuiM i o (WithTextPos View)
 makeRecord (Sugar.ResRecord fields) =
-    traverse (uncurry makeField) fields <&> GridView.make <&> snd
+    GridView.make <*> traverse (uncurry makeField) fields <&> snd
     <&> Align.WithTextPos 0
 
 makeList ::

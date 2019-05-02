@@ -203,15 +203,16 @@ makeFlatTreeView ::
     (MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env) =>
     m (Vector2 R -> [(View, View)] -> View)
 makeFlatTreeView =
-    (,)
+    (,,)
     <$> Align.hboxAlign
     <*> (fontHeight <&> Spacer.makeHorizontal)
-    <&> \(box, space) size pairs ->
+    <*> GridView.make
+    <&> \(box, space, mkGrid) size pairs ->
     let colViews =
             pairs
             & columns (size ^. _2) pairHeight
             <&> map toRow
-            <&> GridView.make
+            <&> mkGrid
             <&> snd
     in  List.intersperse space colViews & box 1
     where

@@ -8,6 +8,7 @@ import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Rect (Rect(..))
@@ -70,13 +71,21 @@ makePlacements rows =
 --- Displays:
 
 make ::
-    (Traversable horiz, Traversable vert) =>
-    vert (horiz (Aligned View)) ->
-    (vert (horiz (Aligned ())), View)
-make views =
-    ( placements <&> Lens.mapped %~ void
-    , View size (placements ^. traverse . traverse . Lens.to translate)
-    )
-    where
-        (size, placements) = makePlacements views
-        translate (Aligned _ (rect, view)) = Element.translateLayers (rect ^. Rect.topLeft) (view ^. View.vAnimLayers)
+    ( MonadReader env m, Dir.HasLayoutDir env
+    , Traversable horiz, Traversable vert
+    ) =>
+    m
+    (vert (horiz (Aligned View)) ->
+     (vert (horiz (Aligned ())), View))
+make =
+    Element.pad
+    <&> \pad views ->
+    let (size, placements) = makePlacements views
+        translate (Aligned _ (rect, view)) =
+            pad
+            (rect ^. Rect.topLeft)
+            (size - (rect ^. Rect.bottomRight))
+            view ^. View.vAnimLayers
+    in  ( placements <&> Lens.mapped %~ void
+        , View size (placements ^. traverse . traverse . Lens.to translate)
+        )
