@@ -15,6 +15,8 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
+import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Annotations as Ann
 import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection, _Selection)
@@ -54,6 +56,24 @@ unlabeledHeader switchLens categoryLens =
     , StatusBar.headerWidget = pure Element.empty
     }
 
+makeAnnotationsSwitcher ::
+    ( MonadReader env m, Applicative f
+    , HasConfig env, HasTheme env, HasLanguage env
+    , TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Hover.HasStyle env
+    ) =>
+    Property f Ann.Mode -> m (StatusBar.StatusWidget f)
+makeAnnotationsSwitcher annotationModeProp =
+    do
+        txt <- Lens.view (Texts.texts . Texts.statusBar)
+        StatusBar.makeSwitchStatusWidget
+            (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
+            Config.nextAnnotationModeKeys annotationModeProp
+            [ (txt ^. Texts.sbEvaluation, Ann.Evaluation)
+            , (txt ^. Texts.sbTypes, Ann.Types)
+            , (txt ^. Texts.sbNone, Ann.None)
+            ]
+
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasStdSpacing env, HasLanguage env
@@ -63,9 +83,7 @@ makeStatusWidgets ::
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
-    <$> StatusBar.makeBoundedSwitchStatusWidget
-        (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
-        Config.nextAnnotationModeKeys annotationModeProp
+    <$> makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
     <*> StatusBar.makeSwitchStatusWidget
         (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
         Config.changeThemeKeys themeProp
@@ -86,5 +104,4 @@ makeStatusWidgets themeNames langNames prop =
             ] <&> _1 %~ (txt ^.)
         themeProp = composeLens (Settings.sSelectedTheme . _Selection) prop
         langProp = composeLens (Settings.sSelectedLanguage . _Selection) prop
-        annotationModeProp = composeLens Settings.sAnnotationMode prop
         helpProp = composeLens Settings.sHelpShown prop

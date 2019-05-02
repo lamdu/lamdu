@@ -5,14 +5,13 @@ module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
     , Header(..), labelHeader, LabelConstraints
     , hoist
-    , makeSwitchStatusWidget, makeBoundedSwitchStatusWidget
+    , makeSwitchStatusWidget
     , fromWidget, combine, combineEdges
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
-import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Element (Element(..))
@@ -148,19 +147,6 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
         choices = map snd choiceVals
         newVal = dropWhile (/= curVal) choices ++ choices & tail & head
         Property curVal setVal = prop
-
-makeBoundedSwitchStatusWidget ::
-    ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
-    , HasConfig env, HasLanguage env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env, Glue.GluesTo w (TextWidget f) (TextWidget f)
-    ) =>
-    Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
-    m (StatusWidget f)
-makeBoundedSwitchStatusWidget header keysGetter prop =
-    makeSwitchStatusWidget header keysGetter prop choiceVals
-    where
-        choiceVals = [minBound..maxBound] <&> \val -> (Text.pack (show val), val)
 
 hspacer ::
     (MonadReader env m, Spacer.HasStdSpacing env, Theme.HasTheme env) => m View

@@ -255,7 +255,7 @@ hoverEdge size =
     (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w & Element.hoverLayers
 
 data IsHelpShown = HelpShown | HelpNotShown
-    deriving (Eq, Ord, Read, Show, Enum, Bounded)
+    deriving (Eq, Ord, Read, Show)
 
 toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown

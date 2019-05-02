@@ -72,6 +72,9 @@ deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} 
 data StatusBar a = StatusBar
     { _sbStatusBar :: a
     , _sbAnnotations :: a
+    , _sbEvaluation :: a
+    , _sbTypes :: a
+    , _sbNone :: a
     , _sbSwitchAnnotations :: a
     , _sbBranch :: a
     , _sbSwitchHelp :: a
