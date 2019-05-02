@@ -48,7 +48,7 @@ data Code a = Code
 Lens.makeLenses ''Code
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Code
 
-data CodeUITexts a = CodeUITexts
+data CodeUI a = CodeUI
     { _newDefinitionButton :: a
     , _undeleteButton :: a
     , _defUpdateHeader :: a
@@ -56,9 +56,9 @@ data CodeUITexts a = CodeUITexts
     , _defUpdateWas :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 CodeUITexts)
-Lens.makeLenses ''CodeUITexts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUITexts
+    deriving Applicative via (Generically1 CodeUI)
+Lens.makeLenses ''CodeUI
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUI
 
 data StatusBar a = StatusBar
     { _annotations :: a
@@ -77,7 +77,7 @@ data Texts a = Texts
       -- Using a boolean for the JSON instance
       _isLeftToRight :: Bool
     , _code :: Code a
-    , _codeUI :: CodeUITexts a
+    , _codeUI :: CodeUI a
     , _statusBar :: StatusBar a
     }
     deriving stock (Eq, Ord, Show, Functor, Foldable, Traversable)
