@@ -17,7 +17,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.I18N.Texts (Language, texts)
+import           Lamdu.I18N.Texts (Language, lTexts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
@@ -61,14 +61,14 @@ ofBody lang =
     BodyGetField gf ->
         ofName (gf ^. gfTag . tagInfo . tagName) <&> ("." <>)
     BodyCase cas ->
-        [ lang ^. texts . Texts.code . Texts.case_
-        , lang ^. texts . Texts.code . Texts.of_
+        [ lang ^. lTexts . Texts.code . Texts.case_
+        , lang ^. lTexts . Texts.code . Texts.of_
         ] ++
         case cas of
             Case LambdaCase (Composite [] ClosedComposite{} _) ->
-                [lang ^. texts . Texts.code . Texts.absurd]
+                [lang ^. lTexts . Texts.code . Texts.absurd]
             _ -> []
-    BodyIfElse {} -> [lang ^. texts . Texts.code . Texts.if_, ":"]
+    BodyIfElse {} -> [lang ^. lTexts . Texts.code . Texts.if_, ":"]
     -- An inject "base expr" can have various things in its val filled
     -- in, so the result group based on it may have both nullary
     -- inject (".") and value inject (":"). Thus, an inject must match
@@ -89,7 +89,7 @@ ofBody lang =
         -- The hole's "extra" apply-form results will be an
         -- IfElse, but we give val terms only to the base expr
         -- which looks like this:
-        [ lang ^. texts . Texts.code . Texts.if_
+        [ lang ^. lTexts . Texts.code . Texts.if_
         | tid ^. tidTId == Builtins.boolTid
         ]
     BodyHole {} -> []
@@ -97,7 +97,7 @@ ofBody lang =
     BodyPlaceHolder {} -> []
 
 binder :: Language -> Tree (Binder (Name o) i o) (Ann a) -> [Text]
-binder lang BinderLet{} = [lang ^. texts . Texts.code . Texts.let_]
+binder lang BinderLet{} = [lang ^. lTexts . Texts.code . Texts.let_]
 binder lang (BinderExpr x) = ofBody lang x
 
 type Suffix = Char
