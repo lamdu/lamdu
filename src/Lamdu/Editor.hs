@@ -42,7 +42,6 @@ import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
 import           Lamdu.I18N.Texts (Language)
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
@@ -210,7 +209,6 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
                 , _animIdPrefix = mempty
                 , _debugMonitors = monitors
                 , _cachedFunctions = cachedFunctions
-                , _layoutDir = sample ^. sLanguageData . Texts.lDirection
                 , _language = sample ^. sLanguageData
                 }
         let dbToIO action =
