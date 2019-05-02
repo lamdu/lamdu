@@ -19,8 +19,8 @@
         },
         "statusBar": {
             "help": "Help ",
-            "language": "",
-            "theme": ""
+            "language": "Language",
+            "theme": "Theme"
         }
     }
 }

@@ -49,6 +49,11 @@ header ::
     OneOf Texts.StatusBar -> StatusBar.Header (m (WithTextPos View))
 header lens = StatusBar.labelHeader (Texts.statusBar . lens)
 
+unlabeledHeader ::
+    Applicative f => OneOf Texts.StatusBar -> StatusBar.Header (f View)
+unlabeledHeader lens =
+    StatusBar.Header (Texts.statusBar . lens) (pure Element.empty)
+
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasStdSpacing env, HasLanguage env
@@ -60,10 +65,10 @@ makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> StatusBar.makeBoundedSwitchStatusWidget (header Texts.sbAnnotations)
         Config.nextAnnotationModeKeys annotationModeProp
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.sbTheme)
+    <*> StatusBar.makeSwitchStatusWidget (unlabeledHeader Texts.sbTheme)
         Config.changeThemeKeys themeProp
         (themeNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.sbLanguage)
+    <*> StatusBar.makeSwitchStatusWidget (unlabeledHeader Texts.sbLanguage)
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
     <*> StatusBar.makeSwitchStatusWidget (header Texts.sbHelp)

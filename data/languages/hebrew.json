@@ -22,8 +22,8 @@
         },
         "statusBar": {
             "help": "עזרה ",
-            "language": "",
-            "theme": ""
+            "language": "שפה",
+            "theme": "תמה"
         }
     }
 }
