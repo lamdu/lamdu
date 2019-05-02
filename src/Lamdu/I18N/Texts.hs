@@ -59,6 +59,7 @@ data CodeUI a = CodeUI
     , _defUpdateHeader :: a
     , _defUpdateTo :: a
     , _defUpdateWas :: a
+    , _goto :: a
     , _quit :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)

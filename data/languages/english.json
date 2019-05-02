@@ -16,6 +16,7 @@
             "defUpdateWas": "Type was: ",
             "newDefinitionButton": "New...",
             "undeleteButton": "Undelete...",
+            "goto": "Goto",
             "quit": "Quit"
         },
         "statusBar": {
