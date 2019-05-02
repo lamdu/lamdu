@@ -15,7 +15,8 @@
             "defUpdateTo": "to: ",
             "defUpdateWas": "Type was: ",
             "newDefinitionButton": "New...",
-            "undeleteButton": "Undelete..."
+            "undeleteButton": "Undelete...",
+            "quit": "Quit"
         },
         "statusBar": {
             "help": "Help ",

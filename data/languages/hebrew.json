@@ -18,7 +18,8 @@
             "defUpdateTo": "ל: ",
             "defUpdateWas": "היה טיפוס: ",
             "newDefinitionButton": "חדש...",
-            "undeleteButton": "שחזר..."
+            "undeleteButton": "שחזר...",
+            "quit": "יציאה"
         },
         "statusBar": {
             "help": " עזרה",

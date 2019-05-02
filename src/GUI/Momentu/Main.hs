@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving, UndecidableInstances, DerivingVia #-}
 module GUI.Momentu.Main
     ( Config(..)
     , Env(..), eWindowSize, eZoom, eState
@@ -8,10 +9,14 @@ module GUI.Momentu.Main
     , Options(..), defaultOptions
     , quitEventMap
     , MainLoop(..), Handlers(..), mainLoopWidget
+    , Texts(..), quit, HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
 import           Data.IORef
+import           Data.List.Lens (prefixed)
 import           Data.MRUMemo (memoIO)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
@@ -49,6 +54,16 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
+
+data Texts a = Texts
+    { _quit :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+Lens.makeLenses ''Texts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -118,9 +133,10 @@ defaultOptions glueTexts eventMapTexts dirTexts helpFontPath =
             , debug = defaultDebugOptions
             }
 
-quitEventMap :: Functor f => Gui EventMap f
+quitEventMap :: (MonadReader env m, Functor f, HasTexts env) => m (Gui EventMap f)
 quitEventMap =
-    E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc ["Quit"]) (error "Quit")
+    Lens.view (texts . quit) <&> \txt ->
+    E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc [txt]) (error "Quit")
 
 mkJumpToSourceEventMap :: Functor f => DebugOptions -> f () -> IO (Gui EventMap f)
 mkJumpToSourceEventMap debug act =
