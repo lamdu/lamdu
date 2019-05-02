@@ -9,10 +9,10 @@ import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -82,7 +82,7 @@ makeBranchSelector ::
     ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , VersionControl.HasConfig env, VersionControl.HasTheme env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->

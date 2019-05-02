@@ -11,10 +11,10 @@ import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -120,7 +120,7 @@ makeElse (Ann pl x) = makeElseBody pl x
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) => f (Row (Gui Responsive o) -> Gui Responsive o)
 verticalRowRender =
     do
@@ -137,7 +137,7 @@ verticalRowRender =
 renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) => Maybe AnimId -> f ([Row (Gui Responsive o)] -> Gui Responsive o)
 renderRows mParensId =
     do

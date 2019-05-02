@@ -29,7 +29,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -233,8 +232,7 @@ toOptionList xs True = Truncated xs
 layoutOption ::
     ( MonadReader env m, Applicative f
     , Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , State.HasCursor env, Hover.HasStyle env, HasConfig env
-    , Dir.HasTexts env
+    , State.HasCursor env, Hover.HasStyle env, HasConfig env, Glue.HasTexts env
     ) =>
     Widget.R ->
     (Widget.Id, TextWidget f, Submenu m f) ->
@@ -322,7 +320,7 @@ noResultsId = (`Widget.joinId` ["no results"])
 make ::
     ( MonadReader env m, Applicative f, TextView.HasStyle env
     , Hover.HasStyle env, Element.HasAnimIdPrefix env, HasConfig env
-    , State.HasCursor env , Dir.HasTexts env
+    , State.HasCursor env , Glue.HasTexts env
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
     m (PickFirstResult f, Hover.Ordered (TextWidget f))
@@ -381,7 +379,7 @@ data Placement = Above | Below | AnyPlace
 
 hoverOptions ::
     ( MonadReader env m, Applicative f, Hover.HasStyle env
-    , Element.HasAnimIdPrefix env, Dir.HasTexts env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env
     ) =>
     m ( Placement ->
         View ->
@@ -438,7 +436,7 @@ hoverOptions =
 makeHovered ::
     ( Applicative f, State.HasCursor env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Hover.HasStyle env, Dir.HasTexts env, MonadReader env m
+    , Hover.HasStyle env, Glue.HasTexts env, MonadReader env m
     ) =>
     Widget.Id -> View ->
     OptionList (Option m f) ->

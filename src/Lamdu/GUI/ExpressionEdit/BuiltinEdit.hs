@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
@@ -66,7 +67,7 @@ makeNamePartEditor color namePartStr setter myId =
 
 make ::
     ( MonadReader env f, Monad o, HasTheme env, GuiState.HasCursor env
-    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Dir.HasTexts env
+    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Glue.HasTexts env
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
     f (TextWidget o)

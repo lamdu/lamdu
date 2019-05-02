@@ -8,6 +8,7 @@ import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.Glue as Glue
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
@@ -83,6 +84,7 @@ data Texts a = Texts
     , _codeUI :: CodeUI a
     , _statusBar :: StatusBar a
     , _dir :: Dir.Texts a
+    , _glue :: Glue.Texts a
     , _eventMap :: EventMap.Texts a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
@@ -108,11 +110,15 @@ deriveJSON Aeson.defaultOptions
 instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class Dir.HasTexts env => HasLanguage env where language :: Lens' env Language
+class
+    ( Glue.HasTexts env, Dir.HasTexts env
+    ) => HasLanguage env where
+    language :: Lens' env Language
 instance EventMap.HasTexts Language where texts = lTexts . eventMap
 
 instance Dir.HasLayoutDir Language where layoutDir = lDirection
 instance Dir.HasTexts Language where texts = lTexts . dir
+instance Glue.HasTexts Language where texts = lTexts . glue
 instance HasLanguage Language where language = id
 
 texts :: HasLanguage env => Lens' env (Texts Text)

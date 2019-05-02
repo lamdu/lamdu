@@ -26,6 +26,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Events (MouseButtonEvent(..))
@@ -84,8 +85,8 @@ defaultDebugOptions =
 
 -- TODO: If moving GUI to lib,
 -- include a default help font in the lib rather than get a path.
-defaultOptions :: E.Texts Text -> Dir.Texts Text -> FilePath -> IO Options
-defaultOptions eventMapTexts dirTexts helpFontPath =
+defaultOptions :: Glue.Texts Text -> E.Texts Text -> Dir.Texts Text -> FilePath -> IO Options
+defaultOptions glueTexts eventMapTexts dirTexts helpFontPath =
     do
         loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
@@ -109,7 +110,7 @@ defaultOptions eventMapTexts dirTexts helpFontPath =
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
-                        EventMapHelp.defaultEnv eventMapTexts dirTexts helpFont
+                        EventMapHelp.defaultEnv glueTexts eventMapTexts dirTexts helpFont
                             & pure
                 , cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }

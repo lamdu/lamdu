@@ -10,7 +10,6 @@ import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -106,7 +105,7 @@ makeIndicator tag enabledColor text =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
-    , HasTheme env, HasConfig env, Dir.HasTexts env
+    , HasTheme env, HasConfig env, Glue.HasTexts env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -161,7 +160,7 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
-    , HasTheme env, HasConfig env, Dir.HasTexts env
+    , HasTheme env, HasConfig env, Glue.HasTexts env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))

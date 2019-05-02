@@ -50,7 +50,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
-import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), GluesTo)
@@ -87,14 +86,14 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
          , SizedElement b
          ) => Glue (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
-    glue texts dir orientation l v =
+    glue env orientation l v =
         Responsive
-        { _rWide = glue texts dir orientation wide v
-        , _rWideDisambig = glue texts dir orientation wide v
+        { _rWide = glue env orientation wide v
+        , _rWideDisambig = glue env orientation wide v
         , _rNarrow =
             l ^. rNarrow
             & Lens.argument %~ adjustNarrowLayoutParams orientation v
-            <&> (glue texts dir orientation ?? v)
+            <&> (glue env orientation ?? v)
         }
         where
             wide =
@@ -106,14 +105,14 @@ instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget
          , SizedElement a
          ) => Glue (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
-    glue texts dir orientation v l =
+    glue env orientation v l =
         Responsive
-        { _rWide = glue texts dir orientation v wide
-        , _rWideDisambig = glue texts dir orientation v wide
+        { _rWide = glue env orientation v wide
+        , _rWideDisambig = glue env orientation v wide
         , _rNarrow =
             l ^. rNarrow
             & Lens.argument %~ adjustNarrowLayoutParams orientation v
-            <&> glue texts dir orientation v
+            <&> glue env orientation v
         }
         where
             wide =
@@ -203,7 +202,7 @@ verticalLayout vert items =
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
-    (MonadReader env m, Applicative f, Dir.HasTexts env) =>
+    (MonadReader env m, Applicative f, Glue.HasTexts env) =>
     m ([Gui Responsive f] -> Gui Responsive f)
 vbox =
     Glue.vbox <&> \vert ->
@@ -219,7 +218,7 @@ vbox =
             }
 
 vboxSpaced ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Dir.HasTexts env
+    ( MonadReader env m, Spacer.HasStdSpacing env, Glue.HasTexts env
     , Applicative f
     ) =>
     m ([Gui Responsive f] -> Gui Responsive f)
@@ -229,7 +228,7 @@ vboxSpaced =
     (\(vert, space) -> List.intersperse (fromView space) <&> vert)
 
 vboxWithSeparator ::
-    (MonadReader env m, Applicative f, Dir.HasTexts env) =>
+    (MonadReader env m, Applicative f, Glue.HasTexts env) =>
     m
     (Bool -> (Widget.R -> View) ->
      Gui Responsive f -> Gui Responsive f ->
@@ -264,7 +263,7 @@ Lens.makeLenses ''TaggedItem
 
 taggedList ::
     ( MonadReader env m, Spacer.HasStdSpacing env, Applicative f
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m ([Gui TaggedItem f] -> Gui Responsive f)
 taggedList =

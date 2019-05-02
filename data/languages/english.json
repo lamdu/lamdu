@@ -33,6 +33,11 @@
         "eventMap": {
             "repeat": "Repeat",
             "depress": "Depress"
+        },
+        "glue": {
+            "stroll": "Stroll",
+            "back": "Back",
+            "ahead": "Ahead"
         }
     }
 }

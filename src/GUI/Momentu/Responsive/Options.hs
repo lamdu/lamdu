@@ -80,7 +80,7 @@ makeWideLayouts disamb w =
     }
 
 hbox ::
-    (MonadReader env m, Dir.HasTexts env, Applicative f) =>
+    (MonadReader env m, Glue.HasTexts env, Applicative f) =>
     m (HorizDisambiguator (f State.Update) -> ([TextWidget f] -> [TextWidget f]) -> Gui (WideLayoutOption []) f)
 hbox =
     Glue.hbox <&>
@@ -93,8 +93,8 @@ hbox =
     }
 
 table ::
-    ( MonadReader env m, Dir.HasTexts env
-    , Traversable t0, Traversable t1, Applicative f
+    ( MonadReader env m, Traversable t0, Traversable t1, Applicative f
+    , Dir.HasTexts env
     ) =>
     m (Gui (WideLayoutOption (Compose t0 t1)) f)
 table =
@@ -131,7 +131,7 @@ disambiguationNone :: Disambiguators a
 disambiguationNone = Disambiguators id id
 
 boxH ::
-    (Applicative f, MonadReader env m, Dir.HasTexts env) =>
+    (Applicative f, MonadReader env m, Glue.HasTexts env) =>
     m
     ( ([TextWidget f] -> [TextWidget f]) ->
       ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
@@ -144,7 +144,7 @@ boxH =
     & tryWideLayout (horiz (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
-    (Applicative f, MonadReader env m, Dir.HasTexts env) =>
+    (Applicative f, MonadReader env m, Glue.HasTexts env) =>
     m
     ( Gui Disambiguators f ->
       [Gui Responsive f] ->
@@ -153,7 +153,7 @@ box = boxH ?? id ?? id
 
 boxSpaced ::
     ( Applicative f, MonadReader env m, Spacer.HasStdSpacing env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (Gui Disambiguators f -> [Gui Responsive f] -> Gui Responsive f)
 boxSpaced =

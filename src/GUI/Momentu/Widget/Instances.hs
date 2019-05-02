@@ -1,5 +1,6 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeFamilies, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 module GUI.Momentu.Widget.Instances
     ( sizedState, stateLayers, stateLens, enterResult, wFocused
     , glueStates
@@ -12,6 +13,9 @@ module GUI.Momentu.Widget.Instances
 
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
+
+
+
 import           Data.Maybe.Extended (unionMaybeWith)
 import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
@@ -80,42 +84,42 @@ instance (Functor f, a ~ f Update) => SizedElement (Widget a) where
 
 instance (Functor f, a ~ f Update) => Glue (Widget a) View where
     type Glued (Widget a) View = Widget a
-    glue _ = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance (Functor f, a ~ f Update) => Glue View (Widget a) where
     type Glued View (Widget a) = Widget a
-    glue _ = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
-    glue texts layoutDir orientation =
-        Glue.glueH (glueStates texts layoutDir orientation Forward)
-        layoutDir orientation
+    glue env orientation =
+        Glue.glueH (glueStates env orientation Forward)
+        (env ^. Dir.layoutDir) orientation
 
 glueStates ::
-    Applicative f =>
-    Dir.Texts Text -> Dir.Layout -> Orientation -> Order ->
+    (Applicative f, Glue.HasTexts env) =>
+    env -> Orientation -> Order ->
     Gui Widget f -> Gui Widget f -> Gui Widget f
-glueStates texts dir orientation order w0 w1 =
+glueStates env orientation order w0 w1 =
     w0
     & wState .~
-        combineStates texts dir orientation order (w0 ^. wState) (w1 ^. wState)
+        combineStates env orientation order (w0 ^. wState) (w1 ^. wState)
 
 combineStates ::
-    Applicative f =>
-    Dir.Texts Text -> Dir.Layout -> Orientation -> Order ->
+    (Applicative f, Glue.HasTexts env) =>
+    env -> Orientation -> Order ->
     Gui State f -> Gui State f -> Gui State f
-combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates _ d o order (StateUnfocused u0) (StateUnfocused u1) =
+combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates env o order (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
     (applyOrder order (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
     (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
-        e = combineMEnters d o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates texts dir orientation order (StateUnfocused u) (StateFocused f) =
-    combineStates texts dir orientation (reverseOrder order)
+        e = combineMEnters env o (u0 ^. uMEnter) (u1 ^. uMEnter)
+combineStates env orientation order (StateUnfocused u) (StateFocused f) =
+    combineStates env orientation (reverseOrder order)
     (StateFocused f) (StateUnfocused u)
-combineStates texts dir orientation order (StateFocused f) (StateUnfocused u) =
+combineStates env orientation order (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~
         unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Point))
@@ -154,18 +158,23 @@ combineStates texts dir orientation order (StateFocused f) (StateUnfocused u) =
             & EventMap.keyPresses
                 (dirKey dir orientation order stdDirKeys <&> ModKey mempty)
             (EventMap.Doc
-                [ texts ^. Dir.navigation
-                , texts ^. Dir.move
-                , texts ^. Dir.textLens orientation order])
+                [ env ^. Dir.texts . Dir.navigation
+                , env ^. Dir.texts . Dir.move
+                , env ^. Dir.texts . Dir.textLens orientation order])
+        dir = env ^. Dir.layoutDir
+        strollDoc dirLens =
+            EventMap.Doc
+            [ env ^. Dir.texts . Dir.navigation
+            , env ^. Glue.texts . Glue.stroll
+            , env ^. Glue.texts . dirLens
+            ]
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
                 EventMap.keysEventMapMovesCursor strollBackKeys
-                (EventMap.Doc ["Navigation", "Stroll", "Back"])
-                (pure bwd)
+                (strollDoc Glue.back) (pure bwd)
             | otherwise =
                 EventMap.keysEventMapMovesCursor strollAheadKeys
-                (EventMap.Doc ["Navigation", "Stroll", "Ahead"])
-                (pure fwd)
+                (strollDoc Glue.ahead) (pure fwd)
         dirCons =
             case (dir, orientation, order) of
             (_, Vertical  , Backward) -> FromBelow
@@ -182,11 +191,12 @@ strollBackKeys :: [MetaKey]
 strollBackKeys = [MetaKey.shift MetaKey.Key'Tab]
 
 combineMEnters ::
-    Dir.Layout -> Orientation ->
+    Dir.HasLayoutDir env =>
+    env -> Orientation ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a)
-combineMEnters d = unionMaybeWith . combineEnters d
+combineMEnters env = unionMaybeWith . combineEnters (env ^. Dir.layoutDir)
 
 combineEnters ::
     Dir.Layout -> Orientation ->

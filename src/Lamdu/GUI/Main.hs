@@ -20,6 +20,7 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
@@ -67,7 +68,7 @@ type T = Transaction
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
 helpEnv ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Dir.HasTexts env
+    ( MonadReader env m, HasConfig env, HasStyle env, Glue.HasTexts env
     , E.HasTexts env
     ) =>
     m EventMapHelp.Env
@@ -81,13 +82,14 @@ helpEnv =
         }
     , EventMapHelp._eStyle = env ^. Style.style . Style.help
     , EventMapHelp._eAnimIdPrefix = ["help box"]
-    , EventMapHelp._eLayoutDir = env ^. Dir.layoutDir
+    , EventMapHelp._eDirLayout = env ^. Dir.layoutDir
     , EventMapHelp._eDirTexts = env ^. Dir.texts
     , EventMapHelp._eEventMapTexts = env ^. E.texts
+    , EventMapHelp._eGlueTexts = env ^. Glue.texts
     }
 
 addHelp ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Dir.HasTexts env
+    ( MonadReader env m, HasConfig env, HasStyle env, Glue.HasTexts env
     , E.HasTexts env
     ) =>
     Vector2 R -> m (Widget (f a) -> Widget (f a))

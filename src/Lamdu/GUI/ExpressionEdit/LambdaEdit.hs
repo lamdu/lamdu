@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -40,7 +39,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 addScopeEdit ::
-    (MonadReader env m, Applicative o, Dir.HasTexts env) =>
+    (MonadReader env m, Applicative o, Glue.HasTexts env) =>
     m (Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o)
 addScopeEdit =
     Glue.mkGlue ?? Glue.Vertical
@@ -48,7 +47,7 @@ addScopeEdit =
                 (|---| maybe Element.empty (WithTextPos 0) mScopeEdit))
 
 mkLhsEdits ::
-    (MonadReader env m, Applicative o, Dir.HasTexts env) =>
+    (MonadReader env m, Applicative o, Glue.HasTexts env) =>
     m
     (Maybe (Gui Responsive o) ->
      Maybe (Gui Widget o) -> [Gui Responsive o])

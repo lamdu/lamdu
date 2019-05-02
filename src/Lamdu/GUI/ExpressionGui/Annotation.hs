@@ -15,7 +15,6 @@ import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fa
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -198,7 +197,7 @@ annotationSpacer =
 addAnnotationH ::
     ( Functor f, MonadReader env m, HasTheme env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     m (WithTextPos View) ->
     WideAnnotationBehavior ->
@@ -225,7 +224,7 @@ addAnnotationH f wideBehavior =
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
     m (Gui Widget f -> Gui Widget f)

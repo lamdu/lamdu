@@ -7,7 +7,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
@@ -48,7 +47,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
 make ::
     ( MonadReader env m
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Dir.HasTexts env -- TODO: This is unused - an artifact constraint
+    , Glue.HasTexts env -- TODO: This is unused - an artifact constraint
     ) =>
     Name f -> m (WithTextPos View)
 make name =

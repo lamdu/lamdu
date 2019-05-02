@@ -36,6 +36,11 @@
         "eventMap": {
             "repeat": "חזרה",
             "depress": "שחרור"
+        },
+        "glue": {
+            "stroll": "שיוט",
+            "back": "אחורה",
+            "ahead": "קדימה"
         }
     }
 }

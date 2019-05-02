@@ -14,6 +14,7 @@ import           GUI.Momentu.Draw (Color(..))
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -46,7 +47,7 @@ data Env =
     , _eSettings :: Settings
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
-    , _eLayoutDir :: Dir.Layout
+    , _eDirLayout :: Dir.Layout
     , _eLanguage :: Language
     }
 Lens.makeLenses ''Env
@@ -60,8 +61,9 @@ instance HasConfig Env where config = eConfig
 instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
-instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
+instance Dir.HasLayoutDir Env where layoutDir = eDirLayout
 instance Dir.HasTexts Env where texts = language . Texts.lTexts . Texts.dir
+instance Glue.HasTexts Env where texts = language . Texts.lTexts . Texts.glue
 instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance HasLanguage Env where language = eLanguage
 
@@ -98,7 +100,7 @@ make =
                 , TextEdit._sEmptyStringsColors = pure (Color 1 1 1 1)
                 }
             , _eAnimIdPrefix = []
-            , _eLayoutDir = Dir.LeftToRight -- TODO: Test other directions
+            , _eDirLayout = Dir.LeftToRight -- TODO: Test other directions
             , _eLanguage = testLang
             }
 

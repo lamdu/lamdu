@@ -172,7 +172,7 @@ fuzzyMaker = memo Fuzzy.make
 makeOptions ::
     ( Monad i, Applicative o, MonadReader env m
     , GuiState.HasCursor env, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Dir.HasTexts env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
@@ -245,7 +245,7 @@ type HasSearchTermEnv env =
     )
 
 makeHoleSearchTerm ::
-    ( MonadReader env m, Applicative o, HasSearchTermEnv env, Dir.HasTexts env
+    ( MonadReader env m, Applicative o, HasSearchTermEnv env, Glue.HasTexts env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
@@ -311,7 +311,7 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 
 makeTagView ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, Dir.HasTexts env
+    , HasTheme env, Glue.HasTexts env
     ) =>
     Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
@@ -338,7 +338,7 @@ data TagEditType
 makeTagEditWith ::
     ( Monad i, Applicative o, MonadReader env n
     , GuiState.HasCursor env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, HasTheme env, Dir.HasTexts env
+    , Element.HasAnimIdPrefix env, HasTheme env, Glue.HasTexts env
     ) =>
     (n (TextWidget o) ->
      ExprGuiM i o (TextWidget o)) ->
@@ -462,7 +462,7 @@ makeParamTag =
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
     ( MonadReader env m, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Dir.HasTexts env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env
     ) =>
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =

@@ -15,11 +15,11 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -117,7 +117,7 @@ makeResultOption pl ctx results =
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Sugar.Payload (Name g) i o a0 -> m View
 makeInferredTypeAnnotation pl =

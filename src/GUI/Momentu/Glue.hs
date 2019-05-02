@@ -1,7 +1,9 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses #-}
-{-# LANGUAGE ConstraintKinds, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
+{-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia #-}
 module GUI.Momentu.Glue
-    ( Glue(..), GluesTo
+    ( Texts(..), stroll, back, ahead
+    , HasTexts(..)
+    , Glue(..), GluesTo
     , (/|/), (/-/)
     , box, hbox, vbox
     , glueH
@@ -11,6 +13,9 @@ module GUI.Momentu.Glue
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
+import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Direction (Orientation(..), axis, perpendicular)
 import qualified GUI.Momentu.Direction as Dir
@@ -19,39 +24,51 @@ import qualified GUI.Momentu.Element as Element
 
 import           Lamdu.Prelude
 
+data Texts a = Texts
+    { _stroll :: a
+    , _back :: a
+    , _ahead :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+Lens.makeLenses ''Texts
+
+class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+
 class (Glued b a ~ Glued a b) => Glue a b where
     type Glued a b
-    glue :: Dir.Texts Text -> Dir.Layout -> Orientation -> a -> b -> Glued a b
+    glue :: HasTexts env => env -> Orientation -> a -> b -> Glued a b
 
 type GluesTo a b c = (Glue a b, Glue b a, Glued a b ~ c)
 
 newtype Poly = Poly { polyGlue :: forall a b. Glue a b => a -> b -> Glued a b }
 
-mkPoly :: (MonadReader env m, Dir.HasTexts env) => m (Orientation -> Poly)
+mkPoly :: (MonadReader env m, HasTexts env) => m (Orientation -> Poly)
 mkPoly =
-    (,) <$> Lens.view Dir.texts <*> Lens.view Dir.layoutDir
-    <&> \(texts, dir) orientation -> Poly (glue texts dir orientation)
+    Lens.view id <&> \env orientation -> Poly (glue env orientation)
 
 mkGlue ::
-    (MonadReader env m, Dir.HasTexts env, Glue a b) =>
+    (MonadReader env m, HasTexts env, Glue a b) =>
     m (Orientation -> a -> b -> Glued a b)
 mkGlue = mkPoly <&> (polyGlue .)
 
 -- Horizontal glue
 (/|/) ::
-    (MonadReader env m, Dir.HasTexts env, Glue a b) =>
+    (MonadReader env m, HasTexts env, Glue a b) =>
     m a -> m b -> m (Glued a b)
 l /|/ r = (mkGlue ?? Horizontal) <*> l <*> r
 
 -- Vertical glue
 (/-/) ::
-    (MonadReader env m, Dir.HasTexts env, Glue a b) =>
+    (MonadReader env m, HasTexts env, Glue a b) =>
     m a -> m b -> m (Glued a b)
 l /-/ r = (mkGlue ?? Vertical) <*> l <*> r
 
 glueH ::
-    (SizedElement a, SizedElement b) =>
-    (a -> b -> c) -> Dir.Layout -> Orientation -> a -> b -> c
+    (SizedElement a, SizedElement b, Dir.HasLayoutDir env) =>
+    (a -> b -> c) -> env -> Orientation -> a -> b -> c
 glueH f direction orientation v0 v1 =
     f
     (Element.pad direction v0pre v0post v0)
@@ -68,16 +85,16 @@ glueH f direction orientation v0 v1 =
         v1s = v1 ^. Element.size
 
 box ::
-    (Element a, GluesTo a a a, MonadReader env m, Dir.HasTexts env) =>
+    (Element a, GluesTo a a a, MonadReader env m, HasTexts env) =>
     m (Orientation -> [a] -> a)
 box = mkGlue <&> \g orientation -> foldr (g orientation) Element.empty
 
 hbox ::
-    (Element a, GluesTo a a a, MonadReader env m, Dir.HasTexts env) =>
+    (Element a, GluesTo a a a, MonadReader env m, HasTexts env) =>
     m ([a] -> a)
 hbox = box ?? Horizontal
 
 vbox ::
-    (Element a, GluesTo a a a, MonadReader env m, Dir.HasTexts env) =>
+    (Element a, GluesTo a a a, MonadReader env m, HasTexts env) =>
     m ([a] -> a)
 vbox = box ?? Vertical

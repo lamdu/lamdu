@@ -39,7 +39,7 @@ instance SizedElement View where size = vSize
 
 instance Glue View View where
     type Glued View View = View
-    glue _ = Glue.glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
+    glue = Glue.glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
 
 make :: Size -> Anim.Frame -> View
 make sz frame = View sz (Element.Layers [frame])

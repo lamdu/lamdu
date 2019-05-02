@@ -70,7 +70,7 @@ grammar = Styled.grammar . Label.make . sanitize
 parensAround ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     WithTextPos View -> m (WithTextPos View)
 parensAround view =
@@ -82,7 +82,7 @@ parensAround view =
 parens ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
@@ -92,7 +92,7 @@ parens parent my view
 makeTFun ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Prec -> Sugar.Type (Name f) -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeTFun parentPrecedence a b =
@@ -110,7 +110,7 @@ makeTFun parentPrecedence a b =
 makeTInst ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Prec -> Sugar.TId (Name f) -> [(Name f, Sugar.Type (Name f))] ->
     m (WithTextPos View)
@@ -163,7 +163,7 @@ makeEmptyComposite = grammar "Ø"
 makeField ::
     ( MonadReader env m, HasTheme env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
@@ -175,7 +175,7 @@ makeField (tag, fieldType) =
 makeVariantField ::
     ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
@@ -200,7 +200,7 @@ gridViewTopLeftAlign =
 makeComposite ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Text -> Text ->
     m (WithTextPos View) -> m (WithTextPos View) ->
@@ -254,7 +254,7 @@ makeComposite o c mkPre mkPost mkField composite =
 makeInternal ::
     ( MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Prec -> Sugar.Type (Name f) -> m (WithTextPos View)
 makeInternal parentPrecedence (Sugar.Type entityId tbody) =
@@ -272,7 +272,7 @@ makeInternal parentPrecedence (Sugar.Type entityId tbody) =
 make ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Sugar.Type (Name f) -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
@@ -280,7 +280,7 @@ make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 makeScheme ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Sugar.Scheme (Name f) -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)

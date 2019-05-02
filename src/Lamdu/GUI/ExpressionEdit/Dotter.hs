@@ -19,7 +19,6 @@ module Lamdu.GUI.ExpressionEdit.Dotter
 import           Control.Applicative (liftA2)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -41,7 +40,7 @@ import           Lamdu.Prelude
 
 add ::
     ( MonadReader env m, Applicative o, TextView.HasStyle env, HasConfig env
-    , Element.HasAnimIdPrefix env, Dir.HasTexts env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -76,7 +75,7 @@ eventMap pl =
 with ::
     ( MonadReader env m, Applicative o, GuiState.HasCursor env
     , TextView.HasStyle env, HasConfig env, Element.HasAnimIdPrefix env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)

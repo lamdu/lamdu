@@ -47,7 +47,7 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (AnimId -> Gui Options.Disambiguators f)
 disambiguators =
@@ -57,7 +57,7 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    (MonadReader env m, TextView.HasStyle env, Dir.HasTexts env, Functor f) =>
+    (MonadReader env m, TextView.HasStyle env, Glue.HasTexts env, Functor f) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
     do
@@ -74,7 +74,7 @@ addParens =
 
 indent ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (AnimId -> Gui Responsive f -> Gui Responsive f)
 indent =
@@ -98,7 +98,7 @@ totalBarWidth =
 
 indentBar ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (Widget.R -> AnimId -> View)
 indentBar =
@@ -117,14 +117,14 @@ indentBar =
 
 boxSpacedDisambiguated ::
     ( MonadReader env m, Applicative f, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     ( MonadReader env m, Applicative f, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedMDisamb =

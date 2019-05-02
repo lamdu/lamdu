@@ -68,15 +68,17 @@ data Env = Env
     { _eConfig :: Config
     , _eStyle :: Style
     , _eAnimIdPrefix :: AnimId
-    , _eLayoutDir :: Dir.Layout
+    , _eDirLayout :: Dir.Layout
     , _eDirTexts :: !(Dir.Texts Text)
+    , _eGlueTexts :: !(Glue.Texts Text)
     , _eEventMapTexts :: !(E.Texts Text)
     }
 Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eStyle . styleText
-instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
+instance Dir.HasLayoutDir Env where layoutDir = eDirLayout
 instance Dir.HasTexts Env where texts = eDirTexts
+instance Glue.HasTexts Env where texts = eGlueTexts
 instance E.HasTexts Env where texts = eEventMapTexts
 
 defaultStyle :: Font -> Style
@@ -99,15 +101,16 @@ defaultConfig =
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
     }
 
-defaultEnv :: E.Texts Text -> Dir.Texts Text -> Font -> Env
-defaultEnv eventMapTexts dirTexts font =
+defaultEnv :: Glue.Texts Text -> E.Texts Text -> Dir.Texts Text -> Font -> Env
+defaultEnv glueTexts eventMapTexts dirTexts font =
     Env
     { _eConfig = defaultConfig
     , _eStyle = defaultStyle font
     , _eAnimIdPrefix = ["help box"]
-    , _eLayoutDir = Dir.LeftToRight
+    , _eDirLayout = Dir.LeftToRight
     , _eEventMapTexts = eventMapTexts
     , _eDirTexts = dirTexts
+    , _eGlueTexts = glueTexts
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -197,7 +200,7 @@ makeTooltip helpKeys =
     (Label.make "Show help" <&> (^. Align.tValue))
     /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
-mkIndent :: (MonadReader env m, Dir.HasTexts env) => m (R -> View -> View)
+mkIndent :: (MonadReader env m, Glue.HasTexts env) => m (R -> View -> View)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
 
 fontHeight :: (MonadReader env m, TextView.HasStyle env) => m R
@@ -205,7 +208,7 @@ fontHeight =
     Lens.view (TextView.style . TextView.styleFont) <&> Font.height
 
 makeFlatTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Dir.HasTexts env) =>
+    (MonadReader env m, TextView.HasStyle env, Glue.HasTexts env) =>
     m (Vector2 R -> [(View, View)] -> View)
 makeFlatTreeView =
     (,,)
@@ -225,7 +228,7 @@ makeFlatTreeView =
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Dir.HasTexts env) =>
+    (MonadReader env m, TextView.HasStyle env, Glue.HasTexts env) =>
     m (Vector2 R -> [Tree View View] -> View)
 makeTreeView =
     do

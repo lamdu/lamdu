@@ -10,7 +10,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -18,6 +17,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -57,7 +57,7 @@ import           Lamdu.Prelude
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Dir.HasTexts env -- TODO: An artifact constraint
+    , Glue.HasTexts env -- TODO: An artifact constraint
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
     m (TextWidget f)

@@ -19,6 +19,7 @@ import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.State as GuiState
@@ -38,10 +39,11 @@ import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
-import           Lamdu.Prelude
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style as Style
+
+import           Lamdu.Prelude
 
 data Env = Env
     { _evalRes :: GUIMain.EvalResults
@@ -81,6 +83,7 @@ instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Dir.HasLayoutDir Env where layoutDir = language . Dir.layoutDir
 instance Dir.HasTexts Env where texts = Texts.language . Dir.texts
+instance Glue.HasTexts Env where texts = Texts.language . Glue.texts
 instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
 instance Texts.HasLanguage Env where language = language
 
