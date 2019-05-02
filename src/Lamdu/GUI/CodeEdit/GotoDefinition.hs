@@ -8,6 +8,7 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
@@ -53,7 +54,7 @@ nameSearchTerm name =
 makeOptions ::
     ( MonadReader env m, HasTheme env, Applicative o
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     m [Sugar.NameRef (Name g) o] ->
     SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
@@ -100,7 +101,7 @@ make ::
     ( MonadReader env m, Applicative o
     , HasTheme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , Menu.HasConfig env, Hover.HasStyle env, GuiState.HasState env
-    , SearchMenu.HasTermStyle env, Element.HasLayoutDir env
+    , SearchMenu.HasTermStyle env, Dir.HasLayoutDir env
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =

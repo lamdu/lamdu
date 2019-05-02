@@ -9,7 +9,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -22,7 +22,7 @@ import           Lamdu.Prelude
 
 make ::
     ( MonadReader env m, Applicative f
-    , State.HasCursor env, TextEdit.HasStyle env, Element.HasLayoutDir env
+    , State.HasCursor env, TextEdit.HasStyle env, Dir.HasLayoutDir env
     ) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
@@ -44,7 +44,7 @@ deleteKeyEventHandler = E.deleteKey . E.KeyEvent ModKey.KeyState'Pressed
 
 makeLineEdit ::
     ( MonadReader env m, Applicative f
-    , State.HasCursor env, TextEdit.HasStyle env, Element.HasLayoutDir env
+    , State.HasCursor env, TextEdit.HasStyle env, Dir.HasLayoutDir env
     ) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id ->
@@ -58,7 +58,7 @@ makeLineEdit =
 
 makeWordEdit ::
     ( MonadReader env m, Applicative f
-    , State.HasCursor env, TextEdit.HasStyle env, Element.HasLayoutDir env
+    , State.HasCursor env, TextEdit.HasStyle env, Dir.HasLayoutDir env
     ) =>
     m
     (TextEdit.EmptyStrings -> Property f Text -> Widget.Id -> TextWidget f)

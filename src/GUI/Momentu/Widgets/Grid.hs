@@ -14,6 +14,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
 import           GUI.Momentu.Direction (Orientation(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
@@ -57,7 +58,7 @@ data NavDests a = NavDests
 
 mkNavDests ::
     Functor f =>
-    Element.LayoutDir ->
+    Dir.Layout ->
     Cursor -> State.VirtualCursor ->
     [[Maybe (FocusDirection -> Gui Widget.EnterResult f)]] ->
     Gui NavDests f
@@ -147,7 +148,7 @@ addNavEventmap keys navDests eMap =
 
 make ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Element.HasLayoutDir env, Applicative f
+    , Dir.HasLayoutDir env, Applicative f
     ) =>
     m
     (vert (horiz (Aligned (Gui Widget f))) ->
@@ -156,20 +157,20 @@ make = makeWithKeys ?? (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Element.HasLayoutDir env, Applicative f
+    , Dir.HasLayoutDir env, Applicative f
     ) =>
     m
     (Keys ModKey ->
      vert (horiz (Aligned (Gui Widget f))) ->
      (vert (horiz (Aligned ())), Gui Widget f))
 makeWithKeys =
-    Lens.view Element.layoutDir <&>
+    Lens.view Dir.layoutDir <&>
     \dir keys children ->
     let (size, content) = GridView.makePlacements children
         orderRow =
             case dir of
-            Element.LeftToRight -> id
-            Element.RightToLeft -> reverse
+            Dir.LeftToRight -> id
+            Dir.RightToLeft -> reverse
     in  ( content & each2d %~ void
         , toList content <&> orderRow . toList
           & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
@@ -185,7 +186,7 @@ each2d =
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
     Applicative f =>
-    Element.LayoutDir -> Keys ModKey -> Widget.Size ->
+    Dir.Layout -> Keys ModKey -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f
 toWidgetWithKeys dir keys size sChildren =

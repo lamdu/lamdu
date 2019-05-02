@@ -8,6 +8,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (R)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Main.Events (KeyEvent(..))
@@ -104,7 +105,7 @@ gridStrollTest =
     where
         makeGrid :: Int -> Gui Widget Identity
         makeGrid pos =
-            Grid.make Element.LeftToRight
+            Grid.make Dir.LeftToRight
             [ [ Aligned 0 (mkWidget pos 0)
               , Aligned 0 (mkWidget pos 1)
               ]
@@ -166,9 +167,9 @@ verticalDisambigTest =
                     }
                 box =
                     -- TODO: Test other layout directions
-                    Options.box Element.LeftToRight disambig [unitItem, unitItem]
+                    Options.box Dir.LeftToRight disambig [unitItem, unitItem]
                     <&> (<>[]) -- to avoid ambiguous type var
-        unitItem = Element.pad Element.LeftToRight 0 1 Element.empty
+        unitItem = Element.pad Dir.LeftToRight 0 1 Element.empty
         disambig =
             Options.disambiguationNone
-            & Options.disambVert .~ Element.pad Element.LeftToRight (Vector2 0.5 0) 0
+            & Options.disambVert .~ Element.pad Dir.LeftToRight (Vector2 0.5 0) 0

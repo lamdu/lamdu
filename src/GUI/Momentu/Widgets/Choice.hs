@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Direction (Orientation(..), perpendicular, axis)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -53,7 +54,7 @@ data IsSelected = Selected | NotSelected
 type HoverFunc f = Gui AnchoredWidget f -> Hover (Gui AnchoredWidget f)
 
 makeInner ::
-    (Applicative f, Eq childId, MonadReader env m, Element.HasLayoutDir env) =>
+    (Applicative f, Eq childId, MonadReader env m, Dir.HasLayoutDir env) =>
     m
     (HoverFunc f ->
      (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
@@ -102,7 +103,7 @@ makeInner =
 make ::
     ( Eq childId, MonadReader env m, Applicative f
     , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     m
     (Property f childId -> [(childId, Gui Widget f)] ->

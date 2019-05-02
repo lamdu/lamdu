@@ -14,6 +14,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -47,8 +48,8 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
-import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.GUI.Styled (grammar, label)
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
@@ -189,10 +190,10 @@ makeScopeNavEdit func myId curCursor =
                 Property.set chosenScopeProp . Just
         let mkScopeEventMap l r = makeScopeEventMap l r curCursor (void . setScope)
         (arrowPrev, arrowNext) <-
-            Lens.view Element.layoutDir <&>
+            Lens.view Dir.layoutDir <&>
             \case
-            Element.LeftToRight -> ("◀", "▶")
-            Element.RightToLeft -> ("▶", "◀")
+            Dir.LeftToRight -> ("◀", "▶")
+            Dir.RightToLeft -> ("▶", "◀")
         let scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
             scopes =
                 [ (arrowPrev, sMPrevParamScope curCursor)

@@ -22,6 +22,7 @@ import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
@@ -140,7 +141,7 @@ data Ordered a = Ordered
 Lens.makeLenses ''Ordered
 
 hoverBesideOptionsAxis ::
-    ( MonadReader env m, Element.HasLayoutDir env
+    ( MonadReader env m, Dir.HasLayoutDir env
     , GluesTo a b c
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
@@ -159,7 +160,7 @@ anchor :: Widget a -> AnchoredWidget a
 anchor = AnchoredWidget 0
 
 hoverBesideOptions ::
-    ( MonadReader env m, Element.HasLayoutDir env, GluesTo a b c
+    ( MonadReader env m, Dir.HasLayoutDir env, GluesTo a b c
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (a -> b -> [c])
@@ -252,7 +253,7 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
 
 hoverBeside ::
     ( GluesTo (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
-    , MonadReader env m, Element.HasLayoutDir env, SizedElement w
+    , MonadReader env m, Dir.HasLayoutDir env, SizedElement w
     , Element.HasAnimIdPrefix env, HasStyle env
     , Functor f
     ) =>

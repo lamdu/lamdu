@@ -23,6 +23,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -112,7 +113,7 @@ cursorRects s str =
 
 makeInternal ::
     (forall a. Lens.Getting a (Modes a) a) ->
-    Style -> Text -> EmptyStrings -> Element.LayoutDir ->
+    Style -> Text -> EmptyStrings -> Dir.Layout ->
     Widget.Id -> TextWidget ((,) Text)
 makeInternal mode s str emptyStrings dir myId =
     v
@@ -171,7 +172,7 @@ eventResult myId newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    Style -> Text -> EmptyStrings -> Element.LayoutDir -> Cursor -> Widget.Id ->
+    Style -> Text -> EmptyStrings -> Dir.Layout -> Cursor -> Widget.Id ->
     TextWidget ((,) Text)
 makeFocused s str empty dir cursor myId =
     makeInternal focused s str empty dir myId
@@ -363,7 +364,7 @@ getCursor =
 
 make ::
     ( MonadReader env m, State.HasCursor env, HasStyle env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
         TextWidget ((,) Text)
@@ -372,7 +373,7 @@ make =
     do
         get <- getCursor
         s <- Lens.view style
-        dir <- Lens.view Element.layoutDir
+        dir <- Lens.view Dir.layoutDir
         pure $ \empty str myId ->
             case get str myId of
             Nothing -> makeInternal unfocused s str empty dir myId

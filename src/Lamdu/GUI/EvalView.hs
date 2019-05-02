@@ -35,6 +35,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
 import           Lamdu.Sugar.Types (ResVal)
 import qualified Lamdu.Sugar.Types as Sugar
+import qualified GUI.Momentu.Direction as Dir
 
 import           Lamdu.Prelude
 
@@ -99,10 +100,10 @@ makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
         (preLabel, postLabel) <-
-            Lens.view Element.layoutDir <&>
+            Lens.view Dir.layoutDir <&>
             \case
-            Element.LeftToRight -> ("[", "]")
-            Element.RightToLeft -> ("]", "[")
+            Dir.LeftToRight -> ("[", "]")
+            Dir.RightToLeft -> ("]", "[")
         opener <- Label.make preLabel
         closer <- Label.make postLabel
         Glue.hbox ?? opener : itemViews ++ [closer]
@@ -150,10 +151,10 @@ makeList ::
 makeList (Sugar.ResList head_) =
     do
         (preLabel, postLabel) <-
-            Lens.view Element.layoutDir <&>
+            Lens.view Dir.layoutDir <&>
             \case
-            Element.LeftToRight -> ("[", ", …]")
-            Element.RightToLeft -> ("]", "[… ,")
+            Dir.LeftToRight -> ("[", ", …]")
+            Dir.RightToLeft -> ("]", "[… ,")
         c <- Label.make postLabel <&> (^. Align.tValue)
         Label.make preLabel /|/ makeInner head_
             >>= Align.tValue (hGlueAlign 1 ?? c)

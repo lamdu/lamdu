@@ -133,7 +133,7 @@ instance Glue View a => Glue View (WithTextPos a) where
 
 glueHelper ::
     (Glue a b, Element b, SizedElement a) =>
-    ((Vector2 R, Vector2 R) -> Vector2 R) -> Element.LayoutDir -> Dir.Orientation ->
+    ((Vector2 R, Vector2 R) -> Vector2 R) -> Dir.Layout -> Dir.Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, Glued a b)
 glueHelper chooseAlign layoutDir orientation (aAbsAlign, aw) (bAbsAlign, bw) =
     ( chooseAlign
@@ -176,16 +176,16 @@ absAligned =
             | otherwise = align / size
 
 boxAlign ::
-    (MonadReader env m, SizedElement a, GluesTo a a a, Element.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasLayoutDir env) =>
     m (Dir.Orientation -> Widget.R -> [a] -> a)
 boxAlign = Glue.box <&> \box o r xs -> box o (xs <&> Aligned (pure r)) ^. value
 
 vboxAlign ::
-    (MonadReader env m, SizedElement a, GluesTo a a a, Element.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasLayoutDir env) =>
     m (Widget.R -> [a] -> a)
 vboxAlign = boxAlign ?? Dir.Vertical
 
 hboxAlign ::
-    (MonadReader env m, SizedElement a, GluesTo a a a, Element.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, GluesTo a a a, Dir.HasLayoutDir env) =>
     m (Widget.R -> [a] -> a)
 hboxAlign = boxAlign ?? Dir.Horizontal

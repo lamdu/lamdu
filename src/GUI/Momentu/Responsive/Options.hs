@@ -16,6 +16,7 @@ import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive
@@ -79,7 +80,7 @@ makeWideLayouts disamb w =
     }
 
 hbox ::
-    (MonadReader env m, Element.HasLayoutDir env, Applicative f) =>
+    (MonadReader env m, Dir.HasLayoutDir env, Applicative f) =>
     m (HorizDisambiguator (f State.Update) -> ([TextWidget f] -> [TextWidget f]) -> Gui (WideLayoutOption []) f)
 hbox =
     Glue.hbox <&>
@@ -92,7 +93,7 @@ hbox =
     }
 
 table ::
-    ( MonadReader env m, Element.HasLayoutDir env
+    ( MonadReader env m, Dir.HasLayoutDir env
     , Traversable t0, Traversable t1, Applicative f
     ) =>
     m (Gui (WideLayoutOption (Compose t0 t1)) f)
@@ -130,7 +131,7 @@ disambiguationNone :: Disambiguators a
 disambiguationNone = Disambiguators id id
 
 boxH ::
-    (Applicative f, MonadReader env m, Element.HasLayoutDir env) =>
+    (Applicative f, MonadReader env m, Dir.HasLayoutDir env) =>
     m
     ( ([TextWidget f] -> [TextWidget f]) ->
       ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
@@ -143,7 +144,7 @@ boxH =
     & tryWideLayout (horiz (disamb ^. disambHoriz) onHGuis) guis
 
 box ::
-    (Applicative f, MonadReader env m, Element.HasLayoutDir env) =>
+    (Applicative f, MonadReader env m, Dir.HasLayoutDir env) =>
     m
     ( Gui Disambiguators f ->
       [Gui Responsive f] ->
@@ -151,7 +152,7 @@ box ::
 box = boxH ?? id ?? id
 
 boxSpaced ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Element.HasLayoutDir env
+    ( MonadReader env m, Spacer.HasStdSpacing env, Dir.HasLayoutDir env
     , Applicative f
     ) =>
     m (Gui Disambiguators f -> [Gui Responsive f] -> Gui Responsive f)

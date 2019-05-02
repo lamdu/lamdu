@@ -36,6 +36,7 @@ import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -126,7 +127,7 @@ defaultEmptyStrings = TextEdit.Modes "  " "  "
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     ( MonadReader env m, Applicative f
-    , TextEdit.HasStyle env, HasState env, Element.HasLayoutDir env
+    , TextEdit.HasStyle env, HasState env, Dir.HasLayoutDir env
     ) =>
     Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
 basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
@@ -212,7 +213,7 @@ addSearchTermStyle myId act =
 searchTermEdit ::
     ( MonadReader env m, Applicative f, HasTermStyle env
     , TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
@@ -284,7 +285,7 @@ enterWithSearchTerm searchTerm myId =
 make ::
     ( MonadReader env m, HasState env, Menu.HasConfig env
     , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Element.HasLayoutDir env, Applicative f
+    , Dir.HasLayoutDir env, Applicative f
     ) =>
     (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->

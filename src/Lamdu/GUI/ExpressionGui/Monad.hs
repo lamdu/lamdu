@@ -32,6 +32,7 @@ import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
@@ -85,7 +86,7 @@ data Askable i o = Askable
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
     , _aIsHoleResult :: Bool
-    , _aLayoutDir :: Element.LayoutDir
+    , _aLayoutDir :: Dir.Layout
     , aIom :: forall x. i x -> o x
     , _aLanguage :: Language
     }
@@ -113,7 +114,7 @@ instance SearchMenu.HasTermStyle (Askable i o) where
 instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
-instance Element.HasLayoutDir (Askable i o) where layoutDir = aLayoutDir
+instance Dir.HasLayoutDir (Askable i o) where layoutDir = aLayoutDir
 instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a
@@ -218,7 +219,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
     , _aIsHoleResult = False
-    , _aLayoutDir = env ^. Element.layoutDir
+    , _aLayoutDir = env ^. Dir.layoutDir
     , _aLanguage = env ^. Texts.language
     , aIom = liftIom
     }

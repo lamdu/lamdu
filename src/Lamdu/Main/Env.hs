@@ -16,6 +16,7 @@ module Lamdu.Main.Env
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation.Id (AnimId)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
@@ -77,6 +78,6 @@ instance SearchMenu.HasTermStyle Env where termStyle = theme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
-instance Element.HasLayoutDir Env where layoutDir = language . Texts.lDirection
+instance Dir.HasLayoutDir Env where layoutDir = language . Texts.lDirection
 instance Texts.HasLanguage Env where language = language
 

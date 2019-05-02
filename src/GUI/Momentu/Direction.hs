@@ -5,15 +5,29 @@ module GUI.Momentu.Direction
     , Order(..), _Forward, _Backward
     , reverseOrder, applyOrder
     , englishName
+    , Layout(..), _LeftToRight, _RightToLeft
+    , HasLayoutDir(..)
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
 import           Data.String (IsString(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Rect (Rect, R)
 import qualified GUI.Momentu.Rect as Rect
 
 import           Lamdu.Prelude
+
+data Layout
+    = LeftToRight -- ^ e.g: latin languages
+    | RightToLeft -- ^ e.g: Hebrew/Arabic
+    deriving (Eq, Ord, Show)
+deriveJSON Aeson.defaultOptions ''Layout
+Lens.makePrisms ''Layout
+
+class HasLayoutDir env where layoutDir :: Lens' env Layout
+instance HasLayoutDir Layout where layoutDir = id
 
 data Orientation = Horizontal | Vertical
     deriving (Eq, Show, Ord, Generic)

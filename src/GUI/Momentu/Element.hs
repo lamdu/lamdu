@@ -3,8 +3,6 @@ module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
     , HasAnimIdPrefix(..), subAnimId
     , Layers(..), layers, translateLayers, addLayersAbove, render
-    , LayoutDir(..), _LeftToRight, _RightToLeft
-    , HasLayoutDir(..)
     , pad, padAround
     , topLayer, bottomLayer
     , width, height
@@ -13,11 +11,10 @@ module GUI.Momentu.Element
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
@@ -55,23 +52,14 @@ class Element a where
     scale :: Vector2 R -> a -> a
     empty :: a
 
-data LayoutDir
-    = LeftToRight -- ^ e.g: latin languages
-    | RightToLeft -- ^ e.g: Hebrew/Arabic
-    deriving (Eq, Ord, Show)
-deriveJSON Aeson.defaultOptions ''LayoutDir
-
-class HasLayoutDir env where layoutDir :: Lens' env LayoutDir
-instance HasLayoutDir LayoutDir where layoutDir = id
-
 pad ::
-    (MonadReader env m, Element a, HasLayoutDir env) =>
+    (MonadReader env m, Element a, Dir.HasLayoutDir env) =>
     m (Vector2 R -> Vector2 R -> a -> a)
 pad =
-    Lens.view layoutDir <&>
+    Lens.view Dir.layoutDir <&>
     \case
-    LeftToRight -> padImpl
-    RightToLeft ->
+    Dir.LeftToRight -> padImpl
+    Dir.RightToLeft ->
         \(Vector2 r t) (Vector2 l b) -> padImpl (Vector2 l t) (Vector2 r b)
 
 -- Different `SetLayers`s do additional things when padding
@@ -103,11 +91,9 @@ subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
 subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
 
 padToSize ::
-    (MonadReader env m, SizedElement a, HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, Dir.HasLayoutDir env) =>
     m (Size -> Vector2 R -> a -> a)
 padToSize =
     pad <&> \p newSize alignment x ->
     let sizeDiff = max <$> 0 <*> newSize - x ^. size
     in  p (sizeDiff * alignment) (sizeDiff * (1 - alignment)) x
-
-Lens.makePrisms ''LayoutDir

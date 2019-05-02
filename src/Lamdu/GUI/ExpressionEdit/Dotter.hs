@@ -19,6 +19,7 @@ module Lamdu.GUI.ExpressionEdit.Dotter
 import           Control.Applicative (liftA2)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -40,7 +41,7 @@ import           Lamdu.Prelude
 
 add ::
     ( MonadReader env m, TextView.HasStyle env, HasConfig env
-    , Element.HasLayoutDir env, Element.HasAnimIdPrefix env
+    , Dir.HasLayoutDir env, Element.HasAnimIdPrefix env
     , Applicative o
     ) =>
     Sugar.Payload name i o a ->
@@ -75,7 +76,7 @@ eventMap pl =
 -- sure it activates it when it's jumped to
 with ::
     ( MonadReader env m, GuiState.HasCursor env, TextView.HasStyle env
-    , HasConfig env, Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    , HasConfig env, Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
     , Applicative o
     ) =>
     Sugar.Payload name i o a ->

@@ -9,6 +9,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.State (Gui)
@@ -30,7 +31,7 @@ import           Lamdu.Prelude
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
-    , Hover.HasStyle env, Element.HasLayoutDir env
+    , Hover.HasStyle env, Dir.HasLayoutDir env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->

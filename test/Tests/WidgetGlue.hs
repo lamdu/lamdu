@@ -9,8 +9,8 @@ import           Data.Binary.Extended (encodeS)
 import           Data.Semigroup (First(..), Last(..))
 import           GUI.Momentu as X
 import           GUI.Momentu.Direction (Orientation(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
-import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue as X
 import qualified GUI.Momentu.Hover as Hover
@@ -61,13 +61,13 @@ toWidgetUnfocused (UnfocusedLeaf size x) =
     , Widget._uLayers = mempty
     } & Widget size
 toWidgetUnfocused (UnfocusedGlue orientation x y) =
-    glue Element.LeftToRight orientation
+    glue Dir.LeftToRight orientation
     (toWidgetUnfocused x) (toWidgetUnfocused y)
 
--- TODO: Test LayoutDir
+-- TODO: Test Dir.Layout
 glueFocused :: GluesTo a b c => GlueOrder -> Orientation -> a -> b -> c
-glueFocused FocusedFirst = glue Element.LeftToRight
-glueFocused FocusedLast = glue Element.LeftToRight <&> flip
+glueFocused FocusedFirst = glue Dir.LeftToRight
+glueFocused FocusedLast = glue Dir.LeftToRight <&> flip
 
 data Env = Env
     { _eAnimId :: AnimId

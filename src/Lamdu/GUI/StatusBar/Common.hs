@@ -15,6 +15,7 @@ import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -167,7 +168,7 @@ hspacer = do
 
 combine ::
     ( MonadReader env m, Applicative f
-    , Element.HasLayoutDir env, HasStdSpacing env, HasTheme env
+    , Dir.HasLayoutDir env, HasStdSpacing env, HasTheme env
     ) => m ([StatusWidget f] -> StatusWidget f)
 combine =
     (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> Glue.hbox <*> hspacer
@@ -186,7 +187,7 @@ combine =
     }
 
 combineEdges ::
-    ( MonadReader env m, Applicative f, Element.HasLayoutDir env
+    ( MonadReader env m, Applicative f, Dir.HasLayoutDir env
     ) =>
     m (R -> StatusWidget f -> StatusWidget f -> StatusWidget f)
 combineEdges =

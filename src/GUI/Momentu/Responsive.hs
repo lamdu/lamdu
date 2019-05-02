@@ -50,6 +50,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue(..), GluesTo)
@@ -202,7 +203,7 @@ verticalLayout vert items =
 
 -- | Vertical box with the alignment point from the top widget
 vbox ::
-    (MonadReader env m, Element.HasLayoutDir env, Applicative f) =>
+    (MonadReader env m, Dir.HasLayoutDir env, Applicative f) =>
     m ([Gui Responsive f] -> Gui Responsive f)
 vbox =
     Glue.vbox <&> \vert ->
@@ -218,7 +219,7 @@ vbox =
             }
 
 vboxSpaced ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Element.HasLayoutDir env
+    ( MonadReader env m, Spacer.HasStdSpacing env, Dir.HasLayoutDir env
     , Applicative f
     ) =>
     m ([Gui Responsive f] -> Gui Responsive f)
@@ -228,7 +229,7 @@ vboxSpaced =
     (\(vert, space) -> List.intersperse (fromView space) <&> vert)
 
 vboxWithSeparator ::
-    (MonadReader env m, Element.HasLayoutDir env, Applicative f) =>
+    (MonadReader env m, Dir.HasLayoutDir env, Applicative f) =>
     m
     (Bool -> (Widget.R -> View) ->
      Gui Responsive f -> Gui Responsive f ->
@@ -263,7 +264,7 @@ Lens.makeLenses ''TaggedItem
 
 taggedList ::
     ( MonadReader env m, Spacer.HasStdSpacing env, Applicative f
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     m ([Gui TaggedItem f] -> Gui Responsive f)
 taggedList =

@@ -14,6 +14,7 @@ import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -67,7 +68,7 @@ disallowedNameChars = ",[]\\`()"
 
 makeTagNameEdit ::
     ( MonadReader env m, Applicative f
-    , TextEdit.HasStyle env, GuiState.HasCursor env, Element.HasLayoutDir env
+    , TextEdit.HasStyle env, GuiState.HasCursor env, Dir.HasLayoutDir env
     ) =>
     Name.StoredName f -> Widget.Id ->
     m (TextWidget f)
@@ -171,7 +172,7 @@ fuzzyMaker = memo Fuzzy.make
 makeOptions ::
     ( Monad i, Applicative o, MonadReader env m
     , GuiState.HasCursor env, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    , Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
@@ -245,7 +246,7 @@ type HasSearchTermEnv env =
 
 makeHoleSearchTerm ::
     ( MonadReader env m, Applicative o, HasSearchTermEnv env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
@@ -312,7 +313,7 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 makeTagView ::
     ( MonadReader env m, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
@@ -340,7 +341,7 @@ makeTagEditWith ::
     ( Monad i, Applicative o, MonadReader env n
     , GuiState.HasCursor env, TextView.HasStyle env
     , Element.HasAnimIdPrefix env, HasTheme env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     ) =>
     (n (TextWidget o) ->
      ExprGuiM i o (TextWidget o)) ->
@@ -464,7 +465,7 @@ makeParamTag =
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
     ( MonadReader env m, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
+    , Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
     ) =>
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =

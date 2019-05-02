@@ -17,6 +17,7 @@ import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
@@ -46,7 +47,7 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Functor f, Element.HasLayoutDir env
+    , Functor f, Dir.HasLayoutDir env
     ) =>
     m (AnimId -> Gui Options.Disambiguators f)
 disambiguators =
@@ -56,7 +57,7 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    ( MonadReader env m, TextView.HasStyle env, Element.HasLayoutDir env
+    ( MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env
     , Functor f) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
@@ -64,17 +65,17 @@ addParens =
         (Glue.Poly (|||)) <- Glue.mkPoly ?? Glue.Horizontal
         textStyle <- Lens.view TextView.style
         (preLabel, postLabel) <-
-            Lens.view Element.layoutDir <&>
+            Lens.view Dir.layoutDir <&>
             \case
-            Element.LeftToRight -> ("(", ")")
-            Element.RightToLeft -> (")", "(")
+            Dir.LeftToRight -> ("(", ")")
+            Dir.RightToLeft -> (")", "(")
         pure $ \myId w ->
             let paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
             in  paren preLabel ||| w ||| paren postLabel
 
 indent ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Element.HasLayoutDir env, Functor f
+    , Dir.HasLayoutDir env, Functor f
     ) =>
     m (AnimId -> Gui Responsive f -> Gui Responsive f)
 indent =
@@ -97,7 +98,7 @@ totalBarWidth =
         stdSpace * (s ^. indentBarWidth + s ^. indentBarGap) & pure
 
 indentBar ::
-    ( MonadReader env m, HasStyle env, Element.HasLayoutDir env
+    ( MonadReader env m, HasStyle env, Dir.HasLayoutDir env
     , Spacer.HasStdSpacing env
     ) =>
     m (Widget.R -> AnimId -> View)
@@ -117,14 +118,14 @@ indentBar =
 
 boxSpacedDisambiguated ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Element.HasLayoutDir env, Applicative f
+    , Dir.HasLayoutDir env, Applicative f
     ) =>
     m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Element.HasLayoutDir env, Applicative f
+    , Dir.HasLayoutDir env, Applicative f
     ) =>
     m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedMDisamb =

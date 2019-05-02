@@ -6,7 +6,7 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Direction as Dir
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
@@ -92,7 +92,7 @@ deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} 
 
 data Language = Language
     { -- TODO: Should this still be called "Texts?"
-      _lDirection :: Element.LayoutDir
+      _lDirection :: Dir.Layout
     , _lTexts :: Texts Text
     } deriving (Eq, Show)
 
@@ -105,10 +105,10 @@ deriveJSON Aeson.defaultOptions
 instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class Element.HasLayoutDir env => HasLanguage env where
+class Dir.HasLayoutDir env => HasLanguage env where
     language :: Lens' env Language
 
-instance Element.HasLayoutDir Language where layoutDir = lDirection
+instance Dir.HasLayoutDir Language where layoutDir = lDirection
 instance HasLanguage Language where language = id
 
 texts :: HasLanguage env => Lens' env (Texts Text)

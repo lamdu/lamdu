@@ -19,7 +19,7 @@ import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Direction (Orientation(..), Order(..), reverseOrder, applyOrder)
 import qualified GUI.Momentu.Direction as Dir
-import           GUI.Momentu.Element (Element, SizedElement, LayoutDir(..))
+import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
@@ -93,13 +93,13 @@ instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) wher
 
 glueStates ::
     Applicative f =>
-    LayoutDir -> Orientation -> Order -> Gui Widget f -> Gui Widget f -> Gui Widget f
+    Dir.Layout -> Orientation -> Order -> Gui Widget f -> Gui Widget f -> Gui Widget f
 glueStates dir orientation order w0 w1 =
     w0 & wState .~ combineStates dir orientation order (w0 ^. wState) (w1 ^. wState)
 
 combineStates ::
     Applicative f =>
-    LayoutDir -> Orientation -> Order ->
+    Dir.Layout -> Orientation -> Order ->
     Gui State f -> Gui State f -> Gui State f
 combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates d o order (StateUnfocused u0) (StateUnfocused u1) =
@@ -163,10 +163,10 @@ combineStates dir orientation order (StateFocused f) (StateUnfocused u) =
             case (dir, orientation, order) of
             (_, Vertical  , Backward) -> FromBelow
             (_, Vertical  , Forward ) -> FromAbove
-            (LeftToRight, Horizontal, Backward) -> FromRight
-            (LeftToRight, Horizontal, Forward ) -> FromLeft
-            (RightToLeft, Horizontal, Backward) -> FromLeft
-            (RightToLeft, Horizontal, Forward ) -> FromRight
+            (Dir.LeftToRight, Horizontal, Backward) -> FromRight
+            (Dir.LeftToRight, Horizontal, Forward ) -> FromLeft
+            (Dir.RightToLeft, Horizontal, Backward) -> FromLeft
+            (Dir.RightToLeft, Horizontal, Forward ) -> FromRight
 
 strollAheadKeys :: [MetaKey]
 strollAheadKeys = [MetaKey MetaKey.noMods MetaKey.Key'Tab]
@@ -175,14 +175,14 @@ strollBackKeys :: [MetaKey]
 strollBackKeys = [MetaKey.shift MetaKey.Key'Tab]
 
 combineMEnters ::
-    LayoutDir -> Orientation ->
+    Dir.Layout -> Orientation ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a)
 combineMEnters d = unionMaybeWith . combineEnters d
 
 combineEnters ::
-    LayoutDir -> Orientation ->
+    Dir.Layout -> Orientation ->
     (FocusDirection -> EnterResult a) ->
     (FocusDirection -> EnterResult a) ->
     FocusDirection -> EnterResult a
@@ -208,7 +208,7 @@ closer axis r r0 r1
     | otherwise = r1
 
 chooseEnter ::
-    LayoutDir -> Orientation -> FocusDirection ->
+    Dir.Layout -> Orientation -> FocusDirection ->
     EnterResult a -> EnterResult a -> EnterResult a
 chooseEnter _ _          FromOutside r0 _  = r0 -- left-biased
 chooseEnter _ _          (Point p) r0 r1 = closerGeometric p r0 r1
@@ -222,10 +222,10 @@ chooseEnter _ Vertical (FromLeft r) r0 r1 =
     closer Rect.verticalRange r r0 r1
 chooseEnter _ Vertical (FromRight r) r0 r1 =
     closer Rect.verticalRange r r0 r1
-chooseEnter LeftToRight Horizontal FromLeft{}  r0 _  = r0
-chooseEnter LeftToRight Horizontal FromRight{} _  r1 = r1
-chooseEnter RightToLeft Horizontal FromLeft{}  _  r1 = r1
-chooseEnter RightToLeft Horizontal FromRight{} r0 _  = r0
+chooseEnter Dir.LeftToRight Horizontal FromLeft{}  r0 _  = r0
+chooseEnter Dir.LeftToRight Horizontal FromRight{} _  r1 = r1
+chooseEnter Dir.RightToLeft Horizontal FromLeft{}  _  r1 = r1
+chooseEnter Dir.RightToLeft Horizontal FromRight{} r0 _  = r0
 
 stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)

@@ -9,9 +9,9 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Color(..))
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
@@ -44,7 +44,7 @@ data Env =
     , _eSettings :: Settings
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
-    , _eLayoutDir :: Element.LayoutDir
+    , _eLayoutDir :: Dir.Layout
     , _eLanguage :: Language
     }
 Lens.makeLenses ''Env
@@ -58,7 +58,7 @@ instance HasConfig Env where config = eConfig
 instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
-instance Element.HasLayoutDir Env where layoutDir = eLayoutDir
+instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
 instance HasLanguage Env where language = eLanguage
 
 make :: IO Env
@@ -94,7 +94,7 @@ make =
                 , TextEdit._sEmptyStringsColors = pure (Color 1 1 1 1)
                 }
             , _eAnimIdPrefix = []
-            , _eLayoutDir = Element.LeftToRight -- TODO: Test other directions
+            , _eLayoutDir = Dir.LeftToRight -- TODO: Test other directions
             , _eLanguage = testLang
             }
 

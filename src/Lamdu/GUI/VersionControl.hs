@@ -9,6 +9,7 @@ import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -81,7 +82,7 @@ makeBranchSelector ::
     ( MonadReader env mr, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , VersionControl.HasConfig env, VersionControl.HasTheme env
-    , Element.HasLayoutDir env
+    , Dir.HasLayoutDir env
     , Monad n
     ) =>
     (forall a. Transaction n a -> mw a) ->

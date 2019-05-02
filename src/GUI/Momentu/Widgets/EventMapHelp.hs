@@ -25,6 +25,7 @@ import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, R)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -67,12 +68,12 @@ data Env = Env
     { _eConfig :: Config
     , _eStyle :: Style
     , _eAnimIdPrefix :: AnimId
-    , _eLayoutDir :: Element.LayoutDir
+    , _eLayoutDir :: Dir.Layout
     }
 Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eStyle . styleText
-instance Element.HasLayoutDir Env where layoutDir = eLayoutDir
+instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -100,7 +101,7 @@ defaultEnv font =
     { _eConfig = defaultConfig
     , _eStyle = defaultStyle font
     , _eAnimIdPrefix = ["help box"]
-    , _eLayoutDir = Element.LeftToRight
+    , _eLayoutDir = Dir.LeftToRight
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -190,7 +191,7 @@ makeTooltip helpKeys =
     /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
 mkIndent ::
-    (MonadReader env m, Element.HasLayoutDir env) =>
+    (MonadReader env m, Dir.HasLayoutDir env) =>
     m (R -> View -> View)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
 
@@ -199,7 +200,7 @@ fontHeight =
     Lens.view (TextView.style . TextView.styleFont) <&> Font.height
 
 makeFlatTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasLayoutDir env) =>
+    (MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env) =>
     m (Vector2 R -> [(View, View)] -> View)
 makeFlatTreeView =
     (,)
@@ -218,7 +219,7 @@ makeFlatTreeView =
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasLayoutDir env) =>
+    (MonadReader env m, TextView.HasStyle env, Dir.HasLayoutDir env) =>
     m (Vector2 R -> [Tree View View] -> View)
 makeTreeView =
     do
@@ -239,7 +240,7 @@ makeTreeView =
             <&> \mk size trees -> mk size (handleResult (go trees))
 
 hoverEdge ::
-    (MonadReader env m, Element.SizedElement a, Element.HasLayoutDir env) =>
+    (MonadReader env m, Element.SizedElement a, Dir.HasLayoutDir env) =>
     Widget.Size -> m (a -> a)
 hoverEdge size =
     (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w & Element.hoverLayers
