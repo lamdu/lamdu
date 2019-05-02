@@ -68,10 +68,14 @@ deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} 
 
 data StatusBar a = StatusBar
     { _sbAnnotations :: a
+    , _sbSwitchAnnotations :: a
     , _sbBranch :: a
+    , _sbSwitchHelp :: a
     , _sbHelp :: a
     , _sbLanguage :: a
+    , _sbSwitchLanguage :: a
     , _sbTheme :: a
+    , _sbSwitchTheme :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 StatusBar)

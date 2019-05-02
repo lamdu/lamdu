@@ -46,13 +46,24 @@ hoist f (StatusWidgets x y z a) =
 
 header ::
     StatusBar.LabelConstraints env m =>
-    OneOf Texts.StatusBar -> StatusBar.Header (m (WithTextPos View))
-header lens = StatusBar.labelHeader (Texts.statusBar . lens)
+    OneOf Texts.StatusBar ->
+    OneOf Texts.StatusBar ->
+    StatusBar.Header (m (WithTextPos View))
+header switchLens categoryLens =
+    StatusBar.labelHeader
+    (Texts.statusBar . switchLens)
+    (Texts.statusBar . categoryLens)
 
 unlabeledHeader ::
-    Applicative f => OneOf Texts.StatusBar -> StatusBar.Header (f View)
-unlabeledHeader lens =
-    StatusBar.Header (Texts.statusBar . lens) (pure Element.empty)
+    Applicative f =>
+    OneOf Texts.StatusBar ->
+    OneOf Texts.StatusBar -> StatusBar.Header (f View)
+unlabeledHeader switchLens categoryLens =
+    StatusBar.Header
+    { StatusBar.headerSwitchTextLens = Texts.statusBar . switchLens
+    , StatusBar.headerCategoryTextLens = Texts.statusBar . categoryLens
+    , StatusBar.headerWidget = pure Element.empty
+    }
 
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
@@ -63,15 +74,19 @@ makeStatusWidgets ::
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
-    <$> StatusBar.makeBoundedSwitchStatusWidget (header Texts.sbAnnotations)
+    <$> StatusBar.makeBoundedSwitchStatusWidget
+        (header Texts.sbSwitchAnnotations Texts.sbAnnotations)
         Config.nextAnnotationModeKeys annotationModeProp
-    <*> StatusBar.makeSwitchStatusWidget (unlabeledHeader Texts.sbTheme)
+    <*> StatusBar.makeSwitchStatusWidget
+        (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
         Config.changeThemeKeys themeProp
         (themeNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (unlabeledHeader Texts.sbLanguage)
+    <*> StatusBar.makeSwitchStatusWidget
+        (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget (header Texts.sbHelp)
+    <*> StatusBar.makeSwitchStatusWidget
+        (header Texts.sbSwitchHelp Texts.sbHelp)
         Config.helpKeys helpProp helpVals
     where
         helpVals =

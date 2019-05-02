@@ -19,9 +19,14 @@
             "quit": "Quit"
         },
         "statusBar": {
-            "help": "Help ",
+            "help": "Help",
             "language": "Language",
-            "theme": "Theme"
+            "theme": "Theme",
+            "annotations": "Annotations",
+            "switchHelp": "Switch Help",
+            "switchLanguage": "Switch Language",
+            "switchTheme": "Switch Theme",
+            "switchAnnotations": "Switch Annotations"
         },
         "versioning": {
             "branches": "Branches",

@@ -68,7 +68,8 @@ fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
 data Header w = Header
-    { headerTextLens :: OneOf Texts
+    { headerCategoryTextLens :: OneOf Texts
+    , headerSwitchTextLens :: OneOf Texts
     , headerWidget :: w
     }
 
@@ -78,8 +79,13 @@ type LabelConstraints env m =
     )
 
 labelHeader ::
-    LabelConstraints env m => OneOf Texts -> Header (m (WithTextPos View))
-labelHeader textLens = Header textLens (info (label textLens))
+    LabelConstraints env m => OneOf Texts -> OneOf Texts -> Header (m (WithTextPos View))
+labelHeader switchTextLens textLens =
+    Header
+    { headerCategoryTextLens = textLens
+    , headerSwitchTextLens = switchTextLens
+    , headerWidget = info (label textLens)
+    }
 
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
@@ -109,7 +115,7 @@ labeledChoice ::
     ) =>
     Header (m w) -> Property f a -> [(Text, a)] -> m (TextWidget f)
 labeledChoice header prop choiceVals =
-    headerWidget header /|/ makeChoice (headerTextLens header) prop choiceVals
+    headerWidget header /|/ makeChoice (headerCategoryTextLens header) prop choiceVals
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
@@ -123,10 +129,10 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
         keys <- Lens.view (Config.config . keysGetter)
-        text <- Lens.view (texts . headerTextLens header)
+        txt <- Lens.view (texts . headerSwitchTextLens header)
         let e =
                 setVal newVal
-                & E.keysEventMap keys (E.Doc ["Status bar", "Switch " <> text])
+                & E.keysEventMap keys (E.Doc ["Status bar", txt])
         pure StatusWidget
             { _widget = w
             , _globalEventMap = e
