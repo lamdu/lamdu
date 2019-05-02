@@ -144,7 +144,7 @@ layout themeNames langNames settingsProp =
         let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
 
         versionControlCfg <- Lens.view (Config.config . Config.versionControl)
-        let vcEventMap = VersionControlGUI.eventMap versionControlCfg vcActions
+        vcEventMap <- VersionControlGUI.eventMap ?? versionControlCfg ?? vcActions
 
         quitKeys <- Lens.view (Config.config . Config.quitKeys)
         let quitEventMap = E.keysEventMap quitKeys (E.Doc ["Quit"]) (error "Quit")

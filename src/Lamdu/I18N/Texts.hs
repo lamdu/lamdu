@@ -81,6 +81,7 @@ deriveJSON Aeson.defaultOptions
 
 data Versioning a = Versioning
     { _branches :: a
+    , _new :: a
     , _rename :: a
     , _doneRenaming :: a
     , _edit :: a

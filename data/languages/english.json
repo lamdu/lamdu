@@ -24,6 +24,7 @@
         },
         "versioning": {
             "branches": "Branches",
+            "new": "New",
             "rename": "Rename",
             "doneRenaming": "Done renaming",
             "edit": "Edit",

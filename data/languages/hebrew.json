@@ -27,6 +27,7 @@
         },
         "versioning": {
             "branches": "ענפים",
+            "new": "חדש",
             "rename": "שנה שם",
             "doneRenaming": "סיום שינוי שם",
             "edit": "עריכה",

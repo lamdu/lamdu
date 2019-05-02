@@ -45,33 +45,35 @@ branchNameFDConfig txt = FocusDelegator.Config
     }
 
 undoEventMap ::
-    VersionControl.Config -> Maybe (m GuiState.Update) ->
-    Gui EventMap m
-undoEventMap config =
+    Texts.Versioning Text -> VersionControl.Config ->
+    Maybe (m GuiState.Update) -> Gui EventMap m
+undoEventMap txt config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.Doc ["Edit", "Undo"])
+    (E.Doc [txt ^. Texts.edit, txt ^. Texts.undo])
     & foldMap
 
 redoEventMap ::
-    VersionControl.Config -> Maybe (m GuiState.Update) ->
-    Gui EventMap m
-redoEventMap config =
+    Texts.Versioning Text -> VersionControl.Config ->
+    Maybe (m GuiState.Update) -> Gui EventMap m
+redoEventMap txt config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.Doc ["Edit", "Redo"])
+    (E.Doc [txt ^. Texts.edit, txt ^. Texts.redo])
     & foldMap
 
 eventMap ::
-    Applicative f =>
-    VersionControl.Config -> A.Actions t f ->
-    Gui EventMap f
-eventMap config actions = mconcat
+    (MonadReader env m, Applicative f, Texts.HasLanguage env) =>
+    m (VersionControl.Config -> A.Actions t f -> Gui EventMap f)
+eventMap =
+    Lens.view (Texts.texts . Texts.versioning)
+    <&> \txt config actions ->
+    mconcat
     [ E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
-      (E.Doc ["Branches", "New"]) $ branchTextEditId <$> A.makeBranch actions
+      (E.Doc [txt ^. Texts.branches, txt ^. Texts.new]) $ branchTextEditId <$> A.makeBranch actions
     , E.keysEventMapMovesCursor (config ^. VersionControl.jumpToBranchesKeys)
-      (E.Doc ["Branches", "Select"]) $
+      (E.Doc [txt ^. Texts.branches, txt ^. Texts.select]) $
       (pure . branchDelegatorId . Property.value . A.currentBranch) actions
-    , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap config
-    , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap config
+    , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap txt config
+    , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap txt config
     ]
 
 branchDelegatorId :: Branch t -> Widget.Id
@@ -109,7 +111,10 @@ makeBranchSelector rwtransaction rtransaction actions =
                             | List.isLengthAtLeast 2 (A.branches actions) =
                                 E.keysEventMapMovesCursor
                                 (config ^. VersionControl.delBranchKeys)
-                                (E.Doc ["Branches", "Delete"])
+                                (E.Doc
+                                    [ txt ^. Texts.branches
+                                    , txt ^. Texts.delete
+                                    ])
                                 (branchDelegatorId <$> A.deleteBranch actions branch)
                             | otherwise = mempty
                     pure (branch, Widget.weakerEvents delEventMap branchNameEdit)
