@@ -32,6 +32,10 @@
             "down": "למטה",
             "move": "זוז",
             "navigation": "ניווט"
+        },
+        "eventMap": {
+            "repeat": "חזרה",
+            "depress": "שחרור"
         }
     }
 }

@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Color(..))
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
+import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
@@ -60,7 +61,8 @@ instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
 instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
-instance Dir.HasTexts Env where texts = eLanguage . Texts.lTexts . Texts.dir
+instance Dir.HasTexts Env where texts = language . Texts.lTexts . Texts.dir
+instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance HasLanguage Env where language = eLanguage
 
 make :: IO Env

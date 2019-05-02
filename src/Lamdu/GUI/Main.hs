@@ -67,7 +67,9 @@ type T = Transaction
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
 helpEnv ::
-    (MonadReader env m, HasConfig env, HasStyle env, Dir.HasTexts env) =>
+    ( MonadReader env m, HasConfig env, HasStyle env, Dir.HasTexts env
+    , E.HasTexts env
+    ) =>
     m EventMapHelp.Env
 helpEnv =
     Lens.view id <&> \env ->
@@ -80,11 +82,14 @@ helpEnv =
     , EventMapHelp._eStyle = env ^. Style.style . Style.help
     , EventMapHelp._eAnimIdPrefix = ["help box"]
     , EventMapHelp._eLayoutDir = env ^. Dir.layoutDir
-    , EventMapHelp._eTexts = env ^. Dir.texts
+    , EventMapHelp._eDirTexts = env ^. Dir.texts
+    , EventMapHelp._eEventMapTexts = env ^. E.texts
     }
 
 addHelp ::
-    (MonadReader env m, HasConfig env, HasStyle env, Dir.HasTexts env) =>
+    ( MonadReader env m, HasConfig env, HasStyle env, Dir.HasTexts env
+    , E.HasTexts env
+    ) =>
     Vector2 R -> m (Widget (f a) -> Widget (f a))
 addHelp size =
     helpEnv
@@ -111,6 +116,7 @@ type Ctx env =
     , Menu.HasConfig env
     , SearchMenu.HasTermStyle env
     , Texts.HasLanguage env
+    , E.HasTexts env
     )
 
 layout ::

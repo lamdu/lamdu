@@ -84,8 +84,8 @@ defaultDebugOptions =
 
 -- TODO: If moving GUI to lib,
 -- include a default help font in the lib rather than get a path.
-defaultOptions :: Dir.Texts Text -> FilePath -> IO Options
-defaultOptions texts helpFontPath =
+defaultOptions :: E.Texts Text -> Dir.Texts Text -> FilePath -> IO Options
+defaultOptions eventMapTexts dirTexts helpFontPath =
     do
         loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
@@ -109,7 +109,8 @@ defaultOptions texts helpFontPath =
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
-                        EventMapHelp.defaultEnv texts helpFont & pure
+                        EventMapHelp.defaultEnv eventMapTexts dirTexts helpFont
+                            & pure
                 , cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }
             , stateStorage = stateStorage_

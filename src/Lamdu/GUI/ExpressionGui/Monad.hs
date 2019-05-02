@@ -34,6 +34,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -116,6 +117,7 @@ instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
 instance Dir.HasLayoutDir (Askable i o) where layoutDir = aLayoutDir
 instance Dir.HasTexts (Askable i o) where texts = aLanguage . Texts.lTexts . Texts.dir
+instance EventMap.HasTexts (Askable i o) where texts = Texts.language . EventMap.texts
 instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a

@@ -18,6 +18,7 @@ import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.State as GuiState
@@ -80,5 +81,6 @@ instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Dir.HasLayoutDir Env where layoutDir = language . Dir.layoutDir
 instance Dir.HasTexts Env where texts = Texts.language . Dir.texts
+instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
 instance Texts.HasLanguage Env where language = language
 

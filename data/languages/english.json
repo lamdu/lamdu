@@ -29,6 +29,10 @@
             "down": "Down",
             "move": "Move",
             "navigation": "Navigation"
+        },
+        "eventMap": {
+            "repeat": "Repeat",
+            "depress": "Depress"
         }
     }
 }

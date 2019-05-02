@@ -1,13 +1,14 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, PatternGuards, NoMonomorphismRestriction #-}
-{-# LANGUAGE DerivingVia, StandaloneDeriving #-}
+{-# LANGUAGE DerivingVia, StandaloneDeriving, RankNTypes #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
     , InputDoc, Subtitle, Doc(..), docStrs
     , Clipboard
     , MaybeWantsClipboard(..), _Doesn'tWantClipboard, _WantsClipboard
+    , Texts(..), HasTexts(..)
     , Event(..)
     , EventMap, lookup
-    , emDocs
+    , emDocs, emHandlerDocs
     , charEventMap, allChars
     , charGroup
     , keyEventMap, keyPress, keyPresses, keyPressOrRepeat
@@ -23,6 +24,8 @@ module GUI.Momentu.EventMap
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
@@ -43,9 +46,18 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Prelude as Prelude
 
-import           Lamdu.Prelude hiding (lookup, filter)
+import           Lamdu.Prelude hiding (lookup, filter, repeat)
 
 {-# ANN module ("HLint: ignore Use camelCase"::String) #-}
+
+data Texts a = Texts
+    { repeat :: !a
+    , depress :: !a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+class HasTexts env where texts :: Lens' env (Texts Text)
+deriveJSON Aeson.defaultOptions ''Texts
 
 data KeyEvent = KeyEvent ModKey.KeyState ModKey
     deriving (Generic, Show, Eq, Ord)
@@ -130,18 +142,33 @@ Lens.makeLenses ''EventMap
 instance Semigroup (EventMap a) where (<>) = overrides
 deriving via ExtendSemigroup (EventMap a) instance Monoid (EventMap a)
 
-prettyKeyEvent :: KeyEvent -> InputDoc
-prettyKeyEvent (KeyEvent ModKey.KeyState'Pressed modKey) = ModKey.pretty modKey
-prettyKeyEvent (KeyEvent ModKey.KeyState'Repeating modKey) = "Repeat " <> ModKey.pretty modKey
-prettyKeyEvent (KeyEvent ModKey.KeyState'Released modKey) = "Depress " <> ModKey.pretty modKey
+prettyKeyEvent :: Texts Text -> KeyEvent -> InputDoc
+prettyKeyEvent txt =
+    \case
+    KeyEvent ModKey.KeyState'Pressed modKey -> ModKey.pretty modKey
+    KeyEvent ModKey.KeyState'Repeating modKey -> repeat txt <> ModKey.pretty modKey
+    KeyEvent ModKey.KeyState'Released modKey -> depress txt <> ModKey.pretty modKey
 
-emDocs :: Lens.IndexedTraversal' InputDoc (EventMap a) Doc
-emDocs f e =
+emDocsH ::
+    (KeyEvent -> r) ->
+    (InputDoc -> r) ->
+    Lens.IndexedTraversal' r (EventMap a) Doc
+emDocsH key idoc f e =
     EventMap
-    <$> (Lens.reindexed prettyKeyEvent Lens.itraversed <. dhDoc) f (_emKeyMap e)
-    <*> (Lens.traverse .> dropHandlerDocs) f (_emDropHandlers e)
-    <*> (Lens.traverse .> cgDocs) f (_emCharGroupHandlers e)
-    <*> (Lens.traverse .> chDocs) f (_emAllCharsHandler e)
+    <$> (Lens.reindexed key Lens.itraversed <. dhDoc) f (_emKeyMap e)
+    <*> (Lens.traverse .> Lens.reindexed idoc dropHandlerDocs) f (_emDropHandlers e)
+    <*> (Lens.traverse .> Lens.reindexed idoc cgDocs) f (_emCharGroupHandlers e)
+    <*> (Lens.traverse .> Lens.reindexed idoc chDocs) f (_emAllCharsHandler e)
+
+emDocs ::
+    ( MonadReader env m, HasTexts env, Lens.Indexable InputDoc p
+    , Applicative f
+    ) =>
+    m (Lens.Over' p f (EventMap a) Doc)
+emDocs = Lens.view texts <&> \txt -> emDocsH (prettyKeyEvent txt) id
+
+emHandlerDocs :: Lens.Traversal' (EventMap a) Doc
+emHandlerDocs = emDocsH (const ()) (const ())
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides

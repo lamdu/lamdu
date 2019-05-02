@@ -7,6 +7,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
 import qualified GUI.Momentu.Direction as Dir
+import qualified GUI.Momentu.EventMap as EventMap
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
@@ -82,6 +83,7 @@ data Texts a = Texts
     , _codeUI :: CodeUI a
     , _statusBar :: StatusBar a
     , _dir :: Dir.Texts a
+    , _eventMap :: EventMap.Texts a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
@@ -107,6 +109,7 @@ instance HasConfigFolder Language where
     configFolder _ = "languages"
 
 class Dir.HasTexts env => HasLanguage env where language :: Lens' env Language
+instance EventMap.HasTexts Language where texts = lTexts . eventMap
 
 instance Dir.HasLayoutDir Language where layoutDir = lDirection
 instance Dir.HasTexts Language where texts = lTexts . dir

@@ -69,13 +69,15 @@ data Env = Env
     , _eStyle :: Style
     , _eAnimIdPrefix :: AnimId
     , _eLayoutDir :: Dir.Layout
-    , _eTexts :: Dir.Texts Text
+    , _eDirTexts :: !(Dir.Texts Text)
+    , _eEventMapTexts :: !(E.Texts Text)
     }
 Lens.makeLenses ''Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance TextView.HasStyle Env where style = eStyle . styleText
 instance Dir.HasLayoutDir Env where layoutDir = eLayoutDir
-instance Dir.HasTexts Env where texts = eTexts
+instance Dir.HasTexts Env where texts = eDirTexts
+instance E.HasTexts Env where texts = eEventMapTexts
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -97,14 +99,15 @@ defaultConfig =
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
     }
 
-defaultEnv :: Dir.Texts Text -> Font -> Env
-defaultEnv texts font =
+defaultEnv :: E.Texts Text -> Dir.Texts Text -> Font -> Env
+defaultEnv eventMapTexts dirTexts font =
     Env
     { _eConfig = defaultConfig
     , _eStyle = defaultStyle font
     , _eAnimIdPrefix = ["help box"]
     , _eLayoutDir = Dir.LeftToRight
-    , _eTexts = texts
+    , _eEventMapTexts = eventMapTexts
+    , _eDirTexts = dirTexts
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -180,13 +183,14 @@ columns maxHeight itemHeight =
 
 make :: MonadReader Env m => Vector2 R -> EventMap a -> m View
 make size eventMap =
-    (makeTreeView ?? size)
-    <*>
-    ( eventMap ^.. E.emDocs . Lens.withIndex
-        <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
-        & groupInputDocs & groupTree
-        & traverse makeTextViews
-    )
+    do
+        mkTreeView <- makeTreeView ?? size
+        docs <- E.emDocs
+        eventMap ^.. docs . Lens.withIndex
+            <&> (_1 %~ (^. E.docStrs)) . Tuple.swap
+            & groupInputDocs & groupTree
+            & traverse makeTextViews
+            <&> mkTreeView
 
 makeTooltip :: MonadReader Env m => [ModKey] -> m View
 makeTooltip helpKeys =
