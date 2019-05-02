@@ -111,23 +111,6 @@ labeledChoice ::
 labeledChoice header prop choiceVals =
     headerWidget header /|/ makeChoice (headerTextLens header) prop choiceVals
 
-makeSwitchEventMap ::
-    ( MonadReader env m, HasConfig env, HasLanguage env
-    , Eq a, Functor f
-    ) =>
-    OneOf Texts -> Lens' Config [MetaKey] ->
-    Property f a -> [a] ->
-    m (Gui EventMap f)
-makeSwitchEventMap headerText keysGetter (Property curVal setVal) choiceVals =
-    do
-        keys <- Lens.view (Config.config . keysGetter)
-        text <- Lens.view (texts . Lens.cloneLens headerText)
-        setVal newVal
-            & E.keysEventMap keys (E.Doc ["Status bar", "Switch " <> text])
-            & pure
-    where
-        newVal = dropWhile (/= curVal) choiceVals ++ choiceVals & tail & head
-
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , HasConfig env, HasLanguage env
@@ -139,13 +122,19 @@ makeSwitchStatusWidget ::
 makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
-        e <-
-            makeSwitchEventMap (headerTextLens header) keysGetter prop
-            (map snd choiceVals)
+        keys <- Lens.view (Config.config . keysGetter)
+        text <- Lens.view (texts . headerTextLens header)
+        let e =
+                setVal newVal
+                & E.keysEventMap keys (E.Doc ["Status bar", "Switch " <> text])
         pure StatusWidget
             { _widget = w
             , _globalEventMap = e
             }
+    where
+        choices = map snd choiceVals
+        newVal = dropWhile (/= curVal) choices ++ choices & tail & head
+        Property curVal setVal = prop
 
 makeBoundedSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
