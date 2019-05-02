@@ -17,7 +17,9 @@
             "newDefinitionButton": "New...",
             "undeleteButton": "Undelete...",
             "goto": "Goto",
-            "quit": "Quit"
+            "quit": "Quit",
+            "hidden": "Hidden",
+            "shown": "Shown"
         },
         "statusBar": {
             "statusBar": "Status Bar",

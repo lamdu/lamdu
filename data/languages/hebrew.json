@@ -20,7 +20,9 @@
             "newDefinitionButton": "חדש...",
             "undeleteButton": "שחזר...",
             "goto": "קפוץ",
-            "quit": "יציאה"
+            "quit": "יציאה",
+            "hidden": "חבוי",
+            "shown": "גלוי"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

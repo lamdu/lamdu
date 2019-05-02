@@ -61,6 +61,8 @@ data CodeUI a = CodeUI
     , _defUpdateWas :: a
     , _goto :: a
     , _quit :: a
+    , _hidden :: a
+    , _shown :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)

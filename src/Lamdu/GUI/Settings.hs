@@ -74,14 +74,16 @@ makeStatusWidgets themeNames langNames prop =
         (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
         Config.changeLanguageKeys langProp
         (langNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget
-        (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
-        Config.helpKeys helpProp helpVals
+    <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
+            (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
+            Config.helpKeys helpProp
+        )
     where
         helpVals =
-            [ ("hidden", HelpNotShown)
-            , ("shown", HelpShown)
-            ]
+            Lens.view (Texts.texts . Texts.codeUI) <&> \txt ->
+            [ (Texts.hidden, HelpNotShown)
+            , (Texts.shown, HelpShown)
+            ] <&> _1 %~ (txt ^.)
         themeProp = composeLens (Settings.sSelectedTheme . _Selection) prop
         langProp = composeLens (Settings.sSelectedLanguage . _Selection) prop
         annotationModeProp = composeLens Settings.sAnnotationMode prop
