@@ -39,7 +39,7 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
-import           GUI.Momentu.View (View(..))
+import           GUI.Momentu.View (View(..), vAnimLayers)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
@@ -238,11 +238,11 @@ makeTreeView =
         makeFlatTreeView
             <&> \mk size trees -> mk size (handleResult (go trees))
 
-addToBottomRight :: View -> Widget.Size -> Element.Layers -> Element.Layers
-addToBottomRight (View eventMapSize eventMapLayers) size =
-    Element.addLayersAbove docLayers
-    where
-        docLayers = Element.translateLayers (size - eventMapSize) eventMapLayers
+hoverEdge ::
+    (MonadReader env m, Element.SizedElement a, Element.HasLayoutDir env) =>
+    Widget.Size -> m (a -> a)
+hoverEdge size =
+    (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w & Element.hoverLayers
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Eq, Ord, Read, Show, Enum, Bounded)
@@ -279,7 +279,8 @@ addHelpViewWith showingHelp size focus =
                     , Widget._ePrevTextRemainder = mempty
                     }
                 )
-        focus & Widget.fLayers %~ addToBottomRight helpView size & pure
+        atEdge <- hoverEdge size ?? helpView
+        focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
 
 toggleEventMap ::
     (MonadReader Env m, MonadIO f, Monoid a) =>
