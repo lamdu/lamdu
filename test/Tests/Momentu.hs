@@ -106,7 +106,7 @@ gridStrollTest =
     where
         makeGrid :: Int -> Gui Widget Identity
         makeGrid pos =
-            Grid.make Dir.LeftToRight
+            Grid.make env
             [ [ Aligned 0 (mkWidget pos 0)
               , Aligned 0 (mkWidget pos 1)
               ]

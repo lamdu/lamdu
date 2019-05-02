@@ -13,7 +13,7 @@ import           Data.Maybe.Extended (unionMaybeWith)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified Data.Vector.Vector2 as Vector2
 import           GUI.Momentu.Align (Aligned(..))
-import           GUI.Momentu.Direction (Orientation(..))
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -64,10 +64,10 @@ mkNavDests ::
     Gui NavDests f
 mkNavDests dir (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
     NavDests
-    { cursorLeft    = reverse colsLeft  & enterHoriz FromRight
-    , cursorUp     = reverse rowsAbove & enterVert  FromBelow
-    , cursorRight   = colsRight         & enterHoriz FromLeft
-    , cursorDown     = rowsBelow         & enterVert  FromAbove
+    { cursorLeft  = reverse colsLeft  & enterHoriz FromRight
+    , cursorUp    = reverse rowsAbove & enterVert  FromBelow
+    , cursorRight = colsRight         & enterHoriz FromLeft
+    , cursorDown  = rowsBelow         & enterVert  FromAbove
 
     , cursorTop       = take 1 rowsAbove           & enterVert  FromAbove
     , cursorLeftMost  = take 1 colsLeft            & enterHoriz FromLeft
@@ -120,26 +120,29 @@ stdKeys = Keys
     where
         k = MetaKey noMods
 
-addNavEventmap :: Keys ModKey -> NavDests a -> EventMap a -> EventMap a
-addNavEventmap keys navDests eMap =
+addNavEventmap ::
+    Dir.HasTexts env =>
+    env -> Keys ModKey -> NavDests a -> EventMap a -> EventMap a
+addNavEventmap env keys navDests eMap =
     strongMap <> eMap <> weakMap
     where
         dir = keysDir keys
         weakMap =
-            [ movement "left"       (keysLeft  dir)      cursorLeft
-            , movement "right"      (keysRight dir)      cursorRight
-            , movement "up"         (keysUp    dir)      cursorUp
-            , movement "down"       (keysDown  dir)      cursorDown
-            , movement "more left"  (keysMoreLeft keys)  cursorLeftMost
-            , movement "more right" (keysMoreRight keys) cursorRightMost
+            [ movement Horizontal Backward (keysLeft  dir)      cursorLeft
+            , movement Horizontal Forward  (keysRight dir)      cursorRight
+            , movement Vertical Backward   (keysUp    dir)      cursorUp
+            , movement Vertical Forward    (keysDown  dir)      cursorDown
+            , movementMore "more left"  (keysMoreLeft keys)  cursorLeftMost
+            , movementMore "more right" (keysMoreRight keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
         strongMap =
-            [ movement "top"       (keysTop keys)       cursorTop
-            , movement "bottom"    (keysBottom keys)    cursorBottom
-            , movement "leftmost"  (keysLeftMost keys)  cursorLeftMost
-            , movement "rightmost" (keysRightMost keys) cursorRightMost
+            [ movementMore "top"       (keysTop keys)       cursorTop
+            , movementMore "bottom"    (keysBottom keys)    cursorBottom
+            , movementMore "leftmost"  (keysLeftMost keys)  cursorLeftMost
+            , movementMore "rightmost" (keysRightMost keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
-        movement dirName events f =
+        movement o d = movementMore (env ^. Dir.texts . Dir.textLens o d)
+        movementMore dirName events f =
             f navDests
             <&> (^. Widget.enterResultEvent)
             <&> EventMap.keyPresses
@@ -148,7 +151,7 @@ addNavEventmap keys navDests eMap =
 
 make ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Dir.HasLayoutDir env, Applicative f
+    , Dir.HasTexts env, Applicative f
     ) =>
     m
     (vert (horiz (Aligned (Gui Widget f))) ->
@@ -157,21 +160,20 @@ make = makeWithKeys ?? (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Dir.HasLayoutDir env, Applicative f
+    , Dir.HasTexts env, Applicative f
     ) =>
     m
     (Keys ModKey ->
      vert (horiz (Aligned (Gui Widget f))) ->
      (vert (horiz (Aligned ())), Gui Widget f))
 makeWithKeys =
-    Lens.view Dir.layoutDir
-    <&>
-    \dir keys children ->
+    Lens.view id <&>
+    \env keys children ->
     let (size, content) = GridView.makePlacements children
     in  ( content & each2d %~ void
         , toList content <&> toList
           & each2d %~ (\(Aligned _ (rect, widget)) -> (rect, widget))
-          & toWidgetWithKeys dir keys size
+          & toWidgetWithKeys env keys size
         )
 
 each2d :: (Traversable vert, Traversable horiz) => Lens.IndexedTraversal Cursor (vert (horiz a)) (vert (horiz b)) a b
@@ -182,11 +184,11 @@ each2d =
 -- TODO: We assume that the given Cursor selects a focused
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
-    Applicative f =>
-    Dir.Layout -> Keys ModKey -> Widget.Size ->
+    (Dir.HasTexts env, Applicative f) =>
+    env -> Keys ModKey -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f
-toWidgetWithKeys dir keys size sChildren =
+toWidgetWithKeys env keys size sChildren =
     Widget
     { _wSize = size
     , _wState =
@@ -202,8 +204,9 @@ toWidgetWithKeys dir keys size sChildren =
             \surrounding ->
             let focusedChild = makeFocusedChild surrounding
                 addNavDests eventContext =
-                    mkNavDests dir cursor (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
-                    & addNavEventmap keys
+                    mkNavDests dir cursor
+                    (eventContext ^. Widget.eVirtualCursor) unfocusedMEnters
+                    & addNavEventmap env keys
                 (before, after) = break ((>= cursor) . fst) (sortOn fst (unfocused ^@.. each2d))
                 -- TODO: DRY with Widget's Glue instance
                 addEventStroll events =
@@ -247,6 +250,7 @@ toWidgetWithKeys dir keys size sChildren =
             }
     }
     where
+        dir = env ^. Dir.layoutDir
         translateChildWidget (rect, widget) =
             -- -- Each child is set to the size of the entire grid and
             -- -- then translated to its place in order to fix the
