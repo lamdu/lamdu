@@ -42,7 +42,7 @@ make ::
     , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
-    , HasConfig env, Element.HasLayoutDir env, HasLanguage env
+    , HasConfig env, HasLanguage env
     ) =>
     StatusWidget (IOTrans n) ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings ->

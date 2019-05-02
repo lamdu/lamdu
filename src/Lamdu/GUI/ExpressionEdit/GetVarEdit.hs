@@ -68,8 +68,7 @@ makeSimpleView color name myId =
 makeParamsRecord ::
     ( MonadReader env m, HasTheme env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
-    , Element.HasLayoutDir env, Texts.HasLanguage env
-    , Applicative f
+    , Texts.HasLanguage env, Applicative f
     ) =>
     Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Gui Responsive f)
 makeParamsRecord myId paramsRecordVar =
@@ -170,7 +169,7 @@ definitionTypeChangeBox ::
     ( MonadReader env m
     , Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
-    , HasConfig env, Element.HasLayoutDir env, Texts.HasLanguage env
+    , HasConfig env, Texts.HasLanguage env
     , Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
@@ -205,9 +204,8 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
-    , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
-    , Texts.HasLanguage env
-    , Applicative f
+    , GuiState.HasCursor env, Hover.HasStyle env
+    , Texts.HasLanguage env, Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->
     m (TextWidget f) ->

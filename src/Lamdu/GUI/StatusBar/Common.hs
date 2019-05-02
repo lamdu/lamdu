@@ -84,8 +84,7 @@ labelHeader textLens = Header textLens (info (label textLens))
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Element.HasLayoutDir env
-    , HasLanguage env
+    , Element.HasAnimIdPrefix env, HasLanguage env
     ) =>
     OneOf Texts -> Property f a -> [(Text, a)] -> m (TextWidget f)
 makeChoice headerText prop choiceVals =
@@ -104,8 +103,7 @@ makeChoice headerText prop choiceVals =
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , GuiState.HasCursor env, Hover.HasStyle env, Element.HasLayoutDir env
-    , HasLanguage env
+    , GuiState.HasCursor env, Hover.HasStyle env, HasLanguage env
     , Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Property f a -> [(Text, a)] -> m (TextWidget f)
@@ -133,8 +131,7 @@ makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , HasConfig env, HasLanguage env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env, Element.HasLayoutDir env
-    , Glue.GluesTo w (TextWidget f) (TextWidget f)
+    , Hover.HasStyle env, Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
     [(Text, a)] -> m (StatusWidget f)
@@ -153,8 +150,7 @@ makeBoundedSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a, Enum a, Bounded a, Show a
     , HasConfig env, HasLanguage env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env, Element.HasLayoutDir env
-    , Glue.GluesTo w (TextWidget f) (TextWidget f)
+    , Hover.HasStyle env, Glue.GluesTo w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
     m (StatusWidget f)

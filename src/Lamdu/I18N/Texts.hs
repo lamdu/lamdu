@@ -6,6 +6,7 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
+import qualified GUI.Momentu.Element as Element
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
@@ -105,7 +106,8 @@ deriveJSON Aeson.defaultOptions
 instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class HasLanguage env where language :: Lens' env Language
+class Element.HasLayoutDir env => HasLanguage env where
+    language :: Lens' env Language
 
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts

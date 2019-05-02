@@ -57,8 +57,7 @@ mkLhsEdits =
 
 mkExpanded ::
     ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
-    , Element.HasLayoutDir env, Element.HasAnimIdPrefix env
-    , Texts.HasLanguage env
+    , Element.HasAnimIdPrefix env, Texts.HasLanguage env
     ) =>
     f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
 mkExpanded =
@@ -74,7 +73,7 @@ lamId = (`Widget.joinId` ["lam"])
 mkShrunk ::
     ( Monad o, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Element.HasLayoutDir env, Texts.HasLanguage env
+    , Texts.HasLanguage env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
@@ -101,7 +100,7 @@ mkShrunk paramIds myId =
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
-    , HasConfig env, Element.HasLayoutDir env, Texts.HasLanguage env
+    , HasConfig env, Texts.HasLanguage env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f

@@ -193,8 +193,7 @@ withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Element.HasLayoutDir env
-    , Texts.HasLanguage env
+    , HasSettings env, HasStyle env, Texts.HasLanguage env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))

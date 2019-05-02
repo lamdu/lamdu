@@ -115,8 +115,7 @@ withFd =
 textEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Element.HasLayoutDir env, Texts.HasLanguage env
-    , Monad o
+    , Texts.HasLanguage env, Monad o
     ) =>
     Property o Text ->
     Sugar.Payload name i o ExprGui.Payload ->

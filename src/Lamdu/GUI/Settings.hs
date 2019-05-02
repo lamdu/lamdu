@@ -52,8 +52,7 @@ header lens = StatusBar.labelHeader (Texts.statusBar . lens)
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasStdSpacing env, HasLanguage env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Element.HasLayoutDir env, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Hover.HasStyle env
     ) =>
     [Selection Theme] -> [Selection Language] ->
     Property f Settings -> m (StatusWidgets f)

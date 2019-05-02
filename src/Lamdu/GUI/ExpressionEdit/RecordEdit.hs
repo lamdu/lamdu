@@ -140,8 +140,7 @@ make (Sugar.Composite fields recordTail addField) pl =
 
 makeRecord ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Element.HasLayoutDir env, Texts.HasLanguage env
-    , Applicative o
+    , Spacer.HasStdSpacing env, Texts.HasLanguage env, Applicative o
     ) =>
     (Gui Responsive o -> m (Gui Responsive o)) ->
     [Gui Responsive.TaggedItem o] ->

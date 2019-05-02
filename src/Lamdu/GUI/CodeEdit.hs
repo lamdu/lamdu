@@ -87,7 +87,6 @@ make ::
     , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , SearchMenu.HasTermStyle env
     , Element.HasAnimIdPrefix env
-    , Element.HasLayoutDir env
     , Texts.HasLanguage env
     , HasCallStack
     ) =>
