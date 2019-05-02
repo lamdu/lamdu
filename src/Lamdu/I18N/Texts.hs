@@ -9,7 +9,7 @@ import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
 
-data CodeTexts a = CodeTexts
+data Code a = Code
     { _assign :: a -- Assignment
     , _relay :: a -- Apply
     , _let_ :: a
@@ -44,9 +44,9 @@ data CodeTexts a = CodeTexts
     , _recordCloser :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 CodeTexts)
-Lens.makeLenses ''CodeTexts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeTexts
+    deriving Applicative via (Generically1 Code)
+Lens.makeLenses ''Code
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Code
 
 data CodeUITexts a = CodeUITexts
     { _newDefinitionButton :: a
@@ -60,7 +60,7 @@ data CodeUITexts a = CodeUITexts
 Lens.makeLenses ''CodeUITexts
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUITexts
 
-data StatusBarTexts a = StatusBarTexts
+data StatusBar a = StatusBar
     { _annotations :: a
     , _branch :: a
     , _help :: a
@@ -68,17 +68,17 @@ data StatusBarTexts a = StatusBarTexts
     , _theme :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 StatusBarTexts)
-Lens.makeLenses ''StatusBarTexts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''StatusBarTexts
+    deriving Applicative via (Generically1 StatusBar)
+Lens.makeLenses ''StatusBar
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''StatusBar
 
 data Texts a = Texts
     { -- TODO: Should this still be called "Texts?"
       -- Using a boolean for the JSON instance
       _isLeftToRight :: Bool
-    , _code :: CodeTexts a
+    , _code :: Code a
     , _codeUI :: CodeUITexts a
-    , _statusBar :: StatusBarTexts a
+    , _statusBar :: StatusBar a
     }
     deriving stock (Eq, Ord, Show, Functor, Foldable, Traversable)
 -- Get-field's dot is currently omitted from the symbols,
@@ -95,8 +95,8 @@ instance HasConfigFolder Language where
 class HasTexts env where texts :: Lens' env Language
 instance HasTexts (Texts Text) where texts = id
 
-dummyTexts :: Texts ()
-dummyTexts =
+dummy :: Texts ()
+dummy =
     Texts
     { _isLeftToRight = True
     , _code = pure ()

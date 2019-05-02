@@ -66,7 +66,7 @@ text animIdSuffix txtLens =
     >>= rawText animIdSuffix
 
 textIds :: Texts [ByteString]
-textIds = Texts.dummyTexts & Lens.traversed %@~ const . (:[]) . encodeS
+textIds = Texts.dummy & Lens.traversed %@~ const . (:[]) . encodeS
 
 label ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env

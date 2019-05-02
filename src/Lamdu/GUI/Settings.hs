@@ -46,7 +46,7 @@ hoist f (StatusWidgets x y z a) =
 
 header ::
     StatusBar.LabelConstraints env m =>
-    OneOf Texts.StatusBarTexts -> StatusBar.Header (m (WithTextPos View))
+    OneOf Texts.StatusBar -> StatusBar.Header (m (WithTextPos View))
 header lens = StatusBar.labelHeader (Texts.statusBar . lens)
 
 makeStatusWidgets ::
