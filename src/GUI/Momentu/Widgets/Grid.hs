@@ -222,7 +222,7 @@ toWidgetWithKeys env keys size sChildren =
             Widget.StateUnfocused Widget.Unfocused
             { _uLayers = unfocusedLayers
             , _uMStroll = mconcat (unfocused ^.. each2d . Lens._Just . Widget.uMStroll)
-            , _uMEnter = combineMEnters unfocusedMEnters
+            , _uMEnter = unfocusedMEnter
             }
         Just (cursor, makeFocusedChild) ->
             Widget.StateFocused $
@@ -265,7 +265,7 @@ toWidgetWithKeys env keys size sChildren =
             , Widget._fPreEvents = focusedChild ^. Widget.fPreEvents
             , Widget._fMEnterPoint =
                 focusedChild ^. Widget.fMEnterPoint
-                & unionMaybeWith Widget.combineEnterPoints (combineMEnters unfocusedMEnters <&> (. Point))
+                & unionMaybeWith Widget.combineEnterPoints (unfocusedMEnter <&> (. Point))
             , Widget._fEventMap =
                 (focusedChild ^. Widget.fEventMap
                     <&> addEventStroll
@@ -274,6 +274,7 @@ toWidgetWithKeys env keys size sChildren =
             }
     }
     where
+        unfocusedMEnter = combineMEnters unfocusedMEnters
         dir = env ^. Dir.layoutDir
         translateChildWidget (rect, widget) =
             -- -- Each child is set to the size of the entire grid and
