@@ -155,9 +155,10 @@ make mkOptions pl allowedTerms =
             (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             (fdWrap ?? term ^. SearchMenu.termWidget <&> Responsive.fromWithTextPos)
         isActive <- HoleWidgetIds.isActive widgetIds
+        anc <- Hover.anchor
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
-                (Hover.anchor open `Hover.emplaceAt`) . Hover.anchor
+                (anc open `Hover.emplaceAt`) . anc
         isAHoleInHole <- ExprGuiM.isHoleResult
         if isActive && not isAHoleInHole
             then

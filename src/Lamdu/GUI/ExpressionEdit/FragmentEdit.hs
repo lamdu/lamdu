@@ -70,10 +70,11 @@ make fragment pl =
         let searchAreaBelow = mkSearchArea Menu.Below
         addAnnotation <- maybeAddAnnotationPl pl <&> (Align.tValue %~)
         Glue.Poly (|---|) <- Glue.mkPoly ?? Glue.Vertical
+        anchor <- Hover.anchor
         let f fragmentExpr above below
                 | isSelected
                 || Widget.isFocused (fragmentExpr ^. Align.tValue) =
-                    addAnnotation fragmentExpr & Align.tValue %~ Hover.hoverInPlaceOf options . Hover.anchor
+                    addAnnotation fragmentExpr & Align.tValue %~ Hover.hoverInPlaceOf options . anchor
                 | otherwise =
                     addAnnotation fragmentExpr
                     where
@@ -85,7 +86,7 @@ make fragment pl =
                         hoverFragmentExpr =
                             fragmentExpr
                             & Align.tValue %~ setFocalArea
-                            & Align.tValue %~ Hover.anchor
+                            & Align.tValue %~ anchor
                         setFocalArea w
                             | isSelected =
                                 w

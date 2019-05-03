@@ -10,6 +10,7 @@ import           Data.Binary.Extended (encodeS)
 import           Data.Semigroup (First(..), Last(..))
 import           GUI.Momentu as X
 import           GUI.Momentu.Direction (Orientation(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue as X
@@ -101,8 +102,9 @@ toWidgetFocused (FocusedGlue hoverMode glueOrder orientation foc unf) =
         unfW = toWidgetUnfocused unf
         mkHover pop anc =
             Hover.hoverInPlaceOf
-            [glueFocused glueOrder orientation (hov pop) (Hover.anchor anc)]
-            (Hover.anchor anc)
+            [glueFocused glueOrder orientation (hov pop)
+                (Hover.anchor Dir.LeftToRight anc)]
+            (Hover.anchor Dir.LeftToRight anc)
         hov =
             Env ["foo"]
             Hover.Style

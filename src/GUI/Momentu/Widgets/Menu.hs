@@ -251,11 +251,12 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
             if isSelected
                 then do
                     hover <- Hover.hover
+                    anc <- Hover.anchor
                     hoverBeside <- Hover.hoverBesideOptionsAxis
                     (_, submenus) <-
                         action <&> FullList
                         >>= make (optionId `Widget.joinId` ["submenu"]) 0
-                    let anchored = base & Align.tValue %~ Hover.anchor
+                    let anchored = base & Align.tValue %~ anc
                     anchored
                         & Align.tValue %~
                         Hover.hoverInPlaceOf
@@ -447,8 +448,9 @@ makeHovered ::
 makeHovered myId annotation options =
     do
         mkHoverOptions <- hoverOptions
+        anc <- Hover.anchor
         make myId (annotation ^. Element.width) options
             <&> _2 %~ \menu placement term ->
-                let a = Hover.anchor term
+                let a = anc term
                 in
                 Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a

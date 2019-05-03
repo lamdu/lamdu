@@ -78,15 +78,20 @@ make ::
     (Property f childId -> [(childId, Gui Widget f)] ->
      Config -> Widget.Id -> Gui Widget f)
 make =
-    (,,,) <$> Element.padToSize <*> Glue.box <*> Hover.hover <*> FocusDelegator.make
-    <&> \(padToSize, box, hover, fd) (Property curChild choose) children config myId ->
+    (,,,,)
+    <$> Element.padToSize
+    <*> Glue.box
+    <*> Hover.hover
+    <*> Hover.anchor
+    <*> FocusDelegator.make
+    <&> \(padToSize, box, hover, anc, fd) (Property curChild choose) children config myId ->
     let orientation = cwcOrientation config
         perp :: Lens' (Vector2 a) a
         perp = axis (perpendicular orientation)
         maxDim = children <&> (^. _2 . Element.size . perp) & maximum
         hoverAsClosed open =
-            [hover (Hover.anchor open)]
-            `Hover.hoverInPlaceOf` Hover.anchor (widget False)
+            [hover (anc open)]
+            `Hover.hoverInPlaceOf` anc (widget False)
         widget allowExpand =
             children <&> annotate
             <&> prependEntryAction

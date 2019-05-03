@@ -130,6 +130,7 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
                 hover <- Hover.hover
                 Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
                 Glue.Poly (|---|) <- Glue.mkPoly ?? Glue.Vertical
+                anchor <- Hover.anchor <&> fmap
                 let hDescLabel f = hover (f descLabel) & Hover.sequenceHover
                 let hoverOptions =
                         [ anchor indicator ||| hDescLabel (hspace |||)
@@ -146,7 +147,6 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
             Sugar.ReachedHole -> HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
             _ -> WidgetIds.fromEntityId entityId
         jumpDoc = E.Doc ["Navigation", "Jump to error"]
-        anchor = fmap Hover.anchor
 
 indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]

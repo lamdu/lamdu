@@ -281,6 +281,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
                     Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
+                    anchor <- Hover.anchor <&> fmap
                     let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
                     let termWithHover termW =
                             let hoverOptions =
@@ -294,8 +295,6 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                     & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
-    where
-        anchor = fmap Hover.anchor
 
 makeTagHoleEdit ::
     (Monad i, Applicative o) =>

@@ -22,6 +22,7 @@ import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
 import           GUI.Momentu.Direction (Orientation(..), Order(..), HasLayoutDir)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
@@ -163,8 +164,14 @@ hoverBesideOptionsAxis =
             , glue (Aligned x bwd) aSrc]
             <&> (^. value)
 
-anchor :: Widget a -> AnchoredWidget a
-anchor = AnchoredWidget 0
+anchor ::
+    (MonadReader env m, HasLayoutDir env) =>
+    m (Widget a -> AnchoredWidget a)
+anchor =
+    Lens.view Dir.layoutDir
+    <&> \dir w -> case dir of
+    Dir.LeftToRight -> AnchoredWidget 0 w
+    Dir.RightToLeft -> AnchoredWidget (Vector2 (w ^. Widget.wSize . _1) 0) w
 
 hoverBesideOptions ::
     ( MonadReader env m, GluesTo env a b c, HasLayoutDir env
@@ -269,9 +276,9 @@ hoverBeside ::
       w -> t (Gui Widget f)
     )
 hoverBeside lens =
-    (,) <$> hoverBesideOptions <*> hover <&>
-    \(doHoverBesides, mkHover) layout h ->
-    let a = layout & lens %~ anchor
+    (,,) <$> hoverBesideOptions <*> hover <*> anchor
+    <&> \(doHoverBesides, mkHover, anc) layout h ->
+    let a = layout & lens %~ anc
     in  a & lens %~
         hoverInPlaceOf
         (doHoverBesides (mkHover h) (a ^. lens))
