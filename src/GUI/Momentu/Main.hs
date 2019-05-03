@@ -55,7 +55,7 @@ import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
-data Texts a = Texts
+newtype Texts a = Texts
     { _quit :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)

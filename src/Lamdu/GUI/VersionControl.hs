@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, DerivingVia #-}
+{-# LANGUAGE RankNTypes, DerivingVia #-}
 module Lamdu.GUI.VersionControl
     ( makeBranchSelector, eventMap
     ) where
