@@ -19,7 +19,6 @@ import           GUI.Momentu.Direction (Orientation(..), perpendicular, axis)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
-import           GUI.Momentu.Hover (Hover, AnchoredWidget)
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -70,20 +69,17 @@ defaultConfig =
 data IsSelected = Selected | NotSelected
     deriving Eq
 
-type HoverFunc f = Gui AnchoredWidget f -> Hover (Gui AnchoredWidget f)
-
-makeInner ::
-    (Applicative f, Eq childId, MonadReader env m, Glue.HasTexts env) =>
+make ::
+    ( Eq childId, MonadReader env m, Applicative f
+    , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Glue.HasTexts env
+    ) =>
     m
-    (HoverFunc f ->
-     (FocusDelegator.Config -> FocusDelegator.FocusEntryTarget ->
-      Widget.Id -> Gui Widget f -> Gui Widget f) ->
-     Property f childId ->
-     [(childId, Gui Widget f)] -> Config -> Widget.Id ->
-     Gui Widget f)
-makeInner =
-    (,) <$> Element.padToSize <*> Glue.box
-    <&> \(padToSize, box) hover fd (Property curChild choose) children config myId ->
+    (Property f childId -> [(childId, Gui Widget f)] ->
+     Config -> Widget.Id -> Gui Widget f)
+make =
+    (,,,) <$> Element.padToSize <*> Glue.box <*> Hover.hover <*> FocusDelegator.make
+    <&> \(padToSize, box, hover, fd) (Property curChild choose) children config myId ->
     let orientation = cwcOrientation config
         perp :: Lens' (Vector2 a) a
         perp = axis (perpendicular orientation)
@@ -118,13 +114,3 @@ makeInner =
     in  widget True
         & (if anyChildFocused then hoverAsClosed else id)
         & padToSize (0 & perp .~ maxDim) 0
-
-make ::
-    ( Eq childId, MonadReader env m, Applicative f
-    , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Glue.HasTexts env
-    ) =>
-    m
-    (Property f childId -> [(childId, Gui Widget f)] ->
-     Config -> Widget.Id -> Gui Widget f)
-make = makeInner <*> Hover.hover <*> FocusDelegator.make
