@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
+import qualified GUI.Momentu.Widgets.Label as Label
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Ann
@@ -22,6 +23,8 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection, _Selection)
 import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
+import           Lamdu.GUI.Styled (OneOfT(..))
+import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.I18N.Texts (Language, HasLanguage)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
@@ -65,14 +68,14 @@ makeAnnotationsSwitcher ::
     Property f Ann.Mode -> m (StatusBar.StatusWidget f)
 makeAnnotationsSwitcher annotationModeProp =
     do
-        txt <- Lens.view (Texts.texts . Texts.statusBar)
-        StatusBar.makeSwitchStatusWidget
+        mk <- Styled.mkFocusableLabel
+        [ (Ann.Evaluation, OneOf Texts.sbEvaluation)
+            , (Ann.Types, OneOf Texts.sbTypes)
+            , (Ann.None, OneOf Texts.sbNone)
+            ] <&> (_2 %~ \(OneOf lens) -> mk (OneOf (Texts.statusBar . lens)))
+            & StatusBar.makeSwitchStatusWidget
             (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
             Config.nextAnnotationModeKeys annotationModeProp
-            [ (txt ^. Texts.sbEvaluation, Ann.Evaluation)
-            , (txt ^. Texts.sbTypes, Ann.Types)
-            , (txt ^. Texts.sbNone, Ann.None)
-            ]
 
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
@@ -84,24 +87,27 @@ makeStatusWidgets ::
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
-    <*> StatusBar.makeSwitchStatusWidget
-        (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
-        Config.changeThemeKeys themeProp
-        (themeNames <&> join (,) . (^. _Selection))
-    <*> StatusBar.makeSwitchStatusWidget
-        (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
-        Config.changeLanguageKeys langProp
-        (langNames <&> join (,) . (^. _Selection))
+    <*> (themeNames <&> (^. _Selection) & traverse rawOpt
+            >>= StatusBar.makeSwitchStatusWidget
+            (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
+            Config.changeThemeKeys themeProp)
+    <*> (langNames <&> (^. _Selection) & traverse rawOpt
+            >>= StatusBar.makeSwitchStatusWidget
+            (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
+            Config.changeLanguageKeys langProp)
     <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
             (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
             Config.helpKeys helpProp
         )
     where
+        rawOpt text = Label.makeFocusable text <&> (,) text
         helpVals =
-            Lens.view (Texts.texts . Texts.codeUI) <&> \txt ->
-            [ (Texts.hidden, HelpNotShown)
-            , (Texts.shown, HelpShown)
-            ] <&> _1 %~ (txt ^.)
+            Styled.mkFocusableLabel
+            <&> \mk ->
+            [ (HelpNotShown, OneOf Texts.hidden)
+            , (HelpShown, OneOf Texts.shown)
+            ] <&>
+            _2 %~ \(OneOf lens) -> mk (OneOf (Texts.codeUI . lens))
         themeProp = composeLens (Settings.sSelectedTheme . _Selection) prop
         langProp = composeLens (Settings.sSelectedLanguage . _Selection) prop
         helpProp = composeLens Settings.sHelpShown prop

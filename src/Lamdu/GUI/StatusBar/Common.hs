@@ -4,6 +4,7 @@
 module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
     , Header(..), labelHeader, LabelConstraints
+    , OneOfT(..)
     , hoist
     , makeSwitchStatusWidget
     , fromWidget, combine, combineEdges
@@ -28,7 +29,6 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (R)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Label as Label
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -36,9 +36,9 @@ import           Lamdu.Config (Config, HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.Styled (info, label)
+import           Lamdu.GUI.Styled (info, label, OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Texts (HasLanguage(..), texts)
+import           Lamdu.I18N.Texts (HasLanguage(..))
 import qualified Lamdu.I18N.Texts as Texts
 
 import           Lamdu.Prelude
@@ -91,47 +91,44 @@ labelHeader switchTextLens textLens =
 
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
-    , Hover.HasStyle env, GuiState.HasCursor env, TextView.HasStyle env
+    , Hover.HasStyle env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, HasLanguage env
     ) =>
-    OneOf Texts.StatusBar -> Property f a -> [(Text, a)] -> m (TextWidget f)
+    OneOf Texts.StatusBar -> Property f a ->
+    [(a, TextWidget f)] -> m (TextWidget f)
 makeChoice headerText prop choiceVals =
     do
-        choices <- traverse mkChoice choiceVals
         defConf <- Choice.defaultConfig
-        text <- Lens.view (texts . Texts.statusBar . headerText)
+        text <- Lens.view (Texts.texts . Texts.statusBar . headerText)
         Choice.make ?? prop ?? choices ?? defConf text ?? myId
             <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
     where
         myId = Widget.Id ("status" : Styled.textIds ^# Texts.statusBar . headerText)
-        mkChoice (text, val) =
-            Label.makeFocusable text
-            <&> (^. Align.tValue)
-            <&> (,) val
+        choices = choiceVals <&> _2 %~ (^. Align.tValue)
 
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env
     , GuiState.HasCursor env, Hover.HasStyle env, HasLanguage env
     , Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
-    Header (m w) -> Property f a -> [(Text, a)] -> m (TextWidget f)
-labeledChoice header prop choiceVals =
-    headerWidget header /|/ makeChoice (headerCategoryTextLens header) prop choiceVals
+    Header (m w) -> Property f a -> [(a, TextWidget f)] -> m (TextWidget f)
+labeledChoice header prop choices =
+    headerWidget header /|/ makeChoice (headerCategoryTextLens header) prop choices
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , HasConfig env, HasLanguage env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Hover.HasStyle env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
-    [(Text, a)] -> m (StatusWidget f)
+    [(a, TextWidget f)] -> m (StatusWidget f)
 makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
         keys <- Lens.view (Config.config . keysGetter)
-        txt <- Lens.view (texts . Texts.statusBar)
+        txt <- Lens.view (Texts.texts . Texts.statusBar)
         let e =
                 setVal newVal
                 & E.keysEventMap keys
@@ -144,7 +141,7 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
             , _globalEventMap = e
             }
     where
-        choices = map snd choiceVals
+        choices = choiceVals <&> fst
         newVal = dropWhile (/= curVal) choices ++ choices & tail & head
         Property curVal setVal = prop
 

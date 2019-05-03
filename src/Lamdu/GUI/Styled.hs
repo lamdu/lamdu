@@ -3,7 +3,9 @@
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled
     ( grammar, info
-    , text, label
+    , text
+    , mkLabel, mkFocusableLabel, OneOfT(..)
+    , label, focusableLabel
     , addValBG, addBgColor
     , addValPadding, addValFrame
     , deletedDef, deletedUse
@@ -27,6 +29,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.State as GuiState
+import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -36,7 +39,7 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.I18N.Texts (Texts(..), texts)
+import           Lamdu.I18N.Texts (Texts(..))
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -62,21 +65,49 @@ text ::
     ) =>
     AnimId -> OneOf Texts -> f (WithTextPos View)
 text animIdSuffix txtLens =
-    Lens.view (texts . Lens.cloneLens txtLens)
+    Lens.view (Texts.texts . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
 
 textIds :: Texts [ByteString]
 textIds = pure () & Lens.traversed %@~ const . (:[]) . encodeS
+
+-- work around lack of impredicative types
+newtype OneOfT a = OneOf (OneOf a)
+
+mkLabel ::
+    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Texts.HasLanguage env
+    ) =>
+    m (OneOfT Texts -> WithTextPos View)
+mkLabel =
+    (,,) <$> TextView.make <*> Element.subAnimId <*> Lens.view Texts.texts
+    <&> \(textView, subAnimId, texts) (OneOf lens) ->
+    textView (texts ^# lens) (subAnimId (textIds ^# lens))
+
+mkFocusableLabel ::
+    ( MonadReader env m, Applicative f, State.HasCursor env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    ) =>
+    m (OneOfT Texts -> TextWidget f)
+mkFocusableLabel =
+    (,,) <$> Widget.makeFocusableView <*> Lens.view Element.animIdPrefix <*> mkLabel
+    <&> \(toFocusable, animIdPrefix, lbl) (OneOf lens) ->
+        let widgetId = animIdPrefix <> textIds ^# lens & Widget.Id
+        in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
 
 label ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
     , Texts.HasLanguage env
     ) =>
     OneOf Texts -> m (WithTextPos View)
-label lens =
-    TextView.make
-    <*> (Lens.view texts <&> (^# lens))
-    <*> (Element.subAnimId ?? (textIds ^# lens))
+label lens = mkLabel ?? OneOf lens
+
+focusableLabel ::
+    ( MonadReader env m, Applicative f, State.HasCursor env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    ) =>
+    OneOf Texts -> m (TextWidget f)
+focusableLabel lens = mkFocusableLabel ?? OneOf lens
 
 addValBG ::
     ( MonadReader env m, Element a
