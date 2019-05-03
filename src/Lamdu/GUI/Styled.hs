@@ -54,7 +54,7 @@ rawText ::
     (MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     AnimId -> Text -> f (WithTextPos View)
 rawText animIdSuffix txt =
-    (TextView.make ?? txt) <*> Element.subAnimId animIdSuffix
+    (TextView.make ?? txt) <*> (Element.subAnimId ?? animIdSuffix)
 
 text ::
     ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
@@ -76,7 +76,7 @@ label ::
 label lens =
     TextView.make
     <*> (Lens.view texts <&> (^# lens))
-    <*> Element.subAnimId (textIds ^# lens)
+    <*> (Element.subAnimId ?? (textIds ^# lens))
 
 addValBG ::
     ( MonadReader env m, Element a
@@ -109,7 +109,7 @@ addDiagonal ::
     (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
     m (Draw.Color -> Draw.R -> a -> a)
 addDiagonal =
-    Element.subAnimId ["diagonal"] <&>
+    Element.subAnimId ?? ["diagonal"] <&>
     \animId color thickness ->
         let mkFrame sz =
                 Draw.convexPoly

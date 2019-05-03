@@ -277,7 +277,8 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
             then
                 do
                     newTagLabel <-
-                        (TextView.make ?? "(new)") <*> Element.subAnimId ["label"]
+                        (TextView.make ?? "(new)") <*>
+                        (Element.subAnimId ?? ["label"])
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
                     Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal

@@ -202,7 +202,7 @@ makeNewDefinitionButton ::
     Anchors.CodeAnchors m -> ExprGuiM (T m) (T m) (Gui Widget (T m))
 makeNewDefinitionButton cp =
     do
-        newDefId <- Element.subAnimId ["New definition"] <&> Widget.Id
+        newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
         makeNewDefinition cp
             >>= Styled.actionable newDefId (Texts.codeUI . Texts.newDefinitionButton) newDefinitionDoc
             <&> (^. Align.tValue)

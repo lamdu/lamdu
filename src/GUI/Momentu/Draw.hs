@@ -26,7 +26,7 @@ backgroundColor ::
     (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
     m (Draw.Color -> a -> a)
 backgroundColor =
-    Element.subAnimId ["bg"] <&>
+    Element.subAnimId ?? ["bg"] <&>
     \animId color -> Element.setLayers . Element.layers %@~ \sz ->
     addBg (Anim.coloredRectangle animId color & Anim.scale sz)
     where
@@ -37,7 +37,7 @@ addInnerFrame ::
     (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
     m (Draw.Color -> Vector2 R -> a -> a)
 addInnerFrame =
-    Element.subAnimId ["inner-frame"] <&>
+    Element.subAnimId ?? ["inner-frame"] <&>
     \animId color frameWidth -> Element.bottomLayer %@~ \sz ->
     mappend
     ( Anim.emptyRectangle frameWidth sz animId

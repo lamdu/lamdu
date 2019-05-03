@@ -49,7 +49,7 @@ addAnnotationBackgroundH ::
 addAnnotationBackgroundH color =
     do
         t <- Lens.view theme
-        bgAnimId <- Element.subAnimId ["annotation background"]
+        bgAnimId <- Element.subAnimId ?? ["annotation background"]
         Draw.backgroundColor bgAnimId (t ^# Theme.valAnnotation . color) & pure
 
 addAnnotationBackground ::

@@ -58,7 +58,7 @@ make name =
         mTagSuffixLabel <-
             makeCollisionSuffixLabel NameTheme.tagCollisionSuffixBGColor tagCollision
             <&> Lens._Just %~ Aligned 0.5
-        animId <- Element.subAnimId ["name"]
+        animId <- Element.subAnimId ?? ["name"]
         (|||) <- Glue.mkGlue ?? Glue.Horizontal
         TextView.make ?? visibleName ?? animId
             <&> Aligned 0.5

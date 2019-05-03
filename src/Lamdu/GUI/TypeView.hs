@@ -148,7 +148,7 @@ addTypeBG ::
 addTypeBG view =
     do
         color <- Lens.view (Theme.theme . Theme.typeFrameBGColor)
-        bgId <- Element.subAnimId ["bg"]
+        bgId <- Element.subAnimId ?? ["bg"]
         view
             & MDraw.backgroundColor bgId color
             & pure
@@ -233,7 +233,7 @@ makeComposite o c mkPre mkPost mkField composite =
                 Nothing -> pure Element.empty
                 Just var ->
                     do
-                        sqrId <- Element.subAnimId ["square"]
+                        sqrId <- Element.subAnimId ?? ["square"]
                         let sqr =
                                 View.unitSquare sqrId
                                 & Element.scale (Vector2 barWidth 10)

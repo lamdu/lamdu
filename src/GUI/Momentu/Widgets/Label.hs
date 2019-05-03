@@ -16,7 +16,7 @@ import           Lamdu.Prelude
 make ::
     (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
     Text -> m (WithTextPos View)
-make text = (TextView.make ?? text) <*> Element.subAnimId [encodeUtf8 text]
+make text = (TextView.make ?? text) <*> (Element.subAnimId ?? [encodeUtf8 text])
 
 makeFocusable ::
     ( MonadReader env m, Applicative f, State.HasCursor env
@@ -26,5 +26,5 @@ makeFocusable ::
 makeFocusable text =
     do
         toFocusable <- Widget.makeFocusableView
-        widgetId <- Element.subAnimId [encodeUtf8 text] <&> Widget.Id
+        widgetId <- Element.subAnimId ?? [encodeUtf8 text] <&> Widget.Id
         make text <&> Align.tValue %~ toFocusable widgetId

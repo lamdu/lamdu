@@ -87,8 +87,8 @@ height = size . _2
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix [ByteString] where animIdPrefix = id
 
-subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => AnimId -> m AnimId
-subAnimId suffix = Lens.view animIdPrefix <&> (++ suffix)
+subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => m (AnimId -> AnimId)
+subAnimId = Lens.view animIdPrefix <&> (++)
 
 padToSize ::
     (MonadReader env m, SizedElement a, Dir.HasLayoutDir env) =>
