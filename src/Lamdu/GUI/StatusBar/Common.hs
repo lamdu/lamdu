@@ -113,7 +113,7 @@ labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
     , GuiState.HasCursor env, Hover.HasStyle env, HasLanguage env
-    , Glue.GluesTo w (TextWidget f) (TextWidget f)
+    , Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Property f a -> [(Text, a)] -> m (TextWidget f)
 labeledChoice header prop choiceVals =
@@ -123,7 +123,7 @@ makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , HasConfig env, HasLanguage env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env, Glue.GluesTo w (TextWidget f) (TextWidget f)
+    , Hover.HasStyle env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
     [(Text, a)] -> m (StatusWidget f)

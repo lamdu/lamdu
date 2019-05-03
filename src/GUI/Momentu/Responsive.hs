@@ -82,9 +82,10 @@ adjustNarrowLayoutParams ::
 adjustNarrowLayoutParams Vertical _ = layoutNeedDisambiguation .~ True
 adjustNarrowLayoutParams Horizontal v = layoutWidth -~ v ^. Element.size . _1
 
-instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
-         , SizedElement b
-         ) => Glue (Responsive a) (WithTextPos b) where
+instance
+    ( GluesTo env (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
+    , SizedElement b
+    ) => Glue env (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
     glue env orientation l v =
         Responsive
@@ -101,9 +102,10 @@ instance ( GluesTo (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget
                 Horizontal -> l ^. rWideDisambig
                 Vertical -> l ^. rWide
 
-instance ( GluesTo (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
-         , SizedElement a
-         ) => Glue (WithTextPos a) (Responsive b) where
+instance
+    ( GluesTo env (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
+    , SizedElement a
+    ) => Glue env (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
     glue env orientation v l =
         Responsive

@@ -1,6 +1,6 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances, FlexibleInstances #-}
 module GUI.Momentu.Widget.Instances
     ( sizedState, stateLayers, stateLens, enterResult, wFocused
     , glueStates
@@ -82,15 +82,22 @@ instance (Functor f, a ~ f Update) => SizedElement (Widget a) where
                 & sBottom +~ nh - oh
             Vector2 ow oh = w ^. wSize
 
-instance (Functor f, a ~ f Update) => Glue (Widget a) View where
+instance
+    ( Functor f, a ~ f Update, Dir.HasLayoutDir env
+    ) => Glue env (Widget a) View where
     type Glued (Widget a) View = Widget a
     glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance (Functor f, a ~ f Update) => Glue View (Widget a) where
+instance
+    ( Functor f, a ~ f Update, Dir.HasLayoutDir env
+    ) => Glue env View (Widget a) where
     type Glued View (Widget a) = Widget a
     glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance (Applicative f, a ~ b, a ~ f Update) => Glue (Widget a) (Widget b) where
+instance
+    ( Applicative f, a ~ b, a ~ f Update
+    , Glue.HasTexts env
+    ) => Glue env (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
     glue env orientation =
         Glue.glueH (glueStates env orientation Forward)

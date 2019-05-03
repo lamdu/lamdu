@@ -21,7 +21,7 @@ import           Data.List.Extended (minimumOn)
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
-import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import           GUI.Momentu.Direction (Orientation(..), Order(..), HasLayoutDir)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
@@ -94,7 +94,9 @@ instance (Functor f, a ~ f State.Update) => Element (AnchoredWidget a) where
 instance (Functor f, a ~ f State.Update) => SizedElement (AnchoredWidget a) where
     size = anchored . Element.size
 
-instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover View) where
+instance
+    ( Functor f, a ~ f State.Update, HasLayoutDir env
+    ) => Glue env (AnchoredWidget a) (Hover View) where
     type Glued (AnchoredWidget a) (Hover View) =
         Hover (AnchoredWidget a)
     glue env o ow (Hover ov) =
@@ -102,7 +104,9 @@ instance (Functor f, a ~ f State.Update) => Glue (AnchoredWidget a) (Hover View)
         where
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a) where
+instance
+    ( Functor f, a ~ f State.Update, HasLayoutDir env
+    ) => Glue env (Hover View) (AnchoredWidget a) where
     type Glued (Hover View) (AnchoredWidget a) =
         Hover (AnchoredWidget a)
     glue env o (Hover ov) =
@@ -110,7 +114,9 @@ instance (Functor f, a ~ f State.Update) => Glue (Hover View) (AnchoredWidget a)
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
-instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (AnchoredWidget a) (Hover (Widget b)) where
+instance
+    ( Applicative f, a ~ b, b ~ f State.Update, Glue.HasTexts env
+    ) => Glue env (AnchoredWidget a) (Hover (Widget b)) where
     type Glued (AnchoredWidget a) (Hover (Widget b)) =
         Hover (AnchoredWidget a)
     glue env orientation ow0 (Hover ow1) =
@@ -120,7 +126,9 @@ instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (AnchoredWidget a) (
                 Widget.glueStates env orientation Forward w0 w1
                 & AnchoredWidget pos
 
-instance (Applicative f, a ~ b, b ~ f State.Update) => Glue (Hover (Widget a)) (AnchoredWidget b) where
+instance
+    ( Applicative f, a ~ b, b ~ f State.Update, Glue.HasTexts env
+    ) => Glue env (Hover (Widget a)) (AnchoredWidget b) where
     type Glued (Hover (Widget a)) (AnchoredWidget b) =
         Hover (AnchoredWidget a)
     glue env orientation (Hover ow0) =
@@ -141,7 +149,7 @@ data Ordered a = Ordered
 Lens.makeLenses ''Ordered
 
 hoverBesideOptionsAxis ::
-    ( MonadReader env m, Glue.HasTexts env, GluesTo a b c
+    ( MonadReader env m, GluesTo env a b c, HasLayoutDir env
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (Orientation -> Ordered a -> b -> [c])
@@ -159,7 +167,7 @@ anchor :: Widget a -> AnchoredWidget a
 anchor = AnchoredWidget 0
 
 hoverBesideOptions ::
-    ( MonadReader env m, Glue.HasTexts env, GluesTo a b c
+    ( MonadReader env m, GluesTo env a b c, HasLayoutDir env
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (a -> b -> [c])
@@ -251,9 +259,9 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
                 br = h ^. Element.size - place ^. Element.size - tl
 
 hoverBeside ::
-    ( GluesTo (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
+    ( GluesTo env (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
     , MonadReader env m, Functor f, SizedElement w
-    , Element.HasAnimIdPrefix env, HasStyle env, Glue.HasTexts env
+    , Element.HasAnimIdPrefix env, HasStyle env, HasLayoutDir env
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m

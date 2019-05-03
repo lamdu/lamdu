@@ -1,4 +1,5 @@
 {-# LANGUAGE StandaloneDeriving, TemplateHaskell, TypeFamilies, DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Tests.WidgetGlue
     ( module X, module Tests.WidgetGlue, module Lens, module Widget, encodeS
     ) where
@@ -20,7 +21,7 @@ import           GUI.Momentu.Widget (R, Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 import           Generic.Random
 import qualified Graphics.UI.GLFW as GLFW
-import           Test.Momentu.Env (env)
+import qualified Test.Momentu.Env as TestEnv
 import           Test.QuickCheck
 
 import           Test.Lamdu.Prelude as X
@@ -61,12 +62,12 @@ toWidgetUnfocused (UnfocusedLeaf size x) =
     , Widget._uLayers = mempty
     } & Widget size
 toWidgetUnfocused (UnfocusedGlue orientation x y) =
-    glue env orientation (toWidgetUnfocused x) (toWidgetUnfocused y)
+    glue TestEnv.env orientation (toWidgetUnfocused x) (toWidgetUnfocused y)
 
 -- TODO: Test Dir.Layout
-glueFocused :: GluesTo a b c => GlueOrder -> Orientation -> a -> b -> c
-glueFocused FocusedFirst = glue env
-glueFocused FocusedLast = glue env <&> flip
+glueFocused :: GluesTo TestEnv.Env a b c => GlueOrder -> Orientation -> a -> b -> c
+glueFocused FocusedFirst = glue TestEnv.env
+glueFocused FocusedLast = glue TestEnv.env <&> flip
 
 data Env = Env
     { _eAnimId :: AnimId

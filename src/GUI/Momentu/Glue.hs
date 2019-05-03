@@ -37,32 +37,31 @@ Lens.makeLenses ''Texts
 class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
 
-class (Glued b a ~ Glued a b) => Glue a b where
+class (Glued b a ~ Glued a b) => Glue env a b where
     type Glued a b
-    glue :: HasTexts env => env -> Orientation -> a -> b -> Glued a b
+    glue :: env -> Orientation -> a -> b -> Glued a b
 
-type GluesTo a b c = (Glue a b, Glue b a, Glued a b ~ c)
+type GluesTo env a b c = (Glue env a b, Glue env b a, Glued a b ~ c)
 
-newtype Poly = Poly { polyGlue :: forall a b. Glue a b => a -> b -> Glued a b }
+newtype Poly env = Poly { polyGlue :: forall a b. Glue env a b => a -> b -> Glued a b }
 
-mkPoly :: (MonadReader env m, HasTexts env) => m (Orientation -> Poly)
-mkPoly =
-    Lens.view id <&> \env orientation -> Poly (glue env orientation)
+mkPoly :: MonadReader env m => m (Orientation -> Poly env)
+mkPoly = Lens.view id <&> \env orientation -> Poly (glue env orientation)
 
 mkGlue ::
-    (MonadReader env m, HasTexts env, Glue a b) =>
+    (MonadReader env m, Glue env a b) =>
     m (Orientation -> a -> b -> Glued a b)
-mkGlue = mkPoly <&> (polyGlue .)
+mkGlue = Lens.view id <&> glue
 
 -- Horizontal glue
 (/|/) ::
-    (MonadReader env m, HasTexts env, Glue a b) =>
+    (MonadReader env m, Glue env a b) =>
     m a -> m b -> m (Glued a b)
 l /|/ r = (mkGlue ?? Horizontal) <*> l <*> r
 
 -- Vertical glue
 (/-/) ::
-    (MonadReader env m, HasTexts env, Glue a b) =>
+    (MonadReader env m, Glue env a b) =>
     m a -> m b -> m (Glued a b)
 l /-/ r = (mkGlue ?? Vertical) <*> l <*> r
 
@@ -85,16 +84,16 @@ glueH f direction orientation v0 v1 =
         v1s = v1 ^. Element.size
 
 box ::
-    (Element a, GluesTo a a a, MonadReader env m, HasTexts env) =>
+    (Element a, GluesTo env a a a, MonadReader env m) =>
     m (Orientation -> [a] -> a)
 box = mkGlue <&> \g orientation -> foldr (g orientation) Element.empty
 
 hbox ::
-    (Element a, GluesTo a a a, MonadReader env m, HasTexts env) =>
+    (Element a, GluesTo env a a a, MonadReader env m) =>
     m ([a] -> a)
 hbox = box ?? Horizontal
 
 vbox ::
-    (Element a, GluesTo a a a, MonadReader env m, HasTexts env) =>
+    (Element a, GluesTo env a a a, MonadReader env m) =>
     m ([a] -> a)
 vbox = box ?? Vertical
