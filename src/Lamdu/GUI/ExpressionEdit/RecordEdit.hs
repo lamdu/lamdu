@@ -236,11 +236,9 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
             <&> Widget.weakerEvents restEventMap
         animId <- Lens.view Element.animIdPrefix
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        vbox <- Responsive.vboxWithSeparator
-        vbox False
-            (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
-            fieldsGui restExpr
-            & pure
+        Responsive.vboxWithSeparator ?? False
+            ?? (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
+            ?? fieldsGui ?? restExpr
 
 openRecordEventMap ::
     (MonadReader env m, HasConfig env, Functor o) =>

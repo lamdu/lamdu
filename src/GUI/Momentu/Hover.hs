@@ -188,17 +188,15 @@ addFrame ::
     (MonadReader env m, HasStyle env, SizedElement a, Element.HasAnimIdPrefix env) =>
     m (a -> a)
 addFrame =
-    do
-        s <- Lens.view style
-        animId <- Lens.view Element.animIdPrefix
-        pure $ \gui ->
-            if gui ^. Element.size == 0 then gui
-            else
-            gui
-            & Element.padAround (s ^. bgPadding)
-            & Draw.backgroundColor (animId <> ["hover bg"]) (s ^. bgColor)
-            & Element.padAround (s ^. framePadding)
-            & Draw.backgroundColor (animId <> ["hover frame"]) (s ^. frameColor)
+    (,) <$> Lens.view style <*> Element.subAnimId
+    <&> \(s, subAnimId) gui ->
+    if gui ^. Element.size == 0 then gui
+    else
+    gui
+    & Element.padAround (s ^. bgPadding)
+    & Draw.backgroundColor (subAnimId ["hover bg"]) (s ^. bgColor)
+    & Element.padAround (s ^. framePadding)
+    & Draw.backgroundColor (subAnimId ["hover frame"]) (s ^. frameColor)
 
 hover ::
     (MonadReader env m, SizedElement a, HasStyle env, Element.HasAnimIdPrefix env) =>
