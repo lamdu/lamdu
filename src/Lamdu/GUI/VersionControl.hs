@@ -7,7 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -101,11 +101,12 @@ makeBranchSelector rwtransaction rtransaction actions =
                         <&> Property.pSet . Lens.mapped %~ rwtransaction
                         & rtransaction
                     branchNameEdit <-
-                        (FocusDelegator.make ?? branchNameFDConfig txt
-                         ?? FocusDelegator.FocusEntryParent ?? branchDelegatorId branch
-                        ) <*>
-                        ( TextEdits.makeLineEdit ?? empty ?? nameProp ?? branchTextEditId branch
-                          <&> (^. Align.tValue) )
+                        ( FocusDelegator.make ?? branchNameFDConfig txt
+                        ?? FocusDelegator.FocusEntryParent
+                        ?? branchDelegatorId branch
+                        <&> (Align.tValue %~) )
+                        <*> (TextEdits.makeLineEdit ?? empty ?? nameProp
+                                ?? branchTextEditId branch)
                     config <- Lens.view VersionControl.config
                     let delEventMap
                             | List.isLengthAtLeast 2 (A.branches actions) =
@@ -117,7 +118,11 @@ makeBranchSelector rwtransaction rtransaction actions =
                                     ])
                                 (branchDelegatorId <$> A.deleteBranch actions branch)
                             | otherwise = mempty
-                    pure (branch, Widget.weakerEvents delEventMap branchNameEdit)
+                    pure
+                        ( branch
+                        , branchNameEdit
+                            & Align.tValue %~ Widget.weakerEvents delEventMap
+                        )
                     & if branch == Property.value (A.currentBranch actions)
                         then
                             Reader.local $
@@ -132,7 +137,6 @@ makeBranchSelector rwtransaction rtransaction actions =
             ?? branchNameEdits
             ?? defConfig (txt ^. Texts.branches)
             ?? WidgetIds.branchSelection
-            <&> WithTextPos 0 -- TODO: Should come from Choice
     where
         empty =
             TextEdit.Modes

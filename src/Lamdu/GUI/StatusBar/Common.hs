@@ -14,7 +14,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
-import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -96,15 +95,13 @@ makeChoice ::
     ) =>
     OneOf Texts.StatusBar -> Property f a ->
     [(a, TextWidget f)] -> m (TextWidget f)
-makeChoice headerText prop choiceVals =
+makeChoice headerText prop choices =
     do
         defConf <- Choice.defaultConfig
         text <- Lens.view (Texts.texts . Texts.statusBar . headerText)
         Choice.make ?? prop ?? choices ?? defConf text ?? myId
-            <&> WithTextPos 0 -- TODO: Choice should maintain the WithTextPos
     where
         myId = Widget.Id ("status" : Styled.textIds ^# Texts.statusBar . headerText)
-        choices = choiceVals <&> _2 %~ (^. Align.tValue)
 
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a

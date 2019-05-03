@@ -11,9 +11,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -36,7 +34,7 @@ make ::
     Widget.Id ->
     Sugar.BinderParams name i o ->
     Property f Sugar.PresentationMode ->
-    m (Gui Widget f)
+    m (Align.TextWidget f)
 make myId (Sugar.Params params) prop =
     do
         theme <- Lens.view Theme.theme
@@ -51,8 +49,7 @@ make myId (Sugar.Params params) prop =
     where
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagVal
         mkPair presentationMode =
-            Label.makeFocusable text <&> (^. Align.tValue)
-            <&> (,) presentationMode
+            Label.makeFocusable text <&> (,) presentationMode
             where
                 text =
                     case presentationMode of
