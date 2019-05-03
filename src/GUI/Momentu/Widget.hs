@@ -1,7 +1,7 @@
 module GUI.Momentu.Widget
     ( module Types
 
-    , Id(..), Id.joinId, makeSubId
+    , Id(..), Id.joinId
 
     -- Types:
     , R, Size
@@ -51,7 +51,7 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Animation (AnimId, R, Size)
+import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -242,9 +242,6 @@ respondToCursorPrefix ::
 respondToCursorPrefix =
     respondToCursorBy
     <&> \respond myIdPrefix -> respond (Lens.has Lens._Just . Id.subId myIdPrefix)
-
-makeSubId :: (MonadReader env m, Element.HasAnimIdPrefix env) => AnimId -> m Id
-makeSubId suffix = Lens.view Element.animIdPrefix <&> (++ suffix) <&> Id
 
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>
