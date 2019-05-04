@@ -298,7 +298,9 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
         Config{_cInvalidCursorOverlayColor} = config
         Options{stateStorage, debug, config} = options
 
-runInner :: IORef (IO ()) -> (GLFW.Window -> MainAnim.Handlers -> IO b) -> GLFW.Window -> Handlers -> IO b
+runInner ::
+    IORef (IO ()) -> (GLFW.Window -> MainAnim.Handlers -> IO b) ->
+    GLFW.Window -> Handlers -> IO b
 runInner refreshAction run win handlers =
     do
         let getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
