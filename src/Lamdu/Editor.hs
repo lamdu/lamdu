@@ -118,21 +118,18 @@ runMainLoop ::
 runMainLoop ekg stateStorage subpixel win mainLoop configSampler
     evaluator db mkSettingsProp cache cachedFunctions monitors =
     do
-        getFonts <- EditorFonts.makeGetFonts subpixel
+        getFonts <- EditorFonts.makeGetFonts configSampler subpixel
         let makeWidget env =
                 do
                     sample <- ConfigSampler.getSample configSampler
                     when (sample ^. sConfigData . Config.debug . Config.printCursor)
                         (putStrLn ("Cursor: " <> show (env ^. M.cursor)))
-                    fonts <- getFonts (env ^. MainLoop.eZoom) sample
+                    fonts <- getFonts (env ^. MainLoop.eZoom)
                     Cache.fence cache
                     mkSettingsProp ^. mkProperty
                         >>= makeRootWidget cachedFunctions monitors fonts db evaluator sample env
         let mkFontInfo zoom =
-                do
-                    sample <- ConfigSampler.getSample configSampler
-                    getFonts zoom sample
-                        <&> (^. Fonts.base) <&> Font.height <&> FontInfo
+                getFonts zoom <&> (^. Fonts.base) <&> Font.height <&> FontInfo
         let mkConfigTheme =
                 ConfigSampler.getSample configSampler
                 <&> \sample -> (sample ^. sConfigData, sample ^. sThemeData)
@@ -149,7 +146,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                       do
                           sample <- ConfigSampler.getSample configSampler
                           if sample ^. sConfigData . Config.debug . Config.debugShowFPS
-                              then getFonts zoom sample <&> (^. Fonts.debugInfo) <&> Just
+                              then getFonts zoom <&> (^. Fonts.debugInfo) <&> Just
                               else pure Nothing
                     , virtualCursorColor =
                         ConfigSampler.getSample configSampler

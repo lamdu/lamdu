@@ -5,7 +5,8 @@ module Lamdu.Editor.Fonts
 import qualified Control.Lens.Extended as Lens
 import           Data.MRUMemo (memoIO)
 import qualified GUI.Momentu as M
-import           Lamdu.Config.Sampler (Sample, sData, sConfig, sThemeData, filePath)
+import           Lamdu.Config.Sampler (Sampler, Sample)
+import qualified Lamdu.Config.Sampler as Sampler
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (FontSize, Fonts(..))
@@ -16,11 +17,14 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
+sampleConfigPath :: Lens' Sample FilePath
+sampleConfigPath = Sampler.sData . Sampler.sConfig . Sampler.filePath
+
 prependConfigPath :: Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =
     Lens.mapped %~ f
     where
-        dir = FilePath.takeDirectory (sample ^. sData . sConfig . filePath)
+        dir = FilePath.takeDirectory (sample ^. sampleConfigPath)
         f "" = "" -- Debug font!
         f x = dir </> x
 
@@ -35,9 +39,9 @@ assignFontSizes theme fonts =
 
 curSampleFonts :: Sample -> Fonts (FontSize, FilePath)
 curSampleFonts sample =
-    sample ^. sThemeData . Theme.fonts
+    sample ^. Sampler.sThemeData . Theme.fonts
     & prependConfigPath sample
-    & assignFontSizes (sample ^. sThemeData)
+    & assignFontSizes (sample ^. Sampler.sThemeData)
 
 defaultFontPath :: FilePath -> FilePath
 defaultFontPath configPath =
@@ -46,16 +50,17 @@ defaultFontPath configPath =
         configDir = FilePath.takeDirectory configPath
 
 makeGetFonts ::
-    Font.LCDSubPixelEnabled ->
-    IO (M.Zoom -> Sample -> IO (Fonts M.Font))
-makeGetFonts subpixel =
+    Sampler -> Font.LCDSubPixelEnabled ->
+    IO (M.Zoom -> IO (Fonts M.Font))
+makeGetFonts configSampler subpixel =
     Font.new subpixel & uncurry & memoIO
     <&> f
     where
-        f cachedLoadFonts zoom sample =
+        f cachedLoadFonts zoom =
             do
                 sizeFactor <- M.getZoomFactor zoom
+                sample <- Sampler.getSample configSampler
                 cachedLoadFonts
-                    ( defaultFontPath (sample ^. sData . sConfig . filePath)
+                    ( defaultFontPath (sample ^. sampleConfigPath)
                     , curSampleFonts sample <&> _1 *~ sizeFactor
                     )
