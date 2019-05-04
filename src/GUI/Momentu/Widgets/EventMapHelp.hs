@@ -13,12 +13,12 @@ module GUI.Momentu.Widgets.EventMapHelp
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.IO.Class (MonadIO(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.Function (on)
-import           Data.IORef (IORef, newIORef, readIORef, modifyIORef)
 import qualified Data.List as List
 import qualified Data.Map as Map
+import           Data.Property (MkProperty(..), Property(..))
+import qualified Data.Property as Property
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
@@ -293,38 +293,35 @@ addHelpViewWith showingHelp size focus =
         focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
 
 toggleEventMap ::
-    (MonadReader Env m, MonadIO f, Monoid a) =>
-    IORef IsHelpShown -> IsHelpShown -> m (EventMap (f a))
-toggleEventMap showingHelpVar showingHelp =
+    (MonadReader Env m, Monoid a, Monad f) =>
+    Property f IsHelpShown -> m (EventMap (f a))
+toggleEventMap showingHelp =
     Lens.view (eConfig . configOverlayDocKeys)
     <&>
     \keys ->
-    modifyIORef showingHelpVar toggle
-    & liftIO
+    Property.pureModify showingHelp toggle
     & E.keysEventMap keys
         (E.Doc ["Help", "Key Bindings", docStr])
     where
         docStr =
-            case showingHelp of
+            case showingHelp ^. Property.pVal of
             HelpNotShown -> "Show"
             HelpShown -> "Hide"
 
 makeToggledHelpAdder ::
-    MonadIO m =>
-    IsHelpShown ->
-    IO (Env -> Widget.Size -> Gui Widget m -> IO (Gui Widget m))
-makeToggledHelpAdder startValue =
-    newIORef startValue
-    <&>
-    \showingHelpVar env size widget ->
+    (Monad m, Monad f) =>
+    MkProperty m f IsHelpShown -> Env -> Widget.Size ->
+    Gui Widget f -> m (Gui Widget f)
+makeToggledHelpAdder showingHelp env size widget =
     widget & Widget.wState %%~
     \case
     Widget.StateUnfocused {} -> fail "adding help to non-focused root widget!"
     Widget.StateFocused makeFocus ->
-        readIORef showingHelpVar
-        <&> (\showingHelp ->
+        showingHelp ^. Property.mkProperty
+        <&> (\prop ->
                 makeFocus
-                <&> (addHelpViewWith showingHelp size ?? env)
-                <&> Widget.fEventMap . Lens.mapped %~ (toggleEventMap showingHelpVar showingHelp env <>)
+                <&> (addHelpViewWith (prop ^. Property.pVal) size ?? env)
+                <&> Widget.fEventMap . Lens.mapped %~
+                    (toggleEventMap prop env <>)
             )
         <&> Widget.StateFocused

@@ -305,7 +305,8 @@ runInner refreshAction run win handlers =
         let getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
         let opts = options handlers
         let Options{debug, config} = opts
-        addHelp <- EventMapHelp.makeToggledHelpAdder EventMapHelp.HelpNotShown
+        helpRef <- newIORef EventMapHelp.HelpNotShown <&> Property.fromIORef
+        let addHelp = EventMapHelp.makeToggledHelpAdder helpRef
         zoom <- Zoom.make win
         lookupModeRef <- newIORef ApplyEvent
         virtCursorRef <- newIORef Nothing
