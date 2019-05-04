@@ -109,6 +109,46 @@ jumpToSource SrcLoc{srcLocFile, srcLocStartLine, srcLocStartCol} =
         , srcLocFile
         ] & void
 
+mainLoopOptions ::
+    Sampler -> (M.Zoom -> IO (Fonts M.Font)) ->
+    MkProperty' IO M.GUIState ->
+    Maybe (MainLoop.PerfCounters -> IO ()) -> MainLoop.Options
+mainLoopOptions configSampler getFonts stateStorage
+    reportPerfCounters =
+    MainLoop.Options
+    { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
+    , stateStorage = stateStorage
+    , debug = MainLoop.DebugOptions
+        { fpsFont =
+          \zoom ->
+          do
+              sample <- ConfigSampler.getSample configSampler
+              if sample ^. sConfigData . Config.debug . Config.debugShowFPS
+                  then getFonts zoom <&> (^. Fonts.debugInfo) <&> Just
+                  else pure Nothing
+        , virtualCursorColor =
+            ConfigSampler.getSample configSampler
+            <&> (^. sConfigData . Config.debug . Config.virtualCursorShown)
+            <&> \case
+                False -> Nothing
+                True -> Just (M.Color 1 1 0 0.5)
+        , reportPerfCounters = fromMaybe (const (pure ())) reportPerfCounters
+        , jumpToSource = jumpToSource
+        , jumpToSourceKeys =
+            ConfigSampler.getSample configSampler
+            <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
+        }
+    , mainTexts =
+            ConfigSampler.getSample configSampler
+            <&> (^. sLanguageData . MainLoop.texts)
+    }
+    where
+        mkConfigTheme =
+            ConfigSampler.getSample configSampler
+            <&> \sample -> (sample ^. sConfigData, sample ^. sThemeData)
+        mkFontInfo zoom =
+            getFonts zoom <&> (^. Fonts.base) <&> Font.height <&> FontInfo
+
 runMainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
     M.Window -> MainLoop Handlers -> Sampler ->
@@ -127,43 +167,14 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     fonts <- getFonts (env ^. MainLoop.eZoom)
                     Cache.fence cache
                     mkSettingsProp ^. mkProperty
-                        >>= makeRootWidget cachedFunctions monitors fonts db evaluator sample env
-        let mkFontInfo zoom =
-                getFonts zoom <&> (^. Fonts.base) <&> Font.height <&> FontInfo
-        let mkConfigTheme =
-                ConfigSampler.getSample configSampler
-                <&> \sample -> (sample ^. sConfigData, sample ^. sThemeData)
+                        >>= makeRootWidget cachedFunctions monitors fonts db
+                        evaluator sample env
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
             { makeWidget = makeWidget
             , options =
-                MainLoop.Options
-                { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
-                , stateStorage = stateStorage
-                , debug = MainLoop.DebugOptions
-                    { fpsFont =
-                      \zoom ->
-                      do
-                          sample <- ConfigSampler.getSample configSampler
-                          if sample ^. sConfigData . Config.debug . Config.debugShowFPS
-                              then getFonts zoom <&> (^. Fonts.debugInfo) <&> Just
-                              else pure Nothing
-                    , virtualCursorColor =
-                        ConfigSampler.getSample configSampler
-                        <&> (^. sConfigData . Config.debug . Config.virtualCursorShown)
-                        <&> \case
-                            False -> Nothing
-                            True -> Just (M.Color 1 1 0 0.5)
-                    , reportPerfCounters = fromMaybe (const (pure ())) reportPerfCounters
-                    , jumpToSource = jumpToSource
-                    , jumpToSourceKeys =
-                        ConfigSampler.getSample configSampler
-                        <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
-                    }
-                , mainTexts =
-                        ConfigSampler.getSample configSampler
-                        <&> (^. sLanguageData . MainLoop.texts)
-                }
+                mainLoopOptions configSampler getFonts stateStorage
+                reportPerfCounters
             }
 
 makeMainGui ::
