@@ -98,7 +98,7 @@ mainLoopConfig getFontInfo getConfig =
             }
         }
     , _cZoom = getConfig <&> (^. _1 . Config.zoom)
-    , _cHelpEnv = Nothing
+    , _cPostProcess = \_zoom _size widget -> pure widget
     , _cInvalidCursorOverlayColor =
         getConfig
         <&> \(_config, theme) ->

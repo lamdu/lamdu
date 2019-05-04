@@ -2,7 +2,7 @@
 module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)
-    , makeToggledHelpAdder
+    , toggledHelpAdder
     , addHelpView
     , Style(..), styleText, styleInputDocColor, styleBGColor, styleTint
     , Config(..), configOverlayDocKeys
@@ -17,7 +17,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Function (on)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import           Data.Property (MkProperty(..), Property(..))
+import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
@@ -308,20 +308,16 @@ toggleEventMap showingHelp =
             HelpNotShown -> "Show"
             HelpShown -> "Hide"
 
-makeToggledHelpAdder ::
-    (Monad m, Monad f) =>
-    MkProperty m f IsHelpShown -> Env -> Widget.Size ->
-    Gui Widget f -> m (Gui Widget f)
-makeToggledHelpAdder showingHelp env size widget =
-    widget & Widget.wState %%~
+toggledHelpAdder ::
+    Monad f =>
+    Property f IsHelpShown -> Env -> Widget.Size -> Gui Widget f -> Gui Widget f
+toggledHelpAdder prop env size widget =
+    widget & Widget.wState %~
     \case
-    Widget.StateUnfocused {} -> fail "adding help to non-focused root widget!"
+    Widget.StateUnfocused {} -> error "adding help to non-focused root widget!"
     Widget.StateFocused makeFocus ->
-        showingHelp ^. Property.mkProperty
-        <&> (\prop ->
-                makeFocus
-                <&> (addHelpViewWith (prop ^. Property.pVal) size ?? env)
-                <&> Widget.fEventMap . Lens.mapped %~
-                    (toggleEventMap prop env <>)
-            )
-        <&> Widget.StateFocused
+        makeFocus
+        <&> (addHelpViewWith (prop ^. Property.pVal) size ?? env)
+        <&> Widget.fEventMap . Lens.mapped %~
+            (toggleEventMap prop env <>)
+        & Widget.StateFocused

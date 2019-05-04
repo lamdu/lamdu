@@ -108,6 +108,7 @@ defaultDebugOptions =
 defaultOptions :: (E.HasTexts env, HasTexts env, Glue.HasTexts env) => env -> FilePath -> IO Options
 defaultOptions env helpFontPath =
     do
+        helpProp <- newIORef EventMapHelp.HelpNotShown <&> Property.fromIORef
         loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
         -- so an empty value might be fitting.
@@ -125,12 +126,15 @@ defaultOptions env helpFontPath =
                     , Cursor.decay = Nothing
                     }
                 , _cZoom = pure Zoom.defaultConfig
-                , _cHelpEnv =
-                    Just $ \zoom ->
+                , _cPostProcess =
+                    \zoom size widget ->
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
-                        EventMapHelp.defaultEnv env helpFont & pure
+                        let helpEnv = EventMapHelp.defaultEnv env helpFont
+                        prop <- helpProp ^. Property.mkProperty
+                        EventMapHelp.toggledHelpAdder prop helpEnv size widget
+                            & pure
                 , _cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }
             , stateStorage = stateStorage_
@@ -243,14 +247,11 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
         Anim.coloredRectangle ["debug-virtual-cursor"] color
         & Anim.scale (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
 
-type AddHelp =
-    EventMapHelp.Env -> Widget.Size -> Gui Widget IO -> IO (Gui Widget IO)
-
 wrapMakeWidget ::
-    Zoom -> AddHelp -> Options -> IORef LookupMode ->
+    Zoom -> Options -> IORef LookupMode ->
     (Env -> IO (Gui Widget IO)) ->
     Widget.Size -> IO (Gui Widget IO)
-wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
+wrapMakeWidget zoom options lookupModeRef mkWidgetUnmemod size =
     do
         s <- Property.getP stateStorage
         let env = Env
@@ -265,7 +266,6 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
             writeIORef lookupModeRef JumpToSource
             & mkJumpToSourceEventMap txt debug
         let moreEvents = zoomEventMap <> jumpToSourceEventMap
-        helpEnv <- config ^. MainConfig.cHelpEnv ?? env ^. eZoom & sequenceA
         w <- mkWidgetUnmemod env
         ( if Widget.isFocused w
             then
@@ -278,7 +278,7 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
                 >>= showInvalidCursor (env ^. State.cursor)
             )
             <&> Widget.eventMapMaker . Lens.mapped %~ (moreEvents <>)
-            >>= maybe pure (addHelp ?? env ^. eWindowSize) helpEnv
+            >>= (config ^. MainConfig.cPostProcess) zoom (env ^. eWindowSize)
     where
         assertFocused w
             | Widget.isFocused w = pure w
@@ -305,13 +305,11 @@ runInner refreshAction run win handlers =
         let getClipboard = GLFW.getClipboardString win <&> fmap Text.pack
         let opts = options handlers
         let Options{debug, config} = opts
-        helpRef <- newIORef EventMapHelp.HelpNotShown <&> Property.fromIORef
-        let addHelp = EventMapHelp.makeToggledHelpAdder helpRef
         zoom <- Zoom.make win
         lookupModeRef <- newIORef ApplyEvent
         virtCursorRef <- newIORef Nothing
         let mkW =
-                wrapMakeWidget zoom addHelp opts lookupModeRef
+                wrapMakeWidget zoom opts lookupModeRef
                 (makeWidget handlers)
                 & memoIO
         mkWidgetRef <- mkW >>= newIORef
