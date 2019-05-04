@@ -1,7 +1,7 @@
 module GUI.Momentu.Main.Animation
     ( MainLoop(..)
     , mainLoop
-    , AnimConfig(..)
+    , Anim.Config(..)
     , Handlers(..)
     , PerfCounters(..)
     ) where
@@ -17,7 +17,6 @@ import qualified GUI.Momentu.Animation.Engine as Anim
 import           GUI.Momentu.Font (Font)
 import           GUI.Momentu.Main.Events (Event)
 import qualified GUI.Momentu.Main.Events.Loop as EventLoop
-import           GUI.Momentu.Main.Types (AnimConfig(..))
 import           GUI.Momentu.Render (render, PerfCounters(..))
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -26,7 +25,7 @@ import           Lamdu.Prelude
 data Handlers = Handlers
     { reportPerfCounters :: PerfCounters -> IO ()
     , getFPSFont :: IO (Maybe Font)
-    , getAnimConfig :: IO AnimConfig
+    , getConfig :: IO Anim.Config
     , makeFrame :: IO Anim.Frame
     , eventHandler :: Event -> IO Bool
         -- ^ Returns whether the event was handled, meaning two things:
@@ -74,7 +73,7 @@ animThreadLoop recvNewFrame handlers win =
             do
                 Anim.currentFrame animState & Anim.draw & render win
                     >>= reportPerfCounters handlers
-                animConfig <- getAnimConfig handlers
+                animConfig <- getConfig handlers
                 (nextAnimState, nextFrameReq) <-
                     Anim.clockedAdvanceAnimation animConfig frameReq animState
                     >>= \case

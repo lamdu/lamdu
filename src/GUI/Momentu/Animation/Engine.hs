@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Animation.Engine
-    ( AnimConfig(..)
+    ( Config(..)
     , currentFrame
     , State
     , initialState
@@ -23,7 +23,7 @@ import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
-data AnimConfig = AnimConfig
+data Config = Config
     { acTimePeriod :: NominalDiffTime
     , acRemainingRatioInPeriod :: R
     }
@@ -109,9 +109,8 @@ desiredFrameRate :: Double
 desiredFrameRate = 60
 
 clockedAdvanceAnimation ::
-    AnimConfig -> Maybe (UTCTime, Frame) ->
-    State -> IO AdvancedAnimation
-clockedAdvanceAnimation (AnimConfig timePeriod ratio) mNewFrame animState =
+    Config -> Maybe (UTCTime, Frame) -> State -> IO AdvancedAnimation
+clockedAdvanceAnimation (Config timePeriod ratio) mNewFrame animState =
     getCurrentTime <&>
     \curTime ->
     case mNewFrame of

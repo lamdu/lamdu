@@ -35,7 +35,7 @@ import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Events (MouseButtonEvent(..))
 import qualified GUI.Momentu.Main.Events as Main.Events
-import           GUI.Momentu.Main.Types (AnimConfig(..), Config(..))
+import           GUI.Momentu.Main.Types (Config(..))
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
@@ -109,7 +109,7 @@ defaultOptions env helpFontPath =
         pure Options
             { config = Config
                 { cAnim =
-                    pure AnimConfig
+                    pure MainAnim.Config
                     { MainAnim.acTimePeriod = 0.11
                     , MainAnim.acRemainingRatioInPeriod = 0.2
                     }
@@ -315,7 +315,7 @@ runInner refreshAction run win handlers =
         run win $
             MainAnim.Handlers
             { MainAnim.reportPerfCounters = reportPerfCounters debug
-            , MainAnim.getAnimConfig = cAnim config
+            , MainAnim.getConfig = cAnim config
             , MainAnim.getFPSFont = fpsFont debug zoom
             , MainAnim.eventHandler = \event ->
                 do
