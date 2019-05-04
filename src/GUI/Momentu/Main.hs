@@ -36,6 +36,7 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Config (Config(..))
+import qualified GUI.Momentu.Main.Config as MainConfig
 import           GUI.Momentu.Main.Events (MouseButtonEvent(..))
 import qualified GUI.Momentu.Main.Events as Main.Events
 import           GUI.Momentu.MetaKey (MetaKey)
@@ -113,24 +114,24 @@ defaultOptions env helpFontPath =
         stateStorage_ <- iorefStateStorage (Widget.Id [])
         pure Options
             { config = Config
-                { cAnim =
+                { _cAnim =
                     pure MainAnim.Config
                     { MainAnim.acTimePeriod = 0.11
                     , MainAnim.acRemainingRatioInPeriod = 0.2
                     }
-                , cCursor =
+                , _cCursor =
                     \_zoom -> pure Cursor.Config
                     { Cursor.cursorColor = Draw.Color 0.5 0.5 1 0.5
                     , Cursor.decay = Nothing
                     }
-                , cZoom = pure Zoom.defaultConfig
-                , cHelpEnv =
+                , _cZoom = pure Zoom.defaultConfig
+                , _cHelpEnv =
                     Just $ \zoom ->
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
                         EventMapHelp.defaultEnv env helpFont & pure
-                , cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
+                , _cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
@@ -258,13 +259,14 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
                 , _eWindowSize = size
                 , _eState = s
                 }
-        zoomEventMap <- cZoom config <&> Zoom.eventMap (env ^. eZoom)
+        zoomEventMap <-
+            config ^. MainConfig.cZoom <&> Zoom.eventMap (env ^. eZoom)
         txt <- mainTexts options
         jumpToSourceEventMap <-
             writeIORef lookupModeRef JumpToSource
             & mkJumpToSourceEventMap txt debug
         let moreEvents = zoomEventMap <> jumpToSourceEventMap
-        helpEnv <- cHelpEnv config ?? env ^. eZoom & sequenceA
+        helpEnv <- config ^. MainConfig.cHelpEnv ?? env ^. eZoom & sequenceA
         w <- mkWidgetUnmemod env
         ( if Widget.isFocused w
             then
@@ -288,12 +290,12 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
         showInvalidCursor cursor widget =
             do
                 putStrLn $ "Invalid cursor: " ++ show cursor
-                color <- cInvalidCursorOverlayColor
+                color <- _cInvalidCursorOverlayColor
                 widget
                     & Element.setLayers . Element.layers <. Lens.reversed . Lens.ix 0 %@~
                     (<>) . (`Anim.scale` Anim.coloredRectangle bgColorAnimId color)
                     & pure
-        Config{cInvalidCursorOverlayColor} = config
+        Config{_cInvalidCursorOverlayColor} = config
         Options{stateStorage, debug, config} = options
 
 runInner :: IORef (IO ()) -> (GLFW.Window -> MainAnim.Handlers -> IO b) -> GLFW.Window -> Handlers -> IO b
@@ -324,7 +326,7 @@ runInner refreshAction run win handlers =
         run win $
             MainAnim.Handlers
             { MainAnim.reportPerfCounters = reportPerfCounters debug
-            , MainAnim.getConfig = cAnim config
+            , MainAnim.getConfig = config ^. MainConfig.cAnim
             , MainAnim.getFPSFont = fpsFont debug zoom
             , MainAnim.eventHandler = \event ->
                 do
@@ -346,7 +348,8 @@ runInner refreshAction run win handlers =
             , MainAnim.makeFrame =
                 do
                     size <- GLFW.Utils.framebufferSize win
-                    (renderWidget size <&> (^. _1)) <*> cCursor config zoom
+                    (renderWidget size <&> (^. _1))
+                        <*> (config ^. MainConfig.cCursor) zoom
             }
 
 mainLoopWidget :: IO (MainLoop Handlers)

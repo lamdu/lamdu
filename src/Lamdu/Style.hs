@@ -79,14 +79,14 @@ newtype FontInfo = FontInfo { fontHeight :: Draw.R }
 mainLoopConfig :: (Zoom -> IO FontInfo) -> IO (Config, Theme) -> MainConfig.Config
 mainLoopConfig getFontInfo getConfig =
     MainConfig.Config
-    { cAnim =
+    { _cAnim =
         getConfig
         <&> \(_config, theme) ->
         Anim.Config
         { acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
         , acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
         }
-    , cCursor =
+    , _cCursor =
         \zoom ->
         (,) <$> getFontInfo zoom <*> getConfig
         <&> \(fi, (_config, theme)) ->
@@ -97,9 +97,9 @@ mainLoopConfig getFontInfo getConfig =
             , Cursor.heightExponent = theme ^. Theme.cursorDecayExponent
             }
         }
-    , cZoom = getConfig <&> (^. _1 . Config.zoom)
-    , cHelpEnv = Nothing
-    , cInvalidCursorOverlayColor =
+    , _cZoom = getConfig <&> (^. _1 . Config.zoom)
+    , _cHelpEnv = Nothing
+    , _cInvalidCursorOverlayColor =
         getConfig
         <&> \(_config, theme) ->
         theme ^. Theme.invalidCursorOverlayColor
