@@ -101,16 +101,16 @@ defaultConfig =
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
     }
 
-defaultEnv :: Glue.Texts Text -> E.Texts Text -> Dir.Texts Text -> Font -> Env
-defaultEnv glueTexts eventMapTexts dirTexts font =
+defaultEnv :: (E.HasTexts env, Glue.HasTexts env) => env -> Font -> Env
+defaultEnv txt font =
     Env
     { _eConfig = defaultConfig
     , _eStyle = defaultStyle font
     , _eAnimIdPrefix = ["help box"]
     , _eDirLayout = Dir.LeftToRight
-    , _eEventMapTexts = eventMapTexts
-    , _eDirTexts = dirTexts
-    , _eGlueTexts = glueTexts
+    , _eEventMapTexts = txt ^. E.texts
+    , _eDirTexts = txt ^. Dir.texts
+    , _eGlueTexts = txt ^. Glue.texts
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]

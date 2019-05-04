@@ -25,7 +25,6 @@ import           Data.Vector.Vector2 (Vector2)
 import           GHC.Stack (CallStack, getCallStack, SrcLoc)
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -100,8 +99,8 @@ defaultDebugOptions =
 
 -- TODO: If moving GUI to lib,
 -- include a default help font in the lib rather than get a path.
-defaultOptions :: Glue.Texts Text -> E.Texts Text -> Dir.Texts Text -> FilePath -> IO Options
-defaultOptions glueTexts eventMapTexts dirTexts helpFontPath =
+defaultOptions :: (E.HasTexts env, HasTexts env) => env -> FilePath -> IO Options
+defaultOptions env helpFontPath =
     do
         loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
@@ -125,8 +124,7 @@ defaultOptions glueTexts eventMapTexts dirTexts helpFontPath =
                     do
                         zoomFactor <- Zoom.getZoomFactor zoom
                         helpFont <- loadHelpFont (9 * zoomFactor)
-                        EventMapHelp.defaultEnv glueTexts eventMapTexts dirTexts helpFont
-                            & pure
+                        EventMapHelp.defaultEnv env helpFont & pure
                 , cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }
             , stateStorage = stateStorage_
