@@ -244,8 +244,7 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
         & Anim.scale (r ^. Rect.size) & Anim.translate (r ^. Rect.topLeft)
 
 type AddHelp =
-    EventMapHelp.Env -> Widget.Size -> Widget (IO State.Update) ->
-    IO (Widget (IO State.Update))
+    EventMapHelp.Env -> Widget.Size -> Gui Widget IO -> IO (Gui Widget IO)
 
 wrapMakeWidget ::
     Zoom -> AddHelp -> Options -> IORef LookupMode ->
