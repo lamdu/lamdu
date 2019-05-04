@@ -202,9 +202,9 @@ Library
                   , GUI.Momentu.Hover
                   , GUI.Momentu.Main
                   , GUI.Momentu.Main.Animation
+                  , GUI.Momentu.Main.Config
                   , GUI.Momentu.Main.Events
                   , GUI.Momentu.Main.Events.Loop
-                  , GUI.Momentu.Main.Types
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
                   , GUI.Momentu.Rect

@@ -33,9 +33,9 @@ import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
+import           GUI.Momentu.Main.Config (Config(..))
 import           GUI.Momentu.Main.Events (MouseButtonEvent(..))
 import qualified GUI.Momentu.Main.Events as Main.Events
-import           GUI.Momentu.Main.Types (Config(..))
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)

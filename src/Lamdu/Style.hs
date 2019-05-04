@@ -11,7 +11,7 @@ import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Main.Animation as Anim
-import qualified GUI.Momentu.Main.Types as MainLoop
+import qualified GUI.Momentu.Main.Config as MainConfig
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -76,9 +76,9 @@ make fonts theme =
 
 newtype FontInfo = FontInfo { fontHeight :: Draw.R }
 
-mainLoopConfig :: (Zoom -> IO FontInfo) -> IO (Config, Theme) -> MainLoop.Config
+mainLoopConfig :: (Zoom -> IO FontInfo) -> IO (Config, Theme) -> MainConfig.Config
 mainLoopConfig getFontInfo getConfig =
-    MainLoop.Config
+    MainConfig.Config
     { cAnim =
         getConfig
         <&> \(_config, theme) ->

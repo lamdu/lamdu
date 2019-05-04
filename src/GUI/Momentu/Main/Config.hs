@@ -1,6 +1,6 @@
 -- | The types used for the mainloop
 
-module GUI.Momentu.Main.Types
+module GUI.Momentu.Main.Config
     ( Config(..)
     ) where
 
