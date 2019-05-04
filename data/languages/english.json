@@ -66,6 +66,11 @@
         "choice": {
             "select": "Select",
             "chooseSelected": "Choose selected"
+        },
+        "mainLoop": {
+            "quit": "Quit",
+            "jumpToSource": "Jump to source",
+            "debug": "Debug"
         }
     }
 }

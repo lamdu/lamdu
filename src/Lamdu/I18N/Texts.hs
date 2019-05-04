@@ -9,6 +9,7 @@ import           Data.List.Lens (prefixed)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
@@ -117,6 +118,7 @@ data Texts a = Texts
     , _glue :: Glue.Texts a
     , _eventMap :: EventMap.Texts a
     , _choice :: Choice.Texts a
+    , _mainLoop :: MainLoop.Texts a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
@@ -151,6 +153,7 @@ instance Dir.HasLayoutDir Language where layoutDir = lDirection
 instance Dir.HasTexts Language where texts = lTexts . dir
 instance Glue.HasTexts Language where texts = lTexts . glue
 instance Choice.HasTexts Language where texts = lTexts . choice
+instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
 instance HasLanguage Language where language = id
 
 texts :: HasLanguage env => Lens' env (Texts Text)

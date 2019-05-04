@@ -9,12 +9,14 @@ module GUI.Momentu.Main
     , Options(..), defaultOptions
     , quitEventMap
     , MainLoop(..), Handlers(..), mainLoopWidget
-    , Texts(..), quit, HasTexts(..)
+    , Texts(..), textQuit, textJumpToSource, textDebug
+    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
+import           Data.Char (toLower)
 import           Data.IORef
 import           Data.List.Lens (prefixed)
 import           Data.MRUMemo (memoIO)
@@ -54,15 +56,17 @@ import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
 import           Lamdu.Prelude
 
-newtype Texts a = Texts
-    { _quit :: a
+data Texts a = Texts
+    { _textQuit :: a
+    , _textJumpToSource :: a
+    , _textDebug :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
 
 Lens.makeLenses ''Texts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
-class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_text")} ''Texts
+class HasTexts env where texts :: Lens' env (Texts Text)
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -80,6 +84,7 @@ data Options = Options
     { config :: Config
     , stateStorage :: MkProperty' IO GUIState
     , debug :: DebugOptions
+    , mainTexts :: IO (Texts Text)
     }
 
 data Handlers = Handlers
@@ -99,7 +104,7 @@ defaultDebugOptions =
 
 -- TODO: If moving GUI to lib,
 -- include a default help font in the lib rather than get a path.
-defaultOptions :: (E.HasTexts env, HasTexts env) => env -> FilePath -> IO Options
+defaultOptions :: (E.HasTexts env, HasTexts env, Glue.HasTexts env) => env -> FilePath -> IO Options
 defaultOptions env helpFontPath =
     do
         loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
@@ -129,18 +134,21 @@ defaultOptions env helpFontPath =
                 }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
+            , mainTexts = pure (env ^. texts)
             }
 
 quitEventMap :: (MonadReader env m, Functor f, HasTexts env) => m (Gui EventMap f)
 quitEventMap =
-    Lens.view (texts . quit) <&> \txt ->
+    Lens.view (texts . textQuit) <&> \txt ->
     E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc [txt]) (error "Quit")
 
-mkJumpToSourceEventMap :: Functor f => DebugOptions -> f () -> IO (Gui EventMap f)
-mkJumpToSourceEventMap debug act =
+mkJumpToSourceEventMap ::
+    Functor f => Texts Text -> DebugOptions -> f () -> IO (Gui EventMap f)
+mkJumpToSourceEventMap txt debug act =
     jumpToSourceKeys debug
-    <&>
-    \keys -> E.keysEventMap keys (E.Doc ["Debug", "Jump to source"]) act
+    <&> \keys ->
+    E.keysEventMap keys
+    (E.Doc [txt ^. textDebug, txt ^. textJumpToSource]) act
 
 data Env = Env
     { _eZoom :: Zoom
@@ -251,9 +259,10 @@ wrapMakeWidget zoom addHelp options lookupModeRef mkWidgetUnmemod size =
                 , _eState = s
                 }
         zoomEventMap <- cZoom config <&> Zoom.eventMap (env ^. eZoom)
+        txt <- mainTexts options
         jumpToSourceEventMap <-
             writeIORef lookupModeRef JumpToSource
-            & mkJumpToSourceEventMap debug
+            & mkJumpToSourceEventMap txt debug
         let moreEvents = zoomEventMap <> jumpToSourceEventMap
         helpEnv <- cHelpEnv config ?? env ^. eZoom & sequenceA
         w <- mkWidgetUnmemod env

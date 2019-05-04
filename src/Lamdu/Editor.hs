@@ -163,6 +163,9 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                         ConfigSampler.getSample configSampler
                         <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
                     }
+                , mainTexts =
+                        ConfigSampler.getSample configSampler
+                        <&> (^. sLanguageData . MainLoop.texts)
                 }
             }
 

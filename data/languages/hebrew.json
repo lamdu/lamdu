@@ -69,6 +69,11 @@
         "choice": {
             "select": "סמן",
             "chooseSelected": "בחר"
+        },
+        "mainLoop": {
+            "quit": "צא",
+            "jumpToSource": "קפוץ לקוד מקור",
+            "debug": "דיבאג"
         }
     }
 }
