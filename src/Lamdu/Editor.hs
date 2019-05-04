@@ -149,6 +149,30 @@ mainLoopOptions configSampler getFonts stateStorage
         mkFontInfo zoom =
             getFonts zoom <&> (^. Fonts.base) <&> Font.height <&> FontInfo
 
+mkEnv ::
+    Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
+    EvalManager.Evaluator -> ConfigSampler.Sample -> MainLoop.Env -> Settings ->
+    IO Env
+mkEnv cachedFunctions monitors fonts evaluator sample mainEnv settings =
+    EvalManager.getResults evaluator <&>
+    \evalResults ->
+    Env
+    { _evalRes = evalResults
+    , _exportActions =
+        exportActions (sample ^. sConfigData)
+        (evalResults ^. current)
+        (EvalManager.executeReplIOProcess evaluator)
+    , _config = sample ^. sConfigData
+    , _theme = sample ^. sThemeData
+    , _settings = settings
+    , _style = Style.make fonts (sample ^. sThemeData)
+    , _mainLoop = mainEnv
+    , _animIdPrefix = mempty
+    , _debugMonitors = monitors
+    , _cachedFunctions = cachedFunctions
+    , _language = sample ^. sLanguageData
+    }
+
 runMainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
     M.Window -> MainLoop Handlers -> Sampler ->
@@ -159,16 +183,18 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
     evaluator db mkSettingsProp cache cachedFunctions monitors =
     do
         getFonts <- EditorFonts.makeGetFonts configSampler subpixel
-        let makeWidget env =
+        let makeWidget mainEnv =
                 do
                     sample <- ConfigSampler.getSample configSampler
                     when (sample ^. sConfigData . Config.debug . Config.printCursor)
-                        (putStrLn ("Cursor: " <> show (env ^. M.cursor)))
-                    fonts <- getFonts (env ^. MainLoop.eZoom)
+                        (putStrLn ("Cursor: " <> show (mainEnv ^. M.cursor)))
+                    fonts <- getFonts (mainEnv ^. MainLoop.eZoom)
                     Cache.fence cache
-                    mkSettingsProp ^. mkProperty
-                        >>= makeRootWidget cachedFunctions monitors fonts db
-                        evaluator sample env
+                    settingsProp <- mkSettingsProp ^. mkProperty
+                    env <-
+                        mkEnv cachedFunctions monitors fonts evaluator
+                        sample mainEnv (Property.value settingsProp)
+                    makeRootWidget env monitors db evaluator sample settingsProp
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
             { makeWidget = makeWidget
@@ -199,42 +225,12 @@ backgroundId = ["background"]
 
 makeRootWidget ::
     HasCallStack =>
-    Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
+    Env -> Debug.Monitors ->
     Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
-    MainLoop.Env -> Property IO Settings ->
+    Property IO Settings ->
     IO (Gui Widget IO)
-makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEnv settingsProp =
+makeRootWidget env perfMonitors db evaluator sample settingsProp =
     do
-        evalResults <- EvalManager.getResults evaluator
-        let env = Env
-                { _evalRes = evalResults
-                , _exportActions =
-                    exportActions (sample ^. sConfigData)
-                    (evalResults ^. current)
-                    (EvalManager.executeReplIOProcess evaluator)
-                , _config = sample ^. sConfigData
-                , _theme = sample ^. sThemeData
-                , _settings = Property.value settingsProp
-                , _style = Style.make fonts (sample ^. sThemeData)
-                , _mainLoop = mainLoopEnv
-                , _animIdPrefix = mempty
-                , _debugMonitors = monitors
-                , _cachedFunctions = cachedFunctions
-                , _language = sample ^. sLanguageData
-                }
-        let dbToIO action =
-                case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
-                Annotations.Evaluation ->
-                    EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
-                _ -> DbLayout.runDbTransaction db action
-        let measureLayout w =
-                -- Hopefully measuring the forcing of these is enough to figure out the layout -
-                -- it's where's the cursors at etc.
-                report w
-                & Widget.wState . Widget._StateFocused . Lens.mapped %~ f
-                where
-                    Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
-                    f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
         themeNames <- ConfigFolder.getNames
         langNames <- ConfigFolder.getNames
         let bgColor = env ^. Env.theme . Theme.backgroundColor
@@ -246,6 +242,19 @@ makeRootWidget cachedFunctions perfMonitors fonts db evaluator sample mainLoopEn
             Debug.addBreakPoints
             (sample ^. sConfigData . Config.debug . Config.breakpoints)
             perfMonitors
+        dbToIO action =
+            case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
+            Annotations.Evaluation ->
+                EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
+            _ -> DbLayout.runDbTransaction db action
+        measureLayout w =
+            -- Hopefully measuring the forcing of these is enough to figure out the layout -
+            -- it's where's the cursors at etc.
+            report w
+            & Widget.wState . Widget._StateFocused . Lens.mapped %~ f
+            where
+                Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
+                f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
 
 run :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 run opts rawDb =
