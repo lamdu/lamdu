@@ -67,6 +67,14 @@
             "select": "Select",
             "chooseSelected": "Choose selected"
         },
+        "grid": {
+            "moreLeft": "more left",
+            "moreRight": "more right",
+            "top": "top",
+            "bottom": "bottom",
+            "leftMost": "left-most",
+            "rightMost": "right-most"
+        },
         "textEdit": {
             "edit": "Edit",
             "delete": "Delete",

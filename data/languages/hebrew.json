@@ -70,6 +70,14 @@
             "select": "סמן",
             "chooseSelected": "בחר"
         },
+        "grid": {
+            "moreLeft": "יותר שמאלה",
+            "moreRight": "יותר ימינה",
+            "top": "פסגה",
+            "bottom": "תחתית",
+            "leftMost": "קצה שמאל",
+            "rightMost": "קצה ימין"
+        },
         "textEdit": {
             "edit": "עריכה",
             "delete": "מחק",

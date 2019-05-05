@@ -22,6 +22,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -137,7 +138,7 @@ verticalRowRender =
 renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , ResponsiveExpr.HasStyle env
-    , Glue.HasTexts env
+    , Grid.HasTexts env
     ) => Maybe AnimId -> f ([Row (Gui Responsive o)] -> Gui Responsive o)
 renderRows mParensId =
     do

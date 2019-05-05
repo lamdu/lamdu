@@ -1,11 +1,16 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, FlexibleInstances, DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE DerivingVia #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys
+    , Texts(..), moreLeft, moreRight, top, bottom, leftMost, rightMost
+    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad (msum)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Foldable (toList)
 import           Data.List.Extended (foldl', transpose, sortOn, groupOn, minimumOn)
 import           Data.MRUMemo (memo)
@@ -34,6 +39,22 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 
 import           Lamdu.Prelude
+
+data Texts a = Texts
+    { _moreLeft :: a
+    , _moreRight :: a
+    , _top :: a
+    , _bottom :: a
+    , _leftMost :: a
+    , _rightMost :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+Lens.makeLenses ''Texts
+JsonTH.derivePrefixed "_" ''Texts
+
+class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 
 newtype Cursor = Cursor (Vector2 Int)
     deriving (Eq)
@@ -122,7 +143,7 @@ stdKeys = Keys
         k = MetaKey noMods
 
 addNavEventmap ::
-    Dir.HasTexts env =>
+    HasTexts env =>
     env -> Keys ModKey -> NavDests a -> EventMap a -> EventMap a
 addNavEventmap env keys navDests eMap =
     strongMap <> eMap <> weakMap
@@ -133,30 +154,29 @@ addNavEventmap env keys navDests eMap =
             , movement Horizontal Forward  (keysRight dir)      cursorRight
             , movement Vertical Backward   (keysUp    dir)      cursorUp
             , movement Vertical Forward    (keysDown  dir)      cursorDown
-            , movementMore "more left"  (keysMoreLeft keys)  cursorLeftMost
-            , movementMore "more right" (keysMoreRight keys) cursorRightMost
+            , movementMore (texts.moreLeft ) (keysMoreLeft keys)  cursorLeftMost
+            , movementMore (texts.moreRight) (keysMoreRight keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
         strongMap =
-            [ movementMore "top"       (keysTop keys)       cursorTop
-            , movementMore "bottom"    (keysBottom keys)    cursorBottom
-            , movementMore "leftmost"  (keysLeftMost keys)  cursorLeftMost
-            , movementMore "rightmost" (keysRightMost keys) cursorRightMost
+            [ movementMore (texts.top      ) (keysTop keys)       cursorTop
+            , movementMore (texts.bottom   ) (keysBottom keys)    cursorBottom
+            , movementMore (texts.leftMost ) (keysLeftMost keys)  cursorLeftMost
+            , movementMore (texts.rightMost) (keysRightMost keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
-        movement o d = movementMore (env ^. Dir.texts . Dir.textLens o d)
-        movementMore dirName events f =
+        movement o d = movementMore (Dir.texts . Dir.textLens o d)
+        movementMore lens events f =
             f navDests
             <&> (^. Widget.enterResultEvent)
             <&> EventMap.keyPresses
                 events
-                (EventMap.Doc
-                    [ env ^. Dir.texts . Dir.navigation
-                    , env ^. Dir.texts . Dir.move
-                    , dirName
-                    ])
+                ([ Dir.texts . Dir.navigation
+                    , Dir.texts . Dir.move
+                    , lens
+                    ] <&> (env ^#) & EventMap.Doc)
 
 make ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Glue.HasTexts env, Applicative f
+    , HasTexts env, Applicative f
     ) =>
     m
     (vert (horiz (Aligned (Gui Widget f))) ->
@@ -165,7 +185,7 @@ make = makeWithKeys ?? (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Glue.HasTexts env, Applicative f
+    , HasTexts env, Applicative f
     ) =>
     m
     (Keys ModKey ->
@@ -189,7 +209,7 @@ each2d =
 -- TODO: We assume that the given Cursor selects a focused
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
-    (Glue.HasTexts env, Applicative f) =>
+    (HasTexts env, Applicative f) =>
     env -> Keys ModKey -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f

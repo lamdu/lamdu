@@ -93,7 +93,7 @@ hbox =
 
 table ::
     ( MonadReader env m, Traversable t0, Traversable t1, Applicative f
-    , Glue.HasTexts env
+    , Grid.HasTexts env
     ) =>
     m (Gui (WideLayoutOption (Compose t0 t1)) f)
 table =
