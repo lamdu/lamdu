@@ -31,7 +31,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Font (Font, openFont, LCDSubPixelEnabled(..))
+import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
@@ -103,13 +103,15 @@ defaultDebugOptions =
     , jumpToSource = \_ -> pure ()
     }
 
--- TODO: If moving GUI to lib,
--- include a default help font in the lib rather than get a path.
-defaultOptions :: (E.HasTexts env, HasTexts env, Glue.HasTexts env) => env -> FilePath -> IO Options
-defaultOptions env helpFontPath =
+defaultOptions ::
+    ( E.HasTexts env, HasTexts env, Glue.HasTexts env
+    , Element.HasAnimIdPrefix env, EventMapHelp.HasConfig env
+    , EventMapHelp.HasStyle env
+    ) =>
+    env -> IO Options
+defaultOptions env =
     do
         helpProp <- newIORef EventMapHelp.HelpNotShown <&> Property.fromIORef
-        loadHelpFont <- memoIO $ \size -> openFont LCDSubPixelDisabled size helpFontPath
         -- Note that not every app is necessarily interactive and even uses a cursor,
         -- so an empty value might be fitting.
         stateStorage_ <- iorefStateStorage (Widget.Id [])
@@ -127,13 +129,10 @@ defaultOptions env helpFontPath =
                     }
                 , _cZoom = pure Zoom.defaultConfig
                 , _cPostProcess =
-                    \zoom size widget ->
+                    \_zoom size widget ->
                     do
-                        zoomFactor <- Zoom.getZoomFactor zoom
-                        helpFont <- loadHelpFont (9 * zoomFactor)
-                        let helpEnv = EventMapHelp.defaultEnv env helpFont
                         prop <- helpProp ^. Property.mkProperty
-                        EventMapHelp.toggledHelpAdder prop helpEnv size widget
+                        EventMapHelp.toggledHelpAdder prop env size widget
                             & pure
                 , _cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }

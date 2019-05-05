@@ -6,10 +6,9 @@ module GUI.Momentu.Widgets.EventMapHelp
     , addHelpView
     , Style(..), styleText, styleInputDocColor, styleBGColor, styleTint
     , Config(..), configOverlayDocKeys
-    , Env(..), eConfig, eStyle
+    , HasStyle(..), HasConfig(..)
     , defaultStyle
     , defaultConfig
-    , defaultEnv
     ) where
 
 import qualified Control.Lens as Lens
@@ -59,27 +58,15 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
+instance TextView.HasStyle Style where style = styleText
+
 newtype Config = Config
     { _configOverlayDocKeys :: [MetaKey]
     }
 Lens.makeLenses ''Config
 
-data Env = Env
-    { _eConfig :: Config
-    , _eStyle :: Style
-    , _eAnimIdPrefix :: AnimId
-    , _eDirLayout :: Dir.Layout
-    , _eDirTexts :: !(Dir.Texts Text)
-    , _eGlueTexts :: !(Glue.Texts Text)
-    , _eEventMapTexts :: !(E.Texts Text)
-    }
-Lens.makeLenses ''Env
-instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
-instance TextView.HasStyle Env where style = eStyle . styleText
-instance Dir.HasLayoutDir Env where layoutDir = eDirLayout
-instance Dir.HasTexts Env where texts = eDirTexts
-instance Glue.HasTexts Env where texts = eGlueTexts
-instance E.HasTexts Env where texts = eEventMapTexts
+class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
+class HasConfig env where config :: Lens' env Config
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -99,18 +86,6 @@ defaultConfig :: Config
 defaultConfig =
     Config
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
-    }
-
-defaultEnv :: (E.HasTexts env, Glue.HasTexts env) => env -> Font -> Env
-defaultEnv txt font =
-    Env
-    { _eConfig = defaultConfig
-    , _eStyle = defaultStyle font
-    , _eAnimIdPrefix = ["help box"]
-    , _eDirLayout = Dir.LeftToRight
-    , _eEventMapTexts = txt ^. E.texts
-    , _eDirTexts = txt ^. Dir.texts
-    , _eGlueTexts = txt ^. Glue.texts
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -144,7 +119,10 @@ addAnimIds animId (Branch a cs) =
     where
         tAnimId = Anim.augmentId a animId
 
-makeShortcutKeyView :: MonadReader Env m => [E.InputDoc] -> m View
+makeShortcutKeyView ::
+    ( MonadReader env m, Glue.HasTexts env, HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) => [E.InputDoc] -> m View
 makeShortcutKeyView inputDocs =
     (Align.vboxAlign ?? 1)
     <*>
@@ -155,9 +133,12 @@ makeShortcutKeyView inputDocs =
     & Reader.local setColor
     where
         setColor env =
-            env & TextView.style . TextView.styleColor .~ (env ^. eStyle . styleInputDocColor)
+            env & TextView.style . TextView.styleColor .~ (env ^. style . styleInputDocColor)
 
-makeTextViews :: MonadReader Env m => Tree E.Subtitle [E.InputDoc] -> m (Tree View View)
+makeTextViews ::
+    ( MonadReader env m, HasStyle env, Glue.HasTexts env
+    , Element.HasAnimIdPrefix env
+    ) => Tree E.Subtitle [E.InputDoc] -> m (Tree View View)
 makeTextViews tree =
     addAnimIds helpAnimId tree
     & traverse shortcut
@@ -184,7 +165,10 @@ columns maxHeight itemHeight =
             where
                 newHeight = itemHeight new
 
-make :: MonadReader Env m => Vector2 R -> EventMap a -> m View
+make ::
+    ( MonadReader env m, Glue.HasTexts env, E.HasTexts env
+    , HasStyle env, Element.HasAnimIdPrefix env
+    ) => Vector2 R -> EventMap a -> m View
 make size eventMap =
     do
         mkTreeView <- makeTreeView ?? size
@@ -195,7 +179,10 @@ make size eventMap =
             & traverse makeTextViews
             <&> mkTreeView
 
-makeTooltip :: MonadReader Env m => [ModKey] -> m View
+makeTooltip ::
+    ( MonadReader env m, Element.HasAnimIdPrefix env, HasStyle env
+    , Glue.HasTexts env
+    ) => [ModKey] -> m View
 makeTooltip helpKeys =
     (Label.make "Show help" <&> (^. Align.tValue))
     /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
@@ -264,20 +251,25 @@ toggle HelpNotShown = HelpShown
 helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
-addHelpView :: MonadReader Env m => Vector2 R -> Widget.Focused (f a) -> m (Widget.Focused (f a))
+addHelpView ::
+    ( MonadReader env m, HasConfig env, HasStyle env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, E.HasTexts env
+    ) => Vector2 R -> Widget.Focused (f a) -> m (Widget.Focused (f a))
 addHelpView = addHelpViewWith HelpShown
 
 addHelpViewWith ::
-    MonadReader Env m =>
+    ( MonadReader env m, HasConfig env, HasStyle env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, E.HasTexts env
+    ) =>
     IsHelpShown -> Vector2 R ->
     Widget.Focused (f a) -> m (Widget.Focused (f a))
 addHelpViewWith showingHelp size focus =
     do
-        keys <- Lens.view (eConfig . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
+        keys <- Lens.view (config . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
         helpView <-
             ( (.)
-                <$> (Element.tint <$> Lens.view (eStyle . styleTint))
-                <*> (MDraw.backgroundColor helpAnimId <$> Lens.view (eStyle . styleBGColor))
+                <$> (Element.tint <$> Lens.view (style . styleTint))
+                <*> (MDraw.backgroundColor helpAnimId <$> Lens.view (style . styleBGColor))
             ) <*>
             case showingHelp of
             HelpNotShown -> makeTooltip keys
@@ -293,10 +285,10 @@ addHelpViewWith showingHelp size focus =
         focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
 
 toggleEventMap ::
-    (MonadReader Env m, Monoid a, Monad f) =>
+    (MonadReader env m, Monoid a, Monad f, HasConfig env) =>
     Property f IsHelpShown -> m (EventMap (f a))
 toggleEventMap showingHelp =
-    Lens.view (eConfig . configOverlayDocKeys)
+    Lens.view (config . configOverlayDocKeys)
     <&>
     \keys ->
     Property.pureModify showingHelp toggle
@@ -309,8 +301,10 @@ toggleEventMap showingHelp =
             HelpShown -> "Hide"
 
 toggledHelpAdder ::
-    Monad f =>
-    Property f IsHelpShown -> Env -> Widget.Size -> Gui Widget f -> Gui Widget f
+    ( Monad f, E.HasTexts env, Glue.HasTexts env, Element.HasAnimIdPrefix env
+    , HasConfig env, HasStyle env
+    ) =>
+    Property f IsHelpShown -> env -> Widget.Size -> Gui Widget f -> Gui Widget f
 toggledHelpAdder prop env size widget =
     widget & Widget.wState %~
     \case

@@ -9,7 +9,9 @@ module Lamdu.Style
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty)
 import qualified Data.Property as Property
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Direction as Dir
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
@@ -80,6 +82,25 @@ make fonts theme =
             , TextView._styleUnderline = Nothing
             }
 
+data HelpEnv = HelpEnv
+    { _heConfig :: EventMapHelp.Config
+    , _heStyle :: EventMapHelp.Style
+    , _heAnimIdPrefix :: AnimId
+    , _heDirLayout :: Dir.Layout
+    , _heDirTexts :: !(Dir.Texts Text)
+    , _heGlueTexts :: !(Glue.Texts Text)
+    , _heEventMapTexts :: !(E.Texts Text)
+    }
+Lens.makeLenses ''HelpEnv
+instance Element.HasAnimIdPrefix HelpEnv where animIdPrefix = heAnimIdPrefix
+instance TextView.HasStyle HelpEnv where style = heStyle . TextView.style
+instance Dir.HasLayoutDir HelpEnv where layoutDir = heDirLayout
+instance Dir.HasTexts HelpEnv where texts = heDirTexts
+instance Glue.HasTexts HelpEnv where texts = heGlueTexts
+instance E.HasTexts HelpEnv where texts = heEventMapTexts
+instance EventMapHelp.HasConfig HelpEnv where config = heConfig
+instance EventMapHelp.HasStyle HelpEnv where style = heStyle
+
 addHelp ::
     Config -> Theme -> Language -> Font ->
     Widget.Size -> Widget (f a) -> Widget (f a)
@@ -89,17 +110,17 @@ addHelp config theme language font size widget =
     (EventMapHelp.addHelpView size ?? env)
     where
         env =
-            EventMapHelp.Env
-            { EventMapHelp._eConfig =
+            HelpEnv
+            { _heConfig =
                 EventMapHelp.Config
                 { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
                 }
-            , EventMapHelp._eAnimIdPrefix = ["help box"]
-            , EventMapHelp._eDirLayout = language ^. Dir.layoutDir
-            , EventMapHelp._eDirTexts = language ^. Dir.texts
-            , EventMapHelp._eEventMapTexts = language ^. E.texts
-            , EventMapHelp._eGlueTexts = language ^. Glue.texts
-            , EventMapHelp._eStyle = helpStyle font (theme ^. Theme.help)
+            , _heAnimIdPrefix = ["help box"]
+            , _heDirLayout = language ^. Dir.layoutDir
+            , _heDirTexts = language ^. Dir.texts
+            , _heEventMapTexts = language ^. E.texts
+            , _heGlueTexts = language ^. Glue.texts
+            , _heStyle = helpStyle font (theme ^. Theme.help)
             }
 
 mainLoopConfig ::
