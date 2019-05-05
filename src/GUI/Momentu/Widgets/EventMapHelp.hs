@@ -17,6 +17,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
+import           Data.Char (toLower)
 import           Data.Function (on)
 import qualified Data.List as List
 import           Data.List.Lens (prefixed)
@@ -82,7 +83,9 @@ data Texts a = Texts
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
 Lens.makeLenses ''Texts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+deriveJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_text")
+    } ''Texts
 -- HasTexts is not required for make or addHelpView
 class (E.HasTexts env, Glue.HasTexts env) => HasTexts env where
     texts :: Lens' env (Texts Text)
