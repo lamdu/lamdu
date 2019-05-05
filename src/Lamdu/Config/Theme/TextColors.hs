@@ -3,9 +3,7 @@
 module Lamdu.Config.Theme.TextColors where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Draw as Draw
 
 import           Lamdu.Prelude
@@ -33,8 +31,6 @@ data TextColors = TextColors
     , _caseTagColor :: Draw.Color
     , _argTagColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''TextColors
+JsonTH.derivePrefixed "_" ''TextColors
 
 Lens.makeLenses ''TextColors

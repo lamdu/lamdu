@@ -7,10 +7,7 @@ module Lamdu.Config.Theme.Fonts
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Char (toLower)
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 
 import           Lamdu.Prelude
 
@@ -23,12 +20,7 @@ data Fonts a = Fonts
     , _binders :: a
     , _debugInfo :: a
     } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_")
-    }
-    ''Fonts
+JsonTH.derivePrefixed "_" ''Fonts
 Lens.makeLenses ''Fonts
 
 type FontSize = Float

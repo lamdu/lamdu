@@ -14,11 +14,8 @@ module GUI.Momentu.Main
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Char (toLower)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.IORef
-import           Data.List.Lens (prefixed)
 import           Data.MRUMemo (memoIO)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
@@ -65,7 +62,7 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 
 Lens.makeLenses ''Texts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_text")} ''Texts
+JsonTH.derivePrefixed "_text" ''Texts
 class HasTexts env where texts :: Lens' env (Texts Text)
 
 data DebugOptions = DebugOptions

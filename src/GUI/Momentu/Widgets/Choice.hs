@@ -10,9 +10,7 @@ module GUI.Momentu.Widgets.Choice
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Property (Property(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
@@ -38,7 +36,7 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 
 Lens.makeLenses ''Texts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+JsonTH.derivePrefixed "_" ''Texts
 class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 
 

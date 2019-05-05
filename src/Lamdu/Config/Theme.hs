@@ -22,6 +22,7 @@ module Lamdu.Config.Theme
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
@@ -48,12 +49,7 @@ data Help = Help
     , _helpBGColor :: Draw.Color
     , _helpTint :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_help")
-    }
-    ''Help
+JsonTH.derivePrefixed "_help" ''Help
 
 Lens.makeLenses ''Help
 
@@ -62,10 +58,7 @@ data Hole = Hole
     , _holeFrameWidth :: Vector2 Double
     , _holeFrameColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier = (Lens.ix 0 %~ toLower) . (^?! prefixed "_hole")
-    }
-    ''Hole
+JsonTH.derivePrefixed "_hole" ''Hole
 
 Lens.makeLenses ''Hole
 
@@ -74,9 +67,7 @@ data Eval = Eval
     , _neighborsPadding :: Vector2 Double
     , _staleResultTint :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Eval
+JsonTH.derivePrefixed "_" ''Eval
 
 Lens.makeLenses ''Eval
 
@@ -84,12 +75,7 @@ data ToolTip = ToolTip
     { _tooltipFgColor :: Draw.Color
     , _tooltipBgColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_tooltip")
-    }
-    ''ToolTip
+JsonTH.derivePrefixed "_tooltip" ''ToolTip
 
 Lens.makeLenses ''ToolTip
 
@@ -111,12 +97,7 @@ data Deleted = Deleted
     , _deletedDefDiagonalWidth :: Double
     , _deletedUseDiagonalWidth :: Double
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_deleted")
-    }
-    ''Deleted
+JsonTH.derivePrefixed "_deleted" ''Deleted
 
 Lens.makeLenses ''Deleted
 
@@ -159,9 +140,7 @@ data Theme = Theme
     , _presentationChoiceScaleFactor :: Vector2 Double
     , _evaluatedPathBGColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Theme
+JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme
 

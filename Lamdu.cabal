@@ -146,6 +146,7 @@ Library
                   , StateVar
                   , stm
                   , syntax-tree
+                  , template-haskell
                   , temporary
                   , text
                   , time >= 1.2
@@ -168,6 +169,7 @@ Library
                   , Control.Monad.Transaction
                   , Control.Monad.Unit
                   , Data.Aeson.Config
+                  , Data.Aeson.TH.Extended
                   , Data.Binary.Extended
                   , Data.ByteString.Extended
                   , Data.Cache.Fenced

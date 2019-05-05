@@ -15,10 +15,8 @@ module GUI.Momentu.Hover
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.List.Extended (minimumOn)
-import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
 import           GUI.Momentu.Direction (Orientation(..), Order(..), HasLayoutDir)
@@ -44,9 +42,7 @@ data Style = Style
     , _bgColor :: Draw.Color
     , _bgPadding :: Vector2 R
     } deriving (Eq, Generic, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Style
+JsonTH.derivePrefixed "_" ''Style
 
 Lens.makeLenses ''Style
 

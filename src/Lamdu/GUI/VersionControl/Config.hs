@@ -7,9 +7,7 @@ module Lamdu.GUI.VersionControl.Config
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.MetaKey (MetaKey)
 
@@ -22,18 +20,14 @@ data Config = Config
     , _jumpToBranchesKeys :: [MetaKey]
     , _delBranchKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Config
+JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
 
 newtype Theme = Theme
     { _selectedBranchColor :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Theme
+JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme
 

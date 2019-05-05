@@ -24,8 +24,7 @@ module GUI.Momentu.EventMap
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)
 import qualified Data.Map as Map
@@ -57,7 +56,7 @@ data Texts a = Texts
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
 class HasTexts env where texts :: Lens' env (Texts Text)
-deriveJSON Aeson.defaultOptions ''Texts
+JsonTH.derivePrefixed "" ''Texts
 
 data KeyEvent = KeyEvent ModKey.KeyState ModKey
     deriving (Generic, Show, Eq, Ord)

@@ -5,9 +5,7 @@ module Lamdu.Debug.Tasks
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 
 import           Lamdu.Prelude
 
@@ -20,6 +18,4 @@ data Tasks a = Tasks
     } deriving stock (Generic, Generic1, Eq, Show, Functor, Foldable, Traversable)
     deriving Applicative via Generically1 Tasks
 Lens.makeLenses ''Tasks
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Tasks
+JsonTH.derivePrefixed "_" ''Tasks

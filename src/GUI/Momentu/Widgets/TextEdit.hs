@@ -12,12 +12,10 @@ module GUI.Momentu.Widgets.TextEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Binary.Extended as Binary
 import           Data.Char (isSpace)
 import           Data.List.Extended (genericLength, minimumOn)
-import           Data.List.Lens (prefixed)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
@@ -50,10 +48,7 @@ data Modes a = Modes
     } deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via Generically1 Modes
 Lens.makeLenses ''Modes
-
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier = (^?! prefixed "_")
-    } ''Modes
+JsonTH.derivePrefixed "_" ''Modes
 
 type EmptyStrings = Modes Text
 

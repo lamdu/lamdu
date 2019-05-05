@@ -30,9 +30,7 @@ module GUI.Momentu.Widgets.Menu.Search
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -69,9 +67,7 @@ data TermStyle = TermStyle
     , _emptyStrings :: TextEdit.EmptyStrings
     , _emptyStringsColors :: TextEdit.Modes Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier = (^?! prefixed "_")
-    } ''TermStyle
+JsonTH.derivePrefixed "_"''TermStyle
 
 Lens.makeLenses ''TermStyle
 

@@ -8,10 +8,8 @@ module GUI.Momentu.Zoom
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.IORef
-import           Data.List.Lens (prefixed)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey)
@@ -35,7 +33,7 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 
 class HasTexts env where texts :: Lens' env (Texts Text)
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+JsonTH.derivePrefixed "_" ''Texts
 
 instance HasTexts (Texts Text) where texts = id
 
@@ -45,9 +43,7 @@ data Config = Config
     , _enlargeFactor :: Double
     , _shrinkFactor :: Double
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Config
+JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
 

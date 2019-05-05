@@ -12,9 +12,7 @@ module GUI.Momentu.Direction
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Rect (Rect, R)
 import qualified GUI.Momentu.Rect as Rect
@@ -25,7 +23,7 @@ data Layout
     = LeftToRight -- ^ e.g: latin languages
     | RightToLeft -- ^ e.g: Hebrew/Arabic
     deriving (Eq, Ord, Show)
-deriveJSON Aeson.defaultOptions ''Layout
+JsonTH.derivePrefixed "" ''Layout
 Lens.makePrisms ''Layout
 
 class HasLayoutDir env where layoutDir :: Lens' env Layout
@@ -68,7 +66,7 @@ data Texts a = Texts
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
 
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+JsonTH.derivePrefixed "_" ''Texts
 
 class HasLayoutDir env => HasTexts env where texts :: Lens' env (Texts Text)
 

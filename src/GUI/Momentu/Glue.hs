@@ -14,9 +14,7 @@ module GUI.Momentu.Glue
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Direction (Orientation(..), axis, perpendicular)
 import qualified GUI.Momentu.Direction as Dir
@@ -37,7 +35,7 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 
 class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+JsonTH.derivePrefixed "_" ''Texts
 
 strollDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> EventMap.Doc
 strollDoc env dirLens =

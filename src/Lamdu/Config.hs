@@ -4,6 +4,7 @@ module Lamdu.Config where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
@@ -24,9 +25,7 @@ data Export = Export
     , _executeKeys :: [MetaKey]
     , _importKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Export
+JsonTH.derivePrefixed "_" ''Export
 
 Lens.makeLenses ''Export
 
@@ -53,12 +52,7 @@ data Completion = Completion
     , _completionOpenKeys :: [MetaKey]
     , _completionCloseKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_completion")
-    }
-    ''Completion
+JsonTH.derivePrefixed "_completion" ''Completion
 
 Lens.makeLenses ''Completion
 
@@ -66,9 +60,7 @@ data Eval = Eval
     { _prevScopeKeys :: [MetaKey]
     , _nextScopeKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Eval
+JsonTH.derivePrefixed "_" ''Eval
 
 Lens.makeLenses ''Eval
 
@@ -76,12 +68,7 @@ data Literal = Literal
     { _literalStartEditingKeys :: [MetaKey]
     , _literalStopEditingKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier
-        = (Lens.ix 0 %~ toLower)
-        . (^?! prefixed "_literal")
-    }
-    ''Literal
+JsonTH.derivePrefixed "_literal" ''Literal
 
 Lens.makeLenses ''Literal
 
@@ -151,9 +138,7 @@ data Config = Config
     , _caseOpenKeys :: [MetaKey]
     , _caseAddAltKeys :: [MetaKey]
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Config
+JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
 

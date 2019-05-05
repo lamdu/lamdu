@@ -22,9 +22,7 @@ module GUI.Momentu.Widgets.Menu
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
@@ -54,9 +52,7 @@ data Style = Style
     { _submenuSymbolColorUnselected :: Draw.Color
     , _submenuSymbolColorSelected :: Draw.Color
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Style
+JsonTH.derivePrefixed "_" ''Style
 
 Lens.makeLenses ''Style
 
@@ -66,9 +62,7 @@ data Keys = Keys
     , _keysPickOptionAndGotoNext :: [MetaKey]
         -- ^ Pick option and goto the next "entry point" (see below)
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Keys
+JsonTH.derivePrefixed "_" ''Keys
 
 Lens.makeLenses ''Keys
 
@@ -79,9 +73,7 @@ data Config = Config
     { _configStyle :: Style
     , _configKeys :: Keys
     } deriving (Eq, Show)
-deriveJSON Aeson.defaultOptions
-    {Aeson.fieldLabelModifier = (^?! prefixed "_")}
-    ''Config
+JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
 

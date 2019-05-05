@@ -2,10 +2,7 @@
 module Lamdu.I18N.Texts where
 
 import qualified Control.Lens as Lens
-import           Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Char (toLower)
-import           Data.List.Lens (prefixed)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
@@ -53,7 +50,7 @@ data Code a = Code
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Code)
 Lens.makeLenses ''Code
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Code
+JsonTH.derivePrefixed "_" ''Code
 
 data CodeUI a = CodeUI
     { _newDefinitionButton :: a
@@ -69,7 +66,7 @@ data CodeUI a = CodeUI
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)
 Lens.makeLenses ''CodeUI
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''CodeUI
+JsonTH.derivePrefixed "_" ''CodeUI
 
 data StatusBar a = StatusBar
     { _sbStatusBar :: a
@@ -89,10 +86,7 @@ data StatusBar a = StatusBar
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 StatusBar)
 Lens.makeLenses ''StatusBar
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier =
-        (Lens.ix 0 %~ toLower) . (^?! prefixed "_sb")
-    } ''StatusBar
+JsonTH.derivePrefixed "_sb" ''StatusBar
 
 data Versioning a = Versioning
     { _branches :: a
@@ -107,7 +101,7 @@ data Versioning a = Versioning
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Versioning)
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Versioning
+JsonTH.derivePrefixed "_" ''Versioning
 Lens.makeLenses ''Versioning
 
 data Texts a = Texts
@@ -128,7 +122,7 @@ data Texts a = Texts
 -- because it has special disambiguation logic implemented in the dotter etc.
 
 Lens.makeLenses ''Texts
-deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+JsonTH.derivePrefixed "_" ''Texts
 
 data Language = Language
     { -- TODO: Should this still be called "Texts?"
@@ -137,10 +131,7 @@ data Language = Language
     } deriving (Eq, Show)
 
 Lens.makeLenses ''Language
-deriveJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier =
-        (Lens.ix 0 %~ toLower) . (^?! prefixed "_l")
-    } ''Language
+JsonTH.derivePrefixed "_l" ''Language
 
 instance HasConfigFolder Language where
     configFolder _ = "languages"
