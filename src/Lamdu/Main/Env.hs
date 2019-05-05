@@ -15,6 +15,8 @@ module Lamdu.Main.Env
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Property (Property)
+import qualified Data.Property as Property
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
@@ -51,7 +53,7 @@ data Env = Env
     , _exportActions :: GUIMain.ExportActions ViewM
     , _config :: Config
     , _theme :: Theme
-    , _settings :: Settings
+    , _settings :: Property IO Settings
     , _style :: Style.Style
     , _mainLoop :: MainLoop.Env
     , _animIdPrefix :: AnimId
@@ -63,7 +65,7 @@ Lens.makeLenses ''Env
 
 instance GUIMain.HasExportActions Env ViewM where exportActions = exportActions
 instance GUIMain.HasEvalResults Env ViewM where evalResults = evalRes
-instance Settings.HasSettings Env where settings = settings
+instance Settings.HasSettings Env where settings = settings . Property.pVal
 instance Style.HasStyle Env where style = style
 instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = mainLoop
 instance Spacer.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing

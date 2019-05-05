@@ -151,7 +151,8 @@ mainLoopOptions configSampler getFonts stateStorage
 
 mkEnv ::
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
-    EvalManager.Evaluator -> ConfigSampler.Sample -> MainLoop.Env -> Settings ->
+    EvalManager.Evaluator -> ConfigSampler.Sample -> MainLoop.Env ->
+    Property IO Settings ->
     IO Env
 mkEnv cachedFunctions monitors fonts evaluator sample mainEnv settings =
     EvalManager.getResults evaluator <&>
@@ -193,8 +194,8 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     settingsProp <- mkSettingsProp ^. mkProperty
                     env <-
                         mkEnv cachedFunctions monitors fonts evaluator
-                        sample mainEnv (Property.value settingsProp)
-                    makeRootWidget env monitors db evaluator sample settingsProp
+                        sample mainEnv settingsProp
+                    makeRootWidget env monitors db evaluator sample
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
             { makeWidget = makeWidget
@@ -205,11 +206,11 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
+    [Selection Theme] -> [Selection Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
-makeMainGui themeNames langNames settingsProp dbToIO env =
-    GUIMain.make themeNames langNames settingsProp env
+makeMainGui themeNames langNames dbToIO env =
+    GUIMain.make themeNames langNames (env ^. Env.settings) env
     <&> Lens.mapped %~
     \act ->
     act ^. ioTrans . Lens._Wrapped
@@ -227,14 +228,13 @@ makeRootWidget ::
     HasCallStack =>
     Env -> Debug.Monitors ->
     Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
-    Property IO Settings ->
     IO (Gui Widget IO)
-makeRootWidget env perfMonitors db evaluator sample settingsProp =
+makeRootWidget env perfMonitors db evaluator sample =
     do
         themeNames <- ConfigFolder.getNames
         langNames <- ConfigFolder.getNames
         let bgColor = env ^. Env.theme . Theme.backgroundColor
-        dbToIO $ makeMainGui themeNames langNames settingsProp dbToIO env
+        dbToIO $ makeMainGui themeNames langNames dbToIO env
             <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where
@@ -243,7 +243,7 @@ makeRootWidget env perfMonitors db evaluator sample settingsProp =
             (sample ^. sConfigData . Config.debug . Config.breakpoints)
             perfMonitors
         dbToIO action =
-            case settingsProp ^. Property.pVal . Settings.sAnnotationMode of
+            case env ^. Env.settings . Property.pVal . Settings.sAnnotationMode of
             Annotations.Evaluation ->
                 EvalManager.runTransactionAndMaybeRestartEvaluator evaluator action
             _ -> DbLayout.runDbTransaction db action
