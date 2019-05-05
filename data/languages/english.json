@@ -71,6 +71,12 @@
             "quit": "Quit",
             "jumpToSource": "Jump to source",
             "debug": "Debug"
+        },
+        "zoom": {
+            "view": "View",
+            "zoom": "Zoom",
+            "enlarge": "Enlarge",
+            "shrink": "Shrink"
         }
     }
 }

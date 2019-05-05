@@ -85,6 +85,7 @@ data Options = Options
     , stateStorage :: MkProperty' IO GUIState
     , debug :: DebugOptions
     , mainTexts :: IO (Texts Text)
+    , zoomTexts :: IO (Zoom.Texts Text)
     }
 
 data Handlers = Handlers
@@ -103,7 +104,7 @@ defaultDebugOptions =
     }
 
 defaultOptions ::
-    ( HasTexts env
+    ( HasTexts env, Zoom.HasTexts env
     , Element.HasAnimIdPrefix env, EventMapHelp.HasConfig env
     , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>
@@ -138,6 +139,7 @@ defaultOptions env =
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
             , mainTexts = pure (env ^. texts)
+            , zoomTexts = pure (env ^. Zoom.texts)
             }
 
 quitEventMap :: (MonadReader env m, Functor f, HasTexts env) => m (Gui EventMap f)
@@ -258,7 +260,9 @@ wrapMakeWidget zoom options lookupModeRef mkWidgetUnmemod size =
                 , _eState = s
                 }
         zoomEventMap <-
-            config ^. MainConfig.cZoom <&> Zoom.eventMap (env ^. eZoom)
+            Zoom.eventMap (env ^. eZoom)
+            <$> zoomTexts options
+            <*> config ^. MainConfig.cZoom
         txt <- mainTexts options
         jumpToSourceEventMap <-
             writeIORef lookupModeRef JumpToSource

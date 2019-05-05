@@ -74,6 +74,12 @@
             "quit": "צא",
             "jumpToSource": "קפוץ לקוד מקור",
             "debug": "דיבאג"
+        },
+        "zoom": {
+            "view": "תצוגה",
+            "zoom": "ניפוח",
+            "enlarge": "נפח",
+            "shrink": "כווץ"
         }
     }
 }

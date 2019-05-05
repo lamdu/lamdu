@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Zoom as Zoom
 import           Graphics.UI.GLFW.Utils (printGLVersion)
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
@@ -137,11 +138,13 @@ mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
             ConfigSampler.getSample configSampler
             <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
         }
-    , mainTexts =
-            ConfigSampler.getSample configSampler
-            <&> (^. sLanguageData . MainLoop.texts)
+    , mainTexts = getTexts MainLoop.texts
+    , zoomTexts = getTexts Zoom.texts
     }
     where
+        getTexts lens =
+            ConfigSampler.getSample configSampler
+            <&> (^. sLanguageData . lens)
         helpProp =
             mkSettingsProp
             & Property.prop %~ Property.composeLens Settings.sHelpShown

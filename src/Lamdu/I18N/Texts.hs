@@ -11,6 +11,7 @@ import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
 import           Lamdu.Prelude
@@ -118,6 +119,7 @@ data Texts a = Texts
     , _glue :: Glue.Texts a
     , _eventMap :: EventMap.Texts a
     , _choice :: Choice.Texts a
+    , _zoom :: Zoom.Texts a
     , _mainLoop :: MainLoop.Texts a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
@@ -155,6 +157,7 @@ instance Glue.HasTexts Language where texts = lTexts . glue
 instance Choice.HasTexts Language where texts = lTexts . choice
 instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
 instance HasLanguage Language where language = id
+instance Zoom.HasTexts Language where texts = lTexts . zoom
 
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts
