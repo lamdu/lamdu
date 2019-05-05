@@ -90,4 +90,3 @@ instance Glue.HasTexts Env where texts = Texts.language . Glue.texts
 instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
 instance Choice.HasTexts Env where texts = Texts.language . Choice.texts
 instance Texts.HasLanguage Env where language = language
-

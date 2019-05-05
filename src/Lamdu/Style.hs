@@ -1,18 +1,25 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.Style
-    ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num, help
+    ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num
     , make
     , HasStyle(..)
-    , FontInfo(..)
     , mainLoopConfig
     ) where
 
 import qualified Control.Lens as Lens
-import qualified GUI.Momentu.Draw as Draw
+import           Data.Property (MkProperty)
+import qualified Data.Property as Property
+import qualified GUI.Momentu.Direction as Dir
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
+import qualified GUI.Momentu.Font as Font
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Main.Animation as Anim
 import qualified GUI.Momentu.Main.Config as MainConfig
+import           GUI.Momentu.Widget (Widget)
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
+import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -24,6 +31,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.I18N.Texts (Language)
 
 import           Lamdu.Prelude
 
@@ -34,7 +42,6 @@ data Style = Style
     , _bytes :: TextEdit.Style
     , _text :: TextEdit.Style
     , _num :: TextEdit.Style
-    , _help :: EventMapHelp.Style
     }
 Lens.makeLenses ''Style
 
@@ -63,7 +70,6 @@ make fonts theme =
     , _bytes          = textEdit TextColors.literalColor Fonts.literalBytes
     , _text           = textEdit TextColors.literalColor Fonts.literalText
     , _num            = textEdit TextColors.literalColor Fonts.base
-    , _help           = helpStyle (fonts ^. Fonts.help) (theme ^. Theme.help)
     }
     where
         textEdit color font =
@@ -74,33 +80,64 @@ make fonts theme =
             , TextView._styleUnderline = Nothing
             }
 
-newtype FontInfo = FontInfo { fontHeight :: Draw.R }
+addHelp ::
+    Config -> Theme -> Language -> Font ->
+    Widget.Size -> Widget (f a) -> Widget (f a)
+addHelp config theme language font size widget =
+    widget
+    & Widget.wState . Widget._StateFocused . Lens.mapped %~
+    (EventMapHelp.addHelpView size ?? env)
+    where
+        env =
+            EventMapHelp.Env
+            { EventMapHelp._eConfig =
+                EventMapHelp.Config
+                { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
+                }
+            , EventMapHelp._eAnimIdPrefix = ["help box"]
+            , EventMapHelp._eDirLayout = language ^. Dir.layoutDir
+            , EventMapHelp._eDirTexts = language ^. Dir.texts
+            , EventMapHelp._eEventMapTexts = language ^. E.texts
+            , EventMapHelp._eGlueTexts = language ^. Glue.texts
+            , EventMapHelp._eStyle = helpStyle font (theme ^. Theme.help)
+            }
 
-mainLoopConfig :: (Zoom -> IO FontInfo) -> IO (Config, Theme) -> MainConfig.Config
-mainLoopConfig getFontInfo getConfig =
+mainLoopConfig ::
+    MkProperty IO o EventMapHelp.IsHelpShown ->
+    (Zoom -> IO (Fonts Font)) -> IO (Config, Theme, Language) -> MainConfig.Config
+mainLoopConfig helpProp getFonts getConfig =
     MainConfig.Config
     { _cAnim =
-        getConfig
-        <&> \(_config, theme) ->
+        getConfig <&> (^. _2)
+        <&> \theme ->
         Anim.Config
         { acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
         , acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
         }
     , _cCursor =
         \zoom ->
-        (,) <$> getFontInfo zoom <*> getConfig
-        <&> \(fi, (_config, theme)) ->
+        (,) <$> getFonts zoom <*> (getConfig <&> (^. _2))
+        <&> \(fonts, theme) ->
         Cursor.Config
         { cursorColor = theme ^. Theme.cursorColor
         , Cursor.decay = Just Cursor.Decay
-            { Cursor.heightUnit = fontHeight fi
+            { Cursor.heightUnit = fonts ^. Fonts.base & Font.height
             , Cursor.heightExponent = theme ^. Theme.cursorDecayExponent
             }
         }
     , _cZoom = getConfig <&> (^. _1 . Config.zoom)
-    , _cPostProcess = \_zoom _size widget -> pure widget
+    , _cPostProcess =
+        \zoom size widget ->
+        Property.getP helpProp
+        >>= \case
+        HelpNotShown -> pure widget
+        HelpShown ->
+            do
+                helpFont <- getFonts zoom <&> (^. Fonts.help)
+                (config, theme, language) <- getConfig
+                addHelp config theme language helpFont size widget & pure
     , _cInvalidCursorOverlayColor =
-        getConfig
-        <&> \(_config, theme) ->
+        getConfig <&> (^. _2)
+        <&> \theme ->
         theme ^. Theme.invalidCursorOverlayColor
     }

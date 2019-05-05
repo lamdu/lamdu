@@ -47,7 +47,6 @@ import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
-import           Lamdu.Style (FontInfo(..))
 import qualified Lamdu.Style as Style
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
@@ -110,13 +109,13 @@ jumpToSource SrcLoc{srcLocFile, srcLocStartLine, srcLocStartCol} =
         ] & void
 
 mainLoopOptions ::
-    Sampler -> (M.Zoom -> IO (Fonts M.Font)) ->
+    MkProperty' IO Settings -> Sampler -> (M.Zoom -> IO (Fonts M.Font)) ->
     MkProperty' IO M.GUIState ->
     Maybe (MainLoop.PerfCounters -> IO ()) -> MainLoop.Options
-mainLoopOptions configSampler getFonts stateStorage
+mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
     reportPerfCounters =
     MainLoop.Options
-    { config = Style.mainLoopConfig mkFontInfo mkConfigTheme
+    { config = Style.mainLoopConfig helpProp getFonts getConfig
     , stateStorage = stateStorage
     , debug = MainLoop.DebugOptions
         { fpsFont =
@@ -143,36 +142,43 @@ mainLoopOptions configSampler getFonts stateStorage
             <&> (^. sLanguageData . MainLoop.texts)
     }
     where
-        mkConfigTheme =
+        helpProp =
+            mkSettingsProp
+            & Property.prop %~ Property.composeLens Settings.sHelpShown
+
+        getConfig =
             ConfigSampler.getSample configSampler
-            <&> \sample -> (sample ^. sConfigData, sample ^. sThemeData)
-        mkFontInfo zoom =
-            getFonts zoom <&> (^. Fonts.base) <&> Font.height <&> FontInfo
+            <&> \sample ->
+            ( sample ^. sConfigData
+            , sample ^. sThemeData
+            , sample ^. sLanguageData
+            )
 
 mkEnv ::
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
-    EvalManager.Evaluator -> ConfigSampler.Sample -> MainLoop.Env ->
+    EvalManager.Evaluator -> Sampler -> MainLoop.Env ->
     Property IO Settings ->
     IO Env
-mkEnv cachedFunctions monitors fonts evaluator sample mainEnv settings =
-    EvalManager.getResults evaluator <&>
-    \evalResults ->
-    Env
-    { _evalRes = evalResults
-    , _exportActions =
-        exportActions (sample ^. sConfigData)
-        (evalResults ^. current)
-        (EvalManager.executeReplIOProcess evaluator)
-    , _config = sample ^. sConfigData
-    , _theme = sample ^. sThemeData
-    , _settings = settings
-    , _style = Style.make fonts (sample ^. sThemeData)
-    , _mainLoop = mainEnv
-    , _animIdPrefix = mempty
-    , _debugMonitors = monitors
-    , _cachedFunctions = cachedFunctions
-    , _language = sample ^. sLanguageData
-    }
+mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
+    do
+        sample <- ConfigSampler.getSample configSampler
+        evalResults <- EvalManager.getResults evaluator
+        pure Env
+            { _evalRes = evalResults
+            , _exportActions =
+                exportActions (sample ^. sConfigData)
+                (evalResults ^. current)
+                (EvalManager.executeReplIOProcess evaluator)
+            , _config = sample ^. sConfigData
+            , _theme = sample ^. sThemeData
+            , _settings = settings
+            , _style = Style.make fonts (sample ^. sThemeData)
+            , _mainLoop = mainEnv
+            , _animIdPrefix = mempty
+            , _debugMonitors = monitors
+            , _cachedFunctions = cachedFunctions
+            , _language = sample ^. sLanguageData
+            }
 
 runMainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
@@ -181,7 +187,8 @@ runMainLoop ::
     MkProperty' IO Settings -> Cache -> Cache.Functions -> Debug.Monitors ->
     IO ()
 runMainLoop ekg stateStorage subpixel win mainLoop configSampler
-    evaluator db mkSettingsProp cache cachedFunctions monitors =
+    evaluator db mkSettingsProp cache cachedFunctions monitors
+    =
     do
         getFonts <- EditorFonts.makeGetFonts configSampler subpixel
         let makeWidget mainEnv =
@@ -194,14 +201,14 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     settingsProp <- mkSettingsProp ^. mkProperty
                     env <-
                         mkEnv cachedFunctions monitors fonts evaluator
-                        sample mainEnv settingsProp
+                        configSampler mainEnv settingsProp
                     makeRootWidget env monitors db evaluator sample
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
             { makeWidget = makeWidget
             , options =
-                mainLoopOptions configSampler getFonts stateStorage
-                reportPerfCounters
+                mainLoopOptions mkSettingsProp configSampler getFonts
+                stateStorage reportPerfCounters
             }
 
 makeMainGui ::

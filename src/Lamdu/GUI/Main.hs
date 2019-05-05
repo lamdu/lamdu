@@ -13,28 +13,21 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
-import qualified Data.Property as Property
-import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget, R)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
-import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
 import           Lamdu.Config.Theme (Theme)
@@ -56,7 +49,6 @@ import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
-import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
 import           Revision.Deltum.Transaction (Transaction)
@@ -67,44 +59,12 @@ type T = Transaction
 
 type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 
-helpEnv ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Glue.HasTexts env
-    , E.HasTexts env
-    ) =>
-    m EventMapHelp.Env
-helpEnv =
-    Lens.view id <&> \env ->
-    EventMapHelp.Env
-    { EventMapHelp._eConfig =
-        EventMapHelp.Config
-        { EventMapHelp._configOverlayDocKeys =
-            env ^. Config.config . Config.helpKeys
-        }
-    , EventMapHelp._eStyle = env ^. Style.style . Style.help
-    , EventMapHelp._eAnimIdPrefix = ["help box"]
-    , EventMapHelp._eDirLayout = env ^. Dir.layoutDir
-    , EventMapHelp._eDirTexts = env ^. Dir.texts
-    , EventMapHelp._eEventMapTexts = env ^. E.texts
-    , EventMapHelp._eGlueTexts = env ^. Glue.texts
-    }
-
-addHelp ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Glue.HasTexts env
-    , E.HasTexts env
-    ) =>
-    Vector2 R -> m (Widget (f a) -> Widget (f a))
-addHelp size =
-    helpEnv
-    <&> \env ->
-    Widget.wState . Widget._StateFocused . Lens.mapped %~
-    (EventMapHelp.addHelpView size ?? env)
-
 type Ctx env =
     ( HasCallStack
     , MainLoop.HasMainLoopEnv env
     , Cache.HasFunctions env
     , Debug.HasMonitors env
-    , Style.HasStyle env
+    , HasStyle env
     , Hover.HasStyle env
     , Settings.HasSettings env
     , Spacer.HasStdSpacing env
@@ -150,20 +110,13 @@ layout themeNames langNames settingsProp =
         quitTxt <- Lens.view (Texts.texts . Texts.codeUI . Texts.quit)
         let quitEventMap = E.keysEventMap quitKeys (E.Doc [quitTxt]) (error "Quit")
 
-        maybeAddHelp fullSize <*>
-            ( pure statusBarWidget
-                /-/ Spacer.vspaceLines (theTheme ^. Theme.topPadding)
-                /-/ pure codeEdit
-                <&> Scroll.focusAreaInto fullSize
-                <&> Widget.weakerEventsWithoutPreevents
-                    (statusBar ^. StatusBar.globalEventMap <> quitEventMap
-                        <> vcEventMap)
-            )
-    where
-        maybeAddHelp size =
-            case settingsProp ^. Property.pVal . Settings.sHelpShown of
-            HelpShown -> addHelp size
-            HelpNotShown -> pure id
+        pure statusBarWidget
+            /-/ Spacer.vspaceLines (theTheme ^. Theme.topPadding)
+            /-/ pure codeEdit
+            <&> Scroll.focusAreaInto fullSize
+            <&> Widget.weakerEventsWithoutPreevents
+                (statusBar ^. StatusBar.globalEventMap <> quitEventMap
+                    <> vcEventMap)
 
 make ::
     Ctx env =>
