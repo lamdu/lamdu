@@ -132,7 +132,7 @@ defaultOptions env =
                     \_zoom size widget ->
                     do
                         prop <- helpProp ^. Property.mkProperty
-                        EventMapHelp.toggledHelpAdder prop env size widget
+                        EventMapHelp.toggledHelpAdder env prop size widget
                             & pure
                 , _cInvalidCursorOverlayColor = pure (Draw.Color 1.0 0 0 0.1)
                 }

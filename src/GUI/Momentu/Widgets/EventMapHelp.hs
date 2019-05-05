@@ -301,11 +301,13 @@ toggleEventMap showingHelp =
             HelpShown -> "Hide"
 
 toggledHelpAdder ::
-    ( Monad f, E.HasTexts env, Glue.HasTexts env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Monad f, E.HasTexts env, Glue.HasTexts env
+    , Element.HasAnimIdPrefix env
     , HasConfig env, HasStyle env
     ) =>
-    Property f IsHelpShown -> env -> Widget.Size -> Gui Widget f -> Gui Widget f
-toggledHelpAdder prop env size widget =
+    m (Property f IsHelpShown -> Widget.Size -> Gui Widget f -> Gui Widget f)
+toggledHelpAdder =
+    Lens.view id <&> \env prop size widget ->
     widget & Widget.wState %~
     \case
     Widget.StateUnfocused {} -> error "adding help to non-focused root widget!"
