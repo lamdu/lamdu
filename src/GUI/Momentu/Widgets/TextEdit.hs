@@ -107,25 +107,25 @@ cursorRects s str =
         lineHeight = TextView.lineHeight s
 
 makeInternal ::
-    (forall a. Lens.Getting a (Modes a) a) ->
-    Style -> Text -> EmptyStrings -> Dir.Layout ->
-    Widget.Id -> TextWidget ((,) Text)
-makeInternal mode s str emptyStrings dir myId =
+    (Dir.HasLayoutDir env, HasStyle env) =>
+    env -> (forall a. Lens.Getting a (Modes a) a) ->
+    Text -> EmptyStrings -> Widget.Id -> TextWidget ((,) Text)
+makeInternal env mode str emptyStrings myId =
     v
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter ?~
         Widget.enterFuncAddVirtualCursor (Rect 0 (v ^. Element.size))
-        (enterFromDirection (v ^. Element.size) s str myId)
+        (enterFromDirection (v ^. Element.size) (env ^. style) str myId)
     where
-        emptyColor = s ^. sEmptyStringsColors . mode
+        emptyColor = env ^. style . sEmptyStringsColors . mode
         emptyView = mkView (emptyStrings ^. mode) (TextView.color .~ emptyColor)
         nonEmptyView =
             mkView (Text.take 5000 str) id
-            & Align.tValue %~ Element.padToSize dir (emptyView ^. Element.size) 0
+            & Align.tValue %~ Element.padToSize env (emptyView ^. Element.size) 0
         v = if Text.null str then emptyView else nonEmptyView
         mkView displayStr setColor =
-            TextView.make (setColor s) displayStr animId
-            & Element.padAround (Vector2 (s ^. sCursorWidth / 2) 0)
+            TextView.make (setColor (env ^. style)) displayStr animId
+            & Element.padAround (Vector2 (env ^. style . sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 minimumIndex :: Ord a => [a] -> Int
@@ -167,17 +167,18 @@ eventResult myId newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    Style -> Text -> EmptyStrings -> Dir.Layout -> Cursor -> Widget.Id ->
+    (Dir.HasLayoutDir env, HasStyle env) =>
+    env -> Text -> EmptyStrings -> Cursor -> Widget.Id ->
     TextWidget ((,) Text)
-makeFocused s str empty dir cursor myId =
-    makeInternal focused s str empty dir myId
+makeFocused env str empty cursor myId =
+    makeInternal env focused str empty myId
     & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
     where
-        cursorRect@(Rect origin size) = mkCursorRect s cursor str
+        cursorRect@(Rect origin size) = mkCursorRect (env ^. style) cursor str
         cursorFrame =
             Anim.unitSquare ["text-cursor"]
-            & Anim.unitImages %~ Draw.tint (s ^. sCursorColor)
+            & Anim.unitImages %~ Draw.tint (env ^. style . sCursorColor)
             & unitIntoCursorRect
         unitIntoCursorRect img =
             img
@@ -367,9 +368,8 @@ make ::
 make =
     do
         get <- getCursor
-        s <- Lens.view style
-        dir <- Lens.view Dir.layoutDir
+        env <- Lens.view id
         pure $ \empty str myId ->
             case get str myId of
-            Nothing -> makeInternal unfocused s str empty dir myId
-            Just pos -> makeFocused s str empty dir pos myId
+            Nothing -> makeInternal env unfocused str empty myId
+            Just pos -> makeFocused env str empty pos myId
