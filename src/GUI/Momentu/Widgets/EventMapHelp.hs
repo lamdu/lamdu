@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts, DerivingVia #-}
 module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)
@@ -9,12 +9,17 @@ module GUI.Momentu.Widgets.EventMapHelp
     , HasStyle(..), HasConfig(..)
     , defaultStyle
     , defaultConfig
+    , Texts(..), textHelp, textKeyBindings, textShow, textHide
+    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Function (on)
 import qualified Data.List as List
+import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
@@ -66,6 +71,21 @@ Lens.makeLenses ''Config
 
 class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
 class HasConfig env where config :: Lens' env Config
+
+data Texts a = Texts
+    { _textHelp :: a
+    , _textKeyBindings :: a
+    , _textShow :: a
+    , _textHide :: a
+    , _textShowHelp :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+Lens.makeLenses ''Texts
+deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+-- HasTexts is not required for make or addHelpView
+class (E.HasTexts env, Glue.HasTexts env) => HasTexts env where
+    texts :: Lens' env (Texts Text)
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -193,12 +213,13 @@ makeFromFocus size focus =
 
 makeTooltip ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Glue.HasTexts env
-    , HasStyle env, HasConfig env
+    , HasStyle env, HasConfig env, HasTexts env
     ) => m View
 makeTooltip =
     do
         helpKeys <- Lens.view (config . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
-        (Label.make "Show help" <&> (^. Align.tValue))
+        txt <- Lens.view (texts . textShowHelp)
+        (Label.make txt <&> (^. Align.tValue))
             /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
 mkIndent :: (MonadReader env m, Glue.HasTexts env) => m (R -> View -> View)
@@ -286,34 +307,37 @@ addHelpView ::
 addHelpView = addHelpViewWith makeFromFocus
 
 toggleEventMap ::
-    (MonadReader env m, Monoid a, Monad f, HasConfig env) =>
+    (MonadReader env m, Monoid a, Monad f, HasConfig env, HasTexts env) =>
     Property f IsHelpShown -> m (EventMap (f a))
 toggleEventMap showingHelp =
-    Lens.view (config . configOverlayDocKeys)
+    Lens.view id
     <&>
-    \keys ->
-    Property.pureModify showingHelp toggle
-    & E.keysEventMap keys
-        (E.Doc ["Help", "Key Bindings", docStr])
-    where
-        docStr =
+    \env ->
+    let docStr =
             case showingHelp ^. Property.pVal of
-            HelpNotShown -> "Show"
-            HelpShown -> "Hide"
+            HelpNotShown -> env ^. texts . textShow
+            HelpShown -> env ^. texts . textHide
+    in  Property.pureModify showingHelp toggle
+        & E.keysEventMap (env ^. config . configOverlayDocKeys)
+            ( E.Doc
+                [ env ^. texts . textHelp
+                , env ^. texts . textKeyBindings
+                , docStr
+                ]
+            )
 
 helpViewForState ::
-    ( MonadReader env m
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env
-    , HasStyle env, HasConfig env, E.HasTexts env
+    ( MonadReader env m, Element.HasAnimIdPrefix env
+    , HasStyle env, HasConfig env, HasTexts env
     ) =>
     IsHelpShown -> Widget.Size -> Widget.Focused (f a) -> m View
 helpViewForState HelpNotShown = \_ _ -> makeTooltip
 helpViewForState HelpShown = makeFromFocus
 
 toggledHelpAdder ::
-    ( MonadReader env m, Monad f, E.HasTexts env, Glue.HasTexts env
+    ( MonadReader env m, Monad f
     , Element.HasAnimIdPrefix env
-    , HasConfig env, HasStyle env
+    , HasConfig env, HasStyle env, HasTexts env
     ) =>
     m (Property f IsHelpShown -> Widget.Size -> Gui Widget f -> Gui Widget f)
 toggledHelpAdder =

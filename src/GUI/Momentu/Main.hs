@@ -32,7 +32,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
-import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Config (Config(..))
@@ -104,9 +103,9 @@ defaultDebugOptions =
     }
 
 defaultOptions ::
-    ( E.HasTexts env, HasTexts env, Glue.HasTexts env
+    ( HasTexts env
     , Element.HasAnimIdPrefix env, EventMapHelp.HasConfig env
-    , EventMapHelp.HasStyle env
+    , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>
     env -> IO Options
 defaultOptions env =
