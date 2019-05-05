@@ -230,7 +230,10 @@ toWidgetWithKeys env keys size sChildren =
                 foldStrollDests strollKeys dirName l =
                     foldMap
                     ( EventMap.keysEventMapMovesCursor strollKeys
-                        (EventMap.Doc ["Navigation", "Stroll", dirName])
+                        (EventMap.Doc
+                            [ nav
+                            , "Stroll", dirName
+                            ])
                         . pure . (^. l . Lens._Wrapped)
                     )
                 strollBefore =
@@ -254,6 +257,8 @@ toWidgetWithKeys env keys size sChildren =
             }
     }
     where
+        nav :: Text -- remove this and get a weird type error!
+        nav = env ^. Dir.texts . Dir.navigation
         dir = env ^. Dir.layoutDir
         translateChildWidget (rect, widget) =
             -- -- Each child is set to the size of the entire grid and
