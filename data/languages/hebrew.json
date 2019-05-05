@@ -70,6 +70,23 @@
             "select": "סמן",
             "chooseSelected": "בחר"
         },
+        "textEdit": {
+            "edit": "עריכה",
+            "delete": "מחק",
+            "insert": "הכנס",
+            "forward": "קדימה",
+            "backward": "אחורה",
+            "word": "מילה",
+            "till": "עד",
+            "newline": "שורה חדשה",
+            "space": "רווח",
+            "beginningOfLine": "תחילת שורה",
+            "endOfLine": "סוף שורה",
+            "beginningOfText": "תחילת טקסט",
+            "endOfText": "סוף טקסט",
+            "swapLetters": "החלף אותיות",
+            "character": "אות"
+        },
         "mainLoop": {
             "quit": "צא",
             "jumpToSource": "קפוץ לקוד מקור",

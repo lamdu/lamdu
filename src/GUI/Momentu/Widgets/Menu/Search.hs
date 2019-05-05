@@ -34,7 +34,6 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -124,7 +123,7 @@ defaultEmptyStrings = TextEdit.Modes "  " "  "
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     ( MonadReader env m, Applicative f
-    , TextEdit.HasStyle env, HasState env, Dir.HasLayoutDir env
+    , TextEdit.HasStyle env, HasState env, TextEdit.HasTexts env
     ) =>
     Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
 basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
@@ -210,7 +209,7 @@ addSearchTermStyle myId act =
 searchTermEdit ::
     ( MonadReader env m, Applicative f, HasTermStyle env
     , TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
-    , Dir.HasLayoutDir env
+    , TextEdit.HasTexts env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =

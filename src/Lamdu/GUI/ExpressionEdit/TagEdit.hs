@@ -14,7 +14,6 @@ import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -68,7 +67,7 @@ disallowedNameChars = ",[]\\`()"
 
 makeTagNameEdit ::
     ( MonadReader env m, Applicative f
-    , TextEdit.HasStyle env, GuiState.HasCursor env, Dir.HasLayoutDir env
+    , TextEdit.HasStyle env, GuiState.HasCursor env, TextEdit.HasTexts env
     ) =>
     Name.StoredName f -> Widget.Id ->
     m (TextWidget f)
@@ -246,6 +245,7 @@ type HasSearchTermEnv env =
 
 makeHoleSearchTerm ::
     ( MonadReader env m, Applicative o, HasSearchTermEnv env, Glue.HasTexts env
+    , TextEdit.HasTexts env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->

@@ -8,6 +8,7 @@ import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 
@@ -113,6 +114,7 @@ data Texts a = Texts
     , _glue :: Glue.Texts a
     , _eventMap :: EventMap.Texts a
     , _choice :: Choice.Texts a
+    , _textEdit :: TextEdit.Texts a
     , _zoom :: Zoom.Texts a
     , _mainLoop :: MainLoop.Texts a
     }
@@ -138,6 +140,7 @@ instance HasConfigFolder Language where
 
 class
     ( Glue.HasTexts env, Dir.HasTexts env, Choice.HasTexts env
+    , TextEdit.HasTexts env
     ) => HasLanguage env where
     language :: Lens' env Language
 instance EventMap.HasTexts Language where texts = lTexts . eventMap
@@ -146,6 +149,7 @@ instance Dir.HasLayoutDir Language where layoutDir = lDirection
 instance Dir.HasTexts Language where texts = lTexts . dir
 instance Glue.HasTexts Language where texts = lTexts . glue
 instance Choice.HasTexts Language where texts = lTexts . choice
+instance TextEdit.HasTexts Language where texts = lTexts . textEdit
 instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
 instance HasLanguage Language where language = id
 instance Zoom.HasTexts Language where texts = lTexts . zoom

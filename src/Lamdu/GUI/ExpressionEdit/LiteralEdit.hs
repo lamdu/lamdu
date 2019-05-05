@@ -13,7 +13,6 @@ import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -144,7 +143,7 @@ parseNum newText
 numEdit ::
     ( MonadReader env m, Monad o
     , HasConfig env, HasStyle env, Menu.HasConfig env
-    , GuiState.HasState env, Dir.HasLayoutDir env
+    , GuiState.HasState env, TextEdit.HasTexts env
     ) =>
     Property o Double ->
     Sugar.Payload name i o ExprGui.Payload ->

@@ -8,7 +8,6 @@ import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -47,7 +46,7 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
     ( Applicative f, MonadReader env m, GuiState.HasCursor env
-    , TextEdit.HasStyle env, Dir.HasLayoutDir env
+    , TextEdit.HasStyle env, TextEdit.HasTexts env
     ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     m (TextWidget f)
@@ -68,6 +67,7 @@ makeNamePartEditor color namePartStr setter myId =
 make ::
     ( MonadReader env f, Monad o, HasTheme env, GuiState.HasCursor env
     , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Glue.HasTexts env
+    , TextEdit.HasTexts env
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
     f (TextWidget o)

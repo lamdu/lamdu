@@ -66,6 +66,7 @@ instance Dir.HasTexts Env where texts = language . Dir.texts
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance Choice.HasTexts Env where texts = language . Choice.texts
+instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance HasLanguage Env where language = eLanguage
 
 make :: IO Env

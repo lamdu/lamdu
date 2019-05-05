@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia, ScopedTypeVariables #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
@@ -9,6 +9,8 @@ module GUI.Momentu.Widgets.TextEdit
     , make
     , defaultStyle
     , getCursor, encodeCursor
+    , Texts(..), textEdit, textDelete, textInsert
+    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -39,6 +41,32 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
+
+data Texts a = Texts
+    { _textEdit :: a
+    , _textDelete :: a
+    , _textInsert :: a
+    , _textForward :: a
+    , _textBackward :: a
+    , _textWord :: a
+    , _textTill :: a
+    , _textNewline :: a
+    , _textSpace :: a
+    , _textBeginningOfLine :: a
+    , _textEndOfLine :: a
+    , _textBeginningOfText :: a
+    , _textEndOfText :: a
+    , _textSwapLetters :: a
+    , _textCharacter :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+JsonTH.derivePrefixed "_text" ''Texts
+
+class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+
+Lens.makeLenses ''Texts
 
 type Cursor = Int
 
@@ -167,13 +195,15 @@ eventResult myId newText newCursor =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused ::
-    (Dir.HasLayoutDir env, HasStyle env) =>
+    (HasTexts env, HasStyle env) =>
     env -> Text -> EmptyStrings -> Cursor -> Widget.Id ->
     TextWidget ((,) Text)
 makeFocused env str empty cursor myId =
     makeInternal env focused str empty myId
     & Element.bottomLayer <>~ cursorFrame
-    & Align.tValue %~ Widget.setFocusedWith cursorRect (eventMap cursor str myId)
+    & Align.tValue %~
+        Widget.setFocusedWith cursorRect
+        (eventMap env cursor str myId)
     where
         cursorRect@(Rect origin size) = mkCursorRect (env ^. style) cursor str
         cursorFrame =
@@ -200,56 +230,60 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    Cursor -> Text -> Widget.Id -> Widget.EventContext ->
+    forall env.
+    HasTexts env =>
+    env -> Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
-eventMap cursor str myId _eventContext =
-    mconcat . concat $ [
-        [ E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc ["left"]) $
-            moveRelative (-1)
+eventMap txt cursor str myId _eventContext =
+    mconcat $ concat [
+        [ moveRelative (-1)
+            & E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc [Dir.texts.Dir.left])
         | cursor > 0 ],
 
-        [ E.keyPressOrRepeat (noMods MetaKey.Key'Right) (moveDoc ["right"]) $
-            moveRelative 1
+        [ moveRelative 1
+            & E.keyPressOrRepeat (noMods MetaKey.Key'Right) (moveDoc [Dir.texts.Dir.right])
         | cursor < textLength ],
 
-        [ keys (moveDoc ["word", "left"]) [ctrl MetaKey.Key'Left]
+        [ keys
+            (moveWordDoc [Dir.texts . Dir.left]) [ctrl MetaKey.Key'Left]
             backMoveWord
         | cursor > 0 ],
 
-        [ keys (moveDoc ["word", "right"]) [ctrl MetaKey.Key'Right] moveWord
+        [ keys (moveWordDoc [Dir.texts . Dir.right])
+            [ctrl MetaKey.Key'Right] moveWord
         | cursor < textLength ],
 
-        [ E.keyPressOrRepeat (noMods MetaKey.Key'Up) (moveDoc ["up"]) $
-            moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
+        [ moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
+            & E.keyPressOrRepeat (noMods MetaKey.Key'Up)
+            (moveDoc [Dir.texts . Dir.up])
         | cursorY > 0 ],
 
-        [ E.keyPressOrRepeat (noMods MetaKey.Key'Down) (moveDoc ["down"]) $
-            moveRelative
-            (Text.length curLineAfter + 1 +
-             min cursorX (Text.length nextLine))
+        [ moveRelative
+            (Text.length curLineAfter + 1 + min cursorX (Text.length nextLine))
+            & E.keyPressOrRepeat (noMods MetaKey.Key'Down)
+            (moveDoc [Dir.texts . Dir.down])
         | cursorY < lineCount - 1 ],
 
-        [ keys (moveDoc ["beginning of line"]) homeKeys $
-            moveRelative (-cursorX)
+        [ moveRelative (-cursorX)
+            & keys (moveDoc [texts.textBeginningOfLine]) homeKeys
         | cursorX > 0 ],
 
-        [ keys (moveDoc ["end of line"]) endKeys $
-          moveRelative (Text.length curLineAfter)
+        [ moveRelative (Text.length curLineAfter)
+            & keys (moveDoc [texts.textEndOfLine]) endKeys
         | not . Text.null $ curLineAfter ],
 
-        [ keys (moveDoc ["beginning of text"]) homeKeys $
-            moveAbsolute 0
+        [ moveAbsolute 0 & keys (moveDoc [texts.textBeginningOfText]) homeKeys
         | cursorX == 0 && cursor > 0 ],
 
-        [ keys (moveDoc ["end of text"]) endKeys $
-            moveAbsolute textLength
+        [ moveAbsolute textLength
+            & keys (moveDoc [texts.textEndOfText]) endKeys
         | Text.null curLineAfter && cursor < textLength ],
 
-        [ keys (deleteDoc ["backwards"]) [noMods MetaKey.Key'Backspace] $
-            backDelete 1
+        [ backDelete 1
+            & keys (deleteDoc [texts.textBackward]) [noMods MetaKey.Key'Backspace]
         | cursor > 0 ],
 
-        [ keys (deleteDoc ["word", "backwards"]) [ctrl MetaKey.Key'W]
+        [ keys (deleteDoc [texts.textWord, texts.textBackward]) [ctrl MetaKey.Key'W]
             backDeleteWord
         | cursor > 0 ],
 
@@ -261,49 +295,61 @@ eventMap cursor str myId _eventContext =
 
         in
 
-        [ keys (editDoc ["Swap letters"]) [ctrl MetaKey.Key'T]
+        [ keys (editDoc [texts.textSwapLetters]) [ctrl MetaKey.Key'T]
             swapLetters
         | cursor > 0 && textLength >= 2 ],
 
-        [ keys (deleteDoc ["forward"]) [noMods MetaKey.Key'Delete] $
-            delete 1
+        [ delete 1
+            & keys (deleteDoc [texts.textForward]) [noMods MetaKey.Key'Delete]
         | cursor < textLength ],
 
-        [ keys (deleteDoc ["word", "forward"]) [alt MetaKey.Key'D]
+        [ keys (deleteDoc [texts.textWord, texts.textForward]) [alt MetaKey.Key'D]
             deleteWord
         | cursor < textLength ],
 
-        [ keys (deleteDoc ["till", "end of line"]) [ctrl MetaKey.Key'K] $
-            delete (Text.length curLineAfter)
+        [ delete (Text.length curLineAfter)
+            & keys (deleteDoc [texts.textTill, texts.textEndOfLine])
+            [ctrl MetaKey.Key'K]
         | not . Text.null $ curLineAfter ],
 
-        [ keys (deleteDoc ["newline"]) [ctrl MetaKey.Key'K] $
-            delete 1
+        [ delete 1 & keys (deleteDoc [texts.textNewline]) [ctrl MetaKey.Key'K]
         | Text.null curLineAfter && cursor < textLength ],
 
-        [ keys (deleteDoc ["till", "beginning of line"]) [ctrl MetaKey.Key'U] $
-            backDelete (Text.length curLineBefore)
+        [ backDelete (Text.length curLineBefore)
+            & keys (deleteDoc [texts.textTill, texts.textBeginningOfLine])
+            [ctrl MetaKey.Key'U]
         | not . Text.null $ curLineBefore ],
 
         [ E.filterChars (`notElem` (" \n" :: String)) .
-            E.allChars "Character" (insertDoc ["character"]) $
+            E.allChars "Character" (insertDoc [texts.textCharacter]) $
             insert . Text.singleton
         ],
 
-        [ keys (insertDoc ["Newline"])
+        [ keys (insertDoc [texts.textNewline])
             [noMods MetaKey.Key'Enter, ModKey.shift MetaKey.Key'Enter] (insert "\n") ],
 
-        [ keys (insertDoc ["Space"])
+        [ keys (insertDoc [texts.textSpace])
             [noMods MetaKey.Key'Space, ModKey.shift MetaKey.Key'Space] (insert " ") ],
 
         [ E.pasteOnKey (cmd MetaKey.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
 
         ]
     where
-        editDoc = E.Doc . ("Edit" :)
-        deleteDoc = editDoc . ("Delete" :)
-        insertDoc = editDoc . ("Insert" :)
-        moveDoc = E.Doc . ("Navigation" :) . ("Move" :)
+        editDoc :: [Lens.ALens' env Text] -> E.Doc
+        editDoc = toDoc . (texts.textEdit :)
+        deleteDoc :: [Lens.ALens' env Text] -> E.Doc
+        deleteDoc = editDoc . (texts.textDelete :)
+        insertDoc :: [Lens.ALens' env Text] -> E.Doc
+        insertDoc = editDoc . (texts.textInsert :)
+        moveWordDoc :: [Lens.ALens' env Text] -> E.Doc
+        moveWordDoc = moveDoc . (texts.textWord :)
+        toDoc :: [Lens.ALens' env Text] -> E.Doc
+        toDoc lenses = lenses <&> (txt ^#) & E.Doc
+        moveDoc :: [Lens.ALens' env Text] -> E.Doc
+        moveDoc =
+            toDoc
+            . (Dir.texts . Dir.navigation :)
+            . (Dir.texts . Dir.move :)
         splitLines = Text.splitOn "\n"
         linesBefore = reverse (splitLines before)
         linesAfter = splitLines after
@@ -360,7 +406,7 @@ getCursor =
 
 make ::
     ( MonadReader env m, State.HasCursor env, HasStyle env
-    , Dir.HasLayoutDir env
+    , HasTexts env
     ) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
         TextWidget ((,) Text)

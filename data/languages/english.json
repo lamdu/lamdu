@@ -67,6 +67,23 @@
             "select": "Select",
             "chooseSelected": "Choose selected"
         },
+        "textEdit": {
+            "edit": "Edit",
+            "delete": "Delete",
+            "insert": "Insert",
+            "forward": "Forward",
+            "backward": "Backward",
+            "word": "Word",
+            "till": "Till",
+            "newline": "Newline",
+            "space": "Space",
+            "beginningOfLine": "Beginning Of Line",
+            "endOfLine": "End Of Line",
+            "beginningOfText": "Beginning Of Text",
+            "endOfText": "End Of Text",
+            "swapLetters": "Swap Letters",
+            "character": "Character"
+        },
         "mainLoop": {
             "quit": "Quit",
             "jumpToSource": "Jump to source",

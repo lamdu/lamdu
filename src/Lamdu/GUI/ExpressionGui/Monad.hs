@@ -122,6 +122,7 @@ instance Dir.HasTexts (Askable i o) where texts = Texts.language . Dir.texts
 instance EventMap.HasTexts (Askable i o) where texts = Texts.language . EventMap.texts
 instance Glue.HasTexts (Askable i o) where texts = Texts.language . Glue.texts
 instance Choice.HasTexts (Askable i o) where texts = Texts.language . Choice.texts
+instance TextEdit.HasTexts (Askable i o) where texts = Texts.language . TextEdit.texts
 instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a

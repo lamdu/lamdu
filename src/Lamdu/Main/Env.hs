@@ -89,4 +89,5 @@ instance Dir.HasTexts Env where texts = Texts.language . Dir.texts
 instance Glue.HasTexts Env where texts = Texts.language . Glue.texts
 instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
 instance Choice.HasTexts Env where texts = Texts.language . Choice.texts
+instance TextEdit.HasTexts Env where texts = Texts.language . TextEdit.texts
 instance Texts.HasLanguage Env where language = language
