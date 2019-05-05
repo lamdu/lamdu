@@ -58,6 +58,8 @@ data Texts a = Texts
     , _textEndOfText :: a
     , _textSwapLetters :: a
     , _textCharacter :: a
+    , _textClipboard :: a
+    , _textPaste :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
@@ -331,7 +333,8 @@ eventMap txt cursor str myId _eventContext =
         [ keys (insertDoc [texts.textSpace])
             [noMods MetaKey.Key'Space, ModKey.shift MetaKey.Key'Space] (insert " ") ],
 
-        [ E.pasteOnKey (cmd MetaKey.Key'V) (E.Doc ["Clipboard", "Paste"]) insert ]
+        [ E.pasteOnKey (cmd MetaKey.Key'V)
+            (toDoc [texts.textClipboard, texts.textPaste]) insert ]
 
         ]
     where

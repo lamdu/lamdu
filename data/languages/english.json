@@ -82,6 +82,8 @@
             "beginningOfText": "Beginning Of Text",
             "endOfText": "End Of Text",
             "swapLetters": "Swap Letters",
+            "clipboard": "Clipboard",
+            "paste": "Paste",
             "character": "Character"
         },
         "mainLoop": {

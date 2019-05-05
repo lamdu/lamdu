@@ -85,6 +85,8 @@
             "beginningOfText": "תחילת טקסט",
             "endOfText": "סוף טקסט",
             "swapLetters": "החלף אותיות",
+            "clipboard": "לוח גזירים",
+            "paste": "הדבק",
             "character": "אות"
         },
         "mainLoop": {
