@@ -35,7 +35,6 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
@@ -179,13 +178,28 @@ make size eventMap =
             & traverse makeTextViews
             <&> mkTreeView
 
+makeFromFocus ::
+    ( MonadReader env m, Glue.HasTexts env, E.HasTexts env, HasStyle env
+    , Element.HasAnimIdPrefix env
+    ) =>
+    Widget.Size -> Widget.Focused (f a) -> m View
+makeFromFocus size focus =
+    Widget.EventContext
+    { Widget._eVirtualCursor =
+        focus ^. Widget.fFocalAreas & last & State.VirtualCursor
+    , Widget._ePrevTextRemainder = mempty
+    } & focus ^. Widget.fEventMap
+    & make size
+
 makeTooltip ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, HasStyle env
-    , Glue.HasTexts env
-    ) => [ModKey] -> m View
-makeTooltip helpKeys =
-    (Label.make "Show help" <&> (^. Align.tValue))
-    /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
+    ( MonadReader env m, Element.HasAnimIdPrefix env, Glue.HasTexts env
+    , HasStyle env, HasConfig env
+    ) => m View
+makeTooltip =
+    do
+        helpKeys <- Lens.view (config . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
+        (Label.make "Show help" <&> (^. Align.tValue))
+            /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
 mkIndent :: (MonadReader env m, Glue.HasTexts env) => m (R -> View -> View)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
@@ -251,38 +265,25 @@ toggle HelpNotShown = HelpShown
 helpAnimId :: AnimId
 helpAnimId = ["help box"]
 
-addHelpView ::
-    ( MonadReader env m, HasConfig env, HasStyle env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, E.HasTexts env
-    ) => Vector2 R -> Widget.Focused (f a) -> m (Widget.Focused (f a))
-addHelpView = addHelpViewWith HelpShown
-
 addHelpViewWith ::
-    ( MonadReader env m, HasConfig env, HasStyle env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, E.HasTexts env
-    ) =>
-    IsHelpShown -> Vector2 R ->
+    (MonadReader env m, HasStyle env, Glue.HasTexts env) =>
+    (Widget.Size -> Widget.Focused (f a) -> m View) -> Widget.Size ->
     Widget.Focused (f a) -> m (Widget.Focused (f a))
-addHelpViewWith showingHelp size focus =
+addHelpViewWith mkHelpView size focus =
     do
-        keys <- Lens.view (config . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
         helpView <-
             ( (.)
                 <$> (Element.tint <$> Lens.view (style . styleTint))
                 <*> (MDraw.backgroundColor helpAnimId <$> Lens.view (style . styleBGColor))
-            ) <*>
-            case showingHelp of
-            HelpNotShown -> makeTooltip keys
-            HelpShown ->
-                make size
-                ( (focus ^. Widget.fEventMap)
-                    Widget.EventContext
-                    { Widget._eVirtualCursor = focus ^. Widget.fFocalAreas & last & State.VirtualCursor
-                    , Widget._ePrevTextRemainder = mempty
-                    }
-                )
+            ) <*> mkHelpView size focus
         atEdge <- hoverEdge size ?? helpView
         focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
+
+addHelpView ::
+    ( MonadReader env m, HasStyle env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, E.HasTexts env
+    ) => Widget.Size -> Widget.Focused (f a) -> m (Widget.Focused (f a))
+addHelpView = addHelpViewWith makeFromFocus
 
 toggleEventMap ::
     (MonadReader env m, Monoid a, Monad f, HasConfig env) =>
@@ -300,6 +301,15 @@ toggleEventMap showingHelp =
             HelpNotShown -> "Show"
             HelpShown -> "Hide"
 
+helpViewForState ::
+    ( MonadReader env m
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env
+    , HasStyle env, HasConfig env, E.HasTexts env
+    ) =>
+    IsHelpShown -> Widget.Size -> Widget.Focused (f a) -> m View
+helpViewForState HelpNotShown = \_ _ -> makeTooltip
+helpViewForState HelpShown = makeFromFocus
+
 toggledHelpAdder ::
     ( MonadReader env m, Monad f, E.HasTexts env, Glue.HasTexts env
     , Element.HasAnimIdPrefix env
@@ -313,7 +323,8 @@ toggledHelpAdder =
     Widget.StateUnfocused {} -> error "adding help to non-focused root widget!"
     Widget.StateFocused makeFocus ->
         makeFocus
-        <&> (addHelpViewWith (prop ^. Property.pVal) size ?? env)
+        <&> (addHelpViewWith
+                (helpViewForState (prop ^. Property.pVal)) size ?? env)
         <&> Widget.fEventMap . Lens.mapped %~
             (toggleEventMap prop env <>)
         & Widget.StateFocused
