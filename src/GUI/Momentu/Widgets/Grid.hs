@@ -19,6 +19,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
@@ -155,7 +156,7 @@ addNavEventmap env keys navDests eMap =
 
 make ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Dir.HasTexts env, Applicative f
+    , Glue.HasTexts env, Applicative f
     ) =>
     m
     (vert (horiz (Aligned (Gui Widget f))) ->
@@ -164,7 +165,7 @@ make = makeWithKeys ?? (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
     ( Traversable vert, Traversable horiz, MonadReader env m
-    , Dir.HasTexts env, Applicative f
+    , Glue.HasTexts env, Applicative f
     ) =>
     m
     (Keys ModKey ->
@@ -188,7 +189,7 @@ each2d =
 -- TODO: We assume that the given Cursor selects a focused
 -- widget. Prove it by passing the Focused data of that widget
 toWidgetWithKeys ::
-    (Dir.HasTexts env, Applicative f) =>
+    (Glue.HasTexts env, Applicative f) =>
     env -> Keys ModKey -> Widget.Size ->
     [[(Rect, Gui Widget f)]] ->
     Gui Widget f
@@ -227,17 +228,16 @@ toWidgetWithKeys env keys size sChildren =
                         else e
                 strollDests = traverse . _2 . Lens._Just . Widget.uMStroll
                 strollAheadDst = after ^. strollDests
-                foldStrollDests strollKeys dirName l =
+                foldStrollDests strollKeys dirLens l =
                     foldMap
                     ( EventMap.keysEventMapMovesCursor strollKeys
-                        (EventMap.Doc ["Navigation", "Stroll", dirName])
-                        . pure . (^. l . Lens._Wrapped)
+                        (Glue.strollDoc env dirLens) . pure . (^. Lens.cloneLens l)
                     )
                 strollBefore =
                     before ^. strollDests
-                    & foldStrollDests Widget.strollBackKeys "Back" _2
+                    & foldStrollDests Widget.strollBackKeys Glue.back (_2 . Lens._Wrapped')
                 strollAfter =
-                    foldStrollDests Widget.strollAheadKeys "Ahead" _1 strollAheadDst
+                    foldStrollDests Widget.strollAheadKeys Glue.ahead (_1 . Lens._Wrapped') strollAheadDst
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers

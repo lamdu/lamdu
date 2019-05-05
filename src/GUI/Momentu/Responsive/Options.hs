@@ -16,7 +16,6 @@ import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive
@@ -94,7 +93,7 @@ hbox =
 
 table ::
     ( MonadReader env m, Traversable t0, Traversable t1, Applicative f
-    , Dir.HasTexts env
+    , Glue.HasTexts env
     ) =>
     m (Gui (WideLayoutOption (Compose t0 t1)) f)
 table =
