@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia #-}
 module GUI.Momentu.Glue
     ( Texts(..), stroll, back, ahead
+        , strollDoc
     , HasTexts(..)
     , Glue(..), GluesTo
     , (/|/), (/-/)
@@ -21,6 +22,7 @@ import           GUI.Momentu.Direction (Orientation(..), axis, perpendicular)
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.EventMap as EventMap
 
 import           Lamdu.Prelude
 
@@ -36,6 +38,14 @@ Lens.makeLenses ''Texts
 
 class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 deriveJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = (^?! prefixed "_")} ''Texts
+
+strollDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> EventMap.Doc
+strollDoc env dirLens =
+    EventMap.Doc
+    [ env ^. Dir.texts . Dir.navigation
+    , env ^# texts . stroll
+    , env ^# texts . dirLens
+    ]
 
 class (Glued b a ~ Glued a b) => Glue env a b where
     type Glued a b

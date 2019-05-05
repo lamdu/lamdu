@@ -169,19 +169,13 @@ combineStates env orientation order (StateFocused f) (StateUnfocused u) =
                 , env ^. Dir.texts . Dir.move
                 , env ^. Dir.texts . Dir.textLens orientation order])
         dir = env ^. Dir.layoutDir
-        strollDoc dirLens =
-            EventMap.Doc
-            [ env ^. Dir.texts . Dir.navigation
-            , env ^. Glue.texts . Glue.stroll
-            , env ^. Glue.texts . dirLens
-            ]
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
                 EventMap.keysEventMapMovesCursor strollBackKeys
-                (strollDoc Glue.back) (pure bwd)
+                (Glue.strollDoc env Glue.back) (pure bwd)
             | otherwise =
                 EventMap.keysEventMapMovesCursor strollAheadKeys
-                (strollDoc Glue.ahead) (pure fwd)
+                (Glue.strollDoc env Glue.ahead) (pure fwd)
         dirCons =
             case (dir, orientation, order) of
             (_, Vertical  , Backward) -> FromBelow
