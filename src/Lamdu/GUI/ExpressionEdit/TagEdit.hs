@@ -245,7 +245,7 @@ type HasSearchTermEnv env =
 
 makeHoleSearchTerm ::
     ( MonadReader env m, Applicative o, HasSearchTermEnv env, Glue.HasTexts env
-    , TextEdit.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->

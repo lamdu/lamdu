@@ -85,6 +85,14 @@
             "submenuSymbol": " ◁",
             "commaNextEntry": ", הקלט הבא"
         },
+        "searchMenu": {
+            "pickNotApplicable": "בחר (לא ישים)",
+            "edit": "עריכה",
+            "searchTerm": "שורת חיפוש",
+            "delete": "מחיקה",
+            "appendChar": "הוספת אות",
+            "deleteBackwards": "מחק אחורה"
+        },
         "textEdit": {
             "edit": "עריכה",
             "delete": "מחק",

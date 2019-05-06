@@ -26,6 +26,11 @@ module GUI.Momentu.Widgets.Menu.Search
     -- temporary exports that will be removed when transition of HoleEdit
     -- to Menu.Search is complete
     , readSearchTerm
+
+    , Texts(..)
+        , textPickNotApplicable, textEdit, textSearchTerm, textDelete
+        , textAppendChar, textDeleteBackwards
+    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -52,6 +57,22 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
 import           Lamdu.Prelude
+
+data Texts a = Texts
+    { _textPickNotApplicable :: a
+    , _textEdit :: a
+    , _textSearchTerm :: a
+    , _textDelete :: a
+    , _textAppendChar :: a
+    , _textDeleteBackwards :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+Lens.makeLenses ''Texts
+JsonTH.derivePrefixed "_text" ''Texts
+
+class Menu.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 
 -- | Context necessary for creation of menu items for a search.
 data ResultsContext = ResultsContext
@@ -89,16 +110,21 @@ Lens.makeLenses ''TermCtx
 type AllowedSearchTerm = Text -> TermCtx Bool
 
 emptyPickEventMap ::
-    (MonadReader env m, Menu.HasConfig env, Applicative f) =>
+    ( MonadReader env m, Menu.HasConfig env, HasTexts env
+    , Applicative f
+    ) =>
     m (Gui EventMap f)
 emptyPickEventMap =
-    Lens.view (Menu.config . Menu.configKeys)
-    <&> allPickKeys
-    <&> \keys -> E.keysEventMap keys (E.Doc ["Pick (N/A)"]) (pure ())
+    Lens.view id
+    <&> \env ->
+    E.keysEventMap (allPickKeys env)
+    (E.Doc [env ^. texts.textPickNotApplicable]) (pure ())
     where
-        allPickKeys keys =
+        allPickKeys env =
             keys ^. Menu.keysPickOption <>
             keys ^. Menu.keysPickOptionAndGotoNext
+            where
+                keys = env ^. Menu.config . Menu.configKeys
 
 -- | All search menu results must start with a common prefix.
 -- This is used to tell when cursor was on a result that got filtered out
@@ -121,7 +147,7 @@ defaultEmptyStrings = TextEdit.Modes "  " "  "
 --   * no pick of first result / no Menu.HasConfig needed --> use
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
-    ( MonadReader env m, Applicative f
+    ( MonadReader env m, Applicative f, HasTexts env
     , TextEdit.HasStyle env, HasState env, TextEdit.HasTexts env
     ) =>
     Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
@@ -147,28 +173,32 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
                 E.filter (_tcTextEdit . allowedSearchTerm . fst)
             <&> Align.tValue . Lens.mapped %~ pure . onEvents
             <&> Align.tValue %~ Widget.takesStroll myId
+        env <- Lens.view id
         pure Term
             { _termWidget = widget
             , _termEditEventMap =
-                searchTermEditEventMap myId (_tcAdHoc . allowedSearchTerm) searchTerm
+                searchTermEditEventMap env myId (_tcAdHoc . allowedSearchTerm) searchTerm
             }
 
-searchTermDoc :: E.Subtitle -> E.Doc
-searchTermDoc subtitle = E.Doc ["Edit", "Search Term", subtitle]
+searchTermDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> E.Doc
+searchTermDoc env subtitle =
+    [textEdit, textSearchTerm, subtitle]
+    <&> ((env ^#) . (texts.)) & E.Doc
 
 addDelSearchTerm ::
-    (MonadReader env m, State.HasState env, Applicative f) =>
+    (MonadReader env m, State.HasState env, HasTexts env, Applicative f) =>
     Id -> m (Term f -> Term f)
 addDelSearchTerm myId =
-    readSearchTerm myId
+    Lens.view id
     <&>
-    \searchTerm term ->
-    let delSearchTerm
+    \env term ->
+    let searchTerm = readSearchTerm myId env
+        delSearchTerm
             | Text.null searchTerm = mempty
             | otherwise =
                 enterWithSearchTerm "" myId & pure
                 & E.keyPress (toModKey (MetaKey noMods MetaKey.Key'Escape))
-                (searchTermDoc "Delete")
+                (searchTermDoc env textDelete)
     in  term
         & termWidget . Align.tValue %~ Widget.weakerEventsWithoutPreevents delSearchTerm
         & termEditEventMap <>~ delSearchTerm
@@ -208,7 +238,7 @@ addSearchTermStyle myId act =
 searchTermEdit ::
     ( MonadReader env m, Applicative f, HasTermStyle env
     , TextEdit.HasStyle env, Menu.HasConfig env, State.HasState env
-    , TextEdit.HasTexts env, Menu.HasTexts env
+    , TextEdit.HasTexts env, HasTexts env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
@@ -221,7 +251,7 @@ searchTermEdit myId allowedSearchTerm mPickFirst =
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
-    ( MonadReader env m, Menu.HasConfig env, Menu.HasTexts env, HasState env
+    ( MonadReader env m, Menu.HasConfig env, HasTexts env, HasState env
     , Applicative f
     ) =>
     Id -> Menu.PickFirstResult f->
@@ -303,16 +333,16 @@ make makeSearchTerm makeOptions annotation myId =
     & assignCursor myId (options ^.. traverse . Menu.oId)
 
 searchTermEditEventMap ::
-    Applicative f =>
-    Id -> (Text -> Bool) -> Text -> Gui EventMap f
-searchTermEditEventMap myId allowedTerms searchTerm =
+    (Applicative f, HasTexts env) =>
+    env -> Id -> (Text -> Bool) -> Text -> Gui EventMap f
+searchTermEditEventMap env myId allowedTerms searchTerm =
     appendCharEventMap <> deleteCharEventMap
     <&> State.updateWidgetState myId
     <&> pure
     where
         appendCharEventMap =
             Text.snoc searchTerm
-            & E.allChars "Character" (searchTermDoc "Append character")
+            & E.allChars "Character" (searchTermDoc env textAppendChar)
             -- We only filter when appending last char, not when
             -- deleting last char, because after appending deletion
             -- necessarily preserves any invariant we enforce in
@@ -323,4 +353,4 @@ searchTermEditEventMap myId allowedTerms searchTerm =
             | otherwise =
                 Text.init searchTerm
                 & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
-                    (searchTermDoc "Delete backwards")
+                    (searchTermDoc env textDeleteBackwards)
