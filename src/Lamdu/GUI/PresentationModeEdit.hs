@@ -1,5 +1,5 @@
 -- | Choice widget for presentation mode
-
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.PresentationModeEdit
     ( make
     ) where
@@ -7,25 +7,33 @@ module Lamdu.GUI.PresentationModeEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property)
-import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.GUI.Styled (OneOfT(..))
+import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-{-# ANN make ("HLint: ignore Use head"::String) #-}
+lens :: Sugar.SpecialArgs dummy -> Lens.Lens' (Texts a) a
+lens mode =
+    Texts.codeUI .
+    case mode of
+    Sugar.Verbose -> Texts.pModeVerbose
+    Sugar.Object{} -> Texts.pModeOO
+    Sugar.Infix{} -> Texts.pModeInfix
 
+{-# ANN make ("HLint: ignore Use head"::String) #-}
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
@@ -42,21 +50,15 @@ make myId (Sugar.Params params) prop =
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
                 (TextView.style . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
-        defConfig <- Choice.defaultConfig
+        defConfig <-
+            Choice.defaultConfig
+            <*> Lens.view (Texts.texts . Texts.codeUI . Texts.presentationMode)
         Choice.make ?? prop ?? pairs
-            ?? defConfig "Presentation Mode" ?? myId
+            ?? defConfig ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where
         paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagVal
-        mkPair presentationMode =
-            Label.makeFocusable text <&> (,) presentationMode
-            where
-                text =
-                    case presentationMode of
-                    Sugar.Verbose -> "Verbose"
-                    Sugar.Object{} -> "OO"
-                    Sugar.Infix{} -> "Infix"
-                    & Text.pack
+        mkPair mode = Styled.mkFocusableLabel ?? OneOf (lens mode) <&> (,) mode
 make _ _ _ =
     -- This shouldn't happen?
     pure Element.empty

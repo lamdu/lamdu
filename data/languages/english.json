@@ -41,7 +41,11 @@
             "def": "Definition",
             "importJSON": "Import JSON file",
             "importReplFromJSON": "Import REPL from JSON file",
-            "execRepl": "Execute Repl Process"
+            "execRepl": "Execute Repl Process",
+            "presentationMode": "Presentation Mode",
+            "pModeVerbose": "Verbose",
+            "pModeOO": "OO",
+            "pModeInfix": "Infix"
         },
         "statusBar": {
             "statusBar": "Status Bar",

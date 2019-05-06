@@ -44,7 +44,11 @@
             "def": "הגדרה",
             "importJSON": "ייבא קובץ ג'סון",
             "importReplFromJSON": "ייבא שורת פקודה מג'סון",
-            "execRepl": "הפעל תוצאת שורת פקודה"
+            "execRepl": "הפעל תוצאת שורת פקודה",
+            "presentationMode": "מצב תצוגה",
+            "pModeVerbose": "עודף",
+            "pModeOO": "אובייקטי",
+            "pModeInfix": "תוכי"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",
