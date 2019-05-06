@@ -204,9 +204,8 @@ blockEvents env =
     , _backward = blockDirection MetaKey.Key'Up upBlocked
     }
     where
-        toDoc = E.Doc . map (env ^#)
         doc keyLens =
-            toDoc
+            E.toDoc env
             [ Dir.texts . Dir.navigation
             , Dir.texts . Dir.move
             , texts . keyLens

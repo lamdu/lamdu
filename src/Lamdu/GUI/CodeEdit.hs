@@ -135,9 +135,6 @@ make cp gp width =
             , _layoutNeedDisambiguation = False
             }
 
-toDoc :: env -> [Lens.ALens' env Text] -> E.Doc
-toDoc env = E.Doc . map (env ^#)
-
 makePaneEdit ::
     Monad m =>
     ExportActions m ->
@@ -147,7 +144,7 @@ makePaneEdit ::
 makePaneEdit theExportActions pane =
     do
         theConfig <- Lens.view config
-        doc <- Lens.view (Texts.texts . Texts.codeUI) <&> toDoc
+        doc <- Lens.view (Texts.texts . Texts.codeUI) <&> E.toDoc
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
@@ -201,7 +198,7 @@ makeNewDefinition cp =
 newDefinitionDoc :: (Texts.HasLanguage env, MonadReader env m) => m E.Doc
 newDefinitionDoc =
     Lens.view (Texts.texts . Texts.codeUI)
-    <&> flip toDoc [Texts.edit, Texts.newDefinition]
+    <&> flip E.toDoc [Texts.edit, Texts.newDefinition]
 
 makeNewDefinitionButton ::
     Monad m =>
@@ -240,22 +237,22 @@ panesEventMap theExportActions cp gp replVarInfo =
         mconcat
             [ newDefinitionEventMap <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"
-                (toDoc txt [Texts.collaboration, Texts.importJSON])
+                (E.toDoc txt [Texts.collaboration, Texts.importJSON])
                 (Just . traverse_ importAll)
                 <&> fmap (\() -> mempty)
             , foldMap
               (E.keysEventMapMovesCursor (theConfig ^. Config.previousCursorKeys)
-               (toDoc txt [Texts.navigation, Texts.goBack])) mJumpBack
+               (E.toDoc txt [Texts.navigation, Texts.goBack])) mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
-              (toDoc txt [Texts.collaboration, Texts.exportEverythingToJSON])
+              (E.toDoc txt [Texts.collaboration, Texts.exportEverythingToJSON])
                 exportAll
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
-                (toDoc txt [Texts.collaboration, Texts.importReplFromJSON])
+                (E.toDoc txt [Texts.collaboration, Texts.importReplFromJSON])
             , case replVarInfo of
                 Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
-                    (toDoc txt [Texts.execRepl])
+                    (E.toDoc txt [Texts.execRepl])
                     (IOTrans.liftIO executeRepl)
                 _ -> mempty
             ] & pure

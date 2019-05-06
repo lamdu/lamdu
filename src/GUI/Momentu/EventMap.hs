@@ -2,7 +2,8 @@
 {-# LANGUAGE DerivingVia, StandaloneDeriving, RankNTypes #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
-    , InputDoc, Subtitle, Doc(..), docStrs
+    , InputDoc, Subtitle
+    , Doc(..), toDoc, docStrs
     , Clipboard
     , MaybeWantsClipboard(..), _Doesn'tWantClipboard, _WantsClipboard
     , Texts(..), HasTexts(..)
@@ -69,6 +70,11 @@ newtype Doc = Doc
     { _docStrs :: [Subtitle]
     } deriving (Generic, Eq, Ord, Show)
 Lens.makeLenses ''Doc
+
+-- | Convenience wrapper to build a Doc by fetching the subtitles from
+-- an environment
+toDoc :: env -> [Lens.ALens' env Subtitle] -> Doc
+toDoc env = Doc . map (env ^#)
 
 data DocHandler a = DocHandler
     { _dhDoc :: Doc

@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
@@ -232,7 +232,6 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    forall env.
     HasTexts env =>
     env -> Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
@@ -338,17 +337,11 @@ eventMap txt cursor str myId _eventContext =
 
         ]
     where
-        editDoc :: [Lens.ALens' env Text] -> E.Doc
         editDoc = toDoc . (texts.textEdit :)
-        deleteDoc :: [Lens.ALens' env Text] -> E.Doc
         deleteDoc = editDoc . (texts.textDelete :)
-        insertDoc :: [Lens.ALens' env Text] -> E.Doc
         insertDoc = editDoc . (texts.textInsert :)
-        moveWordDoc :: [Lens.ALens' env Text] -> E.Doc
         moveWordDoc = moveDoc . (texts.textWord :)
-        toDoc :: [Lens.ALens' env Text] -> E.Doc
-        toDoc lenses = lenses <&> (txt ^#) & E.Doc
-        moveDoc :: [Lens.ALens' env Text] -> E.Doc
+        toDoc = E.toDoc txt
         moveDoc =
             toDoc
             . (Dir.texts . Dir.navigation :)

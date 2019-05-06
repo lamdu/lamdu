@@ -34,17 +34,14 @@ import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-toDoc :: env -> [Lens.ALens' env E.Subtitle] -> E.Doc
-toDoc txt = E.Doc . map (txt ^#)
-
 branchNameFDConfig :: Texts.Texts Text -> FocusDelegator.Config
 branchNameFDConfig txt = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'F2]
     , FocusDelegator.focusChildDoc =
-        toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.rename]
+        E.toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.rename]
     , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusParentDoc =
-        toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.doneRenaming]
+        E.toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.doneRenaming]
     }
 
 undoEventMap ::
@@ -52,7 +49,7 @@ undoEventMap ::
     Maybe (m GuiState.Update) -> Gui EventMap m
 undoEventMap txt config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.undo])
+    (E.toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.undo])
     & foldMap
 
 redoEventMap ::
@@ -60,7 +57,7 @@ redoEventMap ::
     Maybe (m GuiState.Update) -> Gui EventMap m
 redoEventMap txt config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.redo])
+    (E.toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.redo])
     & foldMap
 
 eventMap ::
@@ -73,11 +70,11 @@ eventMap =
     [ A.makeBranch actions
         <&> branchTextEditId
         & E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
-        (toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.new])
+        (E.toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.new])
     , A.currentBranch actions & Property.value & branchDelegatorId & pure
         & E.keysEventMapMovesCursor
         (config ^. VersionControl.jumpToBranchesKeys)
-        (toDoc txt
+        (E.toDoc txt
             [Texts.versioning . Texts.branches
             , Texts.codeUI . Texts.select
             ])
@@ -121,7 +118,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                             | List.isLengthAtLeast 2 (A.branches actions) =
                                 E.keysEventMapMovesCursor
                                 (config ^. VersionControl.delBranchKeys)
-                                (toDoc txt
+                                (E.toDoc txt
                                     [ Texts.versioning . Texts.branches
                                     , Texts.codeUI . Texts.delete
                                     ])
