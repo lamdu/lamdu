@@ -34,44 +34,53 @@ import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-branchNameFDConfig :: Texts.Versioning Text -> FocusDelegator.Config
+toDoc :: env -> [Lens.ALens' env E.Subtitle] -> E.Doc
+toDoc txt = E.Doc . map (txt ^#)
+
+branchNameFDConfig :: Texts.Texts Text -> FocusDelegator.Config
 branchNameFDConfig txt = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'F2]
     , FocusDelegator.focusChildDoc =
-        E.Doc [txt ^. Texts.branches, txt ^. Texts.rename]
+        toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.rename]
     , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusParentDoc =
-        E.Doc [txt ^. Texts.branches, txt ^. Texts.doneRenaming]
+        toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.doneRenaming]
     }
 
 undoEventMap ::
-    Texts.Versioning Text -> VersionControl.Config ->
+    Texts.Texts Text -> VersionControl.Config ->
     Maybe (m GuiState.Update) -> Gui EventMap m
 undoEventMap txt config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.Doc [txt ^. Texts.edit, txt ^. Texts.undo])
+    (toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.undo])
     & foldMap
 
 redoEventMap ::
-    Texts.Versioning Text -> VersionControl.Config ->
+    Texts.Texts Text -> VersionControl.Config ->
     Maybe (m GuiState.Update) -> Gui EventMap m
 redoEventMap txt config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.Doc [txt ^. Texts.edit, txt ^. Texts.redo])
+    (toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.redo])
     & foldMap
 
 eventMap ::
     (MonadReader env m, Applicative f, Texts.HasLanguage env) =>
     m (VersionControl.Config -> A.Actions t f -> Gui EventMap f)
 eventMap =
-    Lens.view (Texts.texts . Texts.versioning)
+    Lens.view Texts.texts
     <&> \txt config actions ->
     mconcat
-    [ E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
-      (E.Doc [txt ^. Texts.branches, txt ^. Texts.new]) $ branchTextEditId <$> A.makeBranch actions
-    , E.keysEventMapMovesCursor (config ^. VersionControl.jumpToBranchesKeys)
-      (E.Doc [txt ^. Texts.branches, txt ^. Texts.select]) $
-      (pure . branchDelegatorId . Property.value . A.currentBranch) actions
+    [ A.makeBranch actions
+        <&> branchTextEditId
+        & E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
+        (toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.new])
+    , A.currentBranch actions & Property.value & branchDelegatorId & pure
+        & E.keysEventMapMovesCursor
+        (config ^. VersionControl.jumpToBranchesKeys)
+        (toDoc txt
+            [Texts.versioning . Texts.branches
+            , Texts.codeUI . Texts.select
+            ])
     , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap txt config
     , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap txt config
     ]
@@ -93,7 +102,7 @@ makeBranchSelector ::
     A.Actions n mw -> mr (TextWidget mw)
 makeBranchSelector rwtransaction rtransaction actions =
     do
-        txt <- Lens.view (Texts.texts . Texts.versioning)
+        txt <- Lens.view Texts.texts
         let makeBranchNameEdit branch =
                 do
                     nameProp <-
@@ -112,9 +121,9 @@ makeBranchSelector rwtransaction rtransaction actions =
                             | List.isLengthAtLeast 2 (A.branches actions) =
                                 E.keysEventMapMovesCursor
                                 (config ^. VersionControl.delBranchKeys)
-                                (E.Doc
-                                    [ txt ^. Texts.branches
-                                    , txt ^. Texts.delete
+                                (toDoc txt
+                                    [ Texts.versioning . Texts.branches
+                                    , Texts.codeUI . Texts.delete
                                     ])
                                 (branchDelegatorId <$> A.deleteBranch actions branch)
                             | otherwise = mempty
@@ -135,7 +144,7 @@ makeBranchSelector rwtransaction rtransaction actions =
         defConfig <- Choice.defaultConfig
         Choice.make ?? A.currentBranch actions
             ?? branchNameEdits
-            ?? defConfig (txt ^. Texts.branches)
+            ?? defConfig (txt ^. Texts.versioning . Texts.branches)
             ?? WidgetIds.branchSelection
     where
         empty =

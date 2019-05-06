@@ -58,6 +58,7 @@ JsonTH.derivePrefixed "_" ''Code
 
 data CodeUI a = CodeUI
     { _newDefinitionButton :: a
+    , _newDefinition :: a
     , _undeleteButton :: a
     , _defUpdateHeader :: a
     , _defUpdateTo :: a
@@ -66,6 +67,27 @@ data CodeUI a = CodeUI
     , _quit :: a
     , _hidden :: a
     , _shown :: a
+    , _pick :: a
+    , _new :: a
+    , _select :: a
+    , _delete :: a
+    , _rename :: a
+    , _doneRenaming :: a
+    , _view :: a
+    , _pane :: a
+    , _close :: a
+    , _moveDown :: a
+    , _moveUp :: a
+    , _collaboration :: a
+    , _exportDefToJSON :: a
+    , _exportEverythingToJSON :: a
+    , _edit :: a
+    , _goBack :: a
+    , _navigation :: a
+    , _def :: a
+    , _importJSON :: a
+    , _importReplFromJSON :: a
+    , _execRepl :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)
@@ -94,14 +116,8 @@ JsonTH.derivePrefixed "_sb" ''StatusBar
 
 data Versioning a = Versioning
     { _branches :: a
-    , _new :: a
-    , _rename :: a
-    , _doneRenaming :: a
-    , _edit :: a
     , _undo :: a
     , _redo :: a
-    , _select :: a
-    , _delete :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Versioning)

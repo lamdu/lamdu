@@ -48,6 +48,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -195,6 +196,36 @@ makeOptions tagSelection mkPickResult ctx
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (allowedTagName searchTerm) = id
                     | otherwise = maybe id (:) (addNewTag tagSelection mkPickResult ctx)
+            txt <- Lens.view Texts.texts
+            let makeOption opt =
+                    Menu.Option
+                    { Menu._oId = optionWId
+                    , Menu._oRender =
+                        (Widget.makeFocusableView ?? optionWId <&> fmap)
+                        <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
+                        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
+                        <&>
+                        \widget ->
+                        Menu.RenderedOption
+                        { Menu._rWidget = widget
+                        , Menu._rPick = Widget.PreEvent
+                            { Widget._pDesc =
+                                txt ^. Texts.codeUI . Texts.pick
+                            , Widget._pAction =
+                                opt ^. Sugar.toPick
+                                <&> mkPickResult
+                                (opt ^. Sugar.toInfo . Sugar.tagInstance)
+                            , Widget._pTextRemainder = ""
+                            }
+                        }
+                    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+                    }
+                    where
+                        instanceId =
+                            opt ^. Sugar.toInfo . Sugar.tagInstance
+                            & WidgetIds.fromEntityId
+                        optionWId =
+                            ctx ^. SearchMenu.rResultIdPrefix <> instanceId
             results <&> snd
                 & splitAt resultCount
                 & _2 %~ not . null
@@ -204,28 +235,6 @@ makeOptions tagSelection mkPickResult ctx
     where
         withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)
         searchTerm = ctx ^. SearchMenu.rSearchTerm
-        makeOption opt =
-            Menu.Option
-            { Menu._oId = optionWId
-            , Menu._oRender =
-                (Widget.makeFocusableView ?? optionWId <&> fmap)
-                <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
-                & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
-                <&>
-                \widget ->
-                Menu.RenderedOption
-                { Menu._rWidget = widget
-                , Menu._rPick = Widget.PreEvent
-                    { Widget._pDesc = "Pick"
-                    , Widget._pAction = opt ^. Sugar.toPick <&> mkPickResult (opt ^. Sugar.toInfo . Sugar.tagInstance)
-                    , Widget._pTextRemainder = ""
-                    }
-                }
-            , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
-            }
-            where
-                instanceId = opt ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId
-                optionWId = ctx ^. SearchMenu.rResultIdPrefix <> instanceId
 
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Name.isValidText
