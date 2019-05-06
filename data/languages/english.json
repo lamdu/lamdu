@@ -79,7 +79,8 @@
             "noResults": "(no results)",
             "downBlocked": "down (blocked)",
             "upBlocked": "up (blocked)",
-            "submenuSymbol": " ▷"
+            "submenuSymbol": " ▷",
+            "commaNextEntry": ", Next entry"
         },
         "textEdit": {
             "edit": "Edit",

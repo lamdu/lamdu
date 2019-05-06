@@ -57,6 +57,7 @@ data Texts a = Texts
     , _downBlocked :: a
     , _upBlocked :: a
     , _submenuSymbol :: a
+    , _commaNextEntry :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
@@ -298,28 +299,30 @@ instance Semigroup (OptionList a) where
     FullList xs <> FullList ys = FullList (xs ++ ys)
 
 makePickEventMap ::
-    (MonadReader env m, HasConfig env, Applicative f) =>
+    (MonadReader env m, HasConfig env, HasTexts env, Applicative f) =>
     m (Widget.PreEvent (f PickResult) -> Gui EventMap f)
 makePickEventMap =
-    Lens.view (config . configKeys)
+    Lens.view id
     <&>
-    \keys pick ->
-    E.keyPresses (keys ^. keysPickOptionAndGotoNext <&> MetaKey.toModKey)
-    (E.Doc [pick ^. Widget.pDesc <> ", Next entry"])
-    (pick ^. Widget.pAction <&>
-        \result ->
-        case result ^. pickMNextEntry of
-        Just nextEntry -> State.updateCursor nextEntry
-        Nothing ->
-            State.updateCursor (result ^. pickDest)
-            & State.uPreferStroll .~ (True ^. Lens._Unwrapped)
-        )
-    <>
-    E.keysEventMapMovesCursor (keys ^. keysPickOption)
-    (E.Doc [pick ^. Widget.pDesc]) (pick ^. Widget.pAction <&> (^. pickDest))
+    \env pick ->
+    let keys = env ^. config . configKeys
+    in  E.keyPresses (keys ^. keysPickOptionAndGotoNext <&> MetaKey.toModKey)
+        (E.Doc [pick ^. Widget.pDesc <> env ^. texts . commaNextEntry])
+        (pick ^. Widget.pAction <&>
+            \result ->
+            case result ^. pickMNextEntry of
+            Just nextEntry -> State.updateCursor nextEntry
+            Nothing ->
+                State.updateCursor (result ^. pickDest)
+                & State.uPreferStroll .~ (True ^. Lens._Unwrapped)
+            )
+        <>
+        E.keysEventMapMovesCursor (keys ^. keysPickOption)
+        (E.Doc [pick ^. Widget.pDesc])
+        (pick ^. Widget.pAction <&> (^. pickDest))
 
 addPickers ::
-    (MonadReader env m, HasConfig env, Applicative f) =>
+    (MonadReader env m, HasConfig env, Applicative f, HasTexts env) =>
     m ( Widget.PreEvent (f PickResult) ->
         Gui Widget f ->
         Gui Widget f
@@ -343,7 +346,7 @@ noResultsId = (`Widget.joinId` ["no results"])
 make ::
     ( MonadReader env m, Applicative f, TextView.HasStyle env
     , Hover.HasStyle env, Element.HasAnimIdPrefix env, HasConfig env
-    , State.HasCursor env , HasTexts env
+    , State.HasCursor env, HasTexts env
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
     m (PickFirstResult f, Hover.Ordered (TextWidget f))

@@ -82,7 +82,8 @@
             "noResults": "(אין תוצאות)",
             "downBlocked": "למטה (חסום)",
             "upBlocked": "למעלה (חסום)",
-            "submenuSymbol": " ◁"
+            "submenuSymbol": " ◁",
+            "commaNextEntry": ", הקלט הבא"
         },
         "textEdit": {
             "edit": "עריכה",

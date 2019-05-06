@@ -207,8 +207,8 @@ addSearchTermStyle myId act =
 
 searchTermEdit ::
     ( MonadReader env m, Applicative f, HasTermStyle env
-    , TextEdit.HasStyle env, State.HasState env, Menu.HasConfig env
-    , TextEdit.HasTexts env
+    , TextEdit.HasStyle env, Menu.HasConfig env, State.HasState env
+    , TextEdit.HasTexts env, Menu.HasTexts env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
@@ -221,7 +221,9 @@ searchTermEdit myId allowedSearchTerm mPickFirst =
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
-    (MonadReader env m, Menu.HasConfig env, HasState env, Applicative f) =>
+    ( MonadReader env m, Menu.HasConfig env, Menu.HasTexts env, HasState env
+    , Applicative f
+    ) =>
     Id -> Menu.PickFirstResult f->
     m (Term f -> Term f)
 addPickFirstResultEvent myId mPickFirst =
