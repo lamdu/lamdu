@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -69,6 +70,7 @@ instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance Choice.HasTexts Env where texts = language . Choice.texts
 instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance Grid.HasTexts Env where texts = language . Grid.texts
+instance Menu.HasTexts Env where texts = language . Menu.texts
 instance HasLanguage Env where language = eLanguage
 
 make :: IO Env

@@ -122,6 +122,7 @@ instance Dir.HasLayoutDir (Askable i o) where layoutDir = aDirLayout
 instance Dir.HasTexts (Askable i o) where texts = Texts.language . Dir.texts
 instance EventMap.HasTexts (Askable i o) where texts = Texts.language . EventMap.texts
 instance Glue.HasTexts (Askable i o) where texts = Texts.language . Glue.texts
+instance Menu.HasTexts (Askable i o) where texts = Texts.language . Menu.texts
 instance Grid.HasTexts (Askable i o) where texts = Texts.language . Grid.texts
 instance Choice.HasTexts (Askable i o) where texts = Texts.language . Choice.texts
 instance TextEdit.HasTexts (Askable i o) where texts = Texts.language . TextEdit.texts

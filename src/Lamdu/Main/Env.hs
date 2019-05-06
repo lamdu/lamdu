@@ -92,4 +92,5 @@ instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
 instance Choice.HasTexts Env where texts = Texts.language . Choice.texts
 instance TextEdit.HasTexts Env where texts = Texts.language . TextEdit.texts
 instance Grid.HasTexts Env where texts = Texts.language . Grid.texts
+instance Menu.HasTexts Env where texts = Texts.language . Menu.texts
 instance Texts.HasLanguage Env where language = language

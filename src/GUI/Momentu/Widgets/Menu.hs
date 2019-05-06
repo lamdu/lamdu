@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE DerivingVia #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), submenuSymbolColorUnselected, submenuSymbolColorSelected
@@ -17,6 +18,8 @@ module GUI.Momentu.Widgets.Menu
     , Placement(..)
     , make, makeHovered, hoverOptions, makePickEventMap
     , noResultsId
+    , Texts(..), noResults
+    , HasTexts(..)
     ) where
 
 import           Control.Applicative (liftA2)
@@ -27,6 +30,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -47,6 +51,20 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
 import           Lamdu.Prelude
+
+data Texts a = Texts
+    { _noResults :: a
+    , _downBlocked :: a
+    , _upBlocked :: a
+    , _submenuSymbol :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Texts)
+
+Lens.makeLenses ''Texts
+JsonTH.derivePrefixed "_" ''Texts
+
+class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 
 data Style = Style
     { _submenuSymbolColorUnselected :: Draw.Color
@@ -165,36 +183,48 @@ optionWidgets f (Option i w s) =
     <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
 makeNoResults ::
-    (MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env m
+    , TextView.HasStyle env
+    , Element.HasAnimIdPrefix env
+    , HasTexts env
+    ) =>
     m (WithTextPos View)
-makeNoResults = Label.make "(No results)"
+makeNoResults =
+    TextView.make
+    <*> Lens.view (texts . noResults)
+    <*> (Element.subAnimId ?? ["no results"])
 
 blockEvents ::
-    Applicative f =>
-    Hover.Ordered (Gui Widget f -> Gui Widget f)
-blockEvents =
+    (Applicative f, HasTexts env) =>
+    env -> Hover.Ordered (Gui Widget f -> Gui Widget f)
+blockEvents env =
     Hover.Ordered
-    { _forward = blockDirection MetaKey.Key'Down "down"
-    , _backward = blockDirection MetaKey.Key'Up "up"
+    { _forward = blockDirection MetaKey.Key'Down downBlocked
+    , _backward = blockDirection MetaKey.Key'Up upBlocked
     }
     where
-        doc keyName = E.Doc ["Navigation", "Move", keyName <> " (blocked)"]
+        toDoc = E.Doc . map (env ^#)
+        doc keyLens =
+            toDoc
+            [ Dir.texts . Dir.navigation
+            , Dir.texts . Dir.move
+            , texts . keyLens
+            ]
         blockDirection key keyName =
             Widget.eventMapMaker . Lens.mapped <>~
             E.keyPresses [ModKey mempty key] (doc keyName) (pure mempty)
 
-submenuSymbolText :: Text
-submenuSymbolText = " ▷"
-
 makeSubmenuSymbol ::
     ( MonadReader env m, HasConfig env, Element.HasAnimIdPrefix env
-    , TextView.HasStyle env
+    , TextView.HasStyle env, HasTexts env
     ) =>
     Bool -> m (WithTextPos View)
 makeSubmenuSymbol isSelected =
     do
         color <- Lens.view (config . configStyle . submenuSymbolColor)
-        Label.make submenuSymbolText
+        TextView.make
+            <*> Lens.view (texts . submenuSymbol)
+            <*> (Element.subAnimId ?? ["submenu sym"])
             & Reader.local (TextView.color .~ color)
     where
         submenuSymbolColor
@@ -222,9 +252,9 @@ toOptionList xs False = FullList xs
 toOptionList xs True = Truncated xs
 
 layoutOption ::
-    ( MonadReader env m, Applicative f
+    ( MonadReader env m, Applicative f, HasTexts env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , State.HasCursor env, Hover.HasStyle env, HasConfig env, Glue.HasTexts env
+    , State.HasCursor env, Hover.HasStyle env, HasConfig env
     ) =>
     Widget.R ->
     (Widget.Id, TextWidget f, Submenu m f) ->
@@ -235,11 +265,11 @@ layoutOption maxOptionWidth (optionId, rendered, submenu) =
     SubmenuItems action ->
         do
             isSelected <- State.isSubCursor ?? optionId
-            submenuSymbol <- makeSubmenuSymbol isSelected
+            submenuSym <- makeSubmenuSymbol isSelected
             base <-
-                padToWidth (maxOptionWidth - submenuSymbol ^. Element.width)
+                padToWidth (maxOptionWidth - submenuSym ^. Element.width)
                 rendered
-                /|/ pure submenuSymbol
+                /|/ pure submenuSym
             if isSelected
                 then do
                     hover <- Hover.hover
@@ -313,7 +343,7 @@ noResultsId = (`Widget.joinId` ["no results"])
 make ::
     ( MonadReader env m, Applicative f, TextView.HasStyle env
     , Hover.HasStyle env, Element.HasAnimIdPrefix env, HasConfig env
-    , State.HasCursor env , Glue.HasTexts env
+    , State.HasCursor env , HasTexts env
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
     m (PickFirstResult f, Hover.Ordered (TextWidget f))
@@ -332,7 +362,7 @@ make myId minWidth options =
         makeOpts opts =
             do
                 submenuSymbolWidth <-
-                    TextView.drawText ?? submenuSymbolText
+                    TextView.drawText <*> Lens.view (texts . submenuSymbol)
                     <&> (^. TextView.renderedTextSize . TextView.bounding . _1)
                 let optionMinWidth (_, (_, w, submenu)) =
                         w ^. Element.width +
@@ -355,9 +385,10 @@ make myId minWidth options =
                     then Label.make "..." <&> Align.tValue %~ Widget.fromView
                     else pure Element.empty
                 vbox <- Glue.vbox
+                env <- Lens.view id
                 pure
                     ( maybe NoPickFirstResult PickFirstResult mPickFirstResult
-                    , (blockEvents <&> (Align.tValue %~)) <*>
+                    , (blockEvents env <&> (Align.tValue %~)) <*>
                         ( Hover.Ordered
                             { _forward = id
                             , _backward = reverse
@@ -429,7 +460,7 @@ hoverOptions =
 makeHovered ::
     ( Applicative f, State.HasCursor env, HasConfig env
     , TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Hover.HasStyle env, Glue.HasTexts env, MonadReader env m
+    , Hover.HasStyle env, HasTexts env, MonadReader env m
     ) =>
     Widget.Id -> View ->
     OptionList (Option m f) ->

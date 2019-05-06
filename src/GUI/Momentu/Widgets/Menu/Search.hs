@@ -38,7 +38,6 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -281,7 +280,7 @@ enterWithSearchTerm searchTerm myId =
 make ::
     ( MonadReader env m, Applicative f, HasState env, Menu.HasConfig env
     , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
-    , Glue.HasTexts env
+    , Menu.HasTexts env
     ) =>
     (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->

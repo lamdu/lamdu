@@ -75,6 +75,12 @@
             "leftMost": "left-most",
             "rightMost": "right-most"
         },
+        "menu": {
+            "noResults": "(no results)",
+            "downBlocked": "down (blocked)",
+            "upBlocked": "up (blocked)",
+            "submenuSymbol": " ▷"
+        },
         "textEdit": {
             "edit": "Edit",
             "delete": "Delete",

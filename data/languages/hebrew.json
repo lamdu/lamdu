@@ -78,6 +78,12 @@
             "leftMost": "קצה שמאל",
             "rightMost": "קצה ימין"
         },
+        "menu": {
+            "noResults": "(אין תוצאות)",
+            "downBlocked": "למטה (חסום)",
+            "upBlocked": "למעלה (חסום)",
+            "submenuSymbol": " ◁"
+        },
         "textEdit": {
             "edit": "עריכה",
             "delete": "מחק",
