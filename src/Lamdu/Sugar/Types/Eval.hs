@@ -4,9 +4,10 @@ module Lamdu.Sugar.Types.Eval
     ( EvalScopes
     , ChildScopes, ParamScopes, EvaluationScopes
     , ScopeId
-    , EvalTypeError(..)
-    , ErrorType(..)
-    , EvalException(..), evalExceptionType, evalExceptionDesc, evalExceptionJumpTo
+    , ER.EvalTypeError(..)
+    , ER.ErrorType(..)
+    , EvalException(..)
+        , evalExceptionType, evalExceptionDesc, evalExceptionJumpTo
     , EvalCompletionResult(..), _EvalSuccess, _EvalError
     , EvalCompletion
     , ResRecord(..), recordFields
@@ -23,7 +24,8 @@ module Lamdu.Sugar.Types.Eval
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Lamdu.Data.Anchors (BinderParamScopeId)
-import           Lamdu.Eval.Results (ScopeId, EvalTypeError(..), ErrorType(..))
+import           Lamdu.Eval.Results (ScopeId)
+import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag
 
@@ -57,7 +59,7 @@ data ResBody name v
     | RInject (ResInject name v)
     | RFunc Int -- Identifier for function instance
     | RArray [v] -- TODO: Vector here?
-    | RError EvalTypeError
+    | RError ER.EvalTypeError
     | RBytes ByteString
     | RFloat Double
     -- Sugared forms:
@@ -92,7 +94,7 @@ type ParamScopes = EvalScopes [BinderParamScopeId]
 type EvaluationScopes name i = CurAndPrev (Maybe (Map ScopeId (i (ResVal name))))
 
 data EvalException o = EvalException
-    { _evalExceptionType :: ErrorType
+    { _evalExceptionType :: ER.ErrorType
     , _evalExceptionDesc :: Text
     , _evalExceptionJumpTo :: Maybe (o EntityId)
     } deriving Generic
