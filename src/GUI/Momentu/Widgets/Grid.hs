@@ -354,7 +354,7 @@ combineMEnters layoutDir children
                 afterEdge =
                     case layoutDir of
                     Dir.LeftToRight -> 1
-                    Dir.RightToLeft -> (-1)
+                    Dir.RightToLeft -> -1
 
         -- | Take only the first/last enterable row/column
         filteredByEdge =
