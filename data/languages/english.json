@@ -5,7 +5,7 @@
             "let_": "let",
             "case_": "case",
             "of_": "of",
-            "if_": "if ",
+            "if_": "if",
             "else_": "else",
             "elseShort": "el",
             "paramsRecordOpener": "Params {"

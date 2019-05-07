@@ -61,6 +61,7 @@ makeIfThen prefixLabel animId ifElse =
         keyword <-
             pure prefixLabel
             /|/ grammar (label (Texts.code . Texts.if_))
+            /|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
         config <- Lens.view Config.config
         let eventMap =
