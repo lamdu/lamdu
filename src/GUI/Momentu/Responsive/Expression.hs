@@ -53,20 +53,15 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    (MonadReader env m, TextView.HasStyle env, Functor f, Dir.HasLayoutDir env) =>
+    (MonadReader env m, TextView.HasStyle env, Functor f) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
-    do
-        (Glue.Poly (|||)) <- Glue.mkPoly ?? Glue.Horizontal
-        textStyle <- Lens.view TextView.style
-        (preLabel, postLabel) <-
-            Lens.view Dir.layoutDir <&>
-            \case
-            Dir.LeftToRight -> ("(", ")")
-            Dir.RightToLeft -> (")", "(")
-        pure $ \myId w ->
-            let paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
-            in  paren preLabel ||| w ||| paren postLabel
+    Lens.view TextView.style <&>
+    \textStyle myId w ->
+    let paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
+    in  paren "(" ||| w ||| paren ")"
+    where
+        Glue.Poly (|||) = Glue.mkPoly Dir.LeftToRight Glue.Horizontal
 
 indent ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
