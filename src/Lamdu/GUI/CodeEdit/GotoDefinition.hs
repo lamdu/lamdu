@@ -42,14 +42,15 @@ allowSearchTerm = Name.isValidText
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameSearchTerm :: Name o -> Text
+nameSearchTerm :: (MonadReader env m, Name.HasNameTexts env) => Name o -> m Text
 nameSearchTerm name =
+    Name.visible name <&>
+    \(Name.TagText text textCol, tagCol) ->
     text <> collisionText textCol <> collisionText tagCol
     where
         collisionText Name.NoCollision = ""
         collisionText (Name.Collision i) = Text.pack (show i)
         collisionText Name.UnknownCollision = "?"
-        (Name.TagText text textCol, tagCol) = Name.visible name
 
 makeOptions ::
     ( MonadReader env m, HasTheme env, Applicative o
@@ -84,13 +85,13 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
                         name = nameRef ^. Sugar.nrName
                         optId = prefix `Widget.joinId` [BS8.pack (show idx)]
             readGlobals <&> zip [0::Int ..]
-                <&> map withText
+                >>= traverse withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)
                 <&> Menu.FullList
     where
         withText (idx, nameRef) =
-            (nameSearchTerm (nameRef ^. Sugar.nrName), (idx, nameRef))
+            nameSearchTerm (nameRef ^. Sugar.nrName) <&> \x -> (x, (idx, nameRef))
         wrapOption optId mkRenedered =
             Menu.Option
             { Menu._oId = optId

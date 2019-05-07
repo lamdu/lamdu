@@ -68,6 +68,10 @@
             "switchTheme": "שנה תמה",
             "switchAnnotations": "החלף ביאורים"
         },
+        "name": {
+            "unnamed": "פלוני",
+            "emptyName": "ריק"
+        },
         "versioning": {
             "branches": "ענפים",
             "undo": "בטל פעולה",

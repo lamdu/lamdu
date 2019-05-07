@@ -62,7 +62,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
-import           Lamdu.Name (Name)
+import           Lamdu.Name (Name, HasNameTexts(..))
 import           Lamdu.Settings (Settings, HasSettings(..))
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -127,6 +127,7 @@ instance SearchMenu.HasTexts (Askable i o) where texts = Texts.language . Search
 instance Grid.HasTexts (Askable i o) where texts = Texts.language . Grid.texts
 instance Choice.HasTexts (Askable i o) where texts = Texts.language . Choice.texts
 instance TextEdit.HasTexts (Askable i o) where texts = Texts.language . TextEdit.texts
+instance HasNameTexts (Askable i o) where nameTexts = Texts.language . nameTexts
 instance Texts.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a

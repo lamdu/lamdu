@@ -57,7 +57,7 @@ import           Lamdu.Prelude
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , HasLayoutDir env
+    , HasLayoutDir env, Name.HasNameTexts env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
     m (TextWidget f)
@@ -139,6 +139,10 @@ makeNameRef role color myId nameRef =
                 do
                     savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
+        nameText <- Name.visible name <&> (^. _1 . Name.ttText)
+        let mAddMarker
+                | (role == Infix) == Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
+                | otherwise = addInfixMarker nameId
         makeSimpleView color name nameId
             <&> mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
@@ -147,10 +151,6 @@ makeNameRef role color myId nameRef =
     where
         name = nameRef ^. Sugar.nrName
         nameId = Widget.joinId myId ["name"]
-        nameText = Name.visible name ^. _1 . Name.ttText
-        mAddMarker
-            | (role == Infix) == Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
-            | otherwise = addInfixMarker nameId
 
 makeInlineEventMap ::
     Applicative f =>

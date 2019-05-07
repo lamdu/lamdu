@@ -51,6 +51,10 @@
             "jsStaleDep": "Dependency type needs update",
             "jsUnhandledCase": "Unhandled case (Lamdu bug)"
         },
+        "name": {
+            "unnamed": "Unnamed",
+            "emptyName": "empty"
+        },
         "statusBar": {
             "statusBar": "Status Bar",
             "help": "Help",

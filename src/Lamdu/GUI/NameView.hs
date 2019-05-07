@@ -48,11 +48,12 @@ makeCollisionSuffixLabel collisionColor mCollision =
 make ::
     ( MonadReader env m
     , HasTheme env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , HasLayoutDir env
+    , HasLayoutDir env, Name.HasNameTexts env
     ) =>
     Name f -> m (WithTextPos View)
 make name =
     do
+        (Name.TagText visibleName textCollision, tagCollision) <- Name.visible name
         mTextSuffixLabel <-
             makeCollisionSuffixLabel NameTheme.textCollisionSuffixBGColor textCollision
             <&> Lens._Just %~ Aligned 0.5
@@ -66,5 +67,3 @@ make name =
             <&> maybe id (flip (|||)) mTextSuffixLabel
             <&> maybe id (flip (|||)) mTagSuffixLabel
             <&> (^. Align.value)
-    where
-        (Name.TagText visibleName textCollision, tagCollision) = Name.visible name

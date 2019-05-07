@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Folder (HasConfigFolder(..))
+import           Lamdu.Name (HasNameTexts(..), NameTexts)
 
 import           Lamdu.Prelude
 
@@ -135,6 +136,7 @@ Lens.makeLenses ''Versioning
 data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
+    , _name :: NameTexts a
     , _statusBar :: StatusBar a
     , _versioning :: Versioning a
     , _dir :: Dir.Texts a
@@ -170,7 +172,7 @@ instance HasConfigFolder Language where
 
 class
     ( Glue.HasTexts env, Dir.HasTexts env, Choice.HasTexts env
-    , TextEdit.HasTexts env, Grid.HasTexts env
+    , TextEdit.HasTexts env, Grid.HasTexts env, HasNameTexts env
     , Menu.HasTexts env, SearchMenu.HasTexts env
     ) => HasLanguage env where
     language :: Lens' env Language
@@ -185,6 +187,7 @@ instance Grid.HasTexts Language where texts = lTexts . grid
 instance Choice.HasTexts Language where texts = lTexts . choice
 instance TextEdit.HasTexts Language where texts = lTexts . textEdit
 instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
+instance HasNameTexts Language where nameTexts = lTexts . name
 instance HasLanguage Language where language = id
 instance Zoom.HasTexts Language where texts = lTexts . zoom
 

@@ -14,7 +14,7 @@ import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Lamdu.SugarStubs ((~>))
+import           Test.Lamdu.SugarStubs ((~>), nameTexts)
 import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
@@ -39,7 +39,7 @@ test =
 
 assertNoCollisions :: Name o -> IO ()
 assertNoCollisions name =
-    case Name.visible name of
+    case Name.visible name nameTexts of
     (Name.TagText _ Name.NoCollision, Name.NoCollision) -> pure ()
     (Name.TagText text textCollision, tagCollision) ->
         unwords
@@ -53,7 +53,7 @@ testWorkArea ::
     (Sugar.Payload InternalName Identity Unit a) ->
     IO ()
 testWorkArea verifyName inputWorkArea =
-    addToWorkArea Stub.getNameProp inputWorkArea
+    addToWorkArea nameTexts Stub.getNameProp inputWorkArea
     & runIdentity
     & getNames
     & traverse_ verifyName
@@ -103,7 +103,7 @@ workAreaGlobals =
     } & testWorkArea verifyName
     where
         verifyName name =
-            case Name.visible name of
+            case Name.visible name nameTexts of
             (Name.TagText _ Name.NoCollision, Name.NoCollision) -> pure ()
             (Name.TagText _ Name.NoCollision, Name.Collision _) -> pure ()
             (Name.TagText text textCollision, tagCollision) ->

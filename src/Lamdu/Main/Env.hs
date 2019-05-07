@@ -43,6 +43,7 @@ import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.I18N.Texts as Texts
+import           Lamdu.Name (HasNameTexts(..))
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style as Style
@@ -94,4 +95,5 @@ instance TextEdit.HasTexts Env where texts = Texts.language . TextEdit.texts
 instance Grid.HasTexts Env where texts = Texts.language . Grid.texts
 instance Menu.HasTexts Env where texts = Texts.language . Menu.texts
 instance SearchMenu.HasTexts Env where texts = Texts.language . SearchMenu.texts
+instance HasNameTexts Env where nameTexts = language . nameTexts
 instance Texts.HasLanguage Env where language = language

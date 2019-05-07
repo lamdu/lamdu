@@ -27,6 +27,7 @@ import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.Lamdu.Db (withDB)
+import           Test.Lamdu.SugarStubs (nameTexts)
 
 import           Test.Lamdu.Prelude
 
@@ -115,7 +116,8 @@ convertWorkArea ::
     (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
 convertWorkArea cache =
-    loadWorkArea sugarConfig cache noopMonitors Annotations.None (pure EvalResults.empty) codeAnchors
+    loadWorkArea nameTexts sugarConfig cache noopMonitors Annotations.None
+    (pure EvalResults.empty) codeAnchors
     >>= validate
 
 testProgram :: FilePath -> (Cache.Functions -> T ViewM a) -> IO a

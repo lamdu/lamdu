@@ -156,9 +156,9 @@ p1Anon (Just uuid) =
             , p1TextsBelow = innerOut ^. p1Texts
             }
 
-displayOf :: Text -> Text
-displayOf text
-    | Lens.has Lens._Empty text = "(empty)"
+displayOf :: HasNameTexts env => env -> Text -> Text
+displayOf env text
+    | Lens.has Lens._Empty text = "(" <> env ^. nameTexts . emptyName <> ")"
     | otherwise = text
 
 p1Tagged ::
@@ -209,11 +209,13 @@ p1Name mDisambiguator nameType p0Name =
 ---------- Pass1 -> Pass2 -----------
 -------------------------------------
 
-tagText :: Text -> Collision -> TagText
-tagText = TagText . displayOf
+tagText :: HasNameTexts env => env -> Text -> Collision -> TagText
+tagText env = TagText . displayOf env
 
-makeTagTexts :: MMap Text (Set T.Tag) -> Map T.Tag TagText
-makeTagTexts p1texts =
+makeTagTexts ::
+    HasNameTexts env =>
+    env -> MMap Text (Set T.Tag) -> Map T.Tag TagText
+makeTagTexts env p1texts =
     p1texts
     & Lens.imapped %@~ mkTagTexts
     & fold
@@ -222,8 +224,8 @@ makeTagTexts p1texts =
             | isCollidingName text tags =
                 tags ^.. Lens.folded & Lens.imap (mkCollision text) & Map.fromList
             | otherwise =
-                Map.fromSet (const (tagText text NoCollision)) tags
-        mkCollision text idx tag = (tag, tagText text (Collision idx))
+                Map.fromSet (const (tagText env text NoCollision)) tags
+        mkCollision text idx tag = (tag, tagText env text (Collision idx))
         isCollidingName text tagsOfName =
             isReserved text || Set.size tagsOfName > 1
 
@@ -249,8 +251,8 @@ toSuffixMap tagContexts =
         eachTag tag contexts = contexts ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: P1Out -> P2Env
-initialP2Env (P1Out globals locals contexts tvs texts) =
+initialP2Env :: HasNameTexts env => env -> P1Out -> P2Env
+initialP2Env env (P1Out globals locals contexts tvs texts) =
     P2Env
     { _p2NameGen = NameGen.initial
     , _p2AnonSuffixes =
@@ -268,12 +270,13 @@ initialP2Env (P1Out globals locals contexts tvs texts) =
         -- ^ all globals are "above" everything, and locals add up as
         -- we descend
     , _p2Tags = top
+    , _p2NameTexts = env ^. nameTexts
     }
     where
         lookupText tag =
             tagTexts ^? Lens.ix tag . ttText
             & fromMaybe (error "Cannot find global tag in tagTexts")
-        tagTexts = makeTagTexts texts
+        tagTexts = makeTagTexts (env ^. nameTexts) texts
         top = colliders locals <> globals & uncolliders
         -- TODO: Use OrderedSet for nice ordered suffixes
         collisions =
@@ -320,15 +323,18 @@ data P2Env = P2Env
         -- ^ All local AND global tags from all scopes everywhere --
         -- used to check collision of globals in hole results with
         -- everything.
+    , _p2NameTexts :: NameTexts Text
     }
 Lens.makeLenses ''P2Env
+
+instance HasNameTexts P2Env where nameTexts = p2NameTexts
 
 newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)
 
-runPass2MakeNamesInitial :: P1Out -> Pass2MakeNames i o a -> a
-runPass2MakeNamesInitial p1out act =
-    initialP2Env p1out & (runReader . runPass2MakeNames) act
+runPass2MakeNamesInitial :: HasNameTexts env => env -> P1Out -> Pass2MakeNames i o a -> a
+runPass2MakeNamesInitial env p1out act =
+    initialP2Env env p1out & (runReader . runPass2MakeNames) act
 
 getCollision :: MMap T.Tag Clash.Info -> Annotated.Name -> Pass2MakeNames i o Collision
 getCollision tagsBelow aName =
@@ -372,14 +378,15 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
 getTagText :: T.Tag -> StoredText o -> Pass2MakeNames i o TagText
 getTagText tag prop =
     Lens.view id
-    <&> \env ->
-    env ^. p2TagTexts . Lens.at tag
-    & fromMaybe (TagText displayText (checkCollision env))
-    where
-        displayText = displayOf (prop ^. Property.pVal)
-        checkCollision env
+    <&>
+    \env ->
+    let displayText = displayOf env (prop ^. Property.pVal)
+        collision
             | env ^. p2Texts . Lens.contains displayText = UnknownCollision
             | otherwise = NoCollision
+    in
+    env ^. p2TagTexts . Lens.at tag
+    & fromMaybe (TagText displayText collision)
 
 storedName ::
     MMap T.Tag Clash.Info -> Annotated.Name -> StoredText o ->
@@ -442,31 +449,33 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
                 & Lens.zoom p2NameGen
                 & (`runState` env0)
                 & pure
-        let text = visible newNameForm ^. _1 . ttText
+        text <- visible newNameForm <&> (^. _1 . ttText)
         let env2 = env1 & p2TextsAbove %~ Set.insert text
         res <- Reader.local (const env2) inner
         pure (newNameForm, res)
 
 runPasses ::
-    Functor i =>
+    (Functor i, HasNameTexts env) =>
+    env ->
     (T.Tag -> MkProperty i o Text) ->
     (a -> Pass0LoadNames i o b) ->
     (b -> Pass1PropagateUp i o c) ->
     (c -> Pass2MakeNames i o d) ->
     a -> i d
-runPasses getNameProp f0 f1 f2 =
+runPasses env getNameProp f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
         pass0 = runPass0LoadNames (P0Env getNameProp) . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial p1out
+        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial env p1out
 
 addToWorkArea ::
-    Monad i =>
+    (Monad i, HasNameTexts env) =>
+    env ->
     (T.Tag -> MkProperty i o Text) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea (Name o) i o (Payload (Name o) i o a))
-addToWorkArea getNameProp =
-    runPasses getNameProp f f f
+addToWorkArea env getNameProp =
+    runPasses env getNameProp f f f
     where
         f = Walk.toWorkArea
