@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Test.Lamdu.GuiEnv (Env(..), make, dummyAnchors) where
+module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
@@ -77,12 +77,15 @@ instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance HasNameTexts Env where nameTexts = language . nameTexts
 instance HasLanguage Env where language = eLanguage
 
+makeLang :: IO Language
+makeLang = TestConfig.loadConfigObject "english"
+
 make :: IO Env
 make =
     do
         testConfig <- Paths.getDataFileName "config.json" >>= AesonConfig.load
         testTheme <- TestConfig.loadConfigObject "dark"
-        testLang <- TestConfig.loadConfigObject "english"
+        testLang <- makeLang
         font <-
             testTheme ^. fonts . Fonts.base & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)

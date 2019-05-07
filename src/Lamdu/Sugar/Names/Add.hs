@@ -29,6 +29,7 @@ import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
@@ -213,9 +214,8 @@ tagText :: HasNameTexts env => env -> Text -> Collision -> TagText
 tagText env = TagText . displayOf env
 
 makeTagTexts ::
-    HasNameTexts env =>
-    env -> MMap Text (Set T.Tag) -> Map T.Tag TagText
-makeTagTexts env p1texts =
+    Texts.Language -> MMap Text (Set T.Tag) -> Map T.Tag TagText
+makeTagTexts lang p1texts =
     p1texts
     & Lens.imapped %@~ mkTagTexts
     & fold
@@ -224,25 +224,20 @@ makeTagTexts env p1texts =
             | isCollidingName text tags =
                 tags ^.. Lens.folded & Lens.imap (mkCollision text) & Map.fromList
             | otherwise =
-                Map.fromSet (const (tagText env text NoCollision)) tags
-        mkCollision text idx tag = (tag, tagText env text (Collision idx))
+                Map.fromSet (const (tagText lang text NoCollision)) tags
+        mkCollision text idx tag = (tag, tagText lang text (Collision idx))
         isCollidingName text tagsOfName =
-            isReserved text || Set.size tagsOfName > 1
+            isReserved lang text || Set.size tagsOfName > 1
 
-isReserved :: Text -> Bool
-isReserved name =
+isReserved :: Texts.Language -> Text -> Bool
+isReserved lang name =
     reservedWords ^. Lens.contains name
     || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
     where
+        texts = lang ^. Texts.lTexts
         reservedWords =
-            Set.fromList
-            [ "if", "elif", "else"
-            , "case", "of"
-            , "let"
-            , "or"
-            , "λ", "«", "»", "Ø", "|", ".", "→", "➾"
-            , "Unnamed"
-            ]
+            texts ^.. Texts.code . traverse <> texts ^.. Texts.name . traverse
+            & Set.fromList
 
 toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId CollisionSuffix
 toSuffixMap tagContexts =
@@ -251,8 +246,8 @@ toSuffixMap tagContexts =
         eachTag tag contexts = contexts ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: HasNameTexts env => env -> P1Out -> P2Env
-initialP2Env env (P1Out globals locals contexts tvs texts) =
+initialP2Env :: Texts.Language -> P1Out -> P2Env
+initialP2Env lang (P1Out globals locals contexts tvs texts) =
     P2Env
     { _p2NameGen = NameGen.initial
     , _p2AnonSuffixes =
@@ -270,13 +265,13 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
         -- ^ all globals are "above" everything, and locals add up as
         -- we descend
     , _p2Tags = top
-    , _p2NameTexts = env ^. nameTexts
+    , _p2NameTexts = lang ^. nameTexts
     }
     where
         lookupText tag =
             tagTexts ^? Lens.ix tag . ttText
             & fromMaybe (error "Cannot find global tag in tagTexts")
-        tagTexts = makeTagTexts (env ^. nameTexts) texts
+        tagTexts = makeTagTexts lang texts
         top = colliders locals <> globals & uncolliders
         -- TODO: Use OrderedSet for nice ordered suffixes
         collisions =
@@ -332,9 +327,9 @@ instance HasNameTexts P2Env where nameTexts = p2NameTexts
 newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)
 
-runPass2MakeNamesInitial :: HasNameTexts env => env -> P1Out -> Pass2MakeNames i o a -> a
-runPass2MakeNamesInitial env p1out act =
-    initialP2Env env p1out & (runReader . runPass2MakeNames) act
+runPass2MakeNamesInitial :: Texts.Language -> P1Out -> Pass2MakeNames i o a -> a
+runPass2MakeNamesInitial lang p1out act =
+    initialP2Env lang p1out & (runReader . runPass2MakeNames) act
 
 getCollision :: MMap T.Tag Clash.Info -> Annotated.Name -> Pass2MakeNames i o Collision
 getCollision tagsBelow aName =
@@ -455,27 +450,27 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
         pure (newNameForm, res)
 
 runPasses ::
-    (Functor i, HasNameTexts env) =>
-    env ->
+    Functor i =>
+    Texts.Language ->
     (T.Tag -> MkProperty i o Text) ->
     (a -> Pass0LoadNames i o b) ->
     (b -> Pass1PropagateUp i o c) ->
     (c -> Pass2MakeNames i o d) ->
     a -> i d
-runPasses env getNameProp f0 f1 f2 =
+runPasses lang getNameProp f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
         pass0 = runPass0LoadNames (P0Env getNameProp) . f0
         pass1 = runPass1PropagateUp . f1
-        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial env p1out
+        pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial lang p1out
 
 addToWorkArea ::
-    (Monad i, HasNameTexts env) =>
-    env ->
+    Monad i =>
+    Texts.Language ->
     (T.Tag -> MkProperty i o Text) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea (Name o) i o (Payload (Name o) i o a))
-addToWorkArea env getNameProp =
-    runPasses env getNameProp f f f
+addToWorkArea lang getNameProp =
+    runPasses lang getNameProp f f f
     where
         f = Walk.toWorkArea

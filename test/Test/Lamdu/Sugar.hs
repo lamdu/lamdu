@@ -20,6 +20,7 @@ import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import           Lamdu.I18N.Texts (Language)
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -27,7 +28,6 @@ import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.Lamdu.Db (withDB)
-import           Test.Lamdu.SugarStubs (nameTexts)
 
 import           Test.Lamdu.Prelude
 
@@ -111,12 +111,13 @@ validate workArea
 
 convertWorkArea ::
     HasCallStack =>
+    Language ->
     Cache.Functions ->
     T ViewM
     (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
-convertWorkArea cache =
-    loadWorkArea nameTexts sugarConfig cache noopMonitors Annotations.None
+convertWorkArea lang cache =
+    loadWorkArea lang sugarConfig cache noopMonitors Annotations.None
     (pure EvalResults.empty) codeAnchors
     >>= validate
 

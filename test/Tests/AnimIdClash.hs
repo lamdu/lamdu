@@ -14,6 +14,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.Gui (verifyLayers)
@@ -67,6 +68,16 @@ testFragment =
         env <-
             GuiEnv.make
             <&> cursor .~ WidgetIds.fromEntityId fragEntityId
+        let expr =
+                ( Sugar.BodyFragment Sugar.Fragment
+                    { Sugar._fExpr = Stub.litNum 5
+                    , Sugar._fHeal = Sugar.TypeMismatch
+                    , Sugar._fOptions = pure []
+                    } & Stub.expr
+                )
+                & ann . Sugar.plEntityId .~ fragEntityId
+                & Stub.addNamesToExpr (env ^. Texts.language)
+                & annotations . Sugar.plData .~ adhocPayload
         let gui =
                 ExpressionEdit.make expr
                 & ExprGuiM.run ExpressionEdit.make BinderEdit.make GuiEnv.dummyAnchors env (const Unit)
@@ -79,14 +90,4 @@ testFragment =
         pure ()
     & testCase "fragment"
     where
-        expr =
-            ( Sugar.BodyFragment Sugar.Fragment
-                { Sugar._fExpr = Stub.litNum 5
-                , Sugar._fHeal = Sugar.TypeMismatch
-                , Sugar._fOptions = pure []
-                } & Stub.expr
-            )
-            & ann . Sugar.plEntityId .~ fragEntityId
-            & Stub.addNamesToExpr
-            & annotations . Sugar.plData .~ adhocPayload
         fragEntityId = "frag"

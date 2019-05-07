@@ -8,13 +8,14 @@ import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.Functor.Identity (Identity(..))
-import           Lamdu.Name (Name)
+import           Lamdu.Name (Name, NameTexts(..))
 import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Lamdu.SugarStubs ((~>), nameTexts)
+import qualified Test.Lamdu.GuiEnv as GuiEnv
+import           Test.Lamdu.SugarStubs ((~>))
 import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
@@ -37,6 +38,13 @@ test =
     , testCase "globals collide" workAreaGlobals
     ]
 
+nameTexts :: NameTexts Text
+nameTexts =
+    NameTexts
+    { _unnamed = "Unnamed"
+    , _emptyName = "empty"
+    }
+
 assertNoCollisions :: Name o -> IO ()
 assertNoCollisions name =
     case Name.visible name nameTexts of
@@ -53,10 +61,12 @@ testWorkArea ::
     (Sugar.Payload InternalName Identity Unit a) ->
     IO ()
 testWorkArea verifyName inputWorkArea =
-    addToWorkArea nameTexts Stub.getNameProp inputWorkArea
-    & runIdentity
-    & getNames
-    & traverse_ verifyName
+    do
+        lang <- GuiEnv.makeLang
+        addToWorkArea lang Stub.getNameProp inputWorkArea
+            & runIdentity
+            & getNames
+            & traverse_ verifyName
 
 getNames ::
     Sugar.WorkArea name Identity o (Sugar.Payload name Identity o a) -> [name]

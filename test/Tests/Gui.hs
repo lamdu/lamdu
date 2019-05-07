@@ -78,7 +78,7 @@ makeGui ::
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc cache env =
     do
-        workArea <- convertWorkArea cache
+        workArea <- convertWorkArea (env ^. Texts.language) cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         gui <-
@@ -140,13 +140,14 @@ applyEvent cache env virtCursor event =
     <&> (`GuiState.update` env)
 
 fromWorkArea ::
+    Texts.Language ->
     Cache.Functions ->
     Lens.ATraversal'
     (Sugar.WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload)) a ->
     T ViewM a
-fromWorkArea cache path =
-    convertWorkArea cache <&> (^?! Lens.cloneTraversal path)
+fromWorkArea lang cache path =
+    convertWorkArea lang cache <&> (^?! Lens.cloneTraversal path)
 
 dummyVirt :: VirtualCursor
 dummyVirt = VirtualCursor (Rect 0 0)
@@ -162,7 +163,7 @@ testLambdaDelete =
     \cache ->
     do
         paramCursor <-
-            fromWorkArea cache
+            fromWorkArea (baseEnv ^. Texts.language) cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
@@ -185,7 +186,7 @@ testFragmentSize =
     \cache ->
     do
         frag <-
-            fromWorkArea cache
+            fromWorkArea (baseEnv ^. Texts.language) cache
             (Sugar.waRepl . Sugar.replExpr . ann)
         guiCursorOnFrag <-
             baseEnv
@@ -207,14 +208,14 @@ testOpPrec =
     \cache ->
     do
         holeId <-
-            fromWorkArea cache
+            fromWorkArea (baseEnv ^. Texts.language) cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fBody . ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
-        workArea <- convertWorkArea cache
+        workArea <- convertWorkArea (baseEnv ^. Texts.language) cache
         _ <- applyEvent cache (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
-        workArea' <- convertWorkArea cache
+        workArea' <- convertWorkArea (baseEnv ^. Texts.language) cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
 workAreaEq ::

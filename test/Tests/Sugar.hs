@@ -14,6 +14,7 @@ import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.HUnit (assertBool)
+import qualified Test.Lamdu.GuiEnv as GuiEnv
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 
 import           Test.Lamdu.Prelude
@@ -51,8 +52,12 @@ testSugarActions ::
         T ViewM a] ->
     IO ()
 testSugarActions program actions =
-    testProgram program $ \cache ->
-    traverse_ (convertWorkArea cache >>=) actions <* convertWorkArea cache
+    do
+        lang <- GuiEnv.makeLang
+        testProgram program $
+            \cache ->
+            traverse_ (convertWorkArea lang cache >>=) actions
+            <* convertWorkArea lang cache
 
 replBinder :: Lens.Traversal' (WorkArea name i o a) (Tree (Binder name i o) (Ann a))
 replBinder = waRepl . replExpr . val
@@ -296,13 +301,16 @@ assertEq msg expected got
 testFloatToRepl :: Test
 testFloatToRepl =
     testCase "float-to-repl" $
-    testProgram "repl-2-lets.json" $ \cache ->
     do
-        workArea <- convertWorkArea cache
-        assertLetVals workArea 1 2
-        void $ workArea ^?! innerLet . ann . plActions . extract
-        newWorkArea <- convertWorkArea cache
-        assertLetVals newWorkArea 2 1
+        lang <- GuiEnv.makeLang
+        testProgram "repl-2-lets.json" $
+            \cache ->
+            do
+                workArea <- convertWorkArea lang cache
+                assertLetVals workArea 1 2
+                void $ workArea ^?! innerLet . ann . plActions . extract
+                newWorkArea <- convertWorkArea lang cache
+                assertLetVals newWorkArea 2 1
     where
         assertLetVals workArea outer inner =
             do
@@ -321,15 +329,17 @@ testCreateLetInLetVal :: Test
 testCreateLetInLetVal =
     testCase "create-let-in-let-val" $
     do
+        lang <- GuiEnv.makeLang
         result <-
-            testProgram "let-item-inline.json" $ \cache ->
+            testProgram "let-item-inline.json" $
+                \cache ->
                 do
-                    workArea <- convertWorkArea cache
+                    workArea <- convertWorkArea lang cache
                     _ <-
                         workArea ^?!
                         theLet . lValue . ann . plActions . mNewLet .
                         Lens._Just
-                    newWorkArea <- convertWorkArea cache
+                    newWorkArea <- convertWorkArea lang cache
                     Lens.has
                         ( theLet . lValue . val . _BodyPlain
                         . apBody . _BinderLet
@@ -349,6 +359,7 @@ testHoleTypeShown :: Test
 testHoleTypeShown =
     testCase "hole-type-shown" $
     do
-        workArea <- testProgram "to-nom.json" convertWorkArea
+        lang <- GuiEnv.makeLang
+        workArea <- testProgram "to-nom.json" (convertWorkArea lang)
         let x = workArea ^?! replBody . _BodyToNom . nVal
         assertBool "Expected to have type" (Lens.has _AnnotationType (x ^. ann . plAnnotation))

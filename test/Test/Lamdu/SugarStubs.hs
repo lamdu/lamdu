@@ -14,7 +14,8 @@ import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Name (Name, NameTexts(..))
+import           Lamdu.I18N.Texts (Language)
+import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Internal (nameWithoutContext)
 import           Lamdu.Sugar.Names.Add (InternalName(..))
 import qualified Lamdu.Sugar.Names.Add as AddNames
@@ -253,20 +254,14 @@ tagSelection =
     , Sugar._tsAnon = Nothing
     }
 
-nameTexts :: NameTexts Text
-nameTexts =
-    NameTexts
-    { _unnamed = "Unnamed"
-    , _emptyName = "empty"
-    }
-
 addNamesToExpr ::
+    Language ->
     Sugar.Expression InternalName Identity Unit
     (Sugar.Payload InternalName Identity Unit a) ->
     Sugar.Expression (Name Unit) Identity Unit
     (Sugar.Payload (Name Unit) Identity Unit a)
-addNamesToExpr x =
-    AddNames.runPasses nameTexts
+addNamesToExpr lang x =
+    AddNames.runPasses lang
     getNameProp NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
     & runIdentity
 

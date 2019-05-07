@@ -17,8 +17,9 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
+import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.Name (Name, HasNameTexts)
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Config as SugarConf
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
@@ -45,17 +46,17 @@ getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Te
 getNameProp = DataOps.assocPublishedTagName . Anchors.tags
 
 loadWorkArea ::
-    (HasCallStack, Monad m, HasNameTexts env) =>
-    env ->
+    (HasCallStack, Monad m) =>
+    Language ->
     SugarConf.Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m
     (Sugar.WorkArea (Name (T m)) (T m) (T m)
         (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
-loadWorkArea env config cache monitors annMode theEvalResults cp =
+loadWorkArea lang config cache monitors annMode theEvalResults cp =
     SugarConvert.loadWorkArea config cache monitors annMode theEvalResults cp
-    >>= report . AddNames.addToWorkArea env (getNameProp cp)
+    >>= report . AddNames.addToWorkArea lang (getNameProp cp)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toExprGuiMPayload
     where
