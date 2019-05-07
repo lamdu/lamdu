@@ -15,7 +15,6 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Direction (HasLayoutDir)
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -44,6 +43,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -116,7 +116,7 @@ makeResultOption pl ctx results =
 
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, HasLayoutDir env
+    , Spacer.HasStdSpacing env, Texts.HasLanguage env
     ) =>
     Sugar.Payload (Name g) i o a0 -> m View
 makeInferredTypeAnnotation pl =
