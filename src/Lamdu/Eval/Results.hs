@@ -53,7 +53,11 @@ deriving instance Show (Tie f Body) => Show (Body f)
 
 type Val pl = Tree (Ann pl) Body
 
-data ErrorType = UnhandledCase | DependencyTypeOutOfDate | ReachedHole | RuntimeError
+data ErrorType
+    = UnhandledCase -- ^ Reached absurd (lamdu bug)
+    | DependencyTypeOutOfDate -- ^ Reached a definition with stale type
+    | ReachedHole -- ^ Reached a hole
+    | RuntimeError -- ^ Any JS exception thrown during evaluation
     deriving (Read, Show, Generic, Eq)
 Lens.makePrisms ''ErrorType
 
