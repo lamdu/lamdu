@@ -62,8 +62,9 @@ instance Show (Name o) where
         unwords ["(StoredName", show disp, show collision, ")"]
 
 instance HasPrecedence (Name o) where
-    precedence name =
-        visible name ^? _1 . ttText . Lens.ix 0 . Lens.to precedence & fromMaybe 12
+    precedence (Stored (StoredName _ disp _)) =
+        disp ^? ttText . Lens.ix 0 . Lens.to precedence & fromMaybe 12
+    precedence _ = 12
 
 isValidText :: Text -> Bool
 isValidText x =
