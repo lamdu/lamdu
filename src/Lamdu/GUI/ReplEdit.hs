@@ -102,6 +102,15 @@ makeIndicator tag enabledColor text =
         color <- indicatorColor tag enabledColor
         Label.make text & Reader.local (TextView.color .~ color)
 
+compiledErrorDesc :: Sugar.CompiledErrorType -> Text
+compiledErrorDesc Sugar.ReachedHole = "Reached a hole"
+compiledErrorDesc Sugar.DependencyTypeOutOfDate = "Dependency type needs update"
+compiledErrorDesc Sugar.UnhandledCase = "Unhandled case (Lamdu bug)"
+
+errorDesc :: Sugar.Error -> Text
+errorDesc (Sugar.CompiledError err) = compiledErrorDesc err
+errorDesc (Sugar.RuntimeError exc) = "JS exception: " <> exc
+
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
@@ -109,7 +118,7 @@ errorIndicator ::
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
-errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
+errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
     do
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         let jumpEventMap j =
@@ -124,7 +133,7 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
             do
                 errorColor <- Lens.view (theme . Theme.errorColor)
                 descLabel <-
-                    Label.make desc & Reader.local (TextView.color .~ errorColor)
+                    Label.make (errorDesc errorType) & Reader.local (TextView.color .~ errorColor)
                 hspace <- Spacer.stdHSpace
                 vspace <- Spacer.stdVSpace
                 hover <- Hover.hover
@@ -144,7 +153,8 @@ errorIndicator myId tag (Sugar.EvalException errorType desc jumpToErr) =
     where
         dest entityId =
             case errorType of
-            Sugar.ReachedHole -> HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
+            Sugar.CompiledError Sugar.ReachedHole ->
+                HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
             _ -> WidgetIds.fromEntityId entityId
         jumpDoc = E.Doc ["Navigation", "Jump to error"]
 

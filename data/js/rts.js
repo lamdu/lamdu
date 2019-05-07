@@ -84,8 +84,8 @@ var bytesConcat = function (x) {
 var conf = require('rtsConfig.js');
 
 var curried_error = function(name) {
-    return function(desc, globalId, exprId) {
-        return conf.error(name, desc, globalId, exprId);
+    return function(globalId, exprId) {
+        return conf.error(name, globalId, exprId);
     };
 };
 

@@ -360,14 +360,13 @@ compileGlobal globalId =
             Definition.BodyExpr defExpr -> compileDefExpr defExpr
     & withGlobal (ER.GlobalDef globalId)
 
-throwErr :: Monad m => ValId -> String -> String -> M m CodeGen
-throwErr valId errName desc =
+throwErr :: Monad m => ValId -> ER.CompiledErrorType -> M m CodeGen
+throwErr valId err =
     Lens.view envCurrentGlobal
     <&> \curGlobal ->
-    [ (rts "exceptions" $. JS.ident errName)
+    [ (rts "exceptions" $. JS.ident (ER.encodeCompiledError err))
         `JS.call`
-        [ JS.string desc
-        , JS.string (ER.encodeWhichGlobal curGlobal)
+        [ JS.string (ER.encodeWhichGlobal curGlobal)
         , jsValId valId
         ] & JS.throw
     ] & codeGenFromLamStmts
@@ -405,7 +404,7 @@ compileGlobalVar valId var =
                         >>= maybe newGlobalType pure
                     if T.alphaEq scheme expectedType
                         then loadGlobal
-                        else throwErr valId "DependencyTypeOutOfDate" "Dependency type needs update"
+                        else throwErr valId ER.DependencyTypeOutOfDate
         Lens.view (envExpectedTypes . Lens.at var)
             >>= maybe loadGlobal verifyType
     where
@@ -514,7 +513,7 @@ compileCaseOnVar valId x scrutineeVar =
         cases <- traverse makeCase tagsStr
         defaultCase <-
             case mRestHandler of
-            Nothing -> throwErr valId "UnhandledCase" "Unhandled case"
+            Nothing -> throwErr valId ER.UnhandledCase
             Just restHandler -> compileAppliedFunc valId restHandler scrutineeVar
             <&> codeGenLamStmts
             <&> JS.defaultc
@@ -679,9 +678,9 @@ optimizeExpr x = pure x
 compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
 compileLeaf x valId =
     case x of
-    V.LHole -> throwErr valId "ReachedHole" "Reached a hole"
+    V.LHole -> throwErr valId ER.ReachedHole
     V.LRecEmpty -> JS.object [] & codeGenFromExpr & pure
-    V.LAbsurd -> throwErr valId "UnhandledCase" "Reached absurd"
+    V.LAbsurd -> throwErr valId ER.UnhandledCase
     V.LVar var -> compileVar valId var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & pure
     V.LFromNom {} ->

@@ -5,9 +5,10 @@ module Lamdu.Sugar.Types.Eval
     , ChildScopes, ParamScopes, EvaluationScopes
     , ScopeId
     , ER.EvalTypeError(..)
-    , ER.ErrorType(..)
-    , EvalException(..)
-        , evalExceptionType, evalExceptionDesc, evalExceptionJumpTo
+    , ER.CompiledErrorType(..)
+        , ER._DependencyTypeOutOfDate, ER._ReachedHole, ER._UnhandledCase
+    , ER.Error(..), ER._CompiledError, ER._RuntimeError
+    , EvalException(..), evalExceptionType, evalExceptionJumpTo
     , EvalCompletionResult(..), _EvalSuccess, _EvalError
     , EvalCompletion
     , ResRecord(..), recordFields
@@ -94,8 +95,7 @@ type ParamScopes = EvalScopes [BinderParamScopeId]
 type EvaluationScopes name i = CurAndPrev (Maybe (Map ScopeId (i (ResVal name))))
 
 data EvalException o = EvalException
-    { _evalExceptionType :: ER.ErrorType
-    , _evalExceptionDesc :: Text
+    { _evalExceptionType :: ER.Error
     , _evalExceptionJumpTo :: Maybe (o EntityId)
     } deriving Generic
 

@@ -277,7 +277,8 @@ instance NFData ShowAnnotation
 instance NFData Sugar.BinderBodyScope
 instance NFData Sugar.BinderMode
 instance NFData Sugar.BinderParamScopeId
-instance NFData Sugar.ErrorType
+instance NFData Sugar.CompiledErrorType
+instance NFData Sugar.Error
 instance NFData Sugar.EvalTypeError
 instance NFData Sugar.FuncApplyLimit
 instance NFData Sugar.ScopeId

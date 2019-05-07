@@ -53,10 +53,9 @@ var sendEvent = function (obj) {
 };
 
 module.exports = {
-    error: function(name, desc, globalId, exprId) {
+    error: function(name, globalId, exprId) {
         return {
             error: name,
-            desc: desc,
             globalId: globalId,
             exprId: exprId,
         };
@@ -91,7 +90,7 @@ module.exports = {
                 event:"CompletionError",
                 err: {
                     error: "RuntimeError",
-                    desc: err.toString()
+                    exception: err.toString()
                 }
             });
             return;

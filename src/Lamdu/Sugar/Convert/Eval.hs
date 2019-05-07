@@ -230,10 +230,9 @@ completion ::
 completion cp entityId completions =
     completions <&> Lens._Just %~ f
     where
-        f (Left (ER.EvalException errType desc position)) =
+        f (Left (ER.EvalException errType position)) =
                 EvalError EvalException
                 { _evalExceptionType = errType
-                , _evalExceptionDesc = desc
                 , _evalExceptionJumpTo =
                     position
                     <&>
