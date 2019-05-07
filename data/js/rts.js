@@ -95,7 +95,7 @@ module.exports = {
     logResult: conf.logResult,
     logNewScope: conf.logNewScope,
     exceptions: {
-        BrokenDef: curried_error("BrokenDef"),
+        DependencyTypeOutOfDate: curried_error("DependencyTypeOutOfDate"),
         ReachedHole: curried_error("ReachedHole"),
         LamduBug: curried_error("LamduBug"),
     },

@@ -405,7 +405,7 @@ compileGlobalVar valId var =
                         >>= maybe newGlobalType pure
                     if T.alphaEq scheme expectedType
                         then loadGlobal
-                        else throwErr valId "BrokenDef" "Dependency type needs update"
+                        else throwErr valId "DependencyTypeOutOfDate" "Dependency type needs update"
         Lens.view (envExpectedTypes . Lens.at var)
             >>= maybe loadGlobal verifyType
     where

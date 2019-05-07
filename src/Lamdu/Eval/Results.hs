@@ -5,7 +5,7 @@ module Lamdu.Eval.Results
     , ScopeId(..), topLevelScopeId
     , EvalTypeError(..)
     , WhichGlobal(..), encodeWhichGlobal, decodeWhichGlobal
-    , ErrorType(..), _LamduBug, _BrokenDef, _ReachedHole
+    , ErrorType(..), _LamduBug, _DependencyTypeOutOfDate, _ReachedHole
     , EvalException(..), errorType, errorDesc, errorPosition
     , EvalResults(..), erExprValues, erAppliesOfLam, erCache, erCompleted
     , empty
@@ -53,7 +53,7 @@ deriving instance Show (Tie f Body) => Show (Body f)
 
 type Val pl = Tree (Ann pl) Body
 
-data ErrorType = LamduBug | BrokenDef | ReachedHole | RuntimeError
+data ErrorType = LamduBug | DependencyTypeOutOfDate | ReachedHole | RuntimeError
     deriving (Read, Show, Generic, Eq)
 Lens.makePrisms ''ErrorType
 
