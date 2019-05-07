@@ -86,20 +86,37 @@ mkNavDests ::
     Gui NavDests f
 mkNavDests dir (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
     NavDests
-    { cursorLeft  = reverse colsLeft  & enterHoriz FromRight
+    { cursorLeft  =
+        case dir of
+        Dir.LeftToRight -> reverse colsPre
+        Dir.RightToLeft -> colsPost
+        & enterHoriz FromRight
+    , cursorRight =
+        case dir of
+        Dir.LeftToRight -> colsPost
+        Dir.RightToLeft -> reverse colsPre
+        & enterHoriz FromLeft
+    , cursorLeftMost  =
+        case dir of
+        Dir.LeftToRight -> colsPre
+        Dir.RightToLeft -> reverse colsPost
+        & take 1 & enterHoriz FromLeft
+    , cursorRightMost =
+        case dir of
+        Dir.LeftToRight -> reverse colsPost
+        Dir.RightToLeft -> colsPre
+        & take 1 & enterHoriz FromRight
+
     , cursorUp    = reverse rowsAbove & enterVert  FromBelow
-    , cursorRight = colsRight         & enterHoriz FromLeft
     , cursorDown  = rowsBelow         & enterVert  FromAbove
 
     , cursorTop       = take 1 rowsAbove           & enterVert  FromAbove
-    , cursorLeftMost  = take 1 colsLeft            & enterHoriz FromLeft
     , cursorBottom    = reverse rowsBelow & take 1 & enterVert  FromBelow
-    , cursorRightMost = reverse colsRight & take 1 & enterHoriz FromRight
     }
     where
         columns = transpose rows
-        colsLeft = take cursorX columns
-        colsRight = drop (cursorX+1) columns
+        colsPre = take cursorX columns
+        colsPost = drop (cursorX+1) columns
         rowsAbove = take cursorY rows
         rowsBelow = drop (cursorY+1) rows
         enterHoriz = enterFrom Vertical Rect.verticalRange
@@ -274,12 +291,12 @@ toWidgetWithKeys env keys size sChildren =
             }
     }
     where
-        unfocusedMEnter = combineMEnters unfocusedMEnters
+        unfocusedMEnter = combineMEnters dir unfocusedMEnters
         dir = env ^. Dir.layoutDir
         translateChildWidget (rect, widget) =
-            -- -- Each child is set to the size of the entire grid and
-            -- -- then translated to its place in order to fix the
-            -- -- Surrounding parameters of all children
+            -- Each child is set to the size of the entire grid and
+            -- then translated to its place in order to fix the
+            -- Surrounding parameters of all children
             Element.pad dir
             (rect ^. Rect.topLeft)
             (size - (rect ^. Rect.bottomRight)) widget
@@ -294,9 +311,10 @@ groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
 combineMEnters ::
+    Dir.Layout ->
     [[Maybe (FocusDirection -> Widget.EnterResult a)]] ->
     Maybe (FocusDirection -> Widget.EnterResult a)
-combineMEnters children
+combineMEnters layoutDir children
     | null childEnters = Nothing
     | otherwise = Just byDirection
     where
@@ -331,8 +349,12 @@ combineMEnters children
                     FromOutside -> Vector2 0 0
                     FromAbove{} -> Vector2 0 (-1)
                     FromBelow{} -> Vector2 0 1
-                    FromLeft{}  -> Vector2 (-1) 0
-                    FromRight{} -> Vector2 1 0
+                    FromLeft{}  -> Vector2 (negate afterEdge) 0
+                    FromRight{} -> Vector2 afterEdge 0
+                afterEdge =
+                    case layoutDir of
+                    Dir.LeftToRight -> 1
+                    Dir.RightToLeft -> (-1)
 
         -- | Take only the first/last enterable row/column
         filteredByEdge =
