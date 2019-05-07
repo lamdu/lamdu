@@ -97,7 +97,7 @@ module.exports = {
     exceptions: {
         DependencyTypeOutOfDate: curried_error("DependencyTypeOutOfDate"),
         ReachedHole: curried_error("ReachedHole"),
-        LamduBug: curried_error("LamduBug"),
+        UnhandledCase: curried_error("UnhandledCase"),
     },
     memo: function (thunk) {
         var done = false;

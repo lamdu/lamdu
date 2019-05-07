@@ -514,7 +514,7 @@ compileCaseOnVar valId x scrutineeVar =
         cases <- traverse makeCase tagsStr
         defaultCase <-
             case mRestHandler of
-            Nothing -> throwErr valId "LamduBug" "Unhandled case"
+            Nothing -> throwErr valId "UnhandledCase" "Unhandled case"
             Just restHandler -> compileAppliedFunc valId restHandler scrutineeVar
             <&> codeGenLamStmts
             <&> JS.defaultc
@@ -681,7 +681,7 @@ compileLeaf x valId =
     case x of
     V.LHole -> throwErr valId "ReachedHole" "Reached a hole"
     V.LRecEmpty -> JS.object [] & codeGenFromExpr & pure
-    V.LAbsurd -> throwErr valId "LamduBug" "Reached absurd"
+    V.LAbsurd -> throwErr valId "UnhandledCase" "Reached absurd"
     V.LVar var -> compileVar valId var >>= maybeLogSubexprResult valId
     V.LLiteral literal -> compileLiteral literal & pure
     V.LFromNom {} ->
