@@ -43,7 +43,7 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
-    , Glue.HasTexts env
+    , Dir.HasLayoutDir env
     ) =>
     m (AnimId -> Gui Options.Disambiguators f)
 disambiguators =
@@ -53,7 +53,7 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    (MonadReader env m, TextView.HasStyle env, Glue.HasTexts env, Functor f) =>
+    (MonadReader env m, TextView.HasStyle env, Functor f, Dir.HasLayoutDir env) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
     do
