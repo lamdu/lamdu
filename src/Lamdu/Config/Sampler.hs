@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Config.Sampler
     ( Sampler, new, setSelection
-    , FiledConfig(..), filePath, fileData
+    , FiledConfig(..), primaryPath, dependencyPaths, fileData
+        , filePaths, sampleFilePaths
     , SampleData(..), sConfig, sTheme, sLanguage
     , Sample(..), sData
     , sConfigData, sThemeData, sLanguageData
@@ -12,6 +13,7 @@ import           Control.Concurrent.Extended (ThreadId, threadDelay, forkIOUnmas
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
 import qualified Data.Text as Text
@@ -32,7 +34,8 @@ type ModificationTime = UTCTime
 -- file, then map over that to Config
 
 data FiledConfig a = FiledConfig
-    { _filePath :: !FilePath
+    { _primaryPath :: FilePath
+    , _dependencyPaths :: ![FilePath]
     , _fileData :: !a
     } deriving (Eq)
 Lens.makeLenses ''FiledConfig
@@ -65,31 +68,37 @@ data Sampler = Sampler
     , setSelection :: Selection Theme -> Selection Language -> IO ()
     }
 
+filePaths :: Lens.Traversal' (FiledConfig a) FilePath
+filePaths f (FiledConfig p ps a) = FiledConfig <$> f p <*> traverse f ps ?? a
+
 sampleFilePaths :: Lens.Traversal' SampleData FilePath
 sampleFilePaths f (SampleData conf theme language) =
     SampleData
-    <$> filePath f conf
-    <*> filePath f theme
-    <*> filePath f language
+    <$> filePaths f conf
+    <*> filePaths f theme
+    <*> filePaths f language
 
 getSampleMTimes :: SampleData -> IO [ModificationTime]
 getSampleMTimes sampleData =
     sampleData ^.. sampleFilePaths & traverse getModificationTime
 
-withMTime :: FilePath -> IO (Config, FiledConfig Theme, FiledConfig Language) -> IO Sample
-withMTime _sConfigPath act =
+withMTime :: IO SampleData -> IO Sample
+withMTime act =
     do
-        (_sConfigData, _sTheme, _sLanguage) <- act
-        let _sConfig = FiledConfig _sConfigPath _sConfigData
-        let sampleData = SampleData{_sConfig, _sTheme, _sLanguage}
+        sampleData <- act
         mtimes <- getSampleMTimes sampleData
         Sample mtimes sampleData & pure
+
+loadConfigFile :: FromJSON a => FilePath -> IO (FiledConfig a)
+loadConfigFile path =
+    AesonConfig.load path & Writer.runWriterT
+    <&> uncurry (flip (FiledConfig path))
 
 loadFromFolder ::
     (HasConfigFolder a, FromJSON a) =>
     FilePath -> Selection a -> IO (FiledConfig a)
 loadFromFolder configPath selection =
-    AesonConfig.load path <&> FiledConfig path
+    loadConfigFile path
     where
         path =
             takeDirectory configPath </> configFolder selection </>
@@ -98,11 +107,11 @@ loadFromFolder configPath selection =
 load :: Selection Theme -> Selection Language -> FilePath -> IO Sample
 load themeName langName configPath =
     do
-        config <- AesonConfig.load configPath
-        (,,) config
+        config <- loadConfigFile configPath
+        SampleData config
             <$> loadFromFolder configPath themeName
             <*> loadFromFolder configPath langName
-    & withMTime configPath
+            & withMTime
 
 maybeReload :: Sample -> FilePath -> IO (Maybe Sample)
 maybeReload (Sample oldVer old) newConfigPath =
@@ -112,7 +121,7 @@ maybeReload (Sample oldVer old) newConfigPath =
             then pure Nothing
             else load (f sTheme) (f sLanguage) newConfigPath <&> Just
     where
-        f l = old ^. l . filePath & takeFileName & dropExtension & Text.pack & Selection
+        f l = old ^. l . primaryPath & takeFileName & dropExtension & Text.pack & Selection
 
 new :: (Sample -> IO ()) -> Selection Theme -> Selection Language -> IO Sampler
 new sampleUpdated initialTheme initialLang =

@@ -3,6 +3,7 @@
 module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Functor.Identity (Identity(..))
@@ -83,7 +84,9 @@ makeLang = TestConfig.loadConfigObject "english"
 make :: IO Env
 make =
     do
-        testConfig <- Paths.getDataFileName "config.json" >>= AesonConfig.load
+        testConfig <-
+            Paths.getDataFileName "config.json"
+            >>= Writer.evalWriterT . AesonConfig.load
         testTheme <- TestConfig.loadConfigObject "dark"
         testLang <- makeLang
         font <-

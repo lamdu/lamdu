@@ -3,6 +3,9 @@ module Data.Aeson.Config
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Trans.FastWriter (WriterT)
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON(..), Result(..), eitherDecode', fromJSON)
 import           Data.Aeson.Lens (_Object, _String, key, values)
 import           Data.Aeson.Types (Value(..))
@@ -21,21 +24,25 @@ override x _ = x
 importsKey :: Text
 importsKey = "imports"
 
-imports :: FilePath -> Value -> IO Value
+imports :: FilePath -> Value -> WriterT [FilePath] IO Value
 imports dirName x =
     x ^.. key importsKey . values . _String
     <&> Text.unpack
     <&> addDir
-    & traverse load
+    & traverse loadRec
     <&> foldl override (x & _Object . Lens.at importsKey .~ Nothing)
     where
         addDir path
             | isRelative path = dirName </> path
             | otherwise = path
 
-load :: FromJSON a => FilePath -> IO a
+loadRec :: FromJSON a => FilePath -> WriterT [FilePath] IO a
+loadRec path = Writer.tell [path] *> load path
+
+load :: FromJSON a => FilePath -> WriterT [FilePath] IO a
 load path =
-    eitherDecode' <$> LBS.readFile path
+    liftIO (LBS.readFile path)
+    <&> eitherDecode'
     >>= either (fail . mappend msg) (imports (takeDirectory path))
     <&> fromJSON
     >>=

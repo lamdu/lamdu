@@ -18,7 +18,7 @@ import qualified System.FilePath as FilePath
 import           Lamdu.Prelude
 
 sampleConfigPath :: Lens' Sample FilePath
-sampleConfigPath = Sampler.sData . Sampler.sConfig . Sampler.filePath
+sampleConfigPath = Sampler.sData . Sampler.sConfig . Sampler.primaryPath
 
 prependConfigPath :: Sample -> Fonts FilePath -> Fonts FilePath
 prependConfigPath sample =

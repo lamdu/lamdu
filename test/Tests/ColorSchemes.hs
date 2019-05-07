@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.ColorSchemes (test) where
 
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
 import qualified Data.Map as Map
@@ -19,7 +20,7 @@ test =
 
 verifyTheme :: FilePath -> IO ()
 verifyTheme filename =
-    load filename >>= verify
+    load filename & Writer.evalWriterT >>= verify
     where
         verify :: Theme -> IO ()
         verify theme

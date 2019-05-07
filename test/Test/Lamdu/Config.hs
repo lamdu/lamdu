@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 module Test.Lamdu.Config (loadConfigObject) where
 
+import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Proxy (Proxy(..))
@@ -18,4 +19,4 @@ loadConfigObject selection =
     Paths.getDataFileName "config.json"
     <&> takeDirectory
     <&> (\x -> x </> configFolder (Proxy @a) </> (selection <> ".json"))
-    >>= AesonConfig.load
+    >>= Writer.evalWriterT . AesonConfig.load

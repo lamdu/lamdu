@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.Config (test) where
 
+import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Config (load)
 import qualified Data.Aeson.Diff as AesonDiff
@@ -32,7 +33,7 @@ verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
 verifyJson proxy jsonPath =
     do
         configPath <- Paths.getDataFileName jsonPath
-        json <- load configPath
+        json <- load configPath & Writer.evalWriterT
         case Aeson.fromJSON json <&> (`asProxyTypeOf` proxy) of
             Aeson.Error msg -> assertString ("Failed decoding " <> configPath <> " from json: " <> msg)
             Aeson.Success val
