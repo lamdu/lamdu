@@ -37,7 +37,7 @@ import qualified Lamdu.Calc.Term.Utils as Flatten
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Eval.Results (WhichGlobal(..), encodeWhichGlobal)
+import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Language.ECMAScript3.PrettyPrint as JSPP
 import qualified Language.ECMAScript3.Syntax as JSS
@@ -80,7 +80,7 @@ data Env m = Env
     , _envLocals :: Map V.Var LocalVarName
     , _envMode :: Mode
     , _envExpectedTypes :: Map V.Var (Tree Pure T.Scheme)
-    , _envCurrentGlobal :: WhichGlobal
+    , _envCurrentGlobal :: ER.WhichGlobal
     }
 Lens.makeLenses ''Env
 
@@ -244,7 +244,7 @@ initialEnv actions =
     , _envLocals = mempty
     , _envMode = loggingMode actions
     , _envExpectedTypes = mempty
-    , _envCurrentGlobal = GlobalRepl
+    , _envCurrentGlobal = ER.GlobalRepl
     }
 
 initialState :: State
@@ -257,7 +257,7 @@ initialState =
     }
 
 -- | Reset reader/writer components of RWS for a new global compilation context
-withGlobal :: Monad m => WhichGlobal -> M m a -> M m a
+withGlobal :: Monad m => ER.WhichGlobal -> M m a -> M m a
 withGlobal whichGlobal act =
     act
     & censor (const LogUnused)
@@ -358,7 +358,7 @@ compileGlobal globalId =
         case def ^. Definition.defBody of
             Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
             Definition.BodyExpr defExpr -> compileDefExpr defExpr
-    & withGlobal (GlobalDef globalId)
+    & withGlobal (ER.GlobalDef globalId)
 
 throwErr :: Monad m => ValId -> String -> String -> M m CodeGen
 throwErr valId errName desc =
@@ -367,7 +367,7 @@ throwErr valId errName desc =
     [ (rts "exceptions" $. JS.ident errName)
         `JS.call`
         [ JS.string desc
-        , JS.string (encodeWhichGlobal curGlobal)
+        , JS.string (ER.encodeWhichGlobal curGlobal)
         , jsValId valId
         ] & JS.throw
     ] & codeGenFromLamStmts
