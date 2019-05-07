@@ -44,9 +44,6 @@ import           Lamdu.Prelude hiding (Map)
 
 type StoredText o = Property o Text
 
-newtype DisplayText = DisplayText { unDisplayText :: Text }
-    deriving (Eq, Ord)
-
 ------------------------------
 ---------- Pass 0 ------------
 ------------------------------
@@ -110,7 +107,7 @@ data P1Out = P1Out
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: OrderedSet UUID
         -- ^ Type vars met
-    , _p1Texts :: MMap DisplayText (Set T.Tag)
+    , _p1Texts :: MMap Text (Set T.Tag)
     }
     deriving stock Generic
     deriving (Semigroup, Monoid) via Generically P1Out
@@ -123,7 +120,7 @@ data P1Name o = P1Name
     , p1LocalsBelow :: MMap T.Tag Clash.Info
         -- ^ Allow checking collisions for names hidden behind monadic
         -- actions:
-    , p1TextsBelow :: MMap DisplayText (Set T.Tag)
+    , p1TextsBelow :: MMap Text (Set T.Tag)
         -- ^ We keep the texts below each node so we can check if an
         -- auto-generated name collides with any name in inner scopes
         -- We only use the keys in this map, but we do not strip the
@@ -159,19 +156,17 @@ p1Anon (Just uuid) =
             , p1TextsBelow = innerOut ^. p1Texts
             }
 
-displayOf :: StoredText o -> DisplayText
-displayOf prop
-    | Lens.has Lens._Empty text = DisplayText "(empty)"
-    | otherwise = DisplayText text
-    where
-        text = Property.value prop
+displayOf :: Text -> Text
+displayOf text
+    | Lens.has Lens._Empty text = "(empty)"
+    | otherwise = text
 
 p1Tagged ::
     Maybe Disambiguator -> Walk.NameType -> P0Name o ->
     CPS (Pass1PropagateUp i o) (P1Name o)
 p1Tagged mDisambiguator nameType (P0Name prop internalName) =
     CPS $ \inner ->
-    tellSome p1Texts (Lens.singletonAt displayText (Set.singleton tag))
+    tellSome p1Texts (Lens.singletonAt (prop ^. Property.pVal) (Set.singleton tag))
     *> inner
     & Writer.censor (p1lens <>~ myTags)
     & Writer.listen
@@ -188,7 +183,6 @@ p1Tagged mDisambiguator nameType (P0Name prop internalName) =
             | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
         myTags = Lens.singletonAt tag (Collider (Clash.infoOf aName))
         tag = internalName ^. inTag
-        displayText = displayOf prop
         aName =
             Annotated.Name
             { Annotated._internal = internalName
@@ -215,10 +209,10 @@ p1Name mDisambiguator nameType p0Name =
 ---------- Pass1 -> Pass2 -----------
 -------------------------------------
 
-tagText :: DisplayText -> Collision -> TagText
-tagText = TagText . unDisplayText
+tagText :: Text -> Collision -> TagText
+tagText = TagText . displayOf
 
-makeTagTexts :: MMap DisplayText (Set T.Tag) -> Map T.Tag TagText
+makeTagTexts :: MMap Text (Set T.Tag) -> Map T.Tag TagText
 makeTagTexts p1texts =
     p1texts
     & Lens.imapped %@~ mkTagTexts
@@ -233,8 +227,8 @@ makeTagTexts p1texts =
         isCollidingName text tagsOfName =
             isReserved text || Set.size tagsOfName > 1
 
-isReserved :: DisplayText -> Bool
-isReserved (DisplayText name) =
+isReserved :: Text -> Bool
+isReserved name =
     reservedWords ^. Lens.contains name
     || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
     where
@@ -263,7 +257,7 @@ initialP2Env (P1Out globals locals contexts tvs texts) =
         contexts ^@.. Lens.ix anonTag . Lens.folded <&> Tuple.swap & Map.fromList
     , _p2TypeVars =
         NameGen.numberCycle ["a", "b", "c"]
-        & filter (not . (`Lens.has` texts) . Lens.ix . DisplayText)
+        & filter (not . (`Lens.has` texts) . Lens.ix)
         & zip (tvs ^.. Lens.folded)
         & Map.fromList
     , _p2TagTexts = tagTexts
@@ -279,7 +273,6 @@ initialP2Env (P1Out globals locals contexts tvs texts) =
         lookupText tag =
             tagTexts ^? Lens.ix tag . ttText
             & fromMaybe (error "Cannot find global tag in tagTexts")
-            & DisplayText
         tagTexts = makeTagTexts texts
         top = colliders locals <> globals & uncolliders
         -- TODO: Use OrderedSet for nice ordered suffixes
@@ -312,13 +305,13 @@ data P2Env = P2Env
     , _p2TypeVars :: Map UUID Text
         -- ^ Names for type variables. Globally unique.
     , _p2TagTexts :: Map T.Tag TagText
-    , _p2Texts :: Set DisplayText
+    , _p2Texts :: Set Text
         -- ^ The set of all texts seen in P1 traversal (we do not see hole results)
         -- This is used to identify textual collisions in hole result tags
     , _p2TagSuffixes :: Map TaggedVarId CollisionSuffix
         -- ^ When tags collide in the overlapping scopes, the tag gets
         -- a different suffix for each of its entities in ALL scopes
-    , _p2TextsAbove :: Set DisplayText
+    , _p2TextsAbove :: Set Text
         -- ^ Used to prevent auto-names from re-using texts from above
     , _p2TagsAbove :: MMap T.Tag Clash.Info
         -- ^ All global tags AND local tags from above -- used to
@@ -381,9 +374,9 @@ getTagText tag prop =
     Lens.view id
     <&> \env ->
     env ^. p2TagTexts . Lens.at tag
-    & fromMaybe (TagText (unDisplayText displayText) (checkCollision env))
+    & fromMaybe (TagText displayText (checkCollision env))
     where
-        displayText = displayOf prop
+        displayText = displayOf (prop ^. Property.pVal)
         checkCollision env
             | env ^. p2Texts . Lens.contains displayText = UnknownCollision
             | otherwise = NoCollision
@@ -444,12 +437,12 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
                     isClash = Clash.infoOf aName
                     tag = aName ^. Annotated.tag
             P1AnonName ctx ->
-                NameGen.newName varInfo (accept . DisplayText) ctx
+                NameGen.newName varInfo accept ctx
                 <&> AutoGenerated
                 & Lens.zoom p2NameGen
                 & (`runState` env0)
                 & pure
-        let text = visible newNameForm ^. _1 . ttText & DisplayText
+        let text = visible newNameForm ^. _1 . ttText
         let env2 = env1 & p2TextsAbove %~ Set.insert text
         res <- Reader.local (const env2) inner
         pure (newNameForm, res)
