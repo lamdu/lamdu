@@ -56,7 +56,7 @@ makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
             ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
-            /|/ grammar (label (Texts.code . Texts.condColon))
+            /|/ (grammar (label (Texts.code . Texts.condColon)) /|/ Spacer.stdHSpace)
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             pure prefixLabel
