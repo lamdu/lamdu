@@ -25,10 +25,13 @@ isLeftToRight t
         BidiRLO -> False -- Right-to-left override
         _ -> isLeftToRight (Text.tail t)
 
-toVisual :: Text -> Text
-toVisual t
+toVisualLine :: Text -> Text
+toVisualLine t
     | isLeftToRight t = t
     | otherwise = Text.map flipChar (Text.reverse t)
+
+toVisual :: Text -> Text
+toVisual = Text.intercalate "\n" . map toVisualLine . Text.splitOn "\n"
 
 flipChar :: Char -> Char
 flipChar '(' = ')'
