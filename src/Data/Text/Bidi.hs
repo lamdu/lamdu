@@ -9,14 +9,28 @@ import           Data.Char.Properties.BidiCategory (BidiCategory(..), getBidiCat
 import qualified Data.Text as Text
 import           Data.Text (Text)
 
+import           Prelude
+
+isLeftToRight :: Text -> Bool
+isLeftToRight t
+    | Text.null t = True
+    | otherwise =
+        case getBidiCategory (Text.head t) of
+        BidiL -> True -- Left to right
+        BidiLRE -> True -- Left-to-right embedding
+        BidiLRO -> True -- Left-to-right override
+        BidiR -> False -- Right to left
+        BidiAL -> False -- Arabic letter
+        BidiRLE -> False -- Right-to-left embedding
+        BidiRLO -> False -- Right-to-left override
+        _ -> isLeftToRight (Text.tail t)
+
 toVisual :: Text -> Text
-toVisual t | Text.null t = t
-toVisual t =
-    case getBidiCategory (Text.head t) of
-    BidiR -> r -- Right to left
-    BidiAL -> r -- Arabic letter
-    BidiRLE -> r -- Right-to-left embedding
-    BidiRLO -> r -- Right-to-left override
-    _ -> t
-    where
-        r = Text.reverse t
+toVisual t
+    | isLeftToRight t = t
+    | otherwise = Text.map flipChar (Text.reverse t)
+
+flipChar :: Char -> Char
+flipChar '(' = ')'
+flipChar ')' = '('
+flipChar x = x
