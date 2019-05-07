@@ -69,18 +69,18 @@ grammar = Styled.grammar . Label.make . sanitize
 
 parensAround ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
+    , Element.HasAnimIdPrefix env
     ) =>
     WithTextPos View -> m (WithTextPos View)
 parensAround view =
     do
         openParenView <- grammar "("
         closeParenView <- grammar ")"
-        Glue.hbox ?? [openParenView, view, closeParenView]
+        Glue.hbox Dir.LeftToRight [openParenView, view, closeParenView] & pure
 
 parens ::
     ( MonadReader env m, TextView.HasStyle env, HasTheme env
-    , Element.HasAnimIdPrefix env, Dir.HasLayoutDir env
+    , Element.HasAnimIdPrefix env
     ) =>
     Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
