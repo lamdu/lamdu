@@ -82,13 +82,6 @@ data EvalException srcId = EvalException
     } deriving Eq
 Lens.makeLenses ''EvalException
 
-instance Show srcId => Show (EvalException srcId) where
-    show (EvalException t d p) =
-        "Eval exception: " ++ show t ++ " (" ++ Text.unpack d ++ ") at " ++
-        case p of
-        Nothing -> "N/A"
-        Just (g, e) -> encodeWhichGlobal g ++ ":" ++ show e
-
 extractField :: Show a => a -> T.Tag -> Val a -> Val a
 extractField errPl tag (Ann _ (RRecExtend (RowExtend vt vv vr)))
     | vt == tag = vv
@@ -104,7 +97,7 @@ data EvalResults srcId =
     , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, Val ())])
     , _erCache :: IntMap (Val ())
     , _erCompleted :: Maybe (Either (EvalException srcId) (Val ()))
-    } deriving Show
+    }
 
 empty :: EvalResults srcId
 empty =
