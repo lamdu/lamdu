@@ -5,6 +5,7 @@ module Lamdu.GUI.ReplEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
@@ -14,6 +15,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
@@ -102,19 +104,32 @@ makeIndicator tag enabledColor text =
         color <- indicatorColor tag enabledColor
         Label.make text & Reader.local (TextView.color .~ color)
 
-compiledErrorDesc :: Sugar.CompiledErrorType -> Text
-compiledErrorDesc Sugar.ReachedHole = "Reached a hole"
-compiledErrorDesc Sugar.DependencyTypeOutOfDate = "Dependency type needs update"
-compiledErrorDesc Sugar.UnhandledCase = "Unhandled case (Lamdu bug)"
+compiledErrorDesc :: Sugar.CompiledErrorType -> OneOf Texts.CodeUI
+compiledErrorDesc Sugar.ReachedHole = Texts.jsReachedAHole
+compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
+compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
 
-errorDesc :: Sugar.Error -> Text
-errorDesc (Sugar.CompiledError err) = compiledErrorDesc err
-errorDesc (Sugar.RuntimeError exc) = "JS exception: " <> exc
+errorDesc ::
+    ( MonadReader env m, HasTheme env, Texts.HasLanguage env
+    , Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ) =>
+    Sugar.Error -> m (Align.WithTextPos View)
+errorDesc err =
+    do
+        errorColor <- Lens.view (theme . Theme.errorColor)
+        case err of
+            Sugar.CompiledError cErr ->
+                label (Texts.codeUI . compiledErrorDesc cErr)
+            Sugar.RuntimeError exc ->
+                label (Texts.codeUI . Texts.jsException)
+                /|/ ((TextView.make ?? exc)
+                        <*> (Element.subAnimId ?? ["exception text"]))
+            & Reader.local (TextView.color .~ errorColor)
 
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
-    , HasTheme env, HasConfig env, Glue.HasTexts env
+    , HasTheme env, HasConfig env, Glue.HasTexts env, Texts.HasLanguage env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -131,9 +146,7 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
         if Widget.isFocused (indicator ^. Align.tValue)
             then
             do
-                errorColor <- Lens.view (theme . Theme.errorColor)
-                descLabel <-
-                    Label.make (errorDesc errorType) & Reader.local (TextView.color .~ errorColor)
+                descLabel <- errorDesc errorType
                 hspace <- Spacer.stdHSpace
                 vspace <- Spacer.stdVSpace
                 hover <- Hover.hover
@@ -170,7 +183,7 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
-    , HasTheme env, HasConfig env, Glue.HasTexts env
+    , HasTheme env, HasConfig env, Texts.HasLanguage env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))

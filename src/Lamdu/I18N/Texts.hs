@@ -92,6 +92,10 @@ data CodeUI a = CodeUI
     , _pModeVerbose :: a
     , _pModeOO :: a
     , _pModeInfix :: a
+    , _jsException :: a
+    , _jsReachedAHole :: a
+    , _jsStaleDep :: a
+    , _jsUnhandledCase :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)

@@ -48,7 +48,11 @@
             "presentationMode": "מצב תצוגה",
             "pModeVerbose": "עודף",
             "pModeOO": "אובייקטי",
-            "pModeInfix": "תוכי"
+            "pModeInfix": "תוכי",
+            "jsException": "חריגה בהרצה: ",
+            "jsReachedAHole": "הרצת חור",
+            "jsStaleDep": "הרצת הגדרה עם טיפוס לא מעודכן",
+            "jsUnhandledCase": "התאמה חסרה )באג בלמדו("
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

@@ -45,7 +45,11 @@
             "presentationMode": "Presentation Mode",
             "pModeVerbose": "Verbose",
             "pModeOO": "OO",
-            "pModeInfix": "Infix"
+            "pModeInfix": "Infix",
+            "jsException": "JS exception: ",
+            "jsReachedAHole": "Reached a hole",
+            "jsStaleDep": "Dependency type needs update",
+            "jsUnhandledCase": "Unhandled case (Lamdu bug)"
         },
         "statusBar": {
             "statusBar": "Status Bar",
