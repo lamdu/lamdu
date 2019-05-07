@@ -120,8 +120,7 @@ makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , ResponsiveExpr.HasStyle env
-    , Glue.HasTexts env -- TODO: An artifact constraint
+    , ResponsiveExpr.HasStyle env, Glue.HasTexts env
     ) => f (Row (Gui Responsive o) -> Gui Responsive o)
 verticalRowRender =
     do

@@ -70,7 +70,7 @@ addParens =
 
 indent ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
-    , Glue.HasTexts env
+    , Dir.HasLayoutDir env
     ) =>
     m (AnimId -> Gui Responsive f -> Gui Responsive f)
 indent =
@@ -94,7 +94,7 @@ totalBarWidth =
 
 indentBar ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Glue.HasTexts env
+    , Dir.HasLayoutDir env
     ) =>
     m (Widget.R -> AnimId -> View)
 indentBar =
