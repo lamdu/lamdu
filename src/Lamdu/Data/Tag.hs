@@ -3,11 +3,13 @@
 module Lamdu.Data.Tag
     ( Tag(..), tagOrder, tagOpName, tagNames
     , OpName(..), _NotAnOp, _OpUni, _OpDir, DirOp(..), opLeftToRight, opRightToLeft
+    , HasLanguageIdentifier(..)
     , getTagName
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Binary
+import           GUI.Momentu.Direction (HasLayoutDir(..), Layout(..))
 
 import           Lamdu.Prelude
 
@@ -36,10 +38,26 @@ data Tag = Tag
     deriving anyclass Binary
 Lens.makeLenses ''Tag
 
--- TODO: Currently this is fixed for English, make it usable for any language!
-getTagName :: Tag -> Text
-getTagName tag =
+-- TODO: Appropriate module for this
+class HasLanguageIdentifier env where
+    languageIdentifier :: Lens' env Text
+
+getTagName ::
+    (HasLanguageIdentifier env, HasLayoutDir env) =>
+    env -> Tag -> Text
+getTagName env tag =
     case tag ^. tagOpName of
-    NotAnOp -> tag ^. tagNames . Lens.ix "english"
+    NotAnOp -> name
     OpUni x -> x
-    OpDir (DirOp x _) -> x
+    OpDir (DirOp l r) ->
+        case env ^. layoutDir of
+        LeftToRight -> opOrName l
+        RightToLeft -> opOrName r
+    where
+        opOrName x
+            | x == mempty = name -- No op for this direction
+            | otherwise = x
+        name =
+            case tag ^. tagNames . Lens.at (env ^. languageIdentifier) of
+            Just x -> x
+            Nothing -> tag ^. tagNames . Lens.ix "english"

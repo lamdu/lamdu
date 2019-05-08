@@ -15,6 +15,7 @@ import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
+import           GUI.Momentu.Direction (HasLayoutDir(..))
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -23,6 +24,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
@@ -112,13 +114,14 @@ assertInferSuccess =
     either (error . ("Type inference failed: " ++) . show . pPrint) id
 
 convertInferDefExpr ::
-    forall m.
-    (HasCallStack, Monad m) =>
+    forall m env.
+    (HasCallStack, Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env ->
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Tree Pure T.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
-convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr defI =
+convertInferDefExpr env config cache monitors annMode evalRes cp defType defExpr defI =
     do
         Load.InferResult valInferred newInferContext <-
             Load.inferDef cachedInfer monitors evalRes defExpr defVar
@@ -146,6 +149,8 @@ convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr def
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
+                , _scLanguageIdentifier = env ^. languageIdentifier
+                , _scLanguageDir = env ^. layoutDir
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
@@ -170,17 +175,17 @@ convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr def
             >>= Transaction.writeIRef defI
 
 convertDefBody ::
-    (HasCallStack, Monad m) =>
-    Config -> Cache.Functions -> Debug.Monitors ->
+    (HasCallStack, Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env -> Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
     T m
     (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
-convertDefBody config cache monitors annMode evalRes cp (Definition.Definition bod defType defI) =
+convertDefBody env config cache monitors annMode evalRes cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
     Definition.BodyExpr defExpr ->
-        convertInferDefExpr config cache monitors annMode evalRes cp defType defExpr defI
+        convertInferDefExpr env config cache monitors annMode evalRes cp defType defExpr defI
 
 markAnnotations ::
     (MarkAnnotations t, Recursive Children t) =>
@@ -192,14 +197,15 @@ markAnnotations config
     | otherwise = markNodeAnnotations
 
 convertRepl ::
-    forall m.
-    (HasCallStack, Monad m) =>
+    forall m env.
+    (HasCallStack, Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env ->
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     T m
     (Repl InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
-convertRepl config cache monitors annMode evalRes cp =
+convertRepl env config cache monitors annMode evalRes cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
@@ -222,6 +228,8 @@ convertRepl config cache monitors annMode evalRes cp =
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
+                , _scLanguageIdentifier = env ^. languageIdentifier
+                , _scLanguageDir = env ^. layoutDir
                 }
         let typ = valInferred ^. ann . Input.inferredType
         nomsMap <-
@@ -263,14 +271,15 @@ loadAnnotatedDef getDefI x =
     getDefI x & ExprLoad.def <&> Definition.defPayload .~ x
 
 loadPanes ::
-    Monad m =>
+    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env ->
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m -> EntityId ->
     T m
     [Pane InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId])]
-loadPanes config cache monitors annMode evalRes cp replEntityId =
+loadPanes env config cache monitors annMode evalRes cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
         paneDefs <- traverse (loadAnnotatedDef Anchors.paneDef) panes
@@ -299,8 +308,8 @@ loadPanes config cache monitors annMode evalRes cp replEntityId =
                     bodyS <-
                         def
                         <&> Anchors.paneDef
-                        & convertDefBody config cache monitors annMode evalRes cp
-                    tag <- Anchors.tags cp & convertTaggedEntityWith defVar
+                        & convertDefBody env config cache monitors annMode evalRes cp
+                    tag <- Anchors.tags cp & convertTaggedEntityWith env defVar
                     defS <-
                         OrderTags.orderDef Definition
                         { _drEntityId = EntityId.ofIRef defI
@@ -322,18 +331,18 @@ loadPanes config cache monitors annMode evalRes cp replEntityId =
         paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
-    (HasCallStack, Monad m) =>
-    Config -> Cache.Functions -> Debug.Monitors ->
+    (HasCallStack, Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env -> Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m
     (WorkArea InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
-loadWorkArea config cache monitors annMode evalRes cp =
+loadWorkArea env config cache monitors annMode evalRes cp =
     do
-        repl <- convertRepl config cache monitors annMode evalRes cp
+        repl <- convertRepl env config cache monitors annMode evalRes cp
         panes <-
-            loadPanes config cache monitors annMode evalRes cp
+            loadPanes env config cache monitors annMode evalRes cp
             (repl ^. replExpr . SugarLens.binderResultExpr . plEntityId)
         pure WorkArea
             { _waRepl = repl

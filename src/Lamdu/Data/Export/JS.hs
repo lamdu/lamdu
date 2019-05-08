@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Lamdu.Data.Export.JS
     ( exportFancy
     , -- | This compiles in the fast/minimal export-js mode
@@ -15,6 +17,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
+import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -23,7 +26,7 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
-import           Lamdu.Data.Tag (getTagName)
+import           Lamdu.Data.Tag (HasLanguageIdentifier(..), getTagName)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
@@ -43,6 +46,18 @@ removeReadmeMeta :: String -> String
 removeReadmeMeta =
     unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
+data CompileNameEnv = CompileNameEnv
+    { _ceLanguage :: Text
+    , _ceLayout :: Dir.Layout
+    }
+Lens.makeLenses ''CompileNameEnv
+
+instance HasLanguageIdentifier CompileNameEnv where languageIdentifier = ceLanguage
+instance Dir.HasLayoutDir CompileNameEnv where layoutDir = ceLayout
+
+compileNameEnv :: CompileNameEnv
+compileNameEnv = CompileNameEnv "english" Dir.LeftToRight
+
 compile :: Monad m => Def.Expr (Val (ValP m)) -> T m String
 compile repl =
     repl <&> annotations %~ valId
@@ -56,7 +71,8 @@ compile repl =
             { Compiler.output = tell . (:[])
             , Compiler.loggingMode = Compiler.Fast Compiler.ReleaseDontMemoDefs
             , Compiler.readAssocTag = lift . getP . Anchors.assocTag
-            , Compiler.readAssocName = fmap getTagName . lift . ExprIRef.readTagInfo
+            , Compiler.readAssocName =
+                fmap (getTagName compileNameEnv) . lift . ExprIRef.readTagInfo
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def

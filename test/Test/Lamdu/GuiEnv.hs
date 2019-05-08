@@ -30,6 +30,7 @@ import           Lamdu.Config.Folder (Selection(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Texts (Language, HasLanguage(..))
@@ -76,6 +77,7 @@ instance Grid.HasTexts Env where texts = language . Grid.texts
 instance Menu.HasTexts Env where texts = language . Menu.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance HasNameTexts Env where nameTexts = language . nameTexts
+instance HasLanguageIdentifier Env where languageIdentifier = language . languageIdentifier
 instance HasLanguage Env where language = eLanguage
 
 makeLang :: IO Language

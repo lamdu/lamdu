@@ -50,8 +50,8 @@ loadWorkArea ::
     (Sugar.WorkArea (Name (T m)) (T m) (T m)
         (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
 loadWorkArea lang config cache monitors annMode theEvalResults cp =
-    SugarConvert.loadWorkArea config cache monitors annMode theEvalResults cp
-    >>= report . AddNames.addToWorkArea lang DataOps.assocTagName
+    SugarConvert.loadWorkArea lang config cache monitors annMode theEvalResults cp
+    >>= report . AddNames.addToWorkArea lang (DataOps.assocTagName lang)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toExprGuiMPayload
     where

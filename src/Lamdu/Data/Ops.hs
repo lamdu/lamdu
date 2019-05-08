@@ -18,13 +18,14 @@ import qualified Control.Lens as Lens
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           GUI.Momentu.Direction (HasLayoutDir(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
-import           Lamdu.Data.Tag (OpName(..), tagOrder, tagNames, tagOpName, getTagName)
+import           Lamdu.Data.Tag (OpName(..), tagOrder, tagNames, tagOpName, getTagName, HasLanguageIdentifier(..))
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -114,31 +115,32 @@ case_ tag tailI =
         RowExtend tag newValueI tailI & V.BCase & ExprIRef.newValI
             <&> CompositeExtendResult newValueI
 
--- TODO: Currently fixed on English. Need to support all languages
 assocTagName ::
-    Monad m => T.Tag -> MkProperty' (T m) Text
-assocTagName tag =
+    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env -> T.Tag -> MkProperty' (T m) Text
+assocTagName env tag =
     ExprIRef.readTagInfo tag
     <&> result
     & Property.MkProperty
     where
+        lang = env ^. languageIdentifier
         result info =
-            Property (getTagName info)
+            Property (getTagName env info)
             (Transaction.writeIRef (ExprIRef.tagI tag) . setName)
             where
                 setName name
                     | name == mempty =
                         info
                         & tagOpName .~ NotAnOp
-                        & tagNames . Lens.at "english" .~ Nothing
+                        & tagNames . Lens.at lang .~ Nothing
                     | isOperator name =
                         info
                         & tagOpName .~ OpUni name
-                        & tagNames . Lens.at "english" .~ Nothing
+                        & tagNames . Lens.at lang .~ Nothing
                     | otherwise =
                         info
                         & tagOpName .~ NotAnOp
-                        & tagNames . Lens.at "english" ?~ name
+                        & tagNames . Lens.at lang ?~ name
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
 
 newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()

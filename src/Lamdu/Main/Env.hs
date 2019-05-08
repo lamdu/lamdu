@@ -38,6 +38,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (ViewM)
+import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
@@ -87,13 +88,14 @@ instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Dir.HasLayoutDir Env where layoutDir = language . Dir.layoutDir
-instance Dir.HasTexts Env where texts = Texts.language . Dir.texts
-instance Glue.HasTexts Env where texts = Texts.language . Glue.texts
-instance EventMap.HasTexts Env where texts = Texts.language . EventMap.texts
-instance Choice.HasTexts Env where texts = Texts.language . Choice.texts
-instance TextEdit.HasTexts Env where texts = Texts.language . TextEdit.texts
-instance Grid.HasTexts Env where texts = Texts.language . Grid.texts
-instance Menu.HasTexts Env where texts = Texts.language . Menu.texts
-instance SearchMenu.HasTexts Env where texts = Texts.language . SearchMenu.texts
+instance Dir.HasTexts Env where texts = language . Dir.texts
+instance Glue.HasTexts Env where texts = language . Glue.texts
+instance EventMap.HasTexts Env where texts = language . EventMap.texts
+instance Choice.HasTexts Env where texts = language . Choice.texts
+instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
+instance Grid.HasTexts Env where texts = language . Grid.texts
+instance Menu.HasTexts Env where texts = language . Menu.texts
+instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance HasNameTexts Env where nameTexts = language . nameTexts
 instance Texts.HasLanguage Env where language = language
+instance HasLanguageIdentifier Env where languageIdentifier = language . languageIdentifier

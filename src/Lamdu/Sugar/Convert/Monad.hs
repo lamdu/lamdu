@@ -26,6 +26,7 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
+import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps)
 import           Lamdu.Calc.Infer (InferState)
@@ -34,6 +35,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Config (Config)
@@ -107,9 +109,14 @@ data Context m = Context
     , _scConfig :: Config
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+    , _scLanguageIdentifier :: Text
+    , _scLanguageDir :: Dir.Layout
     }
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
+
+instance HasLanguageIdentifier (Context m) where languageIdentifier = scLanguageIdentifier
+instance Dir.HasLayoutDir (Context m) where layoutDir = scLanguageDir
 
 cachedFunc :: Monad m => (Cache.Functions -> a) -> ConvertM m a
 cachedFunc f = Lens.view scCacheFunctions <&> f

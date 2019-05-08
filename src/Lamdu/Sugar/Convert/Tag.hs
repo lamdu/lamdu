@@ -9,9 +9,11 @@ import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           GUI.Momentu.Direction (HasLayoutDir(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Data.Tag (HasLanguageIdentifier)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -39,16 +41,19 @@ convertTag ::
     (T.Tag -> T m ()) ->
     ConvertM m (Tag name (T m) (T m))
 convertTag tag name forbiddenTags mkInstance setTag =
-    getTagsProp
-    <&> convertTagWith tag name forbiddenTags RequireTag mkInstance setTag
+    do
+        env <- Lens.view id
+        getTagsProp
+            <&> convertTagWith env tag name forbiddenTags RequireTag mkInstance setTag
 
 convertTagWith ::
-    Monad m =>
+    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
     Tag name (T m) (T m)
-convertTagWith tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
-    convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag tagsProp
+convertTagWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
+    convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
     & Tag (TagInfo (name tag) (mkInstance tag) tag)
 
 convertTagSelection ::
@@ -56,15 +61,18 @@ convertTagSelection ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     ConvertM m (TagSelection name (T m) (T m) a)
 convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
-    getTagsProp
-    <&> convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag
+    do
+        env <- Lens.view id
+        getTagsProp <&>
+            convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag
 
 convertTagSelectionWith ::
-    Monad m =>
+    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    env ->
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
     TagSelection name (T m) (T m) a
-convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
+convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag tagsProp =
     TagSelection
     { _tsOptions =
         getP tagsProp
@@ -75,7 +83,7 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag tagsProp 
         \newName ->
         do
             newTag <- DataOps.genNewTag
-            Property.setP (DataOps.assocTagName newTag) newName
+            Property.setP (DataOps.assocTagName env newTag) newName
             Property.modP tagsProp (Lens.contains newTag .~ True)
             setTag newTag <&> (,) (mkInstance newTag)
     , _tsAnon =
@@ -92,17 +100,23 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag tagsProp 
 
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 convertTaggedEntityWith ::
-    (UniqueId.ToUUID a, MonadTransaction n m) =>
+    ( UniqueId.ToUUID a, MonadTransaction n m
+    , HasLanguageIdentifier env, HasLayoutDir env
+    ) =>
+    env ->
     a -> MkProperty' (T n) (Set T.Tag) -> m (Tag InternalName (T n) (T n))
-convertTaggedEntityWith entity tagsProp =
+convertTaggedEntityWith env entity tagsProp =
     getP prop
     <&>
     \entityTag ->
-    convertTagWith entityTag (nameWithContext entity) mempty AllowAnon
+    convertTagWith env entityTag (nameWithContext entity) mempty AllowAnon
     (EntityId.ofTaggedEntity entity) (setP prop) tagsProp
     where
         prop = Anchors.assocTag entity
 
 convertTaggedEntity ::
     (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (Tag InternalName (T m) (T m))
-convertTaggedEntity entity = getTagsProp >>= convertTaggedEntityWith entity
+convertTaggedEntity entity =
+    do
+        env <- Lens.view id
+        getTagsProp >>= convertTaggedEntityWith env entity
