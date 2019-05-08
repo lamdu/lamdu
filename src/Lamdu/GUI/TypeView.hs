@@ -5,6 +5,7 @@ module Lamdu.GUI.TypeView
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
@@ -117,10 +118,11 @@ makeTInst ::
 makeTInst parentPrecedence tid typeParams =
     do
         hspace <- Spacer.stdHSpace
-        let afterName paramsView = mkNameView /|/ pure hspace /|/ paramsView
-        let makeTypeParam (tParamId, arg) =
+        let afterName paramsView = tconsName /|/ pure hspace /|/ paramsView
+        let makeTypeParam i (tParamId, arg) =
                 do
-                    paramIdView <- NameView.make tParamId
+                    paramIdView <-
+                        NameView.make tParamId & disambAnimId ["param", show i]
                     typeView <- makeInternal (Prec 0) arg
                     pure
                         [ Align.fromWithTextPos 1 paramIdView
@@ -128,19 +130,22 @@ makeTInst parentPrecedence tid typeParams =
                         , Align.fromWithTextPos 0 typeView
                         ]
         case typeParams of
-            [] -> mkNameView
+            [] -> tconsName
             [(_, arg)] ->
                 makeInternal (Prec 0) arg
                 & afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
-                gridViewTopLeftAlign <*> traverse makeTypeParam params
+                gridViewTopLeftAlign <*> Lens.itraverse makeTypeParam params
                 <&> Align.toWithTextPos
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG
                 & afterName
     where
-        mkNameView = NameView.make (tid ^. Sugar.tidName)
+        tconsName =
+            NameView.make (tid ^. Sugar.tidName) & disambAnimId ["TCons"]
+        disambAnimId suffixes =
+            Reader.local (Element.animIdPrefix <>~ (suffixes <&> BS8.pack))
 
 addTypeBG ::
     (Element a, MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
