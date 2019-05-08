@@ -12,7 +12,6 @@ import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
 import qualified AST.Term.Row as Row
 import           AST.Term.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
-import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Data.Aeson ((.=), (.:))
 import qualified Data.Aeson as Aeson
@@ -33,6 +32,8 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
+import           Lamdu.Data.Tag (Tag(..))
+import qualified Lamdu.Data.Tag as Tag
 
 import           Lamdu.Prelude hiding ((.=))
 
@@ -47,7 +48,7 @@ data Entity
     = EntitySchemaVersion Int
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
-    | EntityTag TagOrder (Maybe Text) T.Tag
+    | EntityTag T.Tag Tag
     | EntityNominal T.Tag T.NominalId (Maybe (Tree Pure (NominalDecl T.Type)))
     | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
 Lens.makePrisms ''Entity
@@ -56,7 +57,7 @@ instance AesonTypes.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
     toJSON (EntityRepl x) = encodeRepl x
     toJSON (EntityDef def) = encodeDef def
-    toJSON (EntityTag tagOrder mName tag) = encodeNamedTag (tagOrder, mName, tag)
+    toJSON (EntityTag tid tdata) = encodeNamedTag (tid, tdata)
     toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
     toJSON (EntityLamVar mParamList tag lamI var) = encodeTaggedLamVar (mParamList, tag, lamI, var)
 
@@ -65,14 +66,11 @@ instance AesonTypes.FromJSON Entity where
         decodeVariant "entity"
         [ ("repl" , fmap EntityRepl . decodeRepl)
         , ("def"  , fmap EntityDef  . decodeDef)
-        , ("name" , fmap (uncurry3 EntityTag) . decodeNamedTag)
+        , ("tagOrder", fmap (uncurry EntityTag) . decodeNamedTag)
         , ("nom"  , fmap (\((tag, nomId), nom) -> EntityNominal tag nomId nom) . decodeTaggedNominal)
         , ("lamId", fmap (uncurry4 EntityLamVar) . decodeTaggedLamVar)
         , ("schemaVersion", fmap EntitySchemaVersion . decodeSchemaVersion)
         ]
-
-uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
-uncurry3 f (x0, x1, x2) = f x0 x1 x2
 
 uncurry4 :: (a -> b -> c -> d -> e) -> (a, b, c, d) -> e
 uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
@@ -545,19 +543,39 @@ decodeDef obj =
 encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
 
-encodeNamedTag :: Encoder (TagOrder, Maybe Text, T.Tag)
-encodeNamedTag (tagOrder, mName, T.Tag ident) =
-    encodeTagOrder tagOrder
-    & insertField "tag" (encodeIdent ident)
-    & maybe id (insertField "name") mName
+encodeOp :: Tag.OpName -> [AesonTypes.Pair]
+encodeOp Tag.NotAnOp = []
+encodeOp (Tag.OpUni x) = [("op", Aeson.String x)]
+encodeOp (Tag.OpDir (Tag.DirOp l r)) =
+    [("op", Aeson.Array (Vector.fromList [Aeson.String l, Aeson.String r]))]
+
+encodeNamedTag :: Encoder (T.Tag, Tag)
+encodeNamedTag (T.Tag ident, Tag order op names) =
+    (encodeTagOrder order
+    & insertField "tag" (encodeIdent ident))
+    <> HashMap.fromList (encodeSquash "names" id names <> encodeOp op)
     & Aeson.Object
 
-decodeNamedTag :: Aeson.Object -> AesonTypes.Parser (TagOrder, Maybe Text, T.Tag)
+decodeOpName :: Maybe Aeson.Value -> AesonTypes.Parser (Tag.OpName)
+decodeOpName Nothing = pure Tag.NotAnOp
+decodeOpName (Just (Aeson.String x)) = Tag.OpUni x & pure
+decodeOpName (Just (Aeson.Array x)) =
+    case x ^.. traverse of
+    [Aeson.String l, Aeson.String r] ->
+        Tag.DirOp l r & Tag.OpDir & pure
+    _ -> fail ("unexpected op names:" <> show x)
+decodeOpName x = fail ("unexpected op name: " <> show x)
+
+decodeNamedTag :: Aeson.Object -> AesonTypes.Parser (T.Tag, Tag)
 decodeNamedTag obj =
-    (,,)
-    <$> (obj .: "tagOrder")
-    <*> optional (obj .: "name")
-    <*> (obj .: "tag" >>= decodeIdent <&> T.Tag)
+    (,)
+    <$> (obj .: "tag" >>= decodeIdent <&> T.Tag)
+    <*>
+    ( Tag
+        <$> (obj .: "tagOrder")
+        <*> decodeOpName (obj ^. Lens.at "op")
+        <*> decodeSquashed "names" Aeson.parseJSON obj
+    )
 
 encodeParamList :: Encoder Meta.ParamList
 encodeParamList = Aeson.toJSON . map encodeTagId

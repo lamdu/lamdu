@@ -20,6 +20,7 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
+import           Lamdu.Data.Tag (tagNames, tagOpName, OpName(..))
 import           Test.Lamdu.FreshDb (readFreshDb)
 
 import           Test.Lamdu.Prelude
@@ -37,10 +38,13 @@ verifyTagsTest =
     readFreshDb
     <&> (^.. traverse . JsonCodec._EntityTag)
     >>= traverse verifyHasName
+    <&> concat
     >>= verifyTagNames
     where
-        verifyHasName (_, Nothing, tag) = fail ("stdlib tag with no name:" <> show tag)
-        verifyHasName (_, Just x, _) = pure x
+        verifyHasName (tagId, tag)
+            | Map.null (tag ^. tagNames) && tag ^. tagOpName == NotAnOp =
+                fail ("stdlib tag with no name:" <> show tagId)
+            | otherwise = tag ^.. tagNames . Lens.ix "english" & pure
 
 verifyTagNames :: [Text] -> IO ()
 verifyTagNames names =
@@ -84,8 +88,8 @@ verifyNoBrokenDefsTest =
         db <- readFreshDb
         let tags =
                 Map.fromList
-                [ (tag, name)
-                | (_, Just name, tag) <- db ^.. Lens.folded . JsonCodec._EntityTag
+                [ (tag, tagInfo ^. tagNames . Lens.ix "english")
+                | (tag, tagInfo) <- db ^.. Lens.folded . JsonCodec._EntityTag
                 ]
         let defs = db ^.. Lens.folded . JsonCodec._EntityDef
         traverse_ verifyTag (defs <&> (^. Def.defPayload))

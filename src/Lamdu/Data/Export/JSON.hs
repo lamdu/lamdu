@@ -23,7 +23,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.List as List
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -38,7 +37,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
-import           Lamdu.Data.Tag (Tag(..), tagName, tagOrder)
+import           Lamdu.Data.Tag (Tag(..))
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -65,7 +64,7 @@ type EntityOrdering = (Int, Identifier)
 
 entityOrdering :: Codec.Entity -> EntityOrdering
 entityOrdering (Codec.EntitySchemaVersion _)                          = (0, "")
-entityOrdering (Codec.EntityTag _ _ (T.Tag ident))                    = (1, ident)
+entityOrdering (Codec.EntityTag (T.Tag ident)_ )                      = (1, ident)
 entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
 entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))               = (3, ident)
 entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
@@ -103,11 +102,8 @@ tell = Writer.tell . (: [])
 
 exportTag :: Monad m => T.Tag -> Export m ()
 exportTag tag =
-    do
-        info <- ExprIRef.readTagInfo tag & trans
-        let name = info ^. tagName
-        let mName = name <$ (guard . not . Text.null) name
-        Codec.EntityTag (info ^. tagOrder) mName tag & tell
+    ExprIRef.readTagInfo tag & trans
+    >>= tell . Codec.EntityTag tag
     & withVisited visitedTags tag
 
 exportNominal :: Monad m => T.NominalId -> Export m ()
@@ -231,11 +227,11 @@ importRepl defExpr =
     traverse writeValAtUUID defExpr >>=
     Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
-importTag :: Codec.TagOrder -> Maybe Text -> T.Tag -> T ViewM ()
-importTag order mName tag =
+importTag :: T.Tag -> Tag -> T ViewM ()
+importTag tagId tagInfo =
     do
-        Transaction.writeIRef (ExprIRef.tagI tag) (Tag (mName ^. Lens._Just) order)
-        tag `insertTo` DbLayout.tags
+        Transaction.writeIRef (ExprIRef.tagI tagId) tagInfo
+        tagId `insertTo` DbLayout.tags
 
 importLamVar :: Monad m => Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T m ()
 importLamVar paramList tag lamUUID var =
@@ -255,7 +251,7 @@ importNominal tag nomId nominal =
 importOne :: Codec.Entity -> T ViewM ()
 importOne (Codec.EntityDef def) = importDef def
 importOne (Codec.EntityRepl x) = importRepl x
-importOne (Codec.EntityTag order mName tag) = importTag order mName tag
+importOne (Codec.EntityTag tagId tagInfo) = importTag tagId tagInfo
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar paramList tag lamUUID var) = importLamVar paramList tag lamUUID var
 importOne (Codec.EntitySchemaVersion _) =
@@ -263,7 +259,7 @@ importOne (Codec.EntitySchemaVersion _) =
 
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
-    if ver == 9
+    if ver == 10
     then traverse_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail

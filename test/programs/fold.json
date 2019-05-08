@@ -1,76 +1,102 @@
 [
     {
-        "schemaVersion": 9
+        "schemaVersion": 10
     },
     {
         "tagOrder": 0,
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "name": "num"
+        "names": {
+            "english": "num"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "1b6990743fcc77560fdb139d1ac01a2c",
-        "name": "list"
+        "names": {
+            "english": "list"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "255541b1d8c6185596fd889e8dd40fa2",
-        "name": "fold"
+        "names": {
+            "english": "fold"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "42493a636f6e73000000000000000000",
-        "name": "nonEmpty"
+        "names": {
+            "english": "nonEmpty"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a68656164000000000000000000",
-        "name": "head"
+        "names": {
+            "english": "head"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a696e6669786c00000000000000",
-        "name": "infixl"
+        "names": {
+            "english": "infixl"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "42493a696e6669787200000000000000",
-        "name": "infixr"
+        "names": {
+            "english": "infixr"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a6e696c00000000000000000000",
-        "name": "empty"
+        "names": {
+            "english": "empty"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "42493a7461696c000000000000000000",
-        "name": "tail"
+        "names": {
+            "english": "tail"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "520401f6286eba0f9d724ad242d48440",
-        "name": "initial"
+        "names": {
+            "english": "initial"
+        }
     },
     {
         "tagOrder": 2,
         "tag": "6c15f96848dfbcdafa7f239af12424b1",
-        "name": "binop"
+        "names": {
+            "english": "binop"
+        }
     },
     {
         "tagOrder": 0,
-        "tag": "a318c24216defe206feeb73ef5be0003",
-        "name": "+"
+        "op": "+",
+        "tag": "a318c24216defe206feeb73ef5be0003"
     },
     {
         "tagOrder": 0,
         "tag": "cf92f68d7e2f830d6722a54b13ed7deb",
-        "name": "acc"
+        "names": {
+            "english": "acc"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "f5f4a4909a4091dbb5b3f9524b71fd18",
-        "name": "item"
+        "names": {
+            "english": "item"
+        }
     },
     {
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",

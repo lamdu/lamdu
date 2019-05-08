@@ -23,7 +23,7 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
-import           Lamdu.Data.Tag (tagName)
+import           Lamdu.Data.Tag (getTagName)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
@@ -56,7 +56,7 @@ compile repl =
             { Compiler.output = tell . (:[])
             , Compiler.loggingMode = Compiler.Fast Compiler.ReleaseDontMemoDefs
             , Compiler.readAssocTag = lift . getP . Anchors.assocTag
-            , Compiler.readAssocName = fmap (^. tagName) . lift . ExprIRef.readTagInfo
+            , Compiler.readAssocName = fmap getTagName . lift . ExprIRef.readTagInfo
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def

@@ -1,11 +1,13 @@
 [
     {
-        "schemaVersion": 9
+        "schemaVersion": 10
     },
     {
         "tagOrder": 0,
         "tag": "f5fc847215e75abfd5f4698f7688555f",
-        "name": "foo"
+        "names": {
+            "english": "foo"
+        }
     },
     {
         "tag": null,

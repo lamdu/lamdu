@@ -1,21 +1,27 @@
 [
     {
-        "schemaVersion": 9
+        "schemaVersion": 10
     },
     {
         "tagOrder": 0,
         "tag": "64077ff41e0a8ee59e103f93023ad302",
-        "name": "a"
+        "names": {
+            "english": "a"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "a56145270ce6b3bebd1dd012b7394867",
-        "name": "id"
+        "names": {
+            "english": "id"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "fa4970527c82ac935af48b0693d96cd9",
-        "name": "b"
+        "names": {
+            "english": "b"
+        }
     },
     {
         "tag": null,

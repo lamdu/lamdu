@@ -1,11 +1,13 @@
 [
     {
-        "schemaVersion": 9
+        "schemaVersion": 10
     },
     {
         "tagOrder": 0,
         "tag": "7187f0675eb3827939741acf7342ba78",
-        "name": "return"
+        "names": {
+            "english": "return"
+        }
     },
     {
         "nomType": {

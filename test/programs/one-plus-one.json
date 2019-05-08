@@ -1,26 +1,32 @@
 [
     {
-        "schemaVersion": 9
+        "schemaVersion": 10
     },
     {
         "tagOrder": 0,
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "name": "num"
+        "names": {
+            "english": "num"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a696e6669786c00000000000000",
-        "name": "infixl"
+        "names": {
+            "english": "infixl"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "42493a696e6669787200000000000000",
-        "name": "infixr"
+        "names": {
+            "english": "infixr"
+        }
     },
     {
         "tagOrder": 0,
-        "tag": "a318c24216defe206feeb73ef5be0003",
-        "name": "+"
+        "op": "+",
+        "tag": "a318c24216defe206feeb73ef5be0003"
     },
     {
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",

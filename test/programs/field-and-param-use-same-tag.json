@@ -1,16 +1,20 @@
 [
     {
-        "schemaVersion": 9
+        "schemaVersion": 10
     },
     {
         "tagOrder": 0,
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "name": "num"
+        "names": {
+            "english": "num"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a736f636b657400000000000000",
-        "name": "socket"
+        "names": {
+            "english": "socket"
+        }
     },
     {
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
