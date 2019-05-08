@@ -58,6 +58,5 @@ getTagName env tag =
             | x == mempty = name -- No op for this direction
             | otherwise = x
         name =
-            case tag ^. tagNames . Lens.at (env ^. languageIdentifier) of
-            Just x -> x
-            Nothing -> tag ^. tagNames . Lens.ix "english"
+            tag ^. tagNames . Lens.at (env ^. languageIdentifier)
+            & fromMaybe (tag ^. tagNames . Lens.ix "english")

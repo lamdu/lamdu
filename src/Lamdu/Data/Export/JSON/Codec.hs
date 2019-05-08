@@ -556,7 +556,7 @@ encodeNamedTag (T.Tag ident, Tag order op names) =
     <> HashMap.fromList (encodeSquash "names" id names <> encodeOp op)
     & Aeson.Object
 
-decodeOpName :: Maybe Aeson.Value -> AesonTypes.Parser (Tag.OpName)
+decodeOpName :: Maybe Aeson.Value -> AesonTypes.Parser Tag.OpName
 decodeOpName Nothing = pure Tag.NotAnOp
 decodeOpName (Just (Aeson.String x)) = Tag.OpUni x & pure
 decodeOpName (Just (Aeson.Array x)) =
