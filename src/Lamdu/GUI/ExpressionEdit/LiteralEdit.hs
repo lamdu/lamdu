@@ -126,7 +126,8 @@ textEdit prop pl =
         (withFd ?? myId) <*>
             label (Texts.code . Texts.textOpener)
             /|/ pure text
-            /|/ ( (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
+            /|/ ((Align.tValue %~)
+                    <$> (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
                     <*> label (Texts.code . Texts.textCloser)
                 )
     & withStyle Style.text
