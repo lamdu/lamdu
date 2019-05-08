@@ -1,5 +1,6 @@
 {
     "imports": ["right-to-left.mixin.json"],
+    "identifier": "hebrew",
     "texts": {
         "code": {
             "let_": "יהי",

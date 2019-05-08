@@ -1,5 +1,6 @@
 {
     "imports": ["left-to-right.mixin.json"],
+    "identifier": "english",
     "texts": {
         "code": {
             "let_": "let",

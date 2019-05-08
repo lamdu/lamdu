@@ -161,6 +161,7 @@ JsonTH.derivePrefixed "_" ''Texts
 data Language = Language
     { -- TODO: Should this still be called "Texts?"
       _lDirection :: Dir.Layout
+    , _lIdentifier :: Text
     , _lTexts :: Texts Text
     } deriving (Eq, Show)
 
