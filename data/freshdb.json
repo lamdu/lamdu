@@ -6,14 +6,16 @@
         "tagOrder": 0,
         "tag": "059472d8b1b980682d0b787374405808",
         "names": {
-            "english": "fromArray"
+            "english": "fromArray",
+            "hebrew": "ממערך"
         }
     },
     {
         "tagOrder": 0,
         "tag": "064d0e820f765c091cb74024232bd221",
         "names": {
-            "english": "unlines"
+            "english": "unlines",
+            "hebrew": "חבר-שורות"
         }
     },
     {
@@ -34,35 +36,40 @@
         "tagOrder": 0,
         "tag": "09f5ffef28309853265c4a98d0e56e1b",
         "names": {
-            "english": "sum"
+            "english": "sum",
+            "hebrew": "סכום"
         }
     },
     {
         "tagOrder": 1,
         "tag": "0de9d30d481f7d98aab850e3020f37ed",
         "names": {
-            "english": "texts"
+            "english": "texts",
+            "hebrew": "טקסטים"
         }
     },
     {
         "tagOrder": 0,
         "tag": "0f82aca66af91493b1ff401de5f1f7e3",
         "names": {
-            "english": "length"
+            "english": "length",
+            "hebrew": "אורך"
         }
     },
     {
         "tagOrder": 0,
         "tag": "0fdfeaa68c7b0fbb18c7eabccafbca57",
         "names": {
-            "english": "ceil"
+            "english": "ceil",
+            "hebrew": "עגל-מעלה"
         }
     },
     {
         "tagOrder": 0,
         "tag": "11f9ed365315868feb0bd113ab9d928f",
         "names": {
-            "english": "readFile"
+            "english": "readFile",
+            "hebrew": "קרא-קובץ"
         }
     },
     {
@@ -83,7 +90,8 @@
         "tagOrder": 0,
         "tag": "15c7e7857025b2fd744386ffdddf3c6d",
         "names": {
-            "english": "text"
+            "english": "text",
+            "hebrew": "טקסט"
         }
     },
     {
@@ -97,7 +105,8 @@
         "tagOrder": 0,
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
         "names": {
-            "english": "num"
+            "english": "num",
+            "hebrew": "מספר"
         }
     },
     {
@@ -111,19 +120,21 @@
         "tagOrder": 0,
         "tag": "1b6990743fcc77560fdb139d1ac01a2c",
         "names": {
-            "english": "list"
+            "english": "list",
+            "hebrew": "רשימה"
         }
     },
     {
         "tagOrder": 0,
         "tag": "1bc435bda14ad9da614ff4b7c2beb200",
         "names": {
-            "english": "truncateMutArray"
+            "english": "truncateMutArray",
+            "hebrew": "קצר-מערך-משתנה"
         }
     },
     {
         "tagOrder": 0,
-        "op": "⋲",
+        "op": ["⋲", ""],
         "tag": "237d65fd5b8735fbd8587a1e83d1127e"
     },
     {
@@ -137,49 +148,56 @@
         "tagOrder": 0,
         "tag": "254637f72efcddb6a545bccbd0c3bb84",
         "names": {
-            "english": "loop"
+            "english": "loop",
+            "hebrew": "לולאה"
         }
     },
     {
         "tagOrder": 0,
         "tag": "254bb97b57f12e1608fefc4517de7684",
         "names": {
-            "english": "not"
+            "english": "not",
+            "hebrew": "לא"
         }
     },
     {
         "tagOrder": 0,
         "tag": "255541b1d8c6185596fd889e8dd40fa2",
         "names": {
-            "english": "fold"
+            "english": "fold",
+            "hebrew": "קפל"
         }
     },
     {
         "tagOrder": 0,
         "tag": "25e2b6b106523880e27763084ffa6a07",
         "names": {
-            "english": "repeat"
+            "english": "repeat",
+            "hebrew": "חזור"
         }
     },
     {
         "tagOrder": 0,
         "tag": "2618939548b9c4669642d406622175f9",
         "names": {
-            "english": "newMutRef"
+            "english": "newMutRef",
+            "hebrew": "משתנה-חדש"
         }
     },
     {
         "tagOrder": 0,
         "tag": "27ce1d1bf4270020e1799f12e647f5cb",
         "names": {
-            "english": "send"
+            "english": "send",
+            "hebrew": "שלח"
         }
     },
     {
         "tagOrder": 0,
         "tag": "29a1af58c138274076260b2d9c83b837",
         "names": {
-            "english": "lookup"
+            "english": "lookup",
+            "hebrew": "חפש"
         }
     },
     {
@@ -193,21 +211,24 @@
         "tagOrder": 0,
         "tag": "2cd566b597f3104ca7cdaafba234e97e",
         "names": {
-            "english": "initialState"
+            "english": "initialState",
+            "hebrew": "מצב-ראשוני"
         }
     },
     {
         "tagOrder": 0,
         "tag": "2cf28e61ddd6ee6c5c0513c0319a5687",
         "names": {
-            "english": "toArray"
+            "english": "toArray",
+            "hebrew": "למערך"
         }
     },
     {
         "tagOrder": 0,
         "tag": "2ebb1bbe1825335807392196b93da1f6",
         "names": {
-            "english": "mutRef"
+            "english": "mutRef",
+            "hebrew": "משתנה"
         }
     },
     {
@@ -228,45 +249,53 @@
         "tagOrder": 0,
         "tag": "31c480342399e473e4752c2d4f9d490e",
         "names": {
-            "english": "fromBytes"
+            "english": "fromBytes",
+            "hebrew": "מבתים"
         }
     },
     {
         "tagOrder": 0,
-        "op": "≥",
+        "op": ["≥", "≤"],
         "tag": "32110348a4b87b7844695e53fc00857e"
     },
     {
         "tagOrder": 0,
         "tag": "350cadea596b45fe56f9566184c43c06",
         "names": {
-            "english": "runMut"
+            "english": "runMut",
+            "hebrew": "הרץ-תהליך"
         }
     },
     {
         "tagOrder": 0,
         "tag": "3547cb112ac4489af2310c0626cdba6f",
         "names": {
-            "english": "last"
+            "english": "last",
+            "hebrew": "אחרון"
         }
     },
     {
         "tagOrder": 1,
         "tag": "382c73272703b194008142206698641e",
         "names": {
-            "english": "keep"
+            "english": "keep",
+            "hebrew": "שמור"
         }
     },
     {
         "tagOrder": 0,
-        "op": "-",
+        "op": ["-", ""],
+        "names": {
+            "hebrew": "פחות"
+        },
         "tag": "3973e022e93220f9212c18d0d0c543ae"
     },
     {
         "tagOrder": 3,
         "tag": "39a1b2e147ca8085ca6078182775f99f",
         "names": {
-            "english": "step"
+            "english": "step",
+            "hebrew": "צעד"
         }
     },
     {
@@ -299,7 +328,8 @@
         "tagOrder": 1,
         "tag": "422b088a94926fd6bc76ae0f4cef6181",
         "names": {
-            "english": "while"
+            "english": "while",
+            "hebrew": "כל-עוד"
         }
     },
     {
@@ -313,14 +343,16 @@
         "tagOrder": 1,
         "tag": "42493a636f6e73000000000000000000",
         "names": {
-            "english": "nonEmpty"
+            "english": "nonEmpty",
+            "hebrew": "לא-ריק"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a64617461000000000000000000",
         "names": {
-            "english": "data"
+            "english": "data",
+            "hebrew": "מידע"
         }
     },
     {
@@ -334,7 +366,8 @@
         "tagOrder": 2,
         "tag": "42493a64617461626173650000000000",
         "names": {
-            "english": "database"
+            "english": "database",
+            "hebrew": "מסד-נתונים"
         }
     },
     {
@@ -348,14 +381,16 @@
         "tagOrder": 0,
         "tag": "42493a656e7669726f6e6d656e740000",
         "names": {
-            "english": "environment"
+            "english": "environment",
+            "hebrew": "סביבה"
         }
     },
     {
         "tagOrder": 0,
         "tag": "42493a6572726f720000000000000000",
         "names": {
-            "english": "error"
+            "english": "error",
+            "hebrew": "שגיאה"
         }
     },
     {
@@ -369,7 +404,8 @@
         "tagOrder": 0,
         "tag": "42493a65786563757465000000000000",
         "names": {
-            "english": "execute"
+            "english": "execute",
+            "hebrew": "הרץ"
         }
     },
     {
@@ -383,7 +419,8 @@
         "tagOrder": 0,
         "tag": "42493a6669656c647300000000000000",
         "names": {
-            "english": "fields"
+            "english": "fields",
+            "hebrew": "שדות"
         }
     },
     {
@@ -411,7 +448,8 @@
         "tagOrder": 0,
         "tag": "42493a68656164000000000000000000",
         "names": {
-            "english": "head"
+            "english": "head",
+            "hebrew": "ראש"
         }
     },
     {
@@ -446,14 +484,16 @@
         "tagOrder": 1,
         "tag": "42493a6a757374000000000000000000",
         "names": {
-            "english": "just"
+            "english": "just",
+            "hebrew": "רק"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a6d6f6465000000000000000000",
         "names": {
-            "english": "mode"
+            "english": "mode",
+            "hebrew": "מצב"
         }
     },
     {
@@ -467,14 +507,16 @@
         "tagOrder": 0,
         "tag": "42493a6e696c00000000000000000000",
         "names": {
-            "english": "empty"
+            "english": "empty",
+            "hebrew": "ריק"
         }
     },
     {
         "tagOrder": 0,
         "tag": "42493a6e6f7468696e67000000000000",
         "names": {
-            "english": "nothing"
+            "english": "nothing",
+            "hebrew": "כלום"
         }
     },
     {
@@ -495,7 +537,8 @@
         "tagOrder": 4,
         "tag": "42493a70617373776f72640000000000",
         "names": {
-            "english": "password"
+            "english": "password",
+            "hebrew": "סיסמא"
         }
     },
     {
@@ -509,14 +552,16 @@
         "tagOrder": 0,
         "tag": "42493a726f6f74000000000000000000",
         "names": {
-            "english": "root"
+            "english": "root",
+            "hebrew": "שורש"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a73697a65000000000000000000",
         "names": {
-            "english": "size"
+            "english": "size",
+            "hebrew": "גודל"
         }
     },
     {
@@ -537,42 +582,48 @@
         "tagOrder": 2,
         "tag": "42493a73746172740000000000000000",
         "names": {
-            "english": "start"
+            "english": "start",
+            "hebrew": "התחלה"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a73746174650000000000000000",
         "names": {
-            "english": "state"
+            "english": "state",
+            "hebrew": "מצב"
         }
     },
     {
         "tagOrder": 3,
         "tag": "42493a73746f70000000000000000000",
         "names": {
-            "english": "stop"
+            "english": "stop",
+            "hebrew": "עצירה"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a73756274726565730000000000",
         "names": {
-            "english": "subTrees"
+            "english": "subTrees",
+            "hebrew": "תתי-עצים"
         }
     },
     {
         "tagOrder": 0,
         "tag": "42493a73756363657373000000000000",
         "names": {
-            "english": "success"
+            "english": "success",
+            "hebrew": "הצלחה"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a7461696c000000000000000000",
         "names": {
-            "english": "tail"
+            "english": "tail",
+            "hebrew": "זנב"
         }
     },
     {
@@ -586,14 +637,16 @@
         "tagOrder": 3,
         "tag": "42493a75736572000000000000000000",
         "names": {
-            "english": "user"
+            "english": "user",
+            "hebrew": "משתמש"
         }
     },
     {
         "tagOrder": 2,
         "tag": "42493a76616c00000000000000000000",
         "names": {
-            "english": "value"
+            "english": "value",
+            "hebrew": "ערך"
         }
     },
     {
@@ -621,14 +674,16 @@
         "tagOrder": 1,
         "tag": "50fd18e5c459d85ad1e66236feb7f37b",
         "names": {
-            "english": "action"
+            "english": "action",
+            "hebrew": "פעולה"
         }
     },
     {
         "tagOrder": 1,
         "tag": "520401f6286eba0f9d724ad242d48440",
         "names": {
-            "english": "initial"
+            "english": "initial",
+            "hebrew": "התחלתי"
         }
     },
     {
@@ -642,7 +697,8 @@
         "tagOrder": 0,
         "tag": "53d0824794300ab1f3fec7804828315d",
         "names": {
-            "english": "dotProduct"
+            "english": "dotProduct",
+            "hebrew": "מכפלה-פנימית"
         }
     },
     {
@@ -654,14 +710,16 @@
         "tagOrder": 0,
         "tag": "58393216032be6257784ac0c6a73efb2",
         "names": {
-            "english": "join"
+            "english": "join",
+            "hebrew": "צרף"
         }
     },
     {
         "tagOrder": 0,
         "tag": "5ea44c3961f16643e614435496b16115",
         "names": {
-            "english": "lines"
+            "english": "lines",
+            "hebrew": "שורות"
         }
     },
     {
@@ -678,7 +736,7 @@
     },
     {
         "tagOrder": 0,
-        "op": ">",
+        "op": [">", "<"],
         "tag": "62b67e1f685b7fef51102005dddd2777"
     },
     {
@@ -713,7 +771,8 @@
         "tagOrder": 0,
         "tag": "66696c65000000000000000000000000",
         "names": {
-            "english": "file"
+            "english": "file",
+            "hebrew": "קובץ"
         }
     },
     {
@@ -758,7 +817,8 @@
         "tagOrder": 0,
         "tag": "6e6574776f726b000000000000000000",
         "names": {
-            "english": "network"
+            "english": "network",
+            "hebrew": "רשת"
         }
     },
     {
@@ -772,14 +832,16 @@
         "tagOrder": 0,
         "tag": "6eeb55f76600d4ad08be72ad3ac13d96",
         "names": {
-            "english": "result"
+            "english": "result",
+            "hebrew": "תוצאה"
         }
     },
     {
         "tagOrder": 0,
         "tag": "6f295a8f5a939a2b66c7cb7ed46db554",
         "names": {
-            "english": "sort"
+            "english": "sort",
+            "hebrew": "מיין"
         }
     },
     {
@@ -793,7 +855,8 @@
         "tagOrder": 0,
         "tag": "6f7c72a9a2efc085686effe7b356557d",
         "names": {
-            "english": "maybe"
+            "english": "maybe",
+            "hebrew": "אולי"
         }
     },
     {
@@ -812,7 +875,8 @@
         "tagOrder": 0,
         "tag": "7187f0675eb3827939741acf7342ba78",
         "names": {
-            "english": "return"
+            "english": "return",
+            "hebrew": "החזר"
         }
     },
     {
@@ -836,7 +900,8 @@
         "tagOrder": 0,
         "tag": "77ccd6ff481676bca34515cbc4822604",
         "names": {
-            "english": "toBytes"
+            "english": "toBytes",
+            "hebrew": "לבתים"
         }
     },
     {
@@ -857,21 +922,24 @@
         "tagOrder": 0,
         "tag": "7b468b19c1c3747eb28b554ddce080dd",
         "names": {
-            "english": "foldLazy"
+            "english": "foldLazy",
+            "hebrew": "קיפול-עצל"
         }
     },
     {
         "tagOrder": 0,
         "tag": "7e2131ab7c5075b12aa74cafd5f0710e",
         "names": {
-            "english": "sqrt"
+            "english": "sqrt",
+            "hebrew": "שורש-ריבועי"
         }
     },
     {
         "tagOrder": 0,
         "tag": "7ecab0d963239027822fb22cdd1d61ef",
         "names": {
-            "english": "writeFile"
+            "english": "writeFile",
+            "hebrew": "כתוב-קובץ"
         }
     },
     {
@@ -885,12 +953,13 @@
         "tagOrder": 0,
         "tag": "88507bab5d5848d4a1399b4df04eaa5e",
         "names": {
-            "english": "connect"
+            "english": "connect",
+            "hebrew": "התחבר"
         }
     },
     {
         "tagOrder": 0,
-        "op": "/",
+        "op": ["/", "\\"],
         "tag": "8a5edab282632443219e051e4ade2d1d"
     },
     {
@@ -911,14 +980,16 @@
         "tagOrder": 0,
         "tag": "8ae53350f50a31f95ac0efe084e0d4ec",
         "names": {
-            "english": "newMutArray"
+            "english": "newMutArray",
+            "hebrew": "צור-מערך-משתנה"
         }
     },
     {
         "tagOrder": 1,
         "tag": "91779287964ae7c888a0bcc7d444b7b2",
         "names": {
-            "english": "next"
+            "english": "next",
+            "hebrew": "הבא"
         }
     },
     {
@@ -937,19 +1008,21 @@
         "tagOrder": 0,
         "tag": "9d2ea8044c2c29b27fe0398afec9ac40",
         "names": {
-            "english": "bytes"
+            "english": "bytes",
+            "hebrew": "בתים"
         }
     },
     {
         "tagOrder": 0,
         "tag": "9f858a1290dd67546c895e68764512ba",
         "names": {
-            "english": "readMutRef"
+            "english": "readMutRef",
+            "hebrew": "קרא-משתנה"
         }
     },
     {
         "tagOrder": 0,
-        "op": "//",
+        "op": ["//", "\\\\"],
         "tag": "a2c2339691fc48fbd14fb307292dff3e"
     },
     {
@@ -968,7 +1041,8 @@
         "tagOrder": 0,
         "tag": "a3c502ab51ce23e18f69efa10a748e9f",
         "names": {
-            "english": "unwords"
+            "english": "unwords",
+            "hebrew": "ממילים"
         }
     },
     {
@@ -989,7 +1063,8 @@
         "tagOrder": 0,
         "tag": "a5769cb62ef35ad35b27c45b25fc0110",
         "names": {
-            "english": "mutArray"
+            "english": "mutArray",
+            "hebrew": "מערך-משתנה"
         }
     },
     {
@@ -1003,7 +1078,8 @@
         "tagOrder": 0,
         "tag": "a7937b64b8caa58f03721bb6bacf5c78",
         "names": {
-            "english": "first"
+            "english": "first",
+            "hebrew": "ראשון"
         }
     },
     {
@@ -1024,14 +1100,16 @@
         "tagOrder": 0,
         "tag": "ad1a64057f9ab34fecfe3f4ee78660bb",
         "names": {
-            "english": "split"
+            "english": "split",
+            "hebrew": "פצל"
         }
     },
     {
         "tagOrder": 1,
         "tag": "ae1eba0f0719f10b147cfcbb67fcb4d4",
         "names": {
-            "english": "seperator"
+            "english": "seperator",
+            "hebrew": "מפריד"
         }
     },
     {
@@ -1059,7 +1137,8 @@
         "tagOrder": 0,
         "tag": "b2d7f24e833051d5fc296d4a747281e9",
         "names": {
-            "english": "reverse"
+            "english": "reverse",
+            "hebrew": "אחורנית"
         }
     },
     {
@@ -1073,7 +1152,8 @@
         "tagOrder": 0,
         "tag": "b4022b06a879cccd437423e1a78b3cc3",
         "names": {
-            "english": "writeMutRef"
+            "english": "writeMutRef",
+            "hebrew": "כתוב-למשתנה"
         }
     },
     {
@@ -1101,14 +1181,16 @@
         "tagOrder": 0,
         "tag": "bb0b444c623e2dbf2d4bee6bedd38183",
         "names": {
-            "english": "key"
+            "english": "key",
+            "hebrew": "מפתח"
         }
     },
     {
         "tagOrder": 0,
         "tag": "bb501e4dcd4bd09f2945125de01947b7",
         "names": {
-            "english": "continue"
+            "english": "continue",
+            "hebrew": "המשך"
         }
     },
     {
@@ -1127,7 +1209,8 @@
         "tagOrder": 0,
         "tag": "beeb20fbd67695085c26c5dfa7b5ece4",
         "names": {
-            "english": "contains"
+            "english": "contains",
+            "hebrew": "מכיל"
         }
     },
     {
@@ -1155,7 +1238,8 @@
         "tagOrder": 1,
         "tag": "cb48008a91a5c33154f5f1b82e05bf61",
         "names": {
-            "english": "satisfy"
+            "english": "satisfy",
+            "hebrew": "מקיים"
         }
     },
     {
@@ -1181,7 +1265,8 @@
         "tagOrder": 0,
         "tag": "cfc197131bdd4f4694fb8cf5724222ff",
         "names": {
-            "english": "query"
+            "english": "query",
+            "hebrew": "שאילתא"
         }
     },
     {
@@ -1195,7 +1280,8 @@
         "tagOrder": 0,
         "tag": "d1905cf90af29a5ac3f99e105830eecc",
         "names": {
-            "english": "take"
+            "english": "take",
+            "hebrew": "קח"
         }
     },
     {
@@ -1209,7 +1295,8 @@
         "tagOrder": 0,
         "tag": "d52d7597bbc64b418ee63dce6a39e27c",
         "names": {
-            "english": "random"
+            "english": "random",
+            "hebrew": "אקראי"
         }
     },
     {
@@ -1221,7 +1308,7 @@
     },
     {
         "tagOrder": 0,
-        "op": "≤",
+        "op": ["≤", "≥"],
         "tag": "d79629340b6fda9d491df489dfc57e04"
     },
     {
@@ -1233,35 +1320,39 @@
     },
     {
         "tagOrder": 1,
-        "op": "<",
+        "op": ["<", ">"],
         "tag": "dabd3aff769f07eb2965401eb029974e"
     },
     {
         "tagOrder": 0,
         "tag": "db614bda416dc0b71a337eb49bee3565",
         "names": {
-            "english": "rest"
+            "english": "rest",
+            "hebrew": "שאר"
         }
     },
     {
         "tagOrder": 0,
         "tag": "dba36bffa5cab0f922d087a3aeb179f9",
         "names": {
-            "english": "words"
+            "english": "words",
+            "hebrew": "מילים"
         }
     },
     {
         "tagOrder": 0,
         "tag": "dbe42cc09c16704aa3d60127c60b4e16",
         "names": {
-            "english": "array"
+            "english": "array",
+            "hebrew": "מערך"
         }
     },
     {
         "tagOrder": 0,
         "tag": "dc9c5edb8b2d479e697b4b0b8ab874f3",
         "names": {
-            "english": "tree"
+            "english": "tree",
+            "hebrew": "עץ"
         }
     },
     {
@@ -1275,7 +1366,8 @@
         "tagOrder": 0,
         "tag": "dfc3376b8266c66e8c24736645128a5f",
         "names": {
-            "english": "filter"
+            "english": "filter",
+            "hebrew": "סנן"
         }
     },
     {
@@ -1289,7 +1381,8 @@
         "tagOrder": 0,
         "tag": "e6640de835ad09fb0a7367ee2e0ba99d",
         "names": {
-            "english": "find"
+            "english": "find",
+            "hebrew": "מצא"
         }
     },
     {
@@ -1315,7 +1408,8 @@
         "tagOrder": 1,
         "tag": "f38fc647fb4b73e35d1ffec481a44dd8",
         "names": {
-            "english": "prev"
+            "english": "prev",
+            "hebrew": "קודם"
         }
     },
     {
@@ -1329,21 +1423,24 @@
         "tagOrder": 0,
         "tag": "f48b553b08dc7fe171a25d3ba232fa58",
         "names": {
-            "english": "byteAt"
+            "english": "byteAt",
+            "hebrew": "בית-ב"
         }
     },
     {
         "tagOrder": 0,
         "tag": "f5f4a4909a4091dbb5b3f9524b71fd18",
         "names": {
-            "english": "item"
+            "english": "item",
+            "hebrew": "איבר"
         }
     },
     {
         "tagOrder": 0,
         "tag": "f7a13bb9d9f9eaed7c92d889ff9d3705",
         "names": {
-            "english": "popLastMutArray"
+            "english": "popLastMutArray",
+            "hebrew": "משוך-אחרון-ממערך-משתנה"
         }
     },
     {
@@ -1371,7 +1468,8 @@
         "tagOrder": 0,
         "tag": "fd00218b2ffa8e23f4cbac226d48f6bb",
         "names": {
-            "english": "readMutArray"
+            "english": "readMutArray",
+            "hebrew": "קרא-מערך-משתנה"
         }
     },
     {
