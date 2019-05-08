@@ -26,8 +26,8 @@ type T = Transaction
 
 data AllowAnonTag = AllowAnon | RequireTag
 
-getPublishedTagsProp :: Monad m => ConvertM m (MkProperty' (T m) (Set T.Tag))
-getPublishedTagsProp =
+getTagsProp :: Monad m => ConvertM m (MkProperty' (T m) (Set T.Tag))
+getTagsProp =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
 
 -- forbiddenTags are sibling tags in the same record/funcParams/etc,
@@ -39,7 +39,7 @@ convertTag ::
     (T.Tag -> T m ()) ->
     ConvertM m (Tag name (T m) (T m))
 convertTag tag name forbiddenTags mkInstance setTag =
-    getPublishedTagsProp
+    getTagsProp
     <&> convertTagWith tag name forbiddenTags RequireTag mkInstance setTag
 
 convertTagWith ::
@@ -47,8 +47,8 @@ convertTagWith ::
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
     Tag name (T m) (T m)
-convertTagWith tag name forbiddenTags allowAnon mkInstance setTag publishedTagsProp =
-    convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag publishedTagsProp
+convertTagWith tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
+    convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag tagsProp
     & Tag (TagInfo (name tag) (mkInstance tag) tag)
 
 convertTagSelection ::
@@ -56,7 +56,7 @@ convertTagSelection ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     ConvertM m (TagSelection name (T m) (T m) a)
 convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
-    getPublishedTagsProp
+    getTagsProp
     <&> convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag
 
 convertTagSelectionWith ::
@@ -64,10 +64,10 @@ convertTagSelectionWith ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
     TagSelection name (T m) (T m) a
-convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag publishedTagsProp =
+convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
     TagSelection
     { _tsOptions =
-        getP publishedTagsProp
+        getP tagsProp
         <&> (`Set.difference` forbiddenTags)
         <&> Set.toList
         <&> map toOption
@@ -75,7 +75,8 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag published
         \newName ->
         do
             newTag <- DataOps.genNewTag
-            Property.setP (DataOps.assocPublishedTagName publishedTagsProp newTag) newName
+            Property.setP (DataOps.assocTagName newTag) newName
+            Property.modP tagsProp (Lens.contains newTag .~ True)
             setTag newTag <&> (,) (mkInstance newTag)
     , _tsAnon =
         case allowAnon of
@@ -93,15 +94,15 @@ convertTagSelectionWith name forbiddenTags allowAnon mkInstance setTag published
 convertTaggedEntityWith ::
     (UniqueId.ToUUID a, MonadTransaction n m) =>
     a -> MkProperty' (T n) (Set T.Tag) -> m (Tag InternalName (T n) (T n))
-convertTaggedEntityWith entity publishedTagsProp =
+convertTaggedEntityWith entity tagsProp =
     getP prop
     <&>
     \entityTag ->
     convertTagWith entityTag (nameWithContext entity) mempty AllowAnon
-    (EntityId.ofTaggedEntity entity) (setP prop) publishedTagsProp
+    (EntityId.ofTaggedEntity entity) (setP prop) tagsProp
     where
         prop = Anchors.assocTag entity
 
 convertTaggedEntity ::
     (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (Tag InternalName (T m) (T m))
-convertTaggedEntity entity = getPublishedTagsProp >>= convertTaggedEntityWith entity
+convertTaggedEntity entity = getTagsProp >>= convertTaggedEntityWith entity

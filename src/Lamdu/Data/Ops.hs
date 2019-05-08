@@ -5,7 +5,7 @@ module Lamdu.Data.Ops
     , CompositeExtendResult(..)
     , recExtend
     , case_
-    , genNewTag, assocPublishedTagName
+    , genNewTag, assocTagName
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
     , newPane
@@ -14,7 +14,6 @@ module Lamdu.Data.Ops
     ) where
 
 import           AST.Term.Row (RowExtend(..))
-import qualified Control.Lens as Lens
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -113,10 +112,9 @@ case_ tag tailI =
         RowExtend tag newValueI tailI & V.BCase & ExprIRef.newValI
             <&> CompositeExtendResult newValueI
 
--- | publishes/unpublishes upon setting a non-empty/empty name
-assocPublishedTagName ::
-    Monad m => MkProperty' (T m) (Set T.Tag) -> T.Tag -> MkProperty' (T m) Text
-assocPublishedTagName publishedTagsProp tag =
+assocTagName ::
+    Monad m => T.Tag -> MkProperty' (T m) Text
+assocTagName tag =
     ExprIRef.readTagInfo tag
     <&> result
     & Property.MkProperty
@@ -125,9 +123,7 @@ assocPublishedTagName publishedTagsProp tag =
             Property (info ^. tagName) setName
             where
                 setName name =
-                    do
-                        info & tagName .~ name & Transaction.writeIRef (ExprIRef.tagI tag)
-                        Property.modP publishedTagsProp (Lens.contains tag .~ (name /= ""))
+                    info & tagName .~ name & Transaction.writeIRef (ExprIRef.tagI tag)
 
 newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
 newPane codeAnchors defI =

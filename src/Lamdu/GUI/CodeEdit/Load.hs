@@ -8,10 +8,8 @@ module Lamdu.GUI.CodeEdit.Load
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
-import           Data.Property (MkProperty')
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
-import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
@@ -42,9 +40,6 @@ toExprGuiMPayload (minOpPrec, needParens, pl) =
     (needParens == AddParens.NeedsParens)
     minOpPrec
 
-getNameProp :: Monad m => Anchors.CodeAnchors m -> T.Tag -> MkProperty' (T m) Text
-getNameProp = DataOps.assocPublishedTagName . Anchors.tags
-
 loadWorkArea ::
     (HasCallStack, Monad m) =>
     Language ->
@@ -56,7 +51,7 @@ loadWorkArea ::
         (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
 loadWorkArea lang config cache monitors annMode theEvalResults cp =
     SugarConvert.loadWorkArea config cache monitors annMode theEvalResults cp
-    >>= report . AddNames.addToWorkArea lang (getNameProp cp)
+    >>= report . AddNames.addToWorkArea lang DataOps.assocTagName
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toExprGuiMPayload
     where
