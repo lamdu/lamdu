@@ -54,7 +54,7 @@
         },
         "name": {
             "unnamed": "Unnamed",
-            "emptyName": "empty"
+            "emptyName": "(empty)"
         },
         "statusBar": {
             "statusBar": "Status Bar",

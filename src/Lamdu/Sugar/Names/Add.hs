@@ -159,7 +159,7 @@ p1Anon (Just uuid) =
 
 displayOf :: HasNameTexts env => env -> Text -> Text
 displayOf env text
-    | Lens.has Lens._Empty text = "(" <> env ^. nameTexts . emptyName <> ")"
+    | Lens.has Lens._Empty text = env ^. nameTexts . emptyName
     | otherwise = text
 
 p1Tagged ::
