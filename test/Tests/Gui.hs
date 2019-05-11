@@ -354,6 +354,9 @@ testProgramGuiAtPos cache baseEnv enter =
     where
         virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
 
+nubOn :: Ord k => (a -> k) -> [a] -> [a]
+nubOn f xs = (xs <&> (\x -> (f x, x)) & Map.fromList) ^.. Lens.folded
+
 programTest :: HasCallStack => GuiEnv.Env -> FilePath -> Test
 programTest baseEnv filename =
     testCase filename . testProgram filename $
@@ -367,10 +370,7 @@ programTest baseEnv filename =
                 & fromMaybe (error "unfocused widget from focusedWidget")
         Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
             <&> enterPoint
-            <&> (\x -> (x ^. Widget.enterResultRect, x))
-            & Map.fromList
-            -- this ^^ apparnt redundant use of Data.Map is a huge
-            -- speedup compared to sortOn or no sorting at all!
+            & nubOn (^. Widget.enterResultRect)
             & traverse_ (testProgramGuiAtPos cache baseEnv)
 
 testPrograms :: Test
