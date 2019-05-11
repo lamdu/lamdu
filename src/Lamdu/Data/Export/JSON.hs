@@ -120,7 +120,7 @@ exportSubexpr :: Monad m => Val (ValP m) -> Export m ()
 exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
-        exportTag tag
+        exportTag tag & when (tag /= Anchors.anonTag)
         mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
         Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
     where
