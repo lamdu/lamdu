@@ -7,7 +7,6 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
-import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -362,11 +361,12 @@ programTest baseEnv filename =
         baseGui <- makeGui "" cache baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
         w <- focusedWidget baseGui & either fail pure
+        let enterPoint =
+                w ^. Widget.fMEnterPoint
+                & fromMaybe (error "unfocused widget from focusedWidget")
+        let testAtPos pos = enterPoint pos & testProgramGuiAtPos cache baseEnv
         Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
-            <&> (w ^?! Widget.fMEnterPoint . Lens._Just)
-            <&> (\x -> (x ^. Widget.enterResultRect, x))
-            & Map.fromList
-            & traverse_ (testProgramGuiAtPos cache baseEnv)
+            & traverse_ testAtPos
 
 testPrograms :: Test
 testPrograms =
