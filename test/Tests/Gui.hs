@@ -369,6 +369,8 @@ programTest baseEnv filename =
             <&> enterPoint
             <&> (\x -> (x ^. Widget.enterResultRect, x))
             & Map.fromList
+            -- this ^^ apparnt redundant use of Data.Map is a huge
+            -- speedup compared to sortOn or no sorting at all!
             & traverse_ (testProgramGuiAtPos cache baseEnv)
 
 testPrograms :: Test
