@@ -302,14 +302,14 @@ testTabNavigation cache env virtCursor =
         pos = Widget.fFocalAreas . traverse
         dirs =
             [ ("tab", simpleKeyEvent (head Widget.strollAheadKeys), GT)
-            , ( "shift-tab", simpleKeyEvent (head Widget.strollBackKeys), LT)
+            , ("shift-tab", simpleKeyEvent (head Widget.strollBackKeys), LT)
             ]
 
 testConsistentKeyboardNavigation ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testConsistentKeyboardNavigation cache posEnv posVirt =
     do
-        when (Widget.toAnimId (posEnv ^. cursor) ^? Lens.ix 1 /= Just "literal edit")
+        unless (isLiteralEditId (posEnv ^. cursor)) $
             -- TODO: Handle literal edits properly
             ( traverse_ (uncurry (testKeyboardDirAndBack cache posEnv posVirt))
             [ (k GLFW.Key'Up, k GLFW.Key'Down)
@@ -320,6 +320,8 @@ testConsistentKeyboardNavigation cache posEnv posVirt =
             )
         testTabNavigation cache posEnv posVirt
     where
+        isLiteralEditId wid =
+            Widget.toAnimId wid & Lens.has (Lens.ix 1 . Lens.only "literal edit")
         k = MetaKey noMods
 
 testActions :: HasCallStack => Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
@@ -340,7 +342,8 @@ testActions cache env virtCursor =
             & Transaction.fork & void
 
 testProgramGuiAtPos ::
-    Cache.Functions -> GuiEnv.Env -> Widget.EnterResult (T ViewM GuiState.Update) ->
+    Cache.Functions -> GuiEnv.Env ->
+    Widget.EnterResult (T ViewM GuiState.Update) ->
     T ViewM ()
 testProgramGuiAtPos cache baseEnv enter =
     do
