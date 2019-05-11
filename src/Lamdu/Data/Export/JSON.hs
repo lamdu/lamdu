@@ -101,10 +101,12 @@ tell :: Monad m => Codec.Entity -> Export m ()
 tell = Writer.tell . (: [])
 
 exportTag :: Monad m => T.Tag -> Export m ()
-exportTag tag =
-    ExprIRef.readTagInfo tag & trans
-    >>= tell . Codec.EntityTag tag
-    & withVisited visitedTags tag
+exportTag tag
+    | tag == Anchors.anonTag = error "Attempt to export the anonymous tag"
+    | otherwise =
+        ExprIRef.readTagInfo tag & trans
+        >>= tell . Codec.EntityTag tag
+        & withVisited visitedTags tag
 
 exportNominal :: Monad m => T.NominalId -> Export m ()
 exportNominal nomId =
