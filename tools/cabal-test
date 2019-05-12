@@ -1,2 +1,7 @@
 set -eu
-cabal v1-build && dist/build/Tests/Tests "$@"
+cabal v1-build Tests
+cabal v1-build lamdu &
+execbuild=$!
+dist/build/Tests/Tests "$@"
+echo "Test run successful"
+wait $! || (echo "Executable build failed" ; exit 1)
