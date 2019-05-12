@@ -19,6 +19,7 @@ Data-files:          fonts/DejaVuSans.ttf
                    , fonts/DejaVuSerif-Italic.ttf
                    , fonts/Purisa.ttf
                    , config.json
+                   , default-settings.json
                    , themes/base.mixin.json
                    , themes/dark.json
                    , themes/light.json

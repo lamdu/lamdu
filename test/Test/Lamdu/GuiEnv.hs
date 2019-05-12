@@ -18,6 +18,7 @@ import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
 import qualified GUI.Momentu.Widgets.Choice as Choice
+import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -31,12 +32,11 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
-import           Lamdu.Editor.Settings (initial)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Texts (Language, HasLanguage(..))
 import           Lamdu.Name (HasNameTexts(..))
 import qualified Lamdu.Paths as Paths
-import           Lamdu.Settings (HasSettings(..), Settings)
+import           Lamdu.Settings (HasSettings(..), Settings(..))
 import           Lamdu.Style (HasStyle(..), Style)
 import qualified Lamdu.Style as Style
 import qualified Test.Lamdu.Config as TestConfig
@@ -102,7 +102,13 @@ make =
                 { _sCursor = WidgetIds.defaultCursor
                 , _sWidgetStates = mempty
                 }
-            , _eSettings = initial (Selection "dark") (Selection "english") Annotations.Evaluation
+            , _eSettings =
+                Settings
+                { _sAnnotationMode = Annotations.Evaluation
+                , _sSelectedTheme = Selection "dark"
+                , _sSelectedLanguage = Selection "english"
+                , _sHelpShown = HelpNotShown
+                }
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =

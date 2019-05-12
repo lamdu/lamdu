@@ -276,6 +276,9 @@ run opts rawDb =
             traverse Debug.makeCounters ekg
             >>= maybe (pure Debug.noopMonitors) Debug.makeMonitors
         -- Load config as early as possible, before we open any windows/etc
+        initialSettings <- EditorSettings.read
+        let initialTheme = initialSettings ^. Settings.sSelectedTheme
+        let initialLanguage = initialSettings ^. Settings.sSelectedLanguage
         configSampler <- ConfigSampler.new (const refresh) initialTheme initialLanguage
         (cache, cachedFunctions) <- Cache.make
         let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
@@ -292,13 +295,10 @@ run opts rawDb =
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <-
-                    EditorSettings.newProp initialTheme initialLanguage
-                    (opts ^. Opts.eoAnnotationsMode) configSampler evaluator
+                    EditorSettings.newProp initialSettings configSampler evaluator
                 runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
-        initialTheme = Selection "dark"
-        initialLanguage = Selection "english"
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
             | otherwise = Font.LCDSubPixelDisabled

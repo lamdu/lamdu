@@ -1,43 +1,36 @@
 module Lamdu.Editor.Settings
-    ( initial, newProp
+    ( newProp, read
     ) where
 
+import           Control.Exception.Lens (handling, _IOException)
 import qualified Control.Lens.Extended as Lens
+import           Control.Monad.Except (runExceptT, throwError)
+import           Data.Aeson (eitherDecode')
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy as BSL
 import           Data.IORef
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
-import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified Lamdu.Annotations as Annotations
-import           Lamdu.Config.Folder (Selection)
 import           Lamdu.Config.Sampler (Sampler)
 import qualified Lamdu.Config.Sampler as ConfigSampler
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Eval.Manager as EvalManager
-import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.Paths as LamduPaths
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import           System.FilePath ((</>))
+import           System.IO (hPutStrLn, stderr)
 
-import           Lamdu.Prelude
+import           Lamdu.Prelude hiding (read)
 
-initial :: Selection Theme -> Selection Language -> Annotations.Mode -> Settings
-initial theme lang annotationMode =
-    Settings
-    { _sAnnotationMode = annotationMode
-    , _sSelectedTheme = theme
-    , _sSelectedLanguage = lang
-    , _sHelpShown = HelpNotShown
-    }
+getSettingsPath :: IO FilePath
+getSettingsPath = LamduPaths.getLamduDir <&> (</> "settings.json")
 
 settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Maybe Settings -> Settings -> IO ()
 settingsChangeHandler configSampler evaluator mOld new =
     do
-        lamduDir <- LamduPaths.getLamduDir
-        AesonPretty.encodePretty new
-            & BSL.writeFile (lamduDir </> "settings.json")
+        settingsPath <- getSettingsPath
+        AesonPretty.encodePretty new & BSL.writeFile settingsPath
         when (didChange Settings.sAnnotationMode) $
             case new ^. Settings.sAnnotationMode of
             Annotations.Evaluation -> EvalManager.start evaluator
@@ -55,11 +48,32 @@ settingsChangeHandler configSampler evaluator mOld new =
             Nothing -> True
             Just old -> old ^. lens /= new ^. lens
 
+readFrom :: FilePath -> IO (Either String Settings)
+readFrom path =
+    do
+        fileData <-
+            BSL.readFile path & lift
+            & handling _IOException (throwError . ioErr)
+        eitherDecode' fileData & either (throwError . msg) pure
+        & runExceptT
+    where
+        ioErr err = show path <> ": " <> show err
+        msg err = show path <> " has bad JSON: " <> err
+
+read :: IO Settings
+read =
+    getSettingsPath >>= readFrom
+    >>= \case
+    Right settings -> pure settings
+    Left err ->
+        do
+            hPutStrLn stderr $ err <> ": Falling back to default settings..."
+            LamduPaths.getDataFileName "default-settings.json" >>= readFrom
+                >>= either fail pure
+
 newProp ::
-    Selection Theme -> Selection Language ->
-    Annotations.Mode -> Sampler -> EvalManager.Evaluator ->
-    IO (MkProperty' IO Settings)
-newProp theme lang annMode configSampler evaluator =
+    Settings -> Sampler -> EvalManager.Evaluator -> IO (MkProperty' IO Settings)
+newProp initialSettings configSampler evaluator =
     do
         handleChange Nothing initialSettings
         newIORef initialSettings <&> Property.fromIORef
@@ -70,4 +84,3 @@ newProp theme lang annMode configSampler evaluator =
                     (*> handleChange (Just oldVal) newVal)
     where
         handleChange = settingsChangeHandler configSampler evaluator
-        initialSettings = initial theme lang annMode
