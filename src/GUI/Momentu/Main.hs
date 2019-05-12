@@ -148,7 +148,7 @@ mkJumpToSourceEventMap txt debug act =
     jumpToSourceKeys debug
     <&> \keys ->
     E.keysEventMap keys
-    (E.Doc [txt ^. textDebug, txt ^. textJumpToSource]) act
+    (E.toDoc txt [textDebug, textJumpToSource]) act
 
 data Env = Env
     { _eZoom :: Zoom
