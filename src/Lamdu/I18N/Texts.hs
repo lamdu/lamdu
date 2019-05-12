@@ -66,6 +66,7 @@ data CodeUI a = CodeUI
     , _defUpdateTo :: a
     , _defUpdateWas :: a
     , _goto :: a
+    , _jumpToError :: a
     , _hidden :: a
     , _shown :: a
     , _pick :: a
@@ -85,6 +86,9 @@ data CodeUI a = CodeUI
     , _def :: a
     , _importJSON :: a
     , _importReplFromJSON :: a
+    , _exportReplToJSON :: a
+    , _exportReplToJS :: a
+    , _extractReplToDef :: a
     , _execRepl :: a
     , _presentationMode :: a
     , _pModeVerbose :: a

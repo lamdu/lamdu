@@ -30,7 +30,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Config (Config, HasConfig(..))
+import           Lamdu.Config (HasConfig(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
@@ -66,27 +66,34 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    Functor m => Sugar.Payload name i (T m) a -> [MetaKey] -> Gui EventMap (T m)
-extractEventMap pl keys =
+    (Texts.HasLanguage env, Functor m) =>
+    env -> Sugar.Payload name i (T m) a -> [MetaKey] -> Gui EventMap (T m)
+extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
-    <&> ExprEventMap.extractCursor
-    & E.keysEventMapMovesCursor keys (E.Doc ["Edit", "Extract to definition"])
+    <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
+    where
+        doc =
+            E.toDoc env
+            [ Texts.edit
+            , Texts.texts . Texts.codeUI . Texts.extractReplToDef
+            ]
 
 replEventMap ::
-    Monad m =>
-    Config -> ExportRepl m -> Sugar.Payload name i (T m) a ->
+    (Monad m, HasConfig env, Texts.HasLanguage env) =>
+    env -> ExportRepl m -> Sugar.Payload name i (T m) a ->
     Gui EventMap (IOTrans m)
-replEventMap theConfig (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
+replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
     mconcat
-    [ extractEventMap replExprPl (theConfig ^. Config.extractKeys)
+    [ extractEventMap env replExprPl (env ^. config . Config.extractKeys)
         <&> IOTrans.liftTrans
     , E.keysEventMap (exportConfig ^. Config.exportKeys)
-      (E.Doc ["Collaboration", "Export repl to JSON file"]) exportRepl
+      (toDoc [Texts.collaboration, Texts.exportReplToJSON]) exportRepl
     , E.keysEventMap (exportConfig ^. Config.exportFancyKeys)
-      (E.Doc ["Collaboration", "Export repl as JS"]) exportFancy
+      (toDoc [Texts.collaboration, Texts.exportReplToJS]) exportFancy
     ]
     where
-        exportConfig = theConfig ^. Config.export
+        toDoc = E.toDoc (env ^. Texts.texts . Texts.codeUI)
+        exportConfig = env ^. config . Config.export
 
 indicatorColor ::
     (MonadReader env m, HasTheme env) =>
@@ -136,6 +143,10 @@ errorIndicator ::
 errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
     do
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
+        env <- Lens.view id
+        let jumpDoc =
+                E.toDoc env
+                [Texts.navigation, Texts.texts . Texts.codeUI . Texts.jumpToError]
         let jumpEventMap j =
                 j <&> dest
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
@@ -169,7 +180,6 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
             Sugar.CompiledError Sugar.ReachedHole ->
                 HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
             _ -> WidgetIds.fromEntityId entityId
-        jumpDoc = E.Doc ["Navigation", "Jump to error"]
 
 indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
@@ -190,6 +200,7 @@ resultWidget ::
 resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
+        toDoc <- Lens.view (Texts.texts . Texts.codeUI) <&> E.toDoc
         case varInfo of
             Sugar.VarAction ->
                 do
@@ -197,7 +208,7 @@ resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
                     let executeEventMap =
                             executeIOProcess exportRepl
                             & IOTrans.liftIO
-                            & E.keysEventMap actionKeys (E.Doc ["Execute"])
+                            & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
                     (Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~)) ?? view
                         <&> Align.tValue %~ Widget.weakerEvents executeEventMap
             _ -> view & Align.tValue %~ Widget.fromView & pure
@@ -213,7 +224,8 @@ make ::
     ExprGuiM (T m) (T m) (Gui Responsive (IOTrans m))
 make exportRepl (Sugar.Repl replExpr varInfo replResult) =
     do
-        theConfig <- Lens.view config
+        env <- Lens.view id
+        let theConfig = env ^. config
         let buttonExtractKeys = theConfig ^. Config.actionKeys
         result <-
             (resultWidget exportRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
@@ -223,20 +235,22 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         let centeredBelow down up =
                 (Aligned 0.5 up |---| Aligned 0.5 down) ^. value
+        let extractEvents = extractEventMap env replExprPl buttonExtractKeys
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
             sequence
-            [ (Widget.makeFocusableView ?? Widget.joinId WidgetIds.replId ["symbol"] <&> (Align.tValue %~))
+            [ (Widget.makeFocusableView ?? replSymId <&> (Align.tValue %~))
               <*> label (Texts.code . Texts.repl)
-              <&> Lens.mapped %~ Widget.weakerEvents (extractEventMap replExprPl buttonExtractKeys)
+              <&> Lens.mapped %~ Widget.weakerEvents extractEvents
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
             , makeBinder replExpr
                 <&> Lens.mapped %~ IOTrans.liftTrans
             ]
-            <&> Widget.weakerEvents (replEventMap theConfig exportRepl replExprPl)
+            <&> Widget.weakerEvents (replEventMap env exportRepl replExprPl)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
+        replSymId = Widget.joinId WidgetIds.replId ["symbol"]
         replExprPl = replExpr ^. SugarLens.binderResultExpr
         replExprId = WidgetIds.fromExprPayload replExprPl
