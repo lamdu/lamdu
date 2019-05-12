@@ -330,17 +330,19 @@ module.exports = {
                                     return;
                                 }
                                 var fields = [];
-                                for (var i = 0; i < resJs.fields.length; ++i) {
-                                    fields.push(bytesFromAscii(resJs.fields[i].name));
-                                }
                                 var rows = [];
-                                for (i = 0; i < resJs.rows.length; ++i) {
-                                    var jsRow = resJs.rows[i];
-                                    var row = [];
-                                    for (var k = 0; k < resJs.fields.length; ++k) {
-                                        row.push(bytesFromAscii(utf8.encode(String(jsRow[resJs.fields[k].name]))));
+                                if (resJs.fields) {
+                                    for (var i = 0; i < resJs.fields.length; ++i) {
+                                        fields.push(bytesFromAscii(resJs.fields[i].name));
                                     }
-                                    rows.push(row);
+                                    for (i = 0; i < resJs.rows.length; ++i) {
+                                        var jsRow = resJs.rows[i];
+                                        var row = [];
+                                        for (var k = 0; k < resJs.fields.length; ++k) {
+                                            row.push(bytesFromAscii(utf8.encode(String(jsRow[resJs.fields[k].name]))));
+                                        }
+                                        rows.push(row);
+                                    }
                                 }
                                 var resLamdu = {};
                                 resLamdu[tags.fields] = fields;
