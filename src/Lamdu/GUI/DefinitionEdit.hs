@@ -2,6 +2,7 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
@@ -39,9 +40,10 @@ undeleteButton ::
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ?? ["Undelete"] <&> Widget.Id
+        toDoc <- Lens.view id <&> E.toDoc
+        let def = Texts.texts . Texts.definitions
+        let doc = toDoc [Texts.edit, def . Texts.def, def . Texts.undelete]
         Styled.actionable actionId (Texts.definitions . Texts.undeleteButton) doc undelete
-    where
-        doc = E.Doc ["Edit", "Definition", "Undelete"]
 
 makeExprDefinition ::
     (Monad i, Monad o) =>

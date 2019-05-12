@@ -27,6 +27,7 @@
             "def": "Definition",
             "newDefinitionButton": "New...",
             "newDefinition": "New",
+            "undelete": "Undelete",
             "undeleteButton": "Undelete...",
             "extractReplToDef": "Extract to definition",
             "extract": "Extract",
