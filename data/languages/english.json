@@ -11,6 +11,15 @@
             "elseShort": "el",
             "paramsRecordOpener": "Params {"
         },
+        "collaborationTexts": {
+            "collaboration": "Collaboration",
+            "exportDefToJSON": "Export definition to JSON",
+            "exportEverythingToJSON": "Export everything to JSON",
+            "exportReplToJSON": "Export repl to JSON file",
+            "exportReplToJS": "Export repl as JS",
+            "importJSON": "Import JSON file",
+            "importReplFromJSON": "Import REPL from JSON file"
+        },
         "codeUI": {
             "defUpdateHeader": "Update",
             "defUpdateTo": "to: ",
@@ -32,15 +41,8 @@
             "close": "Close",
             "moveDown": "Move down",
             "moveUp": "Move up",
-            "collaboration": "Collaboration",
-            "exportDefToJSON": "Export definition to JSON",
-            "exportEverythingToJSON": "Export everything to JSON",
             "goBack": "Go back",
             "def": "Definition",
-            "importJSON": "Import JSON file",
-            "importReplFromJSON": "Import REPL from JSON file",
-            "exportReplToJSON": "Export repl to JSON file",
-            "exportReplToJS": "Export repl as JS",
             "extractReplToDef": "Extract to definition",
             "execRepl": "Execute Repl Process",
             "presentationMode": "Presentation Mode",

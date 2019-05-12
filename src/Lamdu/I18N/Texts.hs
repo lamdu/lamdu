@@ -58,6 +58,20 @@ data Code a = Code
 Lens.makeLenses ''Code
 JsonTH.derivePrefixed "_" ''Code
 
+data Collaboration a = Collaboration
+    { _collaboration :: a
+    , _exportDefToJSON :: a
+    , _exportEverythingToJSON :: a
+    , _exportReplToJSON :: a
+    , _exportReplToJS :: a
+    , _importJSON :: a
+    , _importReplFromJSON :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Collaboration)
+Lens.makeLenses ''Collaboration
+JsonTH.derivePrefixed "_" ''Collaboration
+
 data CodeUI a = CodeUI
     { _newDefinitionButton :: a
     , _newDefinition :: a
@@ -79,15 +93,8 @@ data CodeUI a = CodeUI
     , _close :: a
     , _moveDown :: a
     , _moveUp :: a
-    , _collaboration :: a
-    , _exportDefToJSON :: a
-    , _exportEverythingToJSON :: a
     , _goBack :: a
     , _def :: a
-    , _importJSON :: a
-    , _importReplFromJSON :: a
-    , _exportReplToJSON :: a
-    , _exportReplToJS :: a
     , _extractReplToDef :: a
     , _execRepl :: a
     , _presentationMode :: a
@@ -157,6 +164,7 @@ Lens.makeLenses ''Versioning
 data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
+    , _collaborationTexts :: Collaboration a
     , _name :: NameTexts a
     , _statusBar :: StatusBar a
     , _versioning :: Versioning a

@@ -14,6 +14,15 @@
             "paramsRecordOpener": "פרמטרים }",
             "paramsRecordCloser": "{"
         },
+        "collaborationTexts": {
+            "collaboration": "שיתוף",
+            "exportDefToJSON": "ייצא הגדרה לקובץ שיתוף",
+            "exportEverythingToJSON": "ייצא הכל לקובץ שיתוף",
+            "exportReplToJSON": "ייצא שורת פקודה לקובץ שיתוף",
+            "exportReplToJS": "ייצא שורת פקודה לג'אווהסקריפט",
+            "importJSON": "ייבא קובץ שיתוף",
+            "importReplFromJSON": "ייבא שורת פקודה מקובץ שיתוף"
+        },
         "codeUI": {
             "defUpdateHeader": "עדכן",
             "defUpdateTo": "ל: ",
@@ -35,15 +44,8 @@
             "close": "סגור",
             "moveDown": "הזז למטה",
             "moveUp": "הזז למעלה",
-            "collaboration": "שיתוף",
-            "exportDefToJSON": "ייצא הגדרה לקובץ שיתוף",
-            "exportEverythingToJSON": "ייצא הכל לקובץ שיתוף",
             "goBack": "חזרה",
             "def": "הגדרה",
-            "importJSON": "ייבא קובץ שיתוף",
-            "importReplFromJSON": "ייבא שורת פקודה מקובץ שיתוף",
-            "exportReplToJSON": "ייצא שורת פקודה לקובץ שיתוף",
-            "exportReplToJS": "ייצא שורת פקודה לג'אווהסקריפט",
             "extractReplToDef": "ייצא שורת פקודה להגדרה",
             "execRepl": "הפעל תוצאת שורת פקודה",
             "presentationMode": "מצב תצוגה",

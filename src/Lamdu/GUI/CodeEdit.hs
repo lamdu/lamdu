@@ -150,7 +150,6 @@ makePaneEdit theExportActions pane =
                 (titleLenses ++ map ((Texts.texts . Texts.codeUI) .) texts)
         let viewDoc = titledCodeDoc [Texts.view]
         let editDoc = titledCodeDoc [Texts.edit]
-        let codeDoc = titledCodeDoc []
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
@@ -166,7 +165,8 @@ makePaneEdit theExportActions pane =
                     (viewDoc [Texts.pane, Texts.moveUp]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
                   & E.keysEventMap exportKeys
-                    (codeDoc [Texts.collaboration, Texts.exportDefToJSON])
+                    (E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
+                        [Texts.collaboration, Texts.exportDefToJSON])
                 ] & mconcat
             defEventMap =
                 do
@@ -242,10 +242,12 @@ panesEventMap theExportActions cp gp replVarInfo =
             (theConfig ^. Config.pane . Config.newDefinitionKeys) newDefDoc
         env <- Lens.view id
         let codeDoc = E.toDoc (env ^. Texts.texts . Texts.codeUI)
+        let collaborationDoc =
+                E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
         mconcat
             [ newDefinitionEventMap <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"
-                (codeDoc [Texts.collaboration, Texts.importJSON])
+                (collaborationDoc [Texts.collaboration, Texts.importJSON])
                 (Just . traverse_ importAll)
                 <&> fmap (\() -> mempty)
             , foldMap
@@ -255,11 +257,11 @@ panesEventMap theExportActions cp gp replVarInfo =
                    , Texts.texts . Texts.codeUI . Texts.goBack
                    ])) mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
-              (codeDoc [Texts.collaboration, Texts.exportEverythingToJSON])
+              (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])
                 exportAll
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
-                (codeDoc [Texts.collaboration, Texts.importReplFromJSON])
+                (collaborationDoc [Texts.collaboration, Texts.importReplFromJSON])
             , case replVarInfo of
                 Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)

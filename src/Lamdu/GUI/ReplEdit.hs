@@ -92,7 +92,7 @@ replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
       (toDoc [Texts.collaboration, Texts.exportReplToJS]) exportFancy
     ]
     where
-        toDoc = E.toDoc (env ^. Texts.texts . Texts.codeUI)
+        toDoc = E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
         exportConfig = env ^. config . Config.export
 
 indicatorColor ::
