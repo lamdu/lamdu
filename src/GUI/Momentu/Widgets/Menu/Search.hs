@@ -118,7 +118,7 @@ emptyPickEventMap =
     Lens.view id
     <&> \env ->
     E.keysEventMap (allPickKeys env)
-    (E.Doc [env ^. texts.textPickNotApplicable]) (pure ())
+    (E.toDoc env [texts.textPickNotApplicable]) (pure ())
     where
         allPickKeys env =
             keys ^. Menu.keysPickOption <>
@@ -182,8 +182,7 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
 
 searchTermDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> E.Doc
 searchTermDoc env subtitle =
-    [textEdit, textSearchTerm, subtitle]
-    <&> ((env ^#) . (texts.)) & E.Doc
+    E.toDoc (env ^. texts) [textEdit, textSearchTerm, subtitle]
 
 addDelSearchTerm ::
     (MonadReader env m, State.HasState env, HasTexts env, Applicative f) =>
