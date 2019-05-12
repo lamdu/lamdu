@@ -45,41 +45,39 @@ branchNameFDConfig txt = FocusDelegator.Config
     }
 
 undoEventMap ::
-    Texts.Texts Text -> VersionControl.Config ->
-    Maybe (m GuiState.Update) -> Gui EventMap m
-undoEventMap txt config =
+    Texts.HasLanguage env =>
+    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
+undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.undo])
+    (E.toDoc env [Texts.edit, Texts.texts . Texts.versioning . Texts.undo])
     & foldMap
 
 redoEventMap ::
-    Texts.Texts Text -> VersionControl.Config ->
-    Maybe (m GuiState.Update) -> Gui EventMap m
-redoEventMap txt config =
+    Texts.HasLanguage env =>
+    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
+redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.toDoc txt [Texts.codeUI . Texts.edit, Texts.versioning . Texts.redo])
+    (E.toDoc env [Texts.edit, Texts.texts . Texts.versioning . Texts.redo])
     & foldMap
 
 eventMap ::
     (MonadReader env m, Applicative f, Texts.HasLanguage env) =>
     m (VersionControl.Config -> A.Actions t f -> Gui EventMap f)
 eventMap =
-    Lens.view Texts.texts
-    <&> \txt config actions ->
+    Lens.view id
+    <&> \env config actions ->
+    let toDoc = E.toDoc (env ^. Texts.texts) in
     mconcat
     [ A.makeBranch actions
         <&> branchTextEditId
         & E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
-        (E.toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.new])
+        (toDoc [Texts.versioning . Texts.branches, Texts.codeUI . Texts.new])
     , A.currentBranch actions & Property.value & branchDelegatorId & pure
         & E.keysEventMapMovesCursor
         (config ^. VersionControl.jumpToBranchesKeys)
-        (E.toDoc txt
-            [Texts.versioning . Texts.branches
-            , Texts.codeUI . Texts.select
-            ])
-    , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap txt config
-    , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap txt config
+        (toDoc [Texts.versioning . Texts.branches, Texts.codeUI . Texts.select])
+    , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap env config
+    , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap env config
     ]
 
 branchDelegatorId :: Branch t -> Widget.Id

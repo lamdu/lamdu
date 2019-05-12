@@ -66,7 +66,6 @@ data CodeUI a = CodeUI
     , _defUpdateTo :: a
     , _defUpdateWas :: a
     , _goto :: a
-    , _quit :: a
     , _hidden :: a
     , _shown :: a
     , _pick :: a
@@ -75,7 +74,6 @@ data CodeUI a = CodeUI
     , _delete :: a
     , _rename :: a
     , _doneRenaming :: a
-    , _view :: a
     , _pane :: a
     , _close :: a
     , _moveDown :: a
@@ -83,9 +81,7 @@ data CodeUI a = CodeUI
     , _collaboration :: a
     , _exportDefToJSON :: a
     , _exportEverythingToJSON :: a
-    , _edit :: a
     , _goBack :: a
-    , _navigation :: a
     , _def :: a
     , _importJSON :: a
     , _importReplFromJSON :: a
@@ -196,3 +192,15 @@ instance Zoom.HasTexts Language where texts = lTexts . zoom
 
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts
+
+quit :: MainLoop.HasTexts env => Lens' env Text
+quit = MainLoop.texts . MainLoop.textQuit
+
+edit :: TextEdit.HasTexts env => Lens' env Text
+edit = TextEdit.texts . TextEdit.textEdit
+
+view :: Zoom.HasTexts env => Lens' env Text
+view = Zoom.texts . Zoom.view
+
+navigation :: Dir.HasTexts env => Lens' env Text
+navigation = Dir.texts . Dir.navigation
