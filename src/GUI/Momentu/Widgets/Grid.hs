@@ -186,10 +186,11 @@ addNavEventmap env keys navDests eMap =
             <&> (^. Widget.enterResultEvent)
             <&> EventMap.keyPresses
                 events
-                ([ Dir.texts . Dir.navigation
+                (EventMap.toDoc env
+                    [ Dir.texts . Dir.navigation
                     , Dir.texts . Dir.move
                     , lens
-                    ] <&> (env ^#) & EventMap.Doc)
+                    ])
 
 make ::
     ( Traversable vert, Traversable horiz, MonadReader env m
