@@ -1,6 +1,9 @@
 -- | Export lamdu version for --help
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns #-}
-{-# OPTIONS -fforce-recomp -O0 #-}
+{-# LANGUAGE CPP, TemplateHaskell, NamedFieldPuns #-}
+{-# OPTIONS -O0 #-}
+#ifndef DEV_BUILD
+{-# OPTIONS -fforce-recomp #-}
+#endif
 module Lamdu.Version
     ( VersionInfo(..), currentVersionInfo, currentVersionInfoStr
     ) where
@@ -28,7 +31,12 @@ _rc ver = ver ++ "-rc-" ++ curdate
 currentVersionInfo :: VersionInfo
 currentVersionInfo =
     VersionInfo
-    { version = "0.7.1"
+    { version =
+#ifdef DEV_BUILD
+        "<devel>"
+#else
+        "0.8"
+#endif
     , gitCommit = $(Git.hash)
     , gitStatus = $(Git.status)
     , gitDirty = $(Git.dirty)

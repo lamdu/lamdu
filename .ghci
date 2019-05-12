@@ -9,3 +9,4 @@
 :set -outputdir=ghci-out
 :set -hide-package cryptohash
 :set -hide-package base-compat-batteries
+:set -DDEV_BUILD

@@ -46,6 +46,10 @@ Flag ekg
   description: Enable ekg support in Lamdu
   default: True
 
+Flag dev
+  description: Build a dev version (faster build, no version output support)
+  default: False
+
 Executable lamdu
   main-is: Lamdu/Main.hs
   hs-source-dirs: src/main
@@ -58,6 +62,8 @@ Executable lamdu
     ghc-options: -with-rtsopts=-T
   other-modules: Lamdu.Version
                , System.Process.Git
+  if flag(dev)
+    cpp-options: -DDEV_BUILD
 
 Test-Suite Tests
   type: exitcode-stdio-1.0
