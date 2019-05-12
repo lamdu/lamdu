@@ -14,7 +14,6 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -27,8 +26,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-parentExprFDConfig :: Config -> FocusDelegator.Config
-parentExprFDConfig config = FocusDelegator.Config
+parentExprFDConfig ::
+    (MonadReader env m, Config.HasConfig env) => m FocusDelegator.Config
+parentExprFDConfig =
+    Lens.view Config.config <&>
+    \config ->
+    FocusDelegator.Config
     { FocusDelegator.focusChildKeys = config ^. Config.enterSubexpressionKeys
     , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Enter subexpression"]
     , FocusDelegator.focusParentKeys = config ^. Config.leaveSubexpressionKeys
@@ -53,7 +56,7 @@ parentDelegator ::
     ) => Widget.Id ->
     m (Gui Responsive o -> Gui Responsive o)
 parentDelegator myId =
-    FocusDelegator.make <*> (Lens.view Config.config <&> parentExprFDConfig)
+    FocusDelegator.make <*> parentExprFDConfig
     ?? FocusDelegator.FocusEntryChild ?? myId
 
 stdWrapParentExpr ::
