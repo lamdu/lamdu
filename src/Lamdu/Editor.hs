@@ -292,8 +292,8 @@ run opts rawDb =
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <-
-                    EditorSettings.newProp initialTheme initialLanguage (opts ^. Opts.eoAnnotationsMode)
-                    configSampler evaluator
+                    EditorSettings.newProp initialTheme initialLanguage
+                    (opts ^. Opts.eoAnnotationsMode) configSampler evaluator
                 runMainLoop ekg stateStorage subpixel win mainLoop
                     configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
     where
