@@ -193,14 +193,14 @@ instance Zoom.HasTexts Language where texts = lTexts . zoom
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts
 
-quit :: MainLoop.HasTexts env => Lens' env Text
-quit = MainLoop.texts . MainLoop.textQuit
+quit :: HasLanguage env => Lens' env Text
+quit = language . MainLoop.texts . MainLoop.textQuit
 
-edit :: TextEdit.HasTexts env => Lens' env Text
-edit = TextEdit.texts . TextEdit.textEdit
+edit :: HasLanguage env => Lens' env Text
+edit = language . TextEdit.texts . TextEdit.textEdit
 
-view :: Zoom.HasTexts env => Lens' env Text
-view = Zoom.texts . Zoom.view
+view :: HasLanguage env => Lens' env Text
+view = language . Zoom.texts . Zoom.view
 
-navigation :: Dir.HasTexts env => Lens' env Text
-navigation = Dir.texts . Dir.navigation
+navigation :: HasLanguage env => Lens' env Text
+navigation = language . Dir.texts . Dir.navigation

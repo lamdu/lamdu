@@ -107,7 +107,7 @@ layout themeNames langNames settingsProp =
         vcEventMap <- VersionControlGUI.eventMap ?? versionControlCfg ?? vcActions
 
         quitKeys <- Lens.view (Config.config . Config.quitKeys)
-        quitTxt <- Lens.view (Texts.texts . Texts.codeUI . Texts.quit)
+        quitTxt <- Lens.view Texts.quit
         let quitEventMap = E.keysEventMap quitKeys (E.Doc [quitTxt]) (error "Quit")
 
         pure statusBarWidget
