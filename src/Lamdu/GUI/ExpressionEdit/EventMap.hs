@@ -3,7 +3,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     , Options(..), defaultOptions
     , ExprInfo(..), addWith
     , extractCursor
-    , detachEventMap
     , addLetEventMap
     ) where
 
@@ -49,29 +48,32 @@ defaultOptions =
 
 exprInfoFromPl ::
     Monad i =>
-    Sugar.Payload name i0 o0 ExprGui.Payload -> ExprGuiM i o (ExprInfo name i0 o0)
-exprInfoFromPl pl =
-    do
-        isSelected <- GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
-        isHoleResult <- ExprGuiM.isHoleResult
-        pure ExprInfo
-            { exprInfoIsHoleResult = isHoleResult
-            , exprInfoActions = pl ^. Sugar.plActions
-            , exprInfoMinOpPrec =
-                -- Expression with parentheses intercepts all operations from inside it,
-                -- But if it is itself selected then we're out of the parentheses,
-                -- and its parents may take some operators.
-                if pl ^. Sugar.plData . ExprGui.plNeedParens && not isSelected
-                then 0
-                else pl ^. Sugar.plData . ExprGui.plMinOpPrec
-            , exprInfoIsSelected = isSelected
-            }
+    ExprGuiM i o
+    (Sugar.Payload name i0 o0 ExprGui.Payload -> ExprInfo name i0 o0)
+exprInfoFromPl =
+    (,)
+    <$> GuiState.isSubCursor
+    <*> ExprGuiM.isHoleResult
+    <&> \(isSubCursor, isHoleResult) pl ->
+    let isSelected = WidgetIds.fromExprPayload pl & isSubCursor in
+    ExprInfo
+    { exprInfoIsHoleResult = isHoleResult
+    , exprInfoActions = pl ^. Sugar.plActions
+    , exprInfoMinOpPrec =
+        -- Expression with parentheses intercepts all operations from inside it,
+        -- But if it is itself selected then we're out of the parentheses,
+        -- and its parents may take some operators.
+        if pl ^. Sugar.plData . ExprGui.plNeedParens && not isSelected
+        then 0
+        else pl ^. Sugar.plData . ExprGui.plMinOpPrec
+    , exprInfoIsSelected = isSelected
+    }
 
 add ::
     (HasWidget w, Monad i, Monad o) =>
     Options -> Sugar.Payload name i o ExprGui.Payload ->
     ExprGuiM i o (Gui w o -> Gui w o)
-add options pl = exprInfoFromPl pl >>= addWith options
+add options pl = (exprInfoFromPl ?? pl) >>= addWith options
 
 addWith ::
     (HasWidget w, Monad i, Monad o) =>
@@ -85,11 +87,11 @@ extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
 extractEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor o) =>
-    Sugar.NodeActions name i o -> m (Gui EventMap o)
-extractEventMap actions =
+    m (Sugar.NodeActions name i o -> Gui EventMap o)
+extractEventMap =
     Lens.view (Config.config . Config.extractKeys)
     <&>
-    \k ->
+    \k actions ->
     actions ^. Sugar.extract <&> extractCursor
     & E.keysEventMapMovesCursor k doc
     where
@@ -113,24 +115,24 @@ actionsEventMap ::
     Options -> ExprInfo name i o ->
     ExprGuiM i o (EventContext -> Gui EventMap o)
 actionsEventMap options exprInfo =
-    sequence
-    [ case actions ^. Sugar.detach of
-      Sugar.DetachAction act | exprInfoIsSelected exprInfo -> detachEventMap act
-      _ -> pure mempty
+    mconcat
+    [ detachEventMap ?? exprInfo ?? actions ^. Sugar.detach
     , if exprInfoIsHoleResult exprInfo
         then pure mempty
         else
-            sequence
-            [ extractEventMap actions
-            , Lens.view (Config.config . Config.replaceParentKeys) <&> mkReplaceParent
-            ] <&> mconcat
-    , foldMap replaceEventMap (actions ^. Sugar.mSetToHole)
-    , foldMap addLetEventMap (actions ^. Sugar.mNewLet)
-    ] <&> mconcat <&> const
+            mconcat
+            [ extractEventMap ?? actions
+            , mkReplaceParent
+            ]
+    , actions ^. Sugar.mSetToHole & foldMap replaceEventMap
+    , actions ^. Sugar.mNewLet & foldMap addLetEventMap
+    ] <&> const -- throw away EventContext here
     <&> mappend (transformEventMap options exprInfo)
     where
         actions = exprInfoActions exprInfo
-        mkReplaceParent replaceKeys =
+        mkReplaceParent =
+            Lens.view (Config.config . Config.replaceParentKeys)
+            <&> \replaceKeys ->
             actions ^. Sugar.mReplaceParent
             & foldMap
                 (E.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"])
@@ -183,18 +185,23 @@ transformEventMap options exprInfo eventCtx =
 
 detachEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
-    f Sugar.EntityId -> m (Gui EventMap f)
-detachEventMap detach =
+    m (ExprInfo name i o -> Sugar.DetachAction f -> Gui EventMap f)
+detachEventMap =
     Lens.view Config.config
     <&>
-    \config ->
-    E.keysEventMapMovesCursor (config ^. Config.detachKeys)
-    (E.Doc ["Edit", "Modify"])
-    (detach <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
-    <>
-    E.keysEventMap (config ^. Config.parenDetachKeys)
-    (E.Doc ["Edit", "Detach"])
-    (void detach)
+    \config exprInfo ->
+    \case
+    Sugar.DetachAction act
+        | exprInfoIsSelected exprInfo ->
+            E.keysEventMapMovesCursor (config ^. Config.detachKeys)
+            (E.Doc ["Edit", "Modify"])
+            (act <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
+            <>
+            E.keysEventMap (config ^. Config.parenDetachKeys)
+            (E.Doc ["Edit", "Detach"])
+            (void act)
+    _ -> mempty
+
 
 replaceEventMap ::
     (MonadReader env m, Config.HasConfig env, Functor f) =>
