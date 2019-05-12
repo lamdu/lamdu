@@ -31,20 +31,22 @@ initial theme lang annotationMode =
 settingsChangeHandler :: Sampler -> EvalManager.Evaluator -> Maybe Settings -> Settings -> IO ()
 settingsChangeHandler configSampler evaluator mOld new =
     do
-        whenChanged Settings.sAnnotationMode $
+        when (didChange Settings.sAnnotationMode) $
             case new ^. Settings.sAnnotationMode of
             Annotations.Evaluation -> EvalManager.start evaluator
             _ -> EvalManager.stop evaluator
-        whenChanged Settings.sSelectedTheme setSelection
-        whenChanged Settings.sSelectedLanguage setSelection
+        when
+            ( didChange Settings.sSelectedTheme
+                || didChange Settings.sSelectedLanguage
+            ) setSelection
     where
         setSelection =
             ConfigSampler.setSelection configSampler
             (new ^. Settings.sSelectedTheme) (new ^. Settings.sSelectedLanguage)
-        whenChanged lens f =
+        didChange lens =
             case mOld of
-            Nothing -> f
-            Just old -> when (old ^. lens /= new ^. lens) f
+            Nothing -> True
+            Just old -> old ^. lens /= new ^. lens
 
 newProp ::
     Selection Theme -> Selection Language ->
