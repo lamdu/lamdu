@@ -53,7 +53,7 @@ data Code a = Code
     , _recordSep :: a
     , _recordCloser :: a
     }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Code)
 Lens.makeLenses ''Code
 JsonTH.derivePrefixed "_" ''Code
@@ -108,7 +108,7 @@ data CodeUI a = CodeUI
     , _detach :: a
     , _setToHole :: a
     }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)
 Lens.makeLenses ''CodeUI
 JsonTH.derivePrefixed "_" ''CodeUI
@@ -128,7 +128,7 @@ data StatusBar a = StatusBar
     , _sbTheme :: a
     , _sbSwitchTheme :: a
     }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 StatusBar)
 Lens.makeLenses ''StatusBar
 JsonTH.derivePrefixed "_sb" ''StatusBar
@@ -138,7 +138,7 @@ data Versioning a = Versioning
     , _undo :: a
     , _redo :: a
     }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Versioning)
 JsonTH.derivePrefixed "_" ''Versioning
 Lens.makeLenses ''Versioning
@@ -160,7 +160,7 @@ data Texts a = Texts
     , _zoom :: Zoom.Texts a
     , _mainLoop :: MainLoop.Texts a
     }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
@@ -173,7 +173,7 @@ data Language = Language
       _lDirection :: Dir.Layout
     , _lIdentifier :: Text
     , _lTexts :: Texts Text
-    } deriving (Eq, Show)
+    } deriving (Eq)
 
 Lens.makeLenses ''Language
 JsonTH.derivePrefixed "_l" ''Language
