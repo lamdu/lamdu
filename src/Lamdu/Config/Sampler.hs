@@ -19,7 +19,7 @@ import qualified Data.Aeson.Config as AesonConfig
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..))
+import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..), _Selection)
 import           Lamdu.Config.Theme (Theme)
 import           Lamdu.I18N.Texts (Language)
 import qualified Lamdu.Paths as Paths
@@ -102,7 +102,7 @@ loadFromFolder configPath selection =
     where
         path =
             takeDirectory configPath </> configFolder selection </>
-            Text.unpack (getSelection selection) ++ ".json"
+            Text.unpack (selection ^. _Selection) ++ ".json"
 
 load :: Selection Theme -> Selection Language -> FilePath -> IO Sample
 load themeName langName configPath =

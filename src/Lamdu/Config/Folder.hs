@@ -16,7 +16,7 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
-newtype Selection a = Selection { getSelection :: Text }
+newtype Selection a = Selection Text
     deriving (Eq, Ord, Show)
 Lens.makePrisms ''Selection
 
