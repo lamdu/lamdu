@@ -32,9 +32,15 @@
             "extract": "Extract",
             "execRepl": "Execute Repl Process"
         },
-        "codeUI": {
+        "navigationTexts": {
             "goto": "Goto",
             "jumpToError": "Jump to error",
+            "goBack": "Go back",
+            "nextEntry": "Next entry",
+            "enterSubexpression": "Enter subexpression",
+            "leaveSubexpression": "Leave subexpression"
+        },
+        "codeUI": {
             "hidden": "Hidden",
             "shown": "Shown",
             "pick": "Pick",
@@ -47,7 +53,6 @@
             "close": "Close",
             "moveDown": "Move down",
             "moveUp": "Move up",
-            "goBack": "Go back",
             "presentationMode": "Presentation Mode",
             "pModeVerbose": "Verbose",
             "pModeOO": "OO",
@@ -71,9 +76,6 @@
             "letClause": "Let Clause",
             "setToHole": "Set to Hole",
             "negate": "Negate",
-            "nextEntry": "Next entry",
-            "enterSubexpression": "Enter subexpression",
-            "leaveSubexpression": "Leave subexpression",
             "value": "Value"
         },
         "name": {

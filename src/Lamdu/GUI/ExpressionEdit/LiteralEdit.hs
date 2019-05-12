@@ -199,7 +199,11 @@ numEdit prop pl =
             Lens.view (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
             <&>
             \keys ->
-            E.keysEventMap keys (toDoc [Texts.navigation, codeUI . Texts.nextEntry])
+            E.keysEventMap keys
+            (toDoc
+                [ Texts.navigation
+                , Texts.texts . Texts.navigationTexts . Texts.nextEntry
+                ])
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
         let delEvent =

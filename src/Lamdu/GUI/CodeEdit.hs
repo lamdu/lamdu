@@ -256,7 +256,7 @@ panesEventMap theExportActions cp gp replVarInfo =
               (E.keysEventMapMovesCursor (theConfig ^. Config.previousCursorKeys)
                (E.toDoc env
                    [ Texts.navigation
-                   , Texts.texts . Texts.codeUI . Texts.goBack
+                   , Texts.texts . Texts.navigationTexts . Texts.goBack
                    ])) mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])

@@ -35,9 +35,15 @@
             "extract": "חלץ",
             "execRepl": "הפעל תוצאת שורת פקודה"
         },
-        "codeUI": {
+        "navigationTexts": {
             "goto": "קפוץ",
             "jumpToError": "קפוץ לשגיאה",
+            "goBack": "חזרה",
+            "nextEntry": "הכניסה הבאה",
+            "enterSubexpression": "כנס לתת-ביטוי",
+            "leaveSubexpression": "צא מתת-ביטוי"
+        },
+        "codeUI": {
             "hidden": "חבוי",
             "shown": "גלוי",
             "pick": "בחר",
@@ -50,7 +56,6 @@
             "close": "סגור",
             "moveDown": "הזז למטה",
             "moveUp": "הזז למעלה",
-            "goBack": "חזרה",
             "presentationMode": "מצב תצוגה",
             "pModeVerbose": "עודף",
             "pModeOO": "אובייקטי",
@@ -74,9 +79,6 @@
             "letClause": "השמה",
             "setToHole": "הפוך לחור",
             "negate": "הפוך סימן",
-            "nextEntry": "הכניסה הבאה",
-            "enterSubexpression": "כנס לתת-ביטוי",
-            "leaveSubexpression": "צא מתת-ביטוי",
             "value": "ערך"
         },
         "statusBar": {

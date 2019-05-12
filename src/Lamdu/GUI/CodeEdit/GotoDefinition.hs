@@ -63,7 +63,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         do
-            goto <- Lens.view (Texts.texts . Texts.codeUI . Texts.goto)
+            goto <- Lens.view (Texts.texts . Texts.navigationTexts . Texts.goto)
             let toRenderedOption nameRef widget =
                     Menu.RenderedOption
                     { Menu._rWidget = widget
@@ -109,7 +109,7 @@ make ::
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
-        goto <- Lens.view (Texts.texts . Texts.codeUI . Texts.goto)
+        goto <- Lens.view (Texts.texts . Texts.navigationTexts . Texts.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
             (makeOptions readGlobals) Element.empty myId ?? Menu.Below
             & Reader.local (Theme.theme . Theme.searchTerm %~ onTermStyle goto)

@@ -89,10 +89,21 @@ data Definitions a = Definitions
 Lens.makeLenses ''Definitions
 JsonTH.derivePrefixed "_" ''Definitions
 
-data CodeUI a = CodeUI
+data Navigation a = Navigation
     { _jumpToError :: a
     , _goto :: a
-    , _hidden :: a
+    , _goBack :: a
+    , _nextEntry :: a
+    , _enterSubexpression :: a
+    , _leaveSubexpression :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Navigation)
+Lens.makeLenses ''Navigation
+JsonTH.derivePrefixed "_" ''Navigation
+
+data CodeUI a = CodeUI
+    { _hidden :: a
     , _shown :: a
     , _pick :: a
     , _new :: a
@@ -104,7 +115,6 @@ data CodeUI a = CodeUI
     , _close :: a
     , _moveDown :: a
     , _moveUp :: a
-    , _goBack :: a
     , _presentationMode :: a
     , _pModeVerbose :: a
     , _pModeOO :: a
@@ -128,9 +138,6 @@ data CodeUI a = CodeUI
     , _stopEditing :: a
     , _setToHole :: a
     , _negate :: a
-    , _nextEntry :: a
-    , _enterSubexpression :: a
-    , _leaveSubexpression :: a
     , _value :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
@@ -172,6 +179,7 @@ data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
     , _collaborationTexts :: Collaboration a
+    , _navigationTexts :: Navigation a
     , _definitions :: Definitions a
     , _name :: NameTexts a
     , _statusBar :: StatusBar a

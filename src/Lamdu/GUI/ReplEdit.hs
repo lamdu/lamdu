@@ -146,7 +146,9 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
         env <- Lens.view id
         let jumpDoc =
                 E.toDoc env
-                [Texts.navigation, Texts.texts . Texts.codeUI . Texts.jumpToError]
+                [ Texts.navigation
+                , Texts.texts . Texts.navigationTexts . Texts.jumpToError
+                ]
         let jumpEventMap j =
                 j <&> dest
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
