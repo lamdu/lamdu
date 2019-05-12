@@ -75,7 +75,7 @@ extractEventMap env pl keys =
         doc =
             E.toDoc env
             [ Texts.edit
-            , Texts.texts . Texts.codeUI . Texts.extractReplToDef
+            , Texts.texts . Texts.definitions . Texts.extractReplToDef
             ]
 
 replEventMap ::
@@ -200,7 +200,7 @@ resultWidget ::
 resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
-        toDoc <- Lens.view (Texts.texts . Texts.codeUI) <&> E.toDoc
+        toDoc <- Lens.view (Texts.texts . Texts.definitions) <&> E.toDoc
         case varInfo of
             Sugar.VarAction ->
                 do

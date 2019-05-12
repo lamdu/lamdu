@@ -149,7 +149,6 @@ makePaneEdit theExportActions pane =
                 E.toDoc env
                 (titleLenses ++ map ((Texts.texts . Texts.codeUI) .) texts)
         let viewDoc = titledCodeDoc [Texts.view]
-        let editDoc = titledCodeDoc [Texts.edit]
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
@@ -174,9 +173,13 @@ makePaneEdit theExportActions pane =
                         (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & Property.MkProperty)
                         Sugar.DeletedDefinition
                     pane ^. Sugar.paneClose
-                <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys theConfig)
-                    (editDoc [Texts.def, Texts.delete])
+                    <&> WidgetIds.fromEntityId
+                    & E.keysEventMapMovesCursor (Config.delKeys theConfig)
+                    (E.toDoc env
+                        [ Texts.edit
+                        , Texts.texts . Texts.definitions . Texts.def
+                        , Texts.texts . Texts.codeUI . Texts.delete
+                        ])
             paneConfig = theConfig ^. Config.pane
             exportKeys = theConfig ^. Config.export . Config.exportKeys
         DefinitionEdit.make defEventMap (pane ^. Sugar.paneDefinition)
@@ -205,7 +208,7 @@ newDefinitionDoc :: (Texts.HasLanguage env, MonadReader env m) => m E.Doc
 newDefinitionDoc =
     Lens.view id
     <&> flip E.toDoc
-        [Texts.edit, Texts.texts . Texts.codeUI . Texts.newDefinition]
+        [Texts.edit, Texts.texts . Texts.definitions . Texts.newDefinition]
 
 makeNewDefinitionButton ::
     Monad m =>
@@ -216,7 +219,7 @@ makeNewDefinitionButton cp =
         newDefDoc <- newDefinitionDoc
         makeNewDefinition cp
             >>= Styled.actionable newDefId
-            (Texts.codeUI . Texts.newDefinitionButton) newDefDoc
+            (Texts.definitions . Texts.newDefinitionButton) newDefDoc
             <&> (^. Align.tValue)
 
 jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))
@@ -241,7 +244,6 @@ panesEventMap theExportActions cp gp replVarInfo =
             <&> E.keysEventMapMovesCursor
             (theConfig ^. Config.pane . Config.newDefinitionKeys) newDefDoc
         env <- Lens.view id
-        let codeDoc = E.toDoc (env ^. Texts.texts . Texts.codeUI)
         let collaborationDoc =
                 E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
         mconcat
@@ -265,7 +267,7 @@ panesEventMap theExportActions cp gp replVarInfo =
             , case replVarInfo of
                 Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
-                    (codeDoc [Texts.execRepl])
+                    (E.toDoc env [Texts.texts . Texts.definitions . Texts.execRepl])
                     (IOTrans.liftIO executeRepl)
                 _ -> mempty
             ] & pure

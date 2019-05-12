@@ -101,7 +101,7 @@ extractEventMap =
     \env actions ->
     actions ^. Sugar.extract <&> extractCursor
     & E.keysEventMapMovesCursor (env ^. config . Config.extractKeys)
-    (E.toDoc env [Texts.edit, codeUI . Texts.extract])
+    (E.toDoc env [Texts.edit, Texts.texts . Texts.definitions . Texts.extract])
 
 addLetEventMap ::
     (Monad i, Monad o) =>

@@ -72,15 +72,26 @@ data Collaboration a = Collaboration
 Lens.makeLenses ''Collaboration
 JsonTH.derivePrefixed "_" ''Collaboration
 
-data CodeUI a = CodeUI
+data Definitions a = Definitions
     { _newDefinitionButton :: a
     , _newDefinition :: a
     , _undeleteButton :: a
     , _defUpdateHeader :: a
     , _defUpdateTo :: a
     , _defUpdateWas :: a
+    , _def :: a
+    , _extractReplToDef :: a
+    , _execRepl :: a
+    , _extract :: a
+    }
+    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Definitions)
+Lens.makeLenses ''Definitions
+JsonTH.derivePrefixed "_" ''Definitions
+
+data CodeUI a = CodeUI
+    { _jumpToError :: a
     , _goto :: a
-    , _jumpToError :: a
     , _hidden :: a
     , _shown :: a
     , _pick :: a
@@ -94,9 +105,6 @@ data CodeUI a = CodeUI
     , _moveDown :: a
     , _moveUp :: a
     , _goBack :: a
-    , _def :: a
-    , _extractReplToDef :: a
-    , _execRepl :: a
     , _presentationMode :: a
     , _pModeVerbose :: a
     , _pModeOO :: a
@@ -109,7 +117,6 @@ data CodeUI a = CodeUI
     , _replace :: a
     , _replaceParent :: a
     , _applyOperator :: a
-    , _extract :: a
     , _add :: a
     , _letClause :: a
     , _modify :: a
@@ -165,6 +172,7 @@ data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
     , _collaborationTexts :: Collaboration a
+    , _definitions :: Definitions a
     , _name :: NameTexts a
     , _statusBar :: StatusBar a
     , _versioning :: Versioning a
@@ -188,8 +196,7 @@ Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
 data Language = Language
-    { -- TODO: Should this still be called "Texts?"
-      _lDirection :: Dir.Layout
+    { _lDirection :: Dir.Layout
     , _lIdentifier :: Text
     , _lTexts :: Texts Text
     } deriving (Eq)

@@ -23,13 +23,19 @@
             "importJSON": "ייבא קובץ שיתוף",
             "importReplFromJSON": "ייבא שורת פקודה מקובץ שיתוף"
         },
-        "codeUI": {
+        "definitions": {
             "defUpdateHeader": "עדכן",
             "defUpdateTo": "ל: ",
             "defUpdateWas": "היה טיפוס: ",
+            "def": "הגדרה",
             "newDefinitionButton": "חדש...",
             "newDefinition": "חדש",
             "undeleteButton": "שחזר...",
+            "extractReplToDef": "ייצא שורת פקודה להגדרה",
+            "extract": "חלץ",
+            "execRepl": "הפעל תוצאת שורת פקודה"
+        },
+        "codeUI": {
             "goto": "קפוץ",
             "jumpToError": "קפוץ לשגיאה",
             "hidden": "חבוי",
@@ -45,9 +51,6 @@
             "moveDown": "הזז למטה",
             "moveUp": "הזז למעלה",
             "goBack": "חזרה",
-            "def": "הגדרה",
-            "extractReplToDef": "ייצא שורת פקודה להגדרה",
-            "execRepl": "הפעל תוצאת שורת פקודה",
             "presentationMode": "מצב תצוגה",
             "pModeVerbose": "עודף",
             "pModeOO": "אובייקטי",
@@ -60,7 +63,6 @@
             "replace": "החלף",
             "replaceParent": "החלף הורה",
             "applyOperator": "הפעל אופרטור",
-            "extract": "חלץ",
             "modify": "שנה",
             "detach": "נתק",
             "literal": "ליטרלי",
