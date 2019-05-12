@@ -50,7 +50,16 @@
             "jsException": "JS exception: ",
             "jsReachedAHole": "Reached a hole",
             "jsStaleDep": "Dependency type needs update",
-            "jsUnhandledCase": "Unhandled case (Lamdu bug)"
+            "jsUnhandledCase": "Unhandled case (Lamdu bug)",
+            "transform": "Transform",
+            "replaceParent": "Replace Parent",
+            "applyOperator": "Apply Operator",
+            "extract": "Extract",
+            "modify": "Modify",
+            "detach": "Detach",
+            "add": "Add",
+            "letClause": "Let Clause",
+            "setToHole": "Set to Hole"
         },
         "name": {
             "unnamed": "Unnamed",

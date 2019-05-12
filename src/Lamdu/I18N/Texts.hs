@@ -98,6 +98,15 @@ data CodeUI a = CodeUI
     , _jsReachedAHole :: a
     , _jsStaleDep :: a
     , _jsUnhandledCase :: a
+    , _transform :: a
+    , _replaceParent :: a
+    , _applyOperator :: a
+    , _extract :: a
+    , _add :: a
+    , _letClause :: a
+    , _modify :: a
+    , _detach :: a
+    , _setToHole :: a
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)

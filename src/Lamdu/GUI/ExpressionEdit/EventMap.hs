@@ -16,13 +16,15 @@ import           GUI.Momentu.Widget (HasWidget(..), EventContext)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
+import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Precedence (precedence)
 import           Lamdu.Sugar.Parens (MinOpPrec)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -85,29 +87,35 @@ extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
+codeUI :: Texts.HasLanguage env => Lens' env (Texts.CodeUI Text)
+codeUI = Texts.texts . Texts.codeUI
+
 extractEventMap ::
-    (MonadReader env m, Config.HasConfig env, Functor o) =>
+    ( MonadReader env m, Config.HasConfig env, Texts.HasLanguage env
+    , Functor o
+    ) =>
     m (Sugar.NodeActions name i o -> Gui EventMap o)
 extractEventMap =
-    Lens.view (Config.config . Config.extractKeys)
+    Lens.view id
     <&>
-    \k actions ->
+    \env actions ->
     actions ^. Sugar.extract <&> extractCursor
-    & E.keysEventMapMovesCursor k doc
-    where
-        doc = E.Doc ["Edit", "Extract"]
+    & E.keysEventMapMovesCursor (env ^. config . Config.extractKeys)
+    (E.toDoc env [Texts.edit, codeUI . Texts.extract])
 
 addLetEventMap ::
     (Monad i, Monad o) =>
     o Sugar.EntityId -> ExprGuiM i o (Gui EventMap o)
 addLetEventMap addLet =
     do
-        config <- Lens.view Config.config
+        env <- Lens.view id
         savePos <- ExprGuiM.mkPrejumpPosSaver
         savePos >> addLet
             <&> WidgetIds.fromEntityId
-            & E.keysEventMapMovesCursor (config ^. Config.letAddItemKeys)
-                (E.Doc ["Edit", "Let clause", "Add"])
+            & E.keysEventMapMovesCursor
+            (env ^. config . Config.letAddItemKeys)
+                (E.toDoc env
+                    [Texts.edit, codeUI . Texts.letClause, codeUI . Texts.add])
             & pure
 
 actionsEventMap ::
@@ -115,40 +123,42 @@ actionsEventMap ::
     Options -> ExprInfo name i o ->
     ExprGuiM i o (EventContext -> Gui EventMap o)
 actionsEventMap options exprInfo =
-    mconcat
-    [ detachEventMap ?? exprInfo ?? actions ^. Sugar.detach
-    , if exprInfoIsHoleResult exprInfo
-        then pure mempty
-        else
-            mconcat
-            [ extractEventMap ?? actions
-            , mkReplaceParent
-            ]
-    , actions ^. Sugar.mSetToHole & foldMap replaceEventMap
-    , actions ^. Sugar.mNewLet & foldMap addLetEventMap
-    ] <&> const -- throw away EventContext here
-    <&> mappend (transformEventMap options exprInfo)
+    ( mconcat
+        [ detachEventMap ?? exprInfo ?? actions ^. Sugar.detach
+        , if exprInfoIsHoleResult exprInfo
+            then pure mempty
+            else
+                mconcat
+                [ extractEventMap ?? actions
+                , mkReplaceParent
+                ]
+        , actions ^. Sugar.mSetToHole & foldMap replaceEventMap
+        , actions ^. Sugar.mNewLet & foldMap addLetEventMap
+        ] <&> const -- throw away EventContext here
+    ) <> (transformEventMap ?? options ?? exprInfo)
     where
         actions = exprInfoActions exprInfo
         mkReplaceParent =
-            Lens.view (Config.config . Config.replaceParentKeys)
-            <&> \replaceKeys ->
+            Lens.view id
+            <&> \env ->
+            let replaceKeys = env ^. config . Config.replaceParentKeys in
             actions ^. Sugar.mReplaceParent
             & foldMap
-                (E.keysEventMapMovesCursor replaceKeys (E.Doc ["Edit", "Replace parent"])
+                (E.keysEventMapMovesCursor replaceKeys
+                    (E.toDoc env [Texts.edit, codeUI . Texts.replaceParent])
                 . fmap WidgetIds.fromEntityId)
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
-transformSearchTerm :: ExprInfo name i o -> EventContext -> EventMap Text
-transformSearchTerm exprInfo eventCtx =
-    E.charGroup Nothing (E.Doc ["Edit", "Apply Operator"]) ops Text.singleton
-    <> maybeTransformEventMap
-    <&> (searchStrRemainder <>)
-    where
-        maybeTransformEventMap
+transformSearchTerm ::
+    (MonadReader env m, Texts.HasLanguage env) =>
+    m (ExprInfo name i o -> EventContext -> EventMap Text)
+transformSearchTerm =
+    Lens.view id <&> \env exprInfo eventCtx ->
+    let maybeTransformEventMap
             | exprInfoIsSelected exprInfo =
-                E.charEventMap "Letter" (E.Doc ["Edit", "Transform"]) transform
+                E.charEventMap "Letter"
+                (E.toDoc env [Texts.edit, codeUI . Texts.transform]) transform
             | otherwise = mempty
         transform c =
             do
@@ -163,52 +173,63 @@ transformSearchTerm exprInfo eventCtx =
                 | acceptOp firstOp -> Chars.operator
                 | otherwise -> mempty
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
+    in  E.charGroup Nothing
+        (E.toDoc env [Texts.edit, codeUI . Texts.applyOperator]) ops
+        Text.singleton
+        <> maybeTransformEventMap
+        <&> (searchStrRemainder <>)
 
 transformEventMap ::
-    Applicative o =>
-    Options -> ExprInfo name i o -> EventContext -> Gui EventMap o
-transformEventMap options exprInfo eventCtx =
-    case exprInfoActions exprInfo ^. Sugar.detach of
-    Sugar.DetachAction detach ->
-        case addOperatorSetHoleState options of
-        Just holeId -> pure holeId
-        Nothing -> detach
-    Sugar.FragmentAlready holeId -> pure holeId
-    Sugar.FragmentExprAlready holeId -> pure holeId
-    <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
-    & action
-    where
-        action detach =
-            transformSearchTerm exprInfo eventCtx
+    (MonadReader env m, Applicative o, Texts.HasLanguage env) =>
+    m (Options -> ExprInfo name i o -> EventContext -> Gui EventMap o)
+transformEventMap =
+    transformSearchTerm
+    <&> \transform options exprInfo eventCtx ->
+    let action detach =
+            transform exprInfo eventCtx
             <&> SearchMenu.enterWithSearchTerm
             <&> (detach <&>)
+    in  case exprInfoActions exprInfo ^. Sugar.detach of
+        Sugar.DetachAction detach ->
+            case addOperatorSetHoleState options of
+            Just holeId -> pure holeId
+            Nothing -> detach
+        Sugar.FragmentAlready holeId -> pure holeId
+        Sugar.FragmentExprAlready holeId -> pure holeId
+        <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+        & action
 
 detachEventMap ::
-    (MonadReader env m, Config.HasConfig env, Functor f) =>
+    ( MonadReader env m, Config.HasConfig env, Texts.HasLanguage env
+    , Functor f
+    ) =>
     m (ExprInfo name i o -> Sugar.DetachAction f -> Gui EventMap f)
 detachEventMap =
-    Lens.view Config.config
+    Lens.view id
     <&>
-    \config exprInfo ->
+    \env exprInfo ->
     \case
     Sugar.DetachAction act
         | exprInfoIsSelected exprInfo ->
-            E.keysEventMapMovesCursor (config ^. Config.detachKeys)
-            (E.Doc ["Edit", "Modify"])
+            E.keysEventMapMovesCursor (env ^. config . Config.detachKeys)
+            (E.toDoc env [Texts.edit, codeUI . Texts.modify])
             (act <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
             <>
-            E.keysEventMap (config ^. Config.parenDetachKeys)
-            (E.Doc ["Edit", "Detach"])
+            E.keysEventMap (env ^. config . Config.parenDetachKeys)
+            (E.toDoc env [Texts.edit, codeUI . Texts.detach])
             (void act)
     _ -> mempty
 
 
 replaceEventMap ::
-    (MonadReader env m, Config.HasConfig env, Functor f) =>
+    ( MonadReader env m, Config.HasConfig env, Texts.HasLanguage env
+    , Functor f
+    ) =>
     f Sugar.EntityId-> m (Gui EventMap f)
 replaceEventMap action =
-    Lens.view Config.config
+    Lens.view id
     <&>
-    \config ->
+    \env ->
     action <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Set to Hole"])
+    & E.keysEventMapMovesCursor (env ^. config & Config.delKeys)
+    (E.toDoc env [Texts.edit, codeUI . Texts.setToHole])

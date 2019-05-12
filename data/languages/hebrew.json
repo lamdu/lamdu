@@ -53,7 +53,16 @@
             "jsException": "חריגה בהרצה: ",
             "jsReachedAHole": "הרצת חור",
             "jsStaleDep": "הרצת הגדרה עם טיפוס לא מעודכן",
-            "jsUnhandledCase": "התאמה חסרה )באג בלמדו("
+            "jsUnhandledCase": "התאמה חסרה )באג בלמדו(",
+            "transform": "שנה צורה",
+            "replaceParent": "החלף הורה",
+            "applyOperator": "הפעל אופרטור",
+            "extract": "חלץ",
+            "modify": "שנה",
+            "detach": "נתק",
+            "add": "הוסף",
+            "letClause": "השמה",
+            "setToHole": "הפוך לחור"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",
