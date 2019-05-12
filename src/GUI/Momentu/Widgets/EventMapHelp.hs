@@ -52,6 +52,10 @@ import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
+data IsHelpShown = HelpShown | HelpNotShown
+    deriving (Generic, Eq, Ord, Read, Show)
+JsonTH.derivePrefixed "" ''IsHelpShown
+
 data Style = Style
     { _styleText :: TextView.Style
     , _styleInputDocColor :: Draw.Color
@@ -273,9 +277,6 @@ hoverEdge ::
     Widget.Size -> m (a -> a)
 hoverEdge size =
     (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w & Element.hoverLayers
-
-data IsHelpShown = HelpShown | HelpNotShown
-    deriving (Eq, Ord, Read, Show)
 
 toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown

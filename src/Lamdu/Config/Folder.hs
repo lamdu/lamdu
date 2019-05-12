@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Lamdu.Config.Folder
     ( Selection(..), _Selection
@@ -7,6 +8,7 @@ module Lamdu.Config.Folder
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Aeson (FromJSON(..), ToJSON(..))
 import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import qualified Lamdu.Paths as Paths
@@ -17,7 +19,8 @@ import qualified System.FilePath as FilePath
 import           Lamdu.Prelude
 
 newtype Selection a = Selection Text
-    deriving (Eq, Ord, Show)
+    deriving stock (Show)
+    deriving newtype (Eq, Ord, FromJSON, ToJSON)
 Lens.makePrisms ''Selection
 
 class HasConfigFolder a where
