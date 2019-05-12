@@ -14,28 +14,33 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 parentExprFDConfig ::
-    (MonadReader env m, Config.HasConfig env) => m FocusDelegator.Config
+    (MonadReader env m, Config.HasConfig env, Texts.HasLanguage env) =>
+    m FocusDelegator.Config
 parentExprFDConfig =
-    Lens.view Config.config <&>
-    \config ->
+    Lens.view id <&>
+    \env ->
+    let doc lens =
+            E.toDoc env [Texts.navigation, Texts.texts . Texts.codeUI . lens] in
     FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = config ^. Config.enterSubexpressionKeys
-    , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Enter subexpression"]
-    , FocusDelegator.focusParentKeys = config ^. Config.leaveSubexpressionKeys
-    , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Leave subexpression"]
+    { FocusDelegator.focusChildKeys = env ^. config . Config.enterSubexpressionKeys
+    , FocusDelegator.focusChildDoc = doc Texts.enterSubexpression
+    , FocusDelegator.focusParentKeys = env ^. config . Config.leaveSubexpressionKeys
+    , FocusDelegator.focusParentDoc = doc Texts.leaveSubexpression
     }
 
 stdWrap ::
@@ -52,7 +57,9 @@ stdWrap pl =
         (<<<) = liftA2 (.)
 
 parentDelegator ::
-    ( HasCallStack, MonadReader env m, Config.HasConfig env, GuiState.HasCursor env, Applicative o
+    ( HasCallStack, MonadReader env m, Config.HasConfig env
+    , GuiState.HasCursor env, Texts.HasLanguage env
+    , Applicative o
     ) => Widget.Id ->
     m (Gui Responsive o -> Gui Responsive o)
 parentDelegator myId =

@@ -115,6 +115,8 @@ data CodeUI a = CodeUI
     , _setToHole :: a
     , _negate :: a
     , _nextEntry :: a
+    , _enterSubexpression :: a
+    , _leaveSubexpression :: a
     , _value :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)

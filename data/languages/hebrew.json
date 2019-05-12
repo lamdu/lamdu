@@ -71,6 +71,8 @@
             "setToHole": "הפוך לחור",
             "negate": "הפוך סימן",
             "nextEntry": "הכניסה הבאה",
+            "enterSubexpression": "כנס לתת-ביטוי",
+            "leaveSubexpression": "צא מתת-ביטוי",
             "value": "ערך"
         },
         "statusBar": {

@@ -68,6 +68,8 @@
             "setToHole": "Set to Hole",
             "negate": "Negate",
             "nextEntry": "Next entry",
+            "enterSubexpression": "Enter subexpression",
+            "leaveSubexpression": "Leave subexpression",
             "value": "Value"
         },
         "name": {
