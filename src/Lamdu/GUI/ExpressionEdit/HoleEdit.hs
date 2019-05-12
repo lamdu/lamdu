@@ -57,14 +57,15 @@ make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
         delKeys <- Lens.view Config.config <&> Config.delKeys
-        let (litEventMap, delEventMap)
+        let (mkLitEventMap, delEventMap)
                 | searchTerm == "" =
-                    ( makeLiteralEventMap (pl ^. Sugar.plActions . Sugar.setToLiteral)
+                    ( makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                     , foldMap
                         (E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
                         (hole ^. Sugar.holeMDelete)
                     )
                 | otherwise = (mempty, mempty)
+        litEventMap <- mkLitEventMap
         ExprEventMap.add options pl
             <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
                     pl allowedHoleSearchTerm ?? Menu.AnyPlace

@@ -99,6 +99,7 @@ data CodeUI a = CodeUI
     , _jsStaleDep :: a
     , _jsUnhandledCase :: a
     , _transform :: a
+    , _replace :: a
     , _replaceParent :: a
     , _applyOperator :: a
     , _extract :: a
@@ -106,7 +107,15 @@ data CodeUI a = CodeUI
     , _letClause :: a
     , _modify :: a
     , _detach :: a
+    , _literal :: a
+    , _literalText :: a
+    , _literalNumber :: a
+    , _startEditing :: a
+    , _stopEditing :: a
     , _setToHole :: a
+    , _negate :: a
+    , _nextEntry :: a
+    , _value :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)

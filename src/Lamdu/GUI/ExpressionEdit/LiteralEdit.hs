@@ -48,14 +48,19 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+codeUI :: Texts.HasLanguage env => Lens' env (Texts.CodeUI Text)
+codeUI = Texts.texts . Texts.codeUI
+
 mkEditEventMap ::
-    Monad o =>
-    Text -> o Sugar.EntityId ->
-    Gui EventMap o
-mkEditEventMap valText setToHole =
+    (MonadReader env m, Monad o, Texts.HasLanguage env) =>
+    m (Text -> o Sugar.EntityId -> Gui EventMap o)
+mkEditEventMap =
+    Lens.view id
+    <&> \env valText setToHole ->
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
-    & E.keyPresses [ModKey mempty MetaKey.Key'Enter] (E.Doc ["Edit", "Value"])
+    & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
+    (E.toDoc env [Texts.edit, codeUI . Texts.value])
 
 withStyle ::
     (MonadReader env m, HasStyle env) =>
@@ -65,33 +70,40 @@ withStyle whichStyle =
 
 genericEdit ::
     ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
+    , Texts.HasLanguage env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
     Sugar.Payload name i o ExprGui.Payload -> f (Gui Responsive o)
 genericEdit whichStyle prop pl =
-    TextView.makeFocusable ?? valText ?? myId
-    <&> Align.tValue %~ Widget.weakerEvents editEventMap
-    <&> Responsive.fromWithTextPos
-    & withStyle whichStyle
+    do
+        editEventMap <-
+            case pl ^. Sugar.plActions . Sugar.mSetToHole of
+            Just action -> mkEditEventMap ?? valText ?? action
+            _ -> error "Cannot set literal to hole?!"
+        TextView.makeFocusable ?? valText ?? myId
+            <&> Align.tValue %~ Widget.weakerEvents editEventMap
+            <&> Responsive.fromWithTextPos
+            & withStyle whichStyle
     where
         myId = WidgetIds.fromExprPayload pl
-        editEventMap =
-            case pl ^. Sugar.plActions . Sugar.mSetToHole of
-            Just action -> mkEditEventMap valText action
-            _ -> error "Cannot set literal to hole?!"
         valText = prop ^. Property.pVal & format
 
-fdConfig :: (MonadReader env m, HasConfig env, Menu.HasConfig env) => m FocusDelegator.Config
+fdConfig ::
+    ( MonadReader env m, HasConfig env, Menu.HasConfig env
+    , Texts.HasLanguage env
+    ) =>
+    m FocusDelegator.Config
 fdConfig =
-    (,)
-    <$> Lens.view (Config.config . Config.literal)
-    <*> Lens.view (Menu.config . Menu.configKeys)
-    <&>
-    \(litConf, menuKeys) ->
+    Lens.view id
+    <&> \env ->
+    let litConf = env ^. Config.config . Config.literal
+        menuKeys = env ^. Menu.config . Menu.configKeys
+    in
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = litConf ^. Config.literalStartEditingKeys
-    , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Literal", "Start editing"]
+    , FocusDelegator.focusChildDoc =
+        E.toDoc env [Texts.edit, codeUI . Texts.literal, codeUI . Texts.startEditing]
     , FocusDelegator.focusParentKeys =
         litConf ^. Config.literalStopEditingKeys
         -- The literal edit should behave like holes, in that the "pick option"
@@ -100,12 +112,13 @@ fdConfig =
         -- Only taken when the literal edit doesn't handle it by
         -- jumping to next entry:
         <> menuKeys ^. Menu.keysPickOptionAndGotoNext
-    , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Literal", "Stop editing"]
+    , FocusDelegator.focusParentDoc =
+        E.toDoc env [Texts.edit, codeUI . Texts.literal, codeUI . Texts.stopEditing]
     }
 
 withFd ::
-    ( MonadReader env m, HasConfig env, GuiState.HasCursor env, Menu.HasConfig env
-    , Applicative f
+    ( MonadReader env m, HasConfig env, GuiState.HasCursor env
+    , Menu.HasConfig env, Texts.HasLanguage env, Applicative f
     ) =>
     m (Widget.Id -> TextWidget f -> TextWidget f)
 withFd =
@@ -144,7 +157,7 @@ parseNum newText
 numEdit ::
     ( MonadReader env m, Monad o
     , HasConfig env, HasStyle env, Menu.HasConfig env
-    , GuiState.HasState env, TextEdit.HasTexts env
+    , GuiState.HasState env, Texts.HasLanguage env
     ) =>
     Property o Double ->
     Sugar.Payload name i o ExprGui.Payload ->
@@ -166,6 +179,7 @@ numEdit prop pl =
         let negateText
                 | "-" `Text.isPrefixOf` text = Text.tail text
                 | otherwise = "-" <> text
+        toDoc <- Lens.view id <&> E.toDoc
         let negateEvent
                 -- '-' at last position should apply operator rather than negate
                 | pos /= Text.length text =
@@ -174,33 +188,39 @@ numEdit prop pl =
                     <$
                     (prop ^. Property.pSet) (negate curVal)
                     & const
-                    & E.charGroup Nothing (E.Doc ["Edit", "Literal", "Negate"]) "-"
+                    & E.charGroup Nothing
+                      (toDoc
+                          [ Texts.edit
+                          , codeUI . Texts.literal
+                          , codeUI . Texts.negate
+                          ]) "-"
                 | otherwise = mempty
         strollEvent <-
             Lens.view (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
             <&>
             \keys ->
-            E.keysEventMap keys (E.Doc ["Navigation", "Next entry"])
+            E.keysEventMap keys (toDoc [Texts.navigation, codeUI . Texts.nextEntry])
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
         let delEvent =
                 case pl ^. Sugar.plActions . Sugar.mSetToHole of
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
-                    E.keyPresses [ModKey mempty MetaKey.Key'Backspace] (E.Doc ["Edit", "Delete"])
+                    E.keyPresses [ModKey mempty MetaKey.Key'Backspace]
+                    (toDoc [Texts.edit, codeUI . Texts.delete])
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                     <>
-                    E.charEventMap "Letter" (E.Doc ["Edit", "Replace"]) holeWithChar
+                    E.charEventMap "Letter" (toDoc [Texts.edit, codeUI . Texts.replace]) holeWithChar
                     where
                         holeWithChar c =
                             (action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
                                 <&> SearchMenu.enterWithSearchTerm (Text.singleton c))
                             <$ guard (Char.isAlpha c)
                 _ -> mempty
-        let newLiteralEvent
-                | Text.null text =
-                    makeLiteralEventMap (pl ^. Sugar.plActions . Sugar.setToLiteral)
-                | otherwise = mempty
+        newLiteralEvent <-
+            if Text.null text
+            then makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+            else pure mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 -- Avoid taking keys that don't belong to us,
@@ -239,14 +259,16 @@ make lit pl =
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
 
 makeLiteralEventMap ::
-    Monad o =>
-    (Sugar.Literal Identity -> o Sugar.EntityId) ->
-    Gui EventMap o
-makeLiteralEventMap makeLiteral =
-    E.charGroup Nothing (E.Doc ["Edit", "Literal Text"]) "'\""
+    (MonadReader env m, Monad o, Texts.HasLanguage env) =>
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> Gui EventMap o)
+makeLiteralEventMap =
+    Lens.view id <&> E.toDoc
+    <&> \toDoc makeLiteral ->
+    E.charGroup Nothing (toDoc [Texts.edit, codeUI . Texts.literalText]) "'\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> r))
     <>
-    E.charGroup (Just "Digit") (E.Doc ["Edit", "Literal Number"]) Chars.digit
+    E.charGroup (Just "Digit") (toDoc [Texts.edit, codeUI . Texts.literalNumber])
+    Chars.digit
     (fmap r . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
     where
         r = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId
