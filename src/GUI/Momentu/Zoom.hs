@@ -60,18 +60,15 @@ newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R
     }
 
-doc :: HasTexts env => env -> [Lens.ALens' (Texts Text) Text] -> E.Doc
-doc env subtitleLenses = map ((env ^#) . (texts .)) subtitleLenses & E.Doc
-
 eventMap :: HasTexts env => Zoom -> env -> Config -> Gui EventMap IO
 eventMap (Zoom ref) env config =
     mconcat
     [ modifyIORef ref (* config ^. enlargeFactor)
         & E.keysEventMap (config ^. enlargeKeys)
-        (doc env [view, zoom, enlarge])
+        (E.toDoc (env ^. texts) [view, zoom, enlarge])
     , modifyIORef ref (/ config ^. shrinkFactor)
         & E.keysEventMap (config ^. shrinkKeys)
-        (doc env [view, zoom, shrink])
+        (E.toDoc (env ^. texts) [view, zoom, shrink])
     ]
 
 getZoomFactor :: Fractional a => Zoom -> IO a
