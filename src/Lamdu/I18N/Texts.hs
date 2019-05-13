@@ -1,3 +1,4 @@
+{-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
 module Lamdu.I18N.Texts where
 
