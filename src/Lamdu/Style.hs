@@ -33,7 +33,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 
 import           Lamdu.Prelude
 

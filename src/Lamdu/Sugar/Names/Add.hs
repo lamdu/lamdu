@@ -7,7 +7,6 @@ module Lamdu.Sugar.Names.Add
       InternalName(..), inTag, inContext, runPasses
     ) where
 
-import           Data.Coerce (coerce)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
@@ -15,6 +14,7 @@ import           Control.Monad.State (runState, evalState)
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Char as Char
+import           Data.Coerce (coerce)
 import           Data.Foldable (fold)
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
@@ -29,6 +29,8 @@ import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
+import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
@@ -213,8 +215,7 @@ p1Name mDisambiguator nameType p0Name =
 tagText :: HasNameTexts env => env -> Text -> Collision -> TagText
 tagText env = TagText . displayOf env
 
-makeTagTexts ::
-    Texts.Language -> MMap Text (Set T.Tag) -> Map T.Tag TagText
+makeTagTexts :: Language -> MMap Text (Set T.Tag) -> Map T.Tag TagText
 makeTagTexts lang p1texts =
     p1texts
     & Lens.imapped %@~ mkTagTexts
@@ -229,12 +230,12 @@ makeTagTexts lang p1texts =
         isCollidingName text tagsOfName =
             isReserved lang text || Set.size tagsOfName > 1
 
-isReserved :: Texts.Language -> Text -> Bool
+isReserved :: Language -> Text -> Bool
 isReserved lang name =
     reservedWords ^. Lens.contains name
     || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
     where
-        texts = lang ^. Texts.lTexts
+        texts = lang ^. Language.texts
         reservedWords =
             texts ^.. Texts.code . traverse <> texts ^.. Texts.name . traverse
             & Set.fromList
@@ -246,7 +247,7 @@ toSuffixMap tagContexts =
         eachTag tag contexts = contexts ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
-initialP2Env :: Texts.Language -> P1Out -> P2Env
+initialP2Env :: Language -> P1Out -> P2Env
 initialP2Env lang (P1Out globals locals contexts tvs texts) =
     P2Env
     { _p2NameGen = NameGen.initial
@@ -327,7 +328,7 @@ instance HasNameTexts P2Env where nameTexts = p2NameTexts
 newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)
 
-runPass2MakeNamesInitial :: Texts.Language -> P1Out -> Pass2MakeNames i o a -> a
+runPass2MakeNamesInitial :: Language -> P1Out -> Pass2MakeNames i o a -> a
 runPass2MakeNamesInitial lang p1out act =
     initialP2Env lang p1out & (runReader . runPass2MakeNames) act
 
@@ -451,7 +452,7 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
 
 runPasses ::
     Functor i =>
-    Texts.Language ->
+    Language ->
     (T.Tag -> MkProperty i o Text) ->
     (a -> Pass0LoadNames i o b) ->
     (b -> Pass1PropagateUp i o c) ->
@@ -466,7 +467,7 @@ runPasses lang getNameProp f0 f1 f2 =
 
 addToWorkArea ::
     Monad i =>
-    Texts.Language ->
+    Language ->
     (T.Tag -> MkProperty i o Text) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea (Name o) i o (Payload (Name o) i o a))

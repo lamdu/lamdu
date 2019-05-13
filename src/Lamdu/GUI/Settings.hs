@@ -25,7 +25,7 @@ import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Texts (Language, HasLanguage)
+import           Lamdu.I18N.Language (Language, HasLanguage)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings

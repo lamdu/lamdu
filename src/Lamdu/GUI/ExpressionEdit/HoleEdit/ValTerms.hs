@@ -17,7 +17,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.I18N.Texts (Language, texts)
+import           Lamdu.I18N.Language (Language, texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name

@@ -37,7 +37,8 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label, OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Texts (HasLanguage(..))
+import           Lamdu.I18N.Language (HasLanguage(..))
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 
 import           Lamdu.Prelude
@@ -98,7 +99,7 @@ makeChoice ::
 makeChoice headerText prop choices =
     do
         defConf <- Choice.defaultConfig
-        text <- Lens.view (Texts.texts . Texts.statusBar . headerText)
+        text <- Lens.view (Language.texts . Texts.statusBar . headerText)
         Choice.make ?? prop ?? choices ?? defConf text ?? myId
     where
         myId = Widget.Id ("status" : Styled.textIds ^# Texts.statusBar . headerText)
@@ -125,7 +126,7 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
         keys <- Lens.view (Config.config . keysGetter)
-        txt <- Lens.view (Texts.texts . Texts.statusBar)
+        txt <- Lens.view (Language.texts . Texts.statusBar)
         let e =
                 setVal newVal
                 & E.keysEventMap keys

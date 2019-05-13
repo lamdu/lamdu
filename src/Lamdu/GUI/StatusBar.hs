@@ -30,7 +30,7 @@ import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (info, label)
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
-import           Lamdu.I18N.Texts (Language, HasLanguage)
+import           Lamdu.I18N.Language (Language, HasLanguage)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.VersionControl.Actions as VCActions

@@ -42,7 +42,7 @@ import qualified Lamdu.Eval.Manager as EvalManager
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
 import qualified Lamdu.GUI.Main as GUIMain
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts

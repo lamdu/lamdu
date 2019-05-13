@@ -354,6 +354,12 @@ Library
                   , Lamdu.GUI.VersionControl.Config
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
+                  , Lamdu.I18N.Code
+                  , Lamdu.I18N.CodeUI
+                  , Lamdu.I18N.Collaboration
+                  , Lamdu.I18N.Definitions
+                  , Lamdu.I18N.Language
+                  , Lamdu.I18N.StatusBar
                   , Lamdu.I18N.Texts
                   , Lamdu.Main.Env
                   , Lamdu.Name

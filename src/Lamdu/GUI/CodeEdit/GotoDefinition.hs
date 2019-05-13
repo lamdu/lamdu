@@ -25,6 +25,7 @@ import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
@@ -55,7 +56,7 @@ nameSearchTerm name =
 makeOptions ::
     ( MonadReader env m, HasTheme env, Applicative o
     , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     m [Sugar.NameRef (Name g) o] ->
     SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
@@ -63,7 +64,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         do
-            goto <- Lens.view (Texts.texts . Texts.navigationTexts . Texts.goto)
+            goto <- Lens.view (Language.texts . Texts.navigationTexts . Texts.goto)
             let toRenderedOption nameRef widget =
                     Menu.RenderedOption
                     { Menu._rWidget = widget
@@ -104,12 +105,12 @@ make ::
     ( MonadReader env m, Applicative o
     , HasTheme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , Menu.HasConfig env, Hover.HasStyle env, GuiState.HasState env
-    , SearchMenu.HasTermStyle env, Texts.HasLanguage env
+    , SearchMenu.HasTermStyle env, Language.HasLanguage env
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
-        goto <- Lens.view (Texts.texts . Texts.navigationTexts . Texts.goto)
+        goto <- Lens.view (Language.texts . Texts.navigationTexts . Texts.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
             (makeOptions readGlobals) Element.empty myId ?? Menu.Below
             & Reader.local (Theme.theme . Theme.searchTerm %~ onTermStyle goto)

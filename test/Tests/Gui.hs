@@ -34,7 +34,8 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Texts as Texts
+import           Lamdu.I18N.Language (Language, language)
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
 import           Lamdu.Style (HasStyle)
@@ -73,12 +74,12 @@ wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFoc
 
 makeGui ::
     ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Texts.HasLanguage env
+    , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc cache env =
     do
-        workArea <- convertWorkArea (env ^. Texts.language) cache
+        workArea <- convertWorkArea (env ^. language) cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         gui <-
@@ -103,7 +104,7 @@ focusedWidget gui =
 
 makeFocusedWidget ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Texts.HasLanguage env
+    , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env ->
     T ViewM (Widget.Focused (T ViewM GuiState.Update))
@@ -112,7 +113,7 @@ makeFocusedWidget afterDoc cache env =
 
 mApplyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Texts.HasLanguage env
+    , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
     T ViewM (Maybe GuiState.Update)
@@ -132,7 +133,7 @@ mApplyEvent cache env virtCursor event =
 
 applyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Texts.HasLanguage env
+    , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env
 applyEvent cache env virtCursor event =
@@ -140,7 +141,7 @@ applyEvent cache env virtCursor event =
     <&> (`GuiState.update` env)
 
 fromWorkArea ::
-    Texts.Language ->
+    Language ->
     Cache.Functions ->
     Lens.ATraversal'
     (Sugar.WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
@@ -163,7 +164,7 @@ testLambdaDelete =
     \cache ->
     do
         paramCursor <-
-            fromWorkArea (baseEnv ^. Texts.language) cache
+            fromWorkArea (baseEnv ^. language) cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
@@ -186,7 +187,7 @@ testFragmentSize =
     \cache ->
     do
         frag <-
-            fromWorkArea (baseEnv ^. Texts.language) cache
+            fromWorkArea (baseEnv ^. language) cache
             (Sugar.waRepl . Sugar.replExpr . ann)
         guiCursorOnFrag <-
             baseEnv
@@ -208,14 +209,14 @@ testOpPrec =
     \cache ->
     do
         holeId <-
-            fromWorkArea (baseEnv ^. Texts.language) cache
+            fromWorkArea (baseEnv ^. language) cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fBody . ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
-        workArea <- convertWorkArea (baseEnv ^. Texts.language) cache
+        workArea <- convertWorkArea (baseEnv ^. language) cache
         _ <- applyEvent cache (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
-        workArea' <- convertWorkArea (baseEnv ^. Texts.language) cache
+        workArea' <- convertWorkArea (baseEnv ^. language) cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
 workAreaEq ::

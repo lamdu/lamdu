@@ -33,7 +33,7 @@ import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Language, HasLanguage(..))
+import           Lamdu.I18N.Language (Language, HasLanguage(..))
 import           Lamdu.Name (HasNameTexts(..))
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings(..))

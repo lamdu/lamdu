@@ -32,6 +32,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -57,7 +58,7 @@ mkLhsEdits =
 
 mkExpanded ::
     ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
 mkExpanded =
@@ -73,7 +74,7 @@ lamId = (`Widget.joinId` ["lam"])
 mkShrunk ::
     ( Monad o, MonadReader env f, HasConfig env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
@@ -100,7 +101,7 @@ mkShrunk paramIds myId =
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
-    , HasConfig env, Texts.HasLanguage env
+    , HasConfig env, Language.HasLanguage env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f

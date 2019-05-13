@@ -49,6 +49,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Language (texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -197,7 +198,7 @@ makeOptions tagSelection mkPickResult ctx
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (allowedTagName searchTerm) = id
                     | otherwise = maybe id (:) (addNewTag tagSelection mkPickResult ctx)
-            txt <- Lens.view Texts.texts
+            txt <- Lens.view texts
             let makeOption opt =
                     Menu.Option
                     { Menu._oId = optionWId

@@ -42,6 +42,7 @@ import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -66,7 +67,7 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    (Texts.HasLanguage env, Functor m) =>
+    (Language.HasLanguage env, Functor m) =>
     env -> Sugar.Payload name i (T m) a -> [MetaKey] -> Gui EventMap (T m)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
@@ -74,12 +75,12 @@ extractEventMap env pl keys =
     where
         doc =
             E.toDoc env
-            [ Texts.edit
-            , Texts.texts . Texts.definitions . Texts.extractReplToDef
+            [ Language.edit
+            , Language.texts . Texts.definitions . Texts.extractReplToDef
             ]
 
 replEventMap ::
-    (Monad m, HasConfig env, Texts.HasLanguage env) =>
+    (Monad m, HasConfig env, Language.HasLanguage env) =>
     env -> ExportRepl m -> Sugar.Payload name i (T m) a ->
     Gui EventMap (IOTrans m)
 replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
@@ -92,7 +93,7 @@ replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
       (toDoc [Texts.collaboration, Texts.exportReplToJS]) exportFancy
     ]
     where
-        toDoc = E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
+        toDoc = E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
         exportConfig = env ^. config . Config.export
 
 indicatorColor ::
@@ -117,7 +118,7 @@ compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
 compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
 
 errorDesc ::
-    ( MonadReader env m, HasTheme env, Texts.HasLanguage env
+    ( MonadReader env m, HasTheme env, Language.HasLanguage env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env
     ) =>
     Sugar.Error -> m (Align.WithTextPos View)
@@ -136,7 +137,7 @@ errorDesc err =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
-    , HasTheme env, HasConfig env, Glue.HasTexts env, Texts.HasLanguage env
+    , HasTheme env, HasConfig env, Glue.HasTexts env, Language.HasLanguage env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -146,8 +147,8 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
         env <- Lens.view id
         let jumpDoc =
                 E.toDoc env
-                [ Texts.navigation
-                , Texts.texts . Texts.navigationTexts . Texts.jumpToError
+                [ Language.navigation
+                , Language.texts . Texts.navigationTexts . Texts.jumpToError
                 ]
         let jumpEventMap j =
                 j <&> dest
@@ -195,14 +196,14 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
-    , HasTheme env, HasConfig env, Texts.HasLanguage env
+    , HasTheme env, HasConfig env, Language.HasLanguage env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))
 resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
-        toDoc <- Lens.view (Texts.texts . Texts.definitions) <&> E.toDoc
+        toDoc <- Lens.view (Language.texts . Texts.definitions) <&> E.toDoc
         case varInfo of
             Sugar.VarAction ->
                 do

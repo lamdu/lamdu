@@ -20,7 +20,7 @@ import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId

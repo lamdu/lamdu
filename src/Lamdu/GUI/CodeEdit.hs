@@ -54,6 +54,8 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.Language (language)
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (HasSettings)
@@ -87,7 +89,7 @@ make ::
     , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
     , SearchMenu.HasTermStyle env
     , Element.HasAnimIdPrefix env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
@@ -99,7 +101,7 @@ make cp gp width =
         env <- Lens.view id
         annMode <- Lens.view (Settings.settings . Settings.sAnnotationMode)
         workArea <-
-            loadWorkArea (env ^. Texts.language) (env ^. config . Config.sugar)
+            loadWorkArea (env ^. language) (env ^. config . Config.sugar)
             (env ^. Cache.functions) (env ^. Debug.monitors)
             annMode theEvalResults cp
             & transaction
@@ -147,8 +149,8 @@ makePaneEdit theExportActions pane =
         env <- Lens.view id
         let titledCodeDoc titleLenses texts =
                 E.toDoc env
-                (titleLenses ++ map ((Texts.texts . Texts.codeUI) .) texts)
-        let viewDoc = titledCodeDoc [Texts.view]
+                (titleLenses ++ map ((Language.texts . Texts.codeUI) .) texts)
+        let viewDoc = titledCodeDoc [Language.view]
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
@@ -164,7 +166,7 @@ makePaneEdit theExportActions pane =
                     (viewDoc [Texts.pane, Texts.moveUp]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
                   & E.keysEventMap exportKeys
-                    (E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
+                    (E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
                         [Texts.collaboration, Texts.exportDefToJSON])
                 ] & mconcat
             defEventMap =
@@ -176,9 +178,9 @@ makePaneEdit theExportActions pane =
                     <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor (Config.delKeys theConfig)
                     (E.toDoc env
-                        [ Texts.edit
-                        , Texts.texts . Texts.definitions . Texts.def
-                        , Texts.texts . Texts.codeUI . Texts.delete
+                        [ Language.edit
+                        , Language.texts . Texts.definitions . Texts.def
+                        , Language.texts . Texts.codeUI . Texts.delete
                         ])
             paneConfig = theConfig ^. Config.pane
             exportKeys = theConfig ^. Config.export . Config.exportKeys
@@ -204,11 +206,11 @@ makeNewDefinition cp =
             & DataOps.newPublicDefinitionWithPane cp
     <&> WidgetIds.fromIRef
 
-newDefinitionDoc :: (Texts.HasLanguage env, MonadReader env m) => m E.Doc
+newDefinitionDoc :: (Language.HasLanguage env, MonadReader env m) => m E.Doc
 newDefinitionDoc =
     Lens.view id
     <&> flip E.toDoc
-        [Texts.edit, Texts.texts . Texts.definitions . Texts.newDefinition]
+        [Language.edit, Language.texts . Texts.definitions . Texts.newDefinition]
 
 makeNewDefinitionButton ::
     Monad m =>
@@ -245,7 +247,7 @@ panesEventMap theExportActions cp gp replVarInfo =
             (theConfig ^. Config.pane . Config.newDefinitionKeys) newDefDoc
         env <- Lens.view id
         let collaborationDoc =
-                E.toDoc (env ^. Texts.texts . Texts.collaborationTexts)
+                E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
         mconcat
             [ newDefinitionEventMap <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"
@@ -255,8 +257,8 @@ panesEventMap theExportActions cp gp replVarInfo =
             , foldMap
               (E.keysEventMapMovesCursor (theConfig ^. Config.previousCursorKeys)
                (E.toDoc env
-                   [ Texts.navigation
-                   , Texts.texts . Texts.navigationTexts . Texts.goBack
+                   [ Language.navigation
+                   , Language.texts . Texts.navigationTexts . Texts.goBack
                    ])) mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])
@@ -267,7 +269,7 @@ panesEventMap theExportActions cp gp replVarInfo =
             , case replVarInfo of
                 Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
-                    (E.toDoc env [Texts.texts . Texts.definitions . Texts.execRepl])
+                    (E.toDoc env [Language.texts . Texts.definitions . Texts.execRepl])
                     (IOTrans.liftIO executeRepl)
                 _ -> mempty
             ] & pure

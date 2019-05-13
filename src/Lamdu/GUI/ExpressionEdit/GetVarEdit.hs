@@ -47,6 +47,7 @@ import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -69,7 +70,7 @@ makeSimpleView color name myId =
 makeParamsRecord ::
     ( MonadReader env m, HasTheme env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
-    , Texts.HasLanguage env, Applicative f
+    , Language.HasLanguage env, Applicative f
     ) =>
     Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Gui Responsive f)
 makeParamsRecord myId paramsRecordVar =
@@ -170,7 +171,7 @@ definitionTypeChangeBox ::
     ( MonadReader env m
     , Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
-    , HasConfig env, Texts.HasLanguage env
+    , HasConfig env, Language.HasLanguage env
     , Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
@@ -206,7 +207,7 @@ processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
     , GuiState.HasCursor env, Hover.HasStyle env
-    , Texts.HasLanguage env, Applicative f
+    , Language.HasLanguage env, Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->
     m (TextWidget f) ->

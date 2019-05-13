@@ -19,6 +19,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Sugar.Types as Sugar
@@ -37,7 +38,7 @@ lens mode =
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
-    , Hover.HasStyle env, Texts.HasLanguage env
+    , Hover.HasStyle env, Language.HasLanguage env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->
@@ -52,7 +53,7 @@ make myId (Sugar.Params params) prop =
                 (TextView.style . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
         defConfig <-
             Choice.defaultConfig
-            <*> Lens.view (Texts.texts . Texts.codeUI . Texts.presentationMode)
+            <*> Lens.view (Language.texts . Texts.codeUI . Texts.presentationMode)
         Choice.make ?? prop ?? pairs
             ?? defConfig ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)

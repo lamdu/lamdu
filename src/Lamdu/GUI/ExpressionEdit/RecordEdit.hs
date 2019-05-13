@@ -38,9 +38,10 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
-import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.GUI.Styled (label, grammar)
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -140,7 +141,7 @@ make (Sugar.Composite fields recordTail addField) pl =
 
 makeRecord ::
     ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Texts.HasLanguage env, Applicative o
+    , Spacer.HasStdSpacing env, Language.HasLanguage env, Applicative o
     ) =>
     (Gui Responsive o -> m (Gui Responsive o)) ->
     [Gui Responsive.TaggedItem o] ->
@@ -156,7 +157,7 @@ makeRecord postProcess fieldGuis =
 
 addPostTags ::
     ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env
-    , Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
 addPostTags items =

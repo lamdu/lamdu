@@ -61,8 +61,8 @@ import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Language)
-import qualified Lamdu.I18N.Texts as Texts
+import           Lamdu.I18N.Language (Language, language)
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name, HasNameTexts(..))
 import           Lamdu.Settings (Settings, HasSettings(..))
 import           Lamdu.Style (Style, HasStyle(..))
@@ -120,17 +120,17 @@ instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
 instance Dir.HasLayoutDir (Askable i o) where layoutDir = aDirLayout
-instance Dir.HasTexts (Askable i o) where texts = Texts.language . Dir.texts
-instance EventMap.HasTexts (Askable i o) where texts = Texts.language . EventMap.texts
-instance Glue.HasTexts (Askable i o) where texts = Texts.language . Glue.texts
-instance Menu.HasTexts (Askable i o) where texts = Texts.language . Menu.texts
-instance SearchMenu.HasTexts (Askable i o) where texts = Texts.language . SearchMenu.texts
-instance Grid.HasTexts (Askable i o) where texts = Texts.language . Grid.texts
-instance Choice.HasTexts (Askable i o) where texts = Texts.language . Choice.texts
-instance TextEdit.HasTexts (Askable i o) where texts = Texts.language . TextEdit.texts
-instance HasNameTexts (Askable i o) where nameTexts = Texts.language . nameTexts
-instance HasLanguageIdentifier (Askable i o) where languageIdentifier = Texts.language . languageIdentifier
-instance Texts.HasLanguage (Askable i o) where language = aLanguage
+instance Dir.HasTexts (Askable i o) where texts = language . Dir.texts
+instance EventMap.HasTexts (Askable i o) where texts = language . EventMap.texts
+instance Glue.HasTexts (Askable i o) where texts = language . Glue.texts
+instance Menu.HasTexts (Askable i o) where texts = language . Menu.texts
+instance SearchMenu.HasTexts (Askable i o) where texts = language . SearchMenu.texts
+instance Grid.HasTexts (Askable i o) where texts = language . Grid.texts
+instance Choice.HasTexts (Askable i o) where texts = language . Choice.texts
+instance TextEdit.HasTexts (Askable i o) where texts = language . TextEdit.texts
+instance HasNameTexts (Askable i o) where nameTexts = language . nameTexts
+instance HasLanguageIdentifier (Askable i o) where languageIdentifier = language . languageIdentifier
+instance Language.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a
 im = ExprGuiM . lift
@@ -209,7 +209,7 @@ withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Config.HasConfig env, HasTheme env
-    , HasSettings env, HasStyle env, Texts.HasLanguage env
+    , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
@@ -235,6 +235,6 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aStyle = env ^. style
     , _aIsHoleResult = False
     , _aDirLayout = env ^. Dir.layoutDir
-    , _aLanguage = env ^. Texts.language
+    , _aLanguage = env ^. language
     , aIom = liftIom
     }

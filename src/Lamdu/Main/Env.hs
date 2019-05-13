@@ -42,8 +42,8 @@ import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
-import           Lamdu.I18N.Texts (Language)
-import qualified Lamdu.I18N.Texts as Texts
+import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (HasNameTexts(..))
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
@@ -97,5 +97,5 @@ instance Grid.HasTexts Env where texts = language . Grid.texts
 instance Menu.HasTexts Env where texts = language . Menu.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance HasNameTexts Env where nameTexts = language . nameTexts
-instance Texts.HasLanguage Env where language = language
+instance Language.HasLanguage Env where language = language
 instance HasLanguageIdentifier Env where languageIdentifier = language . languageIdentifier

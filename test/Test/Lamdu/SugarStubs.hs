@@ -14,7 +14,7 @@ import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Internal (nameWithoutContext)
 import           Lamdu.Sugar.Names.Add (InternalName(..))

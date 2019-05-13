@@ -21,7 +21,7 @@ import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..), _Selection)
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
 import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))

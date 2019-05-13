@@ -39,8 +39,8 @@ import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.I18N.Texts (Texts(..))
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -61,11 +61,11 @@ rawText animIdSuffix txt =
 
 text ::
     ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     AnimId -> OneOf Texts -> f (WithTextPos View)
 text animIdSuffix txtLens =
-    Lens.view (Texts.texts . Lens.cloneLens txtLens)
+    Lens.view (Language.texts . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
 
 textIds :: Texts [ByteString]
@@ -76,17 +76,17 @@ newtype OneOfT a = OneOf (OneOf a)
 
 mkLabel ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     m (OneOfT Texts -> WithTextPos View)
 mkLabel =
-    (,,) <$> TextView.make <*> Element.subAnimId <*> Lens.view Texts.texts
+    (,,) <$> TextView.make <*> Element.subAnimId <*> Lens.view Language.texts
     <&> \(textView, subAnimId, texts) (OneOf lens) ->
     textView (texts ^# lens) (subAnimId (textIds ^# lens))
 
 mkFocusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     m (OneOfT Texts -> TextWidget f)
 mkFocusableLabel =
@@ -97,14 +97,14 @@ mkFocusableLabel =
 
 label ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     OneOf Texts -> m (WithTextPos View)
 label lens = mkLabel ?? OneOf lens
 
 focusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     OneOf Texts -> m (TextWidget f)
 focusableLabel lens = mkFocusableLabel ?? OneOf lens
@@ -192,7 +192,7 @@ withColor textColor act =
 actionable ::
     ( Element.HasAnimIdPrefix env, TextView.HasStyle env
     , GuiState.HasCursor env, Config.HasConfig env, HasTheme env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     , Applicative f, MonadReader env m
     ) =>
     Widget.Id -> OneOf Texts -> E.Doc -> f Widget.Id -> m (TextWidget f)

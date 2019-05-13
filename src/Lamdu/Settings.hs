@@ -10,7 +10,7 @@ import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Config.Folder (Selection)
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 
 import           Lamdu.Prelude
 

@@ -26,6 +26,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.VersionControl.Actions as A
 import           Revision.Deltum.Rev.Branch (Branch)
@@ -45,28 +46,28 @@ branchNameFDConfig txt = FocusDelegator.Config
     }
 
 undoEventMap ::
-    Texts.HasLanguage env =>
+    Language.HasLanguage env =>
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.toDoc env [Texts.edit, Texts.texts . Texts.versioning . Texts.undo])
+    (E.toDoc env [Language.edit, Language.texts . Texts.versioning . Texts.undo])
     & foldMap
 
 redoEventMap ::
-    Texts.HasLanguage env =>
+    Language.HasLanguage env =>
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.toDoc env [Texts.edit, Texts.texts . Texts.versioning . Texts.redo])
+    (E.toDoc env [Language.edit, Language.texts . Texts.versioning . Texts.redo])
     & foldMap
 
 eventMap ::
-    (MonadReader env m, Applicative f, Texts.HasLanguage env) =>
+    (MonadReader env m, Applicative f, Language.HasLanguage env) =>
     m (VersionControl.Config -> A.Actions t f -> Gui EventMap f)
 eventMap =
     Lens.view id
     <&> \env config actions ->
-    let toDoc = E.toDoc (env ^. Texts.texts) in
+    let toDoc = E.toDoc (env ^. Language.texts) in
     mconcat
     [ A.makeBranch actions
         <&> branchTextEditId
@@ -90,14 +91,14 @@ makeBranchSelector ::
     ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , VersionControl.HasConfig env, VersionControl.HasTheme env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     A.Actions n mw -> mr (TextWidget mw)
 makeBranchSelector rwtransaction rtransaction actions =
     do
-        txt <- Lens.view Texts.texts
+        txt <- Lens.view Language.texts
         let makeBranchNameEdit branch =
                 do
                     nameProp <-

@@ -40,6 +40,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
@@ -48,11 +49,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-codeUI :: Texts.HasLanguage env => Lens' env (Texts.CodeUI Text)
-codeUI = Texts.texts . Texts.codeUI
+codeUI :: Language.HasLanguage env => Lens' env (Texts.CodeUI Text)
+codeUI = Language.texts . Texts.codeUI
 
 mkEditEventMap ::
-    (MonadReader env m, Monad o, Texts.HasLanguage env) =>
+    (MonadReader env m, Monad o, Language.HasLanguage env) =>
     m (Text -> o Sugar.EntityId -> Gui EventMap o)
 mkEditEventMap =
     Lens.view id
@@ -60,7 +61,7 @@ mkEditEventMap =
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
-    (E.toDoc env [Texts.edit, codeUI . Texts.value])
+    (E.toDoc env [Language.edit, codeUI . Texts.value])
 
 withStyle ::
     (MonadReader env m, HasStyle env) =>
@@ -70,7 +71,7 @@ withStyle whichStyle =
 
 genericEdit ::
     ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
@@ -91,7 +92,7 @@ genericEdit whichStyle prop pl =
 
 fdConfig ::
     ( MonadReader env m, HasConfig env, Menu.HasConfig env
-    , Texts.HasLanguage env
+    , Language.HasLanguage env
     ) =>
     m FocusDelegator.Config
 fdConfig =
@@ -103,7 +104,7 @@ fdConfig =
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = litConf ^. Config.literalStartEditingKeys
     , FocusDelegator.focusChildDoc =
-        E.toDoc env [Texts.edit, codeUI . Texts.literal, codeUI . Texts.startEditing]
+        E.toDoc env [Language.edit, codeUI . Texts.literal, codeUI . Texts.startEditing]
     , FocusDelegator.focusParentKeys =
         litConf ^. Config.literalStopEditingKeys
         -- The literal edit should behave like holes, in that the "pick option"
@@ -113,12 +114,12 @@ fdConfig =
         -- jumping to next entry:
         <> menuKeys ^. Menu.keysPickOptionAndGotoNext
     , FocusDelegator.focusParentDoc =
-        E.toDoc env [Texts.edit, codeUI . Texts.literal, codeUI . Texts.stopEditing]
+        E.toDoc env [Language.edit, codeUI . Texts.literal, codeUI . Texts.stopEditing]
     }
 
 withFd ::
     ( MonadReader env m, HasConfig env, GuiState.HasCursor env
-    , Menu.HasConfig env, Texts.HasLanguage env, Applicative f
+    , Menu.HasConfig env, Language.HasLanguage env, Applicative f
     ) =>
     m (Widget.Id -> TextWidget f -> TextWidget f)
 withFd =
@@ -128,7 +129,7 @@ withFd =
 textEdit ::
     ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Texts.HasLanguage env, Monad o
+    , Language.HasLanguage env, Monad o
     ) =>
     Property o Text ->
     Sugar.Payload name i o ExprGui.Payload ->
@@ -157,7 +158,7 @@ parseNum newText
 numEdit ::
     ( MonadReader env m, Monad o
     , HasConfig env, HasStyle env, Menu.HasConfig env
-    , GuiState.HasState env, Texts.HasLanguage env
+    , GuiState.HasState env, Language.HasLanguage env
     ) =>
     Property o Double ->
     Sugar.Payload name i o ExprGui.Payload ->
@@ -190,7 +191,7 @@ numEdit prop pl =
                     & const
                     & E.charGroup Nothing
                       (toDoc
-                          [ Texts.edit
+                          [ Language.edit
                           , codeUI . Texts.literal
                           , codeUI . Texts.negate
                           ]) "-"
@@ -201,8 +202,8 @@ numEdit prop pl =
             \keys ->
             E.keysEventMap keys
             (toDoc
-                [ Texts.navigation
-                , Texts.texts . Texts.navigationTexts . Texts.nextEntry
+                [ Language.navigation
+                , Language.texts . Texts.navigationTexts . Texts.nextEntry
                 ])
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
@@ -211,10 +212,10 @@ numEdit prop pl =
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
                     E.keyPresses [ModKey mempty MetaKey.Key'Backspace]
-                    (toDoc [Texts.edit, codeUI . Texts.delete])
+                    (toDoc [Language.edit, codeUI . Texts.delete])
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                     <>
-                    E.charEventMap "Letter" (toDoc [Texts.edit, codeUI . Texts.replace]) holeWithChar
+                    E.charEventMap "Letter" (toDoc [Language.edit, codeUI . Texts.replace]) holeWithChar
                     where
                         holeWithChar c =
                             (action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
@@ -263,15 +264,15 @@ make lit pl =
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
 
 makeLiteralEventMap ::
-    (MonadReader env m, Monad o, Texts.HasLanguage env) =>
+    (MonadReader env m, Monad o, Language.HasLanguage env) =>
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> Gui EventMap o)
 makeLiteralEventMap =
     Lens.view id <&> E.toDoc
     <&> \toDoc makeLiteral ->
-    E.charGroup Nothing (toDoc [Texts.edit, codeUI . Texts.literalText]) "'\""
+    E.charGroup Nothing (toDoc [Language.edit, codeUI . Texts.literalText]) "'\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> r))
     <>
-    E.charGroup (Just "Digit") (toDoc [Texts.edit, codeUI . Texts.literalNumber])
+    E.charGroup (Just "Digit") (toDoc [Language.edit, codeUI . Texts.literalNumber])
     Chars.digit
     (fmap r . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
     where

@@ -39,7 +39,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -224,7 +224,7 @@ addAnnotationH f wideBehavior =
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
-    , Element.HasAnimIdPrefix env, Texts.HasLanguage env
+    , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->
     m (Gui Widget f -> Gui Widget f)

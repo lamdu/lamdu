@@ -11,7 +11,7 @@ import           Data.Proxy (Proxy(..), asProxyTypeOf)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), getFiles)
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.I18N.Texts (Language)
+import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
 
 import           Test.Lamdu.Prelude
