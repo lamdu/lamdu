@@ -42,7 +42,11 @@
             "goBack": "חזרה",
             "nextEntry": "הכניסה הבאה",
             "enterSubexpression": "כנס לתת-ביטוי",
-            "leaveSubexpression": "צא מתת-ביטוי"
+            "leaveSubexpression": "צא מתת-ביטוי",
+            "blocked": "(חסום)",
+            "prev": "הקודם",
+            "next": "הבא",
+            "jumpToDefBody": "קפוץ לגוף ההגדרה"
         },
         "codeUI": {
             "hidden": "חבוי",
@@ -80,7 +84,9 @@
             "letClause": "השמה",
             "setToHole": "הפוך לחור",
             "negate": "הפוך סימן",
-            "value": "ערך"
+            "value": "ערך",
+            "evaluation": "הרצה",
+            "scope": "תחום"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

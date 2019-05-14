@@ -39,7 +39,11 @@
             "goBack": "Go back",
             "nextEntry": "Next entry",
             "enterSubexpression": "Enter subexpression",
-            "leaveSubexpression": "Leave subexpression"
+            "leaveSubexpression": "Leave subexpression",
+            "blocked": "(Blocked)",
+            "prev": "Previous",
+            "next": "Next",
+            "jumpToDefBody": "Jump to Definition Body"
         },
         "codeUI": {
             "hidden": "Hidden",
@@ -77,7 +81,9 @@
             "letClause": "Let Clause",
             "setToHole": "Set to Hole",
             "negate": "Negate",
-            "value": "Value"
+            "value": "Value",
+            "evaluation": "Evaluation",
+            "scope": "Scope"
         },
         "name": {
             "unnamed": "Unnamed",

@@ -45,6 +45,8 @@ data CodeUI a = CodeUI
     , _setToHole :: a
     , _negate :: a
     , _value :: a
+    , _evaluation :: a
+    , _scope :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 CodeUI)

@@ -14,7 +14,6 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -51,6 +50,8 @@ import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
@@ -121,19 +122,24 @@ mkChosenScopeCursor func =
                 <&> (>>= scopeCursor mChosenScope)
 
 makeScopeEventMap ::
-    Functor o =>
-    [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
+    (Language.HasLanguage env, Functor o) =>
+    env -> [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
     Gui EventMap o
-makeScopeEventMap prevKey nextKey cursor setter =
-    do
-        (key, doc, scope) <-
-            (sMPrevParamScope cursor ^.. Lens._Just <&> (,,) prevKey prevDoc) ++
-            (sMNextParamScope cursor ^.. Lens._Just <&> (,,) nextKey nextDoc)
-        [setter scope & E.keysEventMap key doc]
+makeScopeEventMap env prevKey nextKey cursor setter =
+    mkEventMap (sMPrevParamScope, prevKey, Texts.prev) ++
+    mkEventMap (sMNextParamScope, nextKey, Texts.next)
     & mconcat
     where
-        prevDoc = E.Doc ["Evaluation", "Scope", "Previous"]
-        nextDoc = E.Doc ["Evaluation", "Scope", "Next"]
+        mkEventMap (cursorField, key, lens) =
+            cursorField cursor ^.. Lens._Just
+            <&> setter
+            <&> E.keysEventMap key (doc lens)
+        doc x =
+            E.toDoc (env ^. Language.texts)
+            [ Texts.codeUI . CodeUI.evaluation
+            , Texts.codeUI . CodeUI.scope
+            , Texts.navigationTexts . x
+            ]
 
 makeScopeNavArrow ::
     ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env
@@ -166,11 +172,16 @@ makeScopeNavArrow setScope arrowText mScopeId =
                     | point `Rect.isWithin` r = res action
                 validate _ _ = res (pure mempty)
 
-blockEventMap :: Applicative m => Gui EventMap m
-blockEventMap =
+blockEventMap ::
+    (Language.HasLanguage env, Applicative m) => env -> Gui EventMap m
+blockEventMap env =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
-    (E.Doc ["Navigation", "Move", "(blocked)"])
+    (E.toDoc env
+        [ Language.navigation
+        , Language.move
+        , Language.texts . Texts.navigationTexts . Texts.blocked
+        ])
     where
         dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
 
@@ -188,17 +199,14 @@ makeScopeNavEdit func myId curCursor =
         let setScope =
                 (mempty <$) .
                 Property.set chosenScopeProp . Just
-        let mkScopeEventMap l r = makeScopeEventMap l r curCursor (void . setScope)
-        (arrowPrev, arrowNext) <-
-            Lens.view Dir.layoutDir <&>
-            \case
-            Dir.LeftToRight -> ("◀", "▶")
-            Dir.RightToLeft -> ("▶", "◀")
+        env <- Lens.view id
+        let mkScopeEventMap l r = makeScopeEventMap env l r curCursor (void . setScope)
+        let navTexts = env ^. Language.texts . Texts.navigationTexts
         let scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
             scopes =
-                [ (arrowPrev, sMPrevParamScope curCursor)
+                [ (navTexts ^. Texts.prevScopeArrow, sMPrevParamScope curCursor)
                 , (" ", Nothing)
-                , (arrowNext, sMNextParamScope curCursor)
+                , (navTexts ^. Texts.nextScopeArrow, sMNextParamScope curCursor)
                 ]
         Lens.view (Settings.settings . Settings.sAnnotationMode)
             >>= \case
@@ -208,7 +216,7 @@ makeScopeNavEdit func myId curCursor =
                         <&> (^. Align.tValue)
                     )
                 <&> Widget.weakerEvents
-                    (mkScopeEventMap leftKeys rightKeys <> blockEventMap)
+                    (mkScopeEventMap leftKeys rightKeys <> blockEventMap env)
                 <&> Just
                 <&> (,) (mkScopeEventMap
                          (evalConfig ^. Config.prevScopeKeys)
@@ -425,11 +433,16 @@ make pMode defEventMap tag color assignment =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-
             makeParts Sugar.UnlimitedFuncApply assignment delParamDest
+        env <- Lens.view id
         rhsJumperEquals <-
             ExprGuiM.mkPrejumpPosSaver
             <&> Lens.mapped .~ GuiState.updateCursor rhsId
             <&> const
-            <&> E.charGroup Nothing (E.Doc ["Navigation", "Jump to Def Body"]) "="
+            <&> E.charGroup Nothing
+            (E.toDoc env
+                [ Language.navigation
+                , Language.texts . Texts.navigationTexts . Texts.jumpToDefBody
+                ]) "="
         mPresentationEdit <-
             case assignmentBody of
             Sugar.BodyPlain{} -> pure Nothing

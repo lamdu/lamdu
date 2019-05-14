@@ -37,6 +37,12 @@ data Navigation a = Navigation
     , _nextEntry :: a
     , _enterSubexpression :: a
     , _leaveSubexpression :: a
+    , _blocked :: a
+    , _prev :: a
+    , _next :: a
+    , _prevScopeArrow :: a
+    , _nextScopeArrow :: a
+    , _jumpToDefBody :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Navigation)
