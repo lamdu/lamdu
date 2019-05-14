@@ -31,6 +31,7 @@
             "undeleteButton": "Undelete...",
             "extractReplToDef": "Extract to definition",
             "extract": "Extract",
+            "extractToOuter": "Extract to outer scope",
             "execRepl": "Execute Repl Process"
         },
         "navigationTexts": {
@@ -43,7 +44,9 @@
             "blocked": "(Blocked)",
             "prev": "Previous",
             "next": "Next",
-            "jumpToDefBody": "Jump to Definition Body"
+            "jumpToDefBody": "Jump to Definition Body",
+            "jumpToFirstUse": "Jump to first use",
+            "moveInwards": "Move inwards"
         },
         "codeUI": {
             "hidden": "Hidden",

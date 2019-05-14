@@ -20,6 +20,7 @@ data Definitions a = Definitions
     , _extractReplToDef :: a
     , _execRepl :: a
     , _extract :: a
+    , _extractToOuter :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Definitions)

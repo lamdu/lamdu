@@ -34,6 +34,7 @@
             "undeleteButton": "שחזר...",
             "extractReplToDef": "ייצא שורת פקודה להגדרה",
             "extract": "חלץ",
+            "extractToOuter": "חלץ לתחום חיצוני יותר",
             "execRepl": "הפעל תוצאת שורת פקודה"
         },
         "navigationTexts": {
@@ -46,7 +47,9 @@
             "blocked": "(חסום)",
             "prev": "הקודם",
             "next": "הבא",
-            "jumpToDefBody": "קפוץ לגוף ההגדרה"
+            "jumpToDefBody": "קפוץ לגוף ההגדרה",
+            "jumpToFirstUse": "קפוץ לשימוש הראשון",
+            "moveInwards": "הזז פנימה"
         },
         "codeUI": {
             "hidden": "חבוי",
