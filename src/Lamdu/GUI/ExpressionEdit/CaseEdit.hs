@@ -25,7 +25,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Calc.Type (Tag)
-import           Lamdu.Config (Config)
+import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
@@ -36,17 +36,26 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
-import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.GUI.Styled (label, grammar)
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-doc :: E.Subtitle -> E.Doc
-doc text = E.Doc ["Edit", "Case", text]
+doc ::
+    Language.HasLanguage env =>
+    env -> Lens.ALens' (Texts.CodeUI Text) E.Subtitle -> E.Doc
+doc env lens =
+    E.toDoc env
+    [ Language.edit
+    , Language.texts . Texts.codeUI . CodeUI.caseLabel
+    , Language.texts . Texts.codeUI . lens
+    ]
 
 addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
@@ -58,12 +67,12 @@ make ::
     ExprGuiM i o (Gui Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
-        config <- Lens.view Config.config
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
             <*> grammar (label (Texts.code . Texts.case_))
             <&> Responsive.fromWithTextPos
         ofLabel <- grammar (label (Texts.code . Texts.of_)) <&> Responsive.fromTextView
+        env <- Lens.view id
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase ->
@@ -78,7 +87,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 do
                     argEdit <-
                         ExprGuiM.makeSubexpression arg
-                        <&> Widget.weakerEvents (toLambdaCaseEventMap config toLambdaCase)
+                        <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
                     mTag <-
                         Annotation.evaluationResult (arg ^. ann)
                         <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
@@ -90,14 +99,14 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts addAlt altsId
             >>= case caseTail of
             Sugar.ClosedComposite actions ->
-                pure . Widget.weakerEvents (closedCaseEventMap config actions)
+                pure . Widget.weakerEvents (closedCaseEventMap env actions)
             Sugar.OpenComposite actions rest ->
                 makeOpenCase actions rest (Widget.toAnimId myId)
         let addAltEventMap =
                 addAltId altsId
                 & pure
-                & E.keysEventMapMovesCursor (config ^. Config.caseAddAltKeys)
-                    (doc "Add Alt")
+                & E.keysEventMapMovesCursor (env ^. config . Config.caseAddAltKeys)
+                    (doc env CodeUI.addAlt)
         stdWrapParentExpr pl
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
@@ -113,9 +122,9 @@ makeAltRow ::
     ExprGuiM i o (Gui Responsive.TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
-        config <- Lens.view Config.config
+        env <- Lens.view id
         addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
-        let itemEventMap = caseDelEventMap config delete
+        let itemEventMap = caseDelEventMap env delete
         altExprGui <-
             ExprGuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
         pre <-
@@ -191,11 +200,11 @@ makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
-        config <- Lens.view Config.config
+        env <- Lens.view id
         restExpr <-
             Styled.addValPadding
             <*> ExprGuiM.makeSubexpression rest
-            <&> Widget.weakerEvents (openCaseEventMap config actions)
+            <&> Widget.weakerEvents (openCaseEventMap env actions)
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         vbox <- Responsive.vboxWithSeparator
         vbox False
@@ -203,31 +212,33 @@ makeOpenCase actions rest animId altsGui =
             altsGui restExpr & pure
 
 openCaseEventMap ::
-    Monad o =>
-    Config -> Sugar.OpenCompositeActions o ->
+    (Config.HasConfig env, Language.HasLanguage env, Monad o) =>
+    env -> Sugar.OpenCompositeActions o ->
     Gui EventMap o
-openCaseEventMap config (Sugar.OpenCompositeActions close) =
+openCaseEventMap env (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+    & E.keysEventMapMovesCursor (Config.delKeys (env ^. config)) (doc env CodeUI.close)
 
 closedCaseEventMap ::
-    Monad o =>
-    Config -> Sugar.ClosedCompositeActions o ->
+    (Config.HasConfig env, Language.HasLanguage env, Monad o) =>
+    env -> Sugar.ClosedCompositeActions o ->
     Gui EventMap o
-closedCaseEventMap config (Sugar.ClosedCompositeActions open) =
+closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (config ^. Config.caseOpenKeys) (doc "Open")
+    & E.keysEventMapMovesCursor (env ^. config . Config.caseOpenKeys) (doc env CodeUI.open)
 
 caseDelEventMap ::
-    Monad o =>
-    Config -> o Sugar.EntityId -> Gui EventMap o
-caseDelEventMap config delete =
+    (Config.HasConfig env, Language.HasLanguage env, Monad o) =>
+    env -> o Sugar.EntityId -> Gui EventMap o
+caseDelEventMap env delete =
     delete <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Delete Alt")
+    & E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
+    (doc env CodeUI.deleteAlt)
 
 toLambdaCaseEventMap ::
-    Monad o =>
-    Config -> o Sugar.EntityId -> Gui EventMap o
-toLambdaCaseEventMap config toLamCase =
+    (Config.HasConfig env, Language.HasLanguage env, Monad o) =>
+    env -> o Sugar.EntityId -> Gui EventMap o
+toLambdaCaseEventMap env toLamCase =
     toLamCase <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Turn to Lambda-Case")
+    & E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
+    (doc env CodeUI.toLambdaCase)

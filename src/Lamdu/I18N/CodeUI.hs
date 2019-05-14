@@ -20,6 +20,11 @@ data CodeUI a = CodeUI
     , _changeImportedName :: a
     , _doneChangingImportedName :: a
     , _pane :: a
+    , _caseLabel :: a
+    , _addAlt :: a
+    , _deleteAlt :: a
+    , _toLambdaCase :: a
+    , _open :: a
     , _close :: a
     , _moveDown :: a
     , _moveUp :: a
