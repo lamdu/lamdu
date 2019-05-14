@@ -57,6 +57,8 @@
             "delete": "Delete",
             "rename": "Rename",
             "doneRenaming": "Done renaming",
+            "changeImportedName": "Change imported name",
+            "doneChangingImportedName": "Done changing name",
             "pane": "Pane",
             "close": "Close",
             "moveDown": "Move down",

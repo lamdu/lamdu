@@ -12,7 +12,6 @@ import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
-import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
@@ -26,17 +25,23 @@ import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-builtinFDConfig :: FocusDelegator.Config
-builtinFDConfig = FocusDelegator.Config
+builtinFDConfig :: Language.HasLanguage env => env -> FocusDelegator.Config
+builtinFDConfig env = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-    , FocusDelegator.focusChildDoc = E.Doc ["Edit", "Change imported name"]
+    , FocusDelegator.focusChildDoc = doc CodeUI.changeImportedName
     , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Escape]
-    , FocusDelegator.focusParentDoc = E.Doc ["Edit", "Stop changing name"]
+    , FocusDelegator.focusParentDoc = doc CodeUI.doneChangingImportedName
     }
+    where
+        doc lens =
+            E.toDoc env [Language.edit, Language.texts . Texts.codeUI . lens]
 
 builtinFFIPath :: Widget.Id -> Widget.Id
 builtinFFIPath = flip Widget.joinId ["FFIPath"]
@@ -46,13 +51,15 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
     ( Applicative f, MonadReader env m, GuiState.HasCursor env
-    , TextEdit.HasStyle env, TextEdit.HasTexts env
+    , TextEdit.HasStyle env, Language.HasLanguage env
     ) =>
     MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
     m (TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
-    (FocusDelegator.make ?? builtinFDConfig ?? FocusDelegator.FocusEntryParent
-     ?? myId <&> (Align.tValue %~))
+    (FocusDelegator.make
+        <*> (Lens.view id <&> builtinFDConfig)
+        ?? FocusDelegator.FocusEntryParent
+        ?? myId <&> (Align.tValue %~))
     <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
@@ -66,8 +73,8 @@ makeNamePartEditor color namePartStr setter myId =
 
 make ::
     ( MonadReader env f, Monad o, HasTheme env, GuiState.HasCursor env
-    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env, Glue.HasTexts env
-    , TextEdit.HasTexts env
+    , TextEdit.HasStyle env, Element.HasAnimIdPrefix env
+    , Language.HasLanguage env
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
     f (TextWidget o)

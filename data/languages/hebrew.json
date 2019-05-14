@@ -60,6 +60,8 @@
             "delete": "מחק",
             "rename": "שנה שם",
             "doneRenaming": "סיים שינוי שם",
+            "changeImportedName": "שנה שם מיובא",
+            "doneChangingImportedName": "סיים שינוי שם",
             "pane": "חלונית",
             "close": "סגור",
             "moveDown": "הזז למטה",

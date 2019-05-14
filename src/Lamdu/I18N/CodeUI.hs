@@ -17,6 +17,8 @@ data CodeUI a = CodeUI
     , _delete :: a
     , _rename :: a
     , _doneRenaming :: a
+    , _changeImportedName :: a
+    , _doneChangingImportedName :: a
     , _pane :: a
     , _close :: a
     , _moveDown :: a
