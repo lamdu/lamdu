@@ -46,7 +46,7 @@ add ::
     m (Gui Responsive o -> Gui Responsive o)
 add pl =
     do
-        ev <- eventMap pl
+        ev <- eventMap ?? pl
         label <- Label.make "?"
         (|||) <- Glue.mkGlue ?? Glue.Horizontal
         let f r =
@@ -65,10 +65,12 @@ add pl =
 
 eventMap ::
     (MonadReader env m, HasConfig env, Applicative o) =>
-    Sugar.Payload name i o expr -> m (Gui EventMap o)
-eventMap pl =
-    delDotEventMap (WidgetIds.fromExprPayload pl)
-    <&> (<> fragmentEventMap pl)
+    m (Sugar.Payload name i o expr -> Gui EventMap o)
+eventMap =
+    delDotEventMap <&>
+    \delDotEvents pl ->
+    delDotEvents (WidgetIds.fromExprPayload pl)
+    <> fragmentEventMap pl
 
 -- | Each expression that may have a dotter should use this to make
 -- sure it activates it when it's jumped to
@@ -108,11 +110,11 @@ fragmentEventMap pl =
 
 delDotEventMap ::
     (MonadReader env m, HasConfig env, Applicative f) =>
-    Widget.Id -> m (Gui EventMap f)
-delDotEventMap widgetId =
+    m (Widget.Id -> Gui EventMap f)
+delDotEventMap =
     Config.delKeys
     <&>
-    \delKeys ->
+    \delKeys widgetId ->
     pure widgetId
     & E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete dot"])
 
