@@ -26,6 +26,9 @@ data CodeUI a = CodeUI
     , _toLambdaCase :: a
     , _open :: a
     , _close :: a
+    , _getField :: a
+    , _dot :: a
+    , _deleteDot :: a
     , _moveDown :: a
     , _moveUp :: a
     , _presentationMode :: a

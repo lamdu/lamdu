@@ -17,6 +17,7 @@ module Lamdu.GUI.ExpressionEdit.Dotter
     ) where
 
 import           Control.Applicative (liftA2)
+import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Element as Element
@@ -34,13 +35,19 @@ import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+codeUI :: Language.HasLanguage env => Lens' env (Texts.CodeUI Text)
+codeUI = Language.texts . Texts.codeUI
+
 add ::
     ( MonadReader env m, Applicative o, TextView.HasStyle env, HasConfig env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env
+    , Language.HasLanguage env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -64,20 +71,22 @@ add pl =
             }
 
 eventMap ::
-    (MonadReader env m, HasConfig env, Applicative o) =>
+    ( MonadReader env m, HasConfig env, Language.HasLanguage env
+    , Applicative o
+    ) =>
     m (Sugar.Payload name i o expr -> Gui EventMap o)
 eventMap =
-    delDotEventMap <&>
-    \delDotEvents pl ->
+    (,) <$> Lens.view id <*> delDotEventMap
+    <&> \(env, delDotEvents) pl ->
     delDotEvents (WidgetIds.fromExprPayload pl)
-    <> fragmentEventMap pl
+    <> fragmentEventMap env pl
 
 -- | Each expression that may have a dotter should use this to make
 -- sure it activates it when it's jumped to
 with ::
     ( MonadReader env m, Applicative o, GuiState.HasCursor env
     , TextView.HasStyle env, HasConfig env, Element.HasAnimIdPrefix env
-    , Glue.HasTexts env
+    , Language.HasLanguage env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -93,9 +102,12 @@ with pl =
 -- | Pressing alpha char transforms the dotted expr into a fragment
 -- with '.<char>' as the search term
 fragmentEventMap ::
-    Applicative o => Sugar.Payload name i o expr -> Gui EventMap o
-fragmentEventMap pl =
-    E.charEventMap "Letter" (E.Doc ["Edit", "Get field"]) getField
+    (Language.HasLanguage env, Applicative o) =>
+    env -> Sugar.Payload name i o expr -> Gui EventMap o
+fragmentEventMap env pl =
+    E.charEventMap "Letter"
+    (E.toDoc env [Language.edit, codeUI . CodeUI.getField])
+    getField
     where
         detach (Sugar.FragmentAlready entityId) = pure entityId
         detach (Sugar.FragmentExprAlready entityId) = pure entityId
@@ -109,23 +121,34 @@ fragmentEventMap pl =
             | otherwise = Nothing
 
 delDotEventMap ::
-    (MonadReader env m, HasConfig env, Applicative f) =>
+    ( MonadReader env m, HasConfig env, Applicative f
+    , Language.HasLanguage env
+    ) =>
     m (Widget.Id -> Gui EventMap f)
 delDotEventMap =
-    Config.delKeys
+    (,) <$> Lens.view id <*> Config.delKeys
     <&>
-    \delKeys widgetId ->
+    \(env, delKeys) widgetId ->
     pure widgetId
-    & E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete dot"])
+    & E.keysEventMapMovesCursor delKeys
+    (E.toDoc env
+        [ Language.edit
+        , codeUI . CodeUI.deleteDot
+        ])
 
 addEventMap ::
-    (Applicative f, Widget.HasWidget w) => Widget.Id -> Gui w f -> Gui w f
-addEventMap myId =
-    Widget.weakerEventsWithContext f
-    where
-        f ctx
+    ( Applicative f, Widget.HasWidget w, MonadReader env m
+    , Language.HasLanguage env
+    ) =>
+    m (Widget.Id -> Gui w f -> Gui w f)
+addEventMap =
+    Lens.view id
+    <&> \env myId ->
+    let f ctx
             | Text.null (ctx ^. Widget.ePrevTextRemainder) = gotoDotter
             | otherwise = mempty
         gotoDotter =
             WidgetIds.dotterId myId & GuiState.updateCursor & pure & const
-            & E.charGroup Nothing (E.Doc ["Edit", "Dot"]) "."
+            & E.charGroup Nothing
+            (E.toDoc env [Language.edit, codeUI . CodeUI.dot]) "."
+    in  Widget.weakerEventsWithContext f
