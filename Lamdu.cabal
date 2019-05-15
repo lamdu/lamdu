@@ -361,6 +361,7 @@ Library
                   , Lamdu.I18N.Definitions
                   , Lamdu.I18N.Language
                   , Lamdu.I18N.LangId
+                  , Lamdu.I18N.Navigation
                   , Lamdu.I18N.StatusBar
                   , Lamdu.I18N.Texts
                   , Lamdu.Main.Env

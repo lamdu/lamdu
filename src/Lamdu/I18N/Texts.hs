@@ -6,6 +6,7 @@ module Lamdu.I18N.Texts
     , module Lamdu.I18N.CodeUI
     , module Lamdu.I18N.Collaboration
     , module Lamdu.I18N.Definitions
+    , module Lamdu.I18N.Navigation
     , module Lamdu.I18N.StatusBar
     ) where
 
@@ -25,33 +26,11 @@ import           Lamdu.I18N.Code
 import           Lamdu.I18N.CodeUI
 import           Lamdu.I18N.Collaboration
 import           Lamdu.I18N.Definitions
+import           Lamdu.I18N.Navigation
 import           Lamdu.I18N.StatusBar
 import           Lamdu.Name (NameTexts)
 
 import           Lamdu.Prelude
-
-data Navigation a = Navigation
-    { _jumpToError :: a
-    , _goto :: a
-    , _goBack :: a
-    , _nextEntry :: a
-    , _enterSubexpression :: a
-    , _leaveSubexpression :: a
-    , _blocked :: a
-    , _prev :: a
-    , _next :: a
-    , _prevScopeArrow :: a
-    , _nextScopeArrow :: a
-    , _jumpToDef :: a
-    , _jumpToDefBody :: a
-    , _jumpToFirstUse :: a
-    , _jumpToNextUse :: a
-    , _moveInwards :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Navigation)
-Lens.makeLenses ''Navigation
-JsonTH.derivePrefixed "_" ''Navigation
 
 data Versioning a = Versioning
     { _branches :: a
