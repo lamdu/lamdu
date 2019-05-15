@@ -35,7 +35,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -60,7 +60,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 makeSimpleView ::
-    ( MonadReader env m, GuiState.HasCursor env, HasTheme env
+    ( MonadReader env m, GuiState.HasCursor env, Has Theme env
     , Applicative f, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Has (Name.NameTexts Text) env
     ) =>
@@ -72,7 +72,7 @@ makeSimpleView color name myId =
     & Styled.withColor (Lens.cloneLens color)
 
 makeParamsRecord ::
-    ( MonadReader env m, HasTheme env, GuiState.HasCursor env
+    ( MonadReader env m, Has Theme env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
     , Language.HasLanguage env, Applicative f
     ) =>
@@ -181,7 +181,7 @@ makeInlineEventMap _ _ = mempty
 definitionTypeChangeBox ::
     ( MonadReader env m
     , Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
+    , Spacer.HasStdSpacing env, Has Theme env, GuiState.HasCursor env
     , Has Config env, Language.HasLanguage env
     , Applicative f
     ) =>
@@ -219,7 +219,7 @@ definitionTypeChangeBox info getVarId =
 
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
-    , HasTheme env, Element.HasAnimIdPrefix env, Has Config env
+    , Has Theme env, Element.HasAnimIdPrefix env, Has Config env
     , GuiState.HasCursor env, Has Hover.Style env
     , Language.HasLanguage env, Applicative f
     ) =>
@@ -249,8 +249,8 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                     , Texts.codeUI . CodeUI.hide
                     ])
         let underline = Underline
-                { _underlineColor = env ^. theme . Theme.errorColor
-                , _underlineWidth = env ^. theme . Theme.wideUnderlineWidth
+                { _underlineColor = env ^. has . Theme.errorColor
+                , _underlineWidth = env ^. has . Theme.wideUnderlineWidth
                 }
         layout <-
             Reader.local (TextView.underline ?~ underline) mkLayout
@@ -296,7 +296,7 @@ makeGetParam ::
     ExprGuiM i o (TextWidget o)
 makeGetParam param myId =
     do
-        underline <- Lens.view theme <&> LightLambda.underline
+        underline <- Lens.view has <&> LightLambda.underline
         let mk = makeNameRef Normal TextColors.parameterColor myId (param ^. Sugar.pNameRef)
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->

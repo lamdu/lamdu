@@ -21,7 +21,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
@@ -38,7 +38,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 injectIndicator ::
-    ( MonadReader env f, Has TextView.Style env, HasTheme env
+    ( MonadReader env f, Has TextView.Style env, Has Theme env
     , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) => OneOf Texts -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)

@@ -25,7 +25,7 @@ import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
@@ -74,7 +74,7 @@ wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focu
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
 makeGui ::
-    ( HasState env, HasStdSpacing env, Has Config env, HasTheme env
+    ( HasState env, HasStdSpacing env, Has Config env, Has Theme env
     , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
@@ -104,7 +104,7 @@ focusedWidget gui =
         widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
 makeFocusedWidget ::
-    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, Has Theme env
     , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env ->
@@ -113,7 +113,7 @@ makeFocusedWidget afterDoc cache env =
     makeGui afterDoc cache env >>= either fail pure . focusedWidget
 
 mApplyEvent ::
-    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, Has Theme env
     , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
@@ -133,7 +133,7 @@ mApplyEvent cache env virtCursor event =
             & sequenceA
 
 applyEvent ::
-    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, Has Theme env
     , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env

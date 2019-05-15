@@ -33,7 +33,7 @@ import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label, OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
@@ -74,7 +74,7 @@ data Header w = Header
     }
 
 type LabelConstraints env m =
-    ( MonadReader env m, Has TextView.Style env, HasTheme env
+    ( MonadReader env m, Has TextView.Style env, Has Theme env
     , Element.HasAnimIdPrefix env, HasLanguage env
     )
 
@@ -144,13 +144,13 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
         Property curVal setVal = prop
 
 hspacer ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Theme.HasTheme env) => m View
+    (MonadReader env m, Spacer.HasStdSpacing env, Has Theme env) => m View
 hspacer = do
-    hSpaceCount <- Lens.view (Theme.theme . Theme.statusBar . Theme.statusBarHSpaces)
+    hSpaceCount <- Lens.view (has . Theme.statusBar . Theme.statusBarHSpaces)
     Spacer.getSpaceSize <&> (^. _1) <&> (* hSpaceCount) <&> Spacer.makeHorizontal
 
 combine ::
-    ( MonadReader env m, Applicative f, HasStdSpacing env, HasTheme env
+    ( MonadReader env m, Applicative f, HasStdSpacing env, Has Theme env
     , Glue.HasTexts env
     ) => m ([StatusWidget f] -> StatusWidget f)
 combine =

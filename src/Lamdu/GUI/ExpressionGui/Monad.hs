@@ -55,7 +55,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme, HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
@@ -111,7 +111,7 @@ instance Has TextEdit.Style (Askable i o) where has = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix
 instance Has Config (Askable i o) where has = aConfig
-instance HasTheme (Askable i o) where theme = aTheme
+instance Has Theme (Askable i o) where has = aTheme
 instance Has ResponsiveExpr.Style (Askable i o) where has = aTheme . has
 instance Has Menu.Config (Askable i o) where
     has = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
@@ -209,7 +209,7 @@ withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
-    , Has Config env, HasTheme env
+    , Has Config env, Has Theme env
     , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
@@ -226,7 +226,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aStdSpacing = env ^. Spacer.stdSpacing
     , _aAnimIdPrefix = ["outermost"]
     , _aConfig = env ^. has
-    , _aTheme = env ^. Theme.theme
+    , _aTheme = env ^. has
     , _aSettings = env ^. has
     , _aMakeSubexpression = makeSubexpr
     , _aMakeBinder = mkBinder

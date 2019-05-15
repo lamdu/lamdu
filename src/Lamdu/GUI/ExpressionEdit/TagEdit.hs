@@ -39,7 +39,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -142,7 +142,7 @@ makeNewTagPreEvent searchTerm tagSelection mkPickResult
         }
 
 addNewTag ::
-    ( Applicative o, MonadReader env f, GuiState.HasCursor env, HasTheme env
+    ( Applicative o, MonadReader env f, GuiState.HasCursor env, Has Theme env
     , Has TextView.Style env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
@@ -174,7 +174,7 @@ fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
     ( Monad i, Applicative o, MonadReader env m
-    , GuiState.HasCursor env, HasTheme env, Has TextView.Style env
+    , GuiState.HasCursor env, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Name.NameTexts Text) env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
@@ -250,7 +250,7 @@ allowedTagName =
         f x = Char.isAlpha x || elem x Chars.operator
 
 type HasSearchTermEnv env =
-    ( HasTheme env, Has Config env, GuiState.HasState env
+    ( Has Theme env, Has Config env, GuiState.HasState env
     , TextEdit.HasStyle env, Has Hover.Style env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     )
@@ -283,7 +283,7 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
                 SearchMenu.defaultEmptyStrings
             <&> SearchMenu.termWidget . Align.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
-        tooltip <- Lens.view (theme . Theme.tooltip)
+        tooltip <- Lens.view (has . Theme.tooltip)
         if  allowNewTag &&
             Widget.isFocused (term ^. SearchMenu.termWidget . Align.tValue)
             then
@@ -323,7 +323,7 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 
 makeTagView ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , HasTheme env, Has Dir.Layout env, Has (Name.NameTexts Text) env
+    , Has Theme env, Has Dir.Layout env, Has (Name.NameTexts Text) env
     ) =>
     Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
@@ -350,7 +350,7 @@ data TagEditType
 makeTagEditWith ::
     ( Monad i, Applicative o, MonadReader env n
     , GuiState.HasCursor env, Has TextView.Style env, Has (Name.NameTexts Text) env
-    , Element.HasAnimIdPrefix env, HasTheme env, Glue.HasTexts env
+    , Element.HasAnimIdPrefix env, Has Theme env, Glue.HasTexts env
     ) =>
     (n (TextWidget o) ->
      ExprGuiM i o (TextWidget o)) ->
@@ -473,7 +473,7 @@ makeParamTag =
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
-    ( MonadReader env m, HasTheme env, Has TextView.Style env
+    ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Name.NameTexts Text) env
     ) =>
     Name f -> Sugar.EntityId -> m (WithTextPos View)

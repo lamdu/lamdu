@@ -29,7 +29,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection(..))
-import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
+import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -58,7 +58,7 @@ data Env =
     , _eLanguage :: Language
     }
 Lens.makeLenses ''Env
-instance HasTheme Env where theme = eTheme
+instance Has Theme Env where has = eTheme
 instance HasStdSpacing Env where stdSpacing = eSpacing
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix

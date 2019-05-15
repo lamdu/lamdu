@@ -7,7 +7,7 @@ module Lamdu.GUI.StatusBar
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.Property (Property)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -40,9 +40,9 @@ import           Lamdu.Prelude
 
 make ::
     ( MonadReader env m, MonadTransaction n m
-    , TextEdit.HasStyle env, Theme.HasTheme env, Has Hover.Style env
+    , TextEdit.HasStyle env, Has Theme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
-    , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
+    , VCConfig.HasConfig env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
     , Has Config env, HasLanguage env
     ) =>
     StatusWidget (IOTrans n) ->
@@ -61,7 +61,7 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp
             <&> SettingsGui.hoist IOTrans.liftIO
 
-        theTheme <- Lens.view Theme.theme
+        theTheme <- Lens.view has
         bgColor <-
             Draw.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
         padToSize <- Element.padToSize

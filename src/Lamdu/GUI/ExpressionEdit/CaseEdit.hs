@@ -200,7 +200,7 @@ makeOpenCase ::
     AnimId -> Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 makeOpenCase actions rest animId altsGui =
     do
-        theme <- Lens.view Theme.theme
+        theme <- Lens.view has
         vspace <- Spacer.stdVSpace
         env <- Lens.view id
         restExpr <-

@@ -248,7 +248,7 @@ make ::
     ResVal (Name f) -> ExprGuiM i o (WithTextPos View)
 make v =
     do
-        maxEvalViewSize <- Lens.view (Theme.theme . Theme.maxEvalViewSize)
+        maxEvalViewSize <- Lens.view (has . Theme.maxEvalViewSize)
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
                 & takeWhile (< maxEvalViewSize) & length

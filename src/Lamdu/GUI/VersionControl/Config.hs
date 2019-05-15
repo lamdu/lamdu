@@ -3,7 +3,6 @@ module Lamdu.GUI.VersionControl.Config
     ( Config(..), undoKeys, redoKeys, makeBranchKeys, jumpToBranchesKeys, delBranchKeys
     , HasConfig(..)
     , Theme(..), selectedBranchColor
-    , HasTheme(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -32,4 +31,3 @@ JsonTH.derivePrefixed "_" ''Theme
 Lens.makeLenses ''Theme
 
 class HasConfig env where config :: Lens' env Config
-class HasTheme env where theme :: Lens' env Theme

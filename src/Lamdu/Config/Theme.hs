@@ -18,7 +18,6 @@ module Lamdu.Config.Theme
         , wideUnderlineWidth, valFrameBGColor, valFramePadding
         , typeFrameBGColor, stdSpacing, cursorColor, cursorDecayExponent
         , disabledColor, presentationChoiceScaleFactor, evaluatedPathBGColor
-    , HasTheme(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -144,9 +143,6 @@ data Theme = Theme
 JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme
-
-class HasTheme env where theme :: Lens' env Theme
-instance HasTheme Theme where theme = id
 
 instance Has Expression.Style Theme where has = indent
 instance Has Hover.Style Theme where has = hover

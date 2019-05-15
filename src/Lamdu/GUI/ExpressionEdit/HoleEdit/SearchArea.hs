@@ -32,6 +32,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
@@ -116,7 +117,7 @@ makeResultOption pl ctx results =
             }
 
 makeInferredTypeAnnotation ::
-    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Language.HasLanguage env
     ) =>
     Sugar.Payload (Name g) i o a0 -> m View
@@ -197,7 +198,7 @@ make mkOptions pl allowedTerms =
     where
         makeTerm mPickFirst =
             do
-                theme <- Lens.view (Theme.theme . Theme.hole)
+                theme <- Lens.view (has . Theme.hole)
                 frameWidth <- Spacer.stdFontHeight <&> pure <&> (* theme ^. Theme.holeFrameWidth)
                 addFrame <-
                     MDraw.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth

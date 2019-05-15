@@ -7,6 +7,7 @@ import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -76,7 +77,7 @@ mkNomGui ::
     ExprGuiM i o (Gui Responsive o)
 mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
     do
-        nomColor <- Lens.view (Theme.theme . Theme.textColors . TextColors.nomColor)
+        nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
         env <- Lens.view id
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId

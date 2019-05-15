@@ -37,6 +37,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -144,13 +145,13 @@ makeScopeEventMap env prevKey nextKey cursor setter =
             ]
 
 makeScopeNavArrow ::
-    ( MonadReader env m, Theme.HasTheme env, Has TextView.Style env
+    ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Monoid a, Applicative o
     ) =>
     (w -> o a) -> Text -> Maybe w -> m (WithTextPos (Widget (o a)))
 makeScopeNavArrow setScope arrowText mScopeId =
     do
-        theme <- Lens.view Theme.theme
+        theme <- Lens.view has
         Label.make arrowText
             <&> Align.tValue %~ Widget.fromView
             <&> Align.tValue %~

@@ -19,7 +19,6 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
@@ -79,7 +78,7 @@ makeLetEdit item =
             /|/ (AssignmentEdit.make Nothing mempty (item ^. Sugar.lName)
                     TextColors.letColor binder
                     <&> Widget.weakerEvents eventMap
-                    <&> Element.padAround (env ^. theme . Theme.letItemPadding))
+                    <&> Element.padAround (env ^. has . Theme.letItemPadding))
     where
         bodyId = item ^. Sugar.lBody . ann & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue

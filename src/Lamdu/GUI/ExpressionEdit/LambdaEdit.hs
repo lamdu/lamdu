@@ -25,8 +25,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
-import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -59,7 +58,7 @@ mkLhsEdits =
     mParamsEdit ^.. Lens._Just <&> add mScopeEdit
 
 mkExpanded ::
-    ( Monad o, MonadReader env f, HasTheme env, Has TextView.Style env
+    ( Monad o, MonadReader env f, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
@@ -74,7 +73,7 @@ lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
-    ( Monad o, MonadReader env f, Has Config env, HasTheme env
+    ( Monad o, MonadReader env f, Has Config env, Has Theme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Language.HasLanguage env
     ) => [Sugar.EntityId] -> Widget.Id ->
@@ -88,7 +87,7 @@ mkShrunk paramIds myId =
                   (E.keysEventMapMovesCursor jumpKeys
                    (E.Doc ["View", "Expand Lambda Params"]) . pure .
                    WidgetIds.fromEntityId)
-        theme <- Lens.view Theme.theme
+        theme <- Lens.view has
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
             <*> grammar (label (Texts.code . Texts.lam))
@@ -102,7 +101,7 @@ mkShrunk paramIds myId =
 
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env, Has TextView.Style env, HasTheme env
+    , Element.HasAnimIdPrefix env, Has TextView.Style env, Has Theme env
     , Has Config env, Language.HasLanguage env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->

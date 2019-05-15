@@ -33,7 +33,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme, HasTheme(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -96,13 +96,13 @@ replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
         exportConfig = env ^. has . Config.export
 
 indicatorColor ::
-    (MonadReader env m, HasTheme env) =>
+    (MonadReader env m, Has Theme env) =>
     CurPrevTag -> Lens' Theme Draw.Color -> m Draw.Color
-indicatorColor Current color = Lens.view (theme . color)
-indicatorColor Prev _ = Lens.view (theme . Theme.disabledColor)
+indicatorColor Current color = Lens.view (has . color)
+indicatorColor Prev _ = Lens.view (has . Theme.disabledColor)
 
 makeIndicator ::
-    ( MonadReader env m, HasTheme env, Has TextView.Style env
+    ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env
     ) =>
     CurPrevTag -> Lens' Theme Draw.Color -> Text -> m (Align.WithTextPos View)
@@ -117,13 +117,13 @@ compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
 compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
 
 errorDesc ::
-    ( MonadReader env m, HasTheme env, Language.HasLanguage env
+    ( MonadReader env m, Has Theme env, Language.HasLanguage env
     , Element.HasAnimIdPrefix env, Has TextView.Style env
     ) =>
     Sugar.Error -> m (Align.WithTextPos View)
 errorDesc err =
     do
-        errorColor <- Lens.view (theme . Theme.errorColor)
+        errorColor <- Lens.view (has . Theme.errorColor)
         case err of
             Sugar.CompiledError cErr ->
                 label (Texts.codeUI . compiledErrorDesc cErr)
@@ -136,7 +136,7 @@ errorDesc err =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Has Hover.Style env, GuiState.HasCursor env
-    , HasTheme env, Has Config env, Glue.HasTexts env, Language.HasLanguage env
+    , Has Theme env, Has Config env, Glue.HasTexts env, Language.HasLanguage env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -193,7 +193,7 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Has Hover.Style env
-    , HasTheme env, Has Config env, Language.HasLanguage env
+    , Has Theme env, Has Config env, Language.HasLanguage env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))

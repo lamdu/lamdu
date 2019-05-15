@@ -137,7 +137,7 @@ makeFragmentExprEdit ::
     ExprGuiM i o (Gui Responsive o)
 makeFragmentExprEdit fragment =
     do
-        theme <- Lens.view Theme.theme
+        theme <- Lens.view has
         let frameColor =
                 theme ^.
                 case fragment ^. Sugar.fHeal of

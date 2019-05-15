@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
@@ -22,7 +23,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Definition as Definition
@@ -73,7 +74,7 @@ makeNamePartEditor color namePartStr setter myId =
             }
 
 make ::
-    ( MonadReader env f, Monad o, HasTheme env, GuiState.HasCursor env
+    ( MonadReader env f, Monad o, Has Theme env, GuiState.HasCursor env
     , TextEdit.HasStyle env, Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
@@ -81,7 +82,7 @@ make ::
     f (TextWidget o)
 make def myId =
     do
-        colors <- Lens.view (Theme.theme . Theme.textColors)
+        colors <- Lens.view (has . Theme.textColors)
         makeNamePartEditor (colors ^. TextColors.foreignModuleColor)
             modulePathStr modulePathSetter (builtinFFIPath myId)
             /|/ Label.make "."

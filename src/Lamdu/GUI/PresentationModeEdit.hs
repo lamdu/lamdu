@@ -15,7 +15,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.Styled (OneOfT(..))
@@ -37,7 +37,7 @@ lens mode =
 
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 make ::
-    ( Applicative f, MonadReader env m, HasTheme env
+    ( Applicative f, MonadReader env m, Has Theme env
     , Element.HasAnimIdPrefix env, Has TextView.Style env, GuiState.HasCursor env
     , Has Hover.Style env, Language.HasLanguage env
     ) =>
@@ -47,7 +47,7 @@ make ::
     m (Align.TextWidget f)
 make myId (Sugar.Params params) prop =
     do
-        theme <- Lens.view Theme.theme
+        theme <- Lens.view has
         pairs <-
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local

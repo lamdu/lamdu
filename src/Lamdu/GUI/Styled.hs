@@ -36,7 +36,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Theme (Theme, HasTheme(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -48,10 +48,10 @@ import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
 
-info :: (MonadReader env m, HasTheme env, Has TextView.Style env) => m a -> m a
+info :: (MonadReader env m, Has Theme env, Has TextView.Style env) => m a -> m a
 info = withColor TextColors.infoTextColor
 
-grammar :: (MonadReader env m, HasTheme env, Has TextView.Style env) => m a -> m a
+grammar :: (MonadReader env m, Has Theme env, Has TextView.Style env) => m a -> m a
 grammar = withColor TextColors.grammarColor
 
 rawText ::
@@ -112,23 +112,23 @@ focusableLabel lens = mkFocusableLabel ?? OneOf lens
 
 addValBG ::
     ( MonadReader env m, Element a
-    , Element.HasAnimIdPrefix env, HasTheme env
+    , Element.HasAnimIdPrefix env, Has Theme env
     ) => m (a -> a)
 addValBG = addBgColor Theme.valFrameBGColor
 
 addBgColor ::
     ( MonadReader env m, Element a
-    , Element.HasAnimIdPrefix env, HasTheme env
+    , Element.HasAnimIdPrefix env, Has Theme env
     ) => Lens.ALens' Theme Draw.Color -> m (a -> a)
 addBgColor getColor =
-    Draw.backgroundColor <*> Lens.view (Theme.theme . Lens.cloneLens getColor)
+    Draw.backgroundColor <*> Lens.view (has . Lens.cloneLens getColor)
 
-addValPadding :: (MonadReader env m, Element a, HasTheme env) => m (a -> a)
+addValPadding :: (MonadReader env m, Element a, Has Theme env) => m (a -> a)
 addValPadding =
-    Lens.view (Theme.theme . Theme.valFramePadding) <&> Element.padAround
+    Lens.view (has . Theme.valFramePadding) <&> Element.padAround
 
 addValFrame ::
-    ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env
+    ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, Has Theme env
     ) => m (a -> a)
 addValFrame =
     (.)
@@ -161,46 +161,46 @@ addDiagonal =
         snoc x xs = xs ++ [x]
 
 deletedDiagonal ::
-    ( MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has Theme env, Element a, Element.HasAnimIdPrefix env
     ) =>
     Lens.Getting Widget.R Theme.Deleted Widget.R -> m (a -> a)
 deletedDiagonal widthLens =
     do
-        width <- Lens.view (Theme.theme . Theme.deleted . widthLens)
-        addDiagonal <*> Lens.view (Theme.theme . Theme.errorColor) ?? width
+        width <- Lens.view (has . Theme.deleted . widthLens)
+        addDiagonal <*> Lens.view (has . Theme.errorColor) ?? width
 
 deletedUse ::
-    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
+    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, Has Theme env) =>
     m (a -> a)
 deletedUse = deletedDiagonal Theme.deletedUseDiagonalWidth
 
 deletedDef ::
-    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, HasTheme env) =>
+    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, Has Theme env) =>
     m (a -> a)
 deletedDef =
     (.)
     <$> deletedDiagonal Theme.deletedDefDiagonalWidth
-    <*> (Lens.view (Theme.theme . Theme.deleted . Theme.deletedDefTint) <&> Element.tint)
+    <*> (Lens.view (has . Theme.deleted . Theme.deletedDefTint) <&> Element.tint)
 
 withColor ::
-    (MonadReader env m, HasTheme env, Has TextView.Style env) =>
+    (MonadReader env m, Has Theme env, Has TextView.Style env) =>
     Lens.ALens' TextColors Draw.Color -> m a -> m a
 withColor textColor act =
     do
-        color <- Lens.view (Theme.theme . Theme.textColors . Lens.cloneLens textColor)
+        color <- Lens.view (has . Theme.textColors . Lens.cloneLens textColor)
         Reader.local (TextView.color .~ color) act
 
 actionable ::
     ( Element.HasAnimIdPrefix env, Has TextView.Style env
-    , GuiState.HasCursor env, Has Config env, HasTheme env
+    , GuiState.HasCursor env, Has Config env, Has Theme env
     , Language.HasLanguage env
     , Applicative f, MonadReader env m
     ) =>
     Widget.Id -> OneOf Texts -> E.Doc -> f Widget.Id -> m (TextWidget f)
 actionable myId txtLens doc action =
     do
-        color <- Lens.view (Theme.theme . Theme.textColors . TextColors.actionTextColor)
-        underlineWidth <- Lens.view (Theme.theme . Theme.narrowUnderlineWidth)
+        color <- Lens.view (has . Theme.textColors . TextColors.actionTextColor)
+        underlineWidth <- Lens.view (has . Theme.narrowUnderlineWidth)
         let underline =
                 Font.Underline
                 { Font._underlineColor = color

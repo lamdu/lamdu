@@ -7,7 +7,7 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Draw as Draw
@@ -19,7 +19,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
@@ -56,7 +56,7 @@ nameSearchTerm name =
         collisionText Name.UnknownCollision = "?"
 
 makeOptions ::
-    ( MonadReader env m, HasTheme env, Applicative o
+    ( MonadReader env m, Has Theme env, Applicative o
     , Has TextView.Style env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Language.HasLanguage env
     ) =>
@@ -105,7 +105,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
 
 make ::
     ( MonadReader env m, Applicative o
-    , HasTheme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
+    , Has Theme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , Has Menu.Config env, Has Hover.Style env, GuiState.HasState env
     , Has SearchMenu.TermStyle env, Language.HasLanguage env
     ) =>
@@ -115,7 +115,7 @@ make readGlobals =
         goto <- Lens.view (Language.texts . Texts.navigationTexts . Texts.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
             (makeOptions readGlobals) Element.empty myId ?? Menu.Below
-            & Reader.local (Theme.theme . Theme.searchTerm %~ onTermStyle goto)
+            & Reader.local (has . Theme.searchTerm %~ onTermStyle goto)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget
             , StatusBar._globalEventMap = mempty

@@ -29,7 +29,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (HasTheme(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
@@ -47,21 +47,21 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 addAnnotationBackgroundH ::
-    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Has Theme env, Element a, Element.HasAnimIdPrefix env) =>
     Lens.ALens' ValAnnotation Draw.Color -> m (a -> a)
 addAnnotationBackgroundH color =
     do
-        t <- Lens.view theme
+        t <- Lens.view has
         bgAnimId <- Element.subAnimId ?? ["annotation background"]
         Draw.backgroundColor bgAnimId (t ^# Theme.valAnnotation . color) & pure
 
 addAnnotationBackground ::
-    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Has Theme env, Element a, Element.HasAnimIdPrefix env) =>
     m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationBGColor
 
 addAnnotationHoverBackground ::
-    (MonadReader env m, HasTheme env, Element a, Element.HasAnimIdPrefix env) => m (a -> a)
+    (MonadReader env m, Has Theme env, Element a, Element.HasAnimIdPrefix env) => m (a -> a)
 addAnnotationHoverBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationHoverBGColor
 
 data WideAnnotationBehavior
@@ -76,7 +76,7 @@ wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
 -- NOTE: Also adds the background color, because it differs based on
 -- whether we're hovering
 applyWideAnnotationBehavior ::
-    (MonadReader env m, HasTheme env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
     WideAnnotationBehavior ->
     m (Vector2 Widget.R -> View -> View)
 applyWideAnnotationBehavior KeepWideTypeAnnotation =
@@ -99,14 +99,14 @@ applyWideAnnotationBehavior HoverWideAnnotation =
                 & Element.hoverLayers
 
 processAnnotationGui ::
-    ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
     ) =>
     WideAnnotationBehavior ->
     m (Widget.R -> View -> View)
 processAnnotationGui wideAnnotationBehavior =
     f
-    <$> Lens.view (theme . Theme.valAnnotation)
+    <$> Lens.view (has . Theme.valAnnotation)
     <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
     <*> applyWideAnnotationBehavior wideAnnotationBehavior
@@ -144,7 +144,7 @@ makeEvaluationResultView ::
     ExprGuiM i o (WithTextPos View)
 makeEvaluationResultView res =
     do
-        th <- Lens.view theme
+        th <- Lens.view has
         EvalView.make (erdVal res)
             <&>
             case erdSource res of
@@ -162,7 +162,7 @@ makeEvalView ::
     EvalResDisplay (Name g) -> ExprGuiM i o (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
-        evalTheme <- Lens.view (theme . Theme.eval)
+        evalTheme <- Lens.view (has . Theme.eval)
         let neighbourView n =
                 Lens._Just makeEvaluationResultViewBG n
                 <&> Lens.mapped %~ Element.scale (evalTheme ^. Theme.neighborsScaleFactor)
@@ -192,13 +192,13 @@ makeEvalView mNeighbours evalRes =
             <&> (^. Align.tValue)
 
 annotationSpacer ::
-    (MonadReader env m, HasTheme env, Has TextView.Style env) => m View
+    (MonadReader env m, Has Theme env, Has TextView.Style env) => m View
 annotationSpacer =
-    Lens.view (Theme.theme . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
+    Lens.view (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
     >>= Spacer.vspaceLines
 
 addAnnotationH ::
-    ( Functor f, MonadReader env m, HasTheme env, Has Dir.Layout env
+    ( Functor f, MonadReader env m, Has Theme env, Has Dir.Layout env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     m (WithTextPos View) ->
@@ -224,7 +224,7 @@ addAnnotationH f wideBehavior =
         pure $ \minWidth -> onAlignedWidget minWidth
 
 addInferredType ::
-    ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, HasTheme env
+    ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, Has Theme env
     , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     Sugar.Type (Name g) -> WideAnnotationBehavior ->

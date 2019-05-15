@@ -5,7 +5,7 @@ module Lamdu.GUI.VersionControl
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (TextWidget)
@@ -91,7 +91,7 @@ branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 makeBranchSelector ::
     ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Has Hover.Style env, Element.HasAnimIdPrefix env
-    , VersionControl.HasConfig env, VersionControl.HasTheme env
+    , VersionControl.HasConfig env, Has VersionControl.Theme env
     , Language.HasLanguage env
     ) =>
     (forall a. Transaction n a -> mw a) ->
@@ -135,7 +135,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                             \env ->
                             env &
                             TextView.color .~
-                            env ^. VersionControl.theme . VersionControl.selectedBranchColor
+                            env ^. has . VersionControl.selectedBranchColor
                         else id
         branchNameEdits <- A.branches actions & traverse makeBranchNameEdit
         defConfig <- Choice.defaultConfig

@@ -31,6 +31,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -141,7 +142,7 @@ make (Sugar.Composite fields recordTail addField) pl =
             & E.charGroup Nothing (E.Doc ["Navigation", "Go to parent"]) "}"
 
 makeRecord ::
-    ( MonadReader env m, Theme.HasTheme env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Language.HasLanguage env, Applicative o
     ) =>
     (Gui Responsive o -> m (Gui Responsive o)) ->
@@ -157,7 +158,7 @@ makeRecord postProcess fieldGuis =
     )
 
 addPostTags ::
-    ( MonadReader env m, Theme.HasTheme env, Has TextView.Style env
+    ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
@@ -227,7 +228,7 @@ makeOpenRecord ::
     Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
-        theme <- Lens.view Theme.theme
+        theme <- Lens.view has
         vspace <- Spacer.stdVSpace
         env <- Lens.view id
         let restEventMap =

@@ -34,7 +34,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
@@ -86,7 +86,7 @@ make ::
     ( MonadTransaction m n, MonadReader env n, Has Config env
     , Has Cache.Functions env
     , Has Debug.Monitors env
-    , Theme.HasTheme env, GuiState.HasState env
+    , Has Theme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , Has Settings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env

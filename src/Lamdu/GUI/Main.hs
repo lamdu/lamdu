@@ -71,12 +71,12 @@ type Ctx env =
     , Has Settings env
     , Spacer.HasStdSpacing env
     , GuiState.HasState env
-    , Theme.HasTheme env
+    , Has Theme env
     , Has Config env
     , Element.HasAnimIdPrefix env
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
-    , VCConfig.HasConfig env, VCConfig.HasTheme env
+    , VCConfig.HasConfig env, Has VCConfig.Theme env
     , Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Language.HasLanguage env
@@ -91,7 +91,7 @@ layout themeNames langNames settingsProp =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
-        theTheme <- Lens.view Theme.theme
+        theTheme <- Lens.view has
         fullSize <- Lens.view (has . MainLoop.eWindowSize)
         state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state

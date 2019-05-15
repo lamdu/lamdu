@@ -72,15 +72,15 @@ instance GUIMain.HasEvalResults Env ViewM where evalResults = evalRes
 instance Has Settings Env where has = settings . Property.pVal
 instance Style.HasStyle Env where style = style
 instance Has MainLoop.Env Env where has = mainLoop
-instance Spacer.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
+instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
 instance GuiState.HasCursor Env
 instance Has GUIState Env where has = mainLoop . has
 instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
-instance Theme.HasTheme Env where theme = theme
+instance Has Theme Env where has = theme
 instance Has Config Env where has = config
 instance Has Hover.Style Env where has = theme . has
-instance VCConfig.HasTheme Env where theme = theme . Theme.versionControl
+instance Has VCConfig.Theme Env where has = has . Theme.versionControl
 instance VCConfig.HasConfig Env where config = config . Config.versionControl
 instance Has Menu.Config Env where
     has = Menu.configLens (config . Config.menu) (theme . Theme.menu)

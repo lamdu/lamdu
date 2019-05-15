@@ -15,7 +15,7 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (HasTheme(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.Name as NameTheme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -27,7 +27,7 @@ import           Lamdu.Prelude
 
 makeCollisionSuffixLabel ::
     ( MonadReader env m
-    , Has TextView.Style env, Element.HasAnimIdPrefix env, HasTheme env
+    , Has TextView.Style env, Element.HasAnimIdPrefix env, Has Theme env
     ) => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel collisionColor mCollision =
     case mCollision of
@@ -37,7 +37,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
     where
         mk text =
             do
-                nameTheme <- Lens.view (theme . Theme.name)
+                nameTheme <- Lens.view (has . Theme.name)
                 (Draw.backgroundColor ?? nameTheme ^# collisionColor)
                     <*>
                     (Label.make text
@@ -48,7 +48,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
 
 make ::
     ( MonadReader env m
-    , HasTheme env, Element.HasAnimIdPrefix env, Has TextView.Style env
+    , Has Theme env, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Has (Name.NameTexts Text) env
     ) =>
     Name f -> m (WithTextPos View)
