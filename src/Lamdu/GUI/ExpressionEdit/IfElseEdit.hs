@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where
@@ -7,6 +7,7 @@ import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
+import           Data.Has (Has)
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
@@ -121,7 +122,7 @@ makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , ResponsiveExpr.HasStyle env, Glue.HasTexts env
+    , Has ResponsiveExpr.Style env, Glue.HasTexts env
     ) => f (Row (Gui Responsive o) -> Gui Responsive o)
 verticalRowRender =
     do
@@ -137,7 +138,7 @@ verticalRowRender =
 
 renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , ResponsiveExpr.HasStyle env
+    , Has ResponsiveExpr.Style env
     , Grid.HasTexts env
     ) => Maybe AnimId -> f ([Row (Gui Responsive o)] -> Gui Responsive o)
 renderRows mParensId =

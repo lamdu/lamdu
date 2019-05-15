@@ -148,7 +148,7 @@ Lens.makeLenses ''Theme
 class HasTheme env where theme :: Lens' env Theme
 instance HasTheme Theme where theme = id
 
-instance Expression.HasStyle Theme where style = indent
+instance Has Expression.Style Theme where has = indent
 instance Has Hover.Style Theme where has = hover
 
 instance HasConfigFolder Theme where

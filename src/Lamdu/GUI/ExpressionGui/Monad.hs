@@ -112,7 +112,7 @@ instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable i o) where config = aConfig
 instance HasTheme (Askable i o) where theme = aTheme
-instance ResponsiveExpr.HasStyle (Askable i o) where style = aTheme . ResponsiveExpr.style
+instance Has ResponsiveExpr.Style (Askable i o) where has = aTheme . has
 instance Menu.HasConfig (Askable i o) where
     config = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
 instance SearchMenu.HasTermStyle (Askable i o) where

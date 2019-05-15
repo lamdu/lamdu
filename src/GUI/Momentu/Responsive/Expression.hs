@@ -4,7 +4,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module GUI.Momentu.Responsive.Expression
     ( Style(..), indentBarWidth, indentBarGap, indentBarColor
-    , HasStyle(..)
     , disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb, indent
     , addParens
     ) where
@@ -39,11 +38,8 @@ data Style = Style
 JsonTH.derivePrefixed "_" ''Style
 Lens.makeLenses ''Style
 
-class HasStyle env where style :: Lens' env Style
-instance HasStyle Style where style = id
-
 disambiguators ::
-    ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Functor f, Has Style env, Spacer.HasStdSpacing env
     , Has Dir.Layout env
     ) =>
     m (AnimId -> Gui Options.Disambiguators f)
@@ -65,7 +61,7 @@ addParens =
         Glue.Poly (|||) = Glue.mkPoly Dir.LeftToRight Glue.Horizontal
 
 indent ::
-    ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Functor f, Has Style env, Spacer.HasStdSpacing env
     , Has Dir.Layout env
     ) =>
     m (AnimId -> Gui Responsive f -> Gui Responsive f)
@@ -81,21 +77,21 @@ indent =
         let f myId w = makeBar (w ^. Element.height) myId ||| w
         pure $ \myId -> (Responsive.alignedWidget %~ f myId) . reduceWidth
 
-totalBarWidth :: (MonadReader env m, HasStyle env, Spacer.HasStdSpacing env) => m Double
+totalBarWidth :: (MonadReader env m, Has Style env, Spacer.HasStdSpacing env) => m Double
 totalBarWidth =
     do
-        s <- Lens.view style
+        s <- Lens.view has
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
         stdSpace * (s ^. indentBarWidth + s ^. indentBarGap) & pure
 
 indentBar ::
-    ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Has Style env, Spacer.HasStdSpacing env
     , Has Dir.Layout env
     ) =>
     m (Widget.R -> AnimId -> View)
 indentBar =
     do
-        s <- Lens.view style
+        s <- Lens.view has
         stdSpace <- Spacer.getSpaceSize <&> (^. _1)
         (|||) <- Glue.mkGlue ?? Glue.Horizontal
         pure $ \height myId ->
@@ -108,14 +104,14 @@ indentBar =
             in  bar ||| Spacer.make (Vector2 gapWidth 0)
 
 boxSpacedDisambiguated ::
-    ( MonadReader env m, Applicative f, HasStyle env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Applicative f, Has Style env, Spacer.HasStdSpacing env
     , Glue.HasTexts env
     ) =>
     m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
-    ( MonadReader env m, Applicative f, HasStyle env, Spacer.HasStdSpacing env
+    ( MonadReader env m, Applicative f, Has Style env, Spacer.HasStdSpacing env
     , Glue.HasTexts env
     ) =>
     m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
