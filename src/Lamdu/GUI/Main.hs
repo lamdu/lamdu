@@ -43,7 +43,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Config as SugarConfig
