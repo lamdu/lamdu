@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving, UndecidableInstances, DerivingVia #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module GUI.Momentu.Main
     ( Config(..)
     , Env(..), eWindowSize, eZoom, eState
@@ -15,6 +16,7 @@ module GUI.Momentu.Main
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (MkProperty')
@@ -157,7 +159,7 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 instance State.HasCursor Env
-instance State.HasState Env where state = eState
+instance Has GUIState Env where has = eState
 
 class State.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
 instance HasMainLoopEnv Env where mainLoopEnv = id

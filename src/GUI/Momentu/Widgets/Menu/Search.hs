@@ -48,7 +48,7 @@ import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
-import           GUI.Momentu.State (HasState(..), Gui)
+import           GUI.Momentu.State (HasState, Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget

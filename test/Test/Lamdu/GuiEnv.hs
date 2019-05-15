@@ -17,7 +17,7 @@ import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.Glue as Glue
-import           GUI.Momentu.State (HasState(..), HasCursor, GUIState(..))
+import           GUI.Momentu.State (HasCursor, GUIState(..))
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -63,7 +63,7 @@ instance HasStdSpacing Env where stdSpacing = eSpacing
 instance Has TextView.Style Env where has = TextEdit.style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
-instance HasState Env where state = eState
+instance Has GUIState Env where has = eState
 instance HasConfig Env where config = eConfig
 instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle

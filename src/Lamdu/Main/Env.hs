@@ -25,6 +25,7 @@ import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
+import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -74,7 +75,7 @@ instance Style.HasStyle Env where style = style
 instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = mainLoop
 instance Spacer.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
 instance GuiState.HasCursor Env
-instance GuiState.HasState Env where state = mainLoop . GuiState.state
+instance Has GUIState Env where has = mainLoop . has
 instance TextEdit.HasStyle Env where style = style . Style.base
 instance Has TextView.Style Env where has = TextEdit.style . has
 instance Theme.HasTheme Env where theme = theme

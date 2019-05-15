@@ -1,8 +1,5 @@
--- Suppress wrong warning on default instance for default `cursor` method.
--- TODO: Check if GHC bug reported on that.
-{-# OPTIONS_GHC -Wno-redundant-constraints  #-}
-
 {-# LANGUAGE TemplateHaskell, DefaultSignatures, DerivingVia #-}
+{-# LANGUAGE FlexibleContexts, ConstraintKinds #-}
 
 module GUI.Momentu.State
     ( VirtualCursor(..), vcRect
@@ -12,13 +9,14 @@ module GUI.Momentu.State
     , update
     , updateCursor, fullUpdate
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
-    , HasState(..), readWidgetState, updateWidgetState
+    , HasState, readWidgetState, updateWidgetState
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Extended (Binary, decodeOrFail, encodeS)
 import           Data.ByteString.Extended as BS
+import           Data.Has (Has(..))
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           GUI.Momentu.Animation.Id (AnimId)
@@ -65,22 +63,22 @@ updateCursor c = mempty { _uCursor = Just c & Monoid.Last }
 fullUpdate :: GUIState -> Update
 fullUpdate (GUIState c s) = updateCursor c & uWidgetStateUpdates .~ s
 
-update :: HasState env => Update -> env -> env
+update :: Has GUIState env => Update -> env -> env
 update u s =
     case u ^? uCursor . Lens._Wrapped . Lens._Just of
     Nothing -> s
     Just c ->
         s
-        & state . sCursor .~ c
-        & state . sWidgetStates %~ Map.filterWithKey f
+        & has . sCursor .~ c
+        & has . sWidgetStates %~ Map.filterWithKey f
         where
             f k _v = Id.subId k c & Lens.has Lens._Just
-    & state . sWidgetStates %~ mappend (u ^. uWidgetStateUpdates)
+    & has . sWidgetStates %~ mappend (u ^. uWidgetStateUpdates)
 
 class HasCursor env where
     cursor :: Lens' env Id
-    default cursor :: HasState env => Lens' env Id
-    cursor = state . sCursor
+    default cursor :: Has GUIState env => Lens' env Id
+    cursor = has . sCursor
 
 instance HasCursor GUIState where cursor = sCursor
 
@@ -114,16 +112,13 @@ assignCursorPrefix srcFolder dest =
 -- TODO: Currently widget state is cleaned for widgets whose id isn't prefix of the cursor.
 -- Consider allowing all widgets to store state which are cleaned when not access while generating root widget.
 -- That would put more restrictions on the root widget monad.
-class HasCursor env => HasState env where
-    state :: Lens' env GUIState
-
-instance HasState GUIState where state = id
+type HasState env = (HasCursor env, Has GUIState env)
 
 readWidgetState ::
-    (HasState env, MonadReader env m, Binary a) =>
+    (Has GUIState env, MonadReader env m, Binary a) =>
     Id -> m (Maybe a)
 readWidgetState wid =
-    Lens.view (state . sWidgetStates . Lens.at wid) <&> (>>= f)
+    Lens.view (has . sWidgetStates . Lens.at wid) <&> (>>= f)
     where
         f x = decodeOrFail (BS.lazify x) ^? Lens._Right . _3
 

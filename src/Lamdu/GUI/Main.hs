@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -93,7 +93,7 @@ layout themeNames langNames settingsProp =
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
         theTheme <- Lens.view Theme.theme
         fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
-        state <- Lens.view GuiState.state
+        state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
         (gotoDefinition, codeEdit) <-
             CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)

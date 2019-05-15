@@ -105,7 +105,7 @@ newtype ExprGuiM i (o :: * -> *) a =
 Lens.makeLenses ''Askable
 
 instance GuiState.HasCursor (Askable i o)
-instance GuiState.HasState (Askable i o) where state = aState
+instance Has GUIState (Askable i o) where has = aState
 instance Has TextView.Style (Askable i o) where has = aTextEditStyle . has
 instance TextEdit.HasStyle (Askable i o) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
@@ -221,7 +221,7 @@ run ::
 run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     runReaderT action
     Askable
-    { _aState = env ^. GuiState.state
+    { _aState = env ^. has
     , _aTextEditStyle = env ^. TextEdit.style
     , _aStdSpacing = env ^. Spacer.stdSpacing
     , _aAnimIdPrefix = ["outermost"]
