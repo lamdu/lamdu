@@ -12,7 +12,7 @@ module GUI.Momentu.Widgets.TextEdit
     , defaultStyle
     , getCursor, encodeCursor
     , Texts(..), textEdit, textDelete, textInsert
-    , HasTexts(..)
+    , HasTexts
     ) where
 
 import qualified Control.Lens as Lens
@@ -68,10 +68,8 @@ data Texts a = Texts
 
 JsonTH.derivePrefixed "_text" ''Texts
 
-class
-    ( Has (Dir.Texts Text) env, Has Dir.Layout env
-    ) => HasTexts env where
-    texts :: Lens' env (Texts Text)
+type HasTexts env =
+    (Has (Dir.Texts Text) env, Has Dir.Layout env, Has (Texts Text) env)
 
 Lens.makeLenses ''Texts
 
@@ -236,7 +234,7 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    HasTexts env =>
+    (Has (Texts Text) env, Has (Dir.Texts Text) env) =>
     env -> Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
 eventMap txt cursor str myId _eventContext =
@@ -270,25 +268,25 @@ eventMap txt cursor str myId _eventContext =
         | cursorY < lineCount - 1 ],
 
         [ moveRelative (-cursorX)
-            & keys (moveDoc [texts.textBeginningOfLine]) homeKeys
+            & keys (moveDoc [has . textBeginningOfLine]) homeKeys
         | cursorX > 0 ],
 
         [ moveRelative (Text.length curLineAfter)
-            & keys (moveDoc [texts.textEndOfLine]) endKeys
+            & keys (moveDoc [has . textEndOfLine]) endKeys
         | not . Text.null $ curLineAfter ],
 
-        [ moveAbsolute 0 & keys (moveDoc [texts.textBeginningOfText]) homeKeys
+        [ moveAbsolute 0 & keys (moveDoc [has . textBeginningOfText]) homeKeys
         | cursorX == 0 && cursor > 0 ],
 
         [ moveAbsolute textLength
-            & keys (moveDoc [texts.textEndOfText]) endKeys
+            & keys (moveDoc [has . textEndOfText]) endKeys
         | Text.null curLineAfter && cursor < textLength ],
 
         [ backDelete 1
-            & keys (deleteDoc [texts.textBackward]) [noMods MetaKey.Key'Backspace]
+            & keys (deleteDoc [has . textBackward]) [noMods MetaKey.Key'Backspace]
         | cursor > 0 ],
 
-        [ keys (deleteDoc [texts.textWord, texts.textBackward]) [ctrl MetaKey.Key'W]
+        [ keys (deleteDoc [has . textWord, has . textBackward]) [ctrl MetaKey.Key'W]
             backDeleteWord
         | cursor > 0 ],
 
@@ -300,51 +298,51 @@ eventMap txt cursor str myId _eventContext =
 
         in
 
-        [ keys (editDoc [texts.textSwapLetters]) [ctrl MetaKey.Key'T]
+        [ keys (editDoc [has . textSwapLetters]) [ctrl MetaKey.Key'T]
             swapLetters
         | cursor > 0 && textLength >= 2 ],
 
         [ delete 1
-            & keys (deleteDoc [texts.textForward]) [noMods MetaKey.Key'Delete]
+            & keys (deleteDoc [has . textForward]) [noMods MetaKey.Key'Delete]
         | cursor < textLength ],
 
-        [ keys (deleteDoc [texts.textWord, texts.textForward]) [alt MetaKey.Key'D]
+        [ keys (deleteDoc [has . textWord, has . textForward]) [alt MetaKey.Key'D]
             deleteWord
         | cursor < textLength ],
 
         [ delete (Text.length curLineAfter)
-            & keys (deleteDoc [texts.textTill, texts.textEndOfLine])
+            & keys (deleteDoc [has . textTill, has . textEndOfLine])
             [ctrl MetaKey.Key'K]
         | not . Text.null $ curLineAfter ],
 
-        [ delete 1 & keys (deleteDoc [texts.textNewline]) [ctrl MetaKey.Key'K]
+        [ delete 1 & keys (deleteDoc [has . textNewline]) [ctrl MetaKey.Key'K]
         | Text.null curLineAfter && cursor < textLength ],
 
         [ backDelete (Text.length curLineBefore)
-            & keys (deleteDoc [texts.textTill, texts.textBeginningOfLine])
+            & keys (deleteDoc [has . textTill, has . textBeginningOfLine])
             [ctrl MetaKey.Key'U]
         | not . Text.null $ curLineBefore ],
 
         [ E.filterChars (`notElem` (" \n" :: String)) .
-            E.allChars "Character" (insertDoc [texts.textCharacter]) $
+            E.allChars "Character" (insertDoc [has . textCharacter]) $
             insert . Text.singleton
         ],
 
-        [ keys (insertDoc [texts.textNewline])
+        [ keys (insertDoc [has . textNewline])
             [noMods MetaKey.Key'Enter, ModKey.shift MetaKey.Key'Enter] (insert "\n") ],
 
-        [ keys (insertDoc [texts.textSpace])
+        [ keys (insertDoc [has . textSpace])
             [noMods MetaKey.Key'Space, ModKey.shift MetaKey.Key'Space] (insert " ") ],
 
         [ E.pasteOnKey (cmd MetaKey.Key'V)
-            (toDoc [texts.textClipboard, texts.textPaste]) insert ]
+            (toDoc [has . textClipboard, has . textPaste]) insert ]
 
         ]
     where
-        editDoc = toDoc . (texts.textEdit :)
-        deleteDoc = editDoc . (texts.textDelete :)
-        insertDoc = editDoc . (texts.textInsert :)
-        moveWordDoc = moveDoc . (texts.textWord :)
+        editDoc = toDoc . (has . textEdit :)
+        deleteDoc = editDoc . (has . textDelete :)
+        insertDoc = editDoc . (has . textInsert :)
+        moveWordDoc = moveDoc . (has . textWord :)
         toDoc = E.toDoc txt
         moveDoc =
             toDoc

@@ -92,7 +92,6 @@ instance Has Dir.Layout Env where has = language . has
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance Choice.HasTexts Env where texts = language . Choice.texts
-instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance Grid.HasTexts Env where texts = language . Grid.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Language.HasLanguage Env where language = language

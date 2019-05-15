@@ -125,7 +125,6 @@ instance Glue.HasTexts (Askable i o) where texts = language . Glue.texts
 instance SearchMenu.HasTexts (Askable i o) where texts = language . SearchMenu.texts
 instance Grid.HasTexts (Askable i o) where texts = language . Grid.texts
 instance Choice.HasTexts (Askable i o) where texts = language . Choice.texts
-instance TextEdit.HasTexts (Askable i o) where texts = language . TextEdit.texts
 instance Has LangId (Askable i o) where has = language . has
 instance Language.HasLanguage (Askable i o) where language = aLanguage
 instance Has (t Text) Language => Has (t Text) (Askable i o) where has = language . has
