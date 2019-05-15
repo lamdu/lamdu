@@ -43,7 +43,7 @@ instance HasConfigFolder Language where
 class
     ( Glue.HasTexts env, Has (Dir.Texts Text) env, Choice.HasTexts env
     , TextEdit.HasTexts env, Grid.HasTexts env, Has (NameTexts Text) env
-    , Menu.HasTexts env, SearchMenu.HasTexts env, Has LangId env
+    , Has (Menu.Texts Text) env, SearchMenu.HasTexts env, Has LangId env
     ) => HasLanguage env where
     language :: Lens' env Language
 instance EventMap.HasTexts Language where texts = lTexts . eventMap
@@ -51,7 +51,7 @@ instance EventMap.HasTexts Language where texts = lTexts . eventMap
 instance Has Dir.Layout Language where has = lDirection
 instance Has (Dir.Texts Text) Language where has = lTexts . dir
 instance Glue.HasTexts Language where texts = lTexts . glue
-instance Menu.HasTexts Language where texts = lTexts . menu
+instance Has (Menu.Texts Text) Language where has = lTexts . menu
 instance SearchMenu.HasTexts Language where texts = lTexts . searchMenu
 instance Grid.HasTexts Language where texts = lTexts . grid
 instance Choice.HasTexts Language where texts = lTexts . choice

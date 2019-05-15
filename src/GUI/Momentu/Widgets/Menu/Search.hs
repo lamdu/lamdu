@@ -43,6 +43,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -72,7 +73,7 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
 
-class Menu.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+class Has (Menu.Texts Text) env => HasTexts env where texts :: Lens' env (Texts Text)
 
 -- | Context necessary for creation of menu items for a search.
 data ResultsContext = ResultsContext
@@ -308,7 +309,7 @@ enterWithSearchTerm searchTerm myId =
 make ::
     ( MonadReader env m, Applicative f, HasState env, Has Menu.Config env
     , Has TextView.Style env, Has Hover.Style env, Element.HasAnimIdPrefix env
-    , Menu.HasTexts env
+    , Has (Menu.Texts Text) env, Glue.HasTexts env
     ) =>
     (Menu.PickFirstResult f -> m (Term f)) ->
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
