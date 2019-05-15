@@ -54,7 +54,6 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
@@ -179,11 +178,14 @@ makeScopeNavArrow setScope arrowText mScopeId =
                 validate _ _ = res (pure mempty)
 
 blockEventMap ::
-    (Language.HasLanguage env, Applicative m) => env -> Gui EventMap m
+    ( Has (Texts.Navigation Text) env
+    , Has (MomentuTexts.Texts Text) env
+    , Applicative m
+    ) => env -> Gui EventMap m
 blockEventMap env =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
-    (E.toDoc (env ^. Language.texts)
+    (E.toDoc env
         [ has . MomentuTexts.navigation, has . MomentuTexts.move
         , has . Texts.blocked
         ])

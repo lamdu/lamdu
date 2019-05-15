@@ -23,7 +23,6 @@ import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -31,13 +30,16 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 parentExprFDConfig ::
-    (MonadReader env m, Has Config env, Language.HasLanguage env) =>
+    ( MonadReader env m, Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     m FocusDelegator.Config
 parentExprFDConfig =
     Lens.view id <&>
     \env ->
     let doc lens =
-            E.toDoc (env ^. Language.texts)
+            E.toDoc env
             [has . MomentuTexts.navigation, has . lens]
     in
     FocusDelegator.Config
@@ -62,7 +64,9 @@ stdWrap pl =
 
 parentDelegator ::
     ( HasCallStack, MonadReader env m, Has Config env
-    , GuiState.HasCursor env, Language.HasLanguage env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.Navigation Text) env
+    , GuiState.HasCursor env
     , Applicative o
     ) => Widget.Id ->
     m (Gui Responsive o -> Gui Responsive o)

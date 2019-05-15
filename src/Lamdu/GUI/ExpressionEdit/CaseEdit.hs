@@ -41,21 +41,21 @@ import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 doc ::
-    Language.HasLanguage env =>
+    ( Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
 doc env lens =
     E.toDoc env
     [ has . MomentuTexts.edit
-    , has . CodeUI.caseLabel
+    , has . Texts.caseLabel
     , has . lens
     ]
 
@@ -108,7 +108,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
                 addAltId altsId
                 & pure
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
-                    (doc env CodeUI.addAlt)
+                    (doc env Texts.addAlt)
         stdWrapParentExpr pl
             <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
@@ -214,33 +214,49 @@ makeOpenCase actions rest animId altsGui =
             altsGui restExpr & pure
 
 openCaseEventMap ::
-    (Has Config env, Language.HasLanguage env, Monad o) =>
+    ( Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    , Monad o
+    ) =>
     env -> Sugar.OpenCompositeActions o ->
     Gui EventMap o
 openCaseEventMap env (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys env) (doc env CodeUI.close)
+    & E.keysEventMapMovesCursor (Config.delKeys env) (doc env Texts.close)
 
 closedCaseEventMap ::
-    (Has Config env, Language.HasLanguage env, Monad o) =>
+    ( Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    , Monad o
+    ) =>
     env -> Sugar.ClosedCompositeActions o ->
     Gui EventMap o
 closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env CodeUI.open)
+    & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env Texts.open)
 
 caseDelEventMap ::
-    (Has Config env, Language.HasLanguage env, Monad o) =>
+    ( Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    , Monad o
+    ) =>
     env -> o Sugar.EntityId -> Gui EventMap o
 caseDelEventMap env delete =
     delete <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)
-    (doc env CodeUI.deleteAlt)
+    (doc env Texts.deleteAlt)
 
 toLambdaCaseEventMap ::
-    (Has Config env, Language.HasLanguage env, Monad o) =>
+    ( Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    , Monad o
+    ) =>
     env -> o Sugar.EntityId -> Gui EventMap o
 toLambdaCaseEventMap env toLamCase =
     toLamCase <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)
-    (doc env CodeUI.toLambdaCase)
+    (doc env Texts.toLambdaCase)

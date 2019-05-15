@@ -31,9 +31,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.CodeUI (CodeUI)
-import qualified Lamdu.I18N.CodeUI as CodeUI
-import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -53,10 +51,13 @@ responsiveLiftA3 f x y z =
     }
 
 fragmentDoc ::
-    Language.HasLanguage env => env -> Lens.ALens' (CodeUI Text) Text -> E.Doc
+    ( Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
+    env -> Lens.ALens' env Text -> E.Doc
 fragmentDoc env lens =
     E.toDoc env
-    [has . MomentuTexts.edit, has . CodeUI.fragment, has . lens]
+    [has . MomentuTexts.edit, has . Texts.fragment, lens]
 
 make ::
     (Monad i, Monad o) =>
@@ -110,12 +111,12 @@ make fragment pl =
                     & HoleWidgetIds.hidOpen & pure
                     & E.keysEventMapMovesCursor
                     (env ^. has . Config.healKeys)
-                    (fragmentDoc env CodeUI.showResults)
+                    (fragmentDoc env (has . Texts.showResults))
                 Sugar.HealAction heal ->
                     heal <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
                         (Config.delKeys env <> env ^. has . Config.healKeys)
-                        (fragmentDoc env CodeUI.heal)
+                        (fragmentDoc env (has . Texts.heal))
         isInAHole <- ExprGuiM.isHoleResult
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow

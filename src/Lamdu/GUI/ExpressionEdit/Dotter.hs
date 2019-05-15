@@ -29,6 +29,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -36,15 +37,17 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.CodeUI as CodeUI
-import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 add ::
     ( MonadReader env m, Applicative o, Has TextView.Style env, Has Config env
-    , Language.HasLanguage env, Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env
+    , Has (Texts.CodeUI Text) env
+    , Has (Grid.Texts Text) env
+    , Glue.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -68,8 +71,10 @@ add pl =
             }
 
 eventMap ::
-    ( MonadReader env m, Has Config env, Language.HasLanguage env
+    ( MonadReader env m, Has Config env
     , Applicative o
+    , Has (Texts.CodeUI Text) env
+    , Grid.HasTexts env
     ) =>
     m (Sugar.Payload name i o expr -> Gui EventMap o)
 eventMap =
@@ -83,7 +88,8 @@ eventMap =
 with ::
     ( MonadReader env m, Applicative o, GuiState.HasCursor env
     , Has TextView.Style env, Has Config env, Element.HasAnimIdPrefix env
-    , Language.HasLanguage env
+    , Has (Texts.CodeUI Text) env
+    , Grid.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)
@@ -99,11 +105,14 @@ with pl =
 -- | Pressing alpha char transforms the dotted expr into a fragment
 -- with '.<char>' as the search term
 fragmentEventMap ::
-    (Language.HasLanguage env, Applicative o) =>
+    ( Applicative o
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     env -> Sugar.Payload name i o expr -> Gui EventMap o
 fragmentEventMap env pl =
     E.charEventMap "Letter"
-    (E.toDoc env [has . MomentuTexts.edit, has . CodeUI.getField])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.getField])
     getField
     where
         detach (Sugar.FragmentAlready entityId) = pure entityId
@@ -119,7 +128,8 @@ fragmentEventMap env pl =
 
 delDotEventMap ::
     ( MonadReader env m, Has Config env, Applicative f
-    , Language.HasLanguage env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
     ) =>
     m (Widget.Id -> Gui EventMap f)
 delDotEventMap =
@@ -128,11 +138,12 @@ delDotEventMap =
     \(env, delKeys) widgetId ->
     pure widgetId
     & E.keysEventMapMovesCursor delKeys
-    (E.toDoc env [has . MomentuTexts.edit, has . CodeUI.deleteDot])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.deleteDot])
 
 addEventMap ::
     ( Applicative f, Widget.HasWidget w, MonadReader env m
-    , Language.HasLanguage env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
     ) =>
     m (Widget.Id -> Gui w f -> Gui w f)
 addEventMap =
@@ -144,5 +155,5 @@ addEventMap =
         gotoDotter =
             WidgetIds.dotterId myId & GuiState.updateCursor & pure & const
             & E.charGroup Nothing
-            (E.toDoc env [has . MomentuTexts.edit, has . CodeUI.dot]) "."
+            (E.toDoc env [has . MomentuTexts.edit, has . Texts.dot]) "."
     in  Widget.weakerEventsWithContext f
