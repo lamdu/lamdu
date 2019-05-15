@@ -32,7 +32,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.Definitions as Definitions
-import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -68,7 +67,7 @@ makeLetEdit item =
                 <>
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
-                    (E.toDoc (env ^. Language.texts)
+                    (E.toDoc env
                         [ has . MomentuTexts.navigation
                         , has . Texts.jumpToFirstUse
                         ])
