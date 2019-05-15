@@ -11,6 +11,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
+import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -19,6 +20,9 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -33,10 +37,12 @@ make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <- ExprGuiM.makeSubexpression recExpr
         dotLabel <- Label.make "." & Styled.grammar
-        config <- Lens.view Config.config
+        env <- Lens.view id
         let mkDelEventMap del =
                 del <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config) (E.Doc ["Edit", "Delete"])
+                & E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
+                (E.toDoc env
+                    [Language.edit, Language.texts . Texts.codeUI . CodeUI.delete])
         let delEventMap =
                 recExpr ^. ann . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
