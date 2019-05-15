@@ -10,23 +10,26 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property, composeLens)
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.Label as Label
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Ann
-import qualified Lamdu.Config as Config
 import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection, _Selection)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Language (Language, HasLanguage)
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 
@@ -61,8 +64,11 @@ unlabeledHeader switchLens categoryLens =
 
 makeAnnotationsSwitcher ::
     ( MonadReader env m, Applicative f
-    , Has Config env, Has Theme env, HasLanguage env
+    , Has Config env, Has Theme env
     , Has TextView.Style env
+    , Has (Texts.StatusBar Text) env
+    , Has (Choice.Texts Text) env
+    , Glue.HasTexts env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
     Property f Ann.Mode -> m (StatusBar.StatusWidget f)
@@ -72,15 +78,19 @@ makeAnnotationsSwitcher annotationModeProp =
         [ (Ann.Evaluation, OneOf Texts.sbEvaluation)
             , (Ann.Types, OneOf Texts.sbTypes)
             , (Ann.None, OneOf Texts.sbNone)
-            ] <&> (_2 %~ \(OneOf lens) -> mk (OneOf (Texts.statusBar . lens)))
+            ] <&> (_2 %~ \(OneOf lens) -> mk (OneOf lens))
             & StatusBar.makeSwitchStatusWidget
             (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
             Config.nextAnnotationModeKeys annotationModeProp
 
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
-    , Has Config env, Has Theme env, HasStdSpacing env, HasLanguage env
+    , Has Config env, Has Theme env, HasStdSpacing env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
+    , Has (Choice.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.StatusBar Text) env
+    , Glue.HasTexts env
     ) =>
     [Selection Theme] -> [Selection Language] ->
     Property f Settings -> m (StatusWidgets f)
@@ -107,7 +117,7 @@ makeStatusWidgets themeNames langNames prop =
             [ (HelpNotShown, OneOf Texts.hidden)
             , (HelpShown, OneOf Texts.shown)
             ] <&>
-            _2 %~ \(OneOf lens) -> mk (OneOf (Texts.codeUI . lens))
+            _2 %~ \(OneOf lens) -> mk (OneOf lens)
         themeProp = composeLens (Settings.sSelectedTheme . _Selection) prop
         langProp = composeLens (Settings.sSelectedLanguage . _Selection) prop
         helpProp = composeLens Settings.sHelpShown prop

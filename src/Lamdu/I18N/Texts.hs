@@ -15,7 +15,6 @@ module Lamdu.I18N.Texts
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           GUI.Momentu.Animation.Id (ElemIds)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
@@ -67,8 +66,6 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
-instance ElemIds Texts
-
 instance Has (EventMap.Texts     Text) (Texts Text) where has = eventMap
 instance Has (Dir.Texts          Text) (Texts Text) where has = dir
 instance Has (Glue.Texts         Text) (Texts Text) where has = glue
@@ -79,9 +76,12 @@ instance Has (Choice.Texts       Text) (Texts Text) where has = choice
 instance Has (TextEdit.Texts     Text) (Texts Text) where has = textEdit
 instance Has (MainLoop.Texts     Text) (Texts Text) where has = mainLoop
 instance Has (Zoom.Texts         Text) (Texts Text) where has = zoom
+instance Has (StatusBar          Text) (Texts Text) where has = statusBar
+instance Has (Collaboration      Text) (Texts Text) where has = collaborationTexts
 instance Has (Name               Text) (Texts Text) where has = name
 instance Has (Navigation         Text) (Texts Text) where has = navigationTexts
 instance Has (Versioning         Text) (Texts Text) where has = versioning
+instance Has (Code               Text) (Texts Text) where has = code
 instance Has (CodeUI             Text) (Texts Text) where has = codeUI
 instance Has (Definitions        Text) (Texts Text) where has = definitions
 instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts

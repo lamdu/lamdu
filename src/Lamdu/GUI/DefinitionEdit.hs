@@ -47,7 +47,7 @@ undeleteButton undelete =
                 , has . Texts.def
                 , has . Texts.undelete
                 ]
-        Styled.actionable actionId (Texts.definitions . Texts.undeleteButton)
+        Styled.actionable actionId Texts.undeleteButton
             doc undelete
 
 makeExprDefinition ::

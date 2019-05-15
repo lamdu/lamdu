@@ -31,8 +31,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -57,13 +56,13 @@ mkLhsEdits =
 
 mkExpanded ::
     ( Monad o, MonadReader env f, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Language.HasLanguage env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
     f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
 mkExpanded =
     (,)
     <$> mkLhsEdits
-    <*> (grammar (label (Texts.code . Texts.arrow)) <&> Responsive.fromTextView)
+    <*> (grammar (label Texts.arrow) <&> Responsive.fromTextView)
     <&> \(lhsEdits, labelEdit) mParamsEdit mScopeEdit ->
     lhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
 
@@ -73,7 +72,7 @@ lamId = (`Widget.joinId` ["lam"])
 mkShrunk ::
     ( Monad o, MonadReader env f, Has Config env, Has Theme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Language.HasLanguage env
+    , Has (Texts.Code Text) env, Glue.HasTexts env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
@@ -88,7 +87,7 @@ mkShrunk paramIds myId =
         theme <- Lens.view has
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
-            <*> grammar (label (Texts.code . Texts.lam))
+            <*> grammar (label Texts.lam)
             <&> Responsive.fromWithTextPos
             & Reader.local (TextView.underline ?~ LightLambda.underline theme)
         addScopeEd <- addScopeEdit
@@ -100,7 +99,7 @@ mkShrunk paramIds myId =
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Has TextView.Style env, Has Theme env
-    , Has Config env, Language.HasLanguage env
+    , Has Config env, Has (Texts.Code Text) env, Glue.HasTexts env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f

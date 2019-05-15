@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -44,7 +45,6 @@ import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as CodeTexts
 import qualified Lamdu.I18N.CodeUI as CodeUITexts
-import           Lamdu.I18N.Language (HasLanguage)
 import qualified Lamdu.I18N.Navigation as NavTexts
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
@@ -143,7 +143,8 @@ withFd =
 textEdit ::
     ( MonadReader env m, Has Config env, HasStyle env, Has Menu.Config env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , HasLanguage env
+    , Glue.HasTexts env, TextEdit.HasTexts env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
     Property o Text ->
@@ -153,11 +154,11 @@ textEdit prop pl =
     do
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         (withFd ?? myId) <*>
-            label (Texts.code . CodeTexts.textOpener)
+            label CodeTexts.textOpener
             /|/ pure text
             /|/ ((Align.tValue %~)
                     <$> (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
-                    <*> label (Texts.code . CodeTexts.textCloser)
+                    <*> label CodeTexts.textCloser
                 )
     & withStyle Style.text
     where

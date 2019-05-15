@@ -11,12 +11,14 @@ import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
@@ -42,8 +44,11 @@ import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Collaboration as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -67,7 +72,9 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    (Language.HasLanguage env, Functor m) =>
+    ( Functor m
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
+    ) =>
     env -> Sugar.Payload name i (T m) a -> [MetaKey] -> Gui EventMap (T m)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
@@ -75,10 +82,13 @@ extractEventMap env pl keys =
     where
         doc =
             E.toDoc env
-            [has . Texts.edit, has . Texts.extractReplToDef]
+            [has . MomentuTexts.edit, has . Texts.extractReplToDef]
 
 replEventMap ::
-    (Monad m, Has Config env, Language.HasLanguage env) =>
+    ( Monad m
+    , Has Config env, Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
+    , Has (Texts.Collaboration Text) env
+    ) =>
     env -> ExportRepl m -> Sugar.Payload name i (T m) a ->
     Gui EventMap (IOTrans m)
 replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
@@ -86,12 +96,12 @@ replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
     [ extractEventMap env replExprPl (env ^. has . Config.extractKeys)
         <&> IOTrans.liftTrans
     , E.keysEventMap (exportConfig ^. Config.exportKeys)
-      (toDoc [Texts.collaboration, Texts.exportReplToJSON]) exportRepl
+      (toDoc [Texts.exportReplToJSON]) exportRepl
     , E.keysEventMap (exportConfig ^. Config.exportFancyKeys)
-      (toDoc [Texts.collaboration, Texts.exportReplToJS]) exportFancy
+      (toDoc [Texts.exportReplToJS]) exportFancy
     ]
     where
-        toDoc = E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
+        toDoc = E.toDoc (env ^. has)
         exportConfig = env ^. has . Config.export
 
 indicatorColor ::
@@ -116,8 +126,10 @@ compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
 compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
 
 errorDesc ::
-    ( MonadReader env m, Has Theme env, Language.HasLanguage env
+    ( MonadReader env m, Has Theme env
     , Element.HasAnimIdPrefix env, Has TextView.Style env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
     ) =>
     Sugar.Error -> m (Align.WithTextPos View)
 errorDesc err =
@@ -125,9 +137,9 @@ errorDesc err =
         errorColor <- Lens.view (has . Theme.errorColor)
         case err of
             Sugar.CompiledError cErr ->
-                label (Texts.codeUI . compiledErrorDesc cErr)
+                label (compiledErrorDesc cErr)
             Sugar.RuntimeError exc ->
-                label (Texts.codeUI . Texts.jsException)
+                label Texts.jsException
                 /|/ ((TextView.make ?? exc)
                         <*> (Element.subAnimId ?? ["exception text"]))
             & Reader.local (TextView.color .~ errorColor)
@@ -135,7 +147,9 @@ errorDesc err =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Has Hover.Style env, GuiState.HasCursor env
-    , Has Theme env, Has Config env, Glue.HasTexts env, Language.HasLanguage env
+    , Has Theme env, Has Config env, Glue.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Navigation Text) env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
@@ -144,8 +158,8 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
         actionKeys <- Lens.view (has . Config.actionKeys)
         env <- Lens.view id
         let jumpDoc =
-                E.toDoc (env ^. Language.texts)
-                [Texts.navigation, Texts.navigationTexts . Texts.jumpToError]
+                E.toDoc env
+                [has . Dir.navigation, has . Texts.jumpToError]
         let jumpEventMap j =
                 j <&> dest
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
@@ -192,14 +206,18 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Has Hover.Style env
-    , Has Theme env, Has Config env, Language.HasLanguage env
+    , Has Theme env, Has Config env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Navigation Text) env
+    , Glue.HasTexts env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))
 resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
-        toDoc <- Lens.view (Language.texts . Texts.definitions) <&> E.toDoc
+        toDoc <- Lens.view has <&> E.toDoc
         case varInfo of
             Sugar.VarAction ->
                 do
@@ -238,7 +256,7 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             <*>
             sequence
             [ (Widget.makeFocusableView ?? replSymId <&> (Align.tValue %~))
-              <*> label (Texts.code . Texts.repl)
+              <*> label Texts.repl
               <&> Lens.mapped %~ Widget.weakerEvents extractEvents
               <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result

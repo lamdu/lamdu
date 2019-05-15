@@ -18,6 +18,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
@@ -48,11 +49,11 @@ import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.CodeUI as CodeUI
-import qualified Lamdu.I18N.Definitions as Definitions
-import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
@@ -74,7 +75,8 @@ makeSimpleView color name myId =
 makeParamsRecord ::
     ( MonadReader env m, Has Theme env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
-    , Language.HasLanguage env, Applicative f
+    , Glue.HasTexts env, Has (Texts.Code Text) env, Has (Texts.Name Text) env
+    , Applicative f
     ) =>
     Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Gui Responsive f)
 makeParamsRecord myId paramsRecordVar =
@@ -82,7 +84,7 @@ makeParamsRecord myId paramsRecordVar =
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
         (Options.box ?? Options.disambiguationNone)
             <*> sequence
-            [ grammar (label (Texts.code . Texts.paramsRecordOpener)) <&> Responsive.fromTextView
+            [ grammar (label Texts.paramsRecordOpener) <&> Responsive.fromTextView
             , (Options.boxSpaced ?? Options.disambiguationNone)
               <*>
               ( fieldNames
@@ -96,7 +98,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , grammar (label (Texts.code . Texts.paramsRecordCloser)) <&> Responsive.fromTextView
+            , grammar (label Texts.paramsRecordCloser) <&> Responsive.fromTextView
             ] <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
@@ -127,11 +129,9 @@ addInfixMarker widgetId =
 data Role = Normal | Infix deriving Eq
 
 navDoc ::
-    Language.HasLanguage env =>
+    (Has (Dir.Texts Text) env, Has (Texts.Navigation Text) env) =>
     env -> Lens.ALens' (Texts.Navigation Text) Text -> E.Doc
-navDoc env lens =
-    E.toDoc (env ^. Language.texts)
-    [Texts.navigation, Texts.navigationTexts . lens]
+navDoc env lens = E.toDoc env [has . Dir.navigation, has . lens]
 
 makeNameRef ::
     (Monad i, Monad o) =>
@@ -165,13 +165,17 @@ makeNameRef role color myId nameRef =
         nameId = Widget.joinId myId ["name"]
 
 makeInlineEventMap ::
-    (Has Config env, Language.HasLanguage env, Applicative f) =>
+    ( Has Config env, Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env, Has (Dir.Texts Text) env
+    , Has (Texts.Navigation Text) env
+    , Applicative f
+    ) =>
     env -> Sugar.BinderVarInline f ->
     Gui EventMap f
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
-      (E.toDoc env [has . Texts.edit, has . CodeUI.inline])
+      (E.toDoc env [has . MomentuTexts.edit, has . Texts.inline])
 makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
@@ -179,10 +183,11 @@ makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    ( MonadReader env m
-    , Element.HasAnimIdPrefix env
+    ( MonadReader env m, Glue.HasTexts env, Has (Texts.Code Text) env
+    , Element.HasAnimIdPrefix env, Has (Texts.Definitions Text) env
     , Spacer.HasStdSpacing env, Has Theme env, GuiState.HasCursor env
-    , Has Config env, Language.HasLanguage env
+    , Has Config env, Has (MomentuTexts.Texts Text) env
+    , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
@@ -192,13 +197,13 @@ definitionTypeChangeBox info getVarId =
         env <- Lens.view id
         let updateDoc =
                 E.toDoc env
-                [has . Texts.edit, has . Definitions.updateDefType]
-        oldTypeRow <- Styled.info (label (Texts.definitions . Texts.defUpdateWas))
+                [has . MomentuTexts.edit, has . Texts.updateDefType]
+        oldTypeRow <- Styled.info (label Texts.defUpdateWas)
         newTypeRow <-
-            Styled.actionable myId (Texts.definitions . Texts.defUpdateHeader)
+            Styled.actionable myId Texts.defUpdateHeader
             updateDoc update
             /|/ Spacer.stdHSpace
-            /|/ Styled.info (label (Texts.definitions . Texts.defUpdateTo))
+            /|/ Styled.info (label Texts.defUpdateTo)
 
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)
@@ -218,10 +223,12 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    ( MonadReader env m, Spacer.HasStdSpacing env
+    ( MonadReader env m, Spacer.HasStdSpacing env, Has (MomentuTexts.Texts Text) env
     , Has Theme env, Element.HasAnimIdPrefix env, Has Config env
-    , GuiState.HasCursor env, Has Hover.Style env
-    , Language.HasLanguage env, Applicative f
+    , GuiState.HasCursor env, Has Hover.Style env, Has (Texts.Definitions Text) env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env, Glue.HasTexts env
+    , Has (Texts.Name Text) env, Grid.HasTexts env
+    , Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->
     m (TextWidget f) ->
@@ -237,16 +244,16 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
                 (E.toDoc env
                     [ has . MomentuTexts.view
-                    , has . Definitions.typeUpdateDialog
-                    , has . CodeUI.show
+                    , has . Texts.typeUpdateDialog
+                    , has . Texts.show
                     ])
         let hideDialogEventMap =
                 pure hiddenId
                 & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
                 (E.toDoc env
                     [ has . MomentuTexts.view
-                    , has . Definitions.typeUpdateDialog
-                    , has . CodeUI.hide
+                    , has . Texts.typeUpdateDialog
+                    , has . Texts.hide
                     ])
         let underline = Underline
                 { _underlineColor = env ^. has . Theme.errorColor

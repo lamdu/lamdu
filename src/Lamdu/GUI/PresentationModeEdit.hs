@@ -19,16 +19,14 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
-import qualified Lamdu.I18N.Language as Language
-import           Lamdu.I18N.Texts (Texts)
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
+import qualified GUI.Momentu.Glue as Glue
 
 import           Lamdu.Prelude
 
-lens :: Sugar.SpecialArgs dummy -> Lens.Lens' (Texts a) a
+lens :: Sugar.SpecialArgs dummy -> Lens.Lens' (Texts.CodeUI a) a
 lens mode =
-    Texts.codeUI .
     case mode of
     Sugar.Verbose -> Texts.pModeVerbose
     Sugar.Object{} -> Texts.pModeOO
@@ -38,7 +36,10 @@ lens mode =
 make ::
     ( Applicative f, MonadReader env m, Has Theme env
     , Element.HasAnimIdPrefix env, Has TextView.Style env, GuiState.HasCursor env
-    , Has Hover.Style env, Language.HasLanguage env
+    , Has Hover.Style env
+    , Has (Texts.CodeUI Text) env
+    , Has (Choice.Texts Text) env
+    , Glue.HasTexts env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->
@@ -53,7 +54,7 @@ make myId (Sugar.Params params) prop =
                 (has . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
         defConfig <-
             Choice.defaultConfig
-            <*> Lens.view (Language.texts . Texts.codeUI . Texts.presentationMode)
+            <*> Lens.view (has . Texts.presentationMode)
         Choice.make ?? prop ?? pairs
             ?? defConfig ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)

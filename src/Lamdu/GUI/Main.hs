@@ -71,6 +71,7 @@ type Ctx env =
     , Has VCConfig.Config env, Has VCConfig.Theme env
     , Has Menu.Config env
     , Has SearchMenu.TermStyle env
+    , Has (Texts.StatusBar Text) env
     , Language.HasLanguage env
     )
 

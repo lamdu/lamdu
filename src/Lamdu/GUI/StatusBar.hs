@@ -12,9 +12,12 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
@@ -29,8 +32,10 @@ import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (info, label)
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
-import           Lamdu.I18N.Language (Language, HasLanguage)
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.StatusBar as Texts
+import qualified Lamdu.I18N.Versioning as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.VersionControl.Actions as VCActions
 
@@ -40,8 +45,15 @@ make ::
     ( MonadReader env m, MonadTransaction n m
     , TextEdit.HasStyle env, Has Theme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env
+    , Grid.HasTexts env
     , Has VCConfig.Config env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
-    , Has Config env, HasLanguage env
+    , Has Config env
+    , Has (Texts.StatusBar Text) env
+    , Has (Choice.Texts Text) env
+    , Has (Texts.Versioning Text) env
+    , Has (Texts.CodeUI Text) env
     ) =>
     StatusWidget (IOTrans n) ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings ->
@@ -50,7 +62,7 @@ make ::
 make gotoDefinition themeNames langNames settingsProp width vcActions =
     do
         branchSelector <-
-            info (label (Texts.statusBar . Texts.sbBranch))
+            info (label Texts.sbBranch)
             /|/ VersionControlGUI.makeBranchSelector IOTrans.liftTrans
                 transaction vcActions
             <&> StatusBar.fromWidget

@@ -36,9 +36,7 @@ import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label, OneOfT(..))
-import           Lamdu.I18N.Language (HasLanguage)
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.StatusBar as Texts
 
 import           Lamdu.Prelude
 
@@ -74,7 +72,7 @@ data Header w = Header
 
 type LabelConstraints env m =
     ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env, HasLanguage env
+    , Element.HasAnimIdPrefix env, Has (Texts.StatusBar Text) env
     )
 
 labelHeader ::
@@ -85,29 +83,35 @@ labelHeader switchTextLens textLens =
     Header
     { headerCategoryTextLens = textLens
     , headerSwitchTextLens = switchTextLens
-    , headerWidget = info (label (Texts.statusBar . textLens))
+    , headerWidget = info (label textLens)
     }
 
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Has Hover.Style env, GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env, HasLanguage env
+    , Element.HasAnimIdPrefix env
+    , Has (Choice.Texts Text) env
+    , Has (Texts.StatusBar Text) env
+    , Glue.HasTexts env
     ) =>
     OneOf Texts.StatusBar -> Property f a ->
     [(a, TextWidget f)] -> m (TextWidget f)
 makeChoice headerText prop choices =
     do
         defConf <- Choice.defaultConfig
-        text <- Lens.view (Language.texts . Texts.statusBar . headerText)
+        text <- Lens.view (has . headerText)
         Choice.make ?? prop ?? choices ?? defConf text ?? myId
     where
-        myId = Widget.Id ("status" : elemIds ^# Texts.statusBar . headerText)
+        myId = Widget.Id ("status" : elemIds ^# headerText)
 
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Element.HasAnimIdPrefix env
-    , GuiState.HasCursor env, Has Hover.Style env, HasLanguage env
+    , GuiState.HasCursor env, Has Hover.Style env
     , Glue.GluesTo env w (TextWidget f) (TextWidget f)
+    , Has (Choice.Texts Text) env
+    , Has (Texts.StatusBar Text) env
+    , Glue.HasTexts env
     ) =>
     Header (m w) -> Property f a -> [(a, TextWidget f)] -> m (TextWidget f)
 labeledChoice header prop choices =
@@ -115,9 +119,12 @@ labeledChoice header prop choices =
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
-    , Has Config env, HasLanguage env
+    , Has Config env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Has Hover.Style env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
+    , Has (Choice.Texts Text) env
+    , Has (Texts.StatusBar Text) env
+    , Glue.HasTexts env
     ) =>
     Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
     [(a, TextWidget f)] -> m (StatusWidget f)
@@ -125,13 +132,13 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
         keys <- Lens.view (has . keysGetter)
-        txt <- Lens.view (Language.texts . Texts.statusBar)
+        txt <- Lens.view has
         let e =
                 setVal newVal
                 & E.keysEventMap keys
-                (E.Doc
-                    [ txt ^. Texts.sbStatusBar
-                    , txt ^. headerSwitchTextLens header
+                (E.toDoc txt
+                    [ Texts.sbStatusBar
+                    , headerSwitchTextLens header
                     ])
         pure StatusWidget
             { _widget = w

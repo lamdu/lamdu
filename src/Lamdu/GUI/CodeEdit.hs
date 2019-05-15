@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
@@ -145,8 +146,8 @@ makePaneEdit theExportActions pane =
     do
         env <- Lens.view id
         let titledCodeDoc titleLenses texts =
-                E.toDoc (env ^. Language.texts)
-                (titleLenses ++ map (Texts.codeUI .) texts)
+                E.toDoc env
+                (titleLenses ++ map (has .) texts)
         let viewDoc = titledCodeDoc [has . Texts.view]
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
@@ -163,7 +164,7 @@ makePaneEdit theExportActions pane =
                     (viewDoc [Texts.pane, Texts.moveUp]))
                 , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
                   & E.keysEventMap exportKeys
-                    (E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
+                    (E.toDoc (env ^. has)
                         [Texts.collaboration, Texts.exportDefToJSON])
                 ] & mconcat
             defEventMap =
@@ -203,7 +204,10 @@ makeNewDefinition cp =
             & DataOps.newPublicDefinitionWithPane cp
     <&> WidgetIds.fromIRef
 
-newDefinitionDoc :: (Language.HasLanguage env, MonadReader env m) => m E.Doc
+newDefinitionDoc ::
+    ( MonadReader env m
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
+    ) => m E.Doc
 newDefinitionDoc =
     Lens.view id
     <&> (`E.toDoc` [has . Texts.edit, has . Texts.newDefinition])
@@ -216,8 +220,7 @@ makeNewDefinitionButton cp =
         newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
         newDefDoc <- newDefinitionDoc
         makeNewDefinition cp
-            >>= Styled.actionable newDefId
-            (Texts.definitions . Texts.newDefinitionButton) newDefDoc
+            >>= Styled.actionable newDefId Texts.newDefinitionButton newDefDoc
             <&> (^. Align.tValue)
 
 jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))
@@ -241,8 +244,7 @@ panesEventMap theExportActions cp gp replVarInfo =
             makeNewDefinition cp
             <&> E.keysEventMapMovesCursor
             (env ^. has . Config.pane . Config.newDefinitionKeys) newDefDoc
-        let collaborationDoc =
-                E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
+        let collaborationDoc = E.toDoc (env ^. has)
         mconcat
             [ newDefinitionEventMap <&> IOTrans.liftTrans
             , E.dropEventMap "Drag&drop JSON files"
@@ -251,8 +253,7 @@ panesEventMap theExportActions cp gp replVarInfo =
                 <&> fmap (\() -> mempty)
             , foldMap
               (E.keysEventMapMovesCursor (env ^. has . Config.previousCursorKeys)
-               (E.toDoc (env ^. Language.texts)
-                   [Texts.navigation, Texts.navigationTexts . Texts.goBack]))
+               (E.toDoc env [has . Texts.navigation, has . Texts.goBack]))
                 mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])
@@ -263,7 +264,7 @@ panesEventMap theExportActions cp gp replVarInfo =
             , case replVarInfo of
                 Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
-                    (E.toDoc (env ^. Language.texts) [Texts.definitions . Texts.execRepl])
+                    (E.toDoc (env ^. has) [Texts.execRepl])
                     (IOTrans.liftIO executeRepl)
                 _ -> mempty
             ] & pure

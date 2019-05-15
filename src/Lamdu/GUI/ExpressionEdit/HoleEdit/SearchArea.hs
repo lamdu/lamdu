@@ -19,6 +19,7 @@ import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -44,7 +45,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
-import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -117,7 +119,8 @@ makeResultOption pl ctx results =
 
 makeInferredTypeAnnotation ::
     ( MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Language.HasLanguage env
+    , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Glue.HasTexts env
+    , Has (Texts.Code Text) env
     ) =>
     Sugar.Payload (Name g) i o a0 -> m View
 makeInferredTypeAnnotation pl =

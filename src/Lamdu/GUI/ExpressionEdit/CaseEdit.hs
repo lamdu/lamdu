@@ -69,16 +69,16 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
-            <*> grammar (label (Texts.code . Texts.case_))
+            <*> grammar (label Texts.case_)
             <&> Responsive.fromWithTextPos
-        ofLabel <- grammar (label (Texts.code . Texts.of_)) <&> Responsive.fromTextView
+        ofLabel <- grammar (label Texts.of_) <&> Responsive.fromTextView
         env <- Lens.view id
         (mActiveTag, header) <-
             case mArg of
             Sugar.LambdaCase ->
                 do
                     lambdaLabel <-
-                        grammar (label (Texts.code . Texts.lam)) <&> Responsive.fromTextView
+                        grammar (label Texts.lam) <&> Responsive.fromTextView
                     Options.boxSpaced
                         ?? Options.disambiguationNone
                         ?? [caseLabel, lambdaLabel, ofLabel]
@@ -133,7 +133,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
                 <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                     then addBg
                     else id
-            ) /|/ grammar (label (Texts.code . Texts.inject)) /|/ Spacer.stdHSpace
+            ) /|/ grammar (label Texts.inject) /|/ Spacer.stdHSpace
         pure Responsive.TaggedItem
             { Responsive._tagPre = pre
             , Responsive._taggedItem = altExprGui
@@ -161,7 +161,7 @@ makeAltsWidget mActiveTag alts addAlt altsId =
         case existingAltWidgets ++ newAlts of
             [] ->
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
-                <*> grammar (label (Texts.code . Texts.absurd))
+                <*> grammar (label Texts.absurd)
                 <&> Responsive.fromWithTextPos
             altWidgtes -> Responsive.taggedList ?? altWidgtes
 

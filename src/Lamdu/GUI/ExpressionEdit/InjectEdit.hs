@@ -28,9 +28,7 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (text, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import           Lamdu.I18N.Texts (Texts)
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -38,8 +36,8 @@ import           Lamdu.Prelude
 
 injectIndicator ::
     ( MonadReader env f, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env, Language.HasLanguage env
-    ) => OneOf Texts -> f (WithTextPos View)
+    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
+    ) => OneOf Texts.Code -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)
 
 makeInject ::
@@ -62,7 +60,7 @@ makeInject val tag pl =
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
             ( TagEdit.makeVariantTag tag
-                /|/ injectIndicator (Texts.code . Texts.inject)
+                /|/ injectIndicator Texts.inject
                 <&> Lens.mapped %~ Widget.weakerEvents (foldMap replaceParentEventMap mReplaceParent)
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
@@ -92,7 +90,7 @@ makeNullaryInject nullary tag pl =
     True -> makeInject (emptyRec nullary) tag pl
     False ->
         stdWrapParentExpr pl <*>
-        (TagEdit.makeVariantTag tag /|/ injectIndicator (Texts.code . Texts.nullaryInject)
+        (TagEdit.makeVariantTag tag /|/ injectIndicator Texts.nullaryInject
             <&> Responsive.fromWithTextPos
             <&> Widget.weakerEvents expandNullaryVal)
     where

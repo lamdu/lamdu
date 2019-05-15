@@ -5,6 +5,7 @@ module Lamdu.I18N.CodeUI where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           GUI.Momentu.Animation.Id (ElemIds)
 
 import           Lamdu.Prelude
 
@@ -64,6 +65,7 @@ data CodeUI a = CodeUI
     , _scope :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
+    deriving anyclass ElemIds
     deriving Applicative via (Generically1 CodeUI)
 Lens.makeLenses ''CodeUI
 JsonTH.derivePrefixed "_" ''CodeUI

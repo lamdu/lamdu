@@ -41,8 +41,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -86,8 +85,8 @@ makeUnit pl =
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
         addFieldEventMap <- mkAddFieldEventMap myId
         stdWrap pl
-            <*> ( grammar (label (Texts.code . Texts.recordOpener))
-                    /|/ grammar (label (Texts.code . Texts.recordCloser))
+            <*> ( grammar (label Texts.recordOpener)
+                    /|/ grammar (label Texts.recordCloser)
                     <&> makeFocusable
                     <&> Align.tValue %~ Widget.weakerEvents
                         (addFieldEventMap <> addFieldWithSearchTermEventMap myId)
@@ -141,7 +140,8 @@ make (Sugar.Composite fields recordTail addField) pl =
 
 makeRecord ::
     ( MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Language.HasLanguage env, Applicative o
+    , Spacer.HasStdSpacing env, Applicative o
+    , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
     (Gui Responsive o -> m (Gui Responsive o)) ->
     [Gui Responsive.TaggedItem o] ->
@@ -149,7 +149,7 @@ makeRecord ::
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
-    ( grammar (label (Texts.code . Texts.recordOpener))
+    ( grammar (label Texts.recordOpener)
         /|/ (Responsive.taggedList
                 <*> addPostTags fieldGuis
                 >>= postProcess)
@@ -157,15 +157,15 @@ makeRecord postProcess fieldGuis =
 
 addPostTags ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Language.HasLanguage env
+    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
     ) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
 addPostTags items =
     do
         let f idx item =
                 ( if idx < lastIdx
-                    then label (Texts.code . Texts.recordSep)
-                    else label (Texts.code . Texts.recordCloser)
+                    then label Texts.recordSep
+                    else label Texts.recordCloser
                 ) & grammar
                 & Reader.local (Element.animIdPrefix %~ augmentId idx)
                 <&> \lbl -> item & Responsive.tagPost .~ (lbl <&> Widget.fromView)

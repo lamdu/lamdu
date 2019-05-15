@@ -119,7 +119,7 @@ mkRelayedArgs ::
 mkRelayedArgs args =
     do
         argEdits <- traverse (\(Ann a v) -> GetVarEdit.make (v ^. Lens._Wrapped) a) args
-        collapsed <- grammar (label (Texts.code . Texts.relay)) <&> Responsive.fromTextView
+        collapsed <- grammar (label Texts.relay) <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
 
 mkBoxed ::

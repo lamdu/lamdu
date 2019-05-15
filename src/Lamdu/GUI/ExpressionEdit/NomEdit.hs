@@ -26,8 +26,7 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Texts (Texts)
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -49,7 +48,7 @@ makeToNom ::
     ExprGuiM i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> ExprGuiM.makeBinder
-    & mkNomGui id "ToNominal" (Texts.code . Texts.toNom) mDel pl
+    & mkNomGui id "ToNominal" Texts.toNom mDel pl
     where
         mDel =
             nom ^. Sugar.nVal . ann . Sugar.plActions .
@@ -63,14 +62,14 @@ makeFromNom ::
     ExprGuiM i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" (Texts.code . Texts.fromNom) mDel pl
+    & mkNomGui reverse "FromNominal" Texts.fromNom mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
 
 mkNomGui ::
     (Monad i, Monad o) =>
     ([Gui Responsive o] -> [Gui Responsive o]) ->
-    Text -> OneOf Texts -> Maybe (o Sugar.EntityId) ->
+    Text -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
     ExprGuiM i o (Gui Responsive o)
