@@ -68,7 +68,7 @@ text animIdSuffix txtLens =
     Lens.view (Language.texts . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
 
-textIds :: Texts [ByteString]
+textIds :: Texts AnimId
 textIds = pure () & Lens.traversed %@~ const . (:[]) . encodeS
 
 -- work around lack of impredicative types
