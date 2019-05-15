@@ -64,7 +64,7 @@ type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
 type Ctx env =
     ( HasCallStack
     , MainLoop.HasMainLoopEnv env
-    , Cache.HasFunctions env
+    , Has Cache.Functions env
     , Debug.HasMonitors env
     , HasStyle env
     , Has Hover.Style env

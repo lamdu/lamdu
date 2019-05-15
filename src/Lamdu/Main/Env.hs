@@ -86,7 +86,7 @@ instance Has Menu.Config Env where
     has = Menu.configLens (config . Config.menu) (theme . Theme.menu)
 instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = debugMonitors
-instance Cache.HasFunctions Env where functions = cachedFunctions
+instance Has Cache.Functions Env where has = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
 instance Has (Dir.Texts Text) Env where has = language . has

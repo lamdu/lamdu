@@ -4,7 +4,6 @@
 
 module Lamdu.Cache
     ( Functions(..)
-    , HasFunctions(..)
     , infer
     , make, FencedCache.Cache, FencedCache.fence
     ) where
@@ -38,12 +37,6 @@ type MemoableInferFunc =
 newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc
     }
-
-class HasFunctions env where
-    functions :: Lens' env Functions
-
-instance HasFunctions Functions where
-    functions = id
 
 -- | We know that inferMemoized retains the shape, so we strip the
 -- payload and cover it after
