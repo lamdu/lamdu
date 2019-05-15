@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Settings
     ( Settings(..), sAnnotationMode, sSelectedTheme, sSelectedLanguage, sHelpShown
-    , HasSettings(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -23,5 +22,3 @@ data Settings = Settings
     deriving stock (Eq, Ord, Generic)
 JsonTH.derivePrefixed "_s" ''Settings
 Lens.makeLenses ''Settings
-
-class HasSettings env where settings :: Lens' env Settings

@@ -50,7 +50,6 @@ import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
-import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
@@ -69,7 +68,7 @@ type Ctx env =
     , Debug.HasMonitors env
     , HasStyle env
     , Has Hover.Style env
-    , Settings.HasSettings env
+    , Has Settings env
     , Spacer.HasStdSpacing env
     , GuiState.HasState env
     , Theme.HasTheme env

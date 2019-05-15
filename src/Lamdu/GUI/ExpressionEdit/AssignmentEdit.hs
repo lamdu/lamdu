@@ -207,7 +207,7 @@ makeScopeNavEdit func myId curCursor =
                 , (" ", Nothing)
                 , (navTexts ^. Texts.nextScopeArrow, sMNextParamScope curCursor)
                 ]
-        Lens.view (Settings.settings . Settings.sAnnotationMode)
+        Lens.view (has . Settings.sAnnotationMode)
             >>= \case
             Annotations.Evaluation ->
                 (Widget.makeFocusableWidget ?? myId)

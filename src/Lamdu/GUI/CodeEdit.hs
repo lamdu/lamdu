@@ -60,7 +60,7 @@ import           Lamdu.I18N.Language (language)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
-import           Lamdu.Settings (HasSettings)
+import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -88,7 +88,7 @@ make ::
     , Debug.HasMonitors env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
-    , HasSettings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
+    , Has Settings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
@@ -101,7 +101,7 @@ make cp gp width =
         theEvalResults <- Lens.view evalResults
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
-        annMode <- Lens.view (Settings.settings . Settings.sAnnotationMode)
+        annMode <- Lens.view (has . Settings.sAnnotationMode)
         workArea <-
             loadWorkArea (env ^. language) (env ^. has . Config.sugar)
             (env ^. Cache.functions) (env ^. Debug.monitors)

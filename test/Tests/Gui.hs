@@ -38,7 +38,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Language (Language, language)
 import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name)
-import           Lamdu.Settings (HasSettings)
+import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -75,7 +75,7 @@ wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFoc
 
 makeGui ::
     ( HasState env, HasStdSpacing env, Has Config env, HasTheme env
-    , HasSettings env, HasStyle env, Language.HasLanguage env
+    , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc cache env =
@@ -105,7 +105,7 @@ focusedWidget gui =
 
 makeFocusedWidget ::
     ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
-    , HasSettings env, HasStyle env, Language.HasLanguage env
+    , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env ->
     T ViewM (Widget.Focused (T ViewM GuiState.Update))
@@ -114,7 +114,7 @@ makeFocusedWidget afterDoc cache env =
 
 mApplyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
-    , HasSettings env, HasStyle env, Language.HasLanguage env
+    , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
     T ViewM (Maybe GuiState.Update)
@@ -134,7 +134,7 @@ mApplyEvent cache env virtCursor event =
 
 applyEvent ::
     ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
-    , HasSettings env, HasStyle env, Language.HasLanguage env
+    , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env
 applyEvent cache env virtCursor event =

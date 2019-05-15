@@ -37,7 +37,7 @@ import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, HasLanguage(..))
 import           Lamdu.Name (NameTexts)
 import qualified Lamdu.Paths as Paths
-import           Lamdu.Settings (HasSettings(..), Settings(..))
+import           Lamdu.Settings (Settings(..))
 import           Lamdu.Style (HasStyle(..), Style)
 import qualified Lamdu.Style as Style
 import qualified Test.Lamdu.Config as TestConfig
@@ -65,7 +65,7 @@ instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
 instance Has Config Env where has = eConfig
-instance HasSettings Env where settings = eSettings
+instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance HasStyle Env where style = eStyle
 instance Has Dir.Layout Env where has = eDirLayout

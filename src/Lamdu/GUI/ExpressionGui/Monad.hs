@@ -65,7 +65,7 @@ import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, language)
 import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name, NameTexts)
-import           Lamdu.Settings (Settings, HasSettings(..))
+import           Lamdu.Settings (Settings)
 import           Lamdu.Style (Style, HasStyle(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -119,7 +119,7 @@ instance Has SearchMenu.TermStyle (Askable i o) where
     has = aTheme . Theme.searchTerm
 instance Has Hover.Style (Askable i o) where has = aTheme . has
 instance HasStyle (Askable i o) where style = aStyle
-instance HasSettings (Askable i o) where settings = aSettings
+instance Has Settings (Askable i o) where has = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout
 instance Has (Dir.Texts Text) (Askable i o) where has = language . has
 instance EventMap.HasTexts (Askable i o) where texts = language . EventMap.texts
@@ -210,7 +210,7 @@ withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
     , Has Config env, HasTheme env
-    , HasSettings env, HasStyle env, Language.HasLanguage env
+    , Has Settings env, HasStyle env, Language.HasLanguage env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
@@ -227,7 +227,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aAnimIdPrefix = ["outermost"]
     , _aConfig = env ^. has
     , _aTheme = env ^. Theme.theme
-    , _aSettings = env ^. settings
+    , _aSettings = env ^. has
     , _aMakeSubexpression = makeSubexpr
     , _aMakeBinder = mkBinder
     , _aGuiAnchors = theGuiAnchors
