@@ -310,7 +310,7 @@ testConsistentKeyboardNavigation ::
     Cache.Functions -> GuiEnv.Env -> VirtualCursor -> T ViewM ()
 testConsistentKeyboardNavigation cache posEnv posVirt =
     do
-        unless (isLiteralEditId (posEnv ^. cursor)) $
+        unless (isLiteralEditId (posEnv ^. cursor))
             -- TODO: Handle literal edits properly
             ( traverse_ (uncurry (testKeyboardDirAndBack cache posEnv posVirt))
             [ (k GLFW.Key'Up, k GLFW.Key'Down)
