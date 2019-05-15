@@ -25,7 +25,6 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
@@ -33,6 +32,7 @@ import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (DefI, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Annotations (ShowAnnotation, MarkAnnotations, markNodeAnnotations, alwaysShowAnnotations)
 import           Lamdu.Sugar.Config (Config, showAllAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
@@ -116,7 +116,7 @@ assertInferSuccess =
 
 convertInferDefExpr ::
     forall m env.
-    (HasCallStack, Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (HasCallStack, Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
@@ -150,7 +150,7 @@ convertInferDefExpr env config cache monitors annMode evalRes cp defType defExpr
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
-                , _scLanguageIdentifier = env ^. languageIdentifier
+                , _scLanguageIdentifier = env ^. has
                 , _scLanguageDir = env ^. has
                 }
         ConvertDefExpr.convert
@@ -176,7 +176,7 @@ convertInferDefExpr env config cache monitors annMode evalRes cp defType defExpr
             >>= Transaction.writeIRef defI
 
 convertDefBody ::
-    (HasCallStack, Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (HasCallStack, Monad m, Has LangId env, Has Dir.Layout env) =>
     env -> Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
     Definition.Definition (Val (ValP m)) (DefI m) ->
@@ -199,7 +199,7 @@ markAnnotations config
 
 convertRepl ::
     forall m env.
-    (HasCallStack, Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (HasCallStack, Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) -> Anchors.CodeAnchors m ->
@@ -229,7 +229,7 @@ convertRepl env config cache monitors annMode evalRes cp =
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
-                , _scLanguageIdentifier = env ^. languageIdentifier
+                , _scLanguageIdentifier = env ^. has
                 , _scLanguageDir = env ^. has
                 }
         let typ = valInferred ^. ann . Input.inferredType
@@ -272,7 +272,7 @@ loadAnnotatedDef getDefI x =
     getDefI x & ExprLoad.def <&> Definition.defPayload .~ x
 
 loadPanes ::
-    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
@@ -332,7 +332,7 @@ loadPanes env config cache monitors annMode evalRes cp replEntityId =
         paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::
-    (HasCallStack, Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (HasCallStack, Monad m, Has LangId env, Has Dir.Layout env) =>
     env -> Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->

@@ -3,7 +3,6 @@
 module Lamdu.Data.Tag
     ( Tag(..), tagOrder, tagOpName, tagNames
     , OpName(..), _NotAnOp, _OpUni, _OpDir, DirOp(..), opLeftToRight, opRightToLeft
-    , HasLanguageIdentifier(..)
     , getTagName
     ) where
 
@@ -12,6 +11,7 @@ import           Data.Binary
 import           Data.Has (Has(..))
 import           GUI.Momentu.Direction (Layout(..))
 import qualified GUI.Momentu.Direction as Dir
+import           Lamdu.I18N.LangId (LangId(..))
 
 import           Lamdu.Prelude
 
@@ -34,18 +34,14 @@ Lens.makePrisms '' OpName
 data Tag = Tag
     { _tagOrder :: Int
     , _tagOpName :: OpName
-    , _tagNames :: Map Text Text
+    , _tagNames :: Map LangId Text
     }
     deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
 Lens.makeLenses ''Tag
 
--- TODO: Appropriate module for this
-class HasLanguageIdentifier env where
-    languageIdentifier :: Lens' env Text
-
 getTagName ::
-    (HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (Has LangId env, Has Dir.Layout env) =>
     env -> Tag -> Text
 getTagName env tag =
     case tag ^. tagOpName of
@@ -60,5 +56,5 @@ getTagName env tag =
             | x == mempty = name -- No op for this direction
             | otherwise = x
         name =
-            tag ^. tagNames . Lens.at (env ^. languageIdentifier)
-            & fromMaybe (tag ^. tagNames . Lens.ix "english")
+            tag ^. tagNames . Lens.at (env ^. has)
+            & fromMaybe (tag ^. tagNames . Lens.ix (LangId "english"))

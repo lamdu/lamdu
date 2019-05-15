@@ -27,10 +27,11 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
-import           Lamdu.Data.Tag (OpName(..), tagOrder, tagNames, tagOpName, getTagName, HasLanguageIdentifier(..))
+import           Lamdu.Data.Tag (OpName(..), tagOrder, tagNames, tagOpName, getTagName)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.I18N.LangId (LangId)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
@@ -118,14 +119,14 @@ case_ tag tailI =
             <&> CompositeExtendResult newValueI
 
 assocTagName ::
-    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (Monad m, Has LangId env, Has Dir.Layout env) =>
     env -> T.Tag -> MkProperty' (T m) Text
 assocTagName env tag =
     ExprIRef.readTagInfo tag
     <&> result
     & Property.MkProperty
     where
-        lang = env ^. languageIdentifier
+        lang = env ^. has
         result info =
             Property (getTagName env info)
             (Transaction.writeIRef (ExprIRef.tagI tag) . setName)

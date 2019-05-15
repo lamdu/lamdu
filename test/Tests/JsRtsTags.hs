@@ -7,6 +7,7 @@ import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import           Lamdu.Data.Tag (tagNames)
+import           Lamdu.I18N.LangId (LangId(..))
 import           Lamdu.Paths (readDataFile)
 import           Test.Lamdu.FreshDb (readFreshDb)
 
@@ -17,7 +18,8 @@ test =
     do
         freshDbTags <-
             readFreshDb
-            <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . tagNames . Lens.ix "english")
+            <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . tagNames
+                 . Lens.ix (LangId "english"))
             <&> Set.fromList
         rtsConfig <- readDataFile "js/export/rtsConfig.js"
         let (_:nameMapAndMore:_) = splitOn "var nameMap = {" rtsConfig

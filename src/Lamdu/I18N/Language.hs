@@ -1,7 +1,7 @@
 -- | Language definitions
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts #-}
 module Lamdu.I18N.Language
     ( Language(..)
     , HasLanguage(..)
@@ -22,15 +22,15 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Folder (HasConfigFolder(..))
-import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import           Lamdu.I18N.Texts
 import           Lamdu.Name (HasNameTexts(..))
+import Lamdu.I18N.LangId (LangId)
 
 import           Lamdu.Prelude
 
 data Language = Language
     { _lDirection :: Dir.Layout
-    , _lIdentifier :: Text
+    , _lIdentifier :: LangId
     , _lTexts :: Texts Text
     } deriving (Eq)
 
@@ -43,7 +43,7 @@ instance HasConfigFolder Language where
 class
     ( Glue.HasTexts env, Dir.HasTexts env, Choice.HasTexts env
     , TextEdit.HasTexts env, Grid.HasTexts env, HasNameTexts env
-    , Menu.HasTexts env, SearchMenu.HasTexts env, HasLanguageIdentifier env
+    , Menu.HasTexts env, SearchMenu.HasTexts env, Has LangId env
     ) => HasLanguage env where
     language :: Lens' env Language
 instance EventMap.HasTexts Language where texts = lTexts . eventMap
@@ -58,7 +58,7 @@ instance Choice.HasTexts Language where texts = lTexts . choice
 instance TextEdit.HasTexts Language where texts = lTexts . textEdit
 instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
 instance HasNameTexts Language where nameTexts = lTexts . name
-instance HasLanguageIdentifier Language where languageIdentifier = lIdentifier
+instance Has LangId Language where has = lIdentifier
 instance HasLanguage Language where language = id
 instance Zoom.HasTexts Language where texts = lTexts . zoom
 

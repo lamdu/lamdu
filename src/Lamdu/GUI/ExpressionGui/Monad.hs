@@ -58,10 +58,10 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, language)
 import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name, HasNameTexts(..))
@@ -130,7 +130,7 @@ instance Grid.HasTexts (Askable i o) where texts = language . Grid.texts
 instance Choice.HasTexts (Askable i o) where texts = language . Choice.texts
 instance TextEdit.HasTexts (Askable i o) where texts = language . TextEdit.texts
 instance HasNameTexts (Askable i o) where nameTexts = language . nameTexts
-instance HasLanguageIdentifier (Askable i o) where languageIdentifier = language . languageIdentifier
+instance Has LangId (Askable i o) where has = language . has
 instance Language.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a

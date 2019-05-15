@@ -15,8 +15,8 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Data.Tag (HasLanguageIdentifier)
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
@@ -49,7 +49,7 @@ convertTag tag name forbiddenTags mkInstance setTag =
             <&> convertTagWith env tag name forbiddenTags RequireTag mkInstance setTag
 
 convertTagWith ::
-    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
@@ -69,7 +69,7 @@ convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
             convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag
 
 convertTagSelectionWith ::
-    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
+    (Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
@@ -103,7 +103,7 @@ convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag tagsP
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 convertTaggedEntityWith ::
     ( UniqueId.ToUUID a, MonadTransaction n m
-    , HasLanguageIdentifier env, Has Dir.Layout env
+    , Has LangId env, Has Dir.Layout env
     ) =>
     env ->
     a -> MkProperty' (T n) (Set T.Tag) -> m (Tag InternalName (T n) (T n))

@@ -21,6 +21,7 @@ import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
 import           Lamdu.Data.Tag (tagNames, tagOpName, OpName(..))
+import           Lamdu.I18N.LangId (LangId(..))
 import           Test.Lamdu.FreshDb (readFreshDb)
 
 import           Test.Lamdu.Prelude
@@ -44,7 +45,7 @@ verifyTagsTest =
         verifyHasName (tagId, tag)
             | Map.null (tag ^. tagNames) && tag ^. tagOpName == NotAnOp =
                 fail ("stdlib tag with no name:" <> show tagId)
-            | otherwise = tag ^.. tagNames . Lens.ix "english" & pure
+            | otherwise = tag ^.. tagNames . Lens.ix (LangId "english") & pure
 
 verifyTagNames :: [Text] -> IO ()
 verifyTagNames names =
@@ -88,7 +89,7 @@ verifyNoBrokenDefsTest =
         db <- readFreshDb
         let tags =
                 Map.fromList
-                [ (tag, tagInfo ^. tagNames . Lens.ix "english")
+                [ (tag, tagInfo ^. tagNames . Lens.ix (LangId "english"))
                 | (tag, tagInfo) <- db ^.. Lens.folded . JsonCodec._EntityTag
                 ]
         let defs = db ^.. Lens.folded . JsonCodec._EntityDef

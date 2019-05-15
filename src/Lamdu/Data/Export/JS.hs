@@ -27,7 +27,7 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Data.Export.JSON (jsonExportRepl)
-import           Lamdu.Data.Tag (HasLanguageIdentifier(..), getTagName)
+import           Lamdu.Data.Tag (getTagName)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
@@ -35,6 +35,7 @@ import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Expr.UniqueId (toUUID)
+import           Lamdu.I18N.LangId (LangId(..))
 import qualified Lamdu.Paths as Paths
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -48,16 +49,16 @@ removeReadmeMeta =
     unlines . tail . dropWhile (/= "== ExportFromHere ==") . lines
 
 data CompileNameEnv = CompileNameEnv
-    { _ceLanguage :: Text
+    { _ceLanguage :: LangId
     , _ceLayout :: Dir.Layout
     }
 Lens.makeLenses ''CompileNameEnv
 
-instance HasLanguageIdentifier CompileNameEnv where languageIdentifier = ceLanguage
+instance Has LangId CompileNameEnv where has = ceLanguage
 instance Has Dir.Layout CompileNameEnv where has = ceLayout
 
 compileNameEnv :: CompileNameEnv
-compileNameEnv = CompileNameEnv "english" Dir.LeftToRight
+compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
 compile :: Monad m => Def.Expr (Val (ValP m)) -> T m String
 compile repl =

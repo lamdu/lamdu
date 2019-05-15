@@ -36,9 +36,9 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Data.Tag (HasLanguageIdentifier(..))
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Config (Config)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
@@ -110,13 +110,13 @@ data Context m = Context
     , _scConfig :: Config
     , scConvertSubexpression ::
         forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
-    , _scLanguageIdentifier :: Text
+    , _scLanguageIdentifier :: LangId
     , _scLanguageDir :: Dir.Layout
     }
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
-instance HasLanguageIdentifier (Context m) where languageIdentifier = scLanguageIdentifier
+instance Has LangId (Context m) where has = scLanguageIdentifier
 instance Has Dir.Layout (Context m) where has = scLanguageDir
 
 cachedFunc :: Monad m => (Cache.Functions -> a) -> ConvertM m a
