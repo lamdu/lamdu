@@ -1,7 +1,7 @@
 -- | Language definitions
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, UndecidableInstances #-}
 module Lamdu.I18N.Language
     ( Language(..)
     , HasLanguage(..)
@@ -11,15 +11,12 @@ module Lamdu.I18N.Language
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 import           Lamdu.I18N.Texts
 import           Lamdu.Name (NameTexts)
@@ -46,22 +43,12 @@ class
     , Has (Navigation Text) env
     ) => HasLanguage env where
     language :: Lens' env Language
-instance Has (EventMap.Texts Text) Language where has = lTexts . eventMap
 
-instance Has Dir.Layout Language where has = lDirection
-instance Has (Dir.Texts Text) Language where has = lTexts . dir
-instance Has (Glue.Texts Text) Language where has = lTexts . glue
-instance Has (Menu.Texts Text) Language where has = lTexts . menu
-instance Has (SearchMenu.Texts Text) Language where has = lTexts . searchMenu
-instance Has (Grid.Texts Text) Language where has = lTexts . grid
-instance Has (Choice.Texts Text) Language where has = lTexts . choice
-instance Has (TextEdit.Texts Text) Language where has = lTexts . textEdit
-instance Has (MainLoop.Texts Text) Language where has = lTexts . mainLoop
-instance Has (NameTexts Text) Language where has = lTexts . name
 instance Has LangId Language where has = lIdentifier
 instance HasLanguage Language where language = id
-instance Has (Zoom.Texts Text) Language where has = lTexts . zoom
-instance Has (Navigation Text) Language where has = lTexts . navigationTexts
+instance Has Dir.Layout Language where has = lDirection
+instance Has (f Text) (Texts Text) => Has (f Text) Language where
+    has = lTexts . has
 
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts

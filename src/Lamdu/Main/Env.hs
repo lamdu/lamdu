@@ -42,6 +42,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
+import           Lamdu.I18N.Texts (Texts)
 import           Lamdu.Settings (Settings(..))
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
@@ -87,4 +88,4 @@ instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has
-instance Has (t Text) Language => Has (t Text) Env where has = language . has
+instance Has (t Text) (Texts Text) => Has (t Text) Env where has = language . has

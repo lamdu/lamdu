@@ -29,6 +29,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, HasLanguage(..))
+import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..))
 import           Lamdu.Style (Style)
@@ -64,7 +65,7 @@ instance Has Style Env where has = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
 instance Has LangId Env where has = language . has
 instance HasLanguage Env where language = eLanguage
-instance Has (t Text) Language => Has (t Text) Env where has = language . has
+instance Has (t Text) (Texts Text) => Has (t Text) Env where has = language . has
 
 makeLang :: IO Language
 makeLang = TestConfig.loadConfigObject "english"

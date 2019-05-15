@@ -1,5 +1,6 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
     ( module Lamdu.I18N.Texts
     , module Lamdu.I18N.Code
@@ -60,6 +61,19 @@ data Texts a = Texts
 -- because it has special disambiguation logic implemented in the dotter etc.
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
+
+instance Has (EventMap.Texts Text) (Texts Text) where has = eventMap
+instance Has (Dir.Texts Text) (Texts Text) where has = dir
+instance Has (Glue.Texts Text) (Texts Text) where has = glue
+instance Has (Menu.Texts Text) (Texts Text) where has = menu
+instance Has (SearchMenu.Texts Text) (Texts Text) where has = searchMenu
+instance Has (Grid.Texts Text) (Texts Text) where has = grid
+instance Has (Choice.Texts Text) (Texts Text) where has = choice
+instance Has (TextEdit.Texts Text) (Texts Text) where has = textEdit
+instance Has (MainLoop.Texts Text) (Texts Text) where has = mainLoop
+instance Has (NameTexts Text) (Texts Text) where has = name
+instance Has (Zoom.Texts Text) (Texts Text) where has = zoom
+instance Has (Navigation Text) (Texts Text) where has = navigationTexts
 
 quit :: Lens' (Texts Text) Text
 quit = mainLoop . MainLoop.textQuit
