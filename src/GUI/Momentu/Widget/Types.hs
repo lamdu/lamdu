@@ -17,7 +17,7 @@ import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Animation (R, Size)
 import           GUI.Momentu.FocusDirection (FocusDirection)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.EventMap (EventMap, Subtitle)
+import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Rect (Rect)
 import           GUI.Momentu.State (VirtualCursor)
 import           GUI.Momentu.Widget.Id (Id)
@@ -84,7 +84,7 @@ data Focused a = Focused
     } deriving Functor
 
 data PreEvent a = PreEvent
-    { _pDesc :: Subtitle
+    { _pDesc :: Text
     , _pAction :: a
     , _pTextRemainder :: Text
     } deriving Functor

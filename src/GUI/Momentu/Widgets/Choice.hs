@@ -42,7 +42,7 @@ class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
 
 
 defaultFdConfig ::
-    (MonadReader env m, HasTexts env) => m (E.Subtitle -> FocusDelegator.Config)
+    (MonadReader env m, HasTexts env) => m (Text -> FocusDelegator.Config)
 defaultFdConfig =
     Lens.view texts <&> \txt helpCategory ->
     FocusDelegator.Config
@@ -57,7 +57,7 @@ data Config = Config
     , cwcOrientation :: Orientation
     }
 
-defaultConfig :: (MonadReader env m, HasTexts env) => m (E.Subtitle -> Config)
+defaultConfig :: (MonadReader env m, HasTexts env) => m (Text -> Config)
 defaultConfig =
     defaultFdConfig <&> \defFd helpCategory ->
     Config

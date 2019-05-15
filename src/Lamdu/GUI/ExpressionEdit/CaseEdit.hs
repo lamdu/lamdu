@@ -51,7 +51,7 @@ import           Lamdu.Prelude
 
 doc ::
     Language.HasLanguage env =>
-    env -> Lens.ALens' (Texts.CodeUI Text) E.Subtitle -> E.Doc
+    env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
 doc env lens =
     E.toDoc (env ^. Language.texts)
     [ Texts.edit

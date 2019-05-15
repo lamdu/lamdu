@@ -49,7 +49,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-doc :: E.Subtitle -> E.Doc
+doc :: Text -> E.Doc
 doc text = E.Doc ["Edit", "Record", text]
 
 addFieldId :: Widget.Id -> Widget.Id

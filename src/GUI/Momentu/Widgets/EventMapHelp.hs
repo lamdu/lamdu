@@ -131,7 +131,7 @@ groupTree = foldr step []
                 _ -> Branch at (step (as, l) []) : b
 
 -- We also rely on Map.toList returning a sorted list
-groupInputDocs :: [([E.Subtitle], E.InputDoc)] -> [([E.Subtitle], [E.InputDoc])]
+groupInputDocs :: [([Text], E.InputDoc)] -> [([Text], [E.InputDoc])]
 groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
 
 addAnimIds :: Show a => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
@@ -160,7 +160,7 @@ makeShortcutKeyView inputDocs =
 makeTextViews ::
     ( MonadReader env m, HasStyle env, Glue.HasTexts env
     , Element.HasAnimIdPrefix env
-    ) => Tree E.Subtitle [E.InputDoc] -> m (Tree View View)
+    ) => Tree Text [E.InputDoc] -> m (Tree View View)
 makeTextViews tree =
     addAnimIds helpAnimId tree
     & traverse shortcut

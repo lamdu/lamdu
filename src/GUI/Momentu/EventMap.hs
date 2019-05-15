@@ -2,7 +2,7 @@
 {-# LANGUAGE DerivingVia, StandaloneDeriving, RankNTypes #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)
-    , InputDoc, Subtitle
+    , InputDoc
     , Doc(..), toDoc, docStrs
     , Clipboard
     , MaybeWantsClipboard(..), _Doesn'tWantClipboard, _WantsClipboard
@@ -64,16 +64,14 @@ data KeyEvent = KeyEvent ModKey.KeyState ModKey
 
 type Clipboard = Text
 
-type Subtitle = Text
-
 newtype Doc = Doc
-    { _docStrs :: [Subtitle]
+    { _docStrs :: [Text]
     } deriving (Generic, Eq, Ord, Show)
 Lens.makeLenses ''Doc
 
--- | Convenience wrapper to build a Doc by fetching the subtitles from
+-- | Convenience wrapper to build a Doc by fetching the Texts from
 -- an environment
-toDoc :: env -> [Lens.ALens' env Subtitle] -> Doc
+toDoc :: env -> [Lens.ALens' env Text] -> Doc
 toDoc env = Doc . map (env ^#)
 
 data DocHandler a = DocHandler
