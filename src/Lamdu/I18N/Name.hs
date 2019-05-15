@@ -9,6 +9,7 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 
 import           Lamdu.Prelude
 
+-- All words here are reserved (conflicted when used as user names)
 data Name a = Name
     { _unnamed :: a
     , _emptyName :: a

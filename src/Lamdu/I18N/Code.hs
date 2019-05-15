@@ -9,6 +9,7 @@ import           GUI.Momentu.Animation.Id (ElemIds)
 
 import           Lamdu.Prelude
 
+-- All words here are reserved (conflicted when used as user names)
 data Code a = Code
     { _assign :: a -- Assignment
     , _relay :: a -- Apply
