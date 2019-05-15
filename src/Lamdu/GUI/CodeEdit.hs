@@ -89,7 +89,7 @@ make ::
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , HasSettings env, HasStyle env, Has Hover.Style env, Menu.HasConfig env
-    , SearchMenu.HasTermStyle env
+    , Has SearchMenu.TermStyle env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     , HasCallStack

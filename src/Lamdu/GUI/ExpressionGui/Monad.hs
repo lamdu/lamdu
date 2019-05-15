@@ -115,8 +115,8 @@ instance HasTheme (Askable i o) where theme = aTheme
 instance Has ResponsiveExpr.Style (Askable i o) where has = aTheme . has
 instance Menu.HasConfig (Askable i o) where
     config = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
-instance SearchMenu.HasTermStyle (Askable i o) where
-    termStyle = aTheme . Theme.searchTerm
+instance Has SearchMenu.TermStyle (Askable i o) where
+    has = aTheme . Theme.searchTerm
 instance Has Hover.Style (Askable i o) where has = aTheme . has
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings

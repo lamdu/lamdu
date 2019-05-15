@@ -85,7 +85,7 @@ instance VCConfig.HasTheme Env where theme = theme . Theme.versionControl
 instance VCConfig.HasConfig Env where config = config . Config.versionControl
 instance Menu.HasConfig Env where
     config = Menu.configLens (config . Config.menu) (theme . Theme.menu)
-instance SearchMenu.HasTermStyle Env where termStyle = theme . Theme.searchTerm
+instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix

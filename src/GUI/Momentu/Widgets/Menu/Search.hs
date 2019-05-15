@@ -14,7 +14,6 @@ module GUI.Momentu.Widgets.Menu.Search
     , searchTermEdit
 
     , TermStyle(..), bgColors, emptyStrings, emptyStringsColors
-    , HasTermStyle(..)
     , enterWithSearchTerm
     , Term(..), termWidget, termEditEventMap
 
@@ -91,9 +90,6 @@ JsonTH.derivePrefixed "_"''TermStyle
 
 Lens.makeLenses ''TermStyle
 
-class HasTermStyle env where termStyle :: Lens' env TermStyle
-instance HasTermStyle TermStyle where termStyle = id
-
 data Term f = Term
     { _termWidget :: TextWidget f
     , _termEditEventMap :: Gui EventMap f
@@ -143,7 +139,7 @@ defaultEmptyStrings :: TextEdit.EmptyStrings
 defaultEmptyStrings = TextEdit.Modes "  " "  "
 
 -- | Basic search term edit:
---   * no bg color / no HasTermStyle needed --> use addSearchTermStyle
+--   * no bg color / no Has TermStyle needed --> use addSearchTermStyle
 --     to add it
 --   * no pick of first result / no Menu.HasConfig needed --> use
 --     addPickFirstResultEvent to add it
@@ -204,30 +200,30 @@ addDelSearchTerm myId =
         & termEditEventMap <>~ delSearchTerm
 
 addSearchTermBgColor ::
-    ( MonadReader env m, State.HasCursor env, HasTermStyle env, Functor f
+    ( MonadReader env m, State.HasCursor env, Has TermStyle env, Functor f
     ) => Id -> m (Term f -> Term f)
 addSearchTermBgColor myId =
     do
         isActive <- State.isSubCursor ?? myId
         bgColor <-
             Lens.view
-            (termStyle . bgColors .
+            (has . bgColors .
                 if isActive then TextEdit.focused else TextEdit.unfocused)
         termWidget %~ Draw.backgroundColor bgAnimId bgColor & pure
     where
         bgAnimId = Widget.toAnimId myId <> ["hover background"]
 
 addSearchTermEmptyColors ::
-    ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env
+    ( MonadReader env m, Has TermStyle env, TextEdit.HasStyle env
     ) =>
     m a -> m a
 addSearchTermEmptyColors act =
     do
-        colors <- Lens.view (termStyle . emptyStringsColors)
+        colors <- Lens.view (has . emptyStringsColors)
         Reader.local (has . TextEdit.sEmptyStringsColors .~ colors) act
 
 addSearchTermStyle ::
-    ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env
+    ( MonadReader env m, Has TermStyle env, TextEdit.HasStyle env
     , Functor f, State.HasCursor env
     ) =>
     Widget.Id -> m (Term f) -> m (Term f)
@@ -236,13 +232,13 @@ addSearchTermStyle myId act =
     & addSearchTermEmptyColors
 
 searchTermEdit ::
-    ( MonadReader env m, Applicative f, HasTermStyle env
+    ( MonadReader env m, Applicative f, Has TermStyle env
     , TextEdit.HasStyle env, Menu.HasConfig env, State.HasState env
     , TextEdit.HasTexts env, HasTexts env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
-    Lens.view (termStyle . emptyStrings)
+    Lens.view (has . emptyStrings)
     >>= basicSearchTermEdit myId allowedSearchTerm
     & (addDelSearchTerm myId <*>)
     & addSearchTermStyle myId
