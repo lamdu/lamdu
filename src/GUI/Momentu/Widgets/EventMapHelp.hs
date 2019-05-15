@@ -85,7 +85,7 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
-type HasTexts env = (E.HasTexts env, Glue.HasTexts env, Has (Texts Text) env)
+type HasTexts env = (Has (E.Texts Text) env, Glue.HasTexts env, Has (Texts Text) env)
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -185,7 +185,7 @@ columns maxHeight itemHeight =
                 newHeight = itemHeight new
 
 make ::
-    ( MonadReader env m, Glue.HasTexts env, E.HasTexts env
+    ( MonadReader env m, Glue.HasTexts env, Has (E.Texts Text) env
     , HasStyle env, Element.HasAnimIdPrefix env
     ) => Vector2 R -> EventMap a -> m View
 make size eventMap =
@@ -199,7 +199,7 @@ make size eventMap =
             <&> mkTreeView
 
 makeFromFocus ::
-    ( MonadReader env m, Glue.HasTexts env, E.HasTexts env, HasStyle env
+    ( MonadReader env m, Glue.HasTexts env, Has (E.Texts Text) env, HasStyle env
     , Element.HasAnimIdPrefix env
     ) =>
     Widget.Size -> Widget.Focused (f a) -> m View
@@ -300,7 +300,7 @@ addHelpViewWith mkHelpView size focus =
 
 addHelpView ::
     ( MonadReader env m, HasStyle env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, E.HasTexts env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (E.Texts Text) env
     ) => Widget.Size -> Widget.Focused (f a) -> m (Widget.Focused (f a))
 addHelpView = addHelpViewWith makeFromFocus
 

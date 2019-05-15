@@ -46,7 +46,7 @@ class
     , Has (Navigation Text) env
     ) => HasLanguage env where
     language :: Lens' env Language
-instance EventMap.HasTexts Language where texts = lTexts . eventMap
+instance Has (EventMap.Texts Text) Language where has = lTexts . eventMap
 
 instance Has Dir.Layout Language where has = lDirection
 instance Has (Dir.Texts Text) Language where has = lTexts . dir

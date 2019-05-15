@@ -34,7 +34,6 @@ import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
@@ -120,7 +119,6 @@ instance Has Hover.Style (Askable i o) where has = aTheme . has
 instance Has Style (Askable i o) where has = aStyle
 instance Has Settings (Askable i o) where has = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout
-instance EventMap.HasTexts (Askable i o) where texts = language . EventMap.texts
 instance Glue.HasTexts (Askable i o) where texts = language . Glue.texts
 instance SearchMenu.HasTexts (Askable i o) where texts = language . SearchMenu.texts
 instance Grid.HasTexts (Askable i o) where texts = language . Grid.texts

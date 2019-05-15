@@ -6,7 +6,7 @@ module GUI.Momentu.EventMap
     , Doc(..), toDoc, docStrs
     , Clipboard
     , MaybeWantsClipboard(..), _Doesn'tWantClipboard, _WantsClipboard
-    , Texts(..), HasTexts(..)
+    , Texts(..)
     , Event(..)
     , EventMap, lookup
     , emDocs, emHandlerDocs
@@ -56,7 +56,6 @@ data Texts a = Texts
     }
     deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
-class HasTexts env where texts :: Lens' env (Texts Text)
 JsonTH.derivePrefixed "" ''Texts
 
 data KeyEvent = KeyEvent ModKey.KeyState ModKey
@@ -164,11 +163,11 @@ emDocsH key idoc f e =
     <*> (Lens.traverse .> Lens.reindexed idoc chDocs) f (_emAllCharsHandler e)
 
 emDocs ::
-    ( MonadReader env m, HasTexts env, Lens.Indexable InputDoc p
+    ( MonadReader env m, Has (Texts Text) env, Lens.Indexable InputDoc p
     , Applicative f
     ) =>
     m (Lens.Over' p f (EventMap a) Doc)
-emDocs = Lens.view texts <&> \txt -> emDocsH (prettyKeyEvent txt) id
+emDocs = Lens.view has <&> \txt -> emDocsH (prettyKeyEvent txt) id
 
 emHandlerDocs :: Lens.Traversal' (EventMap a) Doc
 emHandlerDocs = emDocsH (const ()) (const ())

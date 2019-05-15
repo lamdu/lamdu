@@ -72,7 +72,6 @@ type Ctx env =
     , Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Language.HasLanguage env
-    , E.HasTexts env
     )
 
 layout ::
