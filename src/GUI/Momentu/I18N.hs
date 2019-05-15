@@ -9,6 +9,7 @@ import           Lamdu.Prelude
 
 data Texts a = Texts
     { _edit :: a
+    , _view :: a
     , _insert :: a
     , _delete :: a
     }

@@ -4,6 +4,7 @@
     "texts": {
         "commonTexts": {
             "edit": "עריכה",
+            "view": "תצוגה",
             "insert": "הכנס",
             "delete": "מחק"
         },
@@ -202,7 +203,6 @@
             "debug": "דיבאג"
         },
         "zoom": {
-            "view": "תצוגה",
             "zoom": "ניפוח",
             "enlarge": "נפח",
             "shrink": "כווץ"

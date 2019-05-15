@@ -3,7 +3,7 @@ module GUI.Momentu.Zoom
     ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
     , makeUnscaled
-    , Texts(..), view, zoom, enlarge
+    , Texts(..), zoom
     ) where
 
 import qualified Control.Lens as Lens
@@ -11,6 +11,7 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.IORef
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as Texts
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.State (Gui)
@@ -21,8 +22,7 @@ import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 import           Lamdu.Prelude
 
 data Texts a = Texts
-    { _view :: a
-    , _zoom :: a
+    { _zoom :: a
     , _enlarge :: a
     , _shrink :: a
     }
@@ -55,15 +55,17 @@ newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R
     }
 
-eventMap :: Has (Texts Text) env => Zoom -> env -> Config -> Gui EventMap IO
+eventMap ::
+    (Has (Texts Text) env, Has (Texts.Texts Text) env) =>
+    Zoom -> env -> Config -> Gui EventMap IO
 eventMap (Zoom ref) env config =
     mconcat
     [ modifyIORef ref (* config ^. enlargeFactor)
         & E.keysEventMap (config ^. enlargeKeys)
-        (E.toDoc (env ^. has) [view, zoom, enlarge])
+        (E.toDoc env [has . Texts.view, has . zoom, has . enlarge])
     , modifyIORef ref (/ config ^. shrinkFactor)
         & E.keysEventMap (config ^. shrinkKeys)
-        (E.toDoc (env ^. has) [view, zoom, shrink])
+        (E.toDoc env [has . Texts.view, has . zoom, has . shrink])
     ]
 
 getZoomFactor :: Fractional a => Zoom -> IO a

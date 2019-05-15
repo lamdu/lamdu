@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
+import qualified GUI.Momentu.I18N as Texts
 import           GUI.Momentu.Main.Animation (PerfCounters(..), MainLoop(..))
 import qualified GUI.Momentu.Main.Animation as MainAnim
 import           GUI.Momentu.Main.Config (Config(..))
@@ -67,17 +68,19 @@ JsonTH.derivePrefixed "_text" ''Texts
 
 data AllTexts = AllTexts
     { _mainTexts :: Texts Text
+    , _commonTexts :: Texts.Texts Text
     , _zoomTexts :: Zoom.Texts Text
     }
 Lens.makeLenses ''AllTexts
 
 instance Has (Texts Text) AllTexts where has = mainTexts
+instance Has (Texts.Texts Text) AllTexts where has = commonTexts
 instance Has (Zoom.Texts Text) AllTexts where has = zoomTexts
 
 makeAllTexts ::
-    (Has (Texts Text) env, Has (Zoom.Texts Text) env) =>
+    (Has (Texts Text) env, Has (Zoom.Texts Text) env, Has (Texts.Texts Text) env) =>
     env -> AllTexts
-makeAllTexts env = AllTexts (env ^. has) (env ^. has)
+makeAllTexts env = AllTexts (env ^. has) (env ^. has) (env ^. has)
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -114,7 +117,7 @@ defaultDebugOptions =
     }
 
 defaultOptions ::
-    ( Has (Texts Text) env, Has (Zoom.Texts Text) env
+    ( Has (Texts Text) env, Has (Texts.Texts Text) env, Has (Zoom.Texts Text) env
     , Element.HasAnimIdPrefix env, Has EventMapHelp.Config env
     , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>

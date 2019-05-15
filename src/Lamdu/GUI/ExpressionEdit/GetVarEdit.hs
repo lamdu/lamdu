@@ -18,6 +18,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -234,18 +235,18 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         let showDialogEventMap =
                 pure myId
                 & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
-                (E.toDoc (env ^. Language.texts)
-                    [ Texts.view
-                    , Texts.definitions . Definitions.typeUpdateDialog
-                    , Texts.codeUI . CodeUI.show
+                (E.toDoc env
+                    [ has . MomentuTexts.view
+                    , has . Definitions.typeUpdateDialog
+                    , has . CodeUI.show
                     ])
         let hideDialogEventMap =
                 pure hiddenId
                 & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
-                (E.toDoc (env ^. Language.texts)
-                    [ Texts.view
-                    , Texts.definitions . Definitions.typeUpdateDialog
-                    , Texts.codeUI . CodeUI.hide
+                (E.toDoc env
+                    [ has . MomentuTexts.view
+                    , has . Definitions.typeUpdateDialog
+                    , has . CodeUI.hide
                     ])
         let underline = Underline
                 { _underlineColor = env ^. has . Theme.errorColor

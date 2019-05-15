@@ -86,9 +86,6 @@ instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts
 quit :: Lens' (Texts Text) Text
 quit = mainLoop . MainLoop.textQuit
 
-view :: Lens' (Texts Text) Text
-view = zoom . Zoom.view
-
 navigation :: Lens' (Texts Text) Text
 navigation = dir . Dir.navigation
 

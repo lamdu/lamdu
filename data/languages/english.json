@@ -4,6 +4,7 @@
     "texts": {
         "commonTexts": {
             "edit": "Edit",
+            "view": "View",
             "insert": "Insert",
             "delete": "Delete"
         },
@@ -199,7 +200,6 @@
             "debug": "Debug"
         },
         "zoom": {
-            "view": "View",
             "zoom": "Zoom",
             "enlarge": "Enlarge",
             "shrink": "Shrink"

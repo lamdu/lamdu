@@ -147,7 +147,7 @@ makePaneEdit theExportActions pane =
         let titledCodeDoc titleLenses texts =
                 E.toDoc (env ^. Language.texts)
                 (titleLenses ++ map (Texts.codeUI .) texts)
-        let viewDoc = titledCodeDoc [Texts.view]
+        let viewDoc = titledCodeDoc [has . Texts.view]
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
