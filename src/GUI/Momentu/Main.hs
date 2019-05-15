@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving, UndecidableInstances, DerivingVia #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds, FlexibleContexts #-}
 module GUI.Momentu.Main
     ( Config(..)
     , Env(..), eWindowSize, eZoom, eState
-    , HasMainLoopEnv(..)
+    , HasMainLoopEnv
     , DebugOptions(..), defaultDebugOptions
     , PerfCounters(..)
     , Options(..), defaultOptions
@@ -161,8 +161,7 @@ Lens.makeLenses ''Env
 instance State.HasCursor Env
 instance Has GUIState Env where has = eState
 
-class State.HasCursor env => HasMainLoopEnv env where mainLoopEnv :: Lens' env Env
-instance HasMainLoopEnv Env where mainLoopEnv = id
+type HasMainLoopEnv env = (State.HasCursor env, Has Env env)
 
 jumpToTopOfCallStack :: DebugOptions -> CallStack -> IO ()
 jumpToTopOfCallStack debug callStack =

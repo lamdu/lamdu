@@ -72,7 +72,7 @@ instance GUIMain.HasExportActions Env ViewM where exportActions = exportActions
 instance GUIMain.HasEvalResults Env ViewM where evalResults = evalRes
 instance Settings.HasSettings Env where settings = settings . Property.pVal
 instance Style.HasStyle Env where style = style
-instance MainLoop.HasMainLoopEnv Env where mainLoopEnv = mainLoop
+instance Has MainLoop.Env Env where has = mainLoop
 instance Spacer.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
 instance GuiState.HasCursor Env
 instance Has GUIState Env where has = mainLoop . has

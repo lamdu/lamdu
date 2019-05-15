@@ -92,7 +92,7 @@ layout themeNames langNames settingsProp =
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
         theTheme <- Lens.view Theme.theme
-        fullSize <- Lens.view (MainLoop.mainLoopEnv . MainLoop.eWindowSize)
+        fullSize <- Lens.view (has . MainLoop.eWindowSize)
         state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
         (gotoDefinition, codeEdit) <-
