@@ -84,6 +84,3 @@ instance Has (Code               Text) (Texts Text) where has = code
 instance Has (CodeUI             Text) (Texts Text) where has = codeUI
 instance Has (Definitions        Text) (Texts Text) where has = definitions
 instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts
-
-quit :: Lens' (Texts Text) Text
-quit = mainLoop . MainLoop.textQuit

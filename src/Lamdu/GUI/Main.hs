@@ -58,6 +58,7 @@ type T = Transaction
 type Ctx env =
     ( HasCallStack
     , MainLoop.HasMainLoopEnv env
+    , Has (MainLoop.Texts Text) env
     , Has Cache.Functions env
     , Has Debug.Monitors env
     , HasStyle env
@@ -105,7 +106,7 @@ layout themeNames langNames settingsProp =
         vcEventMap <- VersionControlGUI.eventMap ?? versionControlCfg ?? vcActions
 
         quitKeys <- Lens.view (has . Config.quitKeys)
-        quitTxt <- Lens.view (Language.texts . Texts.quit)
+        quitTxt <- Lens.view (has . MainLoop.textQuit)
         let quitEventMap = E.keysEventMap quitKeys (E.Doc [quitTxt]) (error "Quit")
 
         pure statusBarWidget
