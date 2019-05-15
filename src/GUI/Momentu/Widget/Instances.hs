@@ -13,9 +13,7 @@ module GUI.Momentu.Widget.Instances
 
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
-
-
-
+import           Data.Has (Has(..))
 import           Data.Maybe.Extended (unionMaybeWith)
 import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))
@@ -83,13 +81,13 @@ instance (Functor f, a ~ f Update) => SizedElement (Widget a) where
             Vector2 ow oh = w ^. wSize
 
 instance
-    ( Functor f, a ~ f Update, Dir.HasLayoutDir env
+    ( Functor f, a ~ f Update, Has Dir.Layout env
     ) => Glue env (Widget a) View where
     type Glued (Widget a) View = Widget a
     glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance
-    ( Functor f, a ~ f Update, Dir.HasLayoutDir env
+    ( Functor f, a ~ f Update, Has Dir.Layout env
     ) => Glue env View (Widget a) where
     type Glued View (Widget a) = Widget a
     glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
@@ -100,8 +98,7 @@ instance
     ) => Glue env (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
     glue env orientation =
-        Glue.glueH (glueStates env orientation Forward)
-        (env ^. Dir.layoutDir) orientation
+        Glue.glueH (glueStates env orientation Forward) env orientation
 
 glueStates ::
     (Applicative f, Glue.HasTexts env) =>
@@ -168,7 +165,7 @@ combineStates env orientation order (StateFocused f) (StateUnfocused u) =
                 [ env ^. Dir.texts . Dir.navigation
                 , env ^. Dir.texts . Dir.move
                 , env ^. Dir.texts . Dir.textLens orientation order])
-        dir = env ^. Dir.layoutDir
+        dir = env ^. has
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =
                 EventMap.keysEventMapMovesCursor strollBackKeys
@@ -192,12 +189,12 @@ strollBackKeys :: [MetaKey]
 strollBackKeys = [MetaKey.shift MetaKey.Key'Tab]
 
 combineMEnters ::
-    Dir.HasLayoutDir env =>
+    Has Dir.Layout env =>
     env -> Orientation ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a) ->
     Maybe (FocusDirection -> EnterResult a)
-combineMEnters env = unionMaybeWith . combineEnters (env ^. Dir.layoutDir)
+combineMEnters env = unionMaybeWith . combineEnters (env ^. has)
 
 combineEnters ::
     Dir.Layout -> Orientation ->

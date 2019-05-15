@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -- | A goto-definition widget
 module Lamdu.GUI.CodeEdit.GotoDefinition
     ( make

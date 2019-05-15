@@ -1,9 +1,11 @@
+{-# LANGUAGE FlexibleContexts #-}
 module GUI.Momentu.Widgets.GridView
     ( make, makePlacements
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Foldable (toList)
+import           Data.Has (Has(..))
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))
@@ -71,7 +73,7 @@ makePlacements rows =
 --- Displays:
 
 make ::
-    ( MonadReader env m, Dir.HasLayoutDir env
+    ( MonadReader env m, Has Dir.Layout env
     , Traversable horiz, Traversable vert
     ) =>
     m

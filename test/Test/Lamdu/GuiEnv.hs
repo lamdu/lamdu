@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 
 module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
 
@@ -7,6 +7,7 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Functor.Identity (Identity(..))
+import           Data.Has (Has(..))
 import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
@@ -67,7 +68,7 @@ instance HasConfig Env where config = eConfig
 instance HasSettings Env where settings = eSettings
 instance TextEdit.HasStyle Env where style = eTextEditStyle
 instance HasStyle Env where style = eStyle
-instance Dir.HasLayoutDir Env where layoutDir = eDirLayout
+instance Has Dir.Layout Env where has = eDirLayout
 instance Dir.HasTexts Env where texts = language . Dir.texts
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts

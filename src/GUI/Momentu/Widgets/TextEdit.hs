@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
+{-# LANGUAGE DerivingVia, FlexibleContexts #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
@@ -17,6 +18,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Binary.Extended as Binary
 import           Data.Char (isSpace)
+import           Data.Has (Has(..))
 import           Data.List.Extended (genericLength, minimumOn)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -137,7 +139,7 @@ cursorRects s str =
         lineHeight = TextView.lineHeight s
 
 makeInternal ::
-    (Dir.HasLayoutDir env, HasStyle env) =>
+    (Has Dir.Layout env, HasStyle env) =>
     env -> (forall a. Lens.Getting a (Modes a) a) ->
     Text -> EmptyStrings -> Widget.Id -> TextWidget ((,) Text)
 makeInternal env mode str emptyStrings myId =

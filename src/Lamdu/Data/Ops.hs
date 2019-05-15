@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
@@ -15,10 +16,11 @@ module Lamdu.Data.Ops
 
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           GUI.Momentu.Direction (HasLayoutDir(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.CharClassification as Chars
@@ -116,7 +118,7 @@ case_ tag tailI =
             <&> CompositeExtendResult newValueI
 
 assocTagName ::
-    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
     env -> T.Tag -> MkProperty' (T m) Text
 assocTagName env tag =
     ExprIRef.readTagInfo tag

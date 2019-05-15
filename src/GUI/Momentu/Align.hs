@@ -10,6 +10,7 @@ module GUI.Momentu.Align
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
@@ -85,7 +86,7 @@ instance SizedElement a => SizedElement (WithTextPos a) where size = tValue . El
 instance
     ( SizedElement (Glued a b)
     , SizedElement a, SizedElement b
-    , Glue env a b, Dir.HasLayoutDir env
+    , Glue env a b, Has Dir.Layout env
     ) => Glue env (Aligned a) (Aligned b) where
     type Glued (Aligned a) (Aligned b) = Aligned (Glued a b)
     glue env o a b =
@@ -94,7 +95,7 @@ instance
 
 instance
     ( SizedElement a, SizedElement b
-    , Glue env a b, Dir.HasLayoutDir env
+    , Glue env a b, Has Dir.Layout env
     ) => Glue env (WithTextPos a) (WithTextPos b) where
     type Glued (WithTextPos a) (WithTextPos b) = WithTextPos (Glued a b)
     -- | Vertical glue takes the top text pos
@@ -137,7 +138,7 @@ instance Glue env View a => Glue env View (WithTextPos a) where
         }
 
 glueHelper ::
-    (Glue env a b, Element b, SizedElement a, Dir.HasLayoutDir env) =>
+    (Glue env a b, Element b, SizedElement a, Has Dir.Layout env) =>
     ((Vector2 R, Vector2 R) -> Vector2 R) ->
     env -> Dir.Orientation ->
     (Vector2 R, a) -> (Vector2 R, b) -> (Vector2 R, Glued a b)
@@ -157,7 +158,7 @@ glueHelper chooseAlign env orientation (aAbsAlign, aw) (bAbsAlign, bw) =
         aToB = bAbsAlign - aAbsAlign & l .~ 0
         bToA = -aToB
         syncAlign :: Element a => Vector2 R -> a -> a
-        syncAlign move = Element.pad (env ^. Dir.layoutDir) (max 0 move) 0
+        syncAlign move = Element.pad env (max 0 move) 0
 
 {-# INLINE asTuple #-}
 asTuple :: Lens.Iso (Aligned a) (Aligned b) (Vector2 R, a) (Vector2 R, b)

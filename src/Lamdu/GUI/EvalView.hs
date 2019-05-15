@@ -7,6 +7,7 @@ module Lamdu.GUI.EvalView
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -101,7 +102,7 @@ makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
         (preLabel, postLabel) <-
-            Lens.view Dir.layoutDir <&>
+            Lens.view has <&>
             \case
             Dir.LeftToRight -> ("[", "]")
             Dir.RightToLeft -> ("]", "[")
@@ -152,7 +153,7 @@ makeList ::
 makeList (Sugar.ResList head_) =
     do
         (preLabel, postLabel) <-
-            Lens.view Dir.layoutDir <&>
+            Lens.view has <&>
             \case
             Dir.LeftToRight -> ("[", ", …]")
             Dir.RightToLeft -> ("]", "[… ,")

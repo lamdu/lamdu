@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
 module GUI.Momentu.View
     ( View(..), vSize, vAnimLayers, make
     , animFrames
@@ -7,9 +8,10 @@ module GUI.Momentu.View
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (HasLayoutDir)
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue)
@@ -38,7 +40,7 @@ instance Element View where
 
 instance SizedElement View where size = vSize
 
-instance HasLayoutDir env => Glue env View View where
+instance Has Dir.Layout env => Glue env View View where
     type Glued View View = View
     glue = Glue.glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
 

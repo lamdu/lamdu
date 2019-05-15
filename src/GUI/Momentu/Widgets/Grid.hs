@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad (msum)
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Foldable (toList)
+import           Data.Has (Has(..))
 import           Data.List.Extended (foldl', transpose, sortOn, groupOn, minimumOn)
 import           Data.MRUMemo (memo)
 import           Data.Maybe.Extended (unionMaybeWith)
@@ -293,7 +294,7 @@ toWidgetWithKeys env keys size sChildren =
     }
     where
         unfocusedMEnter = combineMEnters dir unfocusedMEnters
-        dir = env ^. Dir.layoutDir
+        dir = env ^. has
         translateChildWidget (rect, widget) =
             -- Each child is set to the size of the entire grid and
             -- then translated to its place in order to fix the

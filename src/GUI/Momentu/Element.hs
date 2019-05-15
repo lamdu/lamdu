@@ -11,6 +11,7 @@ module GUI.Momentu.Element
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
@@ -53,10 +54,10 @@ class Element a where
     empty :: a
 
 pad ::
-    (MonadReader env m, Element a, Dir.HasLayoutDir env) =>
+    (MonadReader env m, Element a, Has Dir.Layout env) =>
     m (Vector2 R -> Vector2 R -> a -> a)
 pad =
-    Lens.view Dir.layoutDir <&>
+    Lens.view has <&>
     \case
     Dir.LeftToRight -> padImpl
     Dir.RightToLeft ->
@@ -91,7 +92,7 @@ subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => m (AnimId -> AnimId)
 subAnimId = Lens.view animIdPrefix <&> (++)
 
 padToSize ::
-    (MonadReader env m, SizedElement a, Dir.HasLayoutDir env) =>
+    (MonadReader env m, SizedElement a, Has Dir.Layout env) =>
     m (Size -> Vector2 R -> a -> a)
 padToSize =
     pad <&> \p newSize alignment x ->

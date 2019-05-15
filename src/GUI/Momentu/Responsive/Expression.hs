@@ -11,6 +11,7 @@ module GUI.Momentu.Responsive.Expression
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has(..))
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
@@ -43,7 +44,7 @@ instance HasStyle Style where style = id
 
 disambiguators ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasLayoutDir env
+    , Has Dir.Layout env
     ) =>
     m (AnimId -> Gui Options.Disambiguators f)
 disambiguators =
@@ -65,7 +66,7 @@ addParens =
 
 indent ::
     ( MonadReader env m, Functor f, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasLayoutDir env
+    , Has Dir.Layout env
     ) =>
     m (AnimId -> Gui Responsive f -> Gui Responsive f)
 indent =
@@ -89,7 +90,7 @@ totalBarWidth =
 
 indentBar ::
     ( MonadReader env m, HasStyle env, Spacer.HasStdSpacing env
-    , Dir.HasLayoutDir env
+    , Has Dir.Layout env
     ) =>
     m (Widget.R -> AnimId -> View)
 indentBar =

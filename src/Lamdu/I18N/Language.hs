@@ -1,6 +1,7 @@
 -- | Language definitions
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Language
     ( Language(..)
     , HasLanguage(..)
@@ -9,6 +10,7 @@ module Lamdu.I18N.Language
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
@@ -46,7 +48,7 @@ class
     language :: Lens' env Language
 instance EventMap.HasTexts Language where texts = lTexts . eventMap
 
-instance Dir.HasLayoutDir Language where layoutDir = lDirection
+instance Has Dir.Layout Language where has = lDirection
 instance Dir.HasTexts Language where texts = lTexts . dir
 instance Glue.HasTexts Language where texts = lTexts . glue
 instance Menu.HasTexts Language where texts = lTexts . menu

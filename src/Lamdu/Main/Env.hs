@@ -15,6 +15,7 @@ module Lamdu.Main.Env
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Animation.Id (AnimId)
@@ -87,7 +88,7 @@ instance SearchMenu.HasTermStyle Env where termStyle = theme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
-instance Dir.HasLayoutDir Env where layoutDir = language . Dir.layoutDir
+instance Has Dir.Layout Env where has = language . has
 instance Dir.HasTexts Env where texts = language . Dir.texts
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts

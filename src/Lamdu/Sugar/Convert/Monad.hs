@@ -25,6 +25,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
+import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Cache as Cache
@@ -116,7 +117,7 @@ Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
 instance HasLanguageIdentifier (Context m) where languageIdentifier = scLanguageIdentifier
-instance Dir.HasLayoutDir (Context m) where layoutDir = scLanguageDir
+instance Has Dir.Layout (Context m) where has = scLanguageDir
 
 cachedFunc :: Monad m => (Cache.Functions -> a) -> ConvertM m a
 cachedFunc f = Lens.view scCacheFunctions <&> f

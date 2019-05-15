@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
     , Role(..)
@@ -6,11 +7,12 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Direction (HasLayoutDir)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -60,7 +62,7 @@ import           Lamdu.Prelude
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
     , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
-    , HasLayoutDir env, Name.HasNameTexts env
+    , Has Dir.Layout env, Name.HasNameTexts env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
     m (TextWidget f)

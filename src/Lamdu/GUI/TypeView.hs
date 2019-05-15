@@ -6,6 +6,7 @@ module Lamdu.GUI.TypeView
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
+import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
@@ -189,7 +190,7 @@ makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Not
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
 gridViewTopLeftAlign ::
-    ( MonadReader env m, Dir.HasLayoutDir env
+    ( MonadReader env m, Has Dir.Layout env
     , Traversable vert, Traversable horiz
     ) =>
     m (vert (horiz (Aligned View)) -> Aligned View)
@@ -203,7 +204,7 @@ gridViewTopLeftAlign =
 
 makeComposite ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, Dir.HasLayoutDir env, HasNameTexts env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env, HasNameTexts env
     ) =>
     Text -> Text ->
     m (WithTextPos View) -> m (WithTextPos View) ->

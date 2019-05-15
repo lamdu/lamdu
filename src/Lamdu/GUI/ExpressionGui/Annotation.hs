@@ -12,10 +12,11 @@ module Lamdu.GUI.ExpressionGui.Annotation
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Direction (HasLayoutDir)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -197,7 +198,7 @@ annotationSpacer =
     >>= Spacer.vspaceLines
 
 addAnnotationH ::
-    ( Functor f, MonadReader env m, HasTheme env, HasLayoutDir env
+    ( Functor f, MonadReader env m, HasTheme env, Has Dir.Layout env
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     m (WithTextPos View) ->

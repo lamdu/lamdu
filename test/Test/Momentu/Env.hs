@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 module Test.Momentu.Env where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -47,7 +48,7 @@ env =
 
 Lens.makeLenses ''Env
 
-instance Dir.HasLayoutDir Env where layoutDir = eDirLayout
+instance Has Dir.Layout Env where has = eDirLayout
 instance Dir.HasTexts Env where texts = eDirTexts
 instance Glue.HasTexts Env where texts = eGlueTexts
 instance Grid.HasTexts Env where texts = eGridTexts

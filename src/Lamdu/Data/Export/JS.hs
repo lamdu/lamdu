@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 
 module Lamdu.Data.Export.JS
     ( exportFancy
@@ -14,6 +14,7 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Has (Has(..))
 import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
@@ -53,7 +54,7 @@ data CompileNameEnv = CompileNameEnv
 Lens.makeLenses ''CompileNameEnv
 
 instance HasLanguageIdentifier CompileNameEnv where languageIdentifier = ceLanguage
-instance Dir.HasLayoutDir CompileNameEnv where layoutDir = ceLayout
+instance Has Dir.Layout CompileNameEnv where has = ceLayout
 
 compileNameEnv :: CompileNameEnv
 compileNameEnv = CompileNameEnv "english" Dir.LeftToRight

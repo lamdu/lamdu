@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 module GUI.Momentu.Direction
     ( Orientation(..), _Horizontal, _Vertical
     , perpendicular, axis, rectRange
@@ -8,11 +9,11 @@ module GUI.Momentu.Direction
     , HasTexts(..)
     , textLens
     , Layout(..), _LeftToRight, _RightToLeft
-    , HasLayoutDir(..)
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Rect (Rect, R)
 import qualified GUI.Momentu.Rect as Rect
@@ -25,9 +26,6 @@ data Layout
     deriving (Eq, Ord, Show)
 JsonTH.derivePrefixed "" ''Layout
 Lens.makePrisms ''Layout
-
-class HasLayoutDir env where layoutDir :: Lens' env Layout
-instance HasLayoutDir Layout where layoutDir = id
 
 data Orientation = Horizontal | Vertical
     deriving (Eq, Show, Ord, Generic)
@@ -68,7 +66,7 @@ data Texts a = Texts
 
 JsonTH.derivePrefixed "_" ''Texts
 
-class HasLayoutDir env => HasTexts env where texts :: Lens' env (Texts Text)
+class Has Layout env => HasTexts env where texts :: Lens' env (Texts Text)
 
 Lens.makeLenses ''Texts
 Lens.makePrisms ''Order

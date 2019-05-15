@@ -27,6 +27,7 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Has (Has(..))
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
@@ -119,7 +120,7 @@ instance SearchMenu.HasTermStyle (Askable i o) where
 instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
-instance Dir.HasLayoutDir (Askable i o) where layoutDir = aDirLayout
+instance Has Dir.Layout (Askable i o) where has = aDirLayout
 instance Dir.HasTexts (Askable i o) where texts = language . Dir.texts
 instance EventMap.HasTexts (Askable i o) where texts = language . EventMap.texts
 instance Glue.HasTexts (Askable i o) where texts = language . Glue.texts
@@ -234,7 +235,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
     , _aIsHoleResult = False
-    , _aDirLayout = env ^. Dir.layoutDir
+    , _aDirLayout = env ^. has
     , _aLanguage = env ^. language
     , aIom = liftIom
     }

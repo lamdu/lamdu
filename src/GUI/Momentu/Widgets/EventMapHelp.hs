@@ -17,6 +17,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Function (on)
+import           Data.Has (Has(..))
 import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Property (Property(..))
@@ -273,7 +274,7 @@ makeTreeView =
             <&> \mk size trees -> mk size (handleResult (go trees))
 
 hoverEdge ::
-    (MonadReader env m, Element.SizedElement a, Dir.HasLayoutDir env) =>
+    (MonadReader env m, Element.SizedElement a, Has Dir.Layout env) =>
     Widget.Size -> m (a -> a)
 hoverEdge size =
     (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w & Element.hoverLayers

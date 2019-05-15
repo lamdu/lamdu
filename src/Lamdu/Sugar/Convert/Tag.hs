@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module Lamdu.Sugar.Convert.Tag
     ( convertTag, convertTagSelection, convertTaggedEntityWith, convertTaggedEntity
@@ -6,10 +7,11 @@ module Lamdu.Sugar.Convert.Tag
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
+import           Data.Has (Has(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           GUI.Momentu.Direction (HasLayoutDir(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -47,7 +49,7 @@ convertTag tag name forbiddenTags mkInstance setTag =
             <&> convertTagWith env tag name forbiddenTags RequireTag mkInstance setTag
 
 convertTagWith ::
-    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
     env ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
@@ -67,7 +69,7 @@ convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
             convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag
 
 convertTagSelectionWith ::
-    (Monad m, HasLanguageIdentifier env, HasLayoutDir env) =>
+    (Monad m, HasLanguageIdentifier env, Has Dir.Layout env) =>
     env ->
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
@@ -101,7 +103,7 @@ convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag tagsP
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 convertTaggedEntityWith ::
     ( UniqueId.ToUUID a, MonadTransaction n m
-    , HasLanguageIdentifier env, HasLayoutDir env
+    , HasLanguageIdentifier env, Has Dir.Layout env
     ) =>
     env ->
     a -> MkProperty' (T n) (Set T.Tag) -> m (Tag InternalName (T n) (T n))

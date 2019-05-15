@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 
 module Lamdu.Data.Tag
     ( Tag(..), tagOrder, tagOpName, tagNames
@@ -9,7 +9,9 @@ module Lamdu.Data.Tag
 
 import qualified Control.Lens as Lens
 import           Data.Binary
-import           GUI.Momentu.Direction (HasLayoutDir(..), Layout(..))
+import           Data.Has (Has(..))
+import           GUI.Momentu.Direction (Layout(..))
+import qualified GUI.Momentu.Direction as Dir
 
 import           Lamdu.Prelude
 
@@ -43,14 +45,14 @@ class HasLanguageIdentifier env where
     languageIdentifier :: Lens' env Text
 
 getTagName ::
-    (HasLanguageIdentifier env, HasLayoutDir env) =>
+    (HasLanguageIdentifier env, Has Dir.Layout env) =>
     env -> Tag -> Text
 getTagName env tag =
     case tag ^. tagOpName of
     NotAnOp -> name
     OpUni x -> x
     OpDir (DirOp l r) ->
-        case env ^. layoutDir of
+        case env ^. has of
         LeftToRight -> opOrName l
         RightToLeft -> opOrName r
     where

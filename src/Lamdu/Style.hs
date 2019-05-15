@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.Style
     ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num
     , make
@@ -7,6 +8,7 @@ module Lamdu.Style
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           Data.Property (MkProperty)
 import qualified Data.Property as Property
 import           GUI.Momentu.Animation (AnimId)
@@ -94,7 +96,7 @@ data HelpEnv = HelpEnv
 Lens.makeLenses ''HelpEnv
 instance Element.HasAnimIdPrefix HelpEnv where animIdPrefix = heAnimIdPrefix
 instance TextView.HasStyle HelpEnv where style = heStyle . TextView.style
-instance Dir.HasLayoutDir HelpEnv where layoutDir = heDirLayout
+instance Has Dir.Layout HelpEnv where has = heDirLayout
 instance Dir.HasTexts HelpEnv where texts = heDirTexts
 instance Glue.HasTexts HelpEnv where texts = heGlueTexts
 instance E.HasTexts HelpEnv where texts = heEventMapTexts
@@ -116,7 +118,7 @@ addHelp config theme language font size widget =
                 { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
                 }
             , _heAnimIdPrefix = ["help box"]
-            , _heDirLayout = language ^. Dir.layoutDir
+            , _heDirLayout = language ^. has
             , _heDirTexts = language ^. Dir.texts
             , _heEventMapTexts = language ^. E.texts
             , _heGlueTexts = language ^. Glue.texts

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
-{-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia #-}
+{-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia, FlexibleContexts #-}
 module GUI.Momentu.Glue
     ( Texts(..), stroll, back, ahead
         , strollDoc
@@ -15,6 +15,7 @@ module GUI.Momentu.Glue
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Direction (Orientation(..), axis, perpendicular)
 import qualified GUI.Momentu.Direction as Dir
@@ -74,7 +75,7 @@ l /|/ r = (mkGlue ?? Horizontal) <*> l <*> r
 l /-/ r = (mkGlue ?? Vertical) <*> l <*> r
 
 glueH ::
-    (SizedElement a, SizedElement b, Dir.HasLayoutDir env) =>
+    (SizedElement a, SizedElement b, Has Dir.Layout env) =>
     (a -> b -> c) -> env -> Orientation -> a -> b -> c
 glueH f direction orientation v0 v1 =
     f

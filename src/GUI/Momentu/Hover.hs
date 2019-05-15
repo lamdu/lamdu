@@ -16,10 +16,11 @@ module GUI.Momentu.Hover
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has(..))
 import           Data.List.Extended (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)
-import           GUI.Momentu.Direction (Orientation(..), Order(..), HasLayoutDir)
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element, SizedElement)
@@ -92,7 +93,7 @@ instance (Functor f, a ~ f State.Update) => SizedElement (AnchoredWidget a) wher
     size = anchored . Element.size
 
 instance
-    ( Functor f, a ~ f State.Update, HasLayoutDir env
+    ( Functor f, a ~ f State.Update, Has Dir.Layout env
     ) => Glue env (AnchoredWidget a) (Hover View) where
     type Glued (AnchoredWidget a) (Hover View) =
         Hover (AnchoredWidget a)
@@ -102,7 +103,7 @@ instance
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance
-    ( Functor f, a ~ f State.Update, HasLayoutDir env
+    ( Functor f, a ~ f State.Update, Has Dir.Layout env
     ) => Glue env (Hover View) (AnchoredWidget a) where
     type Glued (Hover View) (AnchoredWidget a) =
         Hover (AnchoredWidget a)
@@ -146,7 +147,7 @@ data Ordered a = Ordered
 Lens.makeLenses ''Ordered
 
 hoverBesideOptionsAxis ::
-    ( MonadReader env m, GluesTo env a b c, HasLayoutDir env
+    ( MonadReader env m, GluesTo env a b c, Has Dir.Layout env
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (Orientation -> Ordered a -> b -> [c])
@@ -161,16 +162,16 @@ hoverBesideOptionsAxis =
             <&> (^. value)
 
 anchor ::
-    (MonadReader env m, HasLayoutDir env) =>
+    (MonadReader env m, Has Dir.Layout env) =>
     m (Widget a -> AnchoredWidget a)
 anchor =
-    Lens.view Dir.layoutDir
+    Lens.view has
     <&> \dir w -> case dir of
     Dir.LeftToRight -> AnchoredWidget 0 w
     Dir.RightToLeft -> AnchoredWidget (Vector2 (w ^. Widget.wSize . _1) 0) w
 
 hoverBesideOptions ::
-    ( MonadReader env m, GluesTo env a b c, HasLayoutDir env
+    ( MonadReader env m, GluesTo env a b c, Has Dir.Layout env
     , SizedElement a, SizedElement b, SizedElement c
     ) =>
     m (a -> b -> [c])
@@ -262,7 +263,7 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
 hoverBeside ::
     ( GluesTo env (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
     , MonadReader env m, Functor f, SizedElement w
-    , Element.HasAnimIdPrefix env, HasStyle env, HasLayoutDir env
+    , Element.HasAnimIdPrefix env, HasStyle env, Has Dir.Layout env
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m

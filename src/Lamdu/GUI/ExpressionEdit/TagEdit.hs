@@ -10,11 +10,12 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
+import           Data.Has (Has(..))
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Direction (HasLayoutDir)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -322,7 +323,7 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 
 makeTagView ::
     ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
-    , HasTheme env, HasLayoutDir env, Name.HasNameTexts env
+    , HasTheme env, Has Dir.Layout env, Name.HasNameTexts env
     ) =>
     Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
