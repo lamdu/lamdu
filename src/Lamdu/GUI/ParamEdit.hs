@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
     , eventMapAddFirstParam, mkParamPickResult
@@ -5,6 +6,7 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -16,7 +18,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           Lamdu.Config (Config, HasConfig(..))
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
@@ -30,12 +32,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 eventMapAddFirstParam ::
-    (MonadReader env m, Applicative o, HasConfig env) =>
+    (MonadReader env m, Applicative o, Has Config env) =>
     Widget.Id ->
     Sugar.AddFirstParam name i o ->
     m (Gui EventMap o)
 eventMapAddFirstParam binderId addFirst =
-    Lens.view (Config.config . Config.addNextParamKeys)
+    Lens.view (has . Config.addNextParamKeys)
     <&>
     \keys ->
     E.keysEventMapMovesCursor keys (E.Doc ["Edit", doc]) action
@@ -100,7 +102,7 @@ make ::
     ExprGuiM i o [Gui Responsive o]
 make annotationOpts prevId nextId param =
     do
-        conf <- Lens.view Config.config
+        conf <- Lens.view has
         let paramEventMap =
                 mconcat
                 [ eventParamDelEventMap (iDel info) (conf ^. Config.delForwardKeys) "" nextId

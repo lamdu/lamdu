@@ -29,6 +29,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
 import           Lamdu.Config.Theme (Theme)
@@ -72,7 +73,7 @@ type Ctx env =
     , Spacer.HasStdSpacing env
     , GuiState.HasState env
     , Theme.HasTheme env
-    , Config.HasConfig env
+    , Has Config env
     , Element.HasAnimIdPrefix env
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
@@ -105,10 +106,10 @@ layout themeNames langNames settingsProp =
             (fullSize ^. _1) vcActions
         let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
 
-        versionControlCfg <- Lens.view (Config.config . Config.versionControl)
+        versionControlCfg <- Lens.view (has . Config.versionControl)
         vcEventMap <- VersionControlGUI.eventMap ?? versionControlCfg ?? vcActions
 
-        quitKeys <- Lens.view (Config.config . Config.quitKeys)
+        quitKeys <- Lens.view (has . Config.quitKeys)
         quitTxt <- Lens.view (Language.texts . Texts.quit)
         let quitEventMap = E.keysEventMap quitKeys (E.Doc [quitTxt]) (error "Quit")
 

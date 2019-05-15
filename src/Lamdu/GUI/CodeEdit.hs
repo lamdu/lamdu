@@ -12,7 +12,7 @@ import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
@@ -32,7 +32,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Config (config)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
@@ -83,7 +83,7 @@ class HasEvalResults env m where
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 
 make ::
-    ( MonadTransaction m n, MonadReader env n, Config.HasConfig env
+    ( MonadTransaction m n, MonadReader env n, Has Config env
     , Cache.HasFunctions env
     , Debug.HasMonitors env
     , Theme.HasTheme env, GuiState.HasState env
@@ -103,7 +103,7 @@ make cp gp width =
         env <- Lens.view id
         annMode <- Lens.view (Settings.settings . Settings.sAnnotationMode)
         workArea <-
-            loadWorkArea (env ^. language) (env ^. config . Config.sugar)
+            loadWorkArea (env ^. language) (env ^. has . Config.sugar)
             (env ^. Cache.functions) (env ^. Debug.monitors)
             annMode theEvalResults cp
             & transaction
@@ -147,7 +147,6 @@ makePaneEdit ::
     ExprGuiM (T m) (T m) (Gui Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do
-        theConfig <- Lens.view config
         env <- Lens.view id
         let titledCodeDoc titleLenses texts =
                 E.toDoc (env ^. Language.texts)
@@ -178,14 +177,14 @@ makePaneEdit theExportActions pane =
                         Sugar.DeletedDefinition
                     pane ^. Sugar.paneClose
                     <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys theConfig)
+                    & E.keysEventMapMovesCursor (Config.delKeys env)
                     (E.toDoc (env ^. Language.texts)
                         [ Texts.edit
                         , Texts.definitions . Texts.def
                         , Texts.codeUI . Texts.delete
                         ])
-            paneConfig = theConfig ^. Config.pane
-            exportKeys = theConfig ^. Config.export . Config.exportKeys
+            paneConfig = env ^. has . Config.pane
+            exportKeys = env ^. has . Config.export . Config.exportKeys
         DefinitionEdit.make defEventMap (pane ^. Sugar.paneDefinition)
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
@@ -238,15 +237,14 @@ panesEventMap ::
     Sugar.VarInfo -> ExprGuiM (T m) (T m) (Gui EventMap (IOTrans m))
 panesEventMap theExportActions cp gp replVarInfo =
     do
-        theConfig <- Lens.view config
-        let exportConfig = theConfig ^. Config.export
+        env <- Lens.view id
+        let exportConfig = env ^. has . Config.export
         mJumpBack <- jumpBack gp & transaction <&> fmap IOTrans.liftTrans
         newDefDoc <- newDefinitionDoc
         newDefinitionEventMap <-
             makeNewDefinition cp
             <&> E.keysEventMapMovesCursor
-            (theConfig ^. Config.pane . Config.newDefinitionKeys) newDefDoc
-        env <- Lens.view id
+            (env ^. has . Config.pane . Config.newDefinitionKeys) newDefDoc
         let collaborationDoc =
                 E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
         mconcat
@@ -256,7 +254,7 @@ panesEventMap theExportActions cp gp replVarInfo =
                 (Just . traverse_ importAll)
                 <&> fmap (\() -> mempty)
             , foldMap
-              (E.keysEventMapMovesCursor (theConfig ^. Config.previousCursorKeys)
+              (E.keysEventMapMovesCursor (env ^. has . Config.previousCursorKeys)
                (E.toDoc (env ^. Language.texts)
                    [Texts.navigation, Texts.navigationTexts . Texts.goBack]))
                 mJumpBack

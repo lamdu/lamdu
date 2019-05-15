@@ -56,7 +56,7 @@ make ::
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
-        delKeys <- Lens.view Config.config <&> Config.delKeys
+        delKeys <- Lens.view id <&> Config.delKeys
         let (mkLitEventMap, delEventMap)
                 | searchTerm == "" =
                     ( makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral

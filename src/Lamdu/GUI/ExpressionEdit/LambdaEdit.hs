@@ -6,7 +6,7 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -23,7 +23,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
@@ -74,14 +74,14 @@ lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
-    ( Monad o, MonadReader env f, HasConfig env, HasTheme env
+    ( Monad o, MonadReader env f, Has Config env, HasTheme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Language.HasLanguage env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
     do
-        jumpKeys <- Lens.view (Config.config . Config.jumpToDefinitionKeys)
+        jumpKeys <- Lens.view (has . Config.jumpToDefinitionKeys)
         let expandEventMap =
                 paramIds ^? Lens.traverse
                 & foldMap
@@ -103,7 +103,7 @@ mkShrunk paramIds myId =
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Has TextView.Style env, HasTheme env
-    , HasConfig env, Language.HasLanguage env
+    , Has Config env, Language.HasLanguage env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f

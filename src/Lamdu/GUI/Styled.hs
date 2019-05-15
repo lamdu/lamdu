@@ -35,6 +35,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
+import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
@@ -191,7 +192,7 @@ withColor textColor act =
 
 actionable ::
     ( Element.HasAnimIdPrefix env, Has TextView.Style env
-    , GuiState.HasCursor env, Config.HasConfig env, HasTheme env
+    , GuiState.HasCursor env, Has Config env, HasTheme env
     , Language.HasLanguage env
     , Applicative f, MonadReader env m
     ) =>
@@ -205,7 +206,7 @@ actionable myId txtLens doc action =
                 { Font._underlineColor = color
                 , Font._underlineWidth = underlineWidth
                 }
-        actionKeys <- Lens.view (Config.config . Config.actionKeys)
+        actionKeys <- Lens.view (has . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
             <*> label txtLens

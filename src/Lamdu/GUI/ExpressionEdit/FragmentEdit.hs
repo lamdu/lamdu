@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
 import           AST (Tree, Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
@@ -19,7 +20,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -110,13 +110,12 @@ make fragment pl =
                     pl ^. Sugar.plEntityId & HoleWidgetIds.make
                     & HoleWidgetIds.hidOpen & pure
                     & E.keysEventMapMovesCursor
-                    (env ^. config . Config.healKeys)
+                    (env ^. has . Config.healKeys)
                     (fragmentDoc env CodeUI.showResults)
                 Sugar.HealAction heal ->
                     heal <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
-                        (env ^. config
-                            & Config.delKeys <> Lens.view Config.healKeys)
+                        (Config.delKeys env <> env ^. has . Config.healKeys)
                         (fragmentDoc env CodeUI.heal)
         isInAHole <- ExprGuiM.isHoleResult
         ExprEventMap.add ExprEventMap.defaultOptions pl

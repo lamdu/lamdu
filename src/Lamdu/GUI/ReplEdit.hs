@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -31,7 +31,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Config (HasConfig(..))
+import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme, HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
@@ -79,12 +79,12 @@ extractEventMap env pl keys =
             [Texts.edit, Texts.definitions . Texts.extractReplToDef]
 
 replEventMap ::
-    (Monad m, HasConfig env, Language.HasLanguage env) =>
+    (Monad m, Has Config env, Language.HasLanguage env) =>
     env -> ExportRepl m -> Sugar.Payload name i (T m) a ->
     Gui EventMap (IOTrans m)
 replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
     mconcat
-    [ extractEventMap env replExprPl (env ^. config . Config.extractKeys)
+    [ extractEventMap env replExprPl (env ^. has . Config.extractKeys)
         <&> IOTrans.liftTrans
     , E.keysEventMap (exportConfig ^. Config.exportKeys)
       (toDoc [Texts.collaboration, Texts.exportReplToJSON]) exportRepl
@@ -93,7 +93,7 @@ replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
     ]
     where
         toDoc = E.toDoc (env ^. Language.texts . Texts.collaborationTexts)
-        exportConfig = env ^. config . Config.export
+        exportConfig = env ^. has . Config.export
 
 indicatorColor ::
     (MonadReader env m, HasTheme env) =>
@@ -136,13 +136,13 @@ errorDesc err =
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Has Hover.Style env, GuiState.HasCursor env
-    , HasTheme env, HasConfig env, Glue.HasTexts env, Language.HasLanguage env
+    , HasTheme env, Has Config env, Glue.HasTexts env, Language.HasLanguage env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
     m (Align.TextWidget o)
 errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
     do
-        actionKeys <- Lens.view (Config.config . Config.actionKeys)
+        actionKeys <- Lens.view (has . Config.actionKeys)
         env <- Lens.view id
         let jumpDoc =
                 E.toDoc (env ^. Language.texts)
@@ -193,7 +193,7 @@ isExecutableType t =
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Has Hover.Style env
-    , HasTheme env, HasConfig env, Language.HasLanguage env
+    , HasTheme env, Has Config env, Language.HasLanguage env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))
@@ -204,7 +204,7 @@ resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
         case varInfo of
             Sugar.VarAction ->
                 do
-                    actionKeys <- Lens.view (Config.config . Config.actionKeys)
+                    actionKeys <- Lens.view (has . Config.actionKeys)
                     let executeEventMap =
                             executeIOProcess exportRepl
                             & IOTrans.liftIO
@@ -225,8 +225,7 @@ make ::
 make exportRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         env <- Lens.view id
-        let theConfig = env ^. config
-        let buttonExtractKeys = theConfig ^. Config.actionKeys
+        let buttonExtractKeys = env ^. has . Config.actionKeys
         result <-
             (resultWidget exportRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev

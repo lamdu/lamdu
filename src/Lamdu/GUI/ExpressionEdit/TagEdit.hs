@@ -37,7 +37,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
@@ -97,11 +97,11 @@ tagId :: Sugar.Tag name i o -> Widget.Id
 tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
-    (Functor f, Config.HasConfig env, MonadReader env m) =>
+    (Functor f, Has Config env, MonadReader env m) =>
     f Menu.PickResult ->
     m (Gui EventMap f)
 makePickEventMap action =
-    Lens.view (Config.config . Config.menu) <&>
+    Lens.view (has . Config.menu) <&>
     \config ->
     let pickKeys = config ^. Menu.keysPickOption
         jumpNextKeys = config ^. Menu.keysPickOptionAndGotoNext
@@ -187,7 +187,7 @@ makeOptions tagSelection mkPickResult ctx
         do
             resultCount <-
                 Lens.view
-                (Config.config . Config.completion . Config.completionResultCount)
+                (has . Config.completion . Config.completionResultCount)
             results <-
                 tagSelection ^. Sugar.tsOptions
                 <&> concatMap withText
@@ -250,7 +250,7 @@ allowedTagName =
         f x = Char.isAlpha x || elem x Chars.operator
 
 type HasSearchTermEnv env =
-    ( HasTheme env, HasConfig env, GuiState.HasState env
+    ( HasTheme env, Has Config env, GuiState.HasState env
     , TextEdit.HasStyle env, Has Hover.Style env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     )
@@ -364,7 +364,7 @@ makeTagEditWith onView onPickNext tag =
                 | isRenaming = tag ^? Sugar.tagInfo . Sugar.tagName . Name._Stored
                 | otherwise = Nothing
         isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
-        config <- Lens.view Config.config
+        config <- Lens.view has
         let eventMap =
                 ( case tag ^. Sugar.tagInfo . Sugar.tagName of
                     Name.Stored{} ->

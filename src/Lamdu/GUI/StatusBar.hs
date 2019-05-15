@@ -19,7 +19,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -43,7 +43,7 @@ make ::
     , TextEdit.HasStyle env, Theme.HasTheme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
-    , HasConfig env, HasLanguage env
+    , Has Config env, HasLanguage env
     ) =>
     StatusWidget (IOTrans n) ->
     [Selection Theme] -> [Selection Language] -> Property IO Settings ->

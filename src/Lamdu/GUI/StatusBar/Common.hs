@@ -12,7 +12,7 @@ module Lamdu.GUI.StatusBar.Common
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import           GUI.Momentu.Element (Element(..))
@@ -32,8 +32,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config, HasConfig)
-import qualified Lamdu.Config as Config
+import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (HasTheme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label, OneOfT(..))
@@ -117,7 +116,7 @@ labeledChoice header prop choices =
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
-    , HasConfig env, HasLanguage env
+    , Has Config env, HasLanguage env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Has Hover.Style env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
@@ -126,7 +125,7 @@ makeSwitchStatusWidget ::
 makeSwitchStatusWidget header keysGetter prop choiceVals =
     do
         w <- labeledChoice header prop choiceVals
-        keys <- Lens.view (Config.config . keysGetter)
+        keys <- Lens.view (has . keysGetter)
         txt <- Lens.view (Language.texts . Texts.statusBar)
         let e =
                 setVal newVal

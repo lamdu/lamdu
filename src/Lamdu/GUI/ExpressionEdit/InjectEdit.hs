@@ -53,12 +53,12 @@ makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
         arg <- ExprGuiM.makeSubexpression val
-        config <- Lens.view Config.config
+        delKeys <- Lens.view id <&> Config.delKeys
         let replaceParentEventMap replaceParent =
                 -- Deleting the inject is replacing the whole expr
                 -- with the injected value "child"
                 replaceParent <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config) delDoc
+                & E.keysEventMapMovesCursor delKeys delDoc
 
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>

@@ -33,7 +33,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (config, HasConfig)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
@@ -145,8 +145,8 @@ makeNameRef role color myId nameRef =
         env <- Lens.view id
         let jumpToDefinitionEventMap =
                 E.keysEventMapMovesCursor
-                (env ^. config . Config.jumpToDefinitionKeys ++
-                 env ^. config . Config.extractKeys)
+                (env ^. has . Config.jumpToDefinitionKeys ++
+                 env ^. has . Config.extractKeys)
                 (navDoc env Texts.jumpToDef) $
                 do
                     savePrecursor
@@ -165,16 +165,16 @@ makeNameRef role color myId nameRef =
         nameId = Widget.joinId myId ["name"]
 
 makeInlineEventMap ::
-    (HasConfig env, Language.HasLanguage env, Applicative f) =>
+    (Has Config env, Language.HasLanguage env, Applicative f) =>
     env -> Sugar.BinderVarInline f ->
     Gui EventMap f
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
+    & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
       (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . CodeUI.inline])
 makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
-    & E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
+    & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
       (navDoc env Texts.jumpToNextUse)
 makeInlineEventMap _ _ = mempty
 
@@ -182,7 +182,7 @@ definitionTypeChangeBox ::
     ( MonadReader env m
     , Element.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, HasTheme env, GuiState.HasCursor env
-    , HasConfig env, Language.HasLanguage env
+    , Has Config env, Language.HasLanguage env
     , Applicative f
     ) =>
     Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
@@ -219,7 +219,7 @@ definitionTypeChangeBox info getVarId =
 
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
-    , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
+    , HasTheme env, Element.HasAnimIdPrefix env, Has Config env
     , GuiState.HasCursor env, Has Hover.Style env
     , Language.HasLanguage env, Applicative f
     ) =>

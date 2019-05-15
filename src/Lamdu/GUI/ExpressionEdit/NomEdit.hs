@@ -77,10 +77,10 @@ mkNomGui ::
 mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (Theme.theme . Theme.textColors . TextColors.nomColor)
-        config <- Lens.view Config.config
+        env <- Lens.view id
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config)
+                & E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
         stdWrapParentExpr pl

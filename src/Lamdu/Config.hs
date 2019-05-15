@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens
@@ -7,6 +7,7 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
+import           Data.Has (Has(..))
 import           Data.List.Lens (prefixed)
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -142,8 +143,7 @@ JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
 
-class HasConfig env where config :: Lens' env Config
-instance HasConfig Config where config = id
-
-delKeys :: (MonadReader env m, HasConfig env) => m [MetaKey]
-delKeys = sequence [Lens.view (config . delForwardKeys), Lens.view (config . delBackwardKeys)] <&> mconcat
+delKeys :: (MonadReader env m, Has Config env) => m [MetaKey]
+delKeys =
+    Lens.view has
+    <&> \config -> config ^. delForwardKeys <> config ^. delBackwardKeys

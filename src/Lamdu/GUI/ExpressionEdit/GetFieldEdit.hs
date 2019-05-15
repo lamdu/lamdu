@@ -11,7 +11,6 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
-import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
@@ -40,7 +39,7 @@ make (Sugar.GetField recExpr tag) pl =
         env <- Lens.view id
         let mkDelEventMap del =
                 del <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
+                & E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc (env ^. Language.texts)
                     [Texts.edit, Texts.codeUI . CodeUI.delete])
         let delEventMap =

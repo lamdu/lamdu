@@ -27,7 +27,7 @@ import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
-import           Lamdu.Config (Config, HasConfig(..))
+import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection(..))
 import           Lamdu.Config.Theme (Theme, HasTheme(..), baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
@@ -64,7 +64,7 @@ instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
-instance HasConfig Env where config = eConfig
+instance Has Config Env where has = eConfig
 instance HasSettings Env where settings = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance HasStyle Env where style = eStyle

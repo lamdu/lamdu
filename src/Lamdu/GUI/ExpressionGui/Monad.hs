@@ -110,7 +110,7 @@ instance Has TextView.Style (Askable i o) where has = aTextEditStyle . has
 instance Has TextEdit.Style (Askable i o) where has = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix
-instance Config.HasConfig (Askable i o) where config = aConfig
+instance Has Config (Askable i o) where has = aConfig
 instance HasTheme (Askable i o) where theme = aTheme
 instance Has ResponsiveExpr.Style (Askable i o) where has = aTheme . has
 instance Has Menu.Config (Askable i o) where
@@ -209,7 +209,7 @@ withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 
 run ::
     ( GuiState.HasState env, Spacer.HasStdSpacing env
-    , Config.HasConfig env, HasTheme env
+    , Has Config env, HasTheme env
     , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     (ExprGui.SugarExpr i o -> ExprGuiM i o (Gui Responsive o)) ->
@@ -225,13 +225,13 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aTextEditStyle = env ^. has
     , _aStdSpacing = env ^. Spacer.stdSpacing
     , _aAnimIdPrefix = ["outermost"]
-    , _aConfig = env ^. Config.config
+    , _aConfig = env ^. has
     , _aTheme = env ^. Theme.theme
     , _aSettings = env ^. settings
     , _aMakeSubexpression = makeSubexpr
     , _aMakeBinder = mkBinder
     , _aGuiAnchors = theGuiAnchors
-    , _aDepthLeft = env ^. Config.config . Config.maxExprDepth
+    , _aDepthLeft = env ^. has . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. style
     , _aIsHoleResult = False

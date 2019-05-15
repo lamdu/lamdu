@@ -19,8 +19,8 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Ann
-import           Lamdu.Config (HasConfig)
 import qualified Lamdu.Config as Config
+import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection, _Selection)
 import           Lamdu.Config.Theme (Theme, HasTheme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
@@ -62,7 +62,7 @@ unlabeledHeader switchLens categoryLens =
 
 makeAnnotationsSwitcher ::
     ( MonadReader env m, Applicative f
-    , HasConfig env, HasTheme env, HasLanguage env
+    , Has Config env, HasTheme env, HasLanguage env
     , Has TextView.Style env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
@@ -80,7 +80,7 @@ makeAnnotationsSwitcher annotationModeProp =
 
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
-    , HasConfig env, HasTheme env, HasStdSpacing env, HasLanguage env
+    , Has Config env, HasTheme env, HasStdSpacing env, HasLanguage env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
     [Selection Theme] -> [Selection Language] ->

@@ -11,6 +11,7 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import           AST (Tree, Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))
@@ -144,7 +145,7 @@ make ::
     ExprGuiM i o (Menu.Placement -> Gui Responsive o)
 make mkOptions pl allowedTerms =
     do
-        config <- Lens.view Config.config
+        config <- Lens.view has
         let fdWrap =
                 FocusDelegator.make ?? fdConfig (config ^. Config.completion)
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds

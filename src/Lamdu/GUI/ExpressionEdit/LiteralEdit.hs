@@ -33,7 +33,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
@@ -90,14 +90,14 @@ genericEdit whichStyle prop pl =
         valText = prop ^. Property.pVal & format
 
 fdConfig ::
-    ( MonadReader env m, HasConfig env, Has Menu.Config env
+    ( MonadReader env m, Has Config env, Has Menu.Config env
     , Language.HasLanguage env
     ) =>
     m FocusDelegator.Config
 fdConfig =
     Lens.view id
     <&> \env ->
-    let litConf = env ^. Config.config . Config.literal
+    let litConf = env ^. has . Config.literal
         menuKeys = env ^. has . Menu.configKeys
     in
     FocusDelegator.Config
@@ -125,7 +125,7 @@ fdConfig =
     }
 
 withFd ::
-    ( MonadReader env m, HasConfig env, GuiState.HasCursor env
+    ( MonadReader env m, Has Config env, GuiState.HasCursor env
     , Has Menu.Config env, Language.HasLanguage env, Applicative f
     ) =>
     m (Widget.Id -> TextWidget f -> TextWidget f)
@@ -134,7 +134,7 @@ withFd =
     <&> Lens.mapped %~ (Align.tValue %~)
 
 textEdit ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Has Menu.Config env
+    ( MonadReader env m, Has Config env, HasStyle env, Has Menu.Config env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Language.HasLanguage env, Monad o
     ) =>
@@ -164,7 +164,7 @@ parseNum newText
 
 numEdit ::
     ( MonadReader env m, Monad o
-    , HasConfig env, HasStyle env, Has Menu.Config env
+    , Has Config env, HasStyle env, Has Menu.Config env
     , GuiState.HasState env, Language.HasLanguage env
     ) =>
     Property o Double ->

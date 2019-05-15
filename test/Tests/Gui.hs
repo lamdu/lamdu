@@ -7,6 +7,7 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
+import           Data.Has (Has)
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -23,7 +24,7 @@ import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (HasTheme)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -73,7 +74,7 @@ wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focu
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
 makeGui ::
-    ( HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasState env, HasStdSpacing env, Has Config env, HasTheme env
     , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
@@ -103,7 +104,7 @@ focusedWidget gui =
         widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
 makeFocusedWidget ::
-    ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
     , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     String -> Cache.Functions -> env ->
@@ -112,7 +113,7 @@ makeFocusedWidget afterDoc cache env =
     makeGui afterDoc cache env >>= either fail pure . focusedWidget
 
 mApplyEvent ::
-    ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
     , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event ->
@@ -132,7 +133,7 @@ mApplyEvent cache env virtCursor event =
             & sequenceA
 
 applyEvent ::
-    ( HasCallStack, HasState env, HasStdSpacing env, HasConfig env, HasTheme env
+    ( HasCallStack, HasState env, HasStdSpacing env, Has Config env, HasTheme env
     , HasSettings env, HasStyle env, Language.HasLanguage env
     ) =>
     Cache.Functions -> env -> VirtualCursor -> Event -> T ViewM env

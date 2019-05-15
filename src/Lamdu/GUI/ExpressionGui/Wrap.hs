@@ -1,4 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields, FlexibleContexts #-}
 module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
     , stdWrapParentExpr
@@ -6,6 +6,7 @@ module Lamdu.GUI.ExpressionGui.Wrap
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive(..))
 import           GUI.Momentu.State (Gui)
@@ -14,7 +15,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import           Lamdu.Config (config)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -30,7 +31,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 parentExprFDConfig ::
-    (MonadReader env m, Config.HasConfig env, Language.HasLanguage env) =>
+    (MonadReader env m, Has Config env, Language.HasLanguage env) =>
     m FocusDelegator.Config
 parentExprFDConfig =
     Lens.view id <&>
@@ -40,9 +41,9 @@ parentExprFDConfig =
             [Texts.navigation, Texts.navigationTexts . lens]
     in
     FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = env ^. config . Config.enterSubexpressionKeys
+    { FocusDelegator.focusChildKeys = env ^. has . Config.enterSubexpressionKeys
     , FocusDelegator.focusChildDoc = doc Texts.enterSubexpression
-    , FocusDelegator.focusParentKeys = env ^. config . Config.leaveSubexpressionKeys
+    , FocusDelegator.focusParentKeys = env ^. has . Config.leaveSubexpressionKeys
     , FocusDelegator.focusParentDoc = doc Texts.leaveSubexpression
     }
 
@@ -60,7 +61,7 @@ stdWrap pl =
         (<<<) = liftA2 (.)
 
 parentDelegator ::
-    ( HasCallStack, MonadReader env m, Config.HasConfig env
+    ( HasCallStack, MonadReader env m, Has Config env
     , GuiState.HasCursor env, Language.HasLanguage env
     , Applicative o
     ) => Widget.Id ->

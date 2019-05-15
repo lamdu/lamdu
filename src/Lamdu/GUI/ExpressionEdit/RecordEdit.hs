@@ -7,7 +7,7 @@ import           AST.Knot.Ann (val)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -29,7 +29,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
@@ -56,10 +56,10 @@ addFieldId :: Widget.Id -> Widget.Id
 addFieldId = (`Widget.joinId` ["add field"])
 
 mkAddFieldEventMap ::
-    (MonadReader env m, HasConfig env, Applicative o) =>
+    (MonadReader env m, Has Config env, Applicative o) =>
     Widget.Id -> m (Gui EventMap o)
 mkAddFieldEventMap myId =
-    Lens.view (Config.config . Config.recordAddFieldKeys)
+    Lens.view (has . Config.recordAddFieldKeys)
     <&>
     \keys ->
     addFieldId myId
@@ -229,10 +229,10 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view Theme.theme
         vspace <- Spacer.stdVSpace
-        config <- Lens.view Config.config
+        env <- Lens.view id
         let restEventMap =
                 close <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys config) (doc "Close")
+                & E.keysEventMapMovesCursor (Config.delKeys env) (doc "Close")
         restExpr <-
             Styled.addValPadding <*> ExprGuiM.makeSubexpression rest
             <&> Widget.weakerEvents restEventMap
@@ -243,13 +243,13 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
             ?? fieldsGui ?? restExpr
 
 openRecordEventMap ::
-    (MonadReader env m, HasConfig env, Functor o) =>
+    (MonadReader env m, Has Config env, Functor o) =>
     Sugar.OpenCompositeActions o ->
     Sugar.Expression name i o a ->
     m (Gui EventMap o)
 openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
-        Lens.view (Config.config . Config.recordCloseKeys)
+        Lens.view (has . Config.recordCloseKeys)
         <&>
         \keys ->
         close <&> WidgetIds.fromEntityId
@@ -259,20 +259,20 @@ openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
         isHole = Lens.has (val . Sugar._BodyHole)
 
 closedRecordEventMap ::
-    (MonadReader env m, HasConfig env, Functor o) =>
+    (MonadReader env m, Has Config env, Functor o) =>
     Sugar.ClosedCompositeActions o -> m (Gui EventMap o)
 closedRecordEventMap (Sugar.ClosedCompositeActions open) =
-    Lens.view (Config.config . Config.recordOpenKeys)
+    Lens.view (has . Config.recordOpenKeys)
     <&>
     \keys ->
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor keys (doc "Open")
 
 recordDelEventMap ::
-    (MonadReader env m, HasConfig env, Functor o) =>
+    (MonadReader env m, Has Config env, Functor o) =>
     o Sugar.EntityId -> m (Gui EventMap o)
 recordDelEventMap delete =
-    Lens.view Config.config <&> Config.delKeys
+    Lens.view id <&> Config.delKeys
     <&>
     \keys ->
     delete <&> WidgetIds.fromEntityId

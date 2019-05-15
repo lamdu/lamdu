@@ -8,6 +8,7 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import qualified Data.Map as Map
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -17,7 +18,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -49,7 +49,7 @@ makeLetEdit item =
         env <- Lens.view id
         let eventMap =
                 foldMap
-                ( E.keysEventMapMovesCursor (env ^. config . Config.extractKeys)
+                ( E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
                     (E.toDoc (env ^. Language.texts)
                         [ Texts.edit
                         , Texts.codeUI . CodeUI.letClause
@@ -58,7 +58,7 @@ makeLetEdit item =
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . ann . Sugar.plActions . Sugar.extract)
                 <>
-                E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
+                E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc (env ^. Language.texts)
                     [ Texts.edit
                     , Texts.codeUI . CodeUI.letClause
@@ -67,7 +67,7 @@ makeLetEdit item =
                 (bodyId <$ item ^. Sugar.lDelete)
                 <>
                 foldMap
-                ( E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
+                ( E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
                     (E.toDoc (env ^. Language.texts)
                         [ Texts.navigation
                         , Texts.navigationTexts . Texts.jumpToFirstUse
@@ -103,7 +103,7 @@ make (Ann pl (Sugar.BinderLet l)) =
                 . Sugar.lValue . ann . Sugar.plActions
                 . Sugar.extract
                 & foldMap
-                (E.keysEventMap (env ^. config . Config.moveLetInwardKeys)
+                (E.keysEventMap (env ^. has . Config.moveLetInwardKeys)
                 (E.toDoc (env ^. Language.texts)
                     [ Texts.edit
                     , Texts.codeUI . CodeUI.letClause

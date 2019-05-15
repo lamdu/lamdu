@@ -8,6 +8,7 @@ import           AST (Tree, Ann(..), Children(..), Recursive(..), RecursiveConst
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict, withDict)
+import           Data.Has (Has(..))
 import           Data.Proxy (Proxy(..))
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -24,7 +25,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Lamdu.Config (HasConfig(..))
+import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
@@ -47,9 +48,9 @@ setFocalAreaToFullSize =
 
 -- | Remove unwanted event handlers from a hole result
 removeUnwanted ::
-    (MonadReader env m, HasConfig env) => m (EventMap a -> EventMap a)
+    (MonadReader env m, Has Config env) => m (EventMap a -> EventMap a)
 removeUnwanted =
-    Lens.view config
+    Lens.view has
     <&>
     \c ->
     concat

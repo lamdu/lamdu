@@ -64,10 +64,10 @@ makeIfThen prefixLabel animId ifElse =
             /|/ grammar (label (Texts.code . Texts.if_))
             /|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
-        config <- Lens.view Config.config
+        delKeys <- Lens.view id <&> Config.delKeys
         let eventMap =
                 foldMap
-                (E.keysEventMapMovesCursor (Config.delKeys config)
+                (E.keysEventMapMovesCursor delKeys
                  (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
                 (ifElse ^. Sugar.iElse . ann .
                  Sugar.plActions . Sugar.mReplaceParent)

@@ -33,7 +33,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (HasConfig)
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -45,7 +45,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 add ::
-    ( MonadReader env m, Applicative o, Has TextView.Style env, HasConfig env
+    ( MonadReader env m, Applicative o, Has TextView.Style env, Has Config env
     , Language.HasLanguage env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.Payload name i o a ->
@@ -70,7 +70,7 @@ add pl =
             }
 
 eventMap ::
-    ( MonadReader env m, HasConfig env, Language.HasLanguage env
+    ( MonadReader env m, Has Config env, Language.HasLanguage env
     , Applicative o
     ) =>
     m (Sugar.Payload name i o expr -> Gui EventMap o)
@@ -84,7 +84,7 @@ eventMap =
 -- sure it activates it when it's jumped to
 with ::
     ( MonadReader env m, Applicative o, GuiState.HasCursor env
-    , Has TextView.Style env, HasConfig env, Element.HasAnimIdPrefix env
+    , Has TextView.Style env, Has Config env, Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
     Sugar.Payload name i o a ->
@@ -120,7 +120,7 @@ fragmentEventMap env pl =
             | otherwise = Nothing
 
 delDotEventMap ::
-    ( MonadReader env m, HasConfig env, Applicative f
+    ( MonadReader env m, Has Config env, Applicative f
     , Language.HasLanguage env
     ) =>
     m (Widget.Id -> Gui EventMap f)

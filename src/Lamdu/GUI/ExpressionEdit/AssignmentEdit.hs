@@ -9,7 +9,7 @@ import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
@@ -193,7 +193,7 @@ makeScopeNavEdit ::
     )
 makeScopeNavEdit func myId curCursor =
     do
-        evalConfig <- Lens.view (Config.config . Config.eval)
+        evalConfig <- Lens.view (has . Config.eval)
         chosenScopeProp <- func ^. Sugar.fChosenScopeProp & ExprGuiM.im
         let setScope =
                 (mempty <$) .

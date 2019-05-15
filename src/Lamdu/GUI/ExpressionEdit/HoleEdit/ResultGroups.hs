@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
+import           Data.Has (Has(..))
 import           Data.List (sortOn, nubBy)
 import qualified Data.List.Class as ListClass
 import           Data.MRUMemo (memo)
@@ -162,7 +163,7 @@ makeAll ::
     ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
 makeAll options ctx =
     do
-        config <- Lens.view (Config.config . Config.completion)
+        config <- Lens.view (has . Config.completion)
         lang <- Lens.view language
         traverse (mkGroup lang) options
             <&> holeMatches searchTerm
