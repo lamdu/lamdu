@@ -100,8 +100,8 @@ instance Has Dir.Layout HelpEnv where has = heDirLayout
 instance Dir.HasTexts HelpEnv where texts = heDirTexts
 instance Glue.HasTexts HelpEnv where texts = heGlueTexts
 instance E.HasTexts HelpEnv where texts = heEventMapTexts
-instance EventMapHelp.HasConfig HelpEnv where config = heConfig
-instance EventMapHelp.HasStyle HelpEnv where style = heStyle
+instance Has EventMapHelp.Config HelpEnv where has = heConfig
+instance Has EventMapHelp.Style HelpEnv where has = heStyle
 
 addHelp ::
     Config -> Theme -> Language -> Font ->

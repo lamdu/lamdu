@@ -104,7 +104,7 @@ defaultDebugOptions =
 
 defaultOptions ::
     ( HasTexts env, Zoom.HasTexts env
-    , Element.HasAnimIdPrefix env, EventMapHelp.HasConfig env
+    , Element.HasAnimIdPrefix env, Has EventMapHelp.Config env
     , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>
     env -> IO Options

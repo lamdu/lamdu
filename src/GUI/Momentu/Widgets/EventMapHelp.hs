@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts, DerivingVia #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds #-}
 module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)
@@ -7,7 +7,7 @@ module GUI.Momentu.Widgets.EventMapHelp
     , addHelpView
     , Style(..), styleText, styleInputDocColor, styleBGColor, styleTint
     , Config(..), configOverlayDocKeys
-    , HasStyle(..), HasConfig(..)
+    , HasStyle
     , defaultStyle
     , defaultConfig
     , Texts(..), textHelp, textKeyBindings, textShow, textHide
@@ -73,8 +73,7 @@ newtype Config = Config
     }
 Lens.makeLenses ''Config
 
-class Has TextView.Style env => HasStyle env where style :: Lens' env Style
-class HasConfig env where config :: Lens' env Config
+type HasStyle env = (Has TextView.Style env, Has Style env)
 
 data Texts a = Texts
     { _textHelp :: a
@@ -156,7 +155,7 @@ makeShortcutKeyView inputDocs =
     & Reader.local setColor
     where
         setColor env =
-            env & has . TextView.styleColor .~ (env ^. style . styleInputDocColor)
+            env & has . TextView.styleColor .~ (env ^. has . styleInputDocColor)
 
 makeTextViews ::
     ( MonadReader env m, HasStyle env, Glue.HasTexts env
@@ -217,11 +216,11 @@ makeFromFocus size focus =
 
 makeTooltip ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Glue.HasTexts env
-    , HasStyle env, HasConfig env, HasTexts env
+    , HasStyle env, Has Config env, HasTexts env
     ) => m View
 makeTooltip =
     do
-        helpKeys <- Lens.view (config . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
+        helpKeys <- Lens.view (has . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
         txt <- Lens.view (texts . textShowHelp)
         (Label.make txt <&> (^. Align.tValue))
             /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
@@ -295,8 +294,9 @@ addHelpViewWith mkHelpView size focus =
     do
         helpView <-
             ( (.)
-                <$> (Element.tint <$> Lens.view (style . styleTint))
-                <*> (MDraw.backgroundColor helpAnimId <$> Lens.view (style . styleBGColor))
+                <$> (Element.tint <$> Lens.view (has . styleTint))
+                <*> (MDraw.backgroundColor helpAnimId
+                        <$> Lens.view (has . styleBGColor))
             ) <*> mkHelpView size focus
         atEdge <- hoverEdge size ?? helpView
         focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
@@ -308,7 +308,7 @@ addHelpView ::
 addHelpView = addHelpViewWith makeFromFocus
 
 toggleEventMap ::
-    (MonadReader env m, Monoid a, Monad f, HasConfig env, HasTexts env) =>
+    (MonadReader env m, Monoid a, Monad f, Has Config env, HasTexts env) =>
     Property f IsHelpShown -> m (EventMap (f a))
 toggleEventMap showingHelp =
     Lens.view id
@@ -319,7 +319,7 @@ toggleEventMap showingHelp =
             HelpNotShown -> env ^. texts . textShow
             HelpShown -> env ^. texts . textHide
     in  Property.pureModify showingHelp toggle
-        & E.keysEventMap (env ^. config . configOverlayDocKeys)
+        & E.keysEventMap (env ^. has . configOverlayDocKeys)
             ( E.Doc
                 [ env ^. texts . textHelp
                 , env ^. texts . textKeyBindings
@@ -329,7 +329,7 @@ toggleEventMap showingHelp =
 
 helpViewForState ::
     ( MonadReader env m, Element.HasAnimIdPrefix env
-    , HasStyle env, HasConfig env, HasTexts env
+    , HasStyle env, Has Config env, HasTexts env
     ) =>
     IsHelpShown -> Widget.Size -> Widget.Focused (f a) -> m View
 helpViewForState HelpNotShown = \_ _ -> makeTooltip
@@ -338,7 +338,7 @@ helpViewForState HelpShown = makeFromFocus
 toggledHelpAdder ::
     ( MonadReader env m, Monad f
     , Element.HasAnimIdPrefix env
-    , HasConfig env, HasStyle env, HasTexts env
+    , Has Config env, HasStyle env, HasTexts env
     ) =>
     m (Property f IsHelpShown -> Widget.Size -> Gui Widget f -> Gui Widget f)
 toggledHelpAdder =
