@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
     ( module GUI.Momentu.I18N
@@ -59,8 +59,7 @@ data Texts a = Texts
     , _zoom :: Zoom.Texts a
     , _mainLoop :: MainLoop.Texts a
     }
-    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    deriving Eq
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
 Lens.makeLenses ''Texts

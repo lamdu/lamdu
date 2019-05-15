@@ -30,9 +30,7 @@ import           Lamdu.Prelude
 data Texts a = Texts
     { _select :: a
     , _chooseSelected :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

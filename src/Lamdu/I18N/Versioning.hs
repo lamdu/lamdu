@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.I18N.Versioning where
 
 import qualified Control.Lens as Lens
@@ -11,8 +11,6 @@ data Versioning a = Versioning
     { _branches :: a
     , _undo :: a
     , _redo :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Versioning)
+    } deriving Eq
 JsonTH.derivePrefixed "_" ''Versioning
 Lens.makeLenses ''Versioning

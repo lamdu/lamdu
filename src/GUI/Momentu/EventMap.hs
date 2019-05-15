@@ -53,9 +53,7 @@ import           Lamdu.Prelude hiding (lookup, filter, repeat)
 data Texts a = Texts
     { repeat :: !a
     , depress :: !a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 JsonTH.derivePrefixed "" ''Texts
 
 data KeyEvent = KeyEvent ModKey.KeyState ModKey

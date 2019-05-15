@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell, DisambiguateRecordFields #-}
-{-# LANGUAGE DerivingVia #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), submenuSymbolColorUnselected, submenuSymbolColorSelected
@@ -56,9 +55,7 @@ data Texts a = Texts
     , _upBlocked :: a
     , _submenuSymbol :: a
     , _commaNextEntry :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

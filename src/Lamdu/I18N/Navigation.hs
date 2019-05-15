@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.I18N.Navigation where
 
 import qualified Control.Lens as Lens
@@ -24,8 +24,6 @@ data Navigation a = Navigation
     , _jumpToFirstUse :: a
     , _jumpToNextUse :: a
     , _moveInwards :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Navigation)
+    } deriving Eq
 Lens.makeLenses ''Navigation
 JsonTH.derivePrefixed "_" ''Navigation

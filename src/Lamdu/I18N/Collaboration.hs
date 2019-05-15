@@ -1,6 +1,6 @@
 -- | Collaboration texts
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.I18N.Collaboration where
 
 import qualified Control.Lens as Lens
@@ -16,8 +16,6 @@ data Collaboration a = Collaboration
     , _exportReplToJS :: a
     , _importJSON :: a
     , _importReplFromJSON :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Collaboration)
+    } deriving Eq
 Lens.makeLenses ''Collaboration
 JsonTH.derivePrefixed "_" ''Collaboration

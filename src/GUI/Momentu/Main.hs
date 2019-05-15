@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving, UndecidableInstances, DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving, UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses, ConstraintKinds, FlexibleInstances #-}
 module GUI.Momentu.Main
     ( Config(..)
@@ -59,9 +59,7 @@ data Texts a = Texts
     { _textQuit :: a
     , _textJumpToSource :: a
     , _textDebug :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts

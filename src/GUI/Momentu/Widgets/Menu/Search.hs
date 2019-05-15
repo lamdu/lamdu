@@ -64,9 +64,7 @@ data Texts a = Texts
     , _textSearchTerm :: a
     , _textAppendChar :: a
     , _textDeleteBackwards :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts

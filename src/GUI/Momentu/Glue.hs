@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
-{-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia #-}
+{-# LANGUAGE ConstraintKinds, RankNTypes #-}
 module GUI.Momentu.Glue
     ( Texts(..), stroll, back, ahead
         , strollDoc
@@ -28,9 +28,7 @@ data Texts a = Texts
     { _stroll :: a
     , _back :: a
     , _ahead :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

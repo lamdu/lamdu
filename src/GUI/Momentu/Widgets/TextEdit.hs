@@ -60,9 +60,7 @@ data Texts a = Texts
     , _textCharacter :: a
     , _textClipboard :: a
     , _textPaste :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 JsonTH.derivePrefixed "_text" ''Texts
 

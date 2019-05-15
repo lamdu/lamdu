@@ -1,6 +1,5 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, ConstraintKinds #-}
 {-# LANGUAGE DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
-{-# LANGUAGE DerivingVia, ConstraintKinds #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys
@@ -47,9 +46,7 @@ data Texts a = Texts
     , _bottom :: a
     , _leftMost :: a
     , _rightMost :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

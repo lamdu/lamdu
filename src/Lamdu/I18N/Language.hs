@@ -29,7 +29,7 @@ data Language = Language
     { _lDirection :: Dir.Layout
     , _lIdentifier :: LangId
     , _lTexts :: Texts Text
-    } deriving (Eq)
+    } deriving Eq
 
 Lens.makeLenses ''Language
 JsonTH.derivePrefixed "_l" ''Language

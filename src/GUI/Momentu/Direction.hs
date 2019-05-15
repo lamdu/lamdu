@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Direction
     ( Orientation(..), _Horizontal, _Vertical
     , perpendicular, axis, rectRange
@@ -57,9 +57,7 @@ data Texts a = Texts
     , _down :: a
     , _navigation :: a
     , _move :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 JsonTH.derivePrefixed "_" ''Texts
 

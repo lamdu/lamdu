@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module GUI.Momentu.I18N where
 
@@ -12,8 +12,6 @@ data Texts a = Texts
     , _view :: a
     , _insert :: a
     , _delete :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.I18N.Name
     ( Name(..), unnamed, emptyName
     ) where
@@ -12,9 +12,7 @@ import           Lamdu.Prelude
 data Name a = Name
     { _unnamed :: a
     , _emptyName :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Name)
+    } deriving (Eq, Functor, Foldable, Traversable)
 Lens.makeLenses ''Name
 
 JsonTH.derivePrefixed "_" ''Name

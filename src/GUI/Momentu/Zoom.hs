@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module GUI.Momentu.Zoom
     ( Zoom, make, eventMap, getZoomFactor
     , Config(..), defaultConfig
@@ -25,9 +25,7 @@ data Texts a = Texts
     { _zoom :: a
     , _enlarge :: a
     , _shrink :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Ord, Show, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Texts)
+    } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
