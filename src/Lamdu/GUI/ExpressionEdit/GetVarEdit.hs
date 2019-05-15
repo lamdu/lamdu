@@ -31,9 +31,9 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (Config, HasConfig)
+import           Lamdu.Config (config, HasConfig)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (HasTheme)
+import           Lamdu.Config.Theme (HasTheme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -47,7 +47,10 @@ import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Definitions as Definitions
 import qualified Lamdu.I18N.Language as Language
+import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -122,6 +125,18 @@ addInfixMarker widgetId =
 
 data Role = Normal | Infix deriving Eq
 
+navDoc ::
+    Language.HasLanguage env =>
+    env -> Lens.ALens' (Texts.Navigation Text) Text -> E.Doc
+navDoc env lens =
+    E.toDoc env
+    [Language.navigation, Language.texts . Texts.navigationTexts . lens]
+
+editDoc ::
+    Language.HasLanguage env =>
+    env -> Lens.ALens' (Texts Text) Text -> E.Doc
+editDoc env lens = E.toDoc env [Language.edit, Language.texts . lens]
+
 makeNameRef ::
     (Monad i, Monad o) =>
     Role ->
@@ -131,12 +146,12 @@ makeNameRef ::
 makeNameRef role color myId nameRef =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
-        config <- Lens.view Config.config
+        env <- Lens.view id
         let jumpToDefinitionEventMap =
                 E.keysEventMapMovesCursor
-                (config ^. Config.jumpToDefinitionKeys ++
-                 config ^. Config.extractKeys)
-                (E.Doc ["Navigation", "Jump to definition"]) $
+                (env ^. config . Config.jumpToDefinitionKeys ++
+                 env ^. config . Config.extractKeys)
+                (navDoc env Texts.jumpToDef) $
                 do
                     savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
@@ -154,17 +169,17 @@ makeNameRef role color myId nameRef =
         nameId = Widget.joinId myId ["name"]
 
 makeInlineEventMap ::
-    Applicative f =>
-    Config -> Sugar.BinderVarInline f ->
+    (HasConfig env, Language.HasLanguage env, Applicative f) =>
+    env -> Sugar.BinderVarInline f ->
     Gui EventMap f
-makeInlineEventMap config (Sugar.InlineVar inline) =
+makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
-      (E.Doc ["Edit", "Inline"])
-makeInlineEventMap config (Sugar.CannotInlineDueToUses (x:_)) =
+    & E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
+      (editDoc env (Texts.codeUI . CodeUI.inline))
+makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
-    & E.keysEventMapMovesCursor (config ^. Config.inlineKeys)
-      (E.Doc ["Navigation", "Jump to next use"])
+    & E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
+      (navDoc env Texts.jumpToNextUse)
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
@@ -178,6 +193,8 @@ definitionTypeChangeBox ::
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
+        env <- Lens.view id
+        let updateDoc = editDoc env (Texts.definitions . Definitions.updateDefType)
         oldTypeRow <- Styled.info (label (Texts.definitions . Texts.defUpdateWas))
         newTypeRow <-
             Styled.actionable myId (Texts.definitions . Texts.defUpdateHeader)
@@ -196,7 +213,6 @@ definitionTypeChangeBox info getVarId =
             ] <&> snd <&> Align.WithTextPos 0
     where
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
-        updateDoc = E.Doc ["Edit", "Update definition type"]
         mkTypeView idSuffix scheme =
             TypeView.makeScheme scheme
             & Reader.local (Element.animIdPrefix .~ animId ++ [idSuffix])
@@ -217,10 +233,28 @@ processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
-        theme <- Lens.view Theme.theme
+        env <- Lens.view id
+        let showDialogEventMap =
+                pure myId
+                & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
+                (E.toDoc env
+                    [ Language.view
+                    , Language.texts . Texts.definitions
+                        . Definitions.typeUpdateDialog
+                    , Language.texts . Texts.codeUI . CodeUI.show
+                    ])
+        let hideDialogEventMap =
+                pure hiddenId
+                & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
+                (E.toDoc env
+                    [ Language.view
+                    , Language.texts . Texts.definitions
+                        . Definitions.typeUpdateDialog
+                    , Language.texts . Texts.codeUI . CodeUI.hide
+                    ])
         let underline = Underline
-                { _underlineColor = theme ^. Theme.errorColor
-                , _underlineWidth = theme ^. Theme.wideUnderlineWidth
+                { _underlineColor = env ^. theme . Theme.errorColor
+                , _underlineWidth = env ^. theme . Theme.wideUnderlineWidth
                 }
         layout <-
             Reader.local (TextView.underline ?~ underline) mkLayout
@@ -239,14 +273,6 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 <&> fmap (Widget.weakerEventsWithoutPreevents hideDialogEventMap)
             (False, False) -> pure layout
     where
-        showDialogEventMap =
-            pure myId
-            & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
-            (E.Doc ["View", "Type update dialog", "Show"])
-        hideDialogEventMap =
-            pure hiddenId
-            & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
-            (E.Doc ["View", "Type update dialog", "Hide"])
         hiddenId = myId `Widget.joinId` ["hidden"]
 
 makeGetBinder ::
@@ -255,7 +281,7 @@ makeGetBinder ::
     ExprGuiM i o (TextWidget o)
 makeGetBinder role binderVar myId =
     do
-        config <- Lens.view Config.config
+        env <- Lens.view id
         let (color, processDef) =
                 case binderVar ^. Sugar.bvForm of
                 Sugar.GetLet -> (TextColors.letColor, id)
@@ -265,7 +291,7 @@ makeGetBinder role binderVar myId =
                     )
         makeNameRef role color myId (binderVar ^. Sugar.bvNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
-                (makeInlineEventMap config (binderVar ^. Sugar.bvInline))
+                (makeInlineEventMap env (binderVar ^. Sugar.bvInline))
             & processDef
 
 makeGetParam ::
@@ -274,12 +300,12 @@ makeGetParam ::
     ExprGuiM i o (TextWidget o)
 makeGetParam param myId =
     do
-        theme <- Lens.view Theme.theme
+        underline <- Lens.view theme <&> LightLambda.underline
         let mk = makeNameRef Normal TextColors.parameterColor myId (param ^. Sugar.pNameRef)
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->
                 mk
-                & Reader.local (TextView.underline ?~ LightLambda.underline theme)
+                & Reader.local (TextView.underline ?~ underline)
                 & Styled.nameAtBinder name
             Sugar.NormalBinder -> mk
     where

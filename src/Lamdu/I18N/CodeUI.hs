@@ -11,6 +11,8 @@ import           Lamdu.Prelude
 data CodeUI a = CodeUI
     { _hidden :: a
     , _shown :: a
+    , _hide :: a
+    , _show :: a
     , _pick :: a
     , _new :: a
     , _select :: a
@@ -39,6 +41,7 @@ data CodeUI a = CodeUI
     , _jsReachedAHole :: a
     , _jsStaleDep :: a
     , _jsUnhandledCase :: a
+    , _inline :: a
     , _transform :: a
     , _replace :: a
     , _replaceParent :: a

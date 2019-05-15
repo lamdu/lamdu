@@ -42,8 +42,10 @@ data Navigation a = Navigation
     , _next :: a
     , _prevScopeArrow :: a
     , _nextScopeArrow :: a
+    , _jumpToDef :: a
     , _jumpToDefBody :: a
     , _jumpToFirstUse :: a
+    , _jumpToNextUse :: a
     , _moveInwards :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)

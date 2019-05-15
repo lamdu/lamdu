@@ -16,6 +16,8 @@ data Definitions a = Definitions
     , _defUpdateHeader :: a
     , _defUpdateTo :: a
     , _defUpdateWas :: a
+    , _updateDefType :: a
+    , _typeUpdateDialog :: a
     , _def :: a
     , _extractReplToDef :: a
     , _execRepl :: a
