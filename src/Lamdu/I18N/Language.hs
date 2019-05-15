@@ -60,7 +60,7 @@ instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
 instance Has (NameTexts Text) Language where has = lTexts . name
 instance Has LangId Language where has = lIdentifier
 instance HasLanguage Language where language = id
-instance Zoom.HasTexts Language where texts = lTexts . zoom
+instance Has (Zoom.Texts Text) Language where has = lTexts . zoom
 instance Has (Navigation Text) Language where has = lTexts . navigationTexts
 
 texts :: HasLanguage env => Lens' env (Texts Text)

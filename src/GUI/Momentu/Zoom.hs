@@ -4,7 +4,6 @@ module GUI.Momentu.Zoom
     , Config(..), defaultConfig
     , makeUnscaled
     , Texts(..), view, zoom, enlarge
-    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -31,11 +30,7 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 
 Lens.makeLenses ''Texts
-
-class HasTexts env where texts :: Lens' env (Texts Text)
 JsonTH.derivePrefixed "_" ''Texts
-
-instance HasTexts (Texts Text) where texts = id
 
 data Config = Config
     { _shrinkKeys :: [MetaKey]
@@ -60,15 +55,15 @@ newtype Zoom = Zoom
     { _scaleFactorRef :: IORef Widget.R
     }
 
-eventMap :: HasTexts env => Zoom -> env -> Config -> Gui EventMap IO
+eventMap :: Has (Texts Text) env => Zoom -> env -> Config -> Gui EventMap IO
 eventMap (Zoom ref) env config =
     mconcat
     [ modifyIORef ref (* config ^. enlargeFactor)
         & E.keysEventMap (config ^. enlargeKeys)
-        (E.toDoc (env ^. texts) [view, zoom, enlarge])
+        (E.toDoc (env ^. has) [view, zoom, enlarge])
     , modifyIORef ref (/ config ^. shrinkFactor)
         & E.keysEventMap (config ^. shrinkKeys)
-        (E.toDoc (env ^. texts) [view, zoom, shrink])
+        (E.toDoc (env ^. has) [view, zoom, shrink])
     ]
 
 getZoomFactor :: Fractional a => Zoom -> IO a

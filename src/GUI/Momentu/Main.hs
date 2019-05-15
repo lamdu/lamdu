@@ -102,7 +102,7 @@ defaultDebugOptions =
     }
 
 defaultOptions ::
-    ( HasTexts env, Zoom.HasTexts env
+    ( HasTexts env, Has (Zoom.Texts Text) env
     , Element.HasAnimIdPrefix env, Has EventMapHelp.Config env
     , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>
@@ -135,7 +135,7 @@ defaultOptions env =
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
             , mainTexts = pure (env ^. texts)
-            , zoomTexts = pure (env ^. Zoom.texts)
+            , zoomTexts = pure (env ^. has)
             }
 
 quitEventMap :: (MonadReader env m, Functor f, HasTexts env) => m (Gui EventMap f)
