@@ -2,7 +2,6 @@
 module Lamdu.Debug
     ( module Lamdu.Debug.Tasks
     , Monitors, Counters
-    , HasMonitors(..)
     , Monitor(..), mPure, mAction
     , Evaluator(..), EvaluatorM(..)
     , makeCounters
@@ -34,11 +33,6 @@ Lens.makeLenses ''Monitor
 
 type Monitors = Tasks Monitor
 type Counters = Tasks Counter
-
-class HasMonitors env where
-    monitors :: Lens' env Monitors
-
-instance HasMonitors (Tasks Monitor) where monitors = id
 
 idE :: Evaluator
 idE = Evaluator id

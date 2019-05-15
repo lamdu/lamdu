@@ -65,7 +65,7 @@ type Ctx env =
     ( HasCallStack
     , MainLoop.HasMainLoopEnv env
     , Has Cache.Functions env
-    , Debug.HasMonitors env
+    , Has Debug.Monitors env
     , HasStyle env
     , Has Hover.Style env
     , Has Settings env

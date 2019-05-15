@@ -85,7 +85,7 @@ class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
 make ::
     ( MonadTransaction m n, MonadReader env n, Has Config env
     , Has Cache.Functions env
-    , Debug.HasMonitors env
+    , Has Debug.Monitors env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
     , Has Settings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
@@ -104,7 +104,7 @@ make cp gp width =
         annMode <- Lens.view (has . Settings.sAnnotationMode)
         workArea <-
             loadWorkArea (env ^. language) (env ^. has . Config.sugar)
-            (env ^. has) (env ^. Debug.monitors)
+            (env ^. has) (env ^. has)
             annMode theEvalResults cp
             & transaction
         gotoDefinition <-
