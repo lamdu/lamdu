@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
+import           Data.Has (Has)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -101,7 +102,7 @@ indicatorColor Current color = Lens.view (theme . color)
 indicatorColor Prev _ = Lens.view (theme . Theme.disabledColor)
 
 makeIndicator ::
-    ( MonadReader env m, HasTheme env, TextView.HasStyle env
+    ( MonadReader env m, HasTheme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env
     ) =>
     CurPrevTag -> Lens' Theme Draw.Color -> Text -> m (Align.WithTextPos View)
@@ -117,7 +118,7 @@ compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
 
 errorDesc ::
     ( MonadReader env m, HasTheme env, Language.HasLanguage env
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, Has TextView.Style env
     ) =>
     Sugar.Error -> m (Align.WithTextPos View)
 errorDesc err =

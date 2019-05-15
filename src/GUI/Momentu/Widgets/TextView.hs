@@ -1,10 +1,9 @@
-{-# LANGUAGE BangPatterns, TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, BangPatterns, FlexibleContexts #-}
 module GUI.Momentu.Widgets.TextView
     ( Font.Underline(..), Font.underlineColor, Font.underlineWidth
     , Style(..), styleColor, styleFont, styleUnderline, whiteText
     , color, font, underline
     , lineHeight
-    , HasStyle(..)
 
     , make, makeFocusable
     , Font.TextSize(..), bounding, advance
@@ -14,6 +13,7 @@ module GUI.Momentu.Widgets.TextView
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import qualified Data.Text.Bidi as Bidi
 import           Data.Vector.Vector2 (Vector2(..))
@@ -40,17 +40,14 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-class HasStyle env where style :: Lens' env Style
-instance HasStyle Style where style = id
+underline :: Has Style env => Lens' env (Maybe Font.Underline)
+underline = has . styleUnderline
 
-underline :: HasStyle env => Lens' env (Maybe Font.Underline)
-underline = style . styleUnderline
+font :: Has Style env => Lens' env Font
+font = has . styleFont
 
-font :: HasStyle env => Lens' env Font
-font = style . styleFont
-
-color :: HasStyle env => Lens' env Draw.Color
-color = style . styleColor
+color :: Has Style env => Lens' env Draw.Color
+color = has . styleColor
 
 whiteText :: Font -> Style
 whiteText f =
@@ -100,13 +97,13 @@ letterRects s text =
                     Rect (Vector2 (xpos ^. advance) 0) (size ^. bounding)
 
 drawText ::
-    (MonadReader env m, HasStyle env) =>
+    (MonadReader env m, Has Style env) =>
     m (Text -> RenderedText (AnimId -> Anim.Frame))
 drawText =
-    Lens.view style <&> \s text -> nestedFrame s ("text" :: Text, fontRender s text)
+    Lens.view has <&> \s text -> nestedFrame s ("text" :: Text, fontRender s text)
 
 make ::
-    (MonadReader env m, HasStyle env) =>
+    (MonadReader env m, Has Style env) =>
     m (Text -> AnimId -> WithTextPos View)
 make =
     drawText <&> \draw text animId ->
@@ -117,7 +114,7 @@ make =
         }
 
 makeFocusable ::
-    (MonadReader env m, Applicative f, State.HasCursor env, HasStyle env) =>
+    (MonadReader env m, Applicative f, State.HasCursor env, Has Style env) =>
     m (Text -> Widget.Id -> TextWidget f)
 makeFocusable =
     do

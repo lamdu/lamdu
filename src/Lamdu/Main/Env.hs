@@ -76,7 +76,7 @@ instance Spacer.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpac
 instance GuiState.HasCursor Env
 instance GuiState.HasState Env where state = mainLoop . GuiState.state
 instance TextEdit.HasStyle Env where style = style . Style.base
-instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
+instance Has TextView.Style Env where has = TextEdit.style . has
 instance Theme.HasTheme Env where theme = theme
 instance Config.HasConfig Env where config = config
 instance Hover.HasStyle Env where style = theme . Hover.style

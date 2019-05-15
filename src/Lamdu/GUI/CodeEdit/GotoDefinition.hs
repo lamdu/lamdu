@@ -7,6 +7,7 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
+import           Data.Has (Has)
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Draw as Draw
@@ -56,7 +57,7 @@ nameSearchTerm name =
 
 makeOptions ::
     ( MonadReader env m, HasTheme env, Applicative o
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
+    , Has TextView.Style env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Language.HasLanguage env
     ) =>
     m [Sugar.NameRef (Name g) o] ->

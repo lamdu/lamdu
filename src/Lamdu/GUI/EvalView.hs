@@ -41,7 +41,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 textView ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
     ) => Text -> m (WithTextPos View)
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
@@ -63,7 +63,7 @@ makeField tag val =
             Aligned (Vector2 x (y / w ^. Element.height)) w
 
 makeError ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
     ) => Sugar.EvalTypeError -> m (WithTextPos View)
 makeError (Sugar.EvalTypeError msg) =
     textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
@@ -219,7 +219,7 @@ makeInner (Sugar.ResVal entityId body) =
             | otherwise = id
 
 toText ::
-    ( Format r, MonadReader env m, TextView.HasStyle env
+    ( Format r, MonadReader env m, Has TextView.Style env
     , Element.HasAnimIdPrefix env
     ) => r -> m (WithTextPos View)
 toText val =

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, FlexibleContexts #-}
 
 module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
@@ -36,6 +36,7 @@ module GUI.Momentu.Widgets.Menu.Search
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has)
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -310,7 +311,7 @@ enterWithSearchTerm searchTerm myId =
 
 make ::
     ( MonadReader env m, Applicative f, HasState env, Menu.HasConfig env
-    , TextView.HasStyle env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Has TextView.Style env, Hover.HasStyle env, Element.HasAnimIdPrefix env
     , Menu.HasTexts env
     ) =>
     (Menu.PickFirstResult f -> m (Term f)) ->

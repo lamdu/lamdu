@@ -192,7 +192,7 @@ makeEvalView mNeighbours evalRes =
             <&> (^. Align.tValue)
 
 annotationSpacer ::
-    (MonadReader env m, HasTheme env, TextView.HasStyle env) => m View
+    (MonadReader env m, HasTheme env, Has TextView.Style env) => m View
 annotationSpacer =
     Lens.view (Theme.theme . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
     >>= Spacer.vspaceLines

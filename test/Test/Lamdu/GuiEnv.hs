@@ -60,7 +60,7 @@ data Env =
 Lens.makeLenses ''Env
 instance HasTheme Env where theme = eTheme
 instance HasStdSpacing Env where stdSpacing = eSpacing
-instance TextView.HasStyle Env where style = TextEdit.style . TextView.style
+instance Has TextView.Style Env where has = TextEdit.style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance HasState Env where state = eState

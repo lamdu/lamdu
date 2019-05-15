@@ -26,6 +26,7 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
@@ -185,7 +186,7 @@ optionWidgets f (Option i w s) =
 
 makeNoResults ::
     ( MonadReader env m
-    , TextView.HasStyle env
+    , Has TextView.Style env
     , Element.HasAnimIdPrefix env
     , HasTexts env
     ) =>
@@ -216,7 +217,7 @@ blockEvents env =
 
 makeSubmenuSymbol ::
     ( MonadReader env m, HasConfig env, Element.HasAnimIdPrefix env
-    , TextView.HasStyle env, HasTexts env
+    , Has TextView.Style env, HasTexts env
     ) =>
     Bool -> m (WithTextPos View)
 makeSubmenuSymbol isSelected =
@@ -253,7 +254,7 @@ toOptionList xs True = Truncated xs
 
 layoutOption ::
     ( MonadReader env m, Applicative f, HasTexts env
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Element.HasAnimIdPrefix env, Has TextView.Style env
     , State.HasCursor env, Hover.HasStyle env, HasConfig env
     ) =>
     Widget.R ->
@@ -343,7 +344,7 @@ noResultsId :: Widget.Id -> Widget.Id
 noResultsId = (`Widget.joinId` ["no results"])
 
 make ::
-    ( MonadReader env m, Applicative f, TextView.HasStyle env
+    ( MonadReader env m, Applicative f, Has TextView.Style env
     , Hover.HasStyle env, Element.HasAnimIdPrefix env, HasConfig env
     , State.HasCursor env, HasTexts env
     ) =>
@@ -461,7 +462,7 @@ hoverOptions =
 
 makeHovered ::
     ( Applicative f, State.HasCursor env, HasConfig env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env
+    , Has TextView.Style env, Element.HasAnimIdPrefix env
     , Hover.HasStyle env, HasTexts env, MonadReader env m
     ) =>
     Widget.Id -> View ->

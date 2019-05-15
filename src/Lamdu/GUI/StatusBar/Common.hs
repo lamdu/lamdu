@@ -12,6 +12,7 @@ module Lamdu.GUI.StatusBar.Common
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
+import           Data.Has (Has)
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import           GUI.Momentu.Element (Element(..))
@@ -74,7 +75,7 @@ data Header w = Header
     }
 
 type LabelConstraints env m =
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    ( MonadReader env m, Has TextView.Style env, HasTheme env
     , Element.HasAnimIdPrefix env, HasLanguage env
     )
 

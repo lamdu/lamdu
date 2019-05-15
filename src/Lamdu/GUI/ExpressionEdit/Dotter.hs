@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 -- | When typing a dot on an expression, there are 2 possible meanings
 -- of that dot:
 -- 1) Get record field from the expression
@@ -19,6 +20,7 @@ module Lamdu.GUI.ExpressionEdit.Dotter
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
+import           Data.Has (Has)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -43,7 +45,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 add ::
-    ( MonadReader env m, Applicative o, TextView.HasStyle env, HasConfig env
+    ( MonadReader env m, Applicative o, Has TextView.Style env, HasConfig env
     , Language.HasLanguage env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.Payload name i o a ->
@@ -82,7 +84,7 @@ eventMap =
 -- sure it activates it when it's jumped to
 with ::
     ( MonadReader env m, Applicative o, GuiState.HasCursor env
-    , TextView.HasStyle env, HasConfig env, Element.HasAnimIdPrefix env
+    , Has TextView.Style env, HasConfig env, Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
     Sugar.Payload name i o a ->

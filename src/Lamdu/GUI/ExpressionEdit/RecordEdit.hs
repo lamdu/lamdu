@@ -7,6 +7,7 @@ import           AST.Knot.Ann (val)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
+import           Data.Has (Has)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -156,7 +157,7 @@ makeRecord postProcess fieldGuis =
     )
 
 addPostTags ::
-    ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env
+    ( MonadReader env m, Theme.HasTheme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]

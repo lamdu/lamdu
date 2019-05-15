@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
-{-# LANGUAGE DerivingVia, FlexibleContexts #-}
+{-# LANGUAGE DerivingVia, FlexibleContexts, MultiParamTypeClasses #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
@@ -92,10 +92,10 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
+class Has TextView.Style env => HasStyle env where style :: Lens' env Style
 instance HasStyle Style where style = id
 
-instance TextView.HasStyle Style where style = sTextViewStyle
+instance Has TextView.Style Style where has = sTextViewStyle
 
 defaultStyle :: TextView.Style -> Style
 defaultStyle tvStyle =

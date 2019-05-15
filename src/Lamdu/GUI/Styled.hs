@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, FlexibleContexts #-}
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled
@@ -19,6 +19,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Extended (encodeS)
+import           Data.Has (Has)
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
@@ -47,20 +48,20 @@ import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
 
-info :: (MonadReader env m, HasTheme env, TextView.HasStyle env) => m a -> m a
+info :: (MonadReader env m, HasTheme env, Has TextView.Style env) => m a -> m a
 info = withColor TextColors.infoTextColor
 
-grammar :: (MonadReader env m, HasTheme env, TextView.HasStyle env) => m a -> m a
+grammar :: (MonadReader env m, HasTheme env, Has TextView.Style env) => m a -> m a
 grammar = withColor TextColors.grammarColor
 
 rawText ::
-    (MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env) =>
     AnimId -> Text -> f (WithTextPos View)
 rawText animIdSuffix txt =
     (TextView.make ?? txt) <*> (Element.subAnimId ?? animIdSuffix)
 
 text ::
-    ( MonadReader env f, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    ( MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
     AnimId -> OneOf Texts -> f (WithTextPos View)
@@ -75,7 +76,7 @@ textIds = pure () & Lens.traversed %@~ const . (:[]) . encodeS
 newtype OneOfT a = OneOf (OneOf a)
 
 mkLabel ::
-    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
     m (OneOfT Texts -> WithTextPos View)
@@ -86,7 +87,7 @@ mkLabel =
 
 mkFocusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Language.HasLanguage env
+    , Has TextView.Style env, Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     m (OneOfT Texts -> TextWidget f)
 mkFocusableLabel =
@@ -96,7 +97,7 @@ mkFocusableLabel =
         in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
 
 label ::
-    ( MonadReader env m, TextView.HasStyle env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
     OneOf Texts -> m (WithTextPos View)
@@ -104,7 +105,7 @@ label lens = mkLabel ?? OneOf lens
 
 focusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
-    , TextView.HasStyle env, Element.HasAnimIdPrefix env, Language.HasLanguage env
+    , Has TextView.Style env, Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     OneOf Texts -> m (TextWidget f)
 focusableLabel lens = mkFocusableLabel ?? OneOf lens
@@ -182,7 +183,7 @@ deletedDef =
     <*> (Lens.view (Theme.theme . Theme.deleted . Theme.deletedDefTint) <&> Element.tint)
 
 withColor ::
-    (MonadReader env m, HasTheme env, TextView.HasStyle env) =>
+    (MonadReader env m, HasTheme env, Has TextView.Style env) =>
     Lens.ALens' TextColors Draw.Color -> m a -> m a
 withColor textColor act =
     do
@@ -190,7 +191,7 @@ withColor textColor act =
         Reader.local (TextView.color .~ color) act
 
 actionable ::
-    ( Element.HasAnimIdPrefix env, TextView.HasStyle env
+    ( Element.HasAnimIdPrefix env, Has TextView.Style env
     , GuiState.HasCursor env, Config.HasConfig env, HasTheme env
     , Language.HasLanguage env
     , Applicative f, MonadReader env m

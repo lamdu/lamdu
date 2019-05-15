@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.LambdaEdit
     ( make
     ) where
@@ -5,6 +6,7 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has)
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -57,7 +59,7 @@ mkLhsEdits =
     mParamsEdit ^.. Lens._Just <&> add mScopeEdit
 
 mkExpanded ::
-    ( Monad o, MonadReader env f, HasTheme env, TextView.HasStyle env
+    ( Monad o, MonadReader env f, HasTheme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Language.HasLanguage env
     ) =>
     f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
@@ -73,7 +75,7 @@ lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
     ( Monad o, MonadReader env f, HasConfig env, HasTheme env
-    , GuiState.HasCursor env, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , GuiState.HasCursor env, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Language.HasLanguage env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
@@ -100,7 +102,7 @@ mkShrunk paramIds myId =
 
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env, HasTheme env
+    , Element.HasAnimIdPrefix env, Has TextView.Style env, HasTheme env
     , HasConfig env, Language.HasLanguage env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->

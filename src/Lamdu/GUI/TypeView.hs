@@ -65,14 +65,14 @@ sanitize :: Text -> Text
 sanitize = Text.replace "\0" ""
 
 grammar ::
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    ( MonadReader env m, Has TextView.Style env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
     Text -> m (WithTextPos View)
 grammar = Styled.grammar . Label.make . sanitize
 
 parensAround ::
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    ( MonadReader env m, Has TextView.Style env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
     WithTextPos View -> m (WithTextPos View)
@@ -83,7 +83,7 @@ parensAround view =
         Glue.hbox Dir.LeftToRight [openParenView, view, closeParenView] & pure
 
 parens ::
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    ( MonadReader env m, Has TextView.Style env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
     Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
@@ -161,7 +161,7 @@ addTypeBG view =
             & pure
 
 makeEmptyComposite ::
-    ( MonadReader env m, TextView.HasStyle env, HasTheme env
+    ( MonadReader env m, Has TextView.Style env, HasTheme env
     , Element.HasAnimIdPrefix env
     ) =>
     m (WithTextPos View)

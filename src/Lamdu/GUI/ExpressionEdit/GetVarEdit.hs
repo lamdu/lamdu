@@ -61,7 +61,7 @@ import           Lamdu.Prelude
 
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, HasTheme env
-    , Applicative f, Element.HasAnimIdPrefix env, TextView.HasStyle env
+    , Applicative f, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Name.HasNameTexts env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->

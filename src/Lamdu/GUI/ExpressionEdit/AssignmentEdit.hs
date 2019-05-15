@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.AssignmentEdit
     ( make
     , Parts(..), makeFunctionParts
@@ -8,6 +9,7 @@ import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
+import           Data.Has (Has)
 import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
@@ -142,7 +144,7 @@ makeScopeEventMap env prevKey nextKey cursor setter =
             ]
 
 makeScopeNavArrow ::
-    ( MonadReader env m, Theme.HasTheme env, TextView.HasStyle env
+    ( MonadReader env m, Theme.HasTheme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Monoid a, Applicative o
     ) =>
     (w -> o a) -> Text -> Maybe w -> m (WithTextPos (Widget (o a)))

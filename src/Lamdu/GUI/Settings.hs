@@ -1,5 +1,5 @@
 -- | Widget to edit the settings
-{-# LANGUAGE TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts #-}
 module Lamdu.GUI.Settings
      ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
      , hoist
@@ -8,6 +8,7 @@ module Lamdu.GUI.Settings
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
+import           Data.Has (Has)
 import           Data.Property (Property, composeLens)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
@@ -62,7 +63,7 @@ unlabeledHeader switchLens categoryLens =
 makeAnnotationsSwitcher ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasLanguage env
-    , TextView.HasStyle env
+    , Has TextView.Style env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Hover.HasStyle env
     ) =>
     Property f Ann.Mode -> m (StatusBar.StatusWidget f)

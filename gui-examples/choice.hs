@@ -5,6 +5,7 @@ module Main where
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators ((&), (^.))
 import           Control.Monad.IO.Class (MonadIO(..))
+import           Data.Has (Has)
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Text (Text)
@@ -22,7 +23,7 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-instance TextView.HasStyle Env where style = eTextStyle
+instance Has TextView.Style Env where style = eTextStyle
 instance M.HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance M.HasCursor Env where cursor = eCursor
 

@@ -1,11 +1,12 @@
 -- | Choice widget for presentation mode
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, FlexibleContexts #-}
 module Lamdu.GUI.PresentationModeEdit
     ( make
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -37,7 +38,7 @@ lens mode =
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
-    , Element.HasAnimIdPrefix env, TextView.HasStyle env, GuiState.HasCursor env
+    , Element.HasAnimIdPrefix env, Has TextView.Style env, GuiState.HasCursor env
     , Hover.HasStyle env, Language.HasLanguage env
     ) =>
     Widget.Id ->
@@ -50,7 +51,7 @@ make myId (Sugar.Params params) prop =
         pairs <-
             traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
-                (TextView.style . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
+                (has . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
         defConfig <-
             Choice.defaultConfig
             <*> Lens.view (Language.texts . Texts.codeUI . Texts.presentationMode)

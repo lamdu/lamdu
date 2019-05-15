@@ -95,7 +95,7 @@ data HelpEnv = HelpEnv
     }
 Lens.makeLenses ''HelpEnv
 instance Element.HasAnimIdPrefix HelpEnv where animIdPrefix = heAnimIdPrefix
-instance TextView.HasStyle HelpEnv where style = heStyle . TextView.style
+instance Has TextView.Style HelpEnv where has = heStyle . has
 instance Has Dir.Layout HelpEnv where has = heDirLayout
 instance Dir.HasTexts HelpEnv where texts = heDirTexts
 instance Glue.HasTexts HelpEnv where texts = heGlueTexts

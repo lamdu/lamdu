@@ -106,7 +106,7 @@ Lens.makeLenses ''Askable
 
 instance GuiState.HasCursor (Askable i o)
 instance GuiState.HasState (Askable i o) where state = aState
-instance TextView.HasStyle (Askable i o) where style = aTextEditStyle . TextView.style
+instance Has TextView.Style (Askable i o) where has = aTextEditStyle . has
 instance TextEdit.HasStyle (Askable i o) where style = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix

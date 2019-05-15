@@ -54,12 +54,12 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    (MonadReader env m, TextView.HasStyle env, Functor f) =>
+    (MonadReader env m, Has TextView.Style env, Functor f) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
-    Lens.view TextView.style <&>
-    \textStyle myId w ->
-    let paren t = TextView.make textStyle t (myId ++ [encodeUtf8 t])
+    Lens.view id <&>
+    \env myId w ->
+    let paren t = TextView.make env t (myId ++ [encodeUtf8 t])
     in  paren "(" ||| w ||| paren ")"
     where
         Glue.Poly (|||) = Glue.mkPoly Dir.LeftToRight Glue.Horizontal

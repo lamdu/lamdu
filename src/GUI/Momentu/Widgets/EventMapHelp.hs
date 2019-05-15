@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts, DerivingVia #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module GUI.Momentu.Widgets.EventMapHelp
     ( make
     , IsHelpShown(..)
@@ -65,14 +66,14 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-instance TextView.HasStyle Style where style = styleText
+instance Has TextView.Style Style where has = styleText
 
 newtype Config = Config
     { _configOverlayDocKeys :: [MetaKey]
     }
 Lens.makeLenses ''Config
 
-class TextView.HasStyle env => HasStyle env where style :: Lens' env Style
+class Has TextView.Style env => HasStyle env where style :: Lens' env Style
 class HasConfig env where config :: Lens' env Config
 
 data Texts a = Texts
@@ -155,7 +156,7 @@ makeShortcutKeyView inputDocs =
     & Reader.local setColor
     where
         setColor env =
-            env & TextView.style . TextView.styleColor .~ (env ^. style . styleInputDocColor)
+            env & has . TextView.styleColor .~ (env ^. style . styleInputDocColor)
 
 makeTextViews ::
     ( MonadReader env m, HasStyle env, Glue.HasTexts env
@@ -228,12 +229,12 @@ makeTooltip =
 mkIndent :: (MonadReader env m, Glue.HasTexts env) => m (R -> View -> View)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
 
-fontHeight :: (MonadReader env m, TextView.HasStyle env) => m R
+fontHeight :: (MonadReader env m, Has TextView.Style env) => m R
 fontHeight =
-    Lens.view (TextView.style . TextView.styleFont) <&> Font.height
+    Lens.view (has . TextView.styleFont) <&> Font.height
 
 makeFlatTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Glue.HasTexts env) =>
+    (MonadReader env m, Has TextView.Style env, Glue.HasTexts env) =>
     m (Vector2 R -> [(View, View)] -> View)
 makeFlatTreeView =
     (,,)
@@ -253,7 +254,7 @@ makeFlatTreeView =
         pairHeight (titleView, docView) = (max `on` (^. Element.height)) titleView docView
 
 makeTreeView ::
-    (MonadReader env m, TextView.HasStyle env, Glue.HasTexts env) =>
+    (MonadReader env m, Has TextView.Style env, Glue.HasTexts env) =>
     m (Vector2 R -> [Tree View View] -> View)
 makeTreeView =
     do

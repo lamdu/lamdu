@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module GUI.Momentu.Widgets.Spacer
     ( make
     , makeHorizontal, makeVertical
@@ -7,6 +8,7 @@ module GUI.Momentu.Widgets.Spacer
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Font (Font)
@@ -26,16 +28,16 @@ makeHorizontal width = make $ Vector2 width 0
 makeVertical :: Anim.R -> View
 makeVertical height = make $ Vector2 0 height
 
-stdFont :: (MonadReader env m, TextView.HasStyle env) => m Font
-stdFont = Lens.view (TextView.style . TextView.styleFont)
+stdFont :: (MonadReader env m, Has TextView.Style env) => m Font
+stdFont = Lens.view (has . TextView.styleFont)
 
-stdFontHeight :: (MonadReader env m, TextView.HasStyle env) => m Anim.R
+stdFontHeight :: (MonadReader env m, Has TextView.Style env) => m Anim.R
 stdFontHeight = stdFont <&> Font.height
 
-vspaceLines :: (MonadReader env m, TextView.HasStyle env) => Double -> m View
+vspaceLines :: (MonadReader env m, Has TextView.Style env) => Double -> m View
 vspaceLines numLines = stdFontHeight <&> (numLines *) <&> makeVertical
 
-class TextView.HasStyle env => HasStdSpacing env where
+class Has TextView.Style env => HasStdSpacing env where
     stdSpacing :: Lens' env (Vector2 Double)
 
 getSpaceSize :: (MonadReader env m, HasStdSpacing env) => m (Vector2 Double)
