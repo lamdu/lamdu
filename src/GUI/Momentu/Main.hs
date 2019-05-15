@@ -11,7 +11,6 @@ module GUI.Momentu.Main
     , quitEventMap
     , MainLoop(..), Handlers(..), mainLoopWidget
     , Texts(..), textQuit, textJumpToSource, textDebug
-    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -64,7 +63,6 @@ data Texts a = Texts
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
-class HasTexts env where texts :: Lens' env (Texts Text)
 
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
@@ -102,7 +100,7 @@ defaultDebugOptions =
     }
 
 defaultOptions ::
-    ( HasTexts env, Has (Zoom.Texts Text) env
+    ( Has (Texts Text) env, Has (Zoom.Texts Text) env
     , Element.HasAnimIdPrefix env, Has EventMapHelp.Config env
     , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>
@@ -134,13 +132,14 @@ defaultOptions env =
                 }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
-            , mainTexts = pure (env ^. texts)
+            , mainTexts = pure (env ^. has)
             , zoomTexts = pure (env ^. has)
             }
 
-quitEventMap :: (MonadReader env m, Functor f, HasTexts env) => m (Gui EventMap f)
+quitEventMap ::
+    (MonadReader env m, Functor f, Has (Texts Text) env) => m (Gui EventMap f)
 quitEventMap =
-    Lens.view (texts . textQuit) <&> \txt ->
+    Lens.view (has . textQuit) <&> \txt ->
     E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc [txt]) (error "Quit")
 
 mkJumpToSourceEventMap ::

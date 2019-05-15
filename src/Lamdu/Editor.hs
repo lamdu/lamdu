@@ -137,7 +137,7 @@ mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
             ConfigSampler.getSample configSampler
             <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
         }
-    , mainTexts = getTexts MainLoop.texts
+    , mainTexts = getTexts has
     , zoomTexts = getTexts has
     }
     where
