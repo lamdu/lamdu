@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (HasWidget(..), EventContext)
@@ -24,8 +25,8 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
 import           Lamdu.Precedence (precedence)
 import           Lamdu.Sugar.Parens (MinOpPrec)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -89,7 +90,8 @@ extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
 extractEventMap ::
-    ( MonadReader env m, Has Config env, Language.HasLanguage env
+    ( MonadReader env m, Has Config env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
     , Functor o
     ) =>
     m (Sugar.NodeActions name i o -> Gui EventMap o)
@@ -100,7 +102,7 @@ extractEventMap =
     actions ^. Sugar.extract <&> extractCursor
     & E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
     (E.toDoc env
-        [has . Texts.edit, has . Texts.extract])
+        [has . MomentuTexts.edit, has . Texts.extract])
 
 addLetEventMap ::
     (Monad i, Monad o) =>
@@ -114,7 +116,7 @@ addLetEventMap addLet =
             & E.keysEventMapMovesCursor
             (env ^. has . Config.letAddItemKeys)
                 (E.toDoc env
-                    [ has . Texts.edit
+                    [ has . MomentuTexts.edit
                     , has . Texts.letClause
                     , has . Texts.add
                     ])
@@ -148,13 +150,15 @@ actionsEventMap options exprInfo =
             & foldMap
                 (E.keysEventMapMovesCursor replaceKeys
                     (E.toDoc env
-                        [has . Texts.edit, has . Texts.replaceParent])
+                        [has . MomentuTexts.edit, has . Texts.replaceParent])
                 . fmap WidgetIds.fromEntityId)
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
 transformSearchTerm ::
-    (MonadReader env m, Language.HasLanguage env) =>
+    ( MonadReader env m
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    ) =>
     m (ExprInfo name i o -> EventContext -> EventMap Text)
 transformSearchTerm =
     Lens.view id <&> \env exprInfo eventCtx ->
@@ -162,7 +166,7 @@ transformSearchTerm =
             | exprInfoIsSelected exprInfo =
                 E.charEventMap "Letter"
                 (E.toDoc env
-                    [has . Texts.edit, has . Texts.transform]) transform
+                    [has . MomentuTexts.edit, has . Texts.transform]) transform
             | otherwise = mempty
         transform c =
             do
@@ -179,13 +183,15 @@ transformSearchTerm =
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
     in  E.charGroup Nothing
         (E.toDoc env
-            [has . Texts.edit, has . Texts.applyOperator]) ops
+            [has . MomentuTexts.edit, has . Texts.applyOperator]) ops
         Text.singleton
         <> maybeTransformEventMap
         <&> (searchStrRemainder <>)
 
 transformEventMap ::
-    (MonadReader env m, Applicative o, Language.HasLanguage env) =>
+    ( MonadReader env m, Applicative o
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    ) =>
     m (Options -> ExprInfo name i o -> EventContext -> Gui EventMap o)
 transformEventMap =
     transformSearchTerm
@@ -205,7 +211,8 @@ transformEventMap =
         & action
 
 detachEventMap ::
-    ( MonadReader env m, Has Config env, Language.HasLanguage env
+    ( MonadReader env m, Has Config env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Functor f
     ) =>
     m (ExprInfo name i o -> Sugar.DetachAction f -> Gui EventMap f)
@@ -217,17 +224,18 @@ detachEventMap =
     Sugar.DetachAction act
         | exprInfoIsSelected exprInfo ->
             E.keysEventMapMovesCursor (env ^. has . Config.detachKeys)
-            (E.toDoc env [has . Texts.edit, has . Texts.modify])
+            (E.toDoc env [has . MomentuTexts.edit, has . Texts.modify])
             (act <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
             <>
             E.keysEventMap (env ^. has . Config.parenDetachKeys)
-            (E.toDoc env [has . Texts.edit, has . Texts.detach])
+            (E.toDoc env [has . MomentuTexts.edit, has . Texts.detach])
             (void act)
     _ -> mempty
 
 
 replaceEventMap ::
-    ( MonadReader env m, Has Config env, Language.HasLanguage env
+    ( MonadReader env m, Has Config env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Functor f
     ) =>
     f Sugar.EntityId-> m (Gui EventMap f)
@@ -237,4 +245,4 @@ replaceEventMap action =
     \env ->
     action <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)
-    (E.toDoc env [has . Texts.edit, has . Texts.setToHole])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.setToHole])
