@@ -5,7 +5,6 @@ module Lamdu.I18N.Texts
     ( module Lamdu.I18N.Texts
     , module Lamdu.I18N.Code
     , module Lamdu.I18N.CodeUI
-    , module Lamdu.I18N.Definitions
     ) where
 
 import qualified Control.Lens as Lens
