@@ -50,7 +50,7 @@ instance Has (EventMap.Texts Text) Language where has = lTexts . eventMap
 
 instance Has Dir.Layout Language where has = lDirection
 instance Has (Dir.Texts Text) Language where has = lTexts . dir
-instance Glue.HasTexts Language where texts = lTexts . glue
+instance Has (Glue.Texts Text) Language where has = lTexts . glue
 instance Has (Menu.Texts Text) Language where has = lTexts . menu
 instance SearchMenu.HasTexts Language where texts = lTexts . searchMenu
 instance Has (Grid.Texts Text) Language where has = lTexts . grid

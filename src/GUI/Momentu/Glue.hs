@@ -3,7 +3,7 @@
 module GUI.Momentu.Glue
     ( Texts(..), stroll, back, ahead
         , strollDoc
-    , HasTexts(..)
+    , HasTexts
     , Glue(..), GluesTo
     , (/|/), (/-/)
     , box, hbox, vbox
@@ -33,19 +33,20 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 
 Lens.makeLenses ''Texts
-
-class
-    ( Has (Dir.Texts Text) env, Has Dir.Layout env
-    ) => HasTexts env where
-    texts :: Lens' env (Texts Text)
 JsonTH.derivePrefixed "_" ''Texts
+
+type HasTexts env =
+    ( Has (Dir.Texts Text) env
+    , Has Dir.Layout env
+    , Has (Texts Text) env
+    )
 
 strollDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> EventMap.Doc
 strollDoc env dirLens =
     EventMap.Doc
     [ env ^. has . Dir.navigation
-    , env ^# texts . stroll
-    , env ^# texts . dirLens
+    , env ^# has . stroll
+    , env ^# has . dirLens
     ]
 
 class (Glued b a ~ Glued a b) => Glue env a b where

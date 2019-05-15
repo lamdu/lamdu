@@ -21,8 +21,6 @@ import qualified Data.Property as Property
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.EventMap as EventMap
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (GUIState)
@@ -88,8 +86,6 @@ instance Has Debug.Monitors Env where has = debugMonitors
 instance Has Cache.Functions Env where has = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
-instance Glue.HasTexts Env where texts = language . Glue.texts
-instance Has (EventMap.Texts Text) Env where has = language . has
 instance Choice.HasTexts Env where texts = language . Choice.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Language.HasLanguage Env where language = language
