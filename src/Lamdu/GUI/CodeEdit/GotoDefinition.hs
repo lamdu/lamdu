@@ -27,6 +27,7 @@ import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.I18N.Navigation (Navigation)
 import qualified Lamdu.I18N.Navigation as Navigation
 import           Lamdu.Name (Name)
@@ -45,7 +46,7 @@ allowSearchTerm = Name.isValidText
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameSearchTerm :: (MonadReader env m, Has (Name.NameTexts Text) env) => Name o -> m Text
+nameSearchTerm :: (MonadReader env m, Has (Texts.Name Text) env) => Name o -> m Text
 nameSearchTerm name =
     Name.visible name <&>
     \(Name.TagText text textCol, tagCol) ->
@@ -58,7 +59,7 @@ nameSearchTerm name =
 makeOptions ::
     ( MonadReader env m, Has Theme env, Applicative o
     , Has TextView.Style env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Has (Navigation Text) env, Has (Name.NameTexts Text) env, Has Dir.Layout env
+    , Has (Navigation Text) env, Has (Texts.Name Text) env, Has Dir.Layout env
     ) =>
     m [Sugar.NameRef (Name g) o] ->
     SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
@@ -109,7 +110,7 @@ make ::
     , Has Menu.Config env, Has Hover.Style env, GuiState.HasState env
     , Has SearchMenu.TermStyle env, Has (Navigation Text) env
     , Glue.HasTexts env, TextEdit.HasTexts env
-    , SearchMenu.HasTexts env, Has (Name.NameTexts Text) env
+    , SearchMenu.HasTexts env, Has (Texts.Name Text) env
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =

@@ -19,6 +19,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.Name as NameTheme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 
@@ -48,7 +49,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
 make ::
     ( MonadReader env m
     , Has Theme env, Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Has Dir.Layout env, Has (Name.NameTexts Text) env
+    , Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
     Name f -> m (WithTextPos View)
 make name =

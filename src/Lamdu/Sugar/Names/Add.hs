@@ -32,6 +32,7 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
@@ -160,9 +161,9 @@ p1Anon (Just uuid) =
             , p1TextsBelow = innerOut ^. p1Texts
             }
 
-displayOf :: Has (NameTexts Text) env => env -> Text -> Text
+displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
 displayOf env text
-    | Lens.has Lens._Empty text = env ^. has . emptyName
+    | Lens.has Lens._Empty text = env ^. has . Texts.emptyName
     | otherwise = text
 
 p1Tagged ::
@@ -213,7 +214,7 @@ p1Name mDisambiguator nameType p0Name =
 ---------- Pass1 -> Pass2 -----------
 -------------------------------------
 
-tagText :: Has (NameTexts Text) env => env -> Text -> Collision -> TagText
+tagText :: Has (Texts.Name Text) env => env -> Text -> Collision -> TagText
 tagText env = TagText . displayOf env
 
 makeTagTexts :: Language -> MMap Text (Set T.Tag) -> Map T.Tag TagText
@@ -320,11 +321,11 @@ data P2Env = P2Env
         -- ^ All local AND global tags from all scopes everywhere --
         -- used to check collision of globals in hole results with
         -- everything.
-    , _p2NameTexts :: NameTexts Text
+    , _p2NameTexts :: Texts.Name Text
     }
 Lens.makeLenses ''P2Env
 
-instance Has (NameTexts Text) P2Env where has = p2NameTexts
+instance Has (Texts.Name Text) P2Env where has = p2NameTexts
 
 newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)

@@ -31,10 +31,10 @@ import           Lamdu.I18N.Code
 import           Lamdu.I18N.CodeUI
 import           Lamdu.I18N.Collaboration
 import           Lamdu.I18N.Definitions
+import           Lamdu.I18N.Name
 import           Lamdu.I18N.Navigation
 import           Lamdu.I18N.StatusBar
 import           Lamdu.I18N.Versioning
-import           Lamdu.Name (NameTexts)
 
 import           Lamdu.Prelude
 
@@ -45,7 +45,7 @@ data Texts a = Texts
     , _collaborationTexts :: Collaboration a
     , _navigationTexts :: Navigation a
     , _definitions :: Definitions a
-    , _name :: NameTexts a
+    , _name :: Name a
     , _statusBar :: StatusBar a
     , _versioning :: Versioning a
     , _dir :: Dir.Texts a
@@ -66,21 +66,21 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
-instance Has (EventMap.Texts Text) (Texts Text) where has = eventMap
-instance Has (Dir.Texts Text) (Texts Text) where has = dir
-instance Has (Glue.Texts Text) (Texts Text) where has = glue
-instance Has (Menu.Texts Text) (Texts Text) where has = menu
-instance Has (SearchMenu.Texts Text) (Texts Text) where has = searchMenu
-instance Has (Grid.Texts Text) (Texts Text) where has = grid
-instance Has (Choice.Texts Text) (Texts Text) where has = choice
-instance Has (TextEdit.Texts Text) (Texts Text) where has = textEdit
-instance Has (MainLoop.Texts Text) (Texts Text) where has = mainLoop
-instance Has (NameTexts Text) (Texts Text) where has = name
-instance Has (Zoom.Texts Text) (Texts Text) where has = zoom
-instance Has (Navigation Text) (Texts Text) where has = navigationTexts
-instance Has (Versioning Text) (Texts Text) where has = versioning
-instance Has (CodeUI Text) (Texts Text) where has = codeUI
-instance Has (Definitions Text) (Texts Text) where has = definitions
+instance Has (EventMap.Texts     Text) (Texts Text) where has = eventMap
+instance Has (Dir.Texts          Text) (Texts Text) where has = dir
+instance Has (Glue.Texts         Text) (Texts Text) where has = glue
+instance Has (Menu.Texts         Text) (Texts Text) where has = menu
+instance Has (SearchMenu.Texts   Text) (Texts Text) where has = searchMenu
+instance Has (Grid.Texts         Text) (Texts Text) where has = grid
+instance Has (Choice.Texts       Text) (Texts Text) where has = choice
+instance Has (TextEdit.Texts     Text) (Texts Text) where has = textEdit
+instance Has (MainLoop.Texts     Text) (Texts Text) where has = mainLoop
+instance Has (Zoom.Texts         Text) (Texts Text) where has = zoom
+instance Has (Name               Text) (Texts Text) where has = name
+instance Has (Navigation         Text) (Texts Text) where has = navigationTexts
+instance Has (Versioning         Text) (Texts Text) where has = versioning
+instance Has (CodeUI             Text) (Texts Text) where has = codeUI
+instance Has (Definitions        Text) (Texts Text) where has = definitions
 instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts
 
 quit :: Lens' (Texts Text) Text

@@ -50,6 +50,7 @@ import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.Language (texts)
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -174,7 +175,7 @@ fuzzyMaker = memo Fuzzy.make
 makeOptions ::
     ( Monad i, Applicative o, MonadReader env m
     , GuiState.HasCursor env, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Name.NameTexts Text) env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Name Text) env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
@@ -322,7 +323,7 @@ makeTagHoleEdit tagSelection mkPickResult holeId =
 
 makeTagView ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has Theme env, Has Dir.Layout env, Has (Name.NameTexts Text) env
+    , Has Theme env, Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
     Sugar.TagInfo (Name f) -> m (WithTextPos View)
 makeTagView tag =
@@ -348,7 +349,7 @@ data TagEditType
 
 makeTagEditWith ::
     ( Monad i, Applicative o, MonadReader env n
-    , GuiState.HasCursor env, Has TextView.Style env, Has (Name.NameTexts Text) env
+    , GuiState.HasCursor env, Has TextView.Style env, Has (Texts.Name Text) env
     , Element.HasAnimIdPrefix env, Has Theme env, Glue.HasTexts env
     ) =>
     (n (TextWidget o) ->
@@ -473,7 +474,7 @@ makeParamTag =
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Name.NameTexts Text) env
+    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Name Text) env
     ) =>
     Name f -> Sugar.EntityId -> m (WithTextPos View)
 makeArgTag name tagInstance =

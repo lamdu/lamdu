@@ -8,7 +8,8 @@ import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.Functor.Identity (Identity(..))
-import           Lamdu.Name (Name, NameTexts(..))
+import qualified Lamdu.I18N.Name as Texts
+import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
@@ -38,11 +39,11 @@ test =
     , testCase "globals collide" workAreaGlobals
     ]
 
-nameTexts :: NameTexts Text
+nameTexts :: Texts.Name Text
 nameTexts =
-    NameTexts
-    { _unnamed = "Unnamed"
-    , _emptyName = "empty"
+    Texts.Name
+    { Texts._unnamed = "Unnamed"
+    , Texts._emptyName = "empty"
     }
 
 assertNoCollisions :: Name o -> IO ()

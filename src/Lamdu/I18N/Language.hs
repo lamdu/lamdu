@@ -19,9 +19,9 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config.Folder (HasConfigFolder(..))
+import           Lamdu.I18N.LangId (LangId)
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.I18N.Texts
-import           Lamdu.Name (NameTexts)
-import Lamdu.I18N.LangId (LangId)
 
 import           Lamdu.Prelude
 
@@ -43,7 +43,7 @@ type HasLanguage env =
     , Has (Glue.Texts       Text) env
     , Has (Dir.Texts        Text) env
     , Has (Choice.Texts     Text) env
-    , Has (NameTexts        Text) env
+    , Has (Texts.Name       Text) env
     , Has (Menu.Texts       Text) env
     , Has (Navigation       Text) env
     , Has (Versioning       Text) env

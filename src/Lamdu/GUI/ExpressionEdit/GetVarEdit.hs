@@ -50,6 +50,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.Definitions as Definitions
 import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -60,7 +61,7 @@ import           Lamdu.Prelude
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, Has Theme env
     , Applicative f, Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Has Dir.Layout env, Has (Name.NameTexts Text) env
+    , Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
     m (TextWidget f)
