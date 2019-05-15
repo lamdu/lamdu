@@ -3,15 +3,13 @@ module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
-    , CodeEdit.HasEvalResults(..)
     , CodeEdit.HasExportActions(..)
-    , EvalResults
+    , CodeEdit.EvalResults
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
-import           Data.CurAndPrev (CurAndPrev)
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -36,8 +34,6 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Debug as Debug
-import qualified Lamdu.Eval.Results as Results
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -58,8 +54,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-type EvalResults = CurAndPrev (Results.EvalResults (ExprIRef.ValI ViewM))
-
 type Ctx env =
     ( HasCallStack
     , MainLoop.HasMainLoopEnv env
@@ -73,7 +67,7 @@ type Ctx env =
     , Has Theme env
     , Has Config env
     , Element.HasAnimIdPrefix env
-    , CodeEdit.HasEvalResults env ViewM
+    , Has (CodeEdit.EvalResults ViewM) env
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, Has VCConfig.Theme env
     , Has Menu.Config env

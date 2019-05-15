@@ -53,7 +53,7 @@ import qualified Lamdu.Style as Style
 import           Lamdu.Prelude
 
 data Env = Env
-    { _evalRes :: GUIMain.EvalResults
+    { _evalRes :: GUIMain.EvalResults ViewM
     , _exportActions :: GUIMain.ExportActions ViewM
     , _config :: Config
     , _theme :: Theme
@@ -68,7 +68,7 @@ data Env = Env
 Lens.makeLenses ''Env
 
 instance GUIMain.HasExportActions Env ViewM where exportActions = exportActions
-instance GUIMain.HasEvalResults Env ViewM where evalResults = evalRes
+instance Has (GUIMain.EvalResults ViewM) Env where has = evalRes
 instance Has Settings Env where has = settings . Property.pVal
 instance Style.HasStyle Env where style = style
 instance Has MainLoop.Env Env where has = mainLoop

@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, MultiParamTypeClasses #-}
 module Lamdu.GUI.CodeEdit
     ( make
-    , HasEvalResults(..)
+    , EvalResults
     , ReplEdit.ExportRepl(..), ExportActions(..), HasExportActions(..)
     ) where
 
@@ -38,7 +38,7 @@ import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
-import           Lamdu.Eval.Results (EvalResults)
+import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
@@ -75,17 +75,18 @@ data ExportActions m = ExportActions
     , importAll :: FilePath -> IOTrans m ()
     }
 
-class HasEvalResults env m where
-    evalResults :: Lens' env (CurAndPrev (EvalResults (ValI m)))
-
 class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
+
+type EvalResults m = CurAndPrev (EvalResults.EvalResults (ValI m))
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Has Config env
     , Has Cache.Functions env
     , Has Debug.Monitors env
     , Has Theme env, GuiState.HasState env
-    , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
+    , Spacer.HasStdSpacing env
+    , Has (EvalResults m) env
+    , HasExportActions env m
     , Has Settings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Element.HasAnimIdPrefix env
@@ -96,7 +97,7 @@ make ::
     n (StatusBar.StatusWidget (IOTrans m), Gui Widget (IOTrans m))
 make cp gp width =
     do
-        theEvalResults <- Lens.view evalResults
+        theEvalResults <- Lens.view has
         theExportActions <- Lens.view exportActions
         env <- Lens.view id
         annMode <- Lens.view (has . Settings.sAnnotationMode)
