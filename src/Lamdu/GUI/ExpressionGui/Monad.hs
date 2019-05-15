@@ -113,8 +113,8 @@ instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefi
 instance Config.HasConfig (Askable i o) where config = aConfig
 instance HasTheme (Askable i o) where theme = aTheme
 instance Has ResponsiveExpr.Style (Askable i o) where has = aTheme . has
-instance Menu.HasConfig (Askable i o) where
-    config = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
+instance Has Menu.Config (Askable i o) where
+    has = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
 instance Has SearchMenu.TermStyle (Askable i o) where
     has = aTheme . Theme.searchTerm
 instance Has Hover.Style (Askable i o) where has = aTheme . has

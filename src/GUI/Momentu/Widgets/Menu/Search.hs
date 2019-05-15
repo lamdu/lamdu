@@ -107,7 +107,7 @@ Lens.makeLenses ''TermCtx
 type AllowedSearchTerm = Text -> TermCtx Bool
 
 emptyPickEventMap ::
-    ( MonadReader env m, Menu.HasConfig env, HasTexts env
+    ( MonadReader env m, Has Menu.Config env, HasTexts env
     , Applicative f
     ) =>
     m (Gui EventMap f)
@@ -121,7 +121,7 @@ emptyPickEventMap =
             keys ^. Menu.keysPickOption <>
             keys ^. Menu.keysPickOptionAndGotoNext
             where
-                keys = env ^. Menu.config . Menu.configKeys
+                keys = env ^. has . Menu.configKeys
 
 -- | All search menu results must start with a common prefix.
 -- This is used to tell when cursor was on a result that got filtered out
@@ -141,7 +141,7 @@ defaultEmptyStrings = TextEdit.Modes "  " "  "
 -- | Basic search term edit:
 --   * no bg color / no Has TermStyle needed --> use addSearchTermStyle
 --     to add it
---   * no pick of first result / no Menu.HasConfig needed --> use
+--   * no pick of first result / no Has Menu.Config needed --> use
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     ( MonadReader env m, Applicative f, HasTexts env
@@ -233,7 +233,7 @@ addSearchTermStyle myId act =
 
 searchTermEdit ::
     ( MonadReader env m, Applicative f, Has TermStyle env
-    , TextEdit.HasStyle env, Menu.HasConfig env, State.HasState env
+    , TextEdit.HasStyle env, Has Menu.Config env, State.HasState env
     , TextEdit.HasTexts env, HasTexts env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
@@ -247,7 +247,7 @@ searchTermEdit myId allowedSearchTerm mPickFirst =
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
-    ( MonadReader env m, Menu.HasConfig env, HasTexts env, HasState env
+    ( MonadReader env m, Has Menu.Config env, HasTexts env, HasState env
     , Applicative f
     ) =>
     Id -> Menu.PickFirstResult f->
@@ -306,7 +306,7 @@ enterWithSearchTerm searchTerm myId =
     <> State.updateWidgetState myId searchTerm
 
 make ::
-    ( MonadReader env m, Applicative f, HasState env, Menu.HasConfig env
+    ( MonadReader env m, Applicative f, HasState env, Has Menu.Config env
     , Has TextView.Style env, Has Hover.Style env, Element.HasAnimIdPrefix env
     , Menu.HasTexts env
     ) =>

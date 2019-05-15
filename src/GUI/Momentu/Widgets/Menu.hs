@@ -6,7 +6,6 @@ module GUI.Momentu.Widgets.Menu
     , Keys(..), keysPickOption, keysPickOptionAndGotoNext
     , Config(..), configStyle, configKeys
     , configLens
-    , HasConfig(..)
     , Submenu(..), _SubmenuEmpty, _SubmenuItems
     , OptionList(..), _TooMany, _FullList, _Truncated
         , olOptions, olIsTruncated, toOptionList
@@ -26,7 +25,7 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
@@ -85,9 +84,6 @@ data Keys = Keys
 JsonTH.derivePrefixed "_" ''Keys
 
 Lens.makeLenses ''Keys
-
-class HasConfig env where config :: Lens' env Config
-instance HasConfig Config where config = id
 
 data Config = Config
     { _configStyle :: Style
@@ -216,13 +212,13 @@ blockEvents env =
             E.keyPresses [ModKey mempty key] (doc keyName) (pure mempty)
 
 makeSubmenuSymbol ::
-    ( MonadReader env m, HasConfig env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has Config env, Element.HasAnimIdPrefix env
     , Has TextView.Style env, HasTexts env
     ) =>
     Bool -> m (WithTextPos View)
 makeSubmenuSymbol isSelected =
     do
-        color <- Lens.view (config . configStyle . submenuSymbolColor)
+        color <- Lens.view (has . configStyle . submenuSymbolColor)
         TextView.make
             <*> Lens.view (texts . submenuSymbol)
             <*> (Element.subAnimId ?? ["submenu sym"])
@@ -255,7 +251,7 @@ toOptionList xs True = Truncated xs
 layoutOption ::
     ( MonadReader env m, Applicative f, HasTexts env
     , Element.HasAnimIdPrefix env, Has TextView.Style env
-    , State.HasCursor env, Has Hover.Style env, HasConfig env
+    , State.HasCursor env, Has Hover.Style env, Has Config env
     ) =>
     Widget.R ->
     (Widget.Id, TextWidget f, Submenu m f) ->
@@ -299,13 +295,13 @@ instance Semigroup (OptionList a) where
     FullList xs <> FullList ys = FullList (xs ++ ys)
 
 makePickEventMap ::
-    (MonadReader env m, HasConfig env, HasTexts env, Applicative f) =>
+    (MonadReader env m, Has Config env, HasTexts env, Applicative f) =>
     m (Widget.PreEvent (f PickResult) -> Gui EventMap f)
 makePickEventMap =
     Lens.view id
     <&>
     \env pick ->
-    let keys = env ^. config . configKeys
+    let keys = env ^. has . configKeys
     in  E.keyPresses (keys ^. keysPickOptionAndGotoNext <&> MetaKey.toModKey)
         (E.Doc [pick ^. Widget.pDesc <> env ^. texts . commaNextEntry])
         (pick ^. Widget.pAction <&>
@@ -322,7 +318,7 @@ makePickEventMap =
         (pick ^. Widget.pAction <&> (^. pickDest))
 
 addPickers ::
-    (MonadReader env m, HasConfig env, Applicative f, HasTexts env) =>
+    (MonadReader env m, Has Config env, Applicative f, HasTexts env) =>
     m ( Widget.PreEvent (f PickResult) ->
         Gui Widget f ->
         Gui Widget f
@@ -345,7 +341,7 @@ noResultsId = (`Widget.joinId` ["no results"])
 
 make ::
     ( MonadReader env m, Applicative f, Has TextView.Style env
-    , Has Hover.Style env, Element.HasAnimIdPrefix env, HasConfig env
+    , Has Hover.Style env, Element.HasAnimIdPrefix env, Has Config env
     , State.HasCursor env, HasTexts env
     ) =>
     Widget.Id -> Widget.R -> OptionList (Option m f) ->
@@ -461,7 +457,7 @@ hoverOptions =
     <&> (^. Align.value)
 
 makeHovered ::
-    ( Applicative f, State.HasCursor env, HasConfig env
+    ( Applicative f, State.HasCursor env, Has Config env
     , Has TextView.Style env, Element.HasAnimIdPrefix env
     , Has Hover.Style env, HasTexts env, MonadReader env m
     ) =>

@@ -490,4 +490,4 @@ makeBinderTagEdit ::
     ExprGuiM i o (TextWidget o)
 makeBinderTagEdit color tag =
     makeLHSTag (const Nothing) color tag
-    & Reader.local (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])
+    & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

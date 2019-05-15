@@ -90,7 +90,7 @@ genericEdit whichStyle prop pl =
         valText = prop ^. Property.pVal & format
 
 fdConfig ::
-    ( MonadReader env m, HasConfig env, Menu.HasConfig env
+    ( MonadReader env m, HasConfig env, Has Menu.Config env
     , Language.HasLanguage env
     ) =>
     m FocusDelegator.Config
@@ -98,7 +98,7 @@ fdConfig =
     Lens.view id
     <&> \env ->
     let litConf = env ^. Config.config . Config.literal
-        menuKeys = env ^. Menu.config . Menu.configKeys
+        menuKeys = env ^. has . Menu.configKeys
     in
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = litConf ^. Config.literalStartEditingKeys
@@ -126,7 +126,7 @@ fdConfig =
 
 withFd ::
     ( MonadReader env m, HasConfig env, GuiState.HasCursor env
-    , Menu.HasConfig env, Language.HasLanguage env, Applicative f
+    , Has Menu.Config env, Language.HasLanguage env, Applicative f
     ) =>
     m (Widget.Id -> TextWidget f -> TextWidget f)
 withFd =
@@ -134,7 +134,7 @@ withFd =
     <&> Lens.mapped %~ (Align.tValue %~)
 
 textEdit ::
-    ( MonadReader env m, HasConfig env, HasStyle env, Menu.HasConfig env
+    ( MonadReader env m, HasConfig env, HasStyle env, Has Menu.Config env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Language.HasLanguage env, Monad o
     ) =>
@@ -164,7 +164,7 @@ parseNum newText
 
 numEdit ::
     ( MonadReader env m, Monad o
-    , HasConfig env, HasStyle env, Menu.HasConfig env
+    , HasConfig env, HasStyle env, Has Menu.Config env
     , GuiState.HasState env, Language.HasLanguage env
     ) =>
     Property o Double ->
@@ -204,7 +204,7 @@ numEdit prop pl =
                           ]) "-"
                 | otherwise = mempty
         strollEvent <-
-            Lens.view (Menu.config . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
+            Lens.view (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
             <&>
             \keys ->
             E.keysEventMap keys

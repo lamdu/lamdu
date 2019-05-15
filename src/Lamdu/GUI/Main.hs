@@ -77,7 +77,7 @@ type Ctx env =
     , CodeEdit.HasEvalResults env ViewM
     , CodeEdit.HasExportActions env ViewM
     , VCConfig.HasConfig env, VCConfig.HasTheme env
-    , Menu.HasConfig env
+    , Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Language.HasLanguage env
     , E.HasTexts env

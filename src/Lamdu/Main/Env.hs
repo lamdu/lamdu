@@ -83,8 +83,8 @@ instance Config.HasConfig Env where config = config
 instance Has Hover.Style Env where has = theme . has
 instance VCConfig.HasTheme Env where theme = theme . Theme.versionControl
 instance VCConfig.HasConfig Env where config = config . Config.versionControl
-instance Menu.HasConfig Env where
-    config = Menu.configLens (config . Config.menu) (theme . Theme.menu)
+instance Has Menu.Config Env where
+    has = Menu.configLens (config . Config.menu) (theme . Theme.menu)
 instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Debug.HasMonitors Env where monitors = debugMonitors
 instance Cache.HasFunctions Env where functions = cachedFunctions

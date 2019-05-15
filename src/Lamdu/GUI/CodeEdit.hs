@@ -88,7 +88,7 @@ make ::
     , Debug.HasMonitors env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
-    , HasSettings env, HasStyle env, Has Hover.Style env, Menu.HasConfig env
+    , HasSettings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
