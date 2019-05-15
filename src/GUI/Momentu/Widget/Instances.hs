@@ -28,6 +28,7 @@ import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.FocusDirection as FDir
 import           GUI.Momentu.Glue (Glue(..))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -161,8 +162,8 @@ combineStates env orientation order (StateFocused f) (StateUnfocused u) =
             & EventMap.keyPresses
                 (dirKey dir orientation order stdDirKeys <&> ModKey mempty)
             (EventMap.Doc
-                [ env ^. has . Dir.navigation
-                , env ^. has . Dir.move
+                [ env ^. has . MomentuTexts.navigation
+                , env ^. has . MomentuTexts.move
                 , env ^. has . Dir.textLens orientation order])
         dir = env ^. has
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)

@@ -221,7 +221,7 @@ numEdit prop pl =
             \keys ->
             E.keysEventMap keys
             (toDoc
-                [ has . Dir.navigation
+                [ has . MomentuTexts.navigation
                 , has . NavTexts.nextEntry
                 ])
             (pure ())

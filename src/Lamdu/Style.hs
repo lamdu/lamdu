@@ -17,6 +17,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main.Animation as Anim
 import qualified GUI.Momentu.Main.Config as MainConfig
 import           GUI.Momentu.Widget (Widget)
@@ -84,12 +85,13 @@ make fonts theme =
             }
 
 data HelpEnv = HelpEnv
-    { _heConfig :: EventMapHelp.Config
-    , _heStyle :: EventMapHelp.Style
-    , _heAnimIdPrefix :: AnimId
-    , _heDirLayout :: Dir.Layout
+    { _heConfig :: !EventMapHelp.Config
+    , _heStyle :: !EventMapHelp.Style
+    , _heAnimIdPrefix :: !AnimId
+    , _heDirLayout :: !Dir.Layout
     , _heDirTexts :: !(Dir.Texts Text)
     , _heGlueTexts :: !(Glue.Texts Text)
+    , _heCommonTexts :: !(MomentuTexts.Texts Text)
     , _heEventMapTexts :: !(E.Texts Text)
     }
 Lens.makeLenses ''HelpEnv
@@ -101,6 +103,7 @@ instance Has (Glue.Texts Text) HelpEnv where has = heGlueTexts
 instance Has (E.Texts Text) HelpEnv where has = heEventMapTexts
 instance Has EventMapHelp.Config HelpEnv where has = heConfig
 instance Has EventMapHelp.Style HelpEnv where has = heStyle
+instance Has (MomentuTexts.Texts Text) HelpEnv where has = heCommonTexts
 
 addHelp ::
     Config -> Theme -> Language -> Font ->
@@ -122,6 +125,7 @@ addHelp config theme language font size widget =
             , _heEventMapTexts = language ^. has
             , _heGlueTexts = language ^. has
             , _heStyle = helpStyle font (theme ^. Theme.help)
+            , _heCommonTexts = language ^. has
             }
 
 mainLoopConfig ::

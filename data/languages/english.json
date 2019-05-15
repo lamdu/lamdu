@@ -6,7 +6,9 @@
             "edit": "Edit",
             "view": "View",
             "insert": "Insert",
-            "delete": "Delete"
+            "delete": "Delete",
+            "move": "Move",
+            "navigation": "Navigation"
         },
         "code": {
             "let_": "let",
@@ -140,9 +142,7 @@
             "left": "Left",
             "right": "Right",
             "up": "Up",
-            "down": "Down",
-            "move": "Move",
-            "navigation": "Navigation"
+            "down": "Down"
         },
         "eventMap": {
             "repeat": "Repeat",

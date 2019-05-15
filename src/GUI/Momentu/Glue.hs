@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
+import qualified GUI.Momentu.I18N as MomentuTexts
 
 import           Lamdu.Prelude
 
@@ -37,12 +38,13 @@ type HasTexts env =
     ( Has (Dir.Texts Text) env
     , Has Dir.Layout env
     , Has (Texts Text) env
+    , Has (MomentuTexts.Texts Text) env
     )
 
 strollDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> EventMap.Doc
 strollDoc env dirLens =
     EventMap.Doc
-    [ env ^. has . Dir.navigation
+    [ env ^. has . MomentuTexts.navigation
     , env ^# has . stroll
     , env ^# has . dirLens
     ]

@@ -31,7 +31,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Font as Font
-import qualified GUI.Momentu.I18N as Texts
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
@@ -66,7 +66,8 @@ JsonTH.derivePrefixed "_text" ''Texts
 
 type HasTexts env =
     ( Has (Dir.Texts Text) env, Has Dir.Layout env
-    , Has (Texts Text) env, Has (Texts.Texts Text) env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts Text) env
     )
 
 Lens.makeLenses ''Texts
@@ -232,7 +233,9 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    (Has (Texts Text) env, Has (Dir.Texts Text) env, Has (Texts.Texts Text) env) =>
+    ( Has (Texts Text) env, Has (Dir.Texts Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     env -> Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
 eventMap txt cursor str myId _eventContext =
@@ -337,15 +340,15 @@ eventMap txt cursor str myId _eventContext =
 
         ]
     where
-        editDoc = toDoc . (has . Texts.edit :)
-        deleteDoc = editDoc . (has . Texts.delete :)
-        insertDoc = editDoc . (has . Texts.insert :)
+        editDoc = toDoc . (has . MomentuTexts.edit :)
+        deleteDoc = editDoc . (has . MomentuTexts.delete :)
+        insertDoc = editDoc . (has . MomentuTexts.insert :)
         moveWordDoc = moveDoc . (has . textWord :)
         toDoc = E.toDoc txt
         moveDoc =
             toDoc
-            . (has . Dir.navigation :)
-            . (has . Dir.move :)
+            . (has . MomentuTexts.navigation :)
+            . (has . MomentuTexts.move :)
         splitLines = Text.splitOn "\n"
         linesBefore = reverse (splitLines before)
         linesAfter = splitLines after

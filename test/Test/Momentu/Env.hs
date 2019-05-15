@@ -4,6 +4,7 @@ module Test.Momentu.Env where
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Widgets.Grid as Grid
 
 import           Test.Lamdu.Prelude
@@ -13,6 +14,7 @@ data Env = Env
     , _eDirTexts :: Dir.Texts Text
     , _eGlueTexts :: Glue.Texts Text
     , _eGridTexts :: Grid.Texts Text
+    , _eMomentuTexts :: MomentuTexts.Texts Text
     }
 
 env :: Env
@@ -25,8 +27,6 @@ env =
         , Dir._right = "right"
         , Dir._up = "up"
         , Dir._down = "down"
-        , Dir._navigation = "navigation"
-        , Dir._move = "move"
         }
     , _eGlueTexts =
         Glue.Texts
@@ -43,6 +43,15 @@ env =
         , Grid._leftMost = "left-most"
         , Grid._rightMost = "right-most"
         }
+    , _eMomentuTexts =
+        MomentuTexts.Texts
+        { MomentuTexts._edit = "Edit"
+        , MomentuTexts._view = "View"
+        , MomentuTexts._insert = "Insert"
+        , MomentuTexts._delete = "Delete"
+        , MomentuTexts._navigation = "navigation"
+        , MomentuTexts._move = "move"
+        }
     }
 
 Lens.makeLenses ''Env
@@ -51,3 +60,4 @@ instance Has Dir.Layout Env where has = eDirLayout
 instance Has (Dir.Texts Text) Env where has = eDirTexts
 instance Has (Glue.Texts Text) Env where has = eGlueTexts
 instance Has (Grid.Texts Text) Env where has = eGridTexts
+instance Has (MomentuTexts.Texts Text) Env where has = eMomentuTexts

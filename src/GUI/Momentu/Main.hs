@@ -115,7 +115,7 @@ defaultDebugOptions =
     }
 
 defaultOptions ::
-    ( Has (Texts Text) env, Has (Texts.Texts Text) env, Has (Zoom.Texts Text) env
+    ( Has (Texts Text) env, Has (Zoom.Texts Text) env
     , Element.HasAnimIdPrefix env, Has EventMapHelp.Config env
     , EventMapHelp.HasStyle env, EventMapHelp.HasTexts env
     ) =>

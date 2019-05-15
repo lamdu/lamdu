@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
@@ -67,7 +68,7 @@ makeLetEdit item =
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
                     (E.toDoc (env ^. Language.texts)
-                        [ Texts.navigation
+                        [ has . MomentuTexts.navigation
                         , Texts.navigationTexts . Texts.jumpToFirstUse
                         ])
                     . pure . WidgetIds.fromEntityId

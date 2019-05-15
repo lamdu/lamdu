@@ -6,7 +6,9 @@
             "edit": "עריכה",
             "view": "תצוגה",
             "insert": "הכנס",
-            "delete": "מחק"
+            "delete": "מחק",
+            "move": "זוז",
+            "navigation": "ניווט"
         },
         "code": {
             "let_": "יהי",
@@ -143,9 +145,7 @@
             "left": "שמאלה",
             "right": "ימינה",
             "up": "למעלה",
-            "down": "למטה",
-            "move": "זוז",
-            "navigation": "ניווט"
+            "down": "למטה"
         },
         "eventMap": {
             "repeat": "חזרה",

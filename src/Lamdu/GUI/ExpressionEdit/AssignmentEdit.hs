@@ -20,6 +20,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(Rect))
@@ -179,7 +180,9 @@ blockEventMap env =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
     (E.toDoc (env ^. Language.texts)
-        [Texts.navigation, Texts.move, Texts.navigationTexts . Texts.blocked])
+        [ has . MomentuTexts.navigation, has . MomentuTexts.move
+        , Texts.navigationTexts . Texts.blocked
+        ])
     where
         dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
 
@@ -437,8 +440,10 @@ make pMode defEventMap tag color assignment =
             <&> Lens.mapped .~ GuiState.updateCursor rhsId
             <&> const
             <&> E.charGroup Nothing
-            (E.toDoc (env ^. Language.texts)
-                [Texts.navigation, Texts.navigationTexts . Texts.jumpToDefBody])
+            (E.toDoc env
+                [ has . MomentuTexts.navigation
+                , has . Texts.navigationTexts . Texts.jumpToDefBody
+                ])
             "="
         mPresentationEdit <-
             case assignmentBody of

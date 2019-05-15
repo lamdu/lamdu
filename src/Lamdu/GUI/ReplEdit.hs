@@ -11,7 +11,6 @@ import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -159,7 +158,7 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
         env <- Lens.view id
         let jumpDoc =
                 E.toDoc env
-                [has . Dir.navigation, has . Texts.jumpToError]
+                [has . MomentuTexts.navigation, has . Texts.jumpToError]
         let jumpEventMap j =
                 j <&> dest
                 & E.keysEventMapMovesCursor actionKeys jumpDoc

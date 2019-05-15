@@ -87,9 +87,3 @@ instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts
 
 quit :: Lens' (Texts Text) Text
 quit = mainLoop . MainLoop.textQuit
-
-navigation :: Lens' (Texts Text) Text
-navigation = dir . Dir.navigation
-
-move :: Lens' (Texts Text) Text
-move = dir . Dir.move

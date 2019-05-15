@@ -4,7 +4,7 @@ module GUI.Momentu.Direction
     , perpendicular, axis, rectRange
     , Order(..), _Forward, _Backward
     , reverseOrder, applyOrder
-    , Texts(..), left, right, up, down, navigation, move
+    , Texts(..), left, right, up, down
     , textLens
     , Layout(..), _LeftToRight, _RightToLeft
     ) where
@@ -55,8 +55,6 @@ data Texts a = Texts
     , _right :: a
     , _up :: a
     , _down :: a
-    , _navigation :: a
-    , _move :: a
     } deriving Eq
 
 JsonTH.derivePrefixed "_" ''Texts

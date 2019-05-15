@@ -24,6 +24,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
@@ -184,8 +185,8 @@ addNavEventmap env keys navDests eMap =
             <&> EventMap.keyPresses
                 events
                 (EventMap.toDoc env
-                    [ has . Dir.navigation
-                    , has . Dir.move
+                    [ has . MomentuTexts.navigation
+                    , has . MomentuTexts.move
                     , lens
                     ])
 

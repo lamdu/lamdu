@@ -129,9 +129,12 @@ addInfixMarker widgetId =
 data Role = Normal | Infix deriving Eq
 
 navDoc ::
-    (Has (Dir.Texts Text) env, Has (Texts.Navigation Text) env) =>
+    ( Has (Texts.Navigation Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     env -> Lens.ALens' (Texts.Navigation Text) Text -> E.Doc
-navDoc env lens = E.toDoc env [has . Dir.navigation, has . lens]
+navDoc env lens =
+    E.toDoc env [has . MomentuTexts.navigation, has . lens]
 
 makeNameRef ::
     (Monad i, Monad o) =>
@@ -166,7 +169,7 @@ makeNameRef role color myId nameRef =
 
 makeInlineEventMap ::
     ( Has Config env, Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env, Has (Dir.Texts Text) env
+    , Has (Texts.CodeUI Text) env
     , Has (Texts.Navigation Text) env
     , Applicative f
     ) =>
@@ -186,7 +189,7 @@ definitionTypeChangeBox ::
     ( MonadReader env m, Glue.HasTexts env, Has (Texts.Code Text) env
     , Element.HasAnimIdPrefix env, Has (Texts.Definitions Text) env
     , Spacer.HasStdSpacing env, Has Theme env, GuiState.HasCursor env
-    , Has Config env, Has (MomentuTexts.Texts Text) env
+    , Has Config env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
@@ -223,7 +226,7 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Has (MomentuTexts.Texts Text) env
+    ( MonadReader env m, Spacer.HasStdSpacing env
     , Has Theme env, Element.HasAnimIdPrefix env, Has Config env
     , GuiState.HasCursor env, Has Hover.Style env, Has (Texts.Definitions Text) env
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env, Glue.HasTexts env

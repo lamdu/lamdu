@@ -27,7 +27,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -36,6 +35,7 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Hover (Hover)
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -186,7 +186,10 @@ makeNoResults =
     <*> (Element.subAnimId ?? ["no results"])
 
 blockEvents ::
-    (Applicative f, Has (Texts Text) env, Has (Dir.Texts Text) env) =>
+    ( Applicative f
+    , Has (Texts Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     env -> Hover.Ordered (Gui Widget f -> Gui Widget f)
 blockEvents env =
     Hover.Ordered
@@ -196,8 +199,8 @@ blockEvents env =
     where
         doc keyLens =
             E.toDoc env
-            [ has . Dir.navigation
-            , has . Dir.move
+            [ has . MomentuTexts.navigation
+            , has . MomentuTexts.move
             , has . keyLens
             ]
         blockDirection key keyName =

@@ -251,7 +251,7 @@ panesEventMap theExportActions cp gp replVarInfo =
                 <&> fmap (\() -> mempty)
             , foldMap
               (E.keysEventMapMovesCursor (env ^. has . Config.previousCursorKeys)
-               (E.toDoc env [has . Texts.navigation, has . Texts.goBack]))
+               (E.toDoc env [has . MomentuTexts.navigation, has . Texts.goBack]))
                 mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])

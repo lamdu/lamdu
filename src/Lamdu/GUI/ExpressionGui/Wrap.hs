@@ -7,6 +7,7 @@ module Lamdu.GUI.ExpressionGui.Wrap
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive(..))
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -37,7 +38,7 @@ parentExprFDConfig =
     \env ->
     let doc lens =
             E.toDoc (env ^. Language.texts)
-            [Texts.navigation, Texts.navigationTexts . lens]
+            [has . MomentuTexts.navigation, has . lens]
     in
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = env ^. has . Config.enterSubexpressionKeys
