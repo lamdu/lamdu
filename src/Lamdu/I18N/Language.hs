@@ -43,6 +43,7 @@ class
     ( Glue.HasTexts env, Has (Dir.Texts Text) env, Choice.HasTexts env
     , TextEdit.HasTexts env, Grid.HasTexts env, Has (NameTexts Text) env
     , Has (Menu.Texts Text) env, SearchMenu.HasTexts env, Has LangId env
+    , Has (Navigation Text) env
     ) => HasLanguage env where
     language :: Lens' env Language
 instance EventMap.HasTexts Language where texts = lTexts . eventMap
@@ -60,6 +61,7 @@ instance Has (NameTexts Text) Language where has = lTexts . name
 instance Has LangId Language where has = lIdentifier
 instance HasLanguage Language where language = id
 instance Zoom.HasTexts Language where texts = lTexts . zoom
+instance Has (Navigation Text) Language where has = lTexts . navigationTexts
 
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts

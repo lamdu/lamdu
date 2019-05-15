@@ -45,6 +45,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (NameTexts)
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Style as Style
@@ -99,3 +100,4 @@ instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Has (NameTexts Text) Env where has = language . has
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has
+instance Has (Texts.Navigation Text) Env where has = language . has

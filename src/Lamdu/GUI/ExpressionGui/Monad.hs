@@ -63,6 +63,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, language)
 import qualified Lamdu.I18N.Language as Language
+import           Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name, NameTexts)
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (Style, HasStyle(..))
@@ -130,6 +131,7 @@ instance Choice.HasTexts (Askable i o) where texts = language . Choice.texts
 instance TextEdit.HasTexts (Askable i o) where texts = language . TextEdit.texts
 instance Has (NameTexts Text) (Askable i o) where has = language . has
 instance Has LangId (Askable i o) where has = language . has
+instance Has (Texts.Navigation Text) (Askable i o) where has = language . has
 instance Language.HasLanguage (Askable i o) where language = aLanguage
 
 im :: Monad i => i a -> ExprGuiM i o a
