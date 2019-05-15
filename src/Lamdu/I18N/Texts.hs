@@ -3,7 +3,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
     ( module Lamdu.I18N.Texts
-    , module Lamdu.I18N.CodeUI
     ) where
 
 import qualified Control.Lens as Lens

@@ -49,6 +49,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.I18N.Language (texts)
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Texts as Texts

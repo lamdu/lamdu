@@ -56,11 +56,11 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Navigation as Texts
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)

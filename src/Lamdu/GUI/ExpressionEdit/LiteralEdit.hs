@@ -46,8 +46,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as CodeTexts
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as CodeUITexts
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as NavTexts
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
