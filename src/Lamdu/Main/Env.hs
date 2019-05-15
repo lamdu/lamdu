@@ -25,7 +25,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -86,7 +85,6 @@ instance Has Debug.Monitors Env where has = debugMonitors
 instance Has Cache.Functions Env where has = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
-instance Choice.HasTexts Env where texts = language . Choice.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has

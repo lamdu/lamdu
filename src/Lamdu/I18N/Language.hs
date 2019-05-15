@@ -40,7 +40,7 @@ instance HasConfigFolder Language where
     configFolder _ = "languages"
 
 class
-    ( Glue.HasTexts env, Has (Dir.Texts Text) env, Choice.HasTexts env
+    ( Glue.HasTexts env, Has (Dir.Texts Text) env, Has (Choice.Texts Text) env
     , TextEdit.HasTexts env, Grid.HasTexts env, Has (NameTexts Text) env
     , Has (Menu.Texts Text) env, SearchMenu.HasTexts env, Has LangId env
     , Has (Navigation Text) env
@@ -54,7 +54,7 @@ instance Has (Glue.Texts Text) Language where has = lTexts . glue
 instance Has (Menu.Texts Text) Language where has = lTexts . menu
 instance SearchMenu.HasTexts Language where texts = lTexts . searchMenu
 instance Has (Grid.Texts Text) Language where has = lTexts . grid
-instance Choice.HasTexts Language where texts = lTexts . choice
+instance Has (Choice.Texts Text) Language where has = lTexts . choice
 instance Has (TextEdit.Texts Text) Language where has = lTexts . textEdit
 instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
 instance Has (NameTexts Text) Language where has = lTexts . name

@@ -6,7 +6,6 @@ module GUI.Momentu.Widgets.Choice
     , Config(..), defaultConfig
     , Orientation(..)
     , Texts(..), select, chooseSelected
-    , HasTexts(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -37,13 +36,11 @@ data Texts a = Texts
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
-class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
-
 
 defaultFdConfig ::
-    (MonadReader env m, HasTexts env) => m (Text -> FocusDelegator.Config)
+    (MonadReader env m, Has (Texts Text) env) => m (Text -> FocusDelegator.Config)
 defaultFdConfig =
-    Lens.view texts <&> \txt helpCategory ->
+    Lens.view has <&> \txt helpCategory ->
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusChildDoc = E.Doc [helpCategory, txt ^. select]
@@ -56,7 +53,7 @@ data Config = Config
     , cwcOrientation :: Orientation
     }
 
-defaultConfig :: (MonadReader env m, HasTexts env) => m (Text -> Config)
+defaultConfig :: (MonadReader env m, Has (Texts Text) env) => m (Text -> Config)
 defaultConfig =
     defaultFdConfig <&> \defFd helpCategory ->
     Config

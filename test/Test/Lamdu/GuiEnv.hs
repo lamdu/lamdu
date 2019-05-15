@@ -16,7 +16,6 @@ import           GUI.Momentu.Draw (Color(..))
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.State (HasCursor, GUIState(..))
-import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
@@ -64,7 +63,6 @@ instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance Has Style Env where has = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
-instance Choice.HasTexts Env where texts = language . Choice.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Has LangId Env where has = language . has
 instance HasLanguage Env where language = eLanguage
