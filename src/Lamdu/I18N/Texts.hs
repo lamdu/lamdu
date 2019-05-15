@@ -15,6 +15,7 @@ module Lamdu.I18N.Texts
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           GUI.Momentu.Animation.Id (ElemIds)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
@@ -65,6 +66,8 @@ data Texts a = Texts
 -- because it has special disambiguation logic implemented in the dotter etc.
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
+
+instance ElemIds Texts
 
 instance Has (EventMap.Texts     Text) (Texts Text) where has = eventMap
 instance Has (Dir.Texts          Text) (Texts Text) where has = dir

@@ -12,16 +12,14 @@ module Lamdu.GUI.Styled
     , actionable
     , withColor
     , nameAtBinder
-    , textIds
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
-import           Data.Binary.Extended (encodeS)
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu.Animation.Id (AnimId, ElemIds(..))
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
@@ -68,9 +66,6 @@ text animIdSuffix txtLens =
     Lens.view (Language.texts . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
 
-textIds :: Texts AnimId
-textIds = pure () & Lens.traversed %@~ const . (:[]) . encodeS
-
 -- work around lack of impredicative types
 newtype OneOfT a = OneOf (OneOf a)
 
@@ -82,7 +77,7 @@ mkLabel ::
 mkLabel =
     (,,) <$> TextView.make <*> Element.subAnimId <*> Lens.view Language.texts
     <&> \(textView, subAnimId, texts) (OneOf lens) ->
-    textView (texts ^# lens) (subAnimId (textIds ^# lens))
+    textView (texts ^# lens) (subAnimId (elemIds ^# lens))
 
 mkFocusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
@@ -92,7 +87,7 @@ mkFocusableLabel ::
 mkFocusableLabel =
     (,,) <$> Widget.makeFocusableView <*> Lens.view Element.animIdPrefix <*> mkLabel
     <&> \(toFocusable, animIdPrefix, lbl) (OneOf lens) ->
-        let widgetId = animIdPrefix <> textIds ^# lens & Widget.Id
+        let widgetId = animIdPrefix <> elemIds ^# lens & Widget.Id
         in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
 
 label ::

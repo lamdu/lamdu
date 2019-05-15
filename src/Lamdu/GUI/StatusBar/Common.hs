@@ -14,6 +14,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
+import           GUI.Momentu.Animation.Id (ElemIds(..))
 import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -35,7 +36,6 @@ import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label, OneOfT(..))
-import qualified Lamdu.GUI.Styled as Styled
 import           Lamdu.I18N.Language (HasLanguage)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
@@ -101,7 +101,7 @@ makeChoice headerText prop choices =
         text <- Lens.view (Language.texts . Texts.statusBar . headerText)
         Choice.make ?? prop ?? choices ?? defConf text ?? myId
     where
-        myId = Widget.Id ("status" : Styled.textIds ^# Texts.statusBar . headerText)
+        myId = Widget.Id ("status" : elemIds ^# Texts.statusBar . headerText)
 
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
