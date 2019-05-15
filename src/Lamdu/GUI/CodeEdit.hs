@@ -146,7 +146,7 @@ makePaneEdit theExportActions pane =
         let titledCodeDoc titleLenses texts =
                 E.toDoc env
                 (titleLenses ++ map (has .) texts)
-        let viewDoc = titledCodeDoc [has . Texts.view]
+        let viewDoc = titledCodeDoc [has . MomentuTexts.view]
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
@@ -174,9 +174,9 @@ makePaneEdit theExportActions pane =
                     <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor (Config.delKeys env)
                     (E.toDoc env
-                        [ has . Texts.edit
+                        [ has . MomentuTexts.edit
                         , has . Texts.def
-                        , has . Texts.delete
+                        , has . MomentuTexts.delete
                         ])
             paneConfig = env ^. has . Config.pane
             exportKeys = env ^. has . Config.export . Config.exportKeys
@@ -208,7 +208,7 @@ newDefinitionDoc ::
     ) => m E.Doc
 newDefinitionDoc =
     Lens.view id
-    <&> (`E.toDoc` [has . Texts.edit, has . Texts.newDefinition])
+    <&> (`E.toDoc` [has . MomentuTexts.edit, has . Texts.newDefinition])
 
 makeNewDefinitionButton ::
     Monad m =>

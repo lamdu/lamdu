@@ -11,6 +11,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -43,7 +44,7 @@ undeleteButton undelete =
         toDoc <- Lens.view id <&> E.toDoc
         let doc =
                 toDoc
-                [ has . Texts.edit
+                [ has . MomentuTexts.edit
                 , has . Texts.def
                 , has . Texts.undelete
                 ]

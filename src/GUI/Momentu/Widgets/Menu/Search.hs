@@ -42,9 +42,10 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.I18N as Texts
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
+import qualified GUI.Momentu.I18N as Texts
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -179,7 +180,7 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
 
 searchTermDoc :: HasTexts env => env -> Lens.ALens' env Text -> E.Doc
 searchTermDoc env subtitle =
-    E.toDoc env [has . Texts.edit, has . textSearchTerm, subtitle]
+    E.toDoc env [has . MomentuTexts.edit, has . textSearchTerm, subtitle]
 
 addDelSearchTerm ::
     (MonadReader env m, State.HasState env, HasTexts env, Applicative f) =>
@@ -194,7 +195,7 @@ addDelSearchTerm myId =
             | otherwise =
                 enterWithSearchTerm "" myId & pure
                 & E.keyPress (toModKey (MetaKey noMods MetaKey.Key'Escape))
-                (searchTermDoc env (has . Texts.delete))
+                (searchTermDoc env (has . MomentuTexts.delete))
     in  term
         & termWidget . Align.tValue %~ Widget.weakerEventsWithoutPreevents delSearchTerm
         & termEditEventMap <>~ delSearchTerm

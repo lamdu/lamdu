@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -37,7 +38,6 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -103,7 +103,7 @@ fragmentEventMap ::
     env -> Sugar.Payload name i o expr -> Gui EventMap o
 fragmentEventMap env pl =
     E.charEventMap "Letter"
-    (E.toDoc env [has . Texts.edit, has . CodeUI.getField])
+    (E.toDoc env [has . MomentuTexts.edit, has . CodeUI.getField])
     getField
     where
         detach (Sugar.FragmentAlready entityId) = pure entityId
@@ -128,7 +128,7 @@ delDotEventMap =
     \(env, delKeys) widgetId ->
     pure widgetId
     & E.keysEventMapMovesCursor delKeys
-    (E.toDoc env [has . Texts.edit, has . CodeUI.deleteDot])
+    (E.toDoc env [has . MomentuTexts.edit, has . CodeUI.deleteDot])
 
 addEventMap ::
     ( Applicative f, Widget.HasWidget w, MonadReader env m
@@ -144,5 +144,5 @@ addEventMap =
         gotoDotter =
             WidgetIds.dotterId myId & GuiState.updateCursor & pure & const
             & E.charGroup Nothing
-            (E.toDoc env [has . Texts.edit, has . CodeUI.dot]) "."
+            (E.toDoc env [has . MomentuTexts.edit, has . CodeUI.dot]) "."
     in  Widget.weakerEventsWithContext f

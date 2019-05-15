@@ -50,7 +50,7 @@ makeLetEdit item =
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
                     (E.toDoc env
-                        [ has . Texts.edit
+                        [ has . MomentuTexts.edit
                         , has . CodeUI.letClause
                         , has . Definitions.extractToOuter
                         ])
@@ -59,9 +59,9 @@ makeLetEdit item =
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc env
-                    [ has . Texts.edit
+                    [ has . MomentuTexts.edit
                     , has . CodeUI.letClause
-                    , has . Texts.delete
+                    , has . MomentuTexts.delete
                     ])
                 (bodyId <$ item ^. Sugar.lDelete)
                 <>
@@ -104,7 +104,7 @@ make (Ann pl (Sugar.BinderLet l)) =
                 & foldMap
                 (E.keysEventMap (env ^. has . Config.moveLetInwardKeys)
                 (E.toDoc env
-                    [ has . Texts.edit
+                    [ has . MomentuTexts.edit
                     , has . CodeUI.letClause
                     , has . Texts.moveInwards
                     ]) . void)

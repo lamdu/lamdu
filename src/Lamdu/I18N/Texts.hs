@@ -2,8 +2,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
-    ( module GUI.Momentu.I18N
-    , module Lamdu.I18N.Texts
+    ( module Lamdu.I18N.Texts
     , module Lamdu.I18N.Code
     , module Lamdu.I18N.CodeUI
     , module Lamdu.I18N.Collaboration
@@ -18,7 +17,6 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
-import           GUI.Momentu.I18N hiding (Texts)
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Choice as Choice

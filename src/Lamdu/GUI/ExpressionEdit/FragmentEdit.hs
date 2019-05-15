@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
 import           GUI.Momentu.State (Gui)
@@ -33,7 +34,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.CodeUI (CodeUI)
 import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -56,7 +56,7 @@ fragmentDoc ::
     Language.HasLanguage env => env -> Lens.ALens' (CodeUI Text) Text -> E.Doc
 fragmentDoc env lens =
     E.toDoc env
-    [has . Texts.edit, has . CodeUI.fragment, has . lens]
+    [has . MomentuTexts.edit, has . CodeUI.fragment, has . lens]
 
 make ::
     (Monad i, Monad o) =>

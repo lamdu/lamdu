@@ -5,6 +5,7 @@ module Lamdu.GUI.ExpressionEdit.GetFieldEdit
 import           AST (ann)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -19,7 +20,6 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -39,7 +39,7 @@ make (Sugar.GetField recExpr tag) pl =
                 del <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc env
-                    [has . Texts.edit, has . Texts.delete])
+                    [has . MomentuTexts.edit, has . MomentuTexts.delete])
         let delEventMap =
                 recExpr ^. ann . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
