@@ -102,7 +102,7 @@ make cp gp width =
         theExportActions <- Lens.view has
         env <- Lens.view id
         workArea <-
-            loadWorkArea (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+            loadWorkArea env (env ^. has) (env ^. has) (env ^. has)
             (env ^. has) (env ^. has) cp
             & transaction
         gotoDefinition <-

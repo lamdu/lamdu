@@ -8,6 +8,7 @@ module Lamdu.GUI.CodeEdit.Load
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
+import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors
@@ -15,8 +16,10 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
-import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import qualified Lamdu.I18N.Code as Texts
+import           Lamdu.I18N.LangId (LangId)
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Config as SugarConf
 import qualified Lamdu.Sugar.Convert as SugarConvert
@@ -41,17 +44,23 @@ toExprGuiMPayload (minOpPrec, needParens, pl) =
     minOpPrec
 
 loadWorkArea ::
-    (HasCallStack, Monad m) =>
-    Language ->
+    ( HasCallStack
+    , Has LangId env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has Dir.Layout env
+    , Monad m
+    ) =>
+    env ->
     SugarConf.Config -> Cache.Functions -> Debug.Monitors ->
     Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
     Anchors.CodeAnchors m ->
     T m
     (Sugar.WorkArea (Name (T m)) (T m) (T m)
         (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
-loadWorkArea lang config cache monitors annMode theEvalResults cp =
-    SugarConvert.loadWorkArea lang config cache monitors annMode theEvalResults cp
-    >>= report . AddNames.addToWorkArea lang (DataOps.assocTagName lang)
+loadWorkArea env config cache monitors annMode theEvalResults cp =
+    SugarConvert.loadWorkArea env config cache monitors annMode theEvalResults cp
+    >>= report . AddNames.addToWorkArea env (DataOps.assocTagName env)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toExprGuiMPayload
     where
