@@ -1,6 +1,6 @@
 -- | Collaboration texts
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.I18N.Collaboration where
 
 import qualified Control.Lens as Lens
