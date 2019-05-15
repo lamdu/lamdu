@@ -36,7 +36,7 @@ import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, HasLanguage(..))
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..))
-import           Lamdu.Style (HasStyle(..), Style)
+import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Test.Lamdu.Config as TestConfig
 
@@ -65,7 +65,7 @@ instance Has GUIState Env where has = eState
 instance Has Config Env where has = eConfig
 instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
-instance HasStyle Env where style = eStyle
+instance Has Style Env where has = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts

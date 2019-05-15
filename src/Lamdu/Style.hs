@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ConstraintKinds #-}
 module Lamdu.Style
     ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num
     , make
-    , HasStyle(..)
+    , HasStyle
     , mainLoopConfig
     ) where
 
@@ -48,7 +48,7 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-class TextEdit.HasStyle env => HasStyle env where style :: Lens' env Style
+type HasStyle env = (TextEdit.HasStyle env, Has Style env)
 
 helpStyle :: Font -> Theme.Help -> EventMapHelp.Style
 helpStyle font theme =

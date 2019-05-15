@@ -217,7 +217,7 @@ nameAtBinder ::
     (MonadReader env m, Style.HasStyle env) => Name n -> m b -> m b
 nameAtBinder name act =
     do
-        style <- Lens.view Style.style
+        style <- Lens.view has
         let textEditStyle =
                 style
                 ^. case name of

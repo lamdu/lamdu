@@ -438,7 +438,7 @@ makeLHSTag ::
     ExprGuiM i o (TextWidget o)
 makeLHSTag onPickNext color tag =
     do
-        style <- Lens.view Style.style
+        style <- Lens.view has
         (tagEditType, tagEdit) <-
             makeTagEditWith onView onPickNext tag
             & Styled.withColor color

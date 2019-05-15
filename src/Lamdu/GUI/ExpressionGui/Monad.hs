@@ -66,7 +66,7 @@ import qualified Lamdu.I18N.Language as Language
 import           Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name, NameTexts)
 import           Lamdu.Settings (Settings)
-import           Lamdu.Style (Style, HasStyle(..))
+import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -118,7 +118,7 @@ instance Has Menu.Config (Askable i o) where
 instance Has SearchMenu.TermStyle (Askable i o) where
     has = aTheme . Theme.searchTerm
 instance Has Hover.Style (Askable i o) where has = aTheme . has
-instance HasStyle (Askable i o) where style = aStyle
+instance Has Style (Askable i o) where has = aStyle
 instance Has Settings (Askable i o) where has = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout
 instance Has (Dir.Texts Text) (Askable i o) where has = language . has
@@ -234,7 +234,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aGuiAnchors = theGuiAnchors
     , _aDepthLeft = env ^. has . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
-    , _aStyle = env ^. style
+    , _aStyle = env ^. has
     , _aIsHoleResult = False
     , _aDirLayout = env ^. has
     , _aLanguage = env ^. language

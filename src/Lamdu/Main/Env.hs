@@ -47,6 +47,7 @@ import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Settings (Settings(..))
+import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
@@ -69,7 +70,7 @@ Lens.makeLenses ''Env
 instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions
 instance Has (GUIMain.EvalResults ViewM) Env where has = evalRes
 instance Has Settings Env where has = settings . Property.pVal
-instance Style.HasStyle Env where style = style
+instance Has Style Env where has = style
 instance Has MainLoop.Env Env where has = mainLoop
 instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
 instance GuiState.HasCursor Env

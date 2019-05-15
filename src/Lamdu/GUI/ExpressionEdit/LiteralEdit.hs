@@ -64,7 +64,7 @@ withStyle ::
     (MonadReader env m, HasStyle env) =>
     Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
 withStyle whichStyle =
-    Reader.local (\x -> x & has .~ x ^. Style.style . whichStyle)
+    Reader.local (\x -> x & has .~ x ^. has . whichStyle)
 
 genericEdit ::
     ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
