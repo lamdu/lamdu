@@ -28,8 +28,8 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Versioning as Texts
 import qualified Lamdu.VersionControl.Actions as A
 import           Revision.Deltum.Rev.Branch (Branch)
 import qualified Revision.Deltum.Rev.Branch as Branch
@@ -50,11 +50,11 @@ branchNameFDConfig txt = FocusDelegator.Config
     }
 
 undoEventMap ::
-    Language.HasLanguage env =>
+    (Has (MomentuTexts.Texts Text) env, Has (Texts.Versioning Text) env) =>
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.toDoc env [has . Texts.edit, has . Texts.undo])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.undo])
     & foldMap
 
 redoEventMap ::
@@ -62,25 +62,27 @@ redoEventMap ::
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.toDoc env [has . Texts.edit, has . Texts.redo])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.redo])
     & foldMap
 
 eventMap ::
-    (MonadReader env m, Applicative f, Language.HasLanguage env) =>
+    ( MonadReader env m, Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env, Applicative f
+    ) =>
     m (VersionControl.Config -> A.Actions t f -> Gui EventMap f)
 eventMap =
     Lens.view id
     <&> \env config actions ->
-    let toDoc = E.toDoc (env ^. Language.texts) in
+    let toDoc = E.toDoc env in
     mconcat
     [ A.makeBranch actions
         <&> branchTextEditId
         & E.keysEventMapMovesCursor (config ^. VersionControl.makeBranchKeys)
-        (toDoc [Texts.versioning . Texts.branches, Texts.codeUI . Texts.new])
+        (toDoc [has . Texts.branches, has . Texts.new])
     , A.currentBranch actions & Property.value & branchDelegatorId & pure
         & E.keysEventMapMovesCursor
         (config ^. VersionControl.jumpToBranchesKeys)
-        (toDoc [Texts.versioning . Texts.branches, Texts.codeUI . Texts.select])
+        (toDoc [has . Texts.branches, has . Texts.select])
     , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap env config
     , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap env config
     ]
@@ -125,7 +127,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                                 (config ^. VersionControl.delBranchKeys)
                                 (E.toDoc txt
                                     [ has . Texts.branches
-                                    , has . Texts.delete
+                                    , has . MomentuTexts.delete
                                     ])
                                 (branchDelegatorId <$> A.deleteBranch actions branch)
                             | otherwise = mempty
