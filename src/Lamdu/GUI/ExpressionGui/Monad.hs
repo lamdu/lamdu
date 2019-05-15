@@ -116,7 +116,6 @@ instance Has Hover.Style (Askable i o) where has = aTheme . has
 instance Has Style (Askable i o) where has = aStyle
 instance Has Settings (Askable i o) where has = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout
-instance SearchMenu.HasTexts (Askable i o) where texts = language . SearchMenu.texts
 instance Has LangId (Askable i o) where has = language . has
 instance Language.HasLanguage (Askable i o) where language = aLanguage
 instance Has (t Text) Language => Has (t Text) (Askable i o) where has = language . has

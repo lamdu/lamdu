@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, ConstraintKinds #-}
 
 module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap
@@ -29,7 +29,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , Texts(..)
         , textPickNotApplicable, textEdit, textSearchTerm, textDelete
         , textAppendChar, textDeleteBackwards
-    , HasTexts(..)
+    , HasTexts
     ) where
 
 import qualified Control.Lens as Lens
@@ -72,7 +72,7 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
 
-class Has (Menu.Texts Text) env => HasTexts env where texts :: Lens' env (Texts Text)
+type HasTexts env = (Has (Menu.Texts Text) env, Has (Texts Text) env)
 
 -- | Context necessary for creation of menu items for a search.
 data ResultsContext = ResultsContext
@@ -107,7 +107,7 @@ Lens.makeLenses ''TermCtx
 type AllowedSearchTerm = Text -> TermCtx Bool
 
 emptyPickEventMap ::
-    ( MonadReader env m, Has Menu.Config env, HasTexts env
+    ( MonadReader env m, Has Menu.Config env, Has (Texts Text) env
     , Applicative f
     ) =>
     m (Gui EventMap f)
@@ -115,7 +115,7 @@ emptyPickEventMap =
     Lens.view id
     <&> \env ->
     E.keysEventMap (allPickKeys env)
-    (E.toDoc env [texts.textPickNotApplicable]) (pure ())
+    (E.toDoc env [has . textPickNotApplicable]) (pure ())
     where
         allPickKeys env =
             keys ^. Menu.keysPickOption <>
@@ -179,7 +179,7 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
 
 searchTermDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> E.Doc
 searchTermDoc env subtitle =
-    E.toDoc (env ^. texts) [textEdit, textSearchTerm, subtitle]
+    E.toDoc (env ^. has) [textEdit, textSearchTerm, subtitle]
 
 addDelSearchTerm ::
     (MonadReader env m, State.HasState env, HasTexts env, Applicative f) =>

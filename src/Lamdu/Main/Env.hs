@@ -85,7 +85,6 @@ instance Has Debug.Monitors Env where has = debugMonitors
 instance Has Cache.Functions Env where has = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
-instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has
 instance Has (t Text) Language => Has (t Text) Env where has = language . has
