@@ -87,6 +87,20 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 -- Get-field's dot is currently omitted from the symbols,
 -- because it has special disambiguation logic implemented in the dotter etc.
-
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
+
+quit :: Lens' (Texts Text) Text
+quit = mainLoop . MainLoop.textQuit
+
+edit :: Lens' (Texts Text) Text
+edit = textEdit . TextEdit.textEdit
+
+view :: Lens' (Texts Text) Text
+view = zoom . Zoom.view
+
+navigation :: Lens' (Texts Text) Text
+navigation = dir . Dir.navigation
+
+move :: Lens' (Texts Text) Text
+move = dir . Dir.move

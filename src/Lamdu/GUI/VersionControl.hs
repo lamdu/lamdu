@@ -50,7 +50,7 @@ undoEventMap ::
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.toDoc env [Language.edit, Language.texts . Texts.versioning . Texts.undo])
+    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.versioning . Texts.undo])
     & foldMap
 
 redoEventMap ::
@@ -58,7 +58,7 @@ redoEventMap ::
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.toDoc env [Language.edit, Language.texts . Texts.versioning . Texts.redo])
+    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.versioning . Texts.redo])
     & foldMap
 
 eventMap ::

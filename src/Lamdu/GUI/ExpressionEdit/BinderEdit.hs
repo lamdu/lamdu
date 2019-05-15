@@ -39,15 +39,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-codeUI :: Language.HasLanguage env => Lens' env (Texts.CodeUI Text)
-codeUI = Language.texts . Texts.codeUI
-
-definitions :: Language.HasLanguage env => Lens' env (Texts.Definitions Text)
-definitions = Language.texts . Texts.definitions
-
-navigationTexts :: Language.HasLanguage env => Lens' env (Texts.Navigation Text)
-navigationTexts = Language.texts . Texts.navigationTexts
-
 makeLetEdit ::
     (Monad i, Monad o) =>
     Tree (Sugar.Let (Name o) i o)
@@ -59,28 +50,27 @@ makeLetEdit item =
         let eventMap =
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. config . Config.extractKeys)
-                    (E.toDoc env
-                        [ Language.edit
-                        , codeUI . CodeUI.letClause
-                        , definitions . Definitions.extractToOuter
+                    (E.toDoc (env ^. Language.texts)
+                        [ Texts.edit
+                        , Texts.codeUI . CodeUI.letClause
+                        , Texts.definitions . Definitions.extractToOuter
                         ])
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . ann . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
-                (E.toDoc env
-                    [ Language.edit
-                    , codeUI . CodeUI.letClause
-                    , codeUI . CodeUI.delete
+                (E.toDoc (env ^. Language.texts)
+                    [ Texts.edit
+                    , Texts.codeUI . CodeUI.letClause
+                    , Texts.codeUI . CodeUI.delete
                     ])
                 (bodyId <$ item ^. Sugar.lDelete)
                 <>
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
-                    (E.toDoc env
-                        [ Language.navigation
-                        , navigationTexts
-                            . Texts.jumpToFirstUse
+                    (E.toDoc (env ^. Language.texts)
+                        [ Texts.navigation
+                        , Texts.navigationTexts . Texts.jumpToFirstUse
                         ])
                     . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
@@ -114,10 +104,10 @@ make (Ann pl (Sugar.BinderLet l)) =
                 . Sugar.extract
                 & foldMap
                 (E.keysEventMap (env ^. config . Config.moveLetInwardKeys)
-                (E.toDoc env
-                    [ Language.edit
-                    , codeUI . CodeUI.letClause
-                    , Language.texts . Texts.navigationTexts . Texts.moveInwards
+                (E.toDoc (env ^. Language.texts)
+                    [ Texts.edit
+                    , Texts.codeUI . CodeUI.letClause
+                    , Texts.navigationTexts . Texts.moveInwards
                     ]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)

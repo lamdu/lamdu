@@ -41,7 +41,7 @@ builtinFDConfig env = FocusDelegator.Config
     }
     where
         doc lens =
-            E.toDoc env [Language.edit, Language.texts . Texts.codeUI . lens]
+            E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . lens]
 
 builtinFFIPath :: Widget.Id -> Widget.Id
 builtinFFIPath = flip Widget.joinId ["FFIPath"]

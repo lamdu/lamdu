@@ -88,9 +88,6 @@ extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
-codeUI :: Language.HasLanguage env => Lens' env (Texts.CodeUI Text)
-codeUI = Language.texts . Texts.codeUI
-
 extractEventMap ::
     ( MonadReader env m, Config.HasConfig env, Language.HasLanguage env
     , Functor o
@@ -102,7 +99,8 @@ extractEventMap =
     \env actions ->
     actions ^. Sugar.extract <&> extractCursor
     & E.keysEventMapMovesCursor (env ^. config . Config.extractKeys)
-    (E.toDoc env [Language.edit, Language.texts . Texts.definitions . Texts.extract])
+    (E.toDoc (env ^. Language.texts)
+        [Texts.edit, Texts.definitions . Texts.extract])
 
 addLetEventMap ::
     (Monad i, Monad o) =>
@@ -115,8 +113,11 @@ addLetEventMap addLet =
             <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor
             (env ^. config . Config.letAddItemKeys)
-                (E.toDoc env
-                    [Language.edit, codeUI . Texts.letClause, codeUI . Texts.add])
+                (E.toDoc (env ^. Language.texts)
+                    [ Texts.edit
+                    , Texts.codeUI . Texts.letClause
+                    , Texts.codeUI . Texts.add
+                    ])
             & pure
 
 actionsEventMap ::
@@ -146,7 +147,8 @@ actionsEventMap options exprInfo =
             actions ^. Sugar.mReplaceParent
             & foldMap
                 (E.keysEventMapMovesCursor replaceKeys
-                    (E.toDoc env [Language.edit, codeUI . Texts.replaceParent])
+                    (E.toDoc (env ^. Language.texts)
+                        [Texts.edit, Texts.codeUI . Texts.replaceParent])
                 . fmap WidgetIds.fromEntityId)
 
 -- | Create the hole search term for new apply operators,
@@ -159,7 +161,8 @@ transformSearchTerm =
     let maybeTransformEventMap
             | exprInfoIsSelected exprInfo =
                 E.charEventMap "Letter"
-                (E.toDoc env [Language.edit, codeUI . Texts.transform]) transform
+                (E.toDoc (env ^. Language.texts)
+                    [Texts.edit, Texts.codeUI . Texts.transform]) transform
             | otherwise = mempty
         transform c =
             do
@@ -175,7 +178,8 @@ transformSearchTerm =
                 | otherwise -> mempty
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
     in  E.charGroup Nothing
-        (E.toDoc env [Language.edit, codeUI . Texts.applyOperator]) ops
+        (E.toDoc (env ^. Language.texts)
+            [Texts.edit, Texts.codeUI . Texts.applyOperator]) ops
         Text.singleton
         <> maybeTransformEventMap
         <&> (searchStrRemainder <>)
@@ -213,11 +217,11 @@ detachEventMap =
     Sugar.DetachAction act
         | exprInfoIsSelected exprInfo ->
             E.keysEventMapMovesCursor (env ^. config . Config.detachKeys)
-            (E.toDoc env [Language.edit, codeUI . Texts.modify])
+            (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . Texts.modify])
             (act <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
             <>
             E.keysEventMap (env ^. config . Config.parenDetachKeys)
-            (E.toDoc env [Language.edit, codeUI . Texts.detach])
+            (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . Texts.detach])
             (void act)
     _ -> mempty
 
@@ -233,4 +237,4 @@ replaceEventMap action =
     \env ->
     action <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. config & Config.delKeys)
-    (E.toDoc env [Language.edit, codeUI . Texts.setToHole])
+    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . Texts.setToHole])

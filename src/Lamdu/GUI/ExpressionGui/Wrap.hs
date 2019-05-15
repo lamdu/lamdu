@@ -36,8 +36,8 @@ parentExprFDConfig =
     Lens.view id <&>
     \env ->
     let doc lens =
-            E.toDoc env
-            [Language.navigation, Language.texts . Texts.navigationTexts . lens]
+            E.toDoc (env ^. Language.texts)
+            [Texts.navigation, Texts.navigationTexts . lens]
     in
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = env ^. config . Config.enterSubexpressionKeys

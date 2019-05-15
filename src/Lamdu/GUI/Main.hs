@@ -46,6 +46,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
@@ -107,7 +108,7 @@ layout themeNames langNames settingsProp =
         vcEventMap <- VersionControlGUI.eventMap ?? versionControlCfg ?? vcActions
 
         quitKeys <- Lens.view (Config.config . Config.quitKeys)
-        quitTxt <- Lens.view Language.quit
+        quitTxt <- Lens.view (Language.texts . Texts.quit)
         let quitEventMap = E.keysEventMap quitKeys (E.Doc [quitTxt]) (error "Quit")
 
         pure statusBarWidget

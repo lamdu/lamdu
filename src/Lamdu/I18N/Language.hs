@@ -2,8 +2,9 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
 module Lamdu.I18N.Language
-    ( Language(..), HasLanguage(..)
-    , texts, quit, edit, view, navigation, move
+    ( Language(..)
+    , HasLanguage(..)
+    , texts
     ) where
 
 import qualified Control.Lens as Lens
@@ -61,18 +62,3 @@ instance Zoom.HasTexts Language where texts = lTexts . zoom
 
 texts :: HasLanguage env => Lens' env (Texts Text)
 texts = language . lTexts
-
-quit :: HasLanguage env => Lens' env Text
-quit = language . MainLoop.texts . MainLoop.textQuit
-
-edit :: HasLanguage env => Lens' env Text
-edit = language . TextEdit.texts . TextEdit.textEdit
-
-view :: HasLanguage env => Lens' env Text
-view = language . Zoom.texts . Zoom.view
-
-navigation :: HasLanguage env => Lens' env Text
-navigation = language . Dir.texts . Dir.navigation
-
-move :: HasLanguage env => Lens' env Text
-move = language . Dir.texts . Dir.move

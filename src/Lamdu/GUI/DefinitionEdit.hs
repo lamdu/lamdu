@@ -41,10 +41,15 @@ undeleteButton ::
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ?? ["Undelete"] <&> Widget.Id
-        toDoc <- Lens.view id <&> E.toDoc
-        let def = Language.texts . Texts.definitions
-        let doc = toDoc [Language.edit, def . Texts.def, def . Texts.undelete]
-        Styled.actionable actionId (Texts.definitions . Texts.undeleteButton) doc undelete
+        toDoc <- Lens.view Language.texts <&> E.toDoc
+        let doc =
+                toDoc
+                [ Texts.edit
+                , Texts.definitions . Texts.def
+                , Texts.definitions . Texts.undelete
+                ]
+        Styled.actionable actionId (Texts.definitions . Texts.undeleteButton)
+            doc undelete
 
 makeExprDefinition ::
     (Monad i, Monad o) =>

@@ -148,9 +148,9 @@ makePaneEdit theExportActions pane =
         theConfig <- Lens.view config
         env <- Lens.view id
         let titledCodeDoc titleLenses texts =
-                E.toDoc env
-                (titleLenses ++ map ((Language.texts . Texts.codeUI) .) texts)
-        let viewDoc = titledCodeDoc [Language.view]
+                E.toDoc (env ^. Language.texts)
+                (titleLenses ++ map (Texts.codeUI .) texts)
+        let viewDoc = titledCodeDoc [Texts.view]
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
@@ -177,10 +177,10 @@ makePaneEdit theExportActions pane =
                     pane ^. Sugar.paneClose
                     <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor (Config.delKeys theConfig)
-                    (E.toDoc env
-                        [ Language.edit
-                        , Language.texts . Texts.definitions . Texts.def
-                        , Language.texts . Texts.codeUI . Texts.delete
+                    (E.toDoc (env ^. Language.texts)
+                        [ Texts.edit
+                        , Texts.definitions . Texts.def
+                        , Texts.codeUI . Texts.delete
                         ])
             paneConfig = theConfig ^. Config.pane
             exportKeys = theConfig ^. Config.export . Config.exportKeys
@@ -208,9 +208,8 @@ makeNewDefinition cp =
 
 newDefinitionDoc :: (Language.HasLanguage env, MonadReader env m) => m E.Doc
 newDefinitionDoc =
-    Lens.view id
-    <&> flip E.toDoc
-        [Language.edit, Language.texts . Texts.definitions . Texts.newDefinition]
+    Lens.view Language.texts
+    <&> (`E.toDoc` [Texts.edit, Texts.definitions . Texts.newDefinition])
 
 makeNewDefinitionButton ::
     Monad m =>
@@ -256,10 +255,9 @@ panesEventMap theExportActions cp gp replVarInfo =
                 <&> fmap (\() -> mempty)
             , foldMap
               (E.keysEventMapMovesCursor (theConfig ^. Config.previousCursorKeys)
-               (E.toDoc env
-                   [ Language.navigation
-                   , Language.texts . Texts.navigationTexts . Texts.goBack
-                   ])) mJumpBack
+               (E.toDoc (env ^. Language.texts)
+                   [Texts.navigation, Texts.navigationTexts . Texts.goBack]))
+                mJumpBack
             , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])
                 exportAll
@@ -269,7 +267,7 @@ panesEventMap theExportActions cp gp replVarInfo =
             , case replVarInfo of
                 Sugar.VarAction ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
-                    (E.toDoc env [Language.texts . Texts.definitions . Texts.execRepl])
+                    (E.toDoc (env ^. Language.texts) [Texts.definitions . Texts.execRepl])
                     (IOTrans.liftIO executeRepl)
                 _ -> mempty
             ] & pure

@@ -74,10 +74,8 @@ extractEventMap env pl keys =
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
     where
         doc =
-            E.toDoc env
-            [ Language.edit
-            , Language.texts . Texts.definitions . Texts.extractReplToDef
-            ]
+            E.toDoc (env ^. Language.texts)
+            [Texts.edit, Texts.definitions . Texts.extractReplToDef]
 
 replEventMap ::
     (Monad m, HasConfig env, Language.HasLanguage env) =>
@@ -146,10 +144,8 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
         actionKeys <- Lens.view (Config.config . Config.actionKeys)
         env <- Lens.view id
         let jumpDoc =
-                E.toDoc env
-                [ Language.navigation
-                , Language.texts . Texts.navigationTexts . Texts.jumpToError
-                ]
+                E.toDoc (env ^. Language.texts)
+                [Texts.navigation, Texts.navigationTexts . Texts.jumpToError]
         let jumpEventMap j =
                 j <&> dest
                 & E.keysEventMapMovesCursor actionKeys jumpDoc

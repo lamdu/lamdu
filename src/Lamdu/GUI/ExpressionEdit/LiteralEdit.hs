@@ -49,9 +49,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-codeUI :: Language.HasLanguage env => Lens' env (Texts.CodeUI Text)
-codeUI = Language.texts . Texts.codeUI
-
 mkEditEventMap ::
     (MonadReader env m, Monad o, Language.HasLanguage env) =>
     m (Text -> o Sugar.EntityId -> Gui EventMap o)
@@ -61,7 +58,7 @@ mkEditEventMap =
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
-    (E.toDoc env [Language.edit, codeUI . Texts.value])
+    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . Texts.value])
 
 withStyle ::
     (MonadReader env m, HasStyle env) =>
@@ -104,7 +101,11 @@ fdConfig =
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = litConf ^. Config.literalStartEditingKeys
     , FocusDelegator.focusChildDoc =
-        E.toDoc env [Language.edit, codeUI . Texts.literal, codeUI . Texts.startEditing]
+        E.toDoc (env ^. Language.texts)
+        [ Texts.edit
+        , Texts.codeUI . Texts.literal
+        , Texts.codeUI . Texts.startEditing
+        ]
     , FocusDelegator.focusParentKeys =
         litConf ^. Config.literalStopEditingKeys
         -- The literal edit should behave like holes, in that the "pick option"
@@ -114,7 +115,11 @@ fdConfig =
         -- jumping to next entry:
         <> menuKeys ^. Menu.keysPickOptionAndGotoNext
     , FocusDelegator.focusParentDoc =
-        E.toDoc env [Language.edit, codeUI . Texts.literal, codeUI . Texts.stopEditing]
+        E.toDoc (env ^. Language.texts)
+        [ Texts.edit
+        , Texts.codeUI . Texts.literal
+        , Texts.codeUI . Texts.stopEditing
+        ]
     }
 
 withFd ::
@@ -180,7 +185,7 @@ numEdit prop pl =
         let negateText
                 | "-" `Text.isPrefixOf` text = Text.tail text
                 | otherwise = "-" <> text
-        toDoc <- Lens.view id <&> E.toDoc
+        toDoc <- Lens.view Language.texts <&> E.toDoc
         let negateEvent
                 -- '-' at last position should apply operator rather than negate
                 | pos /= Text.length text =
@@ -191,9 +196,9 @@ numEdit prop pl =
                     & const
                     & E.charGroup Nothing
                       (toDoc
-                          [ Language.edit
-                          , codeUI . Texts.literal
-                          , codeUI . Texts.negate
+                          [ Texts.edit
+                          , Texts.codeUI . Texts.literal
+                          , Texts.codeUI . Texts.negate
                           ]) "-"
                 | otherwise = mempty
         strollEvent <-
@@ -202,8 +207,8 @@ numEdit prop pl =
             \keys ->
             E.keysEventMap keys
             (toDoc
-                [ Language.navigation
-                , Language.texts . Texts.navigationTexts . Texts.nextEntry
+                [ Texts.navigation
+                , Texts.navigationTexts . Texts.nextEntry
                 ])
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
@@ -212,10 +217,12 @@ numEdit prop pl =
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
                     E.keyPresses [ModKey mempty MetaKey.Key'Backspace]
-                    (toDoc [Language.edit, codeUI . Texts.delete])
+                    (toDoc [Texts.edit, Texts.codeUI . Texts.delete])
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                     <>
-                    E.charEventMap "Letter" (toDoc [Language.edit, codeUI . Texts.replace]) holeWithChar
+                    E.charEventMap "Letter"
+                    (toDoc [Texts.edit, Texts.codeUI . Texts.replace])
+                    holeWithChar
                     where
                         holeWithChar c =
                             (action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
@@ -267,12 +274,14 @@ makeLiteralEventMap ::
     (MonadReader env m, Monad o, Language.HasLanguage env) =>
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> Gui EventMap o)
 makeLiteralEventMap =
-    Lens.view id <&> E.toDoc
+    Lens.view Language.texts <&> E.toDoc
     <&> \toDoc makeLiteral ->
-    E.charGroup Nothing (toDoc [Language.edit, codeUI . Texts.literalText]) "'\""
+    E.charGroup Nothing
+    (toDoc [Texts.edit, Texts.codeUI . Texts.literalText]) "'\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> r))
     <>
-    E.charGroup (Just "Digit") (toDoc [Language.edit, codeUI . Texts.literalNumber])
+    E.charGroup (Just "Digit")
+    (toDoc [Texts.edit, Texts.codeUI . Texts.literalNumber])
     Chars.digit
     (fmap r . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
     where

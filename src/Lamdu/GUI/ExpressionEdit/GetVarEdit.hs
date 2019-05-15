@@ -50,7 +50,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.Definitions as Definitions
 import qualified Lamdu.I18N.Language as Language
-import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -129,13 +128,8 @@ navDoc ::
     Language.HasLanguage env =>
     env -> Lens.ALens' (Texts.Navigation Text) Text -> E.Doc
 navDoc env lens =
-    E.toDoc env
-    [Language.navigation, Language.texts . Texts.navigationTexts . lens]
-
-editDoc ::
-    Language.HasLanguage env =>
-    env -> Lens.ALens' (Texts Text) Text -> E.Doc
-editDoc env lens = E.toDoc env [Language.edit, Language.texts . lens]
+    E.toDoc (env ^. Language.texts)
+    [Texts.navigation, Texts.navigationTexts . lens]
 
 makeNameRef ::
     (Monad i, Monad o) =>
@@ -175,7 +169,7 @@ makeInlineEventMap ::
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
-      (editDoc env (Texts.codeUI . CodeUI.inline))
+      (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . CodeUI.inline])
 makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
     & E.keysEventMapMovesCursor (env ^. config . Config.inlineKeys)
@@ -194,7 +188,9 @@ definitionTypeChangeBox ::
 definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
-        let updateDoc = editDoc env (Texts.definitions . Definitions.updateDefType)
+        let updateDoc =
+                E.toDoc (env ^. Language.texts)
+                [Texts.edit, Texts.definitions . Definitions.updateDefType]
         oldTypeRow <- Styled.info (label (Texts.definitions . Texts.defUpdateWas))
         newTypeRow <-
             Styled.actionable myId (Texts.definitions . Texts.defUpdateHeader)
@@ -237,20 +233,18 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         let showDialogEventMap =
                 pure myId
                 & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
-                (E.toDoc env
-                    [ Language.view
-                    , Language.texts . Texts.definitions
-                        . Definitions.typeUpdateDialog
-                    , Language.texts . Texts.codeUI . CodeUI.show
+                (E.toDoc (env ^. Language.texts)
+                    [ Texts.view
+                    , Texts.definitions . Definitions.typeUpdateDialog
+                    , Texts.codeUI . CodeUI.show
                     ])
         let hideDialogEventMap =
                 pure hiddenId
                 & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
-                (E.toDoc env
-                    [ Language.view
-                    , Language.texts . Texts.definitions
-                        . Definitions.typeUpdateDialog
-                    , Language.texts . Texts.codeUI . CodeUI.hide
+                (E.toDoc (env ^. Language.texts)
+                    [ Texts.view
+                    , Texts.definitions . Definitions.typeUpdateDialog
+                    , Texts.codeUI . CodeUI.hide
                     ])
         let underline = Underline
                 { _underlineColor = env ^. theme . Theme.errorColor

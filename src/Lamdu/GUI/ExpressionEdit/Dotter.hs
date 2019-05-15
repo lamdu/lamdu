@@ -42,9 +42,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-codeUI :: Language.HasLanguage env => Lens' env (Texts.CodeUI Text)
-codeUI = Language.texts . Texts.codeUI
-
 add ::
     ( MonadReader env m, Applicative o, TextView.HasStyle env, HasConfig env
     , Language.HasLanguage env, Element.HasAnimIdPrefix env
@@ -106,7 +103,7 @@ fragmentEventMap ::
     env -> Sugar.Payload name i o expr -> Gui EventMap o
 fragmentEventMap env pl =
     E.charEventMap "Letter"
-    (E.toDoc env [Language.edit, codeUI . CodeUI.getField])
+    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . CodeUI.getField])
     getField
     where
         detach (Sugar.FragmentAlready entityId) = pure entityId
@@ -131,10 +128,8 @@ delDotEventMap =
     \(env, delKeys) widgetId ->
     pure widgetId
     & E.keysEventMapMovesCursor delKeys
-    (E.toDoc env
-        [ Language.edit
-        , codeUI . CodeUI.deleteDot
-        ])
+    (E.toDoc (env ^. Language.texts)
+        [Texts.edit, Texts.codeUI . CodeUI.deleteDot])
 
 addEventMap ::
     ( Applicative f, Widget.HasWidget w, MonadReader env m
@@ -150,5 +145,6 @@ addEventMap =
         gotoDotter =
             WidgetIds.dotterId myId & GuiState.updateCursor & pure & const
             & E.charGroup Nothing
-            (E.toDoc env [Language.edit, codeUI . CodeUI.dot]) "."
+            (E.toDoc (env ^. Language.texts)
+                [Texts.edit, Texts.codeUI . CodeUI.dot]) "."
     in  Widget.weakerEventsWithContext f

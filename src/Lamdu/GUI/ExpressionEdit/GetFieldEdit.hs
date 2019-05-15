@@ -41,8 +41,8 @@ make (Sugar.GetField recExpr tag) pl =
         let mkDelEventMap del =
                 del <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys (env ^. config))
-                (E.toDoc env
-                    [Language.edit, Language.texts . Texts.codeUI . CodeUI.delete])
+                (E.toDoc (env ^. Language.texts)
+                    [Texts.edit, Texts.codeUI . CodeUI.delete])
         let delEventMap =
                 recExpr ^. ann . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
