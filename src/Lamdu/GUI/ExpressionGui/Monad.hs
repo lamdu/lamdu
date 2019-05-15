@@ -90,6 +90,10 @@ data Askable i o = Askable
     , _aDirLayout :: Dir.Layout
     , aIom :: forall x. i x -> o x
     , _aLanguage :: Language
+        -- TODO: This ^^ defeats the purpose and means ALL gui depends
+        -- on ALL texts Need to parameterize GUI monad on the env, and
+        -- each subcomponent in gui should put Has constraints on the
+        -- env
     }
 
 newtype ExprGuiM i (o :: * -> *) a =
