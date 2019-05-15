@@ -25,7 +25,6 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
-import           Data.Has (Has(..))
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Hover as Hover

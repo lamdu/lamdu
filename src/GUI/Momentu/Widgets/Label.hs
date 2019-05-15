@@ -3,7 +3,6 @@ module GUI.Momentu.Widgets.Label
     ( make, makeFocusable
     ) where
 
-import           Data.Has (Has)
 import           Data.Text.Encoding (encodeUtf8)
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align

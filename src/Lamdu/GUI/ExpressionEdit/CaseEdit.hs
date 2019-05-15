@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.CaseEdit
 import           AST (ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)

@@ -15,7 +15,6 @@ module GUI.Momentu.Hover
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has(..))
 import           Data.List.Extended (minimumOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), value)

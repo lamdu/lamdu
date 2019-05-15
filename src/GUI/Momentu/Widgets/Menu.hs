@@ -24,7 +24,6 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align

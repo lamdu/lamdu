@@ -8,7 +8,6 @@ module Lamdu.GUI.ExpressionEdit.EventMap
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E

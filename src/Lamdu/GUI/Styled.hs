@@ -19,7 +19,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Extended (encodeS)
-import           Data.Has (Has(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)

@@ -10,7 +10,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
-import           Data.Has (Has(..))
 import           Data.List (sortOn, nubBy)
 import qualified Data.List.Class as ListClass
 import           Data.MRUMemo (memo)

@@ -5,7 +5,6 @@ module Lamdu.GUI.VersionControl
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (TextWidget)

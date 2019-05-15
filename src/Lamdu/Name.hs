@@ -13,7 +13,6 @@ module Lamdu.Name
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Char as Char
-import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified Data.Text as Text
 import qualified Lamdu.CharClassification as Chars

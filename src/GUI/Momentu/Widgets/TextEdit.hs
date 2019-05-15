@@ -19,7 +19,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Binary.Extended as Binary
 import           Data.Char (isSpace)
-import           Data.Has (Has(..))
 import           Data.List.Extended (genericLength, minimumOn)
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))

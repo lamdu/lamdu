@@ -2,7 +2,6 @@
 module Test.Momentu.Env where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Widgets.Grid as Grid

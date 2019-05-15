@@ -16,7 +16,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Extended (Binary, decodeOrFail, encodeS)
 import           Data.ByteString.Extended as BS
-import           Data.Has (Has(..))
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import           GUI.Momentu.Animation.Id (AnimId)

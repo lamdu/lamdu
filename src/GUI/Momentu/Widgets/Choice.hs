@@ -11,7 +11,6 @@ module GUI.Momentu.Widgets.Choice
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has)
 import           Data.Property (Property(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)

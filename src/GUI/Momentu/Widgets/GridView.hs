@@ -5,7 +5,6 @@ module GUI.Momentu.Widgets.GridView
 
 import qualified Control.Lens as Lens
 import           Data.Foldable (toList)
-import           Data.Has (Has(..))
 import           Data.List (transpose)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..))

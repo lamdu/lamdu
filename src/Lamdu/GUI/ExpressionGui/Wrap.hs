@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionGui.Wrap
 
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive(..))
 import           GUI.Momentu.State (Gui)

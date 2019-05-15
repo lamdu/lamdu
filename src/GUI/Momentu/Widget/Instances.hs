@@ -13,7 +13,6 @@ module GUI.Momentu.Widget.Instances
 
 import           Control.Lens (LensLike)
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           Data.Maybe.Extended (unionMaybeWith)
 import qualified Data.Semigroup as Semigroup
 import           Data.Vector.Vector2 (Vector2(..))

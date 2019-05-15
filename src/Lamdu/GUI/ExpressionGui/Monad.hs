@@ -27,7 +27,6 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Has (Has(..))
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)

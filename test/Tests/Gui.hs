@@ -7,7 +7,6 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import           Data.Functor.Identity (Identity(..))
-import           Data.Has (Has)
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align

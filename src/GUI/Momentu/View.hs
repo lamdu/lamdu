@@ -8,7 +8,6 @@ module GUI.Momentu.View
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           GUI.Momentu.Animation (R, Size)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir

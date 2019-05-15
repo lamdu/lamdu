@@ -10,7 +10,6 @@ module Lamdu.I18N.Language
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue

@@ -8,7 +8,6 @@ module Lamdu.GUI.Settings
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
-import           Data.Has (Has)
 import           Data.Property (Property, composeLens)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover

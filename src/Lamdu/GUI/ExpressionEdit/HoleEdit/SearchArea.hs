@@ -11,7 +11,6 @@ module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
 import           AST (Tree, Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu (View, (/-/))

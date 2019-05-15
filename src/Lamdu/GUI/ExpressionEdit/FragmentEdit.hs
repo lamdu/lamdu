@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.FragmentEdit
 import           AST (Tree, Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw

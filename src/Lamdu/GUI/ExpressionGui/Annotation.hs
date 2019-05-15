@@ -12,7 +12,6 @@ module Lamdu.GUI.ExpressionGui.Annotation
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align

@@ -11,7 +11,6 @@ module GUI.Momentu.Element
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim

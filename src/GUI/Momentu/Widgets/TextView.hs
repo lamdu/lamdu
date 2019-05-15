@@ -13,7 +13,6 @@ module GUI.Momentu.Widgets.TextView
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import qualified Data.Text.Bidi as Bidi
 import           Data.Vector.Vector2 (Vector2(..))

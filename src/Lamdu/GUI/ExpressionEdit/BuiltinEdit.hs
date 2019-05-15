@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionEdit.BuiltinEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)

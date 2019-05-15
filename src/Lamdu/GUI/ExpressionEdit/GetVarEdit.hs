@@ -7,7 +7,6 @@ module Lamdu.GUI.ExpressionEdit.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align

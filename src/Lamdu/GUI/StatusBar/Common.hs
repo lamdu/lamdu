@@ -12,7 +12,6 @@ module Lamdu.GUI.StatusBar.Common
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
-import           Data.Has (Has(..))
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import           GUI.Momentu.Element (Element(..))

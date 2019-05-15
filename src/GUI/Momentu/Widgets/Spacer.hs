@@ -8,7 +8,6 @@ module GUI.Momentu.Widgets.Spacer
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Font (Font)

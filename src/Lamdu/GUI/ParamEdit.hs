@@ -6,7 +6,6 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)

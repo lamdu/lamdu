@@ -12,7 +12,6 @@ import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Has (Has(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align

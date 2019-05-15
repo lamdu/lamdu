@@ -8,7 +8,6 @@ module Lamdu.Data.Tag
 
 import qualified Control.Lens as Lens
 import           Data.Binary
-import           Data.Has (Has(..))
 import           GUI.Momentu.Direction (Layout(..))
 import qualified GUI.Momentu.Direction as Dir
 import           Lamdu.I18N.LangId (LangId(..))

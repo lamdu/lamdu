@@ -16,7 +16,6 @@ module GUI.Momentu.Main
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has(..))
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           Data.Property (MkProperty')

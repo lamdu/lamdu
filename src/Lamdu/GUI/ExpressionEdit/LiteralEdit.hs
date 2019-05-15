@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.Functor.Identity (Identity(..))
-import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text

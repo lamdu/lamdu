@@ -20,7 +20,6 @@ module Lamdu.GUI.ExpressionEdit.Dotter
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
-import           Data.Has (Has)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)

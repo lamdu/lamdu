@@ -8,7 +8,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
-import           Data.Has (Has(..))
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align

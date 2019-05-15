@@ -18,7 +18,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Function (on)
-import           Data.Has (Has(..))
 import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Property (Property(..))

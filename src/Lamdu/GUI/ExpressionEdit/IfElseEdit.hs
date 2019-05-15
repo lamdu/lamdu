@@ -7,7 +7,6 @@ import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
-import           Data.Has (Has)
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)

@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.LambdaEdit
 import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element

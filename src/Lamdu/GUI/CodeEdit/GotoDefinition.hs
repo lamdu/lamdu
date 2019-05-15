@@ -7,7 +7,6 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
-import           Data.Has (Has(..))
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Draw as Draw

@@ -6,7 +6,6 @@ module Lamdu.GUI.TypeView
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
-import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))

@@ -4,7 +4,6 @@ module Lamdu.GUI.NameView
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align

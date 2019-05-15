@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Tag
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
-import           Data.Has (Has(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set

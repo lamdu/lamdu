@@ -15,7 +15,6 @@ module Lamdu.Main.Env
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Animation.Id (AnimId)

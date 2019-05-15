@@ -7,7 +7,6 @@ import           Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
-import           Data.Has (Has(..))
 import           Data.List.Lens (prefixed)
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.Widgets.Menu as Menu

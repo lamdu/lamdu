@@ -25,7 +25,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
-import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Cache as Cache

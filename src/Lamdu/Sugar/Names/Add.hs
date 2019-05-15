@@ -17,7 +17,6 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Char as Char
 import           Data.Coerce (coerce)
 import           Data.Foldable (fold)
-import           Data.Has (Has(..))
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)

@@ -8,7 +8,6 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Has (Has(..))
 import qualified Data.Map as Map
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E

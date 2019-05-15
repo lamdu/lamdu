@@ -7,7 +7,6 @@ module Tests.WidgetGlue
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.Binary.Extended (encodeS)
-import           Data.Has (Has(..))
 import           Data.Semigroup (First(..), Last(..))
 import           GUI.Momentu as X
 import           GUI.Momentu.Direction (Orientation(..))

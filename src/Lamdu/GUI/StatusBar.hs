@@ -7,7 +7,6 @@ module Lamdu.GUI.StatusBar
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
-import           Data.Has (Has(..))
 import           Data.Property (Property)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align

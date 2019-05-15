@@ -16,7 +16,6 @@ module Lamdu.Data.Ops
 
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set

@@ -10,7 +10,6 @@ module GUI.Momentu.Align
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Has (Has(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element, SizedElement)
