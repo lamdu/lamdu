@@ -45,6 +45,7 @@ import           Lamdu.I18N.Texts (Texts)
 import           Lamdu.Settings (Settings(..))
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
+import qualified Lamdu.Sugar.Config as SugarConfig
 
 import           Lamdu.Prelude
 
@@ -76,6 +77,7 @@ instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Has Theme Env where has = theme
 instance Has Config Env where has = config
+instance Has SugarConfig.Config Env where has = config . has
 instance Has Hover.Style Env where has = theme . has
 instance Has VCConfig.Theme Env where has = has . Theme.versionControl
 instance Has VCConfig.Config Env where has = has . Config.versionControl

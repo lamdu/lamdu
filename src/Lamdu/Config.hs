@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens
@@ -141,6 +141,8 @@ data Config = Config
 JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
+
+instance Has Sugar.Config Config where has = sugar
 
 delKeys :: (MonadReader env m, Has Config env) => m [MetaKey]
 delKeys =

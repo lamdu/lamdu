@@ -45,6 +45,7 @@ import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
+import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
 import           Revision.Deltum.Transaction (Transaction)
@@ -65,6 +66,7 @@ type Ctx env =
     , GuiState.HasState env
     , Has Theme env
     , Has Config env
+    , Has SugarConfig.Config env
     , Element.HasAnimIdPrefix env
     , Has (CodeEdit.EvalResults ViewM) env
     , Has (CodeEdit.ExportActions ViewM) env

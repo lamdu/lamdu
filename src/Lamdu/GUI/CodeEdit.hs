@@ -61,6 +61,7 @@ import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
+import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -82,6 +83,7 @@ make ::
     , Has Cache.Functions env
     , Has Debug.Monitors env
     , Has Theme env, GuiState.HasState env
+    , Has SugarConfig.Config env
     , Spacer.HasStdSpacing env
     , Has (EvalResults m) env
     , Has (ExportActions m) env
@@ -100,8 +102,7 @@ make cp gp width =
         env <- Lens.view id
         annMode <- Lens.view (has . Settings.sAnnotationMode)
         workArea <-
-            loadWorkArea (env ^. has) (env ^. has . Config.sugar)
-            (env ^. has) (env ^. has)
+            loadWorkArea (env ^. has) (env ^. has) (env ^. has) (env ^. has)
             annMode theEvalResults cp
             & transaction
         gotoDefinition <-
