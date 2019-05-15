@@ -173,9 +173,7 @@
         },
         "searchMenu": {
             "pickNotApplicable": "Pick (N/A)",
-            "edit": "Edit",
             "searchTerm": "Search Term",
-            "delete": "Delete",
             "appendChar": "Append character",
             "deleteBackwards": "Delete backwards"
         },

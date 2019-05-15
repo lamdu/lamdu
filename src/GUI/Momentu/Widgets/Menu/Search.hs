@@ -27,7 +27,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , readSearchTerm
 
     , Texts(..)
-        , textPickNotApplicable, textEdit, textSearchTerm, textDelete
+        , textPickNotApplicable, textSearchTerm
         , textAppendChar, textDeleteBackwards
     , HasTexts
     ) where
@@ -42,6 +42,7 @@ import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as Texts
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
@@ -60,9 +61,7 @@ import           Lamdu.Prelude
 
 data Texts a = Texts
     { _textPickNotApplicable :: a
-    , _textEdit :: a
     , _textSearchTerm :: a
-    , _textDelete :: a
     , _textAppendChar :: a
     , _textDeleteBackwards :: a
     }
@@ -72,7 +71,10 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
 
-type HasTexts env = (Has (Menu.Texts Text) env, Has (Texts Text) env)
+type HasTexts env =
+    ( Has (Menu.Texts Text) env, Has (Texts Text) env
+    , Has (Texts.Texts Text) env
+    )
 
 -- | Context necessary for creation of menu items for a search.
 data ResultsContext = ResultsContext
@@ -177,9 +179,9 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
                 searchTermEditEventMap env myId (_tcAdHoc . allowedSearchTerm) searchTerm
             }
 
-searchTermDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> E.Doc
+searchTermDoc :: HasTexts env => env -> Lens.ALens' env Text -> E.Doc
 searchTermDoc env subtitle =
-    E.toDoc (env ^. has) [textEdit, textSearchTerm, subtitle]
+    E.toDoc env [has . Texts.edit, has . textSearchTerm, subtitle]
 
 addDelSearchTerm ::
     (MonadReader env m, State.HasState env, HasTexts env, Applicative f) =>
@@ -194,7 +196,7 @@ addDelSearchTerm myId =
             | otherwise =
                 enterWithSearchTerm "" myId & pure
                 & E.keyPress (toModKey (MetaKey noMods MetaKey.Key'Escape))
-                (searchTermDoc env textDelete)
+                (searchTermDoc env (has . Texts.delete))
     in  term
         & termWidget . Align.tValue %~ Widget.weakerEventsWithoutPreevents delSearchTerm
         & termEditEventMap <>~ delSearchTerm
@@ -338,7 +340,7 @@ searchTermEditEventMap env myId allowedTerms searchTerm =
     where
         appendCharEventMap =
             Text.snoc searchTerm
-            & E.allChars "Character" (searchTermDoc env textAppendChar)
+            & E.allChars "Character" (searchTermDoc env (has . textAppendChar))
             -- We only filter when appending last char, not when
             -- deleting last char, because after appending deletion
             -- necessarily preserves any invariant we enforce in
@@ -349,4 +351,4 @@ searchTermEditEventMap env myId allowedTerms searchTerm =
             | otherwise =
                 Text.init searchTerm
                 & E.keyPress (ModKey mempty MetaKey.Key'Backspace)
-                    (searchTermDoc env textDeleteBackwards)
+                    (searchTermDoc env (has . textDeleteBackwards))
