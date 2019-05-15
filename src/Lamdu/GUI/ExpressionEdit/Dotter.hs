@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 -- | When typing a dot on an expression, there are 2 possible meanings
 -- of that dot:
 -- 1) Get record field from the expression

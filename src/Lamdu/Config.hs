@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens

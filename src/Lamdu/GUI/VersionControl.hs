@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, DerivingVia, FlexibleContexts #-}
+{-# LANGUAGE RankNTypes, DerivingVia #-}
 module Lamdu.GUI.VersionControl
     ( makeBranchSelector, eventMap
     ) where

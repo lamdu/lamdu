@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:

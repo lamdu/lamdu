@@ -4,7 +4,7 @@
 :set -idist/build/autogen
 :set -idist/build/lamdu/autogen
 :set -Wall -Widentities -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wimplicit-prelude -Wredundant-constraints
-:set -XNoImplicitPrelude -XOverloadedStrings -XPartialTypeSignatures -XLambdaCase -XDeriveTraversable -XDeriveGeneric -XDeriveAnyClass -XDerivingStrategies
+:set -XNoImplicitPrelude -XOverloadedStrings -XPartialTypeSignatures -XLambdaCase -XDeriveTraversable -XDeriveGeneric -XDeriveAnyClass -XDerivingStrategies -XFlexibleContexts
 :set -odir=ghci-out
 :set -outputdir=ghci-out
 :set -hide-package cryptohash

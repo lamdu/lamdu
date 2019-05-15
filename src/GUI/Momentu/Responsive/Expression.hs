@@ -1,7 +1,7 @@
 -- | Responsive layout for expressions express the hierarchy using parentheses and indentation,
 -- as is customary in many programming languages and in mathematics.
 
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Responsive.Expression
     ( Style(..), indentBarWidth, indentBarGap, indentBarColor
     , disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb, indent

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas

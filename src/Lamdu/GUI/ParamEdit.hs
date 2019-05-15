@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ParamEdit
     ( Info(..), make
     , eventMapAddFirstParam, mkParamPickResult

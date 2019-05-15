@@ -19,7 +19,7 @@
 -- of a vertically laid out parent will not use parentheses as the
 -- hierarchy is already clear in the layout itself.
 
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies, UndecidableInstances #-}
 
 module GUI.Momentu.Responsive
     ( Responsive(..), rWide, rWideDisambig, rNarrow

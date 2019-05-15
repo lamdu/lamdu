@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.CaseEdit
     ( make
     ) where

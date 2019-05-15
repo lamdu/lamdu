@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionEdit.IfElseEdit
     ( make
     ) where

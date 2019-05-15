@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, DerivingVia #-}
 {-# LANGUAGE MultiParamTypeClasses, ConstraintKinds #-}
 module GUI.Momentu.Widgets.EventMapHelp
     ( make

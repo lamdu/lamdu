@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled

@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.ExpressionEdit.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
     , Role(..)

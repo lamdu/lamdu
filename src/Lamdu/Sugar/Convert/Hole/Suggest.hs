@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( forType
     , termTransforms

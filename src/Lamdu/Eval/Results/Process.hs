@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where

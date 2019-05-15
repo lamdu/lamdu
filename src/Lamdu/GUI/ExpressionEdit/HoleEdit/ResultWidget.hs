@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications, FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
     ( make

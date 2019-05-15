@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 -- | TextEdit creation functions that are based on Property instead of
 -- events yielding new texts
 module GUI.Momentu.Widgets.TextEdit.Property

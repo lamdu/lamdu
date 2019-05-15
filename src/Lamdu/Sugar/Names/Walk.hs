@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeFamilies, NamedFieldPuns, TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies, NamedFieldPuns, TemplateHaskell #-}
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag

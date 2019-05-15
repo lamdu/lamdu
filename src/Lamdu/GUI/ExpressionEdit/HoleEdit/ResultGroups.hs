@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, NamedFieldPuns, DisambiguateRecordFields #-}
+{-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)

@@ -1,5 +1,5 @@
 -- | Common utilities for status bar widgets
-{-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies #-}
 {-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap

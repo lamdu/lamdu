@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportRepl(..)

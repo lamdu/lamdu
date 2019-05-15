@@ -1,5 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE MultiParamTypeClasses, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances, FlexibleInstances #-}
 module GUI.Momentu.Widget.Instances
     ( sizedState, stateLayers, stateLens, enterResult, wFocused

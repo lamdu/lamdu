@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeVariantTag, makeTagView
     , makeParamTag, addParamId

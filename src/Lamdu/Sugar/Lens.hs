@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , HasBinderParams(..)

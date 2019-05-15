@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving, UndecidableInstances, DerivingVia #-}
-{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds #-}
 module GUI.Momentu.Main
     ( Config(..)
     , Env(..), eWindowSize, eZoom, eState

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Lamdu.GUI.EvalView
     ( make
     ) where

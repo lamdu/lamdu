@@ -1,5 +1,5 @@
 -- | A vertical-expand (combo-like) choice widget
-{-# LANGUAGE TemplateHaskell, DerivingVia, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module GUI.Momentu.Widgets.Choice
     ( make
     , defaultFdConfig

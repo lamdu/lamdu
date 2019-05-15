@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 
 module GUI.Momentu.Widgets.Menu.Search
     ( emptyPickEventMap

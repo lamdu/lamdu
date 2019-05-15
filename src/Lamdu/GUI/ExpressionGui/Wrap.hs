@@ -1,4 +1,4 @@
-{-# LANGUAGE DisambiguateRecordFields, FlexibleContexts #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
     , stdWrapParentExpr

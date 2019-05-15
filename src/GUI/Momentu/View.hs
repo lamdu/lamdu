@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 module GUI.Momentu.View
     ( View(..), vSize, vAnimLayers, make
     , animFrames

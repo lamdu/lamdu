@@ -1,5 +1,5 @@
 -- | Choice widget for presentation mode
-{-# LANGUAGE RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.PresentationModeEdit
     ( make
     ) where

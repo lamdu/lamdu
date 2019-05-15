@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DerivingVia, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.Name
     ( Stored, CollisionSuffix
     , Collision(..), _NoCollision, _Collision

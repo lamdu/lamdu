@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DefaultSignatures, DerivingVia #-}
-{-# LANGUAGE FlexibleContexts, ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module GUI.Momentu.State
     ( VirtualCursor(..), vcRect

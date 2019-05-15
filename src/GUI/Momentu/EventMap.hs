@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, PatternGuards, NoMonomorphismRestriction #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, NoMonomorphismRestriction #-}
 {-# LANGUAGE DerivingVia, StandaloneDeriving, RankNTypes #-}
 module GUI.Momentu.EventMap
     ( KeyEvent(..)

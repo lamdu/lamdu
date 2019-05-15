@@ -1,7 +1,5 @@
 -- | Functions memoized with Data.Cache.Fenced
 
-{-# LANGUAGE FlexibleContexts #-}
-
 module Lamdu.Cache
     ( Functions(..)
     , infer

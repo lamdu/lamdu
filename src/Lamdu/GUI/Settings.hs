@@ -1,5 +1,5 @@
 -- | Widget to edit the settings
-{-# LANGUAGE TemplateHaskell, RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Lamdu.GUI.Settings
      ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
      , hoist

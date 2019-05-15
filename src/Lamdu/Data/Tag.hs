@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Data.Tag
     ( Tag(..), tagOrder, tagOpName, tagNames

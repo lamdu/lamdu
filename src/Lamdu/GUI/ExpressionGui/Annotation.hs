@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, TupleSections #-}
+{-# LANGUAGE TypeFamilies, TupleSections #-}
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)

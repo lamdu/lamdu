@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TypeFamilies #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody

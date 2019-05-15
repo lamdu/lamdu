@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 module Lamdu.Style
     ( Style(..), base, autoNameOrigin, nameAtBinder, bytes, text, num
     , make

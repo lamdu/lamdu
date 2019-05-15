@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.ExpressionEdit.InjectEdit
     ( make
     ) where

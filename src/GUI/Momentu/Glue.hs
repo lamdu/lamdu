@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
-{-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia, FlexibleContexts #-}
+{-# LANGUAGE ConstraintKinds, RankNTypes, DerivingVia #-}
 module GUI.Momentu.Glue
     ( Texts(..), stroll, back, ahead
         , strollDoc

@@ -1,5 +1,4 @@
 -- | The Lamdu status bar
-{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.StatusBar
     ( module Lamdu.GUI.StatusBar.Common
     , make

@@ -1,7 +1,7 @@
 -- | Language definitions
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Language
     ( Language(..)
     , HasLanguage(..)

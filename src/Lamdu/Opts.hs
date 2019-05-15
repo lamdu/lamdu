@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE CPP, TemplateHaskell #-}
 module Lamdu.Opts
     ( EditorOpts(..)
       , eoWindowMode, eoJSDebugPaths, eoWindowTitle, eoSubpixelEnabled

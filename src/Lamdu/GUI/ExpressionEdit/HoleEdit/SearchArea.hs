@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields #-}
 -- | The search area (search term + results) of a hole.
 -- When it is open it hovers over the space it takes when closed.
 --

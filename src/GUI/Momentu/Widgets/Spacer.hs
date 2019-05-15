@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module GUI.Momentu.Widgets.Spacer
     ( make
     , makeHorizontal, makeVertical

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, TupleSections #-}
+{-# LANGUAGE TypeFamilies, TupleSections #-}
 module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where

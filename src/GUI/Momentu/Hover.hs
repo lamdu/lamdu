@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts, RankNTypes, UndecidableInstances, DerivingVia #-}
+{-# LANGUAGE RankNTypes, UndecidableInstances, DerivingVia #-}
 module GUI.Momentu.Hover
     ( Style(..), frameColor, framePadding, bgColor, bgPadding
     , Hover, hover, sequenceHover

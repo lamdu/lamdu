@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, FlexibleContexts, DataKinds #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply

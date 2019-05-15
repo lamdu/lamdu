@@ -1,4 +1,4 @@
-{-# LANGUAGE UndecidableInstances, FlexibleContexts, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE UndecidableInstances, GeneralizedNewtypeDeriving #-}
 -- | Extend the Data.Monoid module
 
 module Data.Monoid.Extended

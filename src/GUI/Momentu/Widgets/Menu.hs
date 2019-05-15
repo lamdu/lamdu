@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, DisambiguateRecordFields #-}
+{-# LANGUAGE TemplateHaskell, DisambiguateRecordFields #-}
 {-# LANGUAGE DerivingVia #-}
 
 module GUI.Momentu.Widgets.Menu

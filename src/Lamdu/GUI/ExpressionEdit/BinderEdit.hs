@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, FlexibleContexts, NoMonomorphismRestriction #-}
+{-# LANGUAGE NamedFieldPuns, NoMonomorphismRestriction #-}
 module Lamdu.GUI.ExpressionEdit.BinderEdit
     ( make
     ) where

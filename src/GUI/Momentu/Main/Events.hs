@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module GUI.Momentu.Main.Events
     ( Event(..), KeyEvent(..), MouseButtonEvent(..)
     ) where

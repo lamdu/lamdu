@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell #-}
 {-# LANGUAGE NoMonomorphismRestriction, TupleSections, DerivingVia #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea

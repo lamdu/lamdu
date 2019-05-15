@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.GUI.NameView
     ( make
     ) where

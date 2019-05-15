@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 {-# LANGUAGE DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
 {-# LANGUAGE DerivingVia #-}
 module GUI.Momentu.Widgets.Grid

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Lamdu.Sugar.Convert.Tag
     ( convertTag, convertTagSelection, convertTaggedEntityWith, convertTaggedEntity
     , AllowAnonTag(..)

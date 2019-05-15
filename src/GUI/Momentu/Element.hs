@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
     , HasAnimIdPrefix(..), subAnimId

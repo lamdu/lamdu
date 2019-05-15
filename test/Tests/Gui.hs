@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module Tests.Gui where
 

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
-{-# LANGUAGE DerivingVia, FlexibleContexts, MultiParamTypeClasses #-}
+{-# LANGUAGE DerivingVia, MultiParamTypeClasses #-}
 {-# LANGUAGE ConstraintKinds #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)

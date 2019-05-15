@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module GUI.Momentu.Widgets.Label
     ( make, makeFocusable
     ) where
