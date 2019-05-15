@@ -54,7 +54,6 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Language (language)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
@@ -100,7 +99,7 @@ make cp gp width =
         env <- Lens.view id
         annMode <- Lens.view (has . Settings.sAnnotationMode)
         workArea <-
-            loadWorkArea (env ^. language) (env ^. has . Config.sugar)
+            loadWorkArea (env ^. has) (env ^. has . Config.sugar)
             (env ^. has) (env ^. has)
             annMode theEvalResults cp
             & transaction

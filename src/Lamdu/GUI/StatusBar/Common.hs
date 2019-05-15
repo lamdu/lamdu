@@ -36,7 +36,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Styled (info, label, OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
-import           Lamdu.I18N.Language (HasLanguage(..))
+import           Lamdu.I18N.Language (HasLanguage)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 

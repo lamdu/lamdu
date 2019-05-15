@@ -14,7 +14,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Language (language)
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.Gui (verifyLayers)
@@ -76,7 +75,7 @@ testFragment =
                     } & Stub.expr
                 )
                 & ann . Sugar.plEntityId .~ fragEntityId
-                & Stub.addNamesToExpr (env ^. language)
+                & Stub.addNamesToExpr (env ^. has)
                 & annotations . Sugar.plData .~ adhocPayload
         let gui =
                 ExpressionEdit.make expr

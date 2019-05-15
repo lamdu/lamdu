@@ -41,7 +41,6 @@ import qualified Lamdu.GUI.Main as GUIMain
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
-import qualified Lamdu.I18N.Language as Language
 import           Lamdu.I18N.Texts (Texts)
 import           Lamdu.Settings (Settings(..))
 import           Lamdu.Style (Style)
@@ -64,13 +63,14 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
+instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
+instance GuiState.HasCursor Env
+instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions
 instance Has (GUIMain.EvalResults ViewM) Env where has = evalRes
 instance Has Settings Env where has = settings . Property.pVal
 instance Has Style Env where has = style
 instance Has MainLoop.Env Env where has = mainLoop
-instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
-instance GuiState.HasCursor Env
 instance Has GUIState Env where has = mainLoop . has
 instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
@@ -84,8 +84,7 @@ instance Has Menu.Config Env where
 instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Has Debug.Monitors Env where has = debugMonitors
 instance Has Cache.Functions Env where has = cachedFunctions
-instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
-instance Language.HasLanguage Env where language = language
+instance Has Language Env where has = language
 instance Has LangId Env where has = language . has
 instance Has (t Text) (Texts Text) => Has (t Text) Env where has = language . has

@@ -57,7 +57,7 @@ import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
-import           Lamdu.I18N.Language (Language, language)
+import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
@@ -116,9 +116,10 @@ instance Has Hover.Style (Askable i o) where has = aTheme . has
 instance Has Style (Askable i o) where has = aStyle
 instance Has Settings (Askable i o) where has = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout
-instance Has LangId (Askable i o) where has = language . has
-instance Language.HasLanguage (Askable i o) where language = aLanguage
-instance Has (t Text) Language => Has (t Text) (Askable i o) where has = language . has
+instance Has LangId (Askable i o) where has = aLanguage . has
+instance Has Language (Askable i o) where has = aLanguage
+instance Has (t Text) Language => Has (t Text) (Askable i o) where
+    has = aLanguage . has
 
 im :: Monad i => i a -> ExprGuiM i o a
 im = ExprGuiM . lift
@@ -223,6 +224,6 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     , _aStyle = env ^. has
     , _aIsHoleResult = False
     , _aDirLayout = env ^. has
-    , _aLanguage = env ^. language
+    , _aLanguage = env ^. has
     , aIom = liftIom
     }

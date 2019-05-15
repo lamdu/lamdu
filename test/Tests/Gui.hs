@@ -34,7 +34,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Language (Language, language)
+import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
@@ -79,7 +79,7 @@ makeGui ::
     String -> Cache.Functions -> env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc cache env =
     do
-        workArea <- convertWorkArea (env ^. language) cache
+        workArea <- convertWorkArea (env ^. has) cache
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         gui <-
@@ -164,7 +164,7 @@ testLambdaDelete =
     \cache ->
     do
         paramCursor <-
-            fromWorkArea (baseEnv ^. language) cache
+            fromWorkArea (baseEnv ^. has) cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
              Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
@@ -187,7 +187,7 @@ testFragmentSize =
     \cache ->
     do
         frag <-
-            fromWorkArea (baseEnv ^. language) cache
+            fromWorkArea (baseEnv ^. has) cache
             (Sugar.waRepl . Sugar.replExpr . ann)
         guiCursorOnFrag <-
             baseEnv
@@ -209,14 +209,14 @@ testOpPrec =
     \cache ->
     do
         holeId <-
-            fromWorkArea (baseEnv ^. language) cache
+            fromWorkArea (baseEnv ^. has) cache
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fBody . ann . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
-        workArea <- convertWorkArea (baseEnv ^. language) cache
+        workArea <- convertWorkArea (baseEnv ^. has) cache
         _ <- applyEvent cache (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
-        workArea' <- convertWorkArea (baseEnv ^. language) cache
+        workArea' <- convertWorkArea (baseEnv ^. has) cache
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
 workAreaEq ::

@@ -1,10 +1,10 @@
 -- | Language definitions
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses, UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, UndecidableInstances, ConstraintKinds #-}
 module Lamdu.I18N.Language
     ( Language(..)
-    , HasLanguage(..)
+    , HasLanguage
     , texts
     ) where
 
@@ -36,19 +36,25 @@ JsonTH.derivePrefixed "_l" ''Language
 instance HasConfigFolder Language where
     configFolder _ = "languages"
 
-class
-    ( Glue.HasTexts env, Has (Dir.Texts Text) env, Has (Choice.Texts Text) env
-    , TextEdit.HasTexts env, Grid.HasTexts env, Has (NameTexts Text) env
-    , Has (Menu.Texts Text) env, SearchMenu.HasTexts env, Has LangId env
-    , Has (Navigation Text) env
-    ) => HasLanguage env where
-    language :: Lens' env Language
+type HasLanguage env =
+    ( Has LangId env
+    , Has Dir.Layout env
+    , Has (Glue.Texts       Text) env
+    , Has (Dir.Texts        Text) env
+    , Has (Choice.Texts     Text) env
+    , Has (NameTexts        Text) env
+    , Has (Menu.Texts       Text) env
+    , Has (Navigation       Text) env
+    , Has (TextEdit.Texts   Text) env
+    , Has (Grid.Texts       Text) env
+    , Has (SearchMenu.Texts Text) env
+    , Has Language env
+    )
 
 instance Has LangId Language where has = lIdentifier
-instance HasLanguage Language where language = id
 instance Has Dir.Layout Language where has = lDirection
 instance Has (f Text) (Texts Text) => Has (f Text) Language where
     has = lTexts . has
 
-texts :: HasLanguage env => Lens' env (Texts Text)
-texts = language . lTexts
+texts :: Has Language env => Lens' env (Texts Text)
+texts = has . lTexts

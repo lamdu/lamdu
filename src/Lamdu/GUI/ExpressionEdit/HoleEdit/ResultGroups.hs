@@ -27,7 +27,7 @@ import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.I18N.Language (Language, HasLanguage(..))
+import           Lamdu.I18N.Language (Language)
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -163,7 +163,7 @@ makeAll ::
 makeAll options ctx =
     do
         config <- Lens.view (has . Config.completion)
-        lang <- Lens.view language
+        lang <- Lens.view has
         traverse (mkGroup lang) options
             <&> holeMatches searchTerm
             <&> ListClass.fromList
