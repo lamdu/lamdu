@@ -5,7 +5,6 @@ module Lamdu.I18N.Texts
     ( module Lamdu.I18N.Texts
     , module Lamdu.I18N.Code
     , module Lamdu.I18N.CodeUI
-    , module Lamdu.I18N.Collaboration
     , module Lamdu.I18N.Definitions
     , module Lamdu.I18N.Navigation
     , module Lamdu.I18N.StatusBar
