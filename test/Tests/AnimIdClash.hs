@@ -17,7 +17,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.Gui (verifyLayers)
-import qualified Test.Lamdu.GuiEnv as GuiEnv
+import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Instances ()
 import qualified Test.Lamdu.SugarStubs as Stub
 
@@ -33,7 +33,7 @@ test =
 testTypeView :: Test
 testTypeView =
     do
-        env <- GuiEnv.make
+        env <- Env.make
         TypeView.make typ env ^. Align.tValue . View.vAnimLayers
             & verifyLayers & either fail pure
     & testCase "typeview"
@@ -65,7 +65,7 @@ testFragment :: Test
 testFragment =
     do
         env <-
-            GuiEnv.make
+            Env.make
             <&> cursor .~ WidgetIds.fromEntityId fragEntityId
         let expr =
                 ( Sugar.BodyFragment Sugar.Fragment
@@ -79,7 +79,8 @@ testFragment =
                 & annotations . Sugar.plData .~ adhocPayload
         let gui =
                 ExpressionEdit.make expr
-                & ExprGuiM.run ExpressionEdit.make BinderEdit.make GuiEnv.dummyAnchors env (const Unit)
+                & ExprGuiM.run ExpressionEdit.make BinderEdit.make
+                Env.dummyAnchors env (const Unit)
                 & runIdentity
         let widget = gui ^. Responsive.rWide . Align.tValue
         case widget ^. Widget.wState of

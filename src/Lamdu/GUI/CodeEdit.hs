@@ -101,10 +101,7 @@ make cp gp width =
     do
         theExportActions <- Lens.view has
         env <- Lens.view id
-        workArea <-
-            loadWorkArea env (env ^. has) (env ^. has) (env ^. has)
-            (env ^. has) (env ^. has) cp
-            & transaction
+        workArea <- loadWorkArea env cp & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans

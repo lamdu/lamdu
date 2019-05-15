@@ -7,6 +7,7 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -14,7 +15,8 @@ import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.HUnit (assertBool)
-import qualified Test.Lamdu.GuiEnv as GuiEnv
+import           Test.Lamdu.Env (Env)
+import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 
 import           Test.Lamdu.Prelude
@@ -43,6 +45,18 @@ test =
     , testHoleTypeShown
     ]
 
+testSugarActionsWith ::
+    HasCallStack =>
+    FilePath ->
+    [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
+        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) ->
+        T ViewM a] ->
+    Env ->
+    IO ()
+testSugarActionsWith program actions env =
+    traverse_ (convertWorkArea env >>=) actions <* convertWorkArea env
+    & testProgram program
+
 -- | Verify that a sugar action does not result in a crash
 testSugarActions ::
     HasCallStack =>
@@ -52,12 +66,7 @@ testSugarActions ::
         T ViewM a] ->
     IO ()
 testSugarActions program actions =
-    do
-        lang <- GuiEnv.makeLang
-        testProgram program $
-            \cache ->
-            traverse_ (convertWorkArea lang cache >>=) actions
-            <* convertWorkArea lang cache
+    Env.make >>= testSugarActionsWith program actions
 
 replBinder :: Lens.Traversal' (WorkArea name i o a) (Tree (Binder name i o) (Ann a))
 replBinder = waRepl . replExpr . val
@@ -169,7 +178,8 @@ findM f (x:xs) =
 
 paramAnnotations :: Test
 paramAnnotations =
-    testSugarActions "const-five.json" [verify]
+    Env.make <&> has .~ Annotations.None
+    >>= testSugarActionsWith "const-five.json" [verify]
     & testCase "param-annotations"
     where
         verify workArea =
@@ -302,14 +312,13 @@ testFloatToRepl :: Test
 testFloatToRepl =
     testCase "float-to-repl" $
     do
-        lang <- GuiEnv.makeLang
+        env <- Env.make
         testProgram "repl-2-lets.json" $
-            \cache ->
             do
-                workArea <- convertWorkArea lang cache
+                workArea <- convertWorkArea env
                 assertLetVals workArea 1 2
                 void $ workArea ^?! innerLet . ann . plActions . extract
-                newWorkArea <- convertWorkArea lang cache
+                newWorkArea <- convertWorkArea env
                 assertLetVals newWorkArea 2 1
     where
         assertLetVals workArea outer inner =
@@ -329,17 +338,16 @@ testCreateLetInLetVal :: Test
 testCreateLetInLetVal =
     testCase "create-let-in-let-val" $
     do
-        lang <- GuiEnv.makeLang
+        env <- Env.make
         result <-
             testProgram "let-item-inline.json" $
-                \cache ->
                 do
-                    workArea <- convertWorkArea lang cache
+                    workArea <- convertWorkArea env
                     _ <-
                         workArea ^?!
                         theLet . lValue . ann . plActions . mNewLet .
                         Lens._Just
-                    newWorkArea <- convertWorkArea lang cache
+                    newWorkArea <- convertWorkArea env
                     Lens.has
                         ( theLet . lValue . val . _BodyPlain
                         . apBody . _BinderLet
@@ -359,7 +367,13 @@ testHoleTypeShown :: Test
 testHoleTypeShown =
     testCase "hole-type-shown" $
     do
-        lang <- GuiEnv.makeLang
-        workArea <- testProgram "to-nom.json" (convertWorkArea lang)
+        env <- Env.make <&> has .~ Annotations.None
+        workArea <- testProgram "to-nom.json" (convertWorkArea env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
-        assertBool "Expected to have type" (Lens.has _AnnotationType (x ^. ann . plAnnotation))
+        putStrLn $ case x ^. ann . plAnnotation of
+            AnnotationType {} -> "Type"
+            AnnotationVal {} -> "Val"
+            AnnotationNone {} -> "None"
+        x ^. ann . plAnnotation
+            & Lens.has _AnnotationType
+            & assertBool "Expected to have type"

@@ -1,12 +1,15 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-
-module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
+module Test.Lamdu.Env
+    ( Env(..), make, makeLang, dummyAnchors
+    , EvalResults
+    ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Aeson.Config as AesonConfig
+import           Data.CurAndPrev (CurAndPrev)
 import           Data.Functor.Identity (Identity(..))
 import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
@@ -21,22 +24,31 @@ import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
+import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Data.Db.Layout (ViewM)
+import qualified Lamdu.Debug as Debug
+import qualified Lamdu.Eval.Results as EvalResults
+import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.Paths as Paths
-import           Lamdu.Settings (Settings(..))
+import           Lamdu.Settings (Settings(..), sAnnotationMode)
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
+import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Test.Lamdu.Config as TestConfig
 
 import           Test.Lamdu.Prelude
+
+type EvalResults = CurAndPrev (EvalResults.EvalResults (ValI ViewM))
 
 data Env =
     Env
@@ -46,6 +58,9 @@ data Env =
     , _eState :: GUIState
     , _eConfig :: Config
     , _eSettings :: Settings
+    , _eTasksMonitor :: Debug.Monitors
+    , _eResults :: EvalResults
+    , _eCacheFunctions :: Cache.Functions
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
     , _eDirLayout :: Dir.Layout
@@ -65,6 +80,11 @@ instance Has Style Env where has = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
 instance Has LangId Env where has = eLanguage . has
 instance Has Language Env where has = eLanguage
+instance Has Debug.Monitors Env where has = eTasksMonitor
+instance Has Cache.Functions Env where has = eCacheFunctions
+instance Has SugarConfig.Config Env where has = has . Config.sugar
+instance Has EvalResults Env where has = eResults
+instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has (t Text) (Texts Text) => Has (t Text) Env where has = eLanguage . has
 
 makeLang :: IO Language
@@ -78,6 +98,7 @@ make =
             >>= Writer.evalWriterT . AesonConfig.load
         testTheme <- TestConfig.loadConfigObject "dark"
         testLang <- makeLang
+        cache <- Cache.make <&> snd
         font <-
             testTheme ^. fonts . Fonts.base & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)
@@ -96,6 +117,9 @@ make =
                 , _sSelectedLanguage = Selection "english"
                 , _sHelpShown = HelpNotShown
                 }
+            , _eTasksMonitor = Debug.noopMonitors
+            , _eResults = pure EvalResults.empty
+            , _eCacheFunctions = cache
             , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =

@@ -73,9 +73,9 @@ Test-Suite Tests
   main-is: Tests.hs
   other-modules: Test.Lamdu.Config
                , Test.Lamdu.Db
+               , Test.Lamdu.Env
                , Test.Lamdu.FreshDb
                , Test.Lamdu.Gui
-               , Test.Lamdu.GuiEnv
                , Test.Lamdu.Instances
                , Test.Lamdu.Prelude
                , Test.Lamdu.Sugar

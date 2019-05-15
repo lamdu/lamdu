@@ -15,7 +15,7 @@ import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified Test.Lamdu.GuiEnv as GuiEnv
+import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.SugarStubs ((~>))
 import qualified Test.Lamdu.SugarStubs as Stub
 
@@ -63,7 +63,7 @@ testWorkArea ::
     IO ()
 testWorkArea verifyName inputWorkArea =
     do
-        lang <- GuiEnv.makeLang
+        lang <- Env.makeLang
         addToWorkArea lang Stub.getNameProp inputWorkArea
             & runIdentity
             & getNames

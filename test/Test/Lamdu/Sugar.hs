@@ -8,19 +8,21 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Anchors (Code(..), paneDef)
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Debug (noopMonitors)
-import qualified Lamdu.Eval.Results as EvalResults
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.Code as Texts
+import           Lamdu.I18N.LangId (LangId)
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -28,6 +30,7 @@ import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.Lamdu.Db (withDB)
+import           Test.Lamdu.Env (EvalResults)
 
 import           Test.Lamdu.Prelude
 
@@ -110,23 +113,26 @@ validate workArea
         sugarEntityIdsSet = Set.fromList (sugarEntityIds <&> fst)
 
 convertWorkArea ::
-    HasCallStack =>
-    Language ->
-    Cache.Functions ->
+    ( HasCallStack
+    , Has LangId env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has Dir.Layout env
+    , Has Debug.Monitors env
+    , Has EvalResults env
+    , Has Config env
+    , Has Cache.Functions env, Has Annotations.Mode env
+    ) =>
+    env ->
     T ViewM
     (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
         (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
-convertWorkArea lang cache =
-    loadWorkArea lang sugarConfig cache noopMonitors Annotations.None
-    (pure EvalResults.empty) codeAnchors
-    >>= validate
+convertWorkArea env = loadWorkArea env codeAnchors >>= validate
 
-testProgram :: FilePath -> (Cache.Functions -> T ViewM a) -> IO a
+testProgram :: FilePath -> T ViewM a -> IO a
 testProgram program action =
-    do
-        cache <- Cache.make <&> snd
-        withDB ("test/programs/" <> program)
-            (runDbTransaction ?? runAction (action cache))
+    withDB ("test/programs/" <> program)
+    (runDbTransaction ?? runAction action)
 
 sugarConfig :: Config
 sugarConfig =

@@ -21,7 +21,7 @@ import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
-import qualified Lamdu.Sugar.Config as SugarConf
+import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -49,19 +49,20 @@ loadWorkArea ::
     , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Has Dir.Layout env
+    , Has Debug.Monitors env
+    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has SugarConfig.Config env
+    , Has Cache.Functions env, Has Annotations.Mode env
     , Monad m
     ) =>
-    env ->
-    SugarConf.Config -> Cache.Functions -> Debug.Monitors ->
-    Annotations.Mode -> CurAndPrev (EvalResults (ValI m)) ->
-    Anchors.CodeAnchors m ->
+    env -> Anchors.CodeAnchors m ->
     T m
     (Sugar.WorkArea (Name (T m)) (T m) (T m)
         (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
-loadWorkArea env config cache monitors annMode theEvalResults cp =
-    SugarConvert.loadWorkArea env config cache monitors annMode theEvalResults cp
+loadWorkArea env cp =
+    SugarConvert.loadWorkArea env cp
     >>= report . AddNames.addToWorkArea env (DataOps.assocTagName env)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toExprGuiMPayload
     where
-        Debug.EvaluatorM report = monitors ^. Debug.naming . Debug.mAction
+        Debug.EvaluatorM report = env ^. has . Debug.naming . Debug.mAction
