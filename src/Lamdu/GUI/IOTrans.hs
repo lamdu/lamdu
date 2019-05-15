@@ -6,7 +6,6 @@ module Lamdu.GUI.IOTrans
 
 import qualified Control.Lens as Lens
 import           Data.Functor.Compose (Compose(..))
-import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude

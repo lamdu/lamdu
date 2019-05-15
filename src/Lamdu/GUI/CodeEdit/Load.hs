@@ -7,7 +7,6 @@ module Lamdu.GUI.CodeEdit.Load
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache

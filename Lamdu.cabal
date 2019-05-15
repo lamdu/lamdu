@@ -118,7 +118,6 @@ Library
                   , ansi-wl-pprint
                   , base >= 4.12
                   , base-compat >= 0.8.2 && < 0.11
-                  , base-orphans >= 0.5.0
                   , base16-bytestring
                   , binary >= 0.7
                   , bytestring
