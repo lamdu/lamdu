@@ -42,7 +42,7 @@ import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..), sAnnotationMode)
 import           Lamdu.Style (Style)
-import qualified Lamdu.Style as Style
+import qualified Lamdu.Style.Make as MakeStyle
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Test.Lamdu.Config as TestConfig
 
@@ -120,7 +120,7 @@ make =
             , _eTasksMonitor = Debug.noopMonitors
             , _eResults = pure EvalResults.empty
             , _eCacheFunctions = cache
-            , _eStyle = Style.make (font <$ testTheme ^. fonts) testTheme
+            , _eStyle = MakeStyle.make (font <$ testTheme ^. fonts) testTheme
             , _eSpacing = 1
             , _eTextEditStyle =
                 TextEdit.Style

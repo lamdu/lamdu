@@ -47,7 +47,7 @@ import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
-import qualified Lamdu.Style as Style
+import qualified Lamdu.Style.Make as MakeStyle
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -115,7 +115,7 @@ mainLoopOptions ::
 mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
     reportPerfCounters =
     MainLoop.Options
-    { config = Style.mainLoopConfig helpProp getFonts getConfig
+    { config = MakeStyle.mainLoopConfig helpProp getFonts getConfig
     , stateStorage = stateStorage
     , debug = MainLoop.DebugOptions
         { fpsFont =
@@ -170,7 +170,7 @@ mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
             , _config = sample ^. sConfigData
             , _theme = sample ^. sThemeData
             , _settings = settings
-            , _style = Style.make fonts (sample ^. sThemeData)
+            , _style = MakeStyle.make fonts (sample ^. sThemeData)
             , _mainLoop = mainEnv
             , _animIdPrefix = mempty
             , _debugMonitors = monitors
