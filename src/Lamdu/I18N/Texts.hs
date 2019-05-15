@@ -8,6 +8,7 @@ module Lamdu.I18N.Texts
     , module Lamdu.I18N.Definitions
     , module Lamdu.I18N.Navigation
     , module Lamdu.I18N.StatusBar
+    , module Lamdu.I18N.Versioning
     ) where
 
 import qualified Control.Lens as Lens
@@ -28,19 +29,10 @@ import           Lamdu.I18N.Collaboration
 import           Lamdu.I18N.Definitions
 import           Lamdu.I18N.Navigation
 import           Lamdu.I18N.StatusBar
+import           Lamdu.I18N.Versioning
 import           Lamdu.Name (NameTexts)
 
 import           Lamdu.Prelude
-
-data Versioning a = Versioning
-    { _branches :: a
-    , _undo :: a
-    , _redo :: a
-    }
-    deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
-    deriving Applicative via (Generically1 Versioning)
-JsonTH.derivePrefixed "_" ''Versioning
-Lens.makeLenses ''Versioning
 
 data Texts a = Texts
     { _code :: Code a

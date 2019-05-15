@@ -364,6 +364,7 @@ Library
                   , Lamdu.I18N.Navigation
                   , Lamdu.I18N.StatusBar
                   , Lamdu.I18N.Texts
+                  , Lamdu.I18N.Versioning
                   , Lamdu.Main.Env
                   , Lamdu.Name
                   , Lamdu.Opts
