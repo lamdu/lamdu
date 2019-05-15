@@ -68,7 +68,7 @@ type Ctx env =
     , Element.HasAnimIdPrefix env
     , Has (CodeEdit.EvalResults ViewM) env
     , Has (CodeEdit.ExportActions ViewM) env
-    , VCConfig.HasConfig env, Has VCConfig.Theme env
+    , Has VCConfig.Config env, Has VCConfig.Theme env
     , Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Language.HasLanguage env

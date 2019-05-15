@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.VersionControl.Config
     ( Config(..), undoKeys, redoKeys, makeBranchKeys, jumpToBranchesKeys, delBranchKeys
-    , HasConfig(..)
     , Theme(..), selectedBranchColor
     ) where
 
@@ -29,5 +28,3 @@ newtype Theme = Theme
 JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme
-
-class HasConfig env where config :: Lens' env Config

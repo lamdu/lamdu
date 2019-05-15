@@ -40,7 +40,7 @@ make ::
     ( MonadReader env m, MonadTransaction n m
     , TextEdit.HasStyle env, Has Theme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
-    , VCConfig.HasConfig env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
+    , Has VCConfig.Config env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
     , Has Config env, HasLanguage env
     ) =>
     StatusWidget (IOTrans n) ->

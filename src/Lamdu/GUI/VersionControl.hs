@@ -90,7 +90,7 @@ branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 makeBranchSelector ::
     ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Has Hover.Style env, Element.HasAnimIdPrefix env
-    , VersionControl.HasConfig env, Has VersionControl.Theme env
+    , Has VersionControl.Config env, Has VersionControl.Theme env
     , Language.HasLanguage env
     ) =>
     (forall a. Transaction n a -> mw a) ->
@@ -112,7 +112,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                         <&> (Align.tValue %~) )
                         <*> (TextEdits.makeLineEdit ?? empty ?? nameProp
                                 ?? branchTextEditId branch)
-                    config <- Lens.view VersionControl.config
+                    config <- Lens.view has
                     let delEventMap
                             | List.isLengthAtLeast 2 (A.branches actions) =
                                 E.keysEventMapMovesCursor
