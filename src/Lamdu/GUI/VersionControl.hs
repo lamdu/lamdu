@@ -1,10 +1,11 @@
-{-# LANGUAGE RankNTypes, DerivingVia #-}
+{-# LANGUAGE RankNTypes, DerivingVia, FlexibleContexts #-}
 module Lamdu.GUI.VersionControl
     ( makeBranchSelector, eventMap
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Has (Has)
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (TextWidget)
@@ -89,7 +90,7 @@ branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 makeBranchSelector ::
     ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
-    , Applicative mw, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Applicative mw, Has Hover.Style env, Element.HasAnimIdPrefix env
     , VersionControl.HasConfig env, VersionControl.HasTheme env
     , Language.HasLanguage env
     ) =>

@@ -39,7 +39,7 @@ lens mode =
 make ::
     ( Applicative f, MonadReader env m, HasTheme env
     , Element.HasAnimIdPrefix env, Has TextView.Style env, GuiState.HasCursor env
-    , Hover.HasStyle env, Language.HasLanguage env
+    , Has Hover.Style env, Language.HasLanguage env
     ) =>
     Widget.Id ->
     Sugar.BinderParams name i o ->

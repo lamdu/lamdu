@@ -64,7 +64,7 @@ makeAnnotationsSwitcher ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasLanguage env
     , Has TextView.Style env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
     Property f Ann.Mode -> m (StatusBar.StatusWidget f)
 makeAnnotationsSwitcher annotationModeProp =
@@ -81,7 +81,7 @@ makeAnnotationsSwitcher annotationModeProp =
 makeStatusWidgets ::
     ( MonadReader env m, Applicative f
     , HasConfig env, HasTheme env, HasStdSpacing env, HasLanguage env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Hover.HasStyle env
+    , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
     [Selection Theme] -> [Selection Language] ->
     Property f Settings -> m (StatusWidgets f)

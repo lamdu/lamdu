@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , HasEvalResults(..)
@@ -11,6 +12,7 @@ import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.Has (Has)
 import           Data.Orphans () -- Imported for Monoid (IO ()) instance
 import qualified Data.Property as Property
 import qualified GUI.Momentu.Align as Align
@@ -86,7 +88,7 @@ make ::
     , Debug.HasMonitors env
     , Theme.HasTheme env, GuiState.HasState env
     , Spacer.HasStdSpacing env, HasEvalResults env m, HasExportActions env m
-    , HasSettings env, HasStyle env, Hover.HasStyle env, Menu.HasConfig env
+    , HasSettings env, HasStyle env, Has Hover.Style env, Menu.HasConfig env
     , SearchMenu.HasTermStyle env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env

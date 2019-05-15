@@ -12,6 +12,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Has (Has)
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -66,7 +67,7 @@ type Ctx env =
     , Cache.HasFunctions env
     , Debug.HasMonitors env
     , HasStyle env
-    , Hover.HasStyle env
+    , Has Hover.Style env
     , Settings.HasSettings env
     , Spacer.HasStdSpacing env
     , GuiState.HasState env

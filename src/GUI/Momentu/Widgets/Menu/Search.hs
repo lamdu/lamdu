@@ -311,7 +311,7 @@ enterWithSearchTerm searchTerm myId =
 
 make ::
     ( MonadReader env m, Applicative f, HasState env, Menu.HasConfig env
-    , Has TextView.Style env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , Has TextView.Style env, Has Hover.Style env, Element.HasAnimIdPrefix env
     , Menu.HasTexts env
     ) =>
     (Menu.PickFirstResult f -> m (Term f)) ->

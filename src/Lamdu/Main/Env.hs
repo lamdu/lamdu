@@ -79,7 +79,7 @@ instance TextEdit.HasStyle Env where style = style . Style.base
 instance Has TextView.Style Env where has = TextEdit.style . has
 instance Theme.HasTheme Env where theme = theme
 instance Config.HasConfig Env where config = config
-instance Hover.HasStyle Env where style = theme . Hover.style
+instance Has Hover.Style Env where has = theme . has
 instance VCConfig.HasTheme Env where theme = theme . Theme.versionControl
 instance VCConfig.HasConfig Env where config = config . Config.versionControl
 instance Menu.HasConfig Env where

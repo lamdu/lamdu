@@ -1,5 +1,5 @@
 -- | A vertical-expand (combo-like) choice widget
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, FlexibleContexts #-}
 module GUI.Momentu.Widgets.Choice
     ( make
     , defaultFdConfig
@@ -11,6 +11,7 @@ module GUI.Momentu.Widgets.Choice
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           Data.Has (Has)
 import           Data.Property (Property(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
@@ -69,7 +70,7 @@ data IsSelected = Selected | NotSelected
 
 make ::
     ( Eq childId, MonadReader env m, Applicative f
-    , State.HasCursor env, Hover.HasStyle env, Element.HasAnimIdPrefix env
+    , State.HasCursor env, Has Hover.Style env, Element.HasAnimIdPrefix env
     , Glue.HasTexts env
     ) =>
     m

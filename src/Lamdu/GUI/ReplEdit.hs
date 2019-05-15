@@ -135,7 +135,7 @@ errorDesc err =
 
 errorIndicator ::
     ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Hover.HasStyle env, GuiState.HasCursor env
+    , Spacer.HasStdSpacing env, Has Hover.Style env, GuiState.HasCursor env
     , HasTheme env, HasConfig env, Glue.HasTexts env, Language.HasLanguage env
     ) =>
     Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
@@ -192,7 +192,7 @@ isExecutableType t =
 
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o
-    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Hover.HasStyle env
+    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Has Hover.Style env
     , HasTheme env, HasConfig env, Language.HasLanguage env
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->

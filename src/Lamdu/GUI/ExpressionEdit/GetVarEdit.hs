@@ -220,7 +220,7 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
     , HasTheme env, Element.HasAnimIdPrefix env, HasConfig env
-    , GuiState.HasCursor env, Hover.HasStyle env
+    , GuiState.HasCursor env, Has Hover.Style env
     , Language.HasLanguage env, Applicative f
     ) =>
     Sugar.DefinitionForm (Name x) f -> Widget.Id ->

@@ -251,7 +251,7 @@ allowedTagName =
 
 type HasSearchTermEnv env =
     ( HasTheme env, HasConfig env, GuiState.HasState env
-    , TextEdit.HasStyle env, Hover.HasStyle env
+    , TextEdit.HasStyle env, Has Hover.Style env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     )
 

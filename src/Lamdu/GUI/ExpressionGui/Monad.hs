@@ -117,7 +117,7 @@ instance Menu.HasConfig (Askable i o) where
     config = Menu.configLens (aConfig . Config.menu) (aTheme . Theme.menu)
 instance SearchMenu.HasTermStyle (Askable i o) where
     termStyle = aTheme . Theme.searchTerm
-instance Hover.HasStyle (Askable i o) where style = aTheme . Hover.style
+instance Has Hover.Style (Askable i o) where has = aTheme . has
 instance HasStyle (Askable i o) where style = aStyle
 instance HasSettings (Askable i o) where settings = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout

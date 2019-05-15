@@ -4,7 +4,6 @@ module GUI.Momentu.Hover
     ( Style(..), frameColor, framePadding, bgColor, bgPadding
     , Hover, hover, sequenceHover
     , backgroundColor
-    , HasStyle(..)
     , AnchoredWidget, anchor
     , hoverInPlaceOf, hoverBesideOptions
     , Ordered(..), forward, backward
@@ -47,11 +46,8 @@ JsonTH.derivePrefixed "_" ''Style
 
 Lens.makeLenses ''Style
 
-class HasStyle env where style :: Lens' env Style
-instance HasStyle Style where style = id
-
-backgroundColor :: HasStyle env => Lens' env Draw.Color
-backgroundColor = style . bgColor
+backgroundColor :: Has Style env => Lens' env Draw.Color
+backgroundColor = has . bgColor
 
 data AnchoredWidget a = AnchoredWidget
     { _anchorPoint :: Vector2 R
@@ -182,10 +178,10 @@ hoverBesideOptions =
         doHover o (Ordered h h) src
 
 addFrame ::
-    (MonadReader env m, HasStyle env, SizedElement a, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Has Style env, SizedElement a, Element.HasAnimIdPrefix env) =>
     m (a -> a)
 addFrame =
-    (,) <$> Lens.view style <*> Element.subAnimId
+    (,) <$> Lens.view has <*> Element.subAnimId
     <&> \(s, subAnimId) gui ->
     if gui ^. Element.size == 0 then gui
     else
@@ -196,7 +192,7 @@ addFrame =
     & Draw.backgroundColor (subAnimId ["hover frame"]) (s ^. frameColor)
 
 hover ::
-    (MonadReader env m, SizedElement a, HasStyle env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, SizedElement a, Has Style env, Element.HasAnimIdPrefix env) =>
     m (a -> Hover a)
 hover = addFrame <&> ((Hover . Element.hoverLayers) .)
 
@@ -263,7 +259,7 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
 hoverBeside ::
     ( GluesTo env (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
     , MonadReader env m, Functor f, SizedElement w
-    , Element.HasAnimIdPrefix env, HasStyle env, Has Dir.Layout env
+    , Element.HasAnimIdPrefix env, Has Style env, Has Dir.Layout env
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m

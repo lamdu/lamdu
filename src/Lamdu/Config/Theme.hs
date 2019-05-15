@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
@@ -22,10 +22,11 @@ module Lamdu.Config.Theme
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
+import           Data.Has (Has(..))
 import           Data.List.Lens (prefixed)
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Hover as Hover
@@ -34,10 +35,10 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config.Folder (HasConfigFolder(..))
+import           Lamdu.Config.Theme.Fonts (FontSize, Fonts)
 import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
-import           Lamdu.Config.Theme.Fonts (FontSize, Fonts)
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
 
 import           Lamdu.Prelude
@@ -148,7 +149,7 @@ class HasTheme env where theme :: Lens' env Theme
 instance HasTheme Theme where theme = id
 
 instance Expression.HasStyle Theme where style = indent
-instance Hover.HasStyle Theme where style = hover
+instance Has Hover.Style Theme where has = hover
 
 instance HasConfigFolder Theme where
     configFolder _ = "themes"

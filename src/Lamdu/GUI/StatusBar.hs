@@ -7,6 +7,7 @@ module Lamdu.GUI.StatusBar
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
+import           Data.Has (Has)
 import           Data.Property (Property)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -39,7 +40,7 @@ import           Lamdu.Prelude
 
 make ::
     ( MonadReader env m, MonadTransaction n m
-    , TextEdit.HasStyle env, Theme.HasTheme env, Hover.HasStyle env
+    , TextEdit.HasStyle env, Theme.HasTheme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
     , VCConfig.HasConfig env, VCConfig.HasTheme env, Spacer.HasStdSpacing env
     , HasConfig env, HasLanguage env

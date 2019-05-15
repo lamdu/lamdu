@@ -92,7 +92,7 @@ labelHeader switchTextLens textLens =
 
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
-    , Hover.HasStyle env, GuiState.HasCursor env
+    , Has Hover.Style env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, HasLanguage env
     ) =>
     OneOf Texts.StatusBar -> Property f a ->
@@ -108,7 +108,7 @@ makeChoice headerText prop choices =
 labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Element.HasAnimIdPrefix env
-    , GuiState.HasCursor env, Hover.HasStyle env, HasLanguage env
+    , GuiState.HasCursor env, Has Hover.Style env, HasLanguage env
     , Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Property f a -> [(a, TextWidget f)] -> m (TextWidget f)
@@ -119,7 +119,7 @@ makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , HasConfig env, HasLanguage env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Hover.HasStyle env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
+    , Has Hover.Style env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
     ) =>
     Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
     [(a, TextWidget f)] -> m (StatusWidget f)

@@ -1,5 +1,5 @@
 {-# LANGUAGE StandaloneDeriving, TemplateHaskell, TypeFamilies, DeriveTraversable #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, MultiParamTypeClasses #-}
 module Tests.WidgetGlue
     ( module X, module Tests.WidgetGlue, module Lens, module Widget, encodeS
     ) where
@@ -7,6 +7,7 @@ module Tests.WidgetGlue
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.Binary.Extended (encodeS)
+import           Data.Has (Has(..))
 import           Data.Semigroup (First(..), Last(..))
 import           GUI.Momentu as X
 import           GUI.Momentu.Direction (Orientation(..))
@@ -76,10 +77,8 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-instance HasAnimIdPrefix Env where
-    animIdPrefix = eAnimId
-instance Hover.HasStyle Env where
-    style = eHoverStyle
+instance HasAnimIdPrefix Env where animIdPrefix = eAnimId
+instance Has Hover.Style Env where has = eHoverStyle
 
 toWidgetFocused :: Applicative f => FocusedWidget (Maybe Widget.Id) -> Gui Widget f
 toWidgetFocused (FocusedLeaf size) =
