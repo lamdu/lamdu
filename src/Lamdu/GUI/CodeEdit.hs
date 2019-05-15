@@ -2,7 +2,7 @@
 module Lamdu.GUI.CodeEdit
     ( make
     , EvalResults
-    , ReplEdit.ExportRepl(..), ExportActions(..), HasExportActions(..)
+    , ReplEdit.ExportRepl(..), ExportActions(..)
     ) where
 
 import           AST (_Pure)
@@ -75,8 +75,6 @@ data ExportActions m = ExportActions
     , importAll :: FilePath -> IOTrans m ()
     }
 
-class HasExportActions env m where exportActions :: Lens' env (ExportActions m)
-
 type EvalResults m = CurAndPrev (EvalResults.EvalResults (ValI m))
 
 make ::
@@ -86,7 +84,7 @@ make ::
     , Has Theme env, GuiState.HasState env
     , Spacer.HasStdSpacing env
     , Has (EvalResults m) env
-    , HasExportActions env m
+    , Has (ExportActions m) env
     , Has Settings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env
     , Element.HasAnimIdPrefix env
@@ -98,7 +96,7 @@ make ::
 make cp gp width =
     do
         theEvalResults <- Lens.view has
-        theExportActions <- Lens.view exportActions
+        theExportActions <- Lens.view has
         env <- Lens.view id
         annMode <- Lens.view (has . Settings.sAnnotationMode)
         workArea <-

@@ -3,7 +3,6 @@ module Lamdu.GUI.Main
     ( make
     , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
-    , CodeEdit.HasExportActions(..)
     , CodeEdit.EvalResults
     ) where
 
@@ -68,7 +67,7 @@ type Ctx env =
     , Has Config env
     , Element.HasAnimIdPrefix env
     , Has (CodeEdit.EvalResults ViewM) env
-    , CodeEdit.HasExportActions env ViewM
+    , Has (CodeEdit.ExportActions ViewM) env
     , VCConfig.HasConfig env, Has VCConfig.Theme env
     , Has Menu.Config env
     , Has SearchMenu.TermStyle env

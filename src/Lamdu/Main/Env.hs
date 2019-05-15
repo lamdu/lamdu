@@ -66,7 +66,7 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-instance GUIMain.HasExportActions Env ViewM where exportActions = exportActions
+instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions
 instance Has (GUIMain.EvalResults ViewM) Env where has = evalRes
 instance Has Settings Env where has = settings . Property.pVal
 instance Style.HasStyle Env where style = style
