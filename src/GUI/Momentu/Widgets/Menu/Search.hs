@@ -36,7 +36,7 @@ module GUI.Momentu.Widgets.Menu.Search
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           Data.Has (Has)
+import           Data.Has (Has(..))
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -224,7 +224,7 @@ addSearchTermEmptyColors ::
 addSearchTermEmptyColors act =
     do
         colors <- Lens.view (termStyle . emptyStringsColors)
-        Reader.local (TextEdit.style . TextEdit.sEmptyStringsColors .~ colors) act
+        Reader.local (has . TextEdit.sEmptyStringsColors .~ colors) act
 
 addSearchTermStyle ::
     ( MonadReader env m, HasTermStyle env, TextEdit.HasStyle env

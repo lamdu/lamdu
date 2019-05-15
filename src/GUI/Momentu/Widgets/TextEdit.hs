@@ -1,10 +1,11 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-# LANGUAGE TemplateHaskell, ViewPatterns, NamedFieldPuns, RankNTypes #-}
 {-# LANGUAGE DerivingVia, FlexibleContexts, MultiParamTypeClasses #-}
+{-# LANGUAGE ConstraintKinds #-}
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
-    , HasStyle(..)
+    , HasStyle
     , Modes(..), focused, unfocused
     , EmptyStrings
     , make
@@ -92,8 +93,7 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-class Has TextView.Style env => HasStyle env where style :: Lens' env Style
-instance HasStyle Style where style = id
+type HasStyle env = (Has Style env, Has TextView.Style env)
 
 instance Has TextView.Style Style where has = sTextViewStyle
 
@@ -147,17 +147,17 @@ makeInternal env mode str emptyStrings myId =
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter ?~
         Widget.enterFuncAddVirtualCursor (Rect 0 (v ^. Element.size))
-        (enterFromDirection (v ^. Element.size) (env ^. style) str myId)
+        (enterFromDirection (v ^. Element.size) (env ^. has) str myId)
     where
-        emptyColor = env ^. style . sEmptyStringsColors . mode
+        emptyColor = env ^. has . sEmptyStringsColors . mode
         emptyView = mkView (emptyStrings ^. mode) (TextView.color .~ emptyColor)
         nonEmptyView =
             mkView (Text.take 5000 str) id
             & Align.tValue %~ Element.padToSize env (emptyView ^. Element.size) 0
         v = if Text.null str then emptyView else nonEmptyView
         mkView displayStr setColor =
-            TextView.make (setColor (env ^. style)) displayStr animId
-            & Element.padAround (Vector2 (env ^. style . sCursorWidth / 2) 0)
+            TextView.make (setColor env) displayStr animId
+            & Element.padAround (Vector2 (env ^. has . sCursorWidth / 2) 0)
         animId = Widget.toAnimId myId
 
 minimumIndex :: Ord a => [a] -> Int
@@ -209,10 +209,10 @@ makeFocused env str empty cursor myId =
         Widget.setFocusedWith cursorRect
         (eventMap env cursor str myId)
     where
-        cursorRect@(Rect origin size) = mkCursorRect (env ^. style) cursor str
+        cursorRect@(Rect origin size) = mkCursorRect (env ^. has) cursor str
         cursorFrame =
             Anim.unitSquare ["text-cursor"]
-            & Anim.unitImages %~ Draw.tint (env ^. style . sCursorColor)
+            & Anim.unitImages %~ Draw.tint (env ^. has . sCursorColor)
             & unitIntoCursorRect
         unitIntoCursorRect img =
             img
@@ -403,9 +403,7 @@ getCursor =
                 decodeCursor _ = Text.length str
 
 make ::
-    ( MonadReader env m, State.HasCursor env, HasStyle env
-    , HasTexts env
-    ) =>
+    (MonadReader env m, State.HasCursor env, HasStyle env, HasTexts env) =>
     m ( EmptyStrings -> Text -> Widget.Id ->
         TextWidget ((,) Text)
       )

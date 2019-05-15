@@ -443,7 +443,7 @@ makeLHSTag onPickNext color tag =
         (tagEditType, tagEdit) <-
             makeTagEditWith onView onPickNext tag
             & Styled.withColor color
-            & Reader.local (TextEdit.style .~ style ^. Style.nameAtBinder)
+            & Reader.local (has .~ style ^. Style.nameAtBinder)
         let eventMap =
                 case tagEditType of
                 SimpleView -> chooseEventMap

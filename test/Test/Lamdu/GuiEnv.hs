@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications #-}
 
 module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
 
@@ -60,13 +60,13 @@ data Env =
 Lens.makeLenses ''Env
 instance HasTheme Env where theme = eTheme
 instance HasStdSpacing Env where stdSpacing = eSpacing
-instance Has TextView.Style Env where has = TextEdit.style . has
+instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
 instance HasConfig Env where config = eConfig
 instance HasSettings Env where settings = eSettings
-instance TextEdit.HasStyle Env where style = eTextEditStyle
+instance Has TextEdit.Style Env where has = eTextEditStyle
 instance HasStyle Env where style = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
 instance Dir.HasTexts Env where texts = language . Dir.texts

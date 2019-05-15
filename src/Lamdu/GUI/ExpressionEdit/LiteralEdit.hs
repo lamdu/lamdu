@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.Functor.Identity (Identity(..))
+import           Data.Has (Has(..))
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
@@ -65,7 +66,7 @@ withStyle ::
     (MonadReader env m, HasStyle env) =>
     Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
 withStyle whichStyle =
-    Reader.local (\x -> x & TextEdit.style .~ x ^. Style.style . whichStyle)
+    Reader.local (\x -> x & has .~ x ^. Style.style . whichStyle)
 
 genericEdit ::
     ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env

@@ -107,7 +107,7 @@ Lens.makeLenses ''Askable
 instance GuiState.HasCursor (Askable i o)
 instance Has GUIState (Askable i o) where has = aState
 instance Has TextView.Style (Askable i o) where has = aTextEditStyle . has
-instance TextEdit.HasStyle (Askable i o) where style = aTextEditStyle
+instance Has TextEdit.Style (Askable i o) where has = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable i o) where animIdPrefix = aAnimIdPrefix
 instance Config.HasConfig (Askable i o) where config = aConfig
@@ -222,7 +222,7 @@ run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
     runReaderT action
     Askable
     { _aState = env ^. has
-    , _aTextEditStyle = env ^. TextEdit.style
+    , _aTextEditStyle = env ^. has
     , _aStdSpacing = env ^. Spacer.stdSpacing
     , _aAnimIdPrefix = ["outermost"]
     , _aConfig = env ^. Config.config

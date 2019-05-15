@@ -1,5 +1,5 @@
 -- | The Environment threaded in Lamdu main
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications #-}
 module Lamdu.Main.Env
     ( Env(..)
     , evalRes
@@ -76,8 +76,8 @@ instance Has MainLoop.Env Env where has = mainLoop
 instance Spacer.HasStdSpacing Env where stdSpacing = Theme.theme . Theme.stdSpacing
 instance GuiState.HasCursor Env
 instance Has GUIState Env where has = mainLoop . has
-instance TextEdit.HasStyle Env where style = style . Style.base
-instance Has TextView.Style Env where has = TextEdit.style . has
+instance Has TextEdit.Style Env where has = style . Style.base
+instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Theme.HasTheme Env where theme = theme
 instance Config.HasConfig Env where config = config
 instance Has Hover.Style Env where has = theme . has
