@@ -137,13 +137,9 @@ mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
             ConfigSampler.getSample configSampler
             <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
         }
-    , mainTexts = getTexts has
-    , zoomTexts = getTexts has
+    , getTexts = ConfigSampler.getSample configSampler <&> MainLoop.makeAllTexts . (^. sLanguageData)
     }
     where
-        getTexts lens =
-            ConfigSampler.getSample configSampler
-            <&> (^. sLanguageData . lens)
         helpProp =
             mkSettingsProp
             & Property.prop %~ Property.composeLens Settings.sHelpShown

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving, UndecidableInstances, DerivingVia #-}
-{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE MultiParamTypeClasses, ConstraintKinds, FlexibleInstances #-}
 module GUI.Momentu.Main
     ( Config(..)
     , Env(..), eWindowSize, eZoom, eState
@@ -11,6 +11,7 @@ module GUI.Momentu.Main
     , quitEventMap
     , MainLoop(..), Handlers(..), mainLoopWidget
     , Texts(..), textQuit, textJumpToSource, textDebug
+    , AllTexts(..), makeAllTexts
     ) where
 
 import qualified Control.Lens as Lens
@@ -64,6 +65,20 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
 
+data AllTexts = AllTexts
+    { _mainTexts :: Texts Text
+    , _zoomTexts :: Zoom.Texts Text
+    }
+Lens.makeLenses ''AllTexts
+
+instance Has (Texts Text) AllTexts where has = mainTexts
+instance Has (Zoom.Texts Text) AllTexts where has = zoomTexts
+
+makeAllTexts ::
+    (Has (Texts Text) env, Has (Zoom.Texts Text) env) =>
+    env -> AllTexts
+makeAllTexts env = AllTexts (env ^. has) (env ^. has)
+
 data DebugOptions = DebugOptions
     { fpsFont :: Zoom -> IO (Maybe Font)
     , virtualCursorColor :: IO (Maybe Draw.Color)
@@ -80,8 +95,7 @@ data Options = Options
     { config :: Config
     , stateStorage :: MkProperty' IO GUIState
     , debug :: DebugOptions
-    , mainTexts :: IO (Texts Text)
-    , zoomTexts :: IO (Zoom.Texts Text)
+    , getTexts :: IO AllTexts
     }
 
 data Handlers = Handlers
@@ -132,8 +146,7 @@ defaultOptions env =
                 }
             , stateStorage = stateStorage_
             , debug = defaultDebugOptions
-            , mainTexts = pure (env ^. has)
-            , zoomTexts = pure (env ^. has)
+            , getTexts = makeAllTexts env & pure
             }
 
 quitEventMap ::
@@ -253,14 +266,13 @@ wrapMakeWidget zoom options lookupModeRef mkWidgetUnmemod size =
                 , _eWindowSize = size
                 , _eState = s
                 }
+        txt <- getTexts options
         zoomEventMap <-
-            Zoom.eventMap (env ^. eZoom)
-            <$> zoomTexts options
-            <*> config ^. MainConfig.cZoom
-        txt <- mainTexts options
+            config ^. MainConfig.cZoom
+            <&> Zoom.eventMap (env ^. eZoom) txt
         jumpToSourceEventMap <-
             writeIORef lookupModeRef JumpToSource
-            & mkJumpToSourceEventMap txt debug
+            & mkJumpToSourceEventMap (txt ^. has) debug
         let moreEvents = zoomEventMap <> jumpToSourceEventMap
         w <- mkWidgetUnmemod env
         ( if Widget.isFocused w
