@@ -45,7 +45,7 @@ allowSearchTerm = Name.isValidText
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameSearchTerm :: (MonadReader env m, Name.HasNameTexts env) => Name o -> m Text
+nameSearchTerm :: (MonadReader env m, Has (Name.NameTexts Text) env) => Name o -> m Text
 nameSearchTerm name =
     Name.visible name <&>
     \(Name.TagText text textCol, tagCol) ->

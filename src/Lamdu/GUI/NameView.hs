@@ -49,7 +49,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
 make ::
     ( MonadReader env m
     , HasTheme env, Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Has Dir.Layout env, Name.HasNameTexts env
+    , Has Dir.Layout env, Has (Name.NameTexts Text) env
     ) =>
     Name f -> m (WithTextPos View)
 make name =

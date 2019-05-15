@@ -23,7 +23,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 import           Lamdu.I18N.Texts
-import           Lamdu.Name (HasNameTexts(..))
+import           Lamdu.Name (NameTexts)
 import Lamdu.I18N.LangId (LangId)
 
 import           Lamdu.Prelude
@@ -42,7 +42,7 @@ instance HasConfigFolder Language where
 
 class
     ( Glue.HasTexts env, Dir.HasTexts env, Choice.HasTexts env
-    , TextEdit.HasTexts env, Grid.HasTexts env, HasNameTexts env
+    , TextEdit.HasTexts env, Grid.HasTexts env, Has (NameTexts Text) env
     , Menu.HasTexts env, SearchMenu.HasTexts env, Has LangId env
     ) => HasLanguage env where
     language :: Lens' env Language
@@ -57,7 +57,7 @@ instance Grid.HasTexts Language where texts = lTexts . grid
 instance Choice.HasTexts Language where texts = lTexts . choice
 instance TextEdit.HasTexts Language where texts = lTexts . textEdit
 instance MainLoop.HasTexts Language where texts = lTexts . mainLoop
-instance HasNameTexts Language where nameTexts = lTexts . name
+instance Has (NameTexts Text) Language where has = lTexts . name
 instance Has LangId Language where has = lIdentifier
 instance HasLanguage Language where language = id
 instance Zoom.HasTexts Language where texts = lTexts . zoom

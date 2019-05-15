@@ -1,5 +1,5 @@
 -- | The Environment threaded in Lamdu main
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
 module Lamdu.Main.Env
     ( Env(..)
     , evalRes
@@ -46,7 +46,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
-import           Lamdu.Name (HasNameTexts(..))
+import           Lamdu.Name (NameTexts)
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style as Style
@@ -98,6 +98,6 @@ instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance Grid.HasTexts Env where texts = language . Grid.texts
 instance Menu.HasTexts Env where texts = language . Menu.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
-instance HasNameTexts Env where nameTexts = language . nameTexts
+instance Has (NameTexts Text) Env where has = language . has
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has

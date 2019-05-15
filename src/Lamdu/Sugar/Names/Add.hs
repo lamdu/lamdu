@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell #-}
 {-# LANGUAGE NoMonomorphismRestriction, TupleSections, DerivingVia #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
@@ -16,6 +17,7 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Char as Char
 import           Data.Coerce (coerce)
 import           Data.Foldable (fold)
+import           Data.Has (Has(..))
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
@@ -159,9 +161,9 @@ p1Anon (Just uuid) =
             , p1TextsBelow = innerOut ^. p1Texts
             }
 
-displayOf :: HasNameTexts env => env -> Text -> Text
+displayOf :: Has (NameTexts Text) env => env -> Text -> Text
 displayOf env text
-    | Lens.has Lens._Empty text = env ^. nameTexts . emptyName
+    | Lens.has Lens._Empty text = env ^. has . emptyName
     | otherwise = text
 
 p1Tagged ::
@@ -212,7 +214,7 @@ p1Name mDisambiguator nameType p0Name =
 ---------- Pass1 -> Pass2 -----------
 -------------------------------------
 
-tagText :: HasNameTexts env => env -> Text -> Collision -> TagText
+tagText :: Has (NameTexts Text) env => env -> Text -> Collision -> TagText
 tagText env = TagText . displayOf env
 
 makeTagTexts :: Language -> MMap Text (Set T.Tag) -> Map T.Tag TagText
@@ -266,7 +268,7 @@ initialP2Env lang (P1Out globals locals contexts tvs texts) =
         -- ^ all globals are "above" everything, and locals add up as
         -- we descend
     , _p2Tags = top
-    , _p2NameTexts = lang ^. nameTexts
+    , _p2NameTexts = lang ^. has
     }
     where
         lookupText tag =
@@ -323,7 +325,7 @@ data P2Env = P2Env
     }
 Lens.makeLenses ''P2Env
 
-instance HasNameTexts P2Env where nameTexts = p2NameTexts
+instance Has (NameTexts Text) P2Env where has = p2NameTexts
 
 newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)

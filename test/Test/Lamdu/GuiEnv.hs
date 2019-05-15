@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
 
 module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
 
@@ -35,7 +35,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, HasLanguage(..))
-import           Lamdu.Name (HasNameTexts(..))
+import           Lamdu.Name (NameTexts)
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (HasSettings(..), Settings(..))
 import           Lamdu.Style (HasStyle(..), Style)
@@ -77,7 +77,7 @@ instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance Grid.HasTexts Env where texts = language . Grid.texts
 instance Menu.HasTexts Env where texts = language . Menu.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
-instance HasNameTexts Env where nameTexts = language . nameTexts
+instance Has (NameTexts Text) Env where has = language . has
 instance Has LangId Env where has = language . has
 instance HasLanguage Env where language = eLanguage
 

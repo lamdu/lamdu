@@ -34,7 +34,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
-import           Lamdu.Name (Name, HasNameTexts)
+import           Lamdu.Name (Name, NameTexts)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -204,7 +204,7 @@ gridViewTopLeftAlign =
 
 makeComposite ::
     ( MonadReader env m, HasTheme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env, HasNameTexts env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env, Has (NameTexts Text) env
     ) =>
     Text -> Text ->
     m (WithTextPos View) -> m (WithTextPos View) ->
