@@ -8,8 +8,10 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -25,8 +27,8 @@ import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
+import           Lamdu.I18N.Navigation (Navigation)
+import qualified Lamdu.I18N.Navigation as Navigation
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
@@ -56,7 +58,7 @@ nameSearchTerm name =
 makeOptions ::
     ( MonadReader env m, Has Theme env, Applicative o
     , Has TextView.Style env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Language.HasLanguage env
+    , Has (Navigation Text) env, Has (Name.NameTexts Text) env, Has Dir.Layout env
     ) =>
     m [Sugar.NameRef (Name g) o] ->
     SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
@@ -64,7 +66,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         do
-            goto <- Lens.view (Language.texts . Texts.navigationTexts . Texts.goto)
+            goto <- Lens.view (has . Navigation.goto)
             let toRenderedOption nameRef widget =
                     Menu.RenderedOption
                     { Menu._rWidget = widget
@@ -105,12 +107,14 @@ make ::
     ( MonadReader env m, Applicative o
     , Has Theme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
     , Has Menu.Config env, Has Hover.Style env, GuiState.HasState env
-    , Has SearchMenu.TermStyle env, Language.HasLanguage env
+    , Has SearchMenu.TermStyle env, Has (Navigation Text) env
+    , Glue.HasTexts env, TextEdit.HasTexts env
+    , SearchMenu.HasTexts env, Has (Name.NameTexts Text) env
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
-        goto <- Lens.view (Language.texts . Texts.navigationTexts . Texts.goto)
+        goto <- Lens.view (has . Navigation.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
             (makeOptions readGlobals) Element.empty myId ?? Menu.Below
             & Reader.local (has . Theme.searchTerm %~ onTermStyle goto)
