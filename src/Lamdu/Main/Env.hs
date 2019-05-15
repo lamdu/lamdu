@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -42,7 +43,7 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import           Lamdu.I18N.Texts (Texts)
-import           Lamdu.Settings (Settings(..))
+import           Lamdu.Settings (Settings(..), sAnnotationMode)
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Config as SugarConfig
@@ -77,6 +78,7 @@ instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Has Theme Env where has = theme
 instance Has Config Env where has = config
+instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has SugarConfig.Config Env where has = config . has
 instance Has Hover.Style Env where has = theme . has
 instance Has VCConfig.Theme Env where has = has . Theme.versionControl

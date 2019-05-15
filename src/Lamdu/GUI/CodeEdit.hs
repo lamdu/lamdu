@@ -28,6 +28,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -59,7 +60,6 @@ import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
-import qualified Lamdu.Settings as Settings
 import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Types as Sugar
@@ -87,8 +87,10 @@ make ::
     , Spacer.HasStdSpacing env
     , Has (EvalResults m) env
     , Has (ExportActions m) env
-    , Has Settings env, HasStyle env, Has Hover.Style env, Has Menu.Config env
+    , Has Settings env, HasStyle env
+    , Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env
+    , Has Annotations.Mode env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     , HasCallStack
@@ -97,13 +99,11 @@ make ::
     n (StatusBar.StatusWidget (IOTrans m), Gui Widget (IOTrans m))
 make cp gp width =
     do
-        theEvalResults <- Lens.view has
         theExportActions <- Lens.view has
         env <- Lens.view id
-        annMode <- Lens.view (has . Settings.sAnnotationMode)
         workArea <-
             loadWorkArea (env ^. has) (env ^. has) (env ^. has) (env ^. has)
-            annMode theEvalResults cp
+            (env ^. has) (env ^. has) cp
             & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))

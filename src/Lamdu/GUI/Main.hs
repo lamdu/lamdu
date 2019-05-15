@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -72,6 +73,7 @@ type Ctx env =
     , Has (CodeEdit.ExportActions ViewM) env
     , Has VCConfig.Config env, Has VCConfig.Theme env
     , Has Menu.Config env
+    , Has Annotations.Mode env
     , Has SearchMenu.TermStyle env
     , Has (Texts.StatusBar Text) env
     , Language.HasLanguage env
