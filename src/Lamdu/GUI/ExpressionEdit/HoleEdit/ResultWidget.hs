@@ -33,8 +33,6 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -94,7 +92,7 @@ make ::
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
-    (,) <$> Lens.view (Language.texts . Texts.codeUI . Texts.pick) <*>
+    (,) <$> Lens.view (has . Texts.pick) <*>
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     <&>

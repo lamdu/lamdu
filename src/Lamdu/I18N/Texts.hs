@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
-    ( module Lamdu.I18N.Texts
+    ( Texts(..)
     ) where
 
 import qualified Control.Lens as Lens

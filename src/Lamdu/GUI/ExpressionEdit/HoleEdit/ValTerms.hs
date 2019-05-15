@@ -17,8 +17,6 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.I18N.Code as Texts
-import           Lamdu.I18N.Language (Language, texts)
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -42,14 +40,18 @@ ofName (Name.Stored storedName) =
     where
         Name.TagText displayName textCollision = storedName ^. Name.snDisplayText
 
-expr :: Language -> Expression (Name o) i o a -> [Text]
-expr lang = ofBody lang . (^. val)
+expr ::
+    Has (Texts.Code Text) env =>
+    env -> Expression (Name o) i o a -> [Text]
+expr env = ofBody env . (^. val)
 
-ofBody :: Language -> Tree (Body (Name o) i o) (Ann a) -> [Text]
-ofBody lang =
+ofBody ::
+    Has (Texts.Code Text) env =>
+    env -> Tree (Body (Name o) i o) (Ann a) -> [Text]
+ofBody env =
     \case
     BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
-    BodySimpleApply x -> "apply" : x ^. monoChildren . Lens.to (expr lang)
+    BodySimpleApply x -> "apply" : x ^. monoChildren . Lens.to (expr env)
     BodyLabeledApply x ->
         "apply"
         : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)
@@ -61,14 +63,14 @@ ofBody lang =
     BodyGetField gf ->
         ofName (gf ^. gfTag . tagInfo . tagName) <&> ("." <>)
     BodyCase cas ->
-        [ lang ^. texts . Texts.code . Texts.case_
-        , lang ^. texts . Texts.code . Texts.of_
+        [ env ^. has . Texts.case_
+        , env ^. has . Texts.of_
         ] ++
         case cas of
             Case LambdaCase (Composite [] ClosedComposite{} _) ->
-                [lang ^. texts . Texts.code . Texts.absurd]
+                [env ^. has . Texts.absurd]
             _ -> []
-    BodyIfElse {} -> [lang ^. texts . Texts.code . Texts.if_, ":"]
+    BodyIfElse {} -> [env ^. has . Texts.if_, ":"]
     -- An inject "base expr" can have various things in its val filled
     -- in, so the result group based on it may have both nullary
     -- inject (".") and value inject (":"). Thus, an inject must match
@@ -83,22 +85,24 @@ ofBody lang =
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
     BodyToNom (Nominal tid b) ->
         ofName (tid ^. tidName)
-        ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to (ofBody lang)
+        ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to (ofBody env)
     BodyFromNom (Nominal tid _) ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an
         -- IfElse, but we give val terms only to the base expr
         -- which looks like this:
-        [ lang ^. texts . Texts.code . Texts.if_
+        [ env ^. has . Texts.if_
         | tid ^. tidTId == Builtins.boolTid
         ]
     BodyHole {} -> []
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
 
-binder :: Language -> Tree (Binder (Name o) i o) (Ann a) -> [Text]
-binder lang BinderLet{} = [lang ^. texts . Texts.code . Texts.let_]
-binder lang (BinderExpr x) = ofBody lang x
+binder ::
+    Has (Texts.Code Text) env =>
+    env -> Tree (Binder (Name o) i o) (Ann a) -> [Text]
+binder env BinderLet{} = [env ^. has . Texts.let_]
+binder env (BinderExpr x) = ofBody env x
 
 type Suffix = Char
 

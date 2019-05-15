@@ -50,9 +50,7 @@ import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
-import           Lamdu.I18N.Language (texts)
 import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -200,7 +198,7 @@ makeOptions tagSelection mkPickResult ctx
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (allowedTagName searchTerm) = id
                     | otherwise = maybe id (:) (addNewTag tagSelection mkPickResult ctx)
-            txt <- Lens.view texts
+            env <- Lens.view id
             let makeOption opt =
                     Menu.Option
                     { Menu._oId = optionWId
@@ -214,7 +212,7 @@ makeOptions tagSelection mkPickResult ctx
                         { Menu._rWidget = widget
                         , Menu._rPick = Widget.PreEvent
                             { Widget._pDesc =
-                                txt ^. Texts.codeUI . Texts.pick
+                                env ^. has . Texts.pick
                             , Widget._pAction =
                                 opt ^. Sugar.toPick
                                 <&> mkPickResult

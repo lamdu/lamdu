@@ -53,10 +53,9 @@ import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Navigation as Texts
-import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -126,7 +125,10 @@ mkChosenScopeCursor func =
                 <&> (>>= scopeCursor mChosenScope)
 
 makeScopeEventMap ::
-    (Language.HasLanguage env, Functor o) =>
+    ( Has (Texts.Navigation Text) env
+    , Has (Texts.CodeUI Text) env
+    , Functor o
+    ) =>
     env -> [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
     Gui EventMap o
 makeScopeEventMap env prevKey nextKey cursor setter =
@@ -139,10 +141,10 @@ makeScopeEventMap env prevKey nextKey cursor setter =
             <&> setter
             <&> E.keysEventMap key (doc lens)
         doc x =
-            E.toDoc (env ^. Language.texts)
-            [ Texts.codeUI . CodeUI.evaluation
-            , Texts.codeUI . CodeUI.scope
-            , Texts.navigationTexts . x
+            E.toDoc env
+            [ has . Texts.evaluation
+            , has . Texts.scope
+            , has . x
             ]
 
 makeScopeNavArrow ::
@@ -183,7 +185,7 @@ blockEventMap env =
     & E.keyPresses (dirKeys <&> toModKey)
     (E.toDoc (env ^. Language.texts)
         [ has . MomentuTexts.navigation, has . MomentuTexts.move
-        , Texts.navigationTexts . Texts.blocked
+        , has . Texts.blocked
         ])
     where
         dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
@@ -204,12 +206,11 @@ makeScopeNavEdit func myId curCursor =
                 Property.set chosenScopeProp . Just
         env <- Lens.view id
         let mkScopeEventMap l r = makeScopeEventMap env l r curCursor (void . setScope)
-        let navTexts = env ^. Language.texts . Texts.navigationTexts
         let scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
             scopes =
-                [ (navTexts ^. Texts.prevScopeArrow, sMPrevParamScope curCursor)
+                [ (env ^. has . Texts.prevScopeArrow, sMPrevParamScope curCursor)
                 , (" ", Nothing)
-                , (navTexts ^. Texts.nextScopeArrow, sMNextParamScope curCursor)
+                , (env ^. has . Texts.nextScopeArrow, sMNextParamScope curCursor)
                 ]
         Lens.view (has . Settings.sAnnotationMode)
             >>= \case
@@ -444,7 +445,7 @@ make pMode defEventMap tag color assignment =
             <&> E.charGroup Nothing
             (E.toDoc env
                 [ has . MomentuTexts.navigation
-                , has . Texts.navigationTexts . Texts.jumpToDefBody
+                , has . Texts.jumpToDefBody
                 ])
             "="
         mPresentationEdit <-
