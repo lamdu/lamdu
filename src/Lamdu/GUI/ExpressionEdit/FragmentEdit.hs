@@ -19,6 +19,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import           Lamdu.Config (config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
@@ -30,6 +31,10 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.I18N.CodeUI (CodeUI)
+import qualified Lamdu.I18N.CodeUI as CodeUI
+import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -48,6 +53,15 @@ responsiveLiftA3 f x y z =
     , _rNarrow = liftA3 f (x ^. rNarrow) (y ^. rNarrow) (z ^. rNarrow)
     }
 
+fragmentDoc ::
+    Language.HasLanguage env => env -> Lens.ALens' (CodeUI Text) Text -> E.Doc
+fragmentDoc env lens =
+    E.toDoc env
+    [ Language.edit
+    , Language.texts . Texts.codeUI . CodeUI.fragment
+    , Language.texts . Texts.codeUI . lens
+    ]
+
 make ::
     (Monad i, Monad o) =>
     Tree (Sugar.Fragment (Name o) i o)
@@ -57,7 +71,7 @@ make ::
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
-        config <- Lens.view Config.config
+        env <- Lens.view id
         fragmentExprGui <-
             makeFragmentExprEdit fragment & GuiState.assignCursor myId innerId
         hover <- Hover.hover
@@ -99,13 +113,14 @@ make fragment pl =
                     pl ^. Sugar.plEntityId & HoleWidgetIds.make
                     & HoleWidgetIds.hidOpen & pure
                     & E.keysEventMapMovesCursor
-                    (config ^. Config.healKeys)
-                    (E.Doc ["Edit", "Fragment", "Show Results"])
+                    (env ^. config . Config.healKeys)
+                    (fragmentDoc env CodeUI.showResults)
                 Sugar.HealAction heal ->
                     heal <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor
-                        (Config.delKeys config <> config ^. Config.healKeys)
-                        (E.Doc ["Edit", "Fragment", "Heal"])
+                        (env ^. config
+                            & Config.delKeys <> Lens.view Config.healKeys)
+                        (fragmentDoc env CodeUI.heal)
         isInAHole <- ExprGuiM.isHoleResult
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow

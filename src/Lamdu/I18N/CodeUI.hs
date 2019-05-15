@@ -52,6 +52,9 @@ data CodeUI a = CodeUI
     , _literalNumber :: a
     , _startEditing :: a
     , _stopEditing :: a
+    , _fragment :: a
+    , _showResults :: a
+    , _heal :: a
     , _setToHole :: a
     , _negate :: a
     , _value :: a
