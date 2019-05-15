@@ -28,7 +28,6 @@ import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -92,7 +91,6 @@ instance Has Dir.Layout Env where has = language . has
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance Has (EventMap.Texts Text) Env where has = language . has
 instance Choice.HasTexts Env where texts = language . Choice.texts
-instance Grid.HasTexts Env where texts = language . Grid.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has

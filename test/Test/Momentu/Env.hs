@@ -50,4 +50,4 @@ Lens.makeLenses ''Env
 instance Has Dir.Layout Env where has = eDirLayout
 instance Has (Dir.Texts Text) Env where has = eDirTexts
 instance Glue.HasTexts Env where texts = eGlueTexts
-instance Grid.HasTexts Env where texts = eGridTexts
+instance Has (Grid.Texts Text) Env where has = eGridTexts

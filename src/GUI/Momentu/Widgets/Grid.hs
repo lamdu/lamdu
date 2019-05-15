@@ -1,11 +1,11 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 {-# LANGUAGE DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingVia, ConstraintKinds #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys
     , Texts(..), moreLeft, moreRight, top, bottom, leftMost, rightMost
-    , HasTexts(..)
+    , HasTexts
     ) where
 
 import qualified Control.Lens as Lens
@@ -54,7 +54,7 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
-class Glue.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+type HasTexts env = (Glue.HasTexts env, Has (Texts Text) env)
 
 newtype Cursor = Cursor (Vector2 Int)
     deriving (Eq)
@@ -171,14 +171,14 @@ addNavEventmap env keys navDests eMap =
             , movement Horizontal Forward  (keysRight dir)      cursorRight
             , movement Vertical Backward   (keysUp    dir)      cursorUp
             , movement Vertical Forward    (keysDown  dir)      cursorDown
-            , movementMore (texts.moreLeft ) (keysMoreLeft keys)  cursorLeftMost
-            , movementMore (texts.moreRight) (keysMoreRight keys) cursorRightMost
+            , movementMore (has . moreLeft ) (keysMoreLeft keys)  cursorLeftMost
+            , movementMore (has . moreRight) (keysMoreRight keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
         strongMap =
-            [ movementMore (texts.top      ) (keysTop keys)       cursorTop
-            , movementMore (texts.bottom   ) (keysBottom keys)    cursorBottom
-            , movementMore (texts.leftMost ) (keysLeftMost keys)  cursorLeftMost
-            , movementMore (texts.rightMost) (keysRightMost keys) cursorRightMost
+            [ movementMore (has . top      ) (keysTop keys)       cursorTop
+            , movementMore (has . bottom   ) (keysBottom keys)    cursorBottom
+            , movementMore (has . leftMost ) (keysLeftMost keys)  cursorLeftMost
+            , movementMore (has . rightMost) (keysRightMost keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
         movement o d = movementMore (has . Dir.textLens o d)
         movementMore lens events f =

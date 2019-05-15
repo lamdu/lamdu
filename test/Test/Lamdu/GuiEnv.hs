@@ -19,7 +19,6 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.State (HasCursor, GUIState(..))
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -68,7 +67,6 @@ instance Has Style Env where has = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance Choice.HasTexts Env where texts = language . Choice.texts
-instance Grid.HasTexts Env where texts = language . Grid.texts
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
 instance Has LangId Env where has = language . has
 instance HasLanguage Env where language = eLanguage

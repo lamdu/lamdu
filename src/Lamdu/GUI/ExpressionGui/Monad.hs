@@ -44,7 +44,6 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -121,7 +120,6 @@ instance Has Settings (Askable i o) where has = aSettings
 instance Has Dir.Layout (Askable i o) where has = aDirLayout
 instance Glue.HasTexts (Askable i o) where texts = language . Glue.texts
 instance SearchMenu.HasTexts (Askable i o) where texts = language . SearchMenu.texts
-instance Grid.HasTexts (Askable i o) where texts = language . Grid.texts
 instance Choice.HasTexts (Askable i o) where texts = language . Choice.texts
 instance Has LangId (Askable i o) where has = language . has
 instance Language.HasLanguage (Askable i o) where language = aLanguage
