@@ -1,5 +1,6 @@
 -- | The Environment threaded in Lamdu main
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Lamdu.Main.Env
     ( Env(..)
     , evalRes
@@ -45,8 +46,6 @@ import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Texts as Texts
-import           Lamdu.Name (NameTexts)
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Style as Style
 
@@ -89,15 +88,12 @@ instance Has Debug.Monitors Env where has = debugMonitors
 instance Has Cache.Functions Env where has = cachedFunctions
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has Dir.Layout Env where has = language . has
-instance Has (Dir.Texts Text) Env where has = language . has
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance Choice.HasTexts Env where texts = language . Choice.texts
 instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance Grid.HasTexts Env where texts = language . Grid.texts
-instance Has (Menu.Texts Text) Env where has = language . has
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
-instance Has (NameTexts Text) Env where has = language . has
 instance Language.HasLanguage Env where language = language
 instance Has LangId Env where has = language . has
-instance Has (Texts.Navigation Text) Env where has = language . has
+instance Has (t Text) Language => Has (t Text) Env where has = language . has

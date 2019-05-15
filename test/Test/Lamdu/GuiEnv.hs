@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Lamdu.GuiEnv (Env(..), make, makeLang, dummyAnchors) where
 
@@ -20,7 +21,6 @@ import           GUI.Momentu.State (HasCursor, GUIState(..))
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -34,8 +34,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language, HasLanguage(..))
-import qualified Lamdu.I18N.Texts as Texts
-import           Lamdu.Name (NameTexts)
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..))
 import           Lamdu.Style (HasStyle(..), Style)
@@ -69,18 +67,15 @@ instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance HasStyle Env where style = eStyle
 instance Has Dir.Layout Env where has = eDirLayout
-instance Has (Dir.Texts Text) Env where has = language . has
 instance Glue.HasTexts Env where texts = language . Glue.texts
 instance EventMap.HasTexts Env where texts = language . EventMap.texts
 instance Choice.HasTexts Env where texts = language . Choice.texts
 instance TextEdit.HasTexts Env where texts = language . TextEdit.texts
 instance Grid.HasTexts Env where texts = language . Grid.texts
-instance Has (Menu.Texts Text) Env where has = language . has
 instance SearchMenu.HasTexts Env where texts = language . SearchMenu.texts
-instance Has (NameTexts Text) Env where has = language . has
 instance Has LangId Env where has = language . has
-instance Has (Texts.Navigation Text) Env where has = language . has
 instance HasLanguage Env where language = eLanguage
+instance Has (t Text) Language => Has (t Text) Env where has = language . has
 
 makeLang :: IO Language
 makeLang = TestConfig.loadConfigObject "english"
