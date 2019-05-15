@@ -3,7 +3,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
     ( module Lamdu.I18N.Texts
-    , module Lamdu.I18N.Code
     , module Lamdu.I18N.CodeUI
     ) where
 

@@ -52,6 +52,7 @@ import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as CodeUI
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Navigation as Texts
