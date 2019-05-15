@@ -11,6 +11,7 @@ module Lamdu.I18N.Language
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Direction as Dir
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -45,9 +46,13 @@ type HasLanguage env =
     , Has (NameTexts        Text) env
     , Has (Menu.Texts       Text) env
     , Has (Navigation       Text) env
+    , Has (Versioning       Text) env
+    , Has (CodeUI           Text) env
     , Has (TextEdit.Texts   Text) env
     , Has (Grid.Texts       Text) env
     , Has (SearchMenu.Texts Text) env
+    , Has (Definitions      Text) env
+    , Has (MomentuTexts.Texts Text) env
     , Has Language env
     )
 

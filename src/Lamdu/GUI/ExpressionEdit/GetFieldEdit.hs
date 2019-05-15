@@ -19,8 +19,6 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.CodeUI as CodeUI
-import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -40,8 +38,8 @@ make (Sugar.GetField recExpr tag) pl =
         let mkDelEventMap del =
                 del <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys env)
-                (E.toDoc (env ^. Language.texts)
-                    [Texts.edit, Texts.codeUI . CodeUI.delete])
+                (E.toDoc env
+                    [has . Texts.edit, has . Texts.delete])
         let delEventMap =
                 recExpr ^. ann . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap

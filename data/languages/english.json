@@ -2,6 +2,11 @@
     "imports": ["left-to-right.mixin.json"],
     "identifier": "english",
     "texts": {
+        "commonTexts": {
+            "edit": "Edit",
+            "insert": "Insert",
+            "delete": "Delete"
+        },
         "code": {
             "let_": "let",
             "case_": "case",
@@ -60,7 +65,6 @@
             "pick": "Pick",
             "new": "New",
             "select": "Select",
-            "delete": "Delete",
             "rename": "Rename",
             "doneRenaming": "Done renaming",
             "changeImportedName": "Change imported name",
@@ -176,9 +180,6 @@
             "deleteBackwards": "Delete backwards"
         },
         "textEdit": {
-            "edit": "Edit",
-            "delete": "Delete",
-            "insert": "Insert",
             "forward": "Forward",
             "backward": "Backward",
             "word": "Word",

@@ -2,7 +2,8 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
-    ( module Lamdu.I18N.Texts
+    ( module GUI.Momentu.I18N
+    , module Lamdu.I18N.Texts
     , module Lamdu.I18N.Code
     , module Lamdu.I18N.CodeUI
     , module Lamdu.I18N.Collaboration
@@ -17,6 +18,8 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
+import           GUI.Momentu.I18N hiding (Texts)
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -38,6 +41,7 @@ import           Lamdu.Prelude
 data Texts a = Texts
     { _code :: Code a
     , _codeUI :: CodeUI a
+    , _commonTexts :: MomentuTexts.Texts a
     , _collaborationTexts :: Collaboration a
     , _navigationTexts :: Navigation a
     , _definitions :: Definitions a
@@ -74,12 +78,13 @@ instance Has (MainLoop.Texts Text) (Texts Text) where has = mainLoop
 instance Has (NameTexts Text) (Texts Text) where has = name
 instance Has (Zoom.Texts Text) (Texts Text) where has = zoom
 instance Has (Navigation Text) (Texts Text) where has = navigationTexts
+instance Has (Versioning Text) (Texts Text) where has = versioning
+instance Has (CodeUI Text) (Texts Text) where has = codeUI
+instance Has (Definitions Text) (Texts Text) where has = definitions
+instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts
 
 quit :: Lens' (Texts Text) Text
 quit = mainLoop . MainLoop.textQuit
-
-edit :: Lens' (Texts Text) Text
-edit = textEdit . TextEdit.textEdit
 
 view :: Lens' (Texts Text) Text
 view = zoom . Zoom.view

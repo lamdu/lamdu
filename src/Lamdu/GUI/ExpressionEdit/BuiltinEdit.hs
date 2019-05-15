@@ -40,8 +40,7 @@ builtinFDConfig env = FocusDelegator.Config
     , FocusDelegator.focusParentDoc = doc CodeUI.doneChangingImportedName
     }
     where
-        doc lens =
-            E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . lens]
+        doc lens = E.toDoc env [has . Texts.edit, has . lens]
 
 builtinFFIPath :: Widget.Id -> Widget.Id
 builtinFFIPath = flip Widget.joinId ["FFIPath"]

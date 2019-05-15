@@ -174,10 +174,10 @@ makePaneEdit theExportActions pane =
                     pane ^. Sugar.paneClose
                     <&> WidgetIds.fromEntityId
                     & E.keysEventMapMovesCursor (Config.delKeys env)
-                    (E.toDoc (env ^. Language.texts)
-                        [ Texts.edit
-                        , Texts.definitions . Texts.def
-                        , Texts.codeUI . Texts.delete
+                    (E.toDoc env
+                        [ has . Texts.edit
+                        , has . Texts.def
+                        , has . Texts.delete
                         ])
             paneConfig = env ^. has . Config.pane
             exportKeys = env ^. has . Config.export . Config.exportKeys
@@ -205,8 +205,8 @@ makeNewDefinition cp =
 
 newDefinitionDoc :: (Language.HasLanguage env, MonadReader env m) => m E.Doc
 newDefinitionDoc =
-    Lens.view Language.texts
-    <&> (`E.toDoc` [Texts.edit, Texts.definitions . Texts.newDefinition])
+    Lens.view id
+    <&> (`E.toDoc` [has . Texts.edit, has . Texts.newDefinition])
 
 makeNewDefinitionButton ::
     Monad m =>

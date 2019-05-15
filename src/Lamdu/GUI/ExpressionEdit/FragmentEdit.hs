@@ -55,8 +55,8 @@ responsiveLiftA3 f x y z =
 fragmentDoc ::
     Language.HasLanguage env => env -> Lens.ALens' (CodeUI Text) Text -> E.Doc
 fragmentDoc env lens =
-    E.toDoc (env ^. Language.texts)
-    [Texts.edit, Texts.codeUI . CodeUI.fragment, Texts.codeUI . lens]
+    E.toDoc env
+    [has . Texts.edit, has . CodeUI.fragment, has . lens]
 
 make ::
     (Monad i, Monad o) =>

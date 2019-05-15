@@ -74,8 +74,8 @@ extractEventMap env pl keys =
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
     where
         doc =
-            E.toDoc (env ^. Language.texts)
-            [Texts.edit, Texts.definitions . Texts.extractReplToDef]
+            E.toDoc env
+            [has . Texts.edit, has . Texts.extractReplToDef]
 
 replEventMap ::
     (Monad m, Has Config env, Language.HasLanguage env) =>

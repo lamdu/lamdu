@@ -12,7 +12,9 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.State (Gui)
@@ -35,14 +37,16 @@ import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-branchNameFDConfig :: Texts.Texts Text -> FocusDelegator.Config
+branchNameFDConfig ::
+    (Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env) =>
+    env -> FocusDelegator.Config
 branchNameFDConfig txt = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'F2]
     , FocusDelegator.focusChildDoc =
-        E.toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.rename]
+        E.toDoc txt [has . Texts.branches, has . Texts.rename]
     , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusParentDoc =
-        E.toDoc txt [Texts.versioning . Texts.branches, Texts.codeUI . Texts.doneRenaming]
+        E.toDoc txt [has . Texts.branches, has . Texts.doneRenaming]
     }
 
 undoEventMap ::
@@ -50,15 +54,15 @@ undoEventMap ::
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
-    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.versioning . Texts.undo])
+    (E.toDoc env [has . Texts.edit, has . Texts.undo])
     & foldMap
 
 redoEventMap ::
-    Language.HasLanguage env =>
+    (Has (MomentuTexts.Texts Text) env, Has (Texts.Versioning Text) env) =>
     env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
-    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.versioning . Texts.redo])
+    (E.toDoc env [has . Texts.edit, has . Texts.redo])
     & foldMap
 
 eventMap ::
@@ -91,14 +95,16 @@ makeBranchSelector ::
     ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
     , Applicative mw, Has Hover.Style env, Element.HasAnimIdPrefix env
     , Has VersionControl.Config env, Has VersionControl.Theme env
-    , Language.HasLanguage env
+    , Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env
+    , TextEdit.HasTexts env, Has (Choice.Texts Text) env
+    , Has (Glue.Texts Text) env
     ) =>
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     A.Actions n mw -> mr (TextWidget mw)
 makeBranchSelector rwtransaction rtransaction actions =
     do
-        txt <- Lens.view Language.texts
+        txt <- Lens.view id
         let makeBranchNameEdit branch =
                 do
                     nameProp <-
@@ -118,8 +124,8 @@ makeBranchSelector rwtransaction rtransaction actions =
                                 E.keysEventMapMovesCursor
                                 (config ^. VersionControl.delBranchKeys)
                                 (E.toDoc txt
-                                    [ Texts.versioning . Texts.branches
-                                    , Texts.codeUI . Texts.delete
+                                    [ has . Texts.branches
+                                    , has . Texts.delete
                                     ])
                                 (branchDelegatorId <$> A.deleteBranch actions branch)
                             | otherwise = mempty
@@ -140,7 +146,7 @@ makeBranchSelector rwtransaction rtransaction actions =
         defConfig <- Choice.defaultConfig
         Choice.make ?? A.currentBranch actions
             ?? branchNameEdits
-            ?? defConfig (txt ^. Texts.versioning . Texts.branches)
+            ?? defConfig (txt ^. has . Texts.branches)
             ?? WidgetIds.branchSelection
     where
         empty =

@@ -28,7 +28,6 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Texts as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -41,12 +40,12 @@ undeleteButton ::
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ?? ["Undelete"] <&> Widget.Id
-        toDoc <- Lens.view Language.texts <&> E.toDoc
+        toDoc <- Lens.view id <&> E.toDoc
         let doc =
                 toDoc
-                [ Texts.edit
-                , Texts.definitions . Texts.def
-                , Texts.definitions . Texts.undelete
+                [ has . Texts.edit
+                , has . Texts.def
+                , has . Texts.undelete
                 ]
         Styled.actionable actionId (Texts.definitions . Texts.undeleteButton)
             doc undelete

@@ -16,7 +16,6 @@ data CodeUI a = CodeUI
     , _pick :: a
     , _new :: a
     , _select :: a
-    , _delete :: a
     , _rename :: a
     , _doneRenaming :: a
     , _changeImportedName :: a

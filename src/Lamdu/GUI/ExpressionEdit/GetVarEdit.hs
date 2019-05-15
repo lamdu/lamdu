@@ -169,7 +169,7 @@ makeInlineEventMap ::
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
-      (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . CodeUI.inline])
+      (E.toDoc env [has . Texts.edit, has . CodeUI.inline])
 makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
     WidgetIds.fromEntityId x & pure
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
@@ -189,8 +189,8 @@ definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
         let updateDoc =
-                E.toDoc (env ^. Language.texts)
-                [Texts.edit, Texts.definitions . Definitions.updateDefType]
+                E.toDoc env
+                [has . Texts.edit, has . Definitions.updateDefType]
         oldTypeRow <- Styled.info (label (Texts.definitions . Texts.defUpdateWas))
         newTypeRow <-
             Styled.actionable myId (Texts.definitions . Texts.defUpdateHeader)

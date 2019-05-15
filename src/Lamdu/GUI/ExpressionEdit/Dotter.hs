@@ -103,7 +103,7 @@ fragmentEventMap ::
     env -> Sugar.Payload name i o expr -> Gui EventMap o
 fragmentEventMap env pl =
     E.charEventMap "Letter"
-    (E.toDoc (env ^. Language.texts) [Texts.edit, Texts.codeUI . CodeUI.getField])
+    (E.toDoc env [has . Texts.edit, has . CodeUI.getField])
     getField
     where
         detach (Sugar.FragmentAlready entityId) = pure entityId
@@ -128,8 +128,7 @@ delDotEventMap =
     \(env, delKeys) widgetId ->
     pure widgetId
     & E.keysEventMapMovesCursor delKeys
-    (E.toDoc (env ^. Language.texts)
-        [Texts.edit, Texts.codeUI . CodeUI.deleteDot])
+    (E.toDoc env [has . Texts.edit, has . CodeUI.deleteDot])
 
 addEventMap ::
     ( Applicative f, Widget.HasWidget w, MonadReader env m
@@ -145,6 +144,5 @@ addEventMap =
         gotoDotter =
             WidgetIds.dotterId myId & GuiState.updateCursor & pure & const
             & E.charGroup Nothing
-            (E.toDoc (env ^. Language.texts)
-                [Texts.edit, Texts.codeUI . CodeUI.dot]) "."
+            (E.toDoc env [has . Texts.edit, has . CodeUI.dot]) "."
     in  Widget.weakerEventsWithContext f

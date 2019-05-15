@@ -51,10 +51,10 @@ doc ::
     Language.HasLanguage env =>
     env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
 doc env lens =
-    E.toDoc (env ^. Language.texts)
-    [ Texts.edit
-    , Texts.codeUI . CodeUI.caseLabel
-    , Texts.codeUI . lens
+    E.toDoc env
+    [ has . Texts.edit
+    , has . CodeUI.caseLabel
+    , has . lens
     ]
 
 addAltId :: Widget.Id -> Widget.Id

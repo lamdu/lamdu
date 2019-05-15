@@ -48,19 +48,19 @@ makeLetEdit item =
         let eventMap =
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
-                    (E.toDoc (env ^. Language.texts)
-                        [ Texts.edit
-                        , Texts.codeUI . CodeUI.letClause
-                        , Texts.definitions . Definitions.extractToOuter
+                    (E.toDoc env
+                        [ has . Texts.edit
+                        , has . CodeUI.letClause
+                        , has . Definitions.extractToOuter
                         ])
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . ann . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys env)
-                (E.toDoc (env ^. Language.texts)
-                    [ Texts.edit
-                    , Texts.codeUI . CodeUI.letClause
-                    , Texts.codeUI . CodeUI.delete
+                (E.toDoc env
+                    [ has . Texts.edit
+                    , has . CodeUI.letClause
+                    , has . Texts.delete
                     ])
                 (bodyId <$ item ^. Sugar.lDelete)
                 <>
@@ -102,10 +102,10 @@ make (Ann pl (Sugar.BinderLet l)) =
                 . Sugar.extract
                 & foldMap
                 (E.keysEventMap (env ^. has . Config.moveLetInwardKeys)
-                (E.toDoc (env ^. Language.texts)
-                    [ Texts.edit
-                    , Texts.codeUI . CodeUI.letClause
-                    , Texts.navigationTexts . Texts.moveInwards
+                (E.toDoc env
+                    [ has . Texts.edit
+                    , has . CodeUI.letClause
+                    , has . Texts.moveInwards
                     ]) . void)
         mOuterScopeId <- ExprGuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)

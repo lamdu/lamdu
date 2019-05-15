@@ -2,6 +2,11 @@
     "imports": ["right-to-left.mixin.json"],
     "identifier": "hebrew",
     "texts": {
+        "commonTexts": {
+            "edit": "עריכה",
+            "insert": "הכנס",
+            "delete": "מחק"
+        },
         "code": {
             "let_": "יהי",
             "case_": "התאם",
@@ -63,7 +68,6 @@
             "pick": "בחר",
             "new": "חדש",
             "select": "בחר",
-            "delete": "מחק",
             "rename": "שנה שם",
             "doneRenaming": "סיים שינוי שם",
             "changeImportedName": "שנה שם מיובא",
@@ -179,9 +183,6 @@
             "deleteBackwards": "מחק אחורה"
         },
         "textEdit": {
-            "edit": "עריכה",
-            "delete": "מחק",
-            "insert": "הכנס",
             "forward": "קדימה",
             "backward": "אחורה",
             "word": "מילה",

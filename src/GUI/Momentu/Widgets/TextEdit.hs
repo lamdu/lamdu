@@ -11,7 +11,7 @@ module GUI.Momentu.Widgets.TextEdit
     , make
     , defaultStyle
     , getCursor, encodeCursor
-    , Texts(..), textEdit, textDelete, textInsert
+    , Texts(..)
     , HasTexts
     ) where
 
@@ -31,6 +31,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Font as Font
+import qualified GUI.Momentu.I18N as Texts
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
@@ -45,10 +46,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Prelude
 
 data Texts a = Texts
-    { _textEdit :: a
-    , _textDelete :: a
-    , _textInsert :: a
-    , _textForward :: a
+    { _textForward :: a
     , _textBackward :: a
     , _textWord :: a
     , _textTill :: a
@@ -69,7 +67,9 @@ data Texts a = Texts
 JsonTH.derivePrefixed "_text" ''Texts
 
 type HasTexts env =
-    (Has (Dir.Texts Text) env, Has Dir.Layout env, Has (Texts Text) env)
+    ( Has (Dir.Texts Text) env, Has Dir.Layout env
+    , Has (Texts Text) env, Has (Texts.Texts Text) env
+    )
 
 Lens.makeLenses ''Texts
 
@@ -234,7 +234,7 @@ mkCursorRect s cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    (Has (Texts Text) env, Has (Dir.Texts Text) env) =>
+    (Has (Texts Text) env, Has (Dir.Texts Text) env, Has (Texts.Texts Text) env) =>
     env -> Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
 eventMap txt cursor str myId _eventContext =
@@ -339,9 +339,9 @@ eventMap txt cursor str myId _eventContext =
 
         ]
     where
-        editDoc = toDoc . (has . textEdit :)
-        deleteDoc = editDoc . (has . textDelete :)
-        insertDoc = editDoc . (has . textInsert :)
+        editDoc = toDoc . (has . Texts.edit :)
+        deleteDoc = editDoc . (has . Texts.delete :)
+        insertDoc = editDoc . (has . Texts.insert :)
         moveWordDoc = moveDoc . (has . textWord :)
         toDoc = E.toDoc txt
         moveDoc =
