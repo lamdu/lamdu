@@ -11,7 +11,7 @@ module GUI.Momentu.Widgets.EventMapHelp
     , defaultStyle
     , defaultConfig
     , Texts(..), textHelp, textKeyBindings, textShow, textHide
-    , HasTexts(..)
+    , HasTexts
     ) where
 
 import qualified Control.Lens as Lens
@@ -85,9 +85,7 @@ data Texts a = Texts
     deriving Applicative via (Generically1 Texts)
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_text" ''Texts
--- HasTexts is not required for make or addHelpView
-class (E.HasTexts env, Glue.HasTexts env) => HasTexts env where
-    texts :: Lens' env (Texts Text)
+type HasTexts env = (E.HasTexts env, Glue.HasTexts env, Has (Texts Text) env)
 
 defaultStyle :: Font -> Style
 defaultStyle font =
@@ -215,12 +213,12 @@ makeFromFocus size focus =
 
 makeTooltip ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Glue.HasTexts env
-    , HasStyle env, Has Config env, HasTexts env
+    , HasStyle env, Has Config env, Has (Texts Text) env
     ) => m View
 makeTooltip =
     do
         helpKeys <- Lens.view (has . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
-        txt <- Lens.view (texts . textShowHelp)
+        txt <- Lens.view (has . textShowHelp)
         (Label.make txt <&> (^. Align.tValue))
             /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
 
@@ -307,7 +305,7 @@ addHelpView ::
 addHelpView = addHelpViewWith makeFromFocus
 
 toggleEventMap ::
-    (MonadReader env m, Monoid a, Monad f, Has Config env, HasTexts env) =>
+    (MonadReader env m, Monoid a, Monad f, Has Config env, Has (Texts Text) env) =>
     Property f IsHelpShown -> m (EventMap (f a))
 toggleEventMap showingHelp =
     Lens.view id
@@ -315,13 +313,13 @@ toggleEventMap showingHelp =
     \env ->
     let docStr =
             case showingHelp ^. Property.pVal of
-            HelpNotShown -> env ^. texts . textShow
-            HelpShown -> env ^. texts . textHide
+            HelpNotShown -> env ^. has . textShow
+            HelpShown -> env ^. has . textHide
     in  Property.pureModify showingHelp toggle
         & E.keysEventMap (env ^. has . configOverlayDocKeys)
             ( E.Doc
-                [ env ^. texts . textHelp
-                , env ^. texts . textKeyBindings
+                [ env ^. has . textHelp
+                , env ^. has . textKeyBindings
                 , docStr
                 ]
             )
