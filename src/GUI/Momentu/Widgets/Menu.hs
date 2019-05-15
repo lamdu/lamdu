@@ -203,8 +203,8 @@ blockEvents env =
     where
         doc keyLens =
             E.toDoc env
-            [ Dir.texts . Dir.navigation
-            , Dir.texts . Dir.move
+            [ has . Dir.navigation
+            , has . Dir.move
             , texts . keyLens
             ]
         blockDirection key keyName =

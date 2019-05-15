@@ -181,15 +181,15 @@ addNavEventmap env keys navDests eMap =
             , movementMore (texts.leftMost ) (keysLeftMost keys)  cursorLeftMost
             , movementMore (texts.rightMost) (keysRightMost keys) cursorRightMost
             ] ^. Lens.traverse . Lens._Just
-        movement o d = movementMore (Dir.texts . Dir.textLens o d)
+        movement o d = movementMore (has . Dir.textLens o d)
         movementMore lens events f =
             f navDests
             <&> (^. Widget.enterResultEvent)
             <&> EventMap.keyPresses
                 events
                 (EventMap.toDoc env
-                    [ Dir.texts . Dir.navigation
-                    , Dir.texts . Dir.move
+                    [ has . Dir.navigation
+                    , has . Dir.move
                     , lens
                     ])
 

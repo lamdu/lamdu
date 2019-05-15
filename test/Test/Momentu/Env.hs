@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
 module Test.Momentu.Env where
 
 import qualified Control.Lens as Lens
@@ -49,6 +49,6 @@ env =
 Lens.makeLenses ''Env
 
 instance Has Dir.Layout Env where has = eDirLayout
-instance Dir.HasTexts Env where texts = eDirTexts
+instance Has (Dir.Texts Text) Env where has = eDirTexts
 instance Glue.HasTexts Env where texts = eGlueTexts
 instance Grid.HasTexts Env where texts = eGridTexts

@@ -162,9 +162,9 @@ combineStates env orientation order (StateFocused f) (StateUnfocused u) =
             & EventMap.keyPresses
                 (dirKey dir orientation order stdDirKeys <&> ModKey mempty)
             (EventMap.Doc
-                [ env ^. Dir.texts . Dir.navigation
-                , env ^. Dir.texts . Dir.move
-                , env ^. Dir.texts . Dir.textLens orientation order])
+                [ env ^. has . Dir.navigation
+                , env ^. has . Dir.move
+                , env ^. has . Dir.textLens orientation order])
         dir = env ^. has
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
             | order == Backward =

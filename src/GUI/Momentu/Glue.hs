@@ -35,13 +35,16 @@ data Texts a = Texts
 
 Lens.makeLenses ''Texts
 
-class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+class
+    ( Has (Dir.Texts Text) env, Has Dir.Layout env
+    ) => HasTexts env where
+    texts :: Lens' env (Texts Text)
 JsonTH.derivePrefixed "_" ''Texts
 
 strollDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> EventMap.Doc
 strollDoc env dirLens =
     EventMap.Doc
-    [ env ^. Dir.texts . Dir.navigation
+    [ env ^. has . Dir.navigation
     , env ^# texts . stroll
     , env ^# texts . dirLens
     ]

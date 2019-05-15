@@ -69,7 +69,10 @@ data Texts a = Texts
 
 JsonTH.derivePrefixed "_text" ''Texts
 
-class Dir.HasTexts env => HasTexts env where texts :: Lens' env (Texts Text)
+class
+    ( Has (Dir.Texts Text) env, Has Dir.Layout env
+    ) => HasTexts env where
+    texts :: Lens' env (Texts Text)
 
 Lens.makeLenses ''Texts
 
@@ -240,31 +243,31 @@ eventMap ::
 eventMap txt cursor str myId _eventContext =
     mconcat $ concat [
         [ moveRelative (-1)
-            & E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc [Dir.texts.Dir.left])
+            & E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc [has . Dir.left])
         | cursor > 0 ],
 
         [ moveRelative 1
-            & E.keyPressOrRepeat (noMods MetaKey.Key'Right) (moveDoc [Dir.texts.Dir.right])
+            & E.keyPressOrRepeat (noMods MetaKey.Key'Right) (moveDoc [has . Dir.right])
         | cursor < textLength ],
 
         [ keys
-            (moveWordDoc [Dir.texts . Dir.left]) [ctrl MetaKey.Key'Left]
+            (moveWordDoc [has . Dir.left]) [ctrl MetaKey.Key'Left]
             backMoveWord
         | cursor > 0 ],
 
-        [ keys (moveWordDoc [Dir.texts . Dir.right])
+        [ keys (moveWordDoc [has . Dir.right])
             [ctrl MetaKey.Key'Right] moveWord
         | cursor < textLength ],
 
         [ moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
             & E.keyPressOrRepeat (noMods MetaKey.Key'Up)
-            (moveDoc [Dir.texts . Dir.up])
+            (moveDoc [has . Dir.up])
         | cursorY > 0 ],
 
         [ moveRelative
             (Text.length curLineAfter + 1 + min cursorX (Text.length nextLine))
             & E.keyPressOrRepeat (noMods MetaKey.Key'Down)
-            (moveDoc [Dir.texts . Dir.down])
+            (moveDoc [has . Dir.down])
         | cursorY < lineCount - 1 ],
 
         [ moveRelative (-cursorX)
@@ -346,8 +349,8 @@ eventMap txt cursor str myId _eventContext =
         toDoc = E.toDoc txt
         moveDoc =
             toDoc
-            . (Dir.texts . Dir.navigation :)
-            . (Dir.texts . Dir.move :)
+            . (has . Dir.navigation :)
+            . (has . Dir.move :)
         splitLines = Text.splitOn "\n"
         linesBefore = reverse (splitLines before)
         linesAfter = splitLines after
