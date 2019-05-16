@@ -156,10 +156,10 @@ isGoodResult :: Sugar.HoleResultScore -> Bool
 isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
-    Monad i =>
+    (Monad i, Has (Texts.Code Text) env) =>
     [Sugar.HoleOption (Name o1) i o1] ->
     SearchMenu.ResultsContext ->
-    ExprGuiM i o (Menu.OptionList (ResultGroup i o1))
+    ExprGuiM env i o (Menu.OptionList (ResultGroup i o1))
 makeAll options ctx =
     do
         config <- Lens.view (has . Config.completion)

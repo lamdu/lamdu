@@ -46,8 +46,7 @@ add ::
     ( MonadReader env m, Applicative o, Has TextView.Style env, Has Config env
     , Element.HasAnimIdPrefix env
     , Has (Texts.CodeUI Text) env
-    , Has (Grid.Texts Text) env
-    , Glue.HasTexts env
+    , Grid.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
     m (Gui Responsive o -> Gui Responsive o)

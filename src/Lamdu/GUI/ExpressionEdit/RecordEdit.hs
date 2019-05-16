@@ -23,9 +23,11 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -42,6 +44,10 @@ import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -77,9 +83,15 @@ addFieldWithSearchTermEventMap myId =
             | otherwise = Nothing
 
 makeUnit ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    , Grid.HasTexts env
+    ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
@@ -96,10 +108,19 @@ makeUnit pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , SearchMenu.HasTexts env
+    , Grid.HasTexts env
+    , Has (TextEdit.Texts Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Sugar.Composite (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -174,10 +195,15 @@ addPostTags items =
         lastIdx = length items - 1
 
 makeAddFieldRow ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.TagSelection (Name o) i o Sugar.EntityId ->
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive.TaggedItem o)
+    ExprGuiM env i o (Gui Responsive.TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
@@ -197,9 +223,14 @@ makeAddFieldRow addField pl =
             }
 
 makeFieldRow ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    ExprGuiM i o (Gui Responsive.TaggedItem o)
+    ExprGuiM env i o (Gui Responsive.TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -221,9 +252,9 @@ separationBar theme animId width =
     & Element.scale (Vector2 width 10)
 
 makeOpenRecord ::
-    (Monad i, Monad o) =>
+    (Monad i, Monad o, Glue.HasTexts env) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
+    Gui Responsive o -> ExprGuiM env i o (Gui Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view has

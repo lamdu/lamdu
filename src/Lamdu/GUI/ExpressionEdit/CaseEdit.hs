@@ -23,8 +23,11 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Calc.Type (Tag)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -42,6 +45,9 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -63,10 +69,17 @@ addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env, SearchMenu.HasTexts env, Has (TextEdit.Texts Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Sugar.Case (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         caseLabel <-
@@ -118,10 +131,16 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
         altsId = Widget.joinId myId ["alts"]
 
 makeAltRow ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Maybe Tag ->
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    ExprGuiM i o (Gui Responsive.TaggedItem o)
+    ExprGuiM env i o (Gui Responsive.TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         env <- Lens.view id
@@ -146,12 +165,18 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         altId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makeAltsWidget ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Maybe Tag ->
     [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
     Sugar.TagSelection (Name o) i o Sugar.EntityId ->
     Widget.Id ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeAltsWidget mActiveTag alts addAlt altsId =
     do
         existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
@@ -168,9 +193,15 @@ makeAltsWidget mActiveTag alts addAlt altsId =
             altWidgtes -> Responsive.taggedList ?? altWidgtes
 
 makeAddAltRow ::
-    (Monad i, Monad o) =>
+    ( Monad i, Applicative o
+    , Has (Texts.Name Text) env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    ) =>
     Sugar.TagSelection (Name o) i o Sugar.EntityId -> Widget.Id ->
-    ExprGuiM i o (Gui Responsive.TaggedItem o)
+    ExprGuiM env i o (Gui Responsive.TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
@@ -195,9 +226,12 @@ separationBar theme animId width =
     & Element.scale (Vector2 width 10)
 
 makeOpenCase ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.CodeUI Text) env
+    , Grid.HasTexts env
+    ) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    AnimId -> Gui Responsive o -> ExprGuiM i o (Gui Responsive o)
+    AnimId -> Gui Responsive o -> ExprGuiM env i o (Gui Responsive o)
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view has

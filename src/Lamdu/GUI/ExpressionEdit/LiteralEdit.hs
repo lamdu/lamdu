@@ -28,6 +28,7 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -43,11 +44,11 @@ import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as CodeTexts
 import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as CodeUITexts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Navigation as NavTexts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
@@ -57,7 +58,7 @@ import           Lamdu.Prelude
 
 mkEditEventMap ::
     ( MonadReader env m
-    , Has (MomentuTexts.Texts Text) env, Has (CodeUITexts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
     m (Text -> o Sugar.EntityId -> Gui EventMap o)
@@ -67,7 +68,7 @@ mkEditEventMap =
     setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
-    (E.toDoc env [has . MomentuTexts.edit, has . CodeUITexts.value])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.value])
 
 withStyle ::
     (MonadReader env m, HasStyle env) =>
@@ -77,7 +78,7 @@ withStyle whichStyle =
 
 genericEdit ::
     ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
-    , Has (MomentuTexts.Texts Text) env, Has (CodeUITexts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
@@ -98,7 +99,7 @@ genericEdit whichStyle prop pl =
 
 fdConfig ::
     ( MonadReader env m, Has Config env, Has Menu.Config env
-    , Has (MomentuTexts.Texts Text) env, Has (CodeUITexts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
     m FocusDelegator.Config
 fdConfig =
@@ -112,8 +113,8 @@ fdConfig =
     , FocusDelegator.focusChildDoc =
         E.toDoc env
         [ has . MomentuTexts.edit
-        , has . CodeUITexts.literal
-        , has . CodeUITexts.startEditing
+        , has . Texts.literal
+        , has . Texts.startEditing
         ]
     , FocusDelegator.focusParentKeys =
         litConf ^. Config.literalStopEditingKeys
@@ -126,15 +127,15 @@ fdConfig =
     , FocusDelegator.focusParentDoc =
         E.toDoc env
         [ has . MomentuTexts.edit
-        , has . CodeUITexts.literal
-        , has . CodeUITexts.stopEditing
+        , has . Texts.literal
+        , has . Texts.stopEditing
         ]
     }
 
 withFd ::
     ( MonadReader env m, Has Config env, GuiState.HasCursor env
     , Has Menu.Config env, Applicative f
-    , Has (MomentuTexts.Texts Text) env, Has (CodeUITexts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
     m (Widget.Id -> TextWidget f -> TextWidget f)
 withFd =
@@ -155,11 +156,11 @@ textEdit prop pl =
     do
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         (withFd ?? myId) <*>
-            label CodeTexts.textOpener
+            label Texts.textOpener
             /|/ pure text
             /|/ ((Align.tValue %~)
                     <$> (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
-                    <*> label CodeTexts.textCloser
+                    <*> label Texts.textCloser
                 )
     & withStyle Style.text
     where
@@ -175,8 +176,8 @@ parseNum newText
 numEdit ::
     ( MonadReader env m, Monad o
     , Has Config env, HasStyle env, Has Menu.Config env
-    , Has (CodeUITexts.CodeUI Text) env, Has (MomentuTexts.Texts Text) env
-    , Has (Dir.Texts Text) env, Has (NavTexts.Navigation Text) env
+    , Has (Texts.CodeUI Text) env, Has (MomentuTexts.Texts Text) env
+    , Has (Dir.Texts Text) env, Has (Texts.Navigation Text) env
     , Has (TextEdit.Texts Text) env, Has Dir.Layout env
     , GuiState.HasState env
     ) =>
@@ -212,8 +213,8 @@ numEdit prop pl =
                     & E.charGroup Nothing
                       (toDoc
                           [ has . MomentuTexts.edit
-                          , has . CodeUITexts.literal
-                          , has . CodeUITexts.negate
+                          , has . Texts.literal
+                          , has . Texts.negate
                           ]) "-"
                 | otherwise = mempty
         strollEvent <-
@@ -223,7 +224,7 @@ numEdit prop pl =
             E.keysEventMap keys
             (toDoc
                 [ has . MomentuTexts.navigation
-                , has . NavTexts.nextEntry
+                , has . Texts.nextEntry
                 ])
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
@@ -236,7 +237,7 @@ numEdit prop pl =
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                     <>
                     E.charEventMap "Letter"
-                    (toDoc [has . MomentuTexts.edit, has . CodeUITexts.replace])
+                    (toDoc [has . MomentuTexts.edit, has . Texts.replace])
                     holeWithChar
                     where
                         holeWithChar c =
@@ -273,10 +274,18 @@ numEdit prop pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Navigation Text) env
+    , TextEdit.HasTexts env
+    , Grid.HasTexts env
+    ) =>
     Sugar.Literal (Property o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make lit pl =
     stdWrap pl
     <*>
@@ -287,18 +296,18 @@ make lit pl =
 
 makeLiteralEventMap ::
     ( MonadReader env m, Monad o
-    , Has (MomentuTexts.Texts Text) env, Has (CodeUITexts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> Gui EventMap o)
 makeLiteralEventMap =
     Lens.view id <&> E.toDoc
     <&> \toDoc makeLiteral ->
     E.charGroup Nothing
-    (toDoc [has . MomentuTexts.edit, has . CodeUITexts.literalText]) "'\""
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "'\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> r))
     <>
     E.charGroup (Just "Digit")
-    (toDoc [has . MomentuTexts.edit, has . CodeUITexts.literalNumber])
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalNumber])
     Chars.digit
     (fmap r . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
     where

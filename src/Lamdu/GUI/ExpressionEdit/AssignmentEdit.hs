@@ -32,7 +32,11 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
@@ -54,6 +58,8 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Settings as Settings
@@ -110,7 +116,7 @@ mkChosenScopeCursor ::
     Monad i =>
     Tree (Sugar.Function (Name o) i o)
         (Ann (Sugar.Payload name i o ExprGui.Payload)) ->
-    ExprGuiM i o (CurAndPrev (Maybe ScopeCursor))
+    ExprGuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
         mOuterScopeId <- ExprGuiM.readMScopeId
@@ -193,9 +199,13 @@ blockEventMap env =
         dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
 
 makeScopeNavEdit ::
-    (Monad i, Applicative o) =>
+    ( Monad i, Applicative o
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
+    ) =>
     Sugar.Function name i o expr -> Widget.Id -> ScopeCursor ->
-    ExprGuiM i o
+    ExprGuiM env i o
     ( Gui EventMap o
     , Maybe (Gui Widget o)
     )
@@ -263,11 +273,17 @@ namedParamEditInfo widgetId actions nameEdit =
     }
 
 makeParamsEdit ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (TextEdit.Texts Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Code Text) env
+    , Glue.HasTexts env, SearchMenu.HasTexts env
+    ) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name o) i o ->
-    ExprGuiM i o [Gui Responsive o]
+    ExprGuiM env i o [Gui Responsive o]
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam p ->
@@ -299,13 +315,20 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 mkParam (prevId, nextId, param) = ParamEdit.make annotationOpts prevId nextId param
 
 makeMParamsEdit ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    ) =>
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
     Sugar.AddFirstParam (Name o) i o ->
     Maybe (Sugar.BinderParams (Name o) i o) ->
-    ExprGuiM i o (Maybe (Gui Responsive o))
+    ExprGuiM env i o (Maybe (Gui Responsive o))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
     do
         isPrepend <- GuiState.isSubCursor ?? prependId
@@ -350,13 +373,22 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
             & Annotation.WithNeighbouringEvalAnnotations
 
 makeFunctionParts ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Sugar.FuncApplyLimit ->
     Tree (Sugar.Function (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Widget.Id ->
-    ExprGuiM i o (Parts o)
+    ExprGuiM env i o (Parts o)
 makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
@@ -397,12 +429,19 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
         bodyId = WidgetIds.fromExprPayload funcPl
 
 makePlainParts ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    ) =>
     Tree (Sugar.AssignPlain (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Widget.Id ->
-    ExprGuiM i o (Parts o)
+    ExprGuiM env i o (Parts o)
 makePlainParts assignPlain pl delVarBackwardsId =
     do
         mParamsEdit <-
@@ -416,25 +455,44 @@ makePlainParts assignPlain pl delVarBackwardsId =
         myId = WidgetIds.fromExprPayload pl
 
 makeParts ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Sugar.FuncApplyLimit ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Assignment (Name o) i o) ->
     Widget.Id ->
-    ExprGuiM i o (Parts o)
+    ExprGuiM env i o (Parts o)
 makeParts funcApplyLimit (Ann pl assignmentBody) =
     case assignmentBody of
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
     Sugar.BodyPlain x -> makePlainParts x pl
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Choice.Texts Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     Gui EventMap o ->
     Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Sugar.Assignment (Name o) i o) ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make pMode defEventMap tag color assignment =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-

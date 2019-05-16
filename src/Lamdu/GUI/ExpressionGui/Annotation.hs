@@ -139,9 +139,9 @@ data EvalResDisplay name = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    (Monad i, Monad o) =>
+    (Monad i, Monad o, Has (Texts.Name Text) env) =>
     EvalResDisplay (Name f) ->
-    ExprGuiM i o (WithTextPos View)
+    ExprGuiM env i o (WithTextPos View)
 makeEvaluationResultView res =
     do
         th <- Lens.view has
@@ -157,9 +157,9 @@ data NeighborVals a = NeighborVals
     } deriving (Functor, Foldable, Traversable)
 
 makeEvalView ::
-    (Monad i, Monad o) =>
+    (Monad i, Monad o, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
-    EvalResDisplay (Name g) -> ExprGuiM i o (WithTextPos View)
+    EvalResDisplay (Name g) -> ExprGuiM env i o (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view (has . Theme.eval)
@@ -234,10 +234,10 @@ addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
 addEvaluationResult ::
-    (Monad i, Monad o, Functor f) =>
+    (Monad i, Monad o, Functor f, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
     EvalResDisplay (Name g) -> WideAnnotationBehavior ->
-    ExprGuiM i o
+    ExprGuiM env i o
     ((Widget.R -> Widget.R) ->
      Gui Widget f ->
      Gui Widget f)
@@ -253,9 +253,11 @@ addEvaluationResult mNeigh resDisp wideBehavior =
         & addAnnotationH (makeEvalView mNeigh resDisp)
 
 maybeAddAnnotationPl ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.Payload (Name o) i o1 ExprGui.Payload ->
-    ExprGuiM i o (Gui Widget o -> Gui Widget o)
+    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
@@ -277,7 +279,7 @@ maybeAddAnnotationPl pl =
 evaluationResult ::
     Monad i =>
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM i o (Maybe (Sugar.ResVal name))
+    ExprGuiM env i o (Maybe (Sugar.ResVal name))
 evaluationResult pl =
     do
         scopeId <- ExprGuiM.readMScopeId
@@ -292,7 +294,7 @@ data EvalAnnotationOptions
 getAnnotationMode ::
     Monad i =>
     EvalAnnotationOptions -> Sugar.EvaluationScopes name i ->
-    ExprGuiM i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
+    ExprGuiM env i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
 getAnnotationMode opt annotation =
     do
         neighbourVals <-
@@ -310,10 +312,12 @@ getAnnotationMode opt annotation =
             <&> Lens.mapped %~ (, neighbourVals)
 
 maybeAddAnnotationWith ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Glue.HasTexts env
+    , Has (Texts.Code Text) env, Has (Texts.Name Text) env
+    ) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.Annotation (Name o) i ->
-    ExprGuiM i o (Gui Widget o -> Gui Widget o)
+    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
     case annotation of
     Sugar.AnnotationNone -> pure id
@@ -321,10 +325,13 @@ maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
     Sugar.AnnotationVal ann -> maybeAddValAnnotationWith opt wideAnnotationBehavior ann
 
 maybeAddValAnnotationWith ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Glue.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.ValAnnotation (Name o) i ->
-    ExprGuiM i o (Gui Widget o -> Gui Widget o)
+    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
     getAnnotationMode opt (ann ^. Sugar.annotationVal)
     >>=
@@ -341,9 +348,11 @@ maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
                 <&> \add -> add $ \width -> process width typeView ^. Element.width
 
 maybeAddAnnotation ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     WideAnnotationBehavior -> Sugar.Annotation (Name o) i ->
-    ExprGuiM i o (Gui Widget o -> Gui Widget o)
+    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::

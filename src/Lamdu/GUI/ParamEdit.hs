@@ -9,6 +9,7 @@ import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -16,6 +17,8 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -24,6 +27,9 @@ import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -93,11 +99,17 @@ mkParamPickResult tagInstance _ =
 
 -- exported for use in definition sugaring.
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (TextEdit.Texts Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Code Text) env
+    , Glue.HasTexts env, SearchMenu.HasTexts env
+    ) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Name o) i (Info i o) ->
-    ExprGuiM i o [Gui Responsive o]
+    ExprGuiM env i o [Gui Responsive o]
 make annotationOpts prevId nextId param =
     do
         conf <- Lens.view has

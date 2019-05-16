@@ -69,7 +69,7 @@ makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
@@ -85,12 +85,12 @@ makeWidget resultId holeResultConverted =
             & ExprGuiM.withLocalIsHoleResult
 
 make ::
-    (Monad i, Monad o) =>
+    (Monad i, Monad o, Has (Texts.CodeUI Text) env) =>
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
-    ExprGuiM i o (Menu.RenderedOption o)
+    ExprGuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . Texts.pick) <*>
     makeWidget resultId holeResultConverted

@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -46,6 +47,7 @@ import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -63,10 +65,12 @@ fdConfig config = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.CodeUI Text) env
+    ) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result i o ->
-    ExprGuiM i o (Menu.RenderedOption o)
+    ExprGuiM env i o (Menu.RenderedOption o)
 makeRenderedResult pl ctx result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -94,9 +98,11 @@ postProcessSugar minOpPrec binder =
             <$ sugarPl
 
 makeResultOption ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.CodeUI Text) env
+    ) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
-    ResultGroup i o -> Menu.Option (ExprGuiM i o) o
+    ResultGroup i o -> Menu.Option (ExprGuiM env i o) o
 makeResultOption pl ctx results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
@@ -141,11 +147,18 @@ filterSearchTermEvents allowedTerms searchTerm
         E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (TextEdit.Texts Text) env
+    , SearchMenu.HasTexts env
+    ) =>
     i [Sugar.HoleOption (Name o) i o] ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
-    ExprGuiM i o (Menu.Placement -> Gui Responsive o)
+    ExprGuiM env i o (Menu.Placement -> Gui Responsive o)
 make mkOptions pl allowedTerms =
     do
         config <- Lens.view has

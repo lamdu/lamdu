@@ -16,8 +16,8 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -232,11 +232,18 @@ resultWidget _ _ tag (Sugar.EvalError err) =
     <&> Align.tValue . Lens.mapped %~ IOTrans.liftTrans
 
 make ::
-    Monad m =>
+    ( Monad m
+    , Glue.HasTexts env
+    , Has (Texts.Collaboration Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     ExportRepl m ->
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM (T m) (T m) (Gui Responsive (IOTrans m))
+    ExprGuiM env (T m) (T m) (Gui Responsive (IOTrans m))
 make exportRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         env <- Lens.view id

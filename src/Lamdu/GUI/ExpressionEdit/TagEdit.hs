@@ -172,14 +172,16 @@ fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
-    ( Monad i, Applicative o, MonadReader env m
-    , GuiState.HasCursor env, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Name Text) env
+    ( Monad i, Applicative o, MonadReader menv m
+    , GuiState.HasCursor menv, Has Theme menv, Has TextView.Style menv
+    , Element.HasAnimIdPrefix menv, Glue.HasTexts menv
+    , Has (Texts.Name Text) menv
+    , Has (Texts.CodeUI Text) env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
-    ExprGuiM i o (Menu.OptionList (Menu.Option m o))
+    ExprGuiM env i o (Menu.OptionList (Menu.Option m o))
 makeOptions tagSelection mkPickResult ctx
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
@@ -309,11 +311,17 @@ makeHoleSearchTerm tagSelection mkPickResult holeId =
             else pure term
 
 makeTagHoleEdit ::
-    (Monad i, Applicative o) =>
+    ( Monad i, Applicative o
+    , Has (Texts.Name Text) env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeTagHoleEdit tagSelection mkPickResult holeId =
     SearchMenu.make
     (const (makeHoleSearchTerm tagSelection mkPickResult holeId))
@@ -335,9 +343,14 @@ makeTagView tag =
             & Widget.toAnimId
 
 makeTagEdit ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeTagEdit = makeTagEditWith id (const Nothing) <&> fmap snd
 
 data TagEditType
@@ -347,15 +360,18 @@ data TagEditType
     deriving (Eq)
 
 makeTagEditWith ::
-    ( Monad i, Applicative o, MonadReader env n
-    , GuiState.HasCursor env, Has TextView.Style env, Has (Texts.Name Text) env
-    , Element.HasAnimIdPrefix env, Has Theme env, Glue.HasTexts env
+    ( Monad i, Applicative o, MonadReader nenv n
+    , GuiState.HasCursor nenv, Has TextView.Style nenv, Has (Texts.Name Text) nenv
+    , Element.HasAnimIdPrefix nenv, Has Theme nenv, Glue.HasTexts nenv
+    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
     ) =>
     (n (TextWidget o) ->
-     ExprGuiM i o (TextWidget o)) ->
+     ExprGuiM env i o (TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TagEditType, TextWidget o)
+    ExprGuiM env i o (TagEditType, TextWidget o)
 makeTagEditWith onView onPickNext tag =
     do
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
@@ -414,16 +430,26 @@ makeTagEditWith onView onPickNext tag =
             <&> WidgetIds.tagHoleId
 
 makeRecordTag ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeRecordTag =
     makeTagEdit <&> Styled.withColor TextColors.recordTagColor
 
 makeVariantTag ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeVariantTag tag =
     makeTagEdit tag
     & Styled.withColor TextColors.caseTagColor
@@ -432,10 +458,14 @@ addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
 
 makeLHSTag ::
-    (Monad i, Applicative o) =>
+    ( Monad i, Applicative o
+    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeLHSTag onPickNext color tag =
     do
         style <- Lens.view has
@@ -462,9 +492,13 @@ makeLHSTag onPickNext color tag =
             Styled.withColor color
 
 makeParamTag ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
@@ -484,9 +518,15 @@ makeArgTag name tagInstance =
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
 makeBinderTagEdit ::
-    (Monad i, Applicative o) =>
+    ( Monad i, Applicative o
+    , Glue.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    ) =>
     Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeBinderTagEdit color tag =
     makeLHSTag (const Nothing) color tag
     & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

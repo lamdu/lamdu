@@ -18,6 +18,9 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -29,6 +32,10 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (text, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -41,11 +48,20 @@ injectIndicator ::
 injectIndicator l = grammar (text ["injectIndicator"] l)
 
 makeInject ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     ExprGui.SugarExpr i o ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
@@ -78,12 +94,21 @@ emptyRec (Ann pl (Const (Sugar.NullaryVal closedActions addItem))) =
     & Ann pl
 
 makeNullaryInject ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Const (Sugar.NullaryVal (Name o) i o)) ->
     Sugar.Tag (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
     >>= \case
@@ -102,11 +127,20 @@ makeNullaryInject nullary tag pl =
             & WidgetIds.fromEntityId
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Tree (Sugar.Inject (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make (Sugar.Inject tag mVal) =
     case mVal of
     Sugar.InjectNullary nullary -> makeNullaryInject nullary tag

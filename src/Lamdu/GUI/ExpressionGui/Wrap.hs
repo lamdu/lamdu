@@ -14,6 +14,7 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -23,6 +24,10 @@ import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -50,9 +55,15 @@ parentExprFDConfig =
     }
 
 stdWrap ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Grid.HasTexts env
+    ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o
+    ExprGuiM env i o
     (Gui Responsive o -> Gui Responsive o)
 stdWrap pl =
     (takeFocusIfNeeded pl <&> (Widget.widget %~))
@@ -75,9 +86,16 @@ parentDelegator myId =
     ?? FocusDelegator.FocusEntryChild ?? myId
 
 stdWrapParentExpr ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o -> Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o -> Gui Responsive o)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl
@@ -86,7 +104,7 @@ stdWrapParentExpr pl =
 takeFocusIfNeeded ::
     Monad i =>
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Widget o -> Gui Widget o)
+    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor
     <&>

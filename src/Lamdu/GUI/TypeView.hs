@@ -280,8 +280,10 @@ makeInternal parentPrecedence (Sugar.Type entityId tbody) =
 
 make ::
     ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
-    , Glue.HasTexts env, Has (Texts.Name Text) env
+    , Element.HasAnimIdPrefix env
+    , Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    , Glue.HasTexts env
     ) =>
     Sugar.Type (Name f) -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor

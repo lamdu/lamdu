@@ -12,7 +12,6 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -45,7 +44,6 @@ make ::
     ( MonadReader env m, MonadTransaction n m
     , TextEdit.HasStyle env, Has Theme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
-    , Glue.HasTexts env
     , TextEdit.HasTexts env
     , Grid.HasTexts env
     , Has VCConfig.Config env, Has VCConfig.Theme env, Spacer.HasStdSpacing env

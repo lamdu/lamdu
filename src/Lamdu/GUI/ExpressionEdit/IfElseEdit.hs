@@ -15,6 +15,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -33,6 +34,10 @@ import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -47,11 +52,13 @@ data Row a = Row
 Lens.makeLenses ''Row
 
 makeIfThen ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Code Text) env
+    ) =>
     WithTextPos View -> AnimId ->
     Tree (Sugar.IfElse (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM i o (Row (Gui Responsive o))
+    ExprGuiM env i o (Row (Gui Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
@@ -76,11 +83,15 @@ makeIfThen prefixLabel animId ifElse =
             & pure
 
 makeElseBody ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Tree (Sugar.Else (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM i o [Row (Gui Responsive o)]
+    ExprGuiM env i o [Row (Gui Responsive o)]
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
@@ -114,9 +125,13 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
 
 -- TODO inline and use "case"
 makeElse ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
-    ExprGuiM i o [Row (Gui Responsive o)]
+    ExprGuiM env i o [Row (Gui Responsive o)]
 makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
@@ -167,11 +182,18 @@ renderRows mParensId =
             & Responsive.rWideDisambig %~ addParens
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
     Tree (Sugar.IfElse (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows (ExprGui.mParensId pl)

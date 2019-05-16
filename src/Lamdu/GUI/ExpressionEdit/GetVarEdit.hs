@@ -137,11 +137,15 @@ navDoc env lens =
     E.toDoc env [has . MomentuTexts.navigation, has . lens]
 
 makeNameRef ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.Name Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     Role ->
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
     Sugar.NameRef (Name x) o ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeNameRef role color myId nameRef =
     do
         savePrecursor <- ExprGuiM.mkPrejumpPosSaver
@@ -228,8 +232,9 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
     , Has Theme env, Element.HasAnimIdPrefix env, Has Config env
-    , GuiState.HasCursor env, Has Hover.Style env, Has (Texts.Definitions Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env, Glue.HasTexts env
+    , GuiState.HasCursor env, Has Hover.Style env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
@@ -282,9 +287,16 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         hiddenId = myId `Widget.joinId` ["hidden"]
 
 makeGetBinder ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    , Grid.HasTexts env
+    ) =>
     Role -> Sugar.BinderVarRef (Name x) o -> Widget.Id ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeGetBinder role binderVar myId =
     do
         env <- Lens.view id
@@ -301,9 +313,13 @@ makeGetBinder role binderVar myId =
             & processDef
 
 makeGetParam ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.Name Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) =>
     Sugar.ParamRef (Name x) o -> Widget.Id ->
-    ExprGuiM i o (TextWidget o)
+    ExprGuiM env i o (TextWidget o)
 makeGetParam param myId =
     do
         underline <- Lens.view has <&> LightLambda.underline
@@ -318,10 +334,14 @@ makeGetParam param myId =
         name = param ^. Sugar.pNameRef . Sugar.nrName
 
 makeNoActions ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env, Grid.HasTexts env
+    ) =>
     Sugar.GetVar (Name o) o ->
     Widget.Id ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -332,9 +352,13 @@ makeNoActions getVar myId =
         makeGetParam param myId <&> Responsive.fromWithTextPos
 
 make ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o
+    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env, Grid.HasTexts env
+    ) =>
     Sugar.GetVar (Name o) o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

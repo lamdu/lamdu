@@ -11,16 +11,14 @@ module Lamdu.I18N.Language
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Name as Texts
@@ -45,21 +43,18 @@ instance HasConfigFolder Language where
 type HasLanguage env =
     ( Has LangId env
     , Has Dir.Layout env
-    , Has (Texts.Navigation   Text) env
-    , Has (Texts.Versioning   Text) env
-    , Has (Texts.CodeUI       Text) env
-    , Has (Texts.Code         Text) env
-    , Has (Texts.Name         Text) env
-    , Has (Texts.Definitions  Text) env
-    , Has (Glue.Texts         Text) env
-    , Has (Dir.Texts          Text) env
-    , Has (Choice.Texts       Text) env
-    , Has (Texts.Name         Text) env
-    , Has (Menu.Texts         Text) env
-    , Has (TextEdit.Texts     Text) env
-    , Has (Grid.Texts         Text) env
-    , Has (SearchMenu.Texts   Text) env
-    , Has (MomentuTexts.Texts Text) env
+    , Grid.HasTexts env
+    , SearchMenu.HasTexts env
+    , TextEdit.HasTexts env
+    , Has (Texts.Navigation    Text) env
+    , Has (Texts.Versioning    Text) env
+    , Has (Texts.CodeUI        Text) env
+    , Has (Texts.Code          Text) env
+    , Has (Texts.Collaboration Text) env
+    , Has (Texts.Name          Text) env
+    , Has (Texts.Definitions   Text) env
+    , Has (Choice.Texts        Text) env
+    , Has (Texts.Name          Text) env
     , Has Language env
     )
 

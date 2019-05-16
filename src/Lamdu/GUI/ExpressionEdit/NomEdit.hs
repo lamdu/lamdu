@@ -15,6 +15,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -27,6 +28,10 @@ import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -39,13 +44,19 @@ mReplaceParent ::
 mReplaceParent = ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
 
 makeToNom ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Grid.HasTexts env
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Definitions Text) env
+    ) =>
     Sugar.Nominal (Name o)
         (Tree
             (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
             (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> ExprGuiM.makeBinder
     & mkNomGui id "ToNominal" Texts.toNom mDel pl
@@ -56,10 +67,16 @@ makeToNom nom pl =
 
 
 makeFromNom ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Grid.HasTexts env
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Definitions Text) env
+    ) =>
     Sugar.Nominal (Name o) (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM i o (Gui Responsive o)
+    ExprGuiM env i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
     & mkNomGui reverse "FromNominal" Texts.fromNom mDel pl
@@ -67,12 +84,18 @@ makeFromNom nom pl =
         mDel = nom ^? Sugar.nVal . mReplaceParent
 
 mkNomGui ::
-    (Monad i, Monad o) =>
+    ( Monad i, Monad o, Grid.HasTexts env
+    , Has (Texts.Navigation Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Definitions Text) env
+    ) =>
     ([Gui Responsive o] -> [Gui Responsive o]) ->
     Text -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Nominal (Name o) (ExprGuiM i o (Gui Responsive o)) ->
-    ExprGuiM i o (Gui Responsive o)
+    Sugar.Nominal (Name o) (ExprGuiM env i o (Gui Responsive o)) ->
+    ExprGuiM env i o (Gui Responsive o)
 mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
