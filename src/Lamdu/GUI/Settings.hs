@@ -23,12 +23,12 @@ import qualified Lamdu.Annotations as Ann
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection, _Selection)
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
-import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
@@ -92,7 +92,7 @@ makeStatusWidgets ::
     , Has (Texts.StatusBar Text) env
     , Glue.HasTexts env
     ) =>
-    [Selection Theme] -> [Selection Language] ->
+    [Selection Folder.Theme] -> [Selection Folder.Language] ->
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets

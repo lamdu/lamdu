@@ -2,6 +2,7 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses, UndecidableInstances, ConstraintKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.I18N.Language
     ( Language(..)
     , HasLanguage
@@ -16,6 +17,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config.Folder (HasConfigFolder(..))
+import qualified Lamdu.Config.Folder as Folder
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
@@ -38,6 +40,7 @@ Lens.makeLenses ''Language
 JsonTH.derivePrefixed "_l" ''Language
 
 instance HasConfigFolder Language where
+    type Folder Language = Folder.Language
     configFolder _ = "languages"
 
 type HasLanguage env =

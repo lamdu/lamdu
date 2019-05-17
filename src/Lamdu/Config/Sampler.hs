@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, TypeApplications #-}
 module Lamdu.Config.Sampler
     ( Sampler, new, setSelection
     , FiledConfig(..), primaryPath, dependencyPaths, fileData
@@ -16,10 +16,12 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
+import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..), _Selection)
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
@@ -65,7 +67,7 @@ sLanguageData = sData . sLanguage . fileData
 data Sampler = Sampler
     { _sThreadId :: ThreadId
     , getSample :: IO Sample
-    , setSelection :: Selection Theme -> Selection Language -> IO ()
+    , setSelection :: Selection Folder.Theme -> Selection Folder.Language -> IO ()
     }
 
 filePaths :: Lens.Traversal' (FiledConfig a) FilePath
@@ -95,16 +97,19 @@ loadConfigFile path =
     <&> uncurry (flip (FiledConfig path))
 
 loadFromFolder ::
+    forall a.
     (HasConfigFolder a, FromJSON a) =>
-    FilePath -> Selection a -> IO (FiledConfig a)
+    FilePath -> Selection (Folder a) -> IO (FiledConfig a)
 loadFromFolder configPath selection =
     loadConfigFile path
     where
         path =
-            takeDirectory configPath </> configFolder selection </>
+            takeDirectory configPath
+            </> configFolder (Proxy @a) </>
             Text.unpack (selection ^. _Selection) ++ ".json"
 
-load :: Selection Theme -> Selection Language -> FilePath -> IO Sample
+load ::
+    Selection Folder.Theme -> Selection Folder.Language -> FilePath -> IO Sample
 load themeName langName configPath =
     do
         config <- loadConfigFile configPath
@@ -123,7 +128,10 @@ maybeReload (Sample oldVer old) newConfigPath =
     where
         f l = old ^. l . primaryPath & takeFileName & dropExtension & Text.pack & Selection
 
-new :: (Sample -> IO ()) -> Selection Theme -> Selection Language -> IO Sampler
+new ::
+    (Sample -> IO ()) ->
+    Selection Folder.Theme ->
+    Selection Folder.Language -> IO Sampler
 new sampleUpdated initialTheme initialLang =
     do
         ref <-

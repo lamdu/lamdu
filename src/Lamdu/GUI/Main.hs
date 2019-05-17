@@ -29,6 +29,7 @@ import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -41,7 +42,6 @@ import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)
-import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
@@ -82,7 +82,8 @@ type Ctx env =
 
 layout ::
     Ctx env =>
-    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
+    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
 layout themeNames langNames settingsProp =
     do
@@ -119,7 +120,8 @@ layout themeNames langNames settingsProp =
 
 make ::
     Ctx env =>
-    [Selection Theme] -> [Selection Language] -> Property IO Settings -> env ->
+    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
 make themeNames langNames settingsProp env =
     layout themeNames langNames settingsProp

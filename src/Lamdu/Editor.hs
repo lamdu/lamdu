@@ -1,5 +1,6 @@
 -- | The GUI editor
 {-# LANGUAGE NamedFieldPuns, RankNTypes, DisambiguateRecordFields #-}
+{-# LANGUAGE TypeApplications #-}
 module Lamdu.Editor
     ( run
     ) where
@@ -11,6 +12,7 @@ import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
+import           Data.Proxy (Proxy(..))
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
@@ -24,7 +26,7 @@ import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
-import qualified Lamdu.Config.Folder as ConfigFolder
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Sampler (Sampler, sConfigData, sThemeData, sLanguageData)
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
@@ -211,7 +213,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [Selection Theme] -> [Selection Language] ->
+    [Selection Folder.Theme] -> [Selection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
 makeMainGui themeNames langNames dbToIO env =
@@ -236,8 +238,8 @@ makeRootWidget ::
     IO (Gui Widget IO)
 makeRootWidget env perfMonitors db evaluator sample =
     do
-        themeNames <- ConfigFolder.getNames
-        langNames <- ConfigFolder.getNames
+        themeNames <- Folder.getNames (Proxy @Theme)
+        langNames <- Folder.getNames (Proxy @Language)
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         dbToIO $ makeMainGui themeNames langNames dbToIO env
             <&> M.backgroundColor backgroundId bgColor

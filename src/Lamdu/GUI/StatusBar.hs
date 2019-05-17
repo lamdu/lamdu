@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection)
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.IOTrans (IOTrans(..))
@@ -32,7 +33,6 @@ import           Lamdu.GUI.Styled (info, label)
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import qualified Lamdu.I18N.CodeUI as Texts
-import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.I18N.StatusBar as Texts
 import qualified Lamdu.I18N.Versioning as Texts
 import           Lamdu.Settings (Settings)
@@ -54,7 +54,8 @@ make ::
     , Has (Texts.CodeUI Text) env
     ) =>
     StatusWidget (IOTrans n) ->
-    [Selection Theme] -> [Selection Language] -> Property IO Settings ->
+    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))
 make gotoDefinition themeNames langNames settingsProp width vcActions =

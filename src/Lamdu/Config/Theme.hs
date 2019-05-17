@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
@@ -33,6 +33,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config.Folder (HasConfigFolder(..))
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme.Fonts (FontSize, Fonts)
 import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
@@ -147,4 +148,5 @@ instance Has Expression.Style Theme where has = indent
 instance Has Hover.Style Theme where has = hover
 
 instance HasConfigFolder Theme where
+    type Folder Theme = Folder.Theme
     configFolder _ = "themes"

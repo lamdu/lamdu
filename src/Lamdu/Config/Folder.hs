@@ -1,15 +1,14 @@
-{-# LANGUAGE TemplateHaskell, ScopedTypeVariables, TypeApplications #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TypeFamilies #-}
 
 module Lamdu.Config.Folder
     ( Selection(..), _Selection
     , getFiles, getNames
     , HasConfigFolder(..)
+    , Language, Theme
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson (FromJSON(..), ToJSON(..))
-import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import qualified Lamdu.Paths as Paths
 import qualified System.Directory as Directory
@@ -18,12 +17,17 @@ import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
 
-newtype Selection a = Selection Text
+-- Tags for "tag" in "Selection folder"
+data Language
+data Theme
+
+newtype Selection folder = Selection Text
     deriving stock (Show)
     deriving newtype (Eq, Ord, FromJSON, ToJSON)
 Lens.makePrisms ''Selection
 
 class HasConfigFolder a where
+    type Folder a
     configFolder :: proxy a -> FilePath
 
 getFiles :: HasConfigFolder a => proxy a -> IO [FilePath]
@@ -37,5 +41,5 @@ getFiles p =
             <&> filter ((/= ".mixin") . FilePath.takeExtension . FilePath.dropExtension)
             <&> map (dir </>)
 
-getNames :: forall a. HasConfigFolder a => IO [Selection a]
-getNames = getFiles (Proxy @a) <&> map (Selection . Text.pack . FilePath.takeFileName . FilePath.dropExtension)
+getNames :: HasConfigFolder a => proxy a -> IO [Selection (Folder a)]
+getNames p = getFiles p <&> map (Selection . Text.pack . FilePath.takeFileName . FilePath.dropExtension)
