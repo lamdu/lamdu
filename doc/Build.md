@@ -32,6 +32,7 @@ brew install leveldb haskell-stack
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
+stack install
 ~/.local/bin/lamdu
 ```
 
