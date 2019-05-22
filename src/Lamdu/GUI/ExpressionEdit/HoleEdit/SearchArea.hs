@@ -82,9 +82,7 @@ fdConfig env = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    ( Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    ) =>
+    (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result i o ->
     ExprGuiM env i o (Menu.RenderedOption o)
@@ -115,9 +113,7 @@ postProcessSugar minOpPrec binder =
             <$ sugarPl
 
 makeResultOption ::
-    ( Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    ) =>
+    (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     ResultGroup i o -> Menu.Option (ExprGuiM env i o) o
 makeResultOption pl ctx results =

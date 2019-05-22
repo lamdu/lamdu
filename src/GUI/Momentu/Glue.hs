@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses #-}
 {-# LANGUAGE ConstraintKinds, RankNTypes #-}
 module GUI.Momentu.Glue
-    ( Texts(..), stroll, back, ahead
+    ( Texts(..), stroll
         , strollDoc
     , HasTexts
     , Glue(..), GluesTo
@@ -25,10 +25,8 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 
 import           Lamdu.Prelude
 
-data Texts a = Texts
+newtype Texts a = Texts
     { _stroll :: a
-    , _back :: a
-    , _ahead :: a
     } deriving Eq
 
 Lens.makeLenses ''Texts
@@ -41,7 +39,7 @@ type HasTexts env =
     , Has (MomentuTexts.Texts Text) env
     )
 
-strollDoc :: HasTexts env => env -> Lens.ALens' (Texts Text) Text -> EventMap.Doc
+strollDoc :: HasTexts env => env -> Lens.ALens' (MomentuTexts.Texts Text) Text -> EventMap.Doc
 strollDoc env dirLens =
     EventMap.Doc
     [ env ^. has . MomentuTexts.navigation

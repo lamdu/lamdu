@@ -9,7 +9,9 @@
             "delete": "מחק",
             "move": "זוז",
             "navigation": "ניווט",
-            "select": "בחר"
+            "choose": "בחר",
+            "forward": "קדימה",
+            "backward": "אחורה"
         },
         "code": {
             "let_": "יהי",
@@ -20,8 +22,7 @@
             "elseShort": "או ",
             "injectSymbol": ":",
             "nullaryInjectSymbol": ".",
-            "paramsRecordOpener": "פרמטרים }",
-            "paramsRecordCloser": "{"
+            "paramsRecordOpener": "פרמטרים }"
         },
         "collaborationTexts": {
             "collaboration": "שיתוף",
@@ -40,7 +41,6 @@
             "typeUpdateDialog": "דיאלוג עדכון טיפוסים",
             "def": "הגדרה",
             "newDefinitionButton": "חדש...",
-            "newDefinition": "חדש",
             "undelete": "שחזר",
             "undeleteButton": "שחזר...",
             "extractReplToDef": "ייצא שורת פקודה להגדרה",
@@ -52,7 +52,7 @@
             "goto": "קפוץ",
             "jumpToError": "קפוץ לשגיאה",
             "closeHole": "סגור חור",
-            "goBack": "חזרה",
+            "goBack": "קפוץ חזרה",
             "goToParent": "קפוץ להורה",
             "nextEntry": "הכניסה הבאה",
             "enterSubexpression": "כנס לתת-ביטוי",
@@ -71,7 +71,6 @@
             "shown": "מוצג",
             "hide": "החבא",
             "show": "הצג",
-            "pick": "בחר",
             "createNew": "צור חדש",
             "new": "חדש",
             "newAndJumpToNextEntry": "חדש, קפוץ לכניסה הבאה",
@@ -83,7 +82,7 @@
             "renameTag": "שנה שם תג",
             "doneRenaming": "סיים שינוי שם",
             "changeImportedName": "שנה שם מיובא",
-            "doneChangingImportedName": "סיים שינוי שם",
+            "doneChangingImportedName": "סיים בחירת שם מיובא",
             "pane": "חלונית",
             "nominal": "שמי",
             "deleteToNominal": "מחק עיטוף",
@@ -151,7 +150,6 @@
             "language": "שפה",
             "theme": "תמה",
             "annotations": "ביאורים",
-            "evaluation": "הרצה",
             "types": "טיפוסים",
             "none": "ריק",
             "switchHelp": "שנה מצב עזרה",
@@ -177,16 +175,14 @@
             "down": "למטה"
         },
         "eventMap": {
-            "repeat": "חזרה",
+            "repeat": "חזור",
             "depress": "שחרור"
         },
         "glue": {
-            "stroll": "שיוט",
-            "back": "אחורה",
-            "ahead": "קדימה"
+            "stroll": "שיוט"
         },
         "choice": {
-            "chooseSelected": "בחר"
+            "chooseSelected": "בחר מסומן"
         },
         "grid": {
             "moreLeft": "יותר שמאלה",
@@ -210,8 +206,6 @@
             "deleteBackwards": "מחק אחורה"
         },
         "textEdit": {
-            "forward": "קדימה",
-            "backward": "אחורה",
             "word": "מילה",
             "till": "עד",
             "newline": "שורה חדשה",

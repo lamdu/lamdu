@@ -82,7 +82,7 @@ eventMap =
     , A.currentBranch actions & Property.value & branchDelegatorId & pure
         & E.keysEventMapMovesCursor
         (config ^. VersionControl.jumpToBranchesKeys)
-        (toDoc [has . Texts.branches, has . MomentuTexts.select])
+        (toDoc [has . Texts.branches, has . MomentuTexts.choose])
     , A.mUndo actions <&> fmap GuiState.fullUpdate & undoEventMap env config
     , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap env config
     ]

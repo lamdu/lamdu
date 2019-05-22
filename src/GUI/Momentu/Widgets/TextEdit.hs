@@ -46,9 +46,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Prelude
 
 data Texts a = Texts
-    { _textForward :: a
-    , _textBackward :: a
-    , _textWord :: a
+    { _textWord :: a
     , _textTill :: a
     , _textNewline :: a
     , _textSpace :: a
@@ -284,10 +282,10 @@ eventMap txt cursor str myId _eventContext =
         | Text.null curLineAfter && cursor < textLength ],
 
         [ backDelete 1
-            & keys (deleteDoc [has . textBackward]) [noMods MetaKey.Key'Backspace]
+            & keys (deleteDoc [has . MomentuTexts.backward]) [noMods MetaKey.Key'Backspace]
         | cursor > 0 ],
 
-        [ keys (deleteDoc [has . textWord, has . textBackward]) [ctrl MetaKey.Key'W]
+        [ keys (deleteDoc [has . textWord, has . MomentuTexts.backward]) [ctrl MetaKey.Key'W]
             backDeleteWord
         | cursor > 0 ],
 
@@ -304,10 +302,10 @@ eventMap txt cursor str myId _eventContext =
         | cursor > 0 && textLength >= 2 ],
 
         [ delete 1
-            & keys (deleteDoc [has . textForward]) [noMods MetaKey.Key'Delete]
+            & keys (deleteDoc [has . MomentuTexts.forward]) [noMods MetaKey.Key'Delete]
         | cursor < textLength ],
 
-        [ keys (deleteDoc [has . textWord, has . textForward]) [alt MetaKey.Key'D]
+        [ keys (deleteDoc [has . textWord, has . MomentuTexts.forward]) [alt MetaKey.Key'D]
             deleteWord
         | cursor < textLength ],
 

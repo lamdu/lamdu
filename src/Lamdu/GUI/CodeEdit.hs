@@ -206,11 +206,11 @@ makeNewDefinition cp =
 
 newDefinitionDoc ::
     ( MonadReader env m
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) => m E.Doc
 newDefinitionDoc =
     Lens.view id
-    <&> (`E.toDoc` [has . MomentuTexts.edit, has . Texts.newDefinition])
+    <&> (`E.toDoc` [has . MomentuTexts.edit, has . Texts.new])
 
 makeNewDefinitionButton ::
     (Monad m, Language.HasLanguage env) =>

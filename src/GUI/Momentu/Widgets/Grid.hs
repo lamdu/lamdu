@@ -271,9 +271,9 @@ toWidgetWithKeys env keys size sChildren =
                     )
                 strollBefore =
                     before ^. strollDests
-                    & foldStrollDests Widget.strollBackKeys Glue.back (_2 . Lens._Wrapped')
+                    & foldStrollDests Widget.strollBackKeys MomentuTexts.backward (_2 . Lens._Wrapped')
                 strollAfter =
-                    foldStrollDests Widget.strollAheadKeys Glue.ahead (_1 . Lens._Wrapped') strollAheadDst
+                    foldStrollDests Widget.strollAheadKeys MomentuTexts.forward (_1 . Lens._Wrapped') strollAheadDst
             in
             Widget.Focused
             { Widget._fLayers = focusedChild ^. Widget.fLayers <> unfocusedLayers

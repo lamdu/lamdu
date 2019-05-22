@@ -12,7 +12,6 @@ import           Lamdu.Prelude
 data StatusBar a = StatusBar
     { _sbStatusBar :: a
     , _sbAnnotations :: a
-    , _sbEvaluation :: a
     , _sbTypes :: a
     , _sbNone :: a
     , _sbSwitchAnnotations :: a

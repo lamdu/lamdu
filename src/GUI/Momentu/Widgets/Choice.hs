@@ -42,7 +42,7 @@ defaultFdConfig =
     Lens.view id <&> \txt helpCategory ->
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-    , FocusDelegator.focusChildDoc = E.Doc [helpCategory, txt ^. has . MomentuTexts.select]
+    , FocusDelegator.focusChildDoc = E.Doc [helpCategory, txt ^. has . MomentuTexts.choose]
     , FocusDelegator.focusParentKeys = [MetaKey.Key'Enter, MetaKey.Key'Escape] <&> MetaKey noMods
     , FocusDelegator.focusParentDoc = E.Doc [helpCategory, txt ^. has . chooseSelected]
     }

@@ -7,8 +7,6 @@
             "toNom": "»",
             "fromNom": "«",
             "repl": "⋘",
-            "condColon": ":",
-            "paramsRecordCloser": "{",
             "arrow": "←",
             "textOpener": "”",
             "textCloser": "„",

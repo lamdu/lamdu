@@ -14,7 +14,6 @@ data CodeUI a = CodeUI
     , _shown :: a
     , _hide :: a
     , _show :: a
-    , _pick :: a
     , _createNew :: a
     , _new :: a
     , _newAndJumpToNextEntry :: a

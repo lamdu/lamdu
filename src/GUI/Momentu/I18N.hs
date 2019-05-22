@@ -14,7 +14,9 @@ data Texts a = Texts
     , _delete :: a
     , _navigation :: a
     , _move :: a
-    , _select :: a
+    , _choose :: a
+    , _forward :: a
+    , _backward :: a
     } deriving Eq
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

@@ -98,7 +98,7 @@ makeParamsRecord myId paramsRecordVar =
                     & Reader.local (Element.animIdPrefix %~ (<> paramId))
                 )
               )
-            , grammar (label Texts.paramsRecordCloser) <&> Responsive.fromTextView
+            , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
             ] <&> respondToCursor
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar

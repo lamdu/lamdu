@@ -9,7 +9,9 @@
             "delete": "Delete",
             "move": "Move",
             "navigation": "Navigation",
-            "select": "Select"
+            "choose": "Choose",
+            "forward": "Forward",
+            "backward": "Backward"
         },
         "code": {
             "let_": "let",
@@ -37,7 +39,6 @@
             "typeUpdateDialog": "Type update dialog",
             "def": "Definition",
             "newDefinitionButton": "New...",
-            "newDefinition": "New",
             "undelete": "Undelete",
             "undeleteButton": "Undelete...",
             "extractReplToDef": "Extract to definition",
@@ -68,7 +69,6 @@
             "shown": "Shown",
             "hide": "Hide",
             "show": "Show",
-            "pick": "Pick",
             "createNew": "Create new",
             "new": "New",
             "newAndJumpToNextEntry": "New and jump to next entry",
@@ -80,7 +80,7 @@
             "renameTag": "Rename tag",
             "doneRenaming": "Done renaming",
             "changeImportedName": "Change imported name",
-            "doneChangingImportedName": "Done changing name",
+            "doneChangingImportedName": "Done changing imported name",
             "pane": "Pane",
             "nominal": "Nominal",
             "deleteToNominal": "Delete ToNominal",
@@ -154,7 +154,6 @@
             "language": "Language",
             "theme": "Theme",
             "annotations": "Annotations",
-            "evaluation": "Evaluation",
             "types": "Types",
             "none": "None",
             "switchHelp": "Switch Help",
@@ -178,9 +177,7 @@
             "depress": "Depress"
         },
         "glue": {
-            "stroll": "Stroll",
-            "back": "Back",
-            "ahead": "Ahead"
+            "stroll": "Stroll"
         },
         "choice": {
             "chooseSelected": "Choose selected"
@@ -207,8 +204,6 @@
             "deleteBackwards": "Delete backwards"
         },
         "textEdit": {
-            "forward": "Forward",
-            "backward": "Backward",
             "word": "Word",
             "till": "Till",
             "newline": "Newline",

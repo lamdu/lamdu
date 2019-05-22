@@ -68,17 +68,19 @@ makeAnnotationsSwitcher ::
     , Has TextView.Style env
     , Has (Texts.StatusBar Text) env
     , Has (Choice.Texts Text) env
+    , Has (Texts.CodeUI Text) env
     , Glue.HasTexts env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
     Property f Ann.Mode -> m (StatusBar.StatusWidget f)
 makeAnnotationsSwitcher annotationModeProp =
     do
-        mk <- Styled.mkFocusableLabel
-        [ (Ann.Evaluation, OneOf Texts.sbEvaluation)
-            , (Ann.Types, OneOf Texts.sbTypes)
-            , (Ann.None, OneOf Texts.sbNone)
-            ] <&> (_2 %~ \(OneOf lens) -> mk (OneOf lens))
+        mk0 <- Styled.mkFocusableLabel
+        mk1 <- Styled.mkFocusableLabel
+        [ (Ann.Evaluation, mk0 (OneOf Texts.evaluation))
+            , (Ann.Types, mk1 (OneOf Texts.sbTypes))
+            , (Ann.None, mk1 (OneOf Texts.sbNone))
+            ]
             & StatusBar.makeSwitchStatusWidget
             (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
             Config.nextAnnotationModeKeys annotationModeProp

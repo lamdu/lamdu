@@ -23,7 +23,6 @@ data Code a = Code
     , _absurd :: a
     , -- If:
       _if_ :: a
-    , _condColon :: a -- Colon after if's condition
     , _else_ :: a
     , _elseShort :: a -- "el" in "elif"
     , -- Inject
@@ -31,7 +30,6 @@ data Code a = Code
     , _nullaryInjectSymbol :: a
     , -- Getvar
       _paramsRecordOpener :: a
-    , _paramsRecordCloser :: a
     , -- Lambda:
       _defer :: a
     , _lam :: a

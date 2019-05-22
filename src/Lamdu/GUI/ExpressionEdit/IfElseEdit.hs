@@ -64,7 +64,7 @@ makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
             ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
-            /|/ (grammar (label Texts.condColon) /|/ Spacer.stdHSpace)
+            /|/ (grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace)
         thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             pure prefixLabel
@@ -98,7 +98,7 @@ makeElseBody ::
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
-        <*> (grammar (label Texts.condColon)
+        <*> (grammar (label Texts.injectSymbol)
                 & Reader.local (Element.animIdPrefix .~ elseAnimId)
                 <&> Responsive.fromTextView)
     ) <*> ExprGuiM.makeSubexpression (Ann pl expr)

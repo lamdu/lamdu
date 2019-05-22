@@ -196,6 +196,7 @@ makeOptions ::
     , Has (Texts.Name Text) menv
     , Has (Texts.CodeUI Text) menv
     , Has (Texts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env
     ) =>
     Sugar.TagSelection (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) ->
@@ -234,7 +235,7 @@ makeOptions tagSelection mkPickResult ctx
                         { Menu._rWidget = widget
                         , Menu._rPick = Widget.PreEvent
                             { Widget._pDesc =
-                                env ^. has . Texts.pick
+                                env ^. has . MomentuTexts.choose
                             , Widget._pAction =
                                 opt ^. Sugar.toPick
                                 <&> mkPickResult
@@ -423,7 +424,7 @@ makeTagEditWith onView onPickNext tag =
                 ( E.toDoc env
                     [ has . MomentuTexts.edit
                     , has . Texts.tag
-                    , has . Texts.pick
+                    , has . MomentuTexts.choose
                     ] ) chooseAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
@@ -517,7 +518,7 @@ makeLHSTag onPickNext color tag =
         let chooseEventMap =
                 E.charEventMap "Letter"
                 (E.toDoc env
-                    [has . MomentuTexts.edit, has . Texts.tag, has . Texts.pick])
+                    [has . MomentuTexts.edit, has . Texts.tag, has . MomentuTexts.choose])
                 chooseWithChar
 
         let eventMap =

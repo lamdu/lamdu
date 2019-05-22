@@ -11,7 +11,6 @@ import           Lamdu.Prelude
 
 data Definitions a = Definitions
     { _newDefinitionButton :: a
-    , _newDefinition :: a
     , _undelete :: a
     , _undeleteButton :: a
     , _defUpdateHeader :: a

@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
@@ -31,7 +32,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -84,14 +84,14 @@ makeWidget resultId holeResultConverted =
             & ExprGuiM.withLocalIsHoleResult
 
 make ::
-    (Monad i, Monad o, Has (Texts.CodeUI Text) env) =>
+    (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
     ExprGuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
-    (,) <$> Lens.view (has . Texts.pick) <*>
+    (,) <$> Lens.view (has . MomentuTexts.choose) <*>
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     <&>

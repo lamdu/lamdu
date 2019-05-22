@@ -28,12 +28,7 @@ env =
         , Dir._up = "up"
         , Dir._down = "down"
         }
-    , _eGlueTexts =
-        Glue.Texts
-        { Glue._stroll = "stroll"
-        , Glue._back = "back"
-        , Glue._ahead = "ahead"
-        }
+    , _eGlueTexts = Glue.Texts { Glue._stroll = "stroll" }
     , _eGridTexts =
         Grid.Texts
         { Grid._moreLeft = "more left"
@@ -51,7 +46,9 @@ env =
         , MomentuTexts._delete = "Delete"
         , MomentuTexts._navigation = "Navigation"
         , MomentuTexts._move = "Move"
-        , MomentuTexts._select = "Select"
+        , MomentuTexts._choose = "Choose"
+        , MomentuTexts._forward = "Forward"
+        , MomentuTexts._backward = "Backward"
         }
     }
 
