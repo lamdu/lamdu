@@ -13,8 +13,14 @@ Cabal-version:       >= 1.10
 Data-dir:            data
 Data-files:          fonts/DejaVuSans.ttf
                    , fonts/DejaVuSans-Bold.ttf
+                   , fonts/DejaVuSans-BoldOblique.ttf
+                   , fonts/DejaVuSans-Oblique.ttf
                    , fonts/DejaVuSansMono.ttf
+                   , fonts/DejaVuSansMono-Bold.ttf
+                   , fonts/DejaVuSansMono-BoldOblique.ttf
+                   , fonts/DejaVuSansMono-Oblique.ttf
                    , fonts/DejaVuSerif.ttf
+                   , fonts/DejaVuSerif-Bold.ttf
                    , fonts/DejaVuSerif-BoldItalic.ttf
                    , fonts/DejaVuSerif-Italic.ttf
                    , fonts/Purisa.ttf
