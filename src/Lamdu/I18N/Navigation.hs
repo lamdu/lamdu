@@ -11,6 +11,7 @@ data Navigation a = Navigation
     { _jumpToError :: a
     , _goto :: a
     , _goBack :: a
+    , _goToParent :: a
     , _nextEntry :: a
     , _enterSubexpression :: a
     , _leaveSubexpression :: a

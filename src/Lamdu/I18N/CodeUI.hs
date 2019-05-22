@@ -27,8 +27,11 @@ data CodeUI a = CodeUI
     , _nominal :: a
     , _deleteToNominal :: a
     , _deleteFromNominal :: a
+    , _record :: a
     , _inject :: a
     , _caseLabel :: a
+    , _addField :: a
+    , _deleteField :: a
     , _addAlt :: a
     , _deleteAlt :: a
     , _toLambdaCase :: a
