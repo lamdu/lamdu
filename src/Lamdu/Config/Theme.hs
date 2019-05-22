@@ -175,4 +175,4 @@ instance Has Hover.Style Theme where has = hover
 
 instance HasConfigFolder Theme where
     type Folder Theme = Folder.Theme
-    configFolder _ = "themes"
+    configFolderName _ = "themes"

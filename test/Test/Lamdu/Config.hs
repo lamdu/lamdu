@@ -4,7 +4,7 @@ module Test.Lamdu.Config (loadConfigObject) where
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
-import           Lamdu.Config.Folder (HasConfigFolder(..), Folder)
+import           Lamdu.Config.Folder (HasConfigFolder, Folder)
 import qualified Lamdu.Config.Folder as Folder
 
 import           Test.Lamdu.Prelude

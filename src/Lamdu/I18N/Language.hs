@@ -47,7 +47,7 @@ JsonTH.derivePrefixed "_l" ''Language
 
 instance HasConfigFolder Language where
     type Folder Language = Folder.Language
-    configFolder _ = "languages"
+    configFolderName _ = "languages"
 
 type HasLanguage env =
     ( Has LangId env

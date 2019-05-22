@@ -13,7 +13,7 @@ import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
 import           Data.Text (unpack)
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Folder (HasConfigFolder(..))
+import           Lamdu.Config.Folder (HasConfigFolder)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import           Lamdu.I18N.Language (Language)
