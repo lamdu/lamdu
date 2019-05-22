@@ -16,16 +16,14 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
-import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Folder (HasConfigFolder(..), Selection(..), _Selection)
+import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
-import           System.FilePath (takeDirectory, takeFileName, dropExtension, (</>))
 
 import           Lamdu.Prelude
 
@@ -95,26 +93,21 @@ loadConfigFile path =
     AesonConfig.load path & Writer.runWriterT
     <&> uncurry (flip (FiledConfig path))
 
-loadFromFolder ::
-    forall a.
-    (HasConfigFolder a, FromJSON a) =>
-    Selection (Folder a) -> IO (FiledConfig a)
-loadFromFolder selection =
-    Paths.getDataFileName "config.json"
-    <&> takeDirectory
-    <&> (</>
-            (configFolder (Proxy @a)
-                </> Text.unpack (selection ^. _Selection) ++ ".json"))
-    >>= loadConfigFile
-
-load :: Selection Folder.Theme -> Selection Folder.Language -> IO Sample
-load themeName langName =
+loadPaths :: FilePath -> FilePath -> IO Sample
+loadPaths themePath langPath =
     do
         config <- Paths.getDataFileName "config.json" >>= loadConfigFile
         SampleData config
-            <$> loadFromFolder themeName
-            <*> loadFromFolder langName
+            <$> loadConfigFile themePath
+            <*> loadConfigFile langPath
             & withMTime
+
+load :: Selection Folder.Theme -> Selection Folder.Language -> IO Sample
+load themeName langName =
+    loadPaths
+    <$> Folder.selectionToPath (Proxy @Theme) themeName
+    <*> Folder.selectionToPath (Proxy @Language) langName
+    & join
 
 maybeReload :: Sample -> IO (Maybe Sample)
 maybeReload (Sample oldVer old) =
@@ -122,9 +115,10 @@ maybeReload (Sample oldVer old) =
         mtimes <- getSampleMTimes old
         if mtimes == oldVer
             then pure Nothing
-            else load (f sTheme) (f sLanguage) <&> Just
-    where
-        f l = old ^. l . primaryPath & takeFileName & dropExtension & Text.pack & Selection
+            else
+            loadPaths
+            (old ^. sTheme . primaryPath)
+            (old ^. sLanguage . primaryPath) <&> Just
 
 new ::
     (Sample -> IO ()) ->

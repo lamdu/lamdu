@@ -3,6 +3,7 @@
 module Lamdu.Config.Folder
     ( Selection(..), _Selection
     , getFiles, getNames
+    , selectionToPath
     , HasConfigFolder(..)
     , Language, Theme
     ) where
@@ -12,7 +13,7 @@ import           Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.Text as Text
 import qualified Lamdu.Paths as Paths
 import qualified System.Directory as Directory
-import           System.FilePath ((</>))
+import           System.FilePath (takeDirectory, (</>))
 import qualified System.FilePath as FilePath
 
 import           Lamdu.Prelude
@@ -30,6 +31,13 @@ class HasConfigFolder a where
     type Folder a
     configFolder :: proxy a -> FilePath
 
+selectionToPath ::
+    HasConfigFolder a => Proxy a -> Selection (Folder a) -> IO FilePath
+selectionToPath p (Selection selection) =
+    Paths.getDataFileName "config.json"
+    <&> takeDirectory
+    <&> (</> (configFolder p </> Text.unpack selection ++ ".json"))
+
 getFiles :: HasConfigFolder a => proxy a -> IO [FilePath]
 getFiles p =
     do
@@ -41,5 +49,8 @@ getFiles p =
             <&> filter ((/= ".mixin") . FilePath.takeExtension . FilePath.dropExtension)
             <&> map (dir </>)
 
+pathToSelection :: FilePath -> Selection a
+pathToSelection = Selection . Text.pack . FilePath.takeFileName . FilePath.dropExtension
+
 getNames :: HasConfigFolder a => proxy a -> IO [Selection (Folder a)]
-getNames p = getFiles p <&> map (Selection . Text.pack . FilePath.takeFileName . FilePath.dropExtension)
+getNames p = getFiles p <&> map pathToSelection
