@@ -229,5 +229,51 @@
             "enlarge": "נפח",
             "shrink": "כווץ"
         }
+    },
+    "fonts": {
+        "proportional": {
+            "sans": {
+                "roman": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                }
+            },
+            "serif": {
+                "roman": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                }
+            }
+        },
+        "monospace": {
+            "sans": {
+                "roman": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                }
+            },
+            "serif": {
+                "roman": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans.ttf"
+                }
+            }
+        }
     }
 }
