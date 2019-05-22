@@ -1,5 +1,5 @@
 {-# LANGUAGE NoMonomorphismRestriction, RankNTypes #-}
-module Lamdu.GUI.ExpressionEdit.NomEdit
+module Lamdu.GUI.ExpressionEdit.NominalEdit
     ( makeFromNom, makeToNom
     ) where
 

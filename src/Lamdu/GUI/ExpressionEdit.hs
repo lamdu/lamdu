@@ -26,7 +26,7 @@ import qualified Lamdu.GUI.ExpressionEdit.IfElseEdit as IfElseEdit
 import qualified Lamdu.GUI.ExpressionEdit.InjectEdit as InjectEdit
 import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
-import qualified Lamdu.GUI.ExpressionEdit.NomEdit as NomEdit
+import qualified Lamdu.GUI.ExpressionEdit.NominalEdit as NominalEdit
 import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -102,8 +102,8 @@ makeEditor body pl =
             Sugar.BodyGetField     x -> GetFieldEdit.make     x pl <&> d
             Sugar.BodyInject       x -> InjectEdit.make       x pl
             Sugar.BodyGetVar       x -> GetVarEdit.make       x pl <&> d
-            Sugar.BodyToNom        x -> NomEdit.makeToNom     x pl
-            Sugar.BodyFromNom      x -> NomEdit.makeFromNom   x pl <&> d
+            Sugar.BodyToNom        x -> NominalEdit.makeToNom     x pl
+            Sugar.BodyFromNom      x -> NominalEdit.makeFromNom   x pl <&> d
             Sugar.BodyFragment     x -> FragmentEdit.make     x pl
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where

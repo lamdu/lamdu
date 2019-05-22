@@ -332,7 +332,7 @@ Library
                   , Lamdu.GUI.ExpressionEdit.InjectEdit
                   , Lamdu.GUI.ExpressionEdit.LambdaEdit
                   , Lamdu.GUI.ExpressionEdit.LiteralEdit
-                  , Lamdu.GUI.ExpressionEdit.NomEdit
+                  , Lamdu.GUI.ExpressionEdit.NominalEdit
                   , Lamdu.GUI.ExpressionEdit.RecordEdit
                   , Lamdu.GUI.ExpressionEdit.TagEdit
                   , Lamdu.GUI.ExpressionGui.Annotation
