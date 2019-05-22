@@ -21,6 +21,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
@@ -32,6 +33,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.CharClassification as Chars
+import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -56,12 +58,27 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-fdConfig :: Config.Completion -> FocusDelegator.Config
-fdConfig config = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = config ^. Config.completionOpenKeys
-    , FocusDelegator.focusChildDoc = E.Doc ["Navigation", "Completion", "Open"]
-    , FocusDelegator.focusParentKeys = config ^. Config.completionCloseKeys
-    , FocusDelegator.focusParentDoc = E.Doc ["Navigation", "Completion", "Close"]
+fdConfig ::
+    ( Has Config env
+    , Has (Texts.CodeUI Text) env
+    , Has (MomentuTexts.Texts Text) env
+    ) => env -> FocusDelegator.Config
+fdConfig env = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys =
+        env ^. has . Config.completion . Config.completionOpenKeys
+    , FocusDelegator.focusChildDoc =
+        E.toDoc env
+        [ has . MomentuTexts.navigation
+        , has . Texts.completion
+        , has . Texts.open
+        ]
+    , FocusDelegator.focusParentKeys = env ^. has . Config.completion ^. Config.completionCloseKeys
+    , FocusDelegator.focusParentDoc =
+        E.toDoc env
+        [ has . MomentuTexts.navigation
+        , has . Texts.completion
+        , has . Texts.close
+        ]
     }
 
 makeRenderedResult ::
@@ -161,9 +178,9 @@ make ::
     ExprGuiM env i o (Menu.Placement -> Gui Responsive o)
 make mkOptions pl allowedTerms =
     do
-        config <- Lens.view has
+        env <- Lens.view id
         let fdWrap =
-                FocusDelegator.make ?? fdConfig (config ^. Config.completion)
+                FocusDelegator.make ?? fdConfig env
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
                 <&> (Align.tValue %~)
         term <- makeTerm Menu.NoPickFirstResult

@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -41,19 +42,27 @@ ofName (Name.Stored storedName) =
         Name.TagText displayName textCollision = storedName ^. Name.snDisplayText
 
 expr ::
-    Has (Texts.Code Text) env =>
+    ( Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     env -> Expression (Name o) i o a -> [Text]
 expr env = ofBody env . (^. val)
 
 ofBody ::
-    Has (Texts.Code Text) env =>
+    ( Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     env -> Tree (Body (Name o) i o) (Ann a) -> [Text]
 ofBody env =
     \case
-    BodyLam {} -> ["lambda", "\\", "Λ", "λ", "->", "→"]
-    BodySimpleApply x -> "apply" : x ^. monoChildren . Lens.to (expr env)
+    BodyLam {} ->
+        [ env ^. has . Texts.lambda
+        , "\\", "Λ", "λ", "->", "→"
+        ]
+    BodySimpleApply x ->
+        env ^. has . Texts.apply : x ^. monoChildren . Lens.to (expr env)
     BodyLabeledApply x ->
-        "apply"
+        env ^. has . Texts.apply
         : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)
         ++ (x ^.. aAnnotatedArgs . Lens.folded . aaTag . tagName >>= ofName)
     BodyRecord {} ->
@@ -80,7 +89,7 @@ ofBody env =
     BodyInject (Inject tag _) ->
         (<>) <$> ofName (tag ^. tagInfo . tagName) <*> [":", "."]
     BodyLiteral {} -> []
-    BodyGetVar GetParamsRecord {} -> ["Params"]
+    BodyGetVar GetParamsRecord {} -> [env ^. has . Texts.paramsRecordOpener]
     BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
     BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
     BodyToNom (Nominal tid b) ->
@@ -99,7 +108,9 @@ ofBody env =
     BodyPlaceHolder {} -> []
 
 binder ::
-    Has (Texts.Code Text) env =>
+    ( Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     env -> Tree (Binder (Name o) i o) (Ann a) -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
 binder env (BinderExpr x) = ofBody env x

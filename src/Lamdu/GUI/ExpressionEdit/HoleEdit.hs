@@ -7,6 +7,7 @@ import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -71,11 +72,15 @@ make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
         delKeys <- Lens.view id <&> Config.delKeys
+        env <- Lens.view id
         let (mkLitEventMap, delEventMap)
                 | searchTerm == "" =
                     ( makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                     , foldMap
-                        (E.keysEventMapMovesCursor delKeys (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
+                        (E.keysEventMapMovesCursor delKeys
+                            (E.toDoc env
+                                [has . MomentuTexts.edit, has . MomentuTexts.delete])
+                            . fmap WidgetIds.fromEntityId)
                         (hole ^. Sugar.holeMDelete)
                     )
                 | otherwise = (mempty, mempty)

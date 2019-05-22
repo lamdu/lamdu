@@ -28,6 +28,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -156,7 +157,10 @@ isGoodResult :: Sugar.HoleResultScore -> Bool
 isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
-    (Monad i, Has (Texts.Code Text) env) =>
+    ( Monad i
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     [Sugar.HoleOption (Name o1) i o1] ->
     SearchMenu.ResultsContext ->
     ExprGuiM env i o (Menu.OptionList (ResultGroup i o1))
@@ -183,6 +187,7 @@ mkGroupId option =
 mkGroup ::
     ( Monad i
     , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
     ) =>
     env ->
     Sugar.HoleOption (Name o) i o ->
