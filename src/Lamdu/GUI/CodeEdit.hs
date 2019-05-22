@@ -24,9 +24,12 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
@@ -46,6 +49,7 @@ import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -55,10 +59,12 @@ import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Language as Language
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
@@ -75,6 +81,7 @@ data ExportActions m = ExportActions
     { exportAll :: IOTrans m ()
     , exportReplActions :: ReplEdit.ExportRepl m
     , exportDef :: V.Var -> IOTrans m ()
+    , exportTag :: T.Tag -> IOTrans m ()
     , importAll :: FilePath -> IOTrans m ()
     }
 
@@ -136,6 +143,66 @@ make cp gp width =
             , _layoutNeedDisambiguation = False
             }
 
+exportPaneEventMap ::
+    ( Functor m
+    , Has Config env
+    , Has (Texts.Collaboration Text) env
+    ) =>
+    env -> ExportActions m -> Sugar.PaneBody name i o dummy ->
+    Gui EventMap (IOTrans m)
+exportPaneEventMap env theExportActions paneBody =
+    case paneBody of
+    Sugar.PaneDefinition def ->
+        exportEventMap exportDef (def ^. Sugar.drDefI) Texts.exportDefToJSON
+    Sugar.PaneTag tag ->
+        exportEventMap exportTag (tag ^. Sugar.tagVal) Texts.exportTagToJSON
+    where
+        exportKeys = env ^. has . Config.export . Config.exportKeys
+        exportEventMap act arg docLens =
+            act theExportActions arg
+            & E.keysEventMap exportKeys
+            (E.toDoc (env ^. has) [Texts.collaboration, docLens])
+
+makePaneBodyEdit ::
+    ( Monad m
+    , Grid.HasTexts env
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Choice.Texts Text) env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
+    Sugar.Pane (Name (T m)) (T m) (T m)
+    (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
+    ExprGuiM env (T m) (T m) (Gui Responsive (IOTrans m))
+makePaneBodyEdit pane =
+    do
+        env <- Lens.view id
+        case pane ^. Sugar.paneBody of
+            Sugar.PaneTag tag ->
+                TagEdit.makeTagView tag
+                <&> Responsive.fromTextView
+            Sugar.PaneDefinition def ->
+                DefinitionEdit.make eventMap def
+                <&> Lens.mapped %~ IOTrans.liftTrans
+                where
+                    eventMap =
+                        do
+                            Property.setP
+                                (def ^. Sugar.drDefinitionState & Property.MkProperty)
+                                Sugar.DeletedDefinition
+                            pane ^. Sugar.paneClose
+                            <&> WidgetIds.fromEntityId
+                            & E.keysEventMapMovesCursor (Config.delKeys env)
+                            (E.toDoc env
+                                [ has . MomentuTexts.edit
+                                , has . Texts.def
+                                , has . MomentuTexts.delete
+                                ])
+
 makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m ->
@@ -162,31 +229,10 @@ makePaneEdit theExportActions pane =
                   & foldMap
                     (E.keysEventMap (paneConfig ^. Config.paneMoveUpKeys)
                     (viewDoc [Texts.pane, Texts.moveUp]))
-                , exportDef theExportActions
-                    (pane ^. Sugar.paneBody . Sugar._PaneDefinition . Sugar.drDefI)
-                  & E.keysEventMap exportKeys
-                    (E.toDoc (env ^. has)
-                        [Texts.collaboration, Texts.exportDefToJSON])
+                , exportPaneEventMap env theExportActions (pane ^. Sugar.paneBody)
                 ] & mconcat
-            defEventMap =
-                do
-                    Property.setP
-                        (pane ^. Sugar.paneBody . Sugar._PaneDefinition .
-                            Sugar.drDefinitionState & Property.MkProperty)
-                        Sugar.DeletedDefinition
-                    pane ^. Sugar.paneClose
-                    <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys env)
-                    (E.toDoc env
-                        [ has . MomentuTexts.edit
-                        , has . Texts.def
-                        , has . MomentuTexts.delete
-                        ])
             paneConfig = env ^. has . Config.pane
-            exportKeys = env ^. has . Config.export . Config.exportKeys
-        DefinitionEdit.make defEventMap
-            (pane ^. Sugar.paneBody . Sugar._PaneDefinition)
-            <&> Lens.mapped %~ IOTrans.liftTrans
+        makePaneBodyEdit pane
             <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinition ::

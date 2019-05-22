@@ -24,6 +24,7 @@ exportActions config evalResults executeIOProcess =
         }
     , GUIMain.exportAll = fileExport Export.fileExportAll
     , GUIMain.exportDef = fileExport . Export.fileExportDef
+    , GUIMain.exportTag = fileExport . Export.fileExportTag
     , GUIMain.importAll = importAll
     }
     where

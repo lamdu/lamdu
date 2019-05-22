@@ -8,7 +8,7 @@ module Lamdu.Data.Ops
     , genNewTag, assocTagName
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
-    , newPane
+    , newDefPane
     , newIdentityLambda
     , setTagOrder
     ) where
@@ -144,8 +144,8 @@ assocTagName env tag =
                         & tagNames . Lens.at lang ?~ name
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
 
-newPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
-newPane codeAnchors defI =
+newDefPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
+newDefPane codeAnchors defI =
     do
         let panesProp = Anchors.panes codeAnchors
         panes <- Property.getP panesProp
@@ -168,7 +168,7 @@ newPublicDefinitionToIRef codeAnchors def defI =
     do
         Transaction.writeIRef defI def
         Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
-        newPane codeAnchors defI
+        newDefPane codeAnchors defI
 
 newPublicDefinitionWithPane ::
     Monad m =>
@@ -177,7 +177,7 @@ newPublicDefinitionWithPane codeAnchors def =
     do
         defI <- newDefinition Verbose def
         Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
-        newPane codeAnchors defI
+        newDefPane codeAnchors defI
         pure defI
 
 newIdentityLambda :: Monad m => T m (V.Var, ValI m)

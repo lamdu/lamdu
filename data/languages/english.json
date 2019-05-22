@@ -26,6 +26,7 @@
         "collaborationTexts": {
             "collaboration": "Collaboration",
             "exportDefToJSON": "Export definition to JSON",
+            "exportTagToJSON": "Export tag to JSON",
             "exportEverythingToJSON": "Export everything to JSON",
             "exportReplToJSON": "Export repl to JSON file",
             "exportReplToJS": "Export repl as JS",

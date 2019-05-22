@@ -67,8 +67,9 @@ data Definition name i o a = Definition
     , _drBody :: DefinitionBody name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-newtype PaneBody name i o a
+data PaneBody name i o a
     = PaneDefinition (Definition name i o a)
+    | PaneTag (Tag name)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane name i o a = Pane

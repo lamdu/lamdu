@@ -234,6 +234,7 @@ completion cp entityId completions =
                     EntityId.ofValI valI
                     <$ case whichGlobal of
                     ER.GlobalRepl -> pure ()
-                    ER.GlobalDef varId -> DataOps.newPane cp (ExprIRef.defI varId)
+                    ER.GlobalDef varId ->
+                        DataOps.newDefPane cp (ExprIRef.defI varId)
                 }
         f (Right x) = convertVal entityId x & EvalSuccess

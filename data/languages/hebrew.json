@@ -28,6 +28,7 @@
         "collaborationTexts": {
             "collaboration": "שיתוף",
             "exportDefToJSON": "ייצא הגדרה לקובץ שיתוף",
+            "exportTagToJSON": "ייצא תג לקובץ שיתוף",
             "exportEverythingToJSON": "ייצא הכל לקובץ שיתוף",
             "exportReplToJSON": "ייצא שורת פקודה לקובץ שיתוף",
             "exportReplToJS": "ייצא שורת פקודה לג'אווהסקריפט",

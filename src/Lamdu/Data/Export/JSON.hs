@@ -3,7 +3,7 @@
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll, verifyAll
-    , fileExportDef
+    , fileExportDef, fileExportTag
     , fileImportAll
     ) where
 
@@ -168,6 +168,10 @@ fileExportRepl = export "repl" exportRepl
 fileExportDef :: Monad m => V.Var -> FilePath -> T m (IO ())
 fileExportDef globalId =
     export ("def: " ++ show globalId) (exportDef globalId)
+
+fileExportTag :: Monad m => T.Tag -> FilePath -> T m (IO ())
+fileExportTag tag =
+    export ("tag: " ++ show tag) (exportTag tag)
 
 exportAll :: Export ViewM ()
 exportAll =

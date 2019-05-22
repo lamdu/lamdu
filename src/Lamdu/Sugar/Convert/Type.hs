@@ -10,7 +10,6 @@ import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
 import qualified AST.Term.Scheme as S
--- import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T
