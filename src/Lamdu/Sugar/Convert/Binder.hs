@@ -9,7 +9,6 @@ import           AST.Class.Recursive (Recursive(..), foldMapRecursive)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Infer (irScope)
 import qualified Control.Lens.Extended as Lens
-import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')

@@ -9,7 +9,6 @@ import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import           Data.Either (partitionEithers)
-import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors

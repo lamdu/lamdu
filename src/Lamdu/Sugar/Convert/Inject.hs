@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import           AST.Knot.Ann (Ann(..), ann, val)
-import           Data.Functor.Const (Const(..))
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

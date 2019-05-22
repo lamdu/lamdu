@@ -6,7 +6,6 @@ module Lamdu.GUI.ExpressionEdit.InjectEdit
 import           AST (Tree, Ann(..), ann)
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Lens.Extended as Lens
-import           Data.Functor.Const (Const(..))
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E

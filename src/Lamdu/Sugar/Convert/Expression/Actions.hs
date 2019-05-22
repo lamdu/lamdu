@@ -13,7 +13,6 @@ import qualified AST.Term.Scheme as S
 import           AST.Term.Row (RowExtend(..))
 import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens.Extended as Lens
-import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set

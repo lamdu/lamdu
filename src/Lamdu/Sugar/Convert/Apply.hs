@@ -12,7 +12,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Data.Functor.Const (Const(..))
 import           Data.List.Extended (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
