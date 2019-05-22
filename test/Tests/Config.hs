@@ -32,14 +32,17 @@ verifyConfigFolder p = getFiles p >>= traverse_ (verifyJson p)
 verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
 verifyJson proxy jsonPath =
     do
-        configPath <- Paths.getDataFileName jsonPath
-        json <- load configPath & Writer.evalWriterT
+        json <- loadJsonPath jsonPath
         case Aeson.fromJSON json <&> (`asProxyTypeOf` proxy) of
-            Aeson.Error msg -> assertString ("Failed decoding " <> configPath <> " from json: " <> msg)
+            Aeson.Error msg -> assertString ("Failed decoding " <> jsonPath <> " from json: " <> msg)
             Aeson.Success val
                 | rejson == json -> pure ()
                 | otherwise ->
-                    assertString ("json " <> configPath <> " contains unexpected data:\n" <>
+                    assertString ("json " <> jsonPath <> " contains unexpected data:\n" <>
                         LBSChar.unpack (AesonPretty.encodePretty (Aeson.toJSON (AesonDiff.diff rejson json))))
                 where
                     rejson = Aeson.toJSON val
+
+loadJsonPath :: Aeson.FromJSON a => FilePath -> IO a
+loadJsonPath path =
+    Paths.getDataFileName path >>= Writer.evalWriterT . load
