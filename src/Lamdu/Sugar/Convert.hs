@@ -291,14 +291,14 @@ loadPanes ::
 loadPanes env cp replEntityId =
     do
         Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
-        paneDefs <- traverse (loadAnnotatedDef Anchors.paneDef) panes
+        paneDefs <- traverse (loadAnnotatedDef (^. Anchors._PaneDefinition)) panes
         let mkDelPane i =
                 entityId <$ setPanes newPanes
                 where
                     entityId =
                         newPanes ^? Lens.ix i
                         <|> newPanes ^? Lens.ix (i-1)
-                        <&> (EntityId.ofIRef . Anchors.paneDef)
+                        <&> (EntityId.ofIRef . (^. Anchors._PaneDefinition))
                         & fromMaybe replEntityId
                     newPanes = removeAt i panes
         let movePane oldIndex newIndex =
@@ -316,7 +316,7 @@ loadPanes env cp replEntityId =
                 do
                     bodyS <-
                         def
-                        <&> Anchors.paneDef
+                        <&> (^. Anchors._PaneDefinition)
                         & convertDefBody env cp
                     tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
                     defS <-
@@ -329,14 +329,14 @@ loadPanes env cp replEntityId =
                         , _drDefI = defVar
                         }
                     pure Pane
-                        { _paneDefinition = defS
+                        { _paneBody = PaneDefinition defS
                         , _paneClose = mkDelPane i
                         , _paneMoveDown = mkMMovePaneDown i
                         , _paneMoveUp = mkMMovePaneUp i
                         }
                 where
                     defVar = ExprIRef.globalId defI
-                    defI = def ^. Definition.defPayload & Anchors.paneDef
+                    defI = def ^. Definition.defPayload . Anchors._PaneDefinition
         paneDefs & Lens.itraversed %%@~ convertPane
 
 loadWorkArea ::

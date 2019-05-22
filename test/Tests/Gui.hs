@@ -76,7 +76,8 @@ makeGui afterDoc env =
                     ExprGuiM.makeBinder repl
                     & GuiState.assignCursor WidgetIds.replId replExprId
                 paneGuis <-
-                    workArea ^.. Sugar.waPanes . traverse . Sugar.paneDefinition
+                    workArea ^..
+                    Sugar.waPanes . traverse . Sugar.paneBody . Sugar._PaneDefinition
                     & traverse (DefinitionEdit.make mempty)
                 Responsive.vbox ?? (replGui : paneGuis)
             & ExprGuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id

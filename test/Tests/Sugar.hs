@@ -225,7 +225,7 @@ testExtractForRecursion =
             replBody . _BodyLabeledApply . aFunc .
             val . Lens._Wrapped . bvNameRef . nrGotoDefinition
         extractDef =
-            waPanes . traverse . paneDefinition .
+            waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             ann . plActions . extract
 
@@ -248,7 +248,7 @@ delDefParam =
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         action =
-            waPanes . traverse . paneDefinition .
+            waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             val . _BodyFunction .
             fParams . _Params . traverse .
@@ -261,7 +261,7 @@ updateDef =
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         action =
-            waPanes . traverse . paneDefinition .
+            waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             val . _BodyFunction . fBody .
             val . _BinderExpr . _BodyLabeledApply . aFunc .

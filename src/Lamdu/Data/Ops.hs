@@ -149,8 +149,8 @@ newPane codeAnchors defI =
     do
         let panesProp = Anchors.panes codeAnchors
         panes <- Property.getP panesProp
-        when (defI `notElem` map Anchors.paneDef panes) $
-            Property.setP panesProp $ panes ++ [Anchors.Pane defI]
+        when (Anchors.PaneDefinition defI `notElem` panes) $
+            Property.setP panesProp $ panes ++ [Anchors.PaneDefinition defI]
 
 newDefinition :: Monad m => PresentationMode -> Definition (ValI m) () -> T m (DefI m)
 newDefinition presentationMode def =

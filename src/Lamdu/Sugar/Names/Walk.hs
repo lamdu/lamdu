@@ -508,7 +508,7 @@ toPane ::
     MonadNaming m =>
     Pane (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (Pane (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
-toPane = paneDefinition toDef
+toPane = (paneBody . _PaneDefinition) toDef
 
 toRepl ::
     MonadNaming m =>

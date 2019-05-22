@@ -162,7 +162,8 @@ makePaneEdit theExportActions pane =
                   & foldMap
                     (E.keysEventMap (paneConfig ^. Config.paneMoveUpKeys)
                     (viewDoc [Texts.pane, Texts.moveUp]))
-                , exportDef theExportActions (pane ^. Sugar.paneDefinition . Sugar.drDefI)
+                , exportDef theExportActions
+                    (pane ^. Sugar.paneBody . Sugar._PaneDefinition . Sugar.drDefI)
                   & E.keysEventMap exportKeys
                     (E.toDoc (env ^. has)
                         [Texts.collaboration, Texts.exportDefToJSON])
@@ -170,7 +171,8 @@ makePaneEdit theExportActions pane =
             defEventMap =
                 do
                     Property.setP
-                        (pane ^. Sugar.paneDefinition . Sugar.drDefinitionState & Property.MkProperty)
+                        (pane ^. Sugar.paneBody . Sugar._PaneDefinition .
+                            Sugar.drDefinitionState & Property.MkProperty)
                         Sugar.DeletedDefinition
                     pane ^. Sugar.paneClose
                     <&> WidgetIds.fromEntityId
@@ -182,7 +184,8 @@ makePaneEdit theExportActions pane =
                         ])
             paneConfig = env ^. has . Config.pane
             exportKeys = env ^. has . Config.export . Config.exportKeys
-        DefinitionEdit.make defEventMap (pane ^. Sugar.paneDefinition)
+        DefinitionEdit.make defEventMap
+            (pane ^. Sugar.paneBody . Sugar._PaneDefinition)
             <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 

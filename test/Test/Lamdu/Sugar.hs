@@ -12,7 +12,8 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
-import           Lamdu.Data.Anchors (Code(..), paneDef)
+import           Lamdu.Data.Anchors (Code(..))
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Debug as Debug
@@ -84,7 +85,8 @@ workAreaLowLevelLoad :: T ViewM WorkAreaLowLevel
 workAreaLowLevelLoad =
     WorkAreaLowLevel
     <$> ExprLoad.defExpr (repl codeAnchors)
-    <*> (getP (panes codeAnchors) >>= traverse (ExprLoad.def . paneDef))
+    <*> (getP (panes codeAnchors)
+            >>= traverse (ExprLoad.def . (^. Anchors._PaneDefinition)))
 
 validate ::
     NFData name =>

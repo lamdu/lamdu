@@ -111,7 +111,7 @@ mul = arithmeticInfix2 "*"
 pane :: Sugar.Definition name i Unit a -> Sugar.Pane name i Unit a
 pane body =
     Sugar.Pane
-    { Sugar._paneDefinition = body
+    { Sugar._paneBody = Sugar.PaneDefinition body
     , Sugar._paneClose = Unit
     , Sugar._paneMoveDown = Nothing
     , Sugar._paneMoveUp = Nothing

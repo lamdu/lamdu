@@ -35,7 +35,7 @@ addToWorkArea w =
     { _waRepl = w ^. waRepl & replExpr %~ addToNode
     , _waPanes =
         w ^. waPanes
-        <&> paneDefinition . drBody . _DefinitionBodyExpression . deContent
+        <&> paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
         %~ addToNode
     }
 

@@ -3,7 +3,7 @@ module Lamdu.Data.Anchors
     ( Gui(..), onGui
     , Code(..), onCode
     , Revision(..), onRevision
-    , Pane(..)
+    , Pane(..), _PaneDefinition
     , GuiAnchors, CodeAnchors, RevisionProps
     , assocBranchNameRef
     , assocTag, anonTag
@@ -38,9 +38,8 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-newtype Pane m = Pane
-    { paneDef :: DefI m
-    }
+newtype Pane m
+    = PaneDefinition (DefI m)
     deriving newtype (Eq, Ord)
     deriving stock (Show, Generic)
     deriving anyclass Binary
@@ -109,3 +108,4 @@ assocDefinitionState =
     Transaction.assocDataRefDef LiveDefinition "DefinitionState" . UniqueId.toUUID
 
 Lens.makeLenses ''BinderParamScopeId
+Lens.makePrisms ''Pane
