@@ -8,6 +8,7 @@ import           Data.Typeable (Typeable)
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory
+import           Text.Printf (printf)
 
 import           Lamdu.Prelude
 
@@ -31,6 +32,9 @@ new subpixel fallbackFontPath =
     where
         openEach (fontSize, fontPath) =
             open fontSize fontPath
-            `E.catch` \E.SomeException{} ->
-            open fontSize fallbackFontPath
+            `E.catch` \e@E.SomeException{} ->
+            do
+                printf "Failed to load %v (size %v): %v,\nfalling back to %v\n"
+                    fontPath fontSize (show e) fallbackFontPath
+                open fontSize fallbackFontPath
         open = openFont subpixel
