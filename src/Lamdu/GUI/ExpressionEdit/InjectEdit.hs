@@ -115,14 +115,23 @@ makeNullaryInject nullary tag pl =
     >>= \case
     True -> makeInject (emptyRec nullary) tag pl
     False ->
-        stdWrapParentExpr pl <*>
-        (TagEdit.makeVariantTag tag /|/ injectIndicator Texts.nullaryInject
-            <&> Responsive.fromWithTextPos
-            <&> Widget.weakerEvents expandNullaryVal)
+        do
+            env <- Lens.view id
+            let expandNullaryVal =
+                    GuiState.updateCursor nullaryRecEntityId & pure & const
+                    & E.charGroup Nothing
+                    (E.toDoc env
+                        [ has . MomentuTexts.edit
+                        , has . Texts.inject
+                        , has . Texts.value
+                        ]) ":"
+            stdWrapParentExpr pl <*>
+                ( TagEdit.makeVariantTag tag
+                    /|/ injectIndicator Texts.nullaryInject
+                    <&> Responsive.fromWithTextPos
+                    <&> Widget.weakerEvents expandNullaryVal
+                )
     where
-        expandNullaryVal =
-            GuiState.updateCursor nullaryRecEntityId & pure & const
-            & E.charGroup Nothing (E.Doc ["Edit", "Inject", "Value"]) ":"
         nullaryRecEntityId =
             nullary ^. ann . Sugar.plEntityId
             & WidgetIds.fromEntityId
