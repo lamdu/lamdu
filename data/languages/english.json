@@ -144,7 +144,9 @@
         },
         "name": {
             "unnamed": "Unnamed",
-            "emptyName": "(empty)"
+            "emptyName": "(empty)",
+            "autoNamePrefixes": "x y z w u v",
+            "autoNameFuncPrefixes": "f g"
         },
         "statusBar": {
             "statusBar": "Status Bar",

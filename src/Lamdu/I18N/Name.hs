@@ -1,8 +1,6 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.I18N.Name
-    ( Name(..), unnamed, emptyName
-    ) where
+module Lamdu.I18N.Name where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
@@ -13,6 +11,8 @@ import           Lamdu.Prelude
 data Name a = Name
     { _unnamed :: a
     , _emptyName :: a
+    , _autoNamePrefixes :: a
+    , _autoNameFuncPrefixes :: a
     } deriving (Eq, Functor, Foldable, Traversable)
 Lens.makeLenses ''Name
 

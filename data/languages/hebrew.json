@@ -161,7 +161,9 @@
         },
         "name": {
             "unnamed": "פלוני",
-            "emptyName": "(ריק)"
+            "emptyName": "(ריק)",
+            "autoNamePrefixes": "א ב ג ד ה ו",
+            "autoNameFuncPrefixes": "פ צ"
         },
         "versioning": {
             "branches": "ענפים",

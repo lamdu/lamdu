@@ -262,7 +262,7 @@ initialP2Env ::
     env -> P1Out -> P2Env
 initialP2Env env (P1Out globals locals contexts tvs texts) =
     P2Env
-    { _p2NameGen = NameGen.initial
+    { _p2NameGen = NameGen.initial env
     , _p2AnonSuffixes =
         contexts ^@.. Lens.ix anonTag . Lens.folded <&> Tuple.swap & Map.fromList
     , _p2TypeVars =

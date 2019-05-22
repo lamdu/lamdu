@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.State (State, state)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Sugar.Types.Parts (VarInfo(..))
 
 import           Lamdu.Prelude
@@ -22,14 +23,16 @@ data NameGen g = NameGen
     }
 Lens.makeLenses ''NameGen
 
-initial :: NameGen g
-initial =
+initial :: Has (Texts.Name Text) env => env -> NameGen g
+initial env =
     NameGen
-    { _ngUnusedNames = numberCycle ["x", "y", "z", "w", "u", "v"]
-    , _ngUnusedFuncNames = numberCycle ["f", "g", "h"]
+    { _ngUnusedNames = multiName Texts.autoNamePrefixes
+    , _ngUnusedFuncNames = multiName Texts.autoNameFuncPrefixes
     , _ngUnusedActionNames = numberCycle ["act"]
     , _ngUsedNames = Map.empty
     }
+    where
+        multiName lens = env ^# has . lens & Text.words & numberCycle
 
 numberCycle :: [Text] -> [Text]
 numberCycle s =

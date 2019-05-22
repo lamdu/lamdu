@@ -43,6 +43,8 @@ nameTexts =
     Texts.Name
     { Texts._unnamed = "Unnamed"
     , Texts._emptyName = "empty"
+    , Texts._autoNamePrefixes = "x y z"
+    , Texts._autoNameFuncPrefixes = "f g"
     }
 
 assertNoCollisions :: Name o -> IO ()
