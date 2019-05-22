@@ -13,7 +13,8 @@ import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
 import           Data.Text (unpack)
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Folder (HasConfigFolder(..), getFiles)
+import           Lamdu.Config.Folder (HasConfigFolder(..))
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
@@ -32,9 +33,12 @@ test =
 verifyConfigFolder ::
     (HasConfigFolder a, Aeson.FromJSON a, Aeson.ToJSON a) =>
     Proxy a -> IO ()
-verifyConfigFolder p = getFiles p >>= traverse_ (verifyJson p)
+verifyConfigFolder p =
+    Folder.getSelections p
+    >>= traverse (Folder.selectionToPath p)
+    >>= traverse_ (verifyJson p)
 
-verifyJson :: (Aeson.FromJSON t, Aeson.ToJSON t) => Proxy t -> FilePath -> IO ()
+verifyJson :: (Aeson.FromJSON a, Aeson.ToJSON a) => Proxy a -> FilePath -> IO ()
 verifyJson proxy jsonPath =
     do
         json <- loadJsonPath jsonPath
@@ -54,13 +58,15 @@ loadJsonPath path =
 
 languagesDupTest :: Test
 languagesDupTest =
-    getFiles (Proxy @Language) >>= traverse_ checkDups
+    Folder.getSelections (Proxy @Language)
+    >>= traverse (Folder.selectionToPath (Proxy @Language))
+    >>= traverse_ checkDups
     & testCase "languages-dup"
 
 checkDups :: FilePath -> IO ()
-checkDups jsonPath =
+checkDups path =
     do
-        json <- loadJsonPath jsonPath
+        json <- loadJsonPath path
         let allTexts =
                 (json :: Aeson.Value) ^..
                 key "texts" .

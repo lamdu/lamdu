@@ -2,7 +2,7 @@
 
 module Lamdu.Config.Folder
     ( Selection(..), _Selection
-    , getFiles, getSelections
+    , getSelections
     , selectionToPath
     , HasConfigFolder(..)
     , Language, Theme

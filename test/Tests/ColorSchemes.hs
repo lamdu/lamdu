@@ -6,7 +6,7 @@ import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
 import qualified Data.Map as Map
 import           GUI.Momentu.Draw (Color(..))
-import qualified Lamdu.Config.Folder as ConfigFolder
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import           System.FilePath (takeFileName)
 
@@ -14,7 +14,9 @@ import           Test.Lamdu.Prelude
 
 test :: Test
 test =
-    ConfigFolder.getFiles (Proxy @Theme) >>= traverse_ verifyTheme
+    Folder.getSelections (Proxy @Theme)
+    >>= traverse (Folder.selectionToPath (Proxy @Theme))
+    >>= traverse_ verifyTheme
     & testCase "color-scheme"
 
 verifyTheme :: FilePath -> IO ()
