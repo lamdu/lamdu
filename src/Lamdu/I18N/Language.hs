@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses, UndecidableInstances, ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.I18N.Language
-    ( Language(..), lFonts
+    ( Language(..), lFonts, lTitle
     , HasLanguage
     , texts
     ) where
@@ -39,6 +39,7 @@ data Language = Language
         (I18N.Fonts.SansAndSerif
          (I18N.Fonts.RomanAndItalic
           (I18N.Fonts.LightAndBold FilePath)))
+    , _lTitle :: Text
     , _lTexts :: Texts Text
     } deriving Eq
 

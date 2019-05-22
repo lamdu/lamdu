@@ -1,6 +1,7 @@
 {
     "imports": ["left-to-right.mixin.json"],
     "identifier": "english",
+    "title": "English",
     "texts": {
         "commonTexts": {
             "edit": "Edit",

@@ -9,6 +9,8 @@ import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
 import qualified Control.Lens.Extended as Lens
+import           Control.Monad.Trans.FastWriter (evalWriterT)
+import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (current)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
@@ -24,7 +26,7 @@ import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Folder (Selection(..), _Selection)
+import           Lamdu.Config.Folder (Folder, Selection(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Sampler (Sampler, sConfigData, sThemeData, sLanguageData)
 import qualified Lamdu.Config.Sampler as ConfigSampler
@@ -41,9 +43,10 @@ import qualified Lamdu.Editor.Settings as EditorSettings
 import qualified Lamdu.Eval.Manager as EvalManager
 import qualified Lamdu.Font as Font
 import           Lamdu.GUI.IOTrans (ioTrans)
-import qualified Lamdu.GUI.Main as GUIMain
 import           Lamdu.GUI.Main (TitledSelection(..))
+import qualified Lamdu.GUI.Main as GUIMain
 import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
@@ -231,6 +234,17 @@ makeMainGui themeNames langNames dbToIO env =
 backgroundId :: M.AnimId
 backgroundId = ["background"]
 
+titledLangSelection ::
+    Selection (Folder Language) -> IO (TitledSelection Folder.Language)
+titledLangSelection sel =
+    Folder.selectionToPath (Proxy @Language) sel
+    >>= evalWriterT . AesonConfig.load
+    <&> \conf ->
+    TitledSelection
+    { _title = conf ^. Language.lTitle
+    , _selection = sel
+    }
+
 makeRootWidget ::
     HasCallStack =>
     Env -> Debug.Monitors ->
@@ -241,7 +255,7 @@ makeRootWidget env perfMonitors db evaluator sample =
         themeNames <- Folder.getSelections (Proxy @Theme)
         langNames <-
             Folder.getSelections (Proxy @Language)
-            <&> map (\sel -> TitledSelection (sel ^. _Selection) sel)
+            >>= traverse titledLangSelection
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         dbToIO $ makeMainGui themeNames langNames dbToIO env
             <&> M.backgroundColor backgroundId bgColor

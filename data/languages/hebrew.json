@@ -1,6 +1,7 @@
 {
     "imports": ["right-to-left.mixin.json"],
     "identifier": "hebrew",
+    "title": "עברית",
     "texts": {
         "commonTexts": {
             "edit": "עריכה",
