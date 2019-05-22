@@ -3,12 +3,13 @@
     "animationTimePeriodSec": 0,
     "animationRemainInPeriod": 0.2,
     "fonts": {
-        "base"        : "fonts/DejaVuSansMono.ttf",
-        "help"        : "fonts/DejaVuSansMono.ttf",
-        "autoName"    : "fonts/DejaVuSansMono.ttf",
-        "binders"     : "fonts/DejaVuSansMono.ttf",
-        "literalText" : "fonts/DejaVuSansMono.ttf",
-        "literalBytes": "fonts/DejaVuSansMono.ttf"
+        "base"        : { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Light" },
+        "help"        : { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Light" },
+        "autoName"    : { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Bold"  },
+        "binders"     : { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Bold"  },
+        "literalText" : { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Light" },
+        "literalBytes": { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Light" },
+        "debugInfo"   : { "width": "Monospace", "style": "Sans", "slant": "Roman", "weight": "Light" }
     },
     "stdSpacing": [1.0, 0.1],
     "topPadding": 1,

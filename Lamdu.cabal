@@ -365,6 +365,7 @@ Library
                   , Lamdu.I18N.CodeUI
                   , Lamdu.I18N.Collaboration
                   , Lamdu.I18N.Definitions
+                  , Lamdu.I18N.Fonts
                   , Lamdu.I18N.Language
                   , Lamdu.I18N.LangId
                   , Lamdu.I18N.Name

@@ -28,15 +28,16 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
-import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Language (Language)
+import qualified Lamdu.I18N.Language as Language
 import           Lamdu.I18N.Texts (Texts)
 import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..), sAnnotationMode)
@@ -98,8 +99,12 @@ make =
         testTheme <- TestConfig.loadConfigObject "dark"
         testLang <- makeLang
         cache <- Cache.make <&> snd
+        -- Choose some random font:
         font <-
-            testTheme ^. fonts . Fonts.base & Paths.getDataFileName
+            testLang ^. Language.lFonts .
+            I18N.Fonts.proportional . I18N.Fonts.sans . I18N.Fonts.roman .
+            I18N.Fonts.light
+            & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)
         pure Env
             { _eTheme = testTheme

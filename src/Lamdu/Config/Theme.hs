@@ -8,6 +8,8 @@ module Lamdu.Config.Theme
     , ToolTip(..), tooltipFgColor, tooltipBgColor
     , StatusBar(..), statusBarBGColor, statusBarHSpaces
     , Deleted(..), deletedDefTint, deletedDefDiagonalWidth, deletedUseDiagonalWidth
+    , FontSel(..), fontSelWidth, fontSelStyle, fontSelSlant, fontSelWeight
+        , fontSel
     , Theme(..)
         , fonts, baseTextSize, animationTimePeriodSec
         , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
@@ -39,6 +41,7 @@ import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
+import qualified Lamdu.I18N.Fonts as I18N.Fonts
 
 import           Lamdu.Prelude
 
@@ -101,8 +104,31 @@ JsonTH.derivePrefixed "_deleted" ''Deleted
 
 Lens.makeLenses ''Deleted
 
+data FontSel = FontSel
+    { _fontSelWidth  :: I18N.Fonts.ProportionalOrMonospace
+    , _fontSelStyle  :: I18N.Fonts.SansOrSerif
+    , _fontSelSlant  :: I18N.Fonts.RomanOrItalic
+    , _fontSelWeight :: I18N.Fonts.LightOrBold
+    } deriving Eq
+JsonTH.derivePrefixed "_fontSel" ''FontSel
+
+Lens.makeLenses ''FontSel
+
+fontSel ::
+    FontSel ->
+    Lens.ALens'
+    (I18N.Fonts.ProportionalAndMonospace
+        (I18N.Fonts.SansAndSerif
+            (I18N.Fonts.RomanAndItalic
+                (I18N.Fonts.LightAndBold a)))) a
+fontSel sel =
+    I18N.Fonts.choice (sel ^. fontSelWidth) .
+    I18N.Fonts.choice (sel ^. fontSelStyle) .
+    I18N.Fonts.choice (sel ^. fontSelSlant) .
+    I18N.Fonts.choice (sel ^. fontSelWeight)
+
 data Theme = Theme
-    { _fonts :: Fonts FilePath
+    { _fonts :: Fonts FontSel
     , _baseTextSize :: FontSize
     , _animationTimePeriodSec :: Double
     , _animationRemainInPeriod :: Double

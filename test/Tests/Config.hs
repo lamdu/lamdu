@@ -7,7 +7,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Config (load)
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
-import           Data.Aeson.Lens (_Object, _String)
+import           Data.Aeson.Lens (_Object, _String, key)
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
@@ -61,7 +61,11 @@ checkDups :: FilePath -> IO ()
 checkDups jsonPath =
     do
         json <- loadJsonPath jsonPath
-        let allTexts = json ^.. Lens.folding (Lens.universeOf (_Object . traverse)) . _String
+        let allTexts =
+                (json :: Aeson.Value) ^..
+                key "texts" .
+                Lens.folding (Lens.universeOf (_Object . traverse)) .
+                _String
         group (sort allTexts) ^.. traverse . Lens.ix 1 & traverse_ onDup
     where
         onDup text = assertString ("duplicated text: " <> unpack text)

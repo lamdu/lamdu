@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses, UndecidableInstances, ConstraintKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.I18N.Language
-    ( Language(..)
+    ( Language(..), lFonts
     , HasLanguage
     , texts
     ) where
@@ -22,6 +22,7 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
+import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
@@ -33,6 +34,11 @@ import           Lamdu.Prelude
 data Language = Language
     { _lDirection :: Dir.Layout
     , _lIdentifier :: LangId
+    , _lFonts ::
+        I18N.Fonts.ProportionalAndMonospace
+        (I18N.Fonts.SansAndSerif
+         (I18N.Fonts.RomanAndItalic
+          (I18N.Fonts.LightAndBold FilePath)))
     , _lTexts :: Texts Text
     } deriving Eq
 

@@ -20,13 +20,13 @@
         "bgPadding": [7.0, 7.0]
     },
     "fonts": {
-        "base"        : "fonts/DejaVuSans.ttf",
-        "help"        : "fonts/DejaVuSans.ttf",
-        "autoName"    : "fonts/DejaVuSerif-BoldItalic.ttf",
-        "binders"     : "fonts/DejaVuSans-Bold.ttf",
-        "literalText" : "fonts/DejaVuSerif.ttf",
-        "literalBytes": "fonts/DejaVuSansMono.ttf",
-        "debugInfo"   : "fonts/DejaVuSansMono.ttf"
+        "base"        : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Light" },
+        "help"        : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Light" },
+        "autoName"    : { "width": "Proportional", "style": "Serif", "slant": "Italic", "weight": "Bold"  },
+        "binders"     : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Bold"  },
+        "literalText" : { "width": "Proportional", "style": "Serif", "slant": "Roman" , "weight": "Light" },
+        "literalBytes": { "width": "Monospace"   , "style": "Sans" , "slant": "Roman" , "weight": "Light" },
+        "debugInfo"   : { "width": "Monospace"   , "style": "Sans" , "slant": "Roman" , "weight": "Light" }
     },
     "help": {
         "textSize": 9

@@ -12,5 +12,51 @@
         "statusBar": {
             "branch": "⎇"
         }
+    },
+    "fonts": {
+        "proportional": {
+            "sans": {
+                "roman": {
+                    "light": "fonts/DejaVuSans.ttf",
+                    "bold": "fonts/DejaVuSans-Bold.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSans-Oblique.ttf",
+                    "bold": "fonts/DejaVuSans-BoldOblique.ttf"
+                }
+            },
+            "serif": {
+                "roman": {
+                    "light": "fonts/DejaVuSerif.ttf",
+                    "bold": "fonts/DejaVuSerif-Bold.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSerif-Italic.ttf",
+                    "bold": "fonts/DejaVuSerif-BoldItatlic.ttf"
+                }
+            }
+        },
+        "monospace": {
+            "sans": {
+                "roman": {
+                    "light": "fonts/DejaVuSansMono.ttf",
+                    "bold": "fonts/DejaVuSansMono-Bold.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSansMono-Oblique.ttf",
+                    "bold": "fonts/DejaVuSansMono-BoldOblique.ttf"
+                }
+            },
+            "serif": {
+                "roman": {
+                    "light": "fonts/DejaVuSansMono.ttf",
+                    "bold": "fonts/DejaVuSansMono-Bold.ttf"
+                },
+                "italic": {
+                    "light": "fonts/DejaVuSansMono-Oblique.ttf",
+                    "bold": "fonts/DejaVuSansMono-BoldOblique.ttf"
+                }
+            }
+        }
     }
 }

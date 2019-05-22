@@ -12,6 +12,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (FontSize, Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Font as Font
+import qualified Lamdu.I18N.Language as Language
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
 
@@ -20,13 +21,13 @@ import           Lamdu.Prelude
 sampleConfigPath :: Lens' Sample FilePath
 sampleConfigPath = Sampler.sData . Sampler.sConfig . Sampler.primaryPath
 
-prependConfigPath :: Sample -> Fonts FilePath -> Fonts FilePath
+prependConfigPath :: Sample -> Fonts Theme.FontSel -> Fonts FilePath
 prependConfigPath sample =
     Lens.mapped %~ f
     where
         dir = FilePath.takeDirectory (sample ^. sampleConfigPath)
-        f "" = "" -- Debug font!
-        f x = dir </> x
+        fonts = sample ^. Sampler.sLanguageData . Language.lFonts
+        f sel = dir </> fonts ^# Theme.fontSel sel
 
 assignFontSizes :: Theme -> Fonts FilePath -> Fonts (FontSize, FilePath)
 assignFontSizes theme fonts =

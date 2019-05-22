@@ -36,6 +36,7 @@ import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
+import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Precedence (HasPrecedence(..))
@@ -58,6 +59,11 @@ deriving instance Data Menu.Style
 deriving instance Data SearchMenu.TermStyle
 deriving instance Data ResponsiveExpr.Style
 deriving instance Data Theme
+deriving instance Data I18N.Fonts.LightOrBold
+deriving instance Data I18N.Fonts.RomanOrItalic
+deriving instance Data I18N.Fonts.SansOrSerif
+deriving instance Data I18N.Fonts.ProportionalOrMonospace
+deriving instance Data Theme.FontSel
 deriving instance Data Theme.Eval
 deriving instance Data Theme.Help
 deriving instance Data Theme.Hole
