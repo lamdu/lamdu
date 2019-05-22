@@ -31,6 +31,8 @@ data CodeUI a = CodeUI
     , _toLambdaCase :: a
     , _open :: a
     , _close :: a
+    , _shrinkLambdaParams :: a
+    , _expandLambdaParams :: a
     , _getField :: a
     , _dot :: a
     , _deleteDot :: a

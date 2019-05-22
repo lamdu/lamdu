@@ -10,6 +10,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
@@ -79,18 +80,24 @@ lamId = (`Widget.joinId` ["lam"])
 mkShrunk ::
     ( Monad o, MonadReader env f, Has Config env, Has Theme env
     , GuiState.HasCursor env, Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Has (Texts.Code Text) env, Glue.HasTexts env
+    , Glue.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
     ) => [Sugar.EntityId] -> Widget.Id ->
     f (Maybe (Gui Widget o) -> [Gui Responsive o])
 mkShrunk paramIds myId =
     do
-        jumpKeys <- Lens.view (has . Config.jumpToDefinitionKeys)
+        env <- Lens.view id
         let expandEventMap =
                 paramIds ^? Lens.traverse
                 & foldMap
-                  (E.keysEventMapMovesCursor jumpKeys
-                   (E.Doc ["View", "Expand Lambda Params"]) . pure .
-                   WidgetIds.fromEntityId)
+                  (E.keysEventMapMovesCursor
+                      (env ^. has . Config.jumpToDefinitionKeys)
+                      ( E.toDoc env
+                          [ has . MomentuTexts.view
+                          , has . Texts.expandLambdaParams
+                          ]
+                      ) . pure . WidgetIds.fromEntityId)
         theme <- Lens.view has
         lamLabel <-
             (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
@@ -106,7 +113,10 @@ mkShrunk paramIds myId =
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env, Has TextView.Style env, Has Theme env
-    , Has Config env, Has (Texts.Code Text) env, Glue.HasTexts env
+    , Has Config env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f
@@ -119,9 +129,13 @@ mkLightLambda params myId =
             & traverse (GuiState.isSubCursor ??)
             <&> or
         let shrinkKeys = [MetaKey noMods MetaKey.Key'Escape]
+        env <- Lens.view id
         let shrinkEventMap =
                 E.keysEventMapMovesCursor shrinkKeys
-                (E.Doc ["View", "Shrink Lambda Params"]) (pure (lamId myId))
+                (E.toDoc env
+                    [ has . MomentuTexts.view
+                    , has . Texts.shrinkLambdaParams
+                    ]) (pure (lamId myId))
         if isSelected
             then
                  mkExpanded

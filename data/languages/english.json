@@ -83,6 +83,8 @@
             "toLambdaCase": "Turn to Lambda-Case",
             "open": "Open",
             "close": "Close",
+            "shrinkLambdaParams": "Shrink Lambda Params",
+            "expandLambdaParams": "Expand Lambda Params",
             "getField": "Get field",
             "dot": "Dot",
             "deleteDot": "Delete dot",
