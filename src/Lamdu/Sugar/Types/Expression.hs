@@ -38,7 +38,6 @@ module Lamdu.Sugar.Types.Expression
 import           AST (Tree, Tie, Ann, Children, Recursive, makeChildren)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import           Data.Functor.Identity (Identity(..))
 import           Data.Property (Property)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)

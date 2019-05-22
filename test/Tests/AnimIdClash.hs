@@ -2,7 +2,6 @@ module Tests.AnimIdClash (test) where
 
 import           AST (ann, annotations)
 import           Control.Monad.Unit (Unit(..))
-import           Data.Functor.Identity (Identity(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))

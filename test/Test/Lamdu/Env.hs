@@ -10,7 +10,6 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Functor.Identity (Identity(..))
 import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim

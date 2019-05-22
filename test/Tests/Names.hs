@@ -7,7 +7,6 @@ module Tests.Names where
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
-import           Data.Functor.Identity (Identity(..))
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
