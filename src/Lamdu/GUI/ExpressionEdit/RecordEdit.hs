@@ -249,6 +249,7 @@ makeFieldRow ::
     , TextEdit.HasTexts env, SearchMenu.HasTexts env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
     ) =>
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
     ExprGuiM env i o (Gui Responsive.TaggedItem o)

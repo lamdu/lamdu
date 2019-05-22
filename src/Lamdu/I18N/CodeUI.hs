@@ -15,11 +15,15 @@ data CodeUI a = CodeUI
     , _hide :: a
     , _show :: a
     , _pick :: a
+    , _createNew :: a
     , _new :: a
+    , _newAndJumpToNextEntry :: a
+    , _newName :: a
     , _apply :: a
     , _lambda :: a
     , _completion :: a
     , _rename :: a
+    , _renameTag :: a
     , _doneRenaming :: a
     , _changeImportedName :: a
     , _doneChangingImportedName :: a
@@ -27,6 +31,7 @@ data CodeUI a = CodeUI
     , _nominal :: a
     , _deleteToNominal :: a
     , _deleteFromNominal :: a
+    , _tag :: a
     , _record :: a
     , _inject :: a
     , _caseLabel :: a

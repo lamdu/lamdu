@@ -96,6 +96,7 @@ makeBuiltinDefinition ::
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
     ) =>
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionBuiltin (Name g) o ->

@@ -278,6 +278,7 @@ makeParamsEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Code Text) env
+    , Has (Texts.Navigation Text) env
     , Glue.HasTexts env, SearchMenu.HasTexts env
     ) =>
     Annotation.EvalAnnotationOptions ->
@@ -316,9 +317,10 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
 
 makeMParamsEdit ::
     ( Monad i, Monad o
-    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
     , Glue.HasTexts env
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
@@ -430,9 +432,10 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
 
 makePlainParts ::
     ( Monad i, Monad o
-    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
     , Glue.HasTexts env
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
