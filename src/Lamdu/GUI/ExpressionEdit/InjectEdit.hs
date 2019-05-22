@@ -11,6 +11,7 @@ import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -65,13 +66,14 @@ makeInject ::
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
+        env <- Lens.view id
+        let delDoc = E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete]
         arg <- ExprGuiM.makeSubexpression val
-        delKeys <- Lens.view id <&> Config.delKeys
         let replaceParentEventMap replaceParent =
                 -- Deleting the inject is replacing the whole expr
                 -- with the injected value "child"
                 replaceParent <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor delKeys delDoc
+                & E.keysEventMapMovesCursor (Config.delKeys env) delDoc
 
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
@@ -82,7 +84,6 @@ makeInject val tag pl =
                 <&> (: [arg])
             )
     where
-        delDoc = E.Doc ["Edit", "Delete"]
         mReplaceParent = val ^. ann . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
