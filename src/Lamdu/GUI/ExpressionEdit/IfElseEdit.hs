@@ -54,6 +54,7 @@ Lens.makeLenses ''Row
 makeIfThen ::
     ( Monad i, Monad o
     , Has (Texts.Code Text) env
+    , Has (MomentuTexts.Texts Text) env
     ) =>
     WithTextPos View -> AnimId ->
     Tree (Sugar.IfElse (Name o) i o)
@@ -70,11 +71,13 @@ makeIfThen prefixLabel animId ifElse =
             /|/ grammar (label Texts.if_)
             /|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
-        delKeys <- Lens.view id <&> Config.delKeys
+        env <- Lens.view id
         let eventMap =
                 foldMap
-                (E.keysEventMapMovesCursor delKeys
-                 (E.Doc ["Edit", "Delete"]) . fmap WidgetIds.fromEntityId)
+                (E.keysEventMapMovesCursor (Config.delKeys env)
+                 ( E.toDoc env
+                     [has . MomentuTexts.edit, has . MomentuTexts.delete]
+                 ) . fmap WidgetIds.fromEntityId)
                 (ifElse ^. Sugar.iElse . ann .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
