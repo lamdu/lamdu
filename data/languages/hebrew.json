@@ -8,7 +8,8 @@
             "insert": "הכנס",
             "delete": "מחק",
             "move": "זוז",
-            "navigation": "ניווט"
+            "navigation": "ניווט",
+            "select": "בחר"
         },
         "code": {
             "let_": "יהי",
@@ -73,7 +74,6 @@
             "apply": "הפעל",
             "lambda": "למדה",
             "completion": "השלמה",
-            "select": "בחר",
             "rename": "שנה שם",
             "doneRenaming": "סיים שינוי שם",
             "changeImportedName": "שנה שם מיובא",
@@ -161,7 +161,6 @@
             "ahead": "קדימה"
         },
         "choice": {
-            "select": "סמן",
             "chooseSelected": "בחר"
         },
         "grid": {

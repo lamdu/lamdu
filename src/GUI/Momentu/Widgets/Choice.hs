@@ -5,7 +5,7 @@ module GUI.Momentu.Widgets.Choice
     , defaultFdConfig
     , Config(..), defaultConfig
     , Orientation(..)
-    , Texts(..), select, chooseSelected
+    , Texts(..), chooseSelected
     ) where
 
 import qualified Control.Lens as Lens
@@ -19,6 +19,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as State
@@ -27,23 +28,23 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 
 import           Lamdu.Prelude
 
-data Texts a = Texts
-    { _select :: a
-    , _chooseSelected :: a
+newtype Texts a = Texts
+    { _chooseSelected :: a
     } deriving Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
 defaultFdConfig ::
-    (MonadReader env m, Has (Texts Text) env) => m (Text -> FocusDelegator.Config)
+    (MonadReader env m, Has (Texts Text) env, Has (MomentuTexts.Texts Text) env) =>
+    m (Text -> FocusDelegator.Config)
 defaultFdConfig =
-    Lens.view has <&> \txt helpCategory ->
+    Lens.view id <&> \txt helpCategory ->
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
-    , FocusDelegator.focusChildDoc = E.Doc [helpCategory, txt ^. select]
+    , FocusDelegator.focusChildDoc = E.Doc [helpCategory, txt ^. has . MomentuTexts.select]
     , FocusDelegator.focusParentKeys = [MetaKey.Key'Enter, MetaKey.Key'Escape] <&> MetaKey noMods
-    , FocusDelegator.focusParentDoc = E.Doc [helpCategory, txt ^. chooseSelected]
+    , FocusDelegator.focusParentDoc = E.Doc [helpCategory, txt ^. has . chooseSelected]
     }
 
 data Config = Config
@@ -51,7 +52,9 @@ data Config = Config
     , cwcOrientation :: Orientation
     }
 
-defaultConfig :: (MonadReader env m, Has (Texts Text) env) => m (Text -> Config)
+defaultConfig ::
+    (MonadReader env m, Has (Texts Text) env, Has (MomentuTexts.Texts Text) env) =>
+    m (Text -> Config)
 defaultConfig =
     defaultFdConfig <&> \defFd helpCategory ->
     Config

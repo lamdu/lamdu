@@ -19,7 +19,6 @@ data CodeUI a = CodeUI
     , _apply :: a
     , _lambda :: a
     , _completion :: a
-    , _select :: a
     , _rename :: a
     , _doneRenaming :: a
     , _changeImportedName :: a

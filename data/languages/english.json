@@ -8,7 +8,8 @@
             "insert": "Insert",
             "delete": "Delete",
             "move": "Move",
-            "navigation": "Navigation"
+            "navigation": "Navigation",
+            "select": "Select"
         },
         "code": {
             "let_": "let",
@@ -70,7 +71,6 @@
             "apply": "Apply",
             "lambda": "Lambda",
             "completion": "Completion",
-            "select": "Select",
             "rename": "Rename",
             "doneRenaming": "Done renaming",
             "changeImportedName": "Change imported name",
@@ -158,7 +158,6 @@
             "ahead": "Ahead"
         },
         "choice": {
-            "select": "Select",
             "chooseSelected": "Choose selected"
         },
         "grid": {

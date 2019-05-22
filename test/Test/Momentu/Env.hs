@@ -49,8 +49,9 @@ env =
         , MomentuTexts._view = "View"
         , MomentuTexts._insert = "Insert"
         , MomentuTexts._delete = "Delete"
-        , MomentuTexts._navigation = "navigation"
-        , MomentuTexts._move = "move"
+        , MomentuTexts._navigation = "Navigation"
+        , MomentuTexts._move = "Move"
+        , MomentuTexts._select = "Select"
         }
     }
 
