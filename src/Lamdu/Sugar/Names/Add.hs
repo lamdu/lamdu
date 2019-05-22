@@ -30,8 +30,8 @@ import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
@@ -203,9 +203,11 @@ p1Name mDisambiguator nameType p0Name =
         then p1Anon ctx
         else p1Tagged mDisambiguator nameType p0Name
     where
-        tellCtx x =
-            tellSome p1Contexts (Lens.singletonAt tag (Set.singleton x)) *>
-            when (nameType == Walk.TypeVar) (tellSome p1TypeVars (OrderedSet.singleton x))
+        tellCtx x
+            | nameType == Walk.TypeVar =
+                tellSome p1TypeVars (OrderedSet.singleton x)
+            | otherwise =
+                tellSome p1Contexts (Lens.singletonAt tag (Set.singleton x))
         InternalName ctx tag = p0Name ^. p0InternalName
 
 -------------------------------------
