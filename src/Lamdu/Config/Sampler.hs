@@ -98,32 +98,31 @@ loadConfigFile path =
 loadFromFolder ::
     forall a.
     (HasConfigFolder a, FromJSON a) =>
-    FilePath -> Selection (Folder a) -> IO (FiledConfig a)
-loadFromFolder configPath selection =
-    loadConfigFile path
-    where
-        path =
-            takeDirectory configPath
-            </> configFolder (Proxy @a) </>
-            Text.unpack (selection ^. _Selection) ++ ".json"
+    Selection (Folder a) -> IO (FiledConfig a)
+loadFromFolder selection =
+    Paths.getDataFileName "config.json"
+    <&> takeDirectory
+    <&> (</>
+            (configFolder (Proxy @a)
+                </> Text.unpack (selection ^. _Selection) ++ ".json"))
+    >>= loadConfigFile
 
-load ::
-    Selection Folder.Theme -> Selection Folder.Language -> FilePath -> IO Sample
-load themeName langName configPath =
+load :: Selection Folder.Theme -> Selection Folder.Language -> IO Sample
+load themeName langName =
     do
-        config <- loadConfigFile configPath
+        config <- Paths.getDataFileName "config.json" >>= loadConfigFile
         SampleData config
-            <$> loadFromFolder configPath themeName
-            <*> loadFromFolder configPath langName
+            <$> loadFromFolder themeName
+            <*> loadFromFolder langName
             & withMTime
 
-maybeReload :: Sample -> FilePath -> IO (Maybe Sample)
-maybeReload (Sample oldVer old) newConfigPath =
+maybeReload :: Sample -> IO (Maybe Sample)
+maybeReload (Sample oldVer old) =
     do
         mtimes <- getSampleMTimes old
         if mtimes == oldVer
             then pure Nothing
-            else load (f sTheme) (f sLanguage) newConfigPath <&> Just
+            else load (f sTheme) (f sLanguage) <&> Just
     where
         f l = old ^. l . primaryPath & takeFileName & dropExtension & Text.pack & Selection
 
@@ -133,11 +132,7 @@ new ::
     Selection Folder.Language -> IO Sampler
 new sampleUpdated initialTheme initialLang =
     do
-        ref <-
-            getConfigPath
-            >>= load initialTheme initialLang
-            >>= E.evaluate
-            >>= newMVar
+        ref <- load initialTheme initialLang >>= E.evaluate >>= newMVar
         tid <-
             forkIOUnmasked . forever $
             do
@@ -146,7 +141,7 @@ new sampleUpdated initialTheme initialLang =
                     reloadResult _ (Just newSample) = (newSample, Just newSample)
                 mNew <-
                     modifyMVar ref $ \old ->
-                    (getConfigPath >>= maybeReload old <&> reloadResult old)
+                    (maybeReload old <&> reloadResult old)
                     `E.catch` \E.SomeException {} -> pure (old, Nothing)
                 traverse_ sampleUpdated mNew
         pure Sampler
@@ -155,10 +150,7 @@ new sampleUpdated initialTheme initialLang =
             , setSelection =
                 \theme lang ->
                 takeMVar ref
-                >> getConfigPath
-                >>= load theme lang
+                >> load theme lang
                 >>= E.evaluate
                 >>= putMVar ref
             }
-    where
-        getConfigPath = Paths.getDataFileName "config.json"
