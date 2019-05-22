@@ -108,11 +108,11 @@ makeStatusWidgets ::
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
-    <*> (themeNames <&> (^. _Selection) & traverse rawOpt
+    <*> (traverse rawOpt themeNames
             >>= StatusBar.makeSwitchStatusWidget
             (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
             Config.changeThemeKeys themeProp)
-    <*> (langNames & traverse opt
+    <*> (traverse opt langNames
             >>= StatusBar.makeSwitchStatusWidget
             (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
             Config.changeLanguageKeys langProp)
@@ -124,10 +124,10 @@ makeStatusWidgets themeNames langNames prop =
         opt sel =
             (TextView.makeFocusable ?? (sel ^. title))
             <*> (Lens.view Element.animIdPrefix
-                    <&> AnimId.augmentId (sel ^. selection . _Selection)
+                    <&> AnimId.augmentId (sel ^. selection)
                     <&> WidgetId.Id)
-            <&> (,) (sel ^. title)
-        rawOpt text = Label.makeFocusable text <&> (,) text
+            <&> (,) (sel ^. selection)
+        rawOpt sel = Label.makeFocusable (sel ^. _Selection) <&> (,) sel
         helpVals =
             Styled.mkFocusableLabel
             <&> \mk ->
@@ -135,6 +135,6 @@ makeStatusWidgets themeNames langNames prop =
             , (HelpShown, OneOf Texts.shown)
             ] <&>
             _2 %~ \(OneOf lens) -> mk (OneOf lens)
-        themeProp = composeLens (Settings.sSelectedTheme . _Selection) prop
-        langProp = composeLens (Settings.sSelectedLanguage . _Selection) prop
+        themeProp = composeLens Settings.sSelectedTheme prop
+        langProp = composeLens Settings.sSelectedLanguage prop
         helpProp = composeLens Settings.sHelpShown prop
