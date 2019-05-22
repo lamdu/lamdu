@@ -18,11 +18,11 @@ import           Test.Lamdu.Prelude
 
 test :: Test
 test =
-    do
-        verifyJson (Proxy @Config) "config.json"
-        verifyConfigFolder (Proxy @Theme)
-        verifyConfigFolder (Proxy @Language)
-    & testCase "config-parses"
+    testGroup "config-tests"
+    [ testCase "config-parse" (verifyJson (Proxy @Config) "config.json")
+    , testCase "themes-parse" (verifyConfigFolder (Proxy @Theme))
+    , testCase "languages-parse" (verifyConfigFolder (Proxy @Language))
+    ]
 
 verifyConfigFolder ::
     (HasConfigFolder a, Aeson.FromJSON a, Aeson.ToJSON a) =>
