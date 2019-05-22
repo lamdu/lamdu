@@ -10,7 +10,6 @@ import qualified Data.Char as Char
 import           Data.List (sort)
 import           Data.Map ((!))
 import qualified Data.Map as Map
-import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lamdu.Calc.Definition (depsGlobalTypes)

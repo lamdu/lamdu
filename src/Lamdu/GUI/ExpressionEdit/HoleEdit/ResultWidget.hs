@@ -8,7 +8,6 @@ import           AST (Tree, Ann(..), Children(..), Recursive(..), RecursiveConst
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict, withDict)
-import           Data.Proxy (Proxy(..))
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element

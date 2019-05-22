@@ -7,7 +7,7 @@ import           Data.Aeson.Config (load)
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
-import           Data.Proxy (Proxy(..), asProxyTypeOf)
+import           Data.Proxy (asProxyTypeOf)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), getFiles)
 import           Lamdu.Config.Theme (Theme)

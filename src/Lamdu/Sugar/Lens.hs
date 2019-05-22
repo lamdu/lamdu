@@ -21,7 +21,6 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Constraint
 import           Data.Functor.Const (Const(..))
-import           Data.Proxy (Proxy(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude

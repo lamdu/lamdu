@@ -11,7 +11,6 @@ import           AST (Tree, overChildren)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
-import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence
     (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)

@@ -12,7 +12,6 @@ import qualified Control.Lens.Extended as Lens
 import           Data.CurAndPrev (current)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
-import           Data.Proxy (Proxy(..))
 import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Main (MainLoop, Handlers(..))

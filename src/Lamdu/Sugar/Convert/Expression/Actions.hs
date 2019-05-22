@@ -16,7 +16,6 @@ import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Const (Const(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Lamdu.Annotations as Annotations

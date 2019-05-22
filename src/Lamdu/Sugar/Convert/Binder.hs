@@ -14,7 +14,6 @@ import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
-import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

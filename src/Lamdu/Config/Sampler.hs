@@ -16,7 +16,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
-import           Data.Proxy (Proxy(..))
 import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Lamdu.Config (Config)

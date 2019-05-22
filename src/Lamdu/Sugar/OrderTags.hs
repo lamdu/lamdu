@@ -7,7 +7,6 @@ module Lamdu.Sugar.OrderTags
 import           AST (Tree, Children(..), Ann(..), monoChildren)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
-import           Data.Proxy (Proxy(..))
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens

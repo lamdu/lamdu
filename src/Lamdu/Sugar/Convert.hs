@@ -13,7 +13,6 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
-import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations

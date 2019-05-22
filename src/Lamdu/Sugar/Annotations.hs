@@ -11,7 +11,6 @@ import           AST (Tree, Knot, overChildren)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Functor.Const (Const(..))
-import           Data.Proxy (Proxy(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
