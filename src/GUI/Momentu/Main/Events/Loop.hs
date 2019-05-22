@@ -9,16 +9,13 @@ module GUI.Momentu.Main.Events.Loop
     ) where
 
 import qualified Control.Exception as E
-import           Control.Lens.Operators
-import           Control.Monad (when, void)
 import           Data.Typeable (Typeable)
 import           Data.Vector.Vector2 (Vector2(..))
-import           GHC.Generics (Generic)
 import           GUI.Momentu.Main.Events
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
-import           Prelude
+import           Lamdu.Prelude
 
 -- | The output of the event handler back to the event-loop.
 data Next
