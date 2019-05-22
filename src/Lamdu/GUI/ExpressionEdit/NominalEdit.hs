@@ -10,6 +10,7 @@ import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -59,7 +60,7 @@ makeToNom ::
     ExprGuiM env i o (Gui Responsive o)
 makeToNom nom pl =
     nom <&> ExprGuiM.makeBinder
-    & mkNomGui id "ToNominal" Texts.toNom mDel pl
+    & mkNomGui id Texts.deleteToNominal Texts.toNom mDel pl
     where
         mDel =
             nom ^. Sugar.nVal . ann . Sugar.plActions .
@@ -79,7 +80,7 @@ makeFromNom ::
     ExprGuiM env i o (Gui Responsive o)
 makeFromNom nom pl =
     nom <&> ExprGuiM.makeSubexpression
-    & mkNomGui reverse "FromNominal" Texts.fromNom mDel pl
+    & mkNomGui reverse Texts.deleteFromNominal Texts.fromNom mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
 
@@ -92,18 +93,22 @@ mkNomGui ::
     , Has (Texts.Definitions Text) env
     ) =>
     ([Gui Responsive o] -> [Gui Responsive o]) ->
-    Text -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
+    OneOf Texts.CodeUI -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Sugar.Nominal (Name o) (ExprGuiM env i o (Gui Responsive o)) ->
     ExprGuiM env i o (Gui Responsive o)
-mkNomGui ordering nomStr textLens mDel pl (Sugar.Nominal tid val) =
+mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
         env <- Lens.view id
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor (Config.delKeys env)
-                (E.Doc ["Edit", "Nominal", "Delete " <> nomStr])
+                (E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . Texts.nominal
+                    , has . deleteNomText
+                    ])
         let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
         stdWrapParentExpr pl
             <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)

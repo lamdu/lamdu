@@ -24,6 +24,9 @@ data CodeUI a = CodeUI
     , _changeImportedName :: a
     , _doneChangingImportedName :: a
     , _pane :: a
+    , _nominal :: a
+    , _deleteToNominal :: a
+    , _deleteFromNominal :: a
     , _inject :: a
     , _caseLabel :: a
     , _addAlt :: a
