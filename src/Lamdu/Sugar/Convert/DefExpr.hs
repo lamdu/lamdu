@@ -9,7 +9,7 @@ import           AST.Term.Scheme (saveScheme)
 import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Lamdu.Calc.Infer (runPureInfer)
+import           Lamdu.Calc.Infer (alphaEq, runPureInfer)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -25,6 +25,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 import           Lamdu.Prelude
 
@@ -44,8 +45,8 @@ convert defType defExpr defI =
                 >>= saveScheme
                 & runPureInfer V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)
-        unless (T.alphaEq defType inferredType) $
-            fail $ "Def type mismatches its inferred type! " <> show (defType, inferredType)
+        unless (alphaEq defType inferredType) $
+            fail $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
         DefinitionBodyExpression DefinitionExpression
             { _deType = defTypeS

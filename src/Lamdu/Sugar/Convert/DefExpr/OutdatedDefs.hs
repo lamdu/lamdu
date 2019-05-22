@@ -16,6 +16,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Lamdu.Calc.Definition (depsGlobalTypes)
+import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -166,7 +167,7 @@ isPartSame part preType newType =
     do
         prePart <- (_Pure . sTyp) (^? part) preType
         newPart <- (_Pure . sTyp) (^? part) newType
-        T.alphaEq prePart newPart & guard
+        alphaEq prePart newPart & guard
     & Lens.has Lens._Just
 
 argChangeType :: Tree Pure T.Scheme -> Tree Pure T.Scheme -> ArgChange
@@ -192,7 +193,7 @@ argChangeType prevArg newArg =
     & fromMaybe ArgChange
     where
         fieldChange prevField newField
-            | T.alphaEq prevFieldScheme newFieldScheme = Nothing
+            | alphaEq prevFieldScheme newFieldScheme = Nothing
             | otherwise = argChangeType prevFieldScheme newFieldScheme & Just
             where
                 prevFieldScheme = prevArg & _Pure . sTyp .~ prevField
@@ -247,7 +248,7 @@ scan entityId defExpr setDefExpr typeCheck =
             <&> (^. Def.defType)
             >>= processDef globalVar usedType
         processDef globalVar usedType newUsedDefType
-            | T.alphaEq usedType newUsedDefType = pure Map.empty
+            | alphaEq usedType newUsedDefType = pure Map.empty
             | otherwise =
                 do
                     usedTypeS <- ConvertType.convertScheme (EntityId.usedTypeOf entityId) usedType

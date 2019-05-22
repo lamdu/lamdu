@@ -14,6 +14,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
+import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
@@ -112,7 +113,7 @@ verifyDefs tagName defs =
             case defTypes ^. Lens.at var of
             Nothing -> assertString ("Missing def referred in frozen deps: " ++ identHex (V.vvName var))
             Just (tag, x)
-                | T.alphaEq x typ -> pure ()
+                | alphaEq x typ -> pure ()
                 | otherwise ->
                     assertString
                     ("Frozen def type mismatch for " ++ show (tagName tag) ++ ":\n" ++

@@ -30,6 +30,7 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
+import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -402,7 +403,7 @@ compileGlobalVar valId var =
                     scheme <-
                         Lens.use (globalTypes . Lens.at var)
                         >>= maybe newGlobalType pure
-                    if T.alphaEq scheme expectedType
+                    if alphaEq scheme expectedType
                         then loadGlobal
                         else throwErr valId ER.DependencyTypeOutOfDate
         Lens.view (envExpectedTypes . Lens.at var)

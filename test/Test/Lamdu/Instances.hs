@@ -97,9 +97,6 @@ instance Pretty Color where
         where
             base = "Color" <+> pPrint r <+> pPrint g <+> pPrint b
 
-instance Pretty (T.Types k) where
-    pPrint _ = "TODO: Pretty (T.Types k)"
-
 instance Arbitrary (Vector2 R) where
     arbitrary =
         Vector2 <$> comp <*> comp
