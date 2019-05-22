@@ -1,19 +1,22 @@
 -- | Widget to edit the settings
 {-# LANGUAGE TemplateHaskell, RankNTypes #-}
 module Lamdu.GUI.Settings
-     ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
-     , hoist
-     , makeStatusWidgets
-     ) where
+    ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
+    , TitledSelection(..), title, selection
+    , hoist
+    , makeStatusWidgets
+    ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property, composeLens)
+import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -42,6 +45,12 @@ data StatusWidgets f = StatusWidgets
     , _helpWidget :: StatusBar.StatusWidget f
     }
 Lens.makeLenses ''StatusWidgets
+
+data TitledSelection a = TitledSelection
+    { _title :: !Text
+    , _selection :: !(Selection a)
+    }
+Lens.makeLenses ''TitledSelection
 
 hoist ::
     (f GuiState.Update -> g GuiState.Update) ->
@@ -94,7 +103,7 @@ makeStatusWidgets ::
     , Has (Texts.StatusBar Text) env
     , Glue.HasTexts env
     ) =>
-    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
@@ -103,7 +112,7 @@ makeStatusWidgets themeNames langNames prop =
             >>= StatusBar.makeSwitchStatusWidget
             (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
             Config.changeThemeKeys themeProp)
-    <*> (langNames <&> (^. _Selection) & traverse rawOpt
+    <*> (langNames & traverse opt
             >>= StatusBar.makeSwitchStatusWidget
             (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
             Config.changeLanguageKeys langProp)
@@ -112,6 +121,12 @@ makeStatusWidgets themeNames langNames prop =
             Config.helpKeys helpProp
         )
     where
+        opt sel =
+            (TextView.makeFocusable ?? (sel ^. title))
+            <*> (Lens.view Element.animIdPrefix
+                    <&> AnimId.augmentId (sel ^. selection . _Selection)
+                    <&> WidgetId.Id)
+            <&> (,) (sel ^. title)
         rawOpt text = Label.makeFocusable text <&> (,) text
         helpVals =
             Styled.mkFocusableLabel

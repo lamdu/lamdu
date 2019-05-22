@@ -1,6 +1,7 @@
 -- | The Lamdu status bar
 module Lamdu.GUI.StatusBar
     ( module Lamdu.GUI.StatusBar.Common
+    , TitledSelection(..), title, selection
     , make
     ) where
 
@@ -26,6 +27,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
+import           Lamdu.GUI.Settings (TitledSelection(..), title, selection)
 import qualified Lamdu.GUI.Settings as SettingsGui
 import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
@@ -54,7 +56,7 @@ make ::
     , Has (Texts.CodeUI Text) env
     ) =>
     StatusWidget (IOTrans n) ->
-    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))

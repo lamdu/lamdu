@@ -4,6 +4,7 @@ module Lamdu.GUI.Main
     , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
     , CodeEdit.EvalResults
+    , TitledSelection(..), title, selection
     ) where
 
 import qualified Control.Lens as Lens
@@ -39,6 +40,7 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.StatusBar as StatusBar
+import           Lamdu.GUI.StatusBar (TitledSelection(..), title, selection)
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)
@@ -82,7 +84,7 @@ type Ctx env =
 
 layout ::
     Ctx env =>
-    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
 layout themeNames langNames settingsProp =
@@ -120,7 +122,7 @@ layout themeNames langNames settingsProp =
 
 make ::
     Ctx env =>
-    [Selection Folder.Theme] -> [Selection Folder.Language] ->
+    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
 make themeNames langNames settingsProp env =
