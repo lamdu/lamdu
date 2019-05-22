@@ -48,7 +48,7 @@ data Help = Help
     , _helpInputDocColor :: Draw.Color
     , _helpBGColor :: Draw.Color
     , _helpTint :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving Eq
 JsonTH.derivePrefixed "_help" ''Help
 
 Lens.makeLenses ''Help
@@ -57,7 +57,7 @@ data Hole = Hole
     { _holeResultPadding :: Vector2 Double
     , _holeFrameWidth :: Vector2 Double
     , _holeFrameColor :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving Eq
 JsonTH.derivePrefixed "_hole" ''Hole
 
 Lens.makeLenses ''Hole
@@ -66,7 +66,7 @@ data Eval = Eval
     { _neighborsScaleFactor :: Vector2 Double
     , _neighborsPadding :: Vector2 Double
     , _staleResultTint :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving Eq
 JsonTH.derivePrefixed "_" ''Eval
 
 Lens.makeLenses ''Eval
@@ -74,7 +74,7 @@ Lens.makeLenses ''Eval
 data ToolTip = ToolTip
     { _tooltipFgColor :: Draw.Color
     , _tooltipBgColor :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving Eq
 JsonTH.derivePrefixed "_tooltip" ''ToolTip
 
 Lens.makeLenses ''ToolTip
@@ -82,7 +82,7 @@ Lens.makeLenses ''ToolTip
 data StatusBar = StatusBar
     { _statusBarBGColor :: Draw.Color
     , _statusBarHSpaces :: Double
-    } deriving (Eq, Show)
+    } deriving Eq
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier
         = (Lens.taking 2 traverse %~ toLower)
@@ -96,7 +96,7 @@ data Deleted = Deleted
     { _deletedDefTint :: Draw.Color
     , _deletedDefDiagonalWidth :: Double
     , _deletedUseDiagonalWidth :: Double
-    } deriving (Eq, Show)
+    } deriving Eq
 JsonTH.derivePrefixed "_deleted" ''Deleted
 
 Lens.makeLenses ''Deleted
@@ -139,7 +139,7 @@ data Theme = Theme
     , _disabledColor :: Draw.Color
     , _presentationChoiceScaleFactor :: Vector2 Double
     , _evaluatedPathBGColor :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving Eq
 JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme
