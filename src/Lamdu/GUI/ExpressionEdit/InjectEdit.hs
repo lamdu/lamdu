@@ -122,7 +122,7 @@ makeNullaryInject nullary tag pl =
                     & E.charGroup Nothing
                     (E.toDoc env
                         [ has . MomentuTexts.edit
-                        , has . Texts.inject
+                        , has . Texts.injectLabel
                         , has . Texts.value
                         ]) ":"
             stdWrapParentExpr pl <*>
