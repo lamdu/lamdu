@@ -71,6 +71,14 @@ data CodeUI a = CodeUI
     , _literalNumber :: a
     , _startEditing :: a
     , _stopEditing :: a
+    , _nameFirstParameter :: a
+    , _parameter :: a
+    , _addParameter :: a
+    , _addNextParameter :: a
+    , _deleteParameter :: a
+    , _deleteParameterBackwards :: a
+    , _moveBefore :: a
+    , _moveAfter :: a
     , _fragment :: a
     , _showResults :: a
     , _heal :: a

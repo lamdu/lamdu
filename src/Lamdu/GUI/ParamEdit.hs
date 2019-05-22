@@ -10,6 +10,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -36,49 +37,78 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 eventMapAddFirstParam ::
-    (MonadReader env m, Applicative o, Has Config env) =>
+    ( MonadReader env m, Applicative o, Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
     Widget.Id ->
     Sugar.AddFirstParam name i o ->
     m (Gui EventMap o)
 eventMapAddFirstParam binderId addFirst =
-    Lens.view (has . Config.addNextParamKeys)
+    Lens.view id
     <&>
-    \keys ->
-    E.keysEventMapMovesCursor keys (E.Doc ["Edit", doc]) action
+    \env ->
+    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+    (E.toDoc env [has . MomentuTexts.edit, has . doc]) action
     where
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
         (action, doc) =
             case addFirst of
-            Sugar.NeedToPickTagToAddFirst x -> (pure (enterParam x), "Name first parameter")
-            Sugar.PrependParam{} -> (pure (TagEdit.addParamId binderId), "Add parameter")
-            Sugar.AddInitialParam x -> (x <&> enterParam, "Add parameter")
+            Sugar.NeedToPickTagToAddFirst x ->
+                (pure (enterParam x), Texts.nameFirstParameter)
+            Sugar.PrependParam{} ->
+                (pure (TagEdit.addParamId binderId), Texts.addParameter)
+            Sugar.AddInitialParam x ->
+                (x <&> enterParam, Texts.addParameter)
 
 eventMapAddNextParam ::
-    Applicative o =>
-    Config -> Widget.Id -> Sugar.AddNextParam name i o ->
+    ( Applicative o
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has Config env
+    ) =>
+    env -> Widget.Id -> Sugar.AddNextParam name i o ->
     Gui EventMap o
-eventMapAddNextParam conf myId addNext =
-    E.keysEventMapMovesCursor (conf ^. Config.addNextParamKeys)
-    (E.Doc ["Edit", doc]) (pure dst)
+eventMapAddNextParam env myId addNext =
+    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+    (E.toDoc env [has . MomentuTexts.edit, has . doc]) (pure dst)
     where
         (dst, doc) =
             case addNext of
-            Sugar.AddNext{} -> (TagEdit.addParamId myId, "Add next parameter")
+            Sugar.AddNext{} ->
+                (TagEdit.addParamId myId, Texts.addNextParameter)
             Sugar.NeedToPickTagToAddNext x ->
-                (WidgetIds.tagHoleId (WidgetIds.fromEntityId x), "Name first parameter")
+                ( WidgetIds.tagHoleId (WidgetIds.fromEntityId x)
+                , Texts.nameFirstParameter
+                )
 
 eventMapOrderParam ::
-    Monad m =>
-    [MetaKey] -> Text -> m () -> Gui EventMap m
-eventMapOrderParam keys docSuffix =
-    E.keysEventMap keys (E.Doc ["Edit", "Parameter", "Move " <> docSuffix])
+    ( Monad m
+    , Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
+    env ->
+    Lens.ALens' Config [MetaKey] ->
+    Lens.ALens' (Texts.CodeUI Text) Text -> m () ->
+    Gui EventMap m
+eventMapOrderParam env keys moveDoc =
+    E.keysEventMap (env ^# has . keys)
+    (E.toDoc env
+        [has . MomentuTexts.edit, has . Texts.parameter, has . moveDoc])
 
 eventParamDelEventMap ::
-    Monad m => m () -> [MetaKey] -> Text -> Widget.Id -> Gui EventMap m
-eventParamDelEventMap fpDel keys docSuffix dstPosId =
+    ( Monad m, Has Config env
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.CodeUI Text) env
+    ) =>
+    env -> m () ->
+    Lens.ALens' Config [MetaKey] ->
+    Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> Gui EventMap m
+eventParamDelEventMap env fpDel keys delParam dstPosId =
     GuiState.updateCursor dstPosId <$ fpDel
-    & E.keyPresses (keys <&> toModKey)
-        (E.Doc ["Edit", "Delete parameter" <> docSuffix])
+    & E.keyPresses (env ^# has . keys <&> toModKey)
+        (E.toDoc env [has . MomentuTexts.edit, has . delParam])
 
 data Info i o = Info
     { iNameEdit :: TextWidget o
@@ -112,14 +142,14 @@ make ::
     ExprGuiM env i o [Gui Responsive o]
 make annotationOpts prevId nextId param =
     do
-        conf <- Lens.view has
+        env <- Lens.view id
         let paramEventMap =
                 mconcat
-                [ eventParamDelEventMap (iDel info) (conf ^. Config.delForwardKeys) "" nextId
-                , eventParamDelEventMap (iDel info) (conf ^. Config.delBackwardKeys) " backwards" prevId
-                , foldMap (eventMapAddNextParam conf myId) (iAddNext info)
-                , foldMap (eventMapOrderParam (conf ^. Config.paramOrderBeforeKeys) "before") (iMOrderBefore info)
-                , foldMap (eventMapOrderParam (conf ^. Config.paramOrderAfterKeys) "after") (iMOrderAfter info)
+                [ eventParamDelEventMap env (iDel info) Config.delForwardKeys Texts.deleteParameter nextId
+                , eventParamDelEventMap env (iDel info) Config.delBackwardKeys Texts.deleteParameterBackwards prevId
+                , foldMap (eventMapAddNextParam env myId) (iAddNext info)
+                , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (iMOrderBefore info)
+                , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (iMOrderAfter info)
                 ]
         wideAnnotationBehavior <-
             GuiState.isSubCursor ?? myId
