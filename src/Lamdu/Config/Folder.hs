@@ -2,7 +2,7 @@
 
 module Lamdu.Config.Folder
     ( Selection(..), _Selection
-    , getFiles, getNames
+    , getFiles, getSelections
     , selectionToPath
     , HasConfigFolder(..)
     , Language, Theme
@@ -52,5 +52,5 @@ getFiles p =
 pathToSelection :: FilePath -> Selection a
 pathToSelection = Selection . Text.pack . FilePath.takeFileName . FilePath.dropExtension
 
-getNames :: HasConfigFolder a => proxy a -> IO [Selection (Folder a)]
-getNames p = getFiles p <&> map pathToSelection
+getSelections :: HasConfigFolder a => proxy a -> IO [Selection (Folder a)]
+getSelections p = getFiles p <&> map pathToSelection

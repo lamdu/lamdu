@@ -237,8 +237,8 @@ makeRootWidget ::
     IO (Gui Widget IO)
 makeRootWidget env perfMonitors db evaluator sample =
     do
-        themeNames <- Folder.getNames (Proxy @Theme)
-        langNames <- Folder.getNames (Proxy @Language)
+        themeNames <- Folder.getSelections (Proxy @Theme)
+        langNames <- Folder.getSelections (Proxy @Language)
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         dbToIO $ makeMainGui themeNames langNames dbToIO env
             <&> M.backgroundColor backgroundId bgColor
