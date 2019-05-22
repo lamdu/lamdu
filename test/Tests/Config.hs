@@ -1,13 +1,17 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.Config (test) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Config (load)
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
+import           Data.Aeson.Lens (_Object, _String)
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
+import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
+import           Data.Text (unpack)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder(..), getFiles)
 import           Lamdu.Config.Theme (Theme)
@@ -22,6 +26,7 @@ test =
     [ testCase "config-parse" (verifyJson (Proxy @Config) "config.json")
     , testCase "themes-parse" (verifyConfigFolder (Proxy @Theme))
     , testCase "languages-parse" (verifyConfigFolder (Proxy @Language))
+    , languagesDupTest
     ]
 
 verifyConfigFolder ::
@@ -46,3 +51,18 @@ verifyJson proxy jsonPath =
 loadJsonPath :: Aeson.FromJSON a => FilePath -> IO a
 loadJsonPath path =
     Paths.getDataFileName path >>= Writer.evalWriterT . load
+
+languagesDupTest :: Test
+languagesDupTest =
+    getFiles (Proxy @Language) >>= traverse_ checkDups
+    & testCase "languages-dup"
+
+checkDups :: FilePath -> IO ()
+checkDups jsonPath =
+    do
+        json <- loadJsonPath jsonPath
+        let allTexts = json ^.. Lens.folding (Lens.universeOf (_Object . traverse)) . _String
+        group (sort allTexts) ^.. traverse . Lens.ix 1 & traverse_ onDup
+    where
+        onDup text = assertString ("duplicated text: " <> unpack text)
+
