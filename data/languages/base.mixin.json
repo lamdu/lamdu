@@ -32,7 +32,7 @@
                 },
                 "italic": {
                     "light": "fonts/DejaVuSerif-Italic.ttf",
-                    "bold": "fonts/DejaVuSerif-BoldItatlic.ttf"
+                    "bold": "fonts/DejaVuSerif-BoldItalic.ttf"
                 }
             }
         },
