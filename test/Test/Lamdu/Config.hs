@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Test.Lamdu.Config (loadConfigObject) where
 
 import qualified Control.Monad.Trans.FastWriter as Writer

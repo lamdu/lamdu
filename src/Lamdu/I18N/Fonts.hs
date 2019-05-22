@@ -58,21 +58,21 @@ JsonTH.deriveJSON Aeson.defaultOptions ''RomanOrItalic
 JsonTH.deriveJSON Aeson.defaultOptions ''LightOrBold
 
 instance Choice ProportionalOrMonospace where
-    type instance Options ProportionalOrMonospace = ProportionalAndMonospace
+    type Options ProportionalOrMonospace = ProportionalAndMonospace
     choice Proportional = proportional
     choice Monospace = monospace
 
 instance Choice SansOrSerif where
-    type instance Options SansOrSerif = SansAndSerif
+    type Options SansOrSerif = SansAndSerif
     choice Sans = sans
     choice Serif = serif
 
 instance Choice RomanOrItalic where
-    type instance Options RomanOrItalic = RomanAndItalic
+    type Options RomanOrItalic = RomanAndItalic
     choice Roman = roman
     choice Italic = italic
 
 instance Choice LightOrBold where
-    type instance Options LightOrBold = LightAndBold
+    type Options LightOrBold = LightAndBold
     choice Light = light
     choice Bold = bold
