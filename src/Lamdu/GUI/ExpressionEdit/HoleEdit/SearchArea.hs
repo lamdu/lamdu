@@ -72,7 +72,7 @@ fdConfig env = FocusDelegator.Config
         , has . Texts.completion
         , has . Texts.open
         ]
-    , FocusDelegator.focusParentKeys = env ^. has . Config.completion ^. Config.completionCloseKeys
+    , FocusDelegator.focusParentKeys = env ^. has . Config.completion . Config.completionCloseKeys
     , FocusDelegator.focusParentDoc =
         E.toDoc env
         [ has . MomentuTexts.navigation
