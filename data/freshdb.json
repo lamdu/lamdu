@@ -412,7 +412,8 @@
         "tagOrder": 1,
         "tag": "42493a66616c73650000000000000000",
         "names": {
-            "english": "false"
+            "english": "false",
+            "hebrew": "כזב"
         }
     },
     {
@@ -630,7 +631,8 @@
         "tagOrder": 0,
         "tag": "42493a74727565000000000000000000",
         "names": {
-            "english": "true"
+            "english": "true",
+            "hebrew": "אמת"
         }
     },
     {
@@ -1174,7 +1176,8 @@
         "tagOrder": 0,
         "tag": "b760f44fa5965c2474a3b471467a22c4",
         "names": {
-            "english": "bool"
+            "english": "bool",
+            "hebrew": "בוליאן"
         }
     },
     {
@@ -1315,7 +1318,8 @@
         "tagOrder": 0,
         "tag": "d90ee9ccf6bea1d2942a7b2131933819",
         "names": {
-            "english": "drop"
+            "english": "drop",
+            "hebrew": "זרוק"
         }
     },
     {
