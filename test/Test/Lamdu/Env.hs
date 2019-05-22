@@ -88,7 +88,7 @@ instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has (t Text) (Texts Text) => Has (t Text) Env where has = eLanguage . has
 
 makeLang :: IO Language
-makeLang = TestConfig.loadConfigObject "english"
+makeLang = TestConfig.loadConfigObject Proxy (Selection "english")
 
 make :: IO Env
 make =
@@ -96,7 +96,7 @@ make =
         testConfig <-
             Paths.getDataFileName "config.json"
             >>= Writer.evalWriterT . AesonConfig.load
-        testTheme <- TestConfig.loadConfigObject "dark"
+        testTheme <- TestConfig.loadConfigObject Proxy (Selection "dark")
         testLang <- makeLang
         cache <- Cache.make <&> snd
         -- Choose some random font:

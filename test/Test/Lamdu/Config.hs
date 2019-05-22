@@ -4,18 +4,13 @@ module Test.Lamdu.Config (loadConfigObject) where
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
-import           Lamdu.Config.Folder (HasConfigFolder(..))
-import qualified Lamdu.Paths as Paths
-import           System.FilePath ((</>), takeDirectory)
+import           Lamdu.Config.Folder (HasConfigFolder(..), Folder)
+import qualified Lamdu.Config.Folder as Folder
 
 import           Test.Lamdu.Prelude
 
 loadConfigObject ::
-    forall a.
     (FromJSON a, HasConfigFolder a) =>
-    FilePath -> IO a
-loadConfigObject selection =
-    Paths.getDataFileName "config.json"
-    <&> takeDirectory
-    <&> (\x -> x </> configFolder (Proxy @a) </> (selection <> ".json"))
-    >>= Writer.evalWriterT . AesonConfig.load
+    Proxy a -> Folder.Selection (Folder a) -> IO a
+loadConfigObject p selection =
+    Folder.selectionToPath p selection >>= Writer.evalWriterT . AesonConfig.load
