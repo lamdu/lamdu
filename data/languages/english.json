@@ -76,7 +76,7 @@
             "changeImportedName": "Change imported name",
             "doneChangingImportedName": "Done changing name",
             "pane": "Pane",
-            "injectLabel": "Inject",
+            "inject": "Inject",
             "caseLabel": "Case",
             "addAlt": "Add Alt",
             "deleteAlt": "Delete Alt",

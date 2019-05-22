@@ -78,7 +78,7 @@ makeInject val tag pl =
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
             ( TagEdit.makeVariantTag tag
-                /|/ injectIndicator Texts.inject
+                /|/ injectIndicator Texts.injectSymbol
                 <&> Lens.mapped %~ Widget.weakerEvents (foldMap replaceParentEventMap mReplaceParent)
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
@@ -122,12 +122,12 @@ makeNullaryInject nullary tag pl =
                     & E.charGroup Nothing
                     (E.toDoc env
                         [ has . MomentuTexts.edit
-                        , has . Texts.injectLabel
+                        , has . Texts.inject
                         , has . Texts.value
                         ]) ":"
             stdWrapParentExpr pl <*>
                 ( TagEdit.makeVariantTag tag
-                    /|/ injectIndicator Texts.nullaryInject
+                    /|/ injectIndicator Texts.nullaryInjectSymbol
                     <&> Responsive.fromWithTextPos
                     <&> Widget.weakerEvents expandNullaryVal
                 )

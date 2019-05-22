@@ -3,8 +3,8 @@
         "code": {
             "assign": "=",
             "absurd": "Ø",
-            "inject": ":",
-            "nullaryInject": ".",
+            "injectSymbol": ":",
+            "nullaryInjectSymbol": ".",
             "defer": "|",
             "lam": "λ",
             "recordSep": ","

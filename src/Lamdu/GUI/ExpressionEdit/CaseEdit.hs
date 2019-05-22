@@ -154,7 +154,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
                 <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
                     then addBg
                     else id
-            ) /|/ grammar (label Texts.inject) /|/ Spacer.stdHSpace
+            ) /|/ grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace
         pure Responsive.TaggedItem
             { Responsive._tagPre = pre
             , Responsive._taggedItem = altExprGui

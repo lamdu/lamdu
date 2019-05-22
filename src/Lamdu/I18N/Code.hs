@@ -27,8 +27,8 @@ data Code a = Code
     , _else_ :: a
     , _elseShort :: a -- "el" in "elif"
     , -- Inject
-      _inject :: a
-    , _nullaryInject :: a
+      _injectSymbol :: a
+    , _nullaryInjectSymbol :: a
     , -- Getvar
       _paramsRecordOpener :: a
     , _paramsRecordCloser :: a
