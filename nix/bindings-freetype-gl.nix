@@ -7,13 +7,10 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "bindings-freetype-gl";
-    sha256 = "1sqw8cxz1kqnwl62738qdhwgqdjlzqm0ljr27xaz4702p0f3ybx9";
-    rev = "3e409dd8c5232abc53fd10e8138658333b90456f";
+    sha256 = "1kbq05865159r2cr0vbdjy5yij1byn53gp9fzqwn3q5gv1b7rrq5";
+    rev = "c178be550fbffe135435478a71fcb1dad537963a";
     fetchSubmodules = true;
   };
-  postPatch = ''
-    rm Setup.hs
-  '';
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [ base bindings-DSL freetype2 bytestring file-embed ];
   librarySystemDepends = [ glew ];
