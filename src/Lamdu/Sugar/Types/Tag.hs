@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
-    ( TagRef(..), tagRefTag, tagRefReplace
-    , Tag(..), tagName, tagVal, tagInstance
-    , TagReplace(..), tsOptions, tsNewTag, tsAnon
+    ( Tag(..), tagName, tagVal, tagInstance
     , TagOption(..), toInfo, toPick
+    , TagReplace(..), tsOptions, tsNewTag, tsAnon
+    , TagRef(..), tagRefTag, tagRefReplace, tagRefJumpTo
     ) where
 
 import qualified Control.Lens as Lens
@@ -40,6 +40,7 @@ data TagReplace name i o a = TagReplace
 data TagRef name i o = TagRef
     { _tagRefTag :: Tag name
     , _tagRefReplace :: TagReplace name i o ()
+    , _tagRefJumpTo :: Maybe (o EntityId)
     } deriving Generic
 
 Lens.makeLenses ''TagRef

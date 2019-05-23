@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Test.Lamdu.Sugar where
 
 import           AST (annotations)
@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (Code(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
@@ -64,16 +65,22 @@ validateHiddenEntityIds workArea
             & Set.fromList
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
+data PaneLowLevel
+    = PaneDefLowLevel (Def.Definition (Val (ValP ViewM)) (DefI ViewM))
+    | PaneTagLowLevel T.Tag
+
+Lens.makePrisms ''PaneLowLevel
+
 data WorkAreaLowLevel = WorkAreaLowLevel
     { wallRepl :: Def.Expr (Val (ValP ViewM))
-    , wallPanes :: [Def.Definition (Val (ValP ViewM)) (DefI ViewM)]
+    , wallPanes :: [PaneLowLevel]
     }
 
 workAreaLowLevelValProps :: WorkAreaLowLevel -> [ValP ViewM]
 workAreaLowLevelValProps (WorkAreaLowLevel r p) =
     defExprs ^.. Lens.folded . Def.expr . annotations
     where
-        defExprs = r : p ^.. Lens.folded . Def.defBody . Def._BodyExpr
+        defExprs = r : p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
 
 workAreaLowLevelEntityIds :: WorkAreaLowLevel -> Set EntityId
 workAreaLowLevelEntityIds wall =
@@ -81,12 +88,15 @@ workAreaLowLevelEntityIds wall =
     <&> EntityId.ofValI . Property.value
     & Set.fromList
 
+loadPane :: Anchors.Pane ViewM -> T ViewM PaneLowLevel
+loadPane (Anchors.PaneDefinition def) = ExprLoad.def def <&> PaneDefLowLevel
+loadPane (Anchors.PaneTag tag) = PaneTagLowLevel tag & pure
+
 workAreaLowLevelLoad :: T ViewM WorkAreaLowLevel
 workAreaLowLevelLoad =
     WorkAreaLowLevel
     <$> ExprLoad.defExpr (repl codeAnchors)
-    <*> (getP (panes codeAnchors)
-            >>= traverse (ExprLoad.def . (^. Anchors._PaneDefinition)))
+    <*> (getP (panes codeAnchors) >>= traverse loadPane)
 
 validate ::
     NFData name =>

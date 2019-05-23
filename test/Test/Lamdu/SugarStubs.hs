@@ -130,6 +130,7 @@ mkTag var tag =
     Sugar.TagRef
     { Sugar._tagRefReplace = tagRefReplace
     , Sugar._tagRefTag = tagRefTag var tag
+    , Sugar._tagRefJumpTo = Nothing
     }
 
 def ::

@@ -60,6 +60,7 @@
             "blocked": "(Blocked)",
             "prev": "Previous",
             "next": "Next",
+            "jumpToTag": "Jump to Tag",
             "jumpToDef": "Jump to Definition",
             "jumpToDefBody": "Jump to Definition Body",
             "jumpToFirstUse": "Jump to first use",

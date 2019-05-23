@@ -40,10 +40,10 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-newtype Pane m
+data Pane m
     = PaneDefinition (DefI m)
-    deriving newtype (Eq, Ord)
-    deriving stock (Show, Generic)
+    | PaneTag T.Tag
+    deriving (Eq, Show, Generic)
     deriving anyclass Binary
 
 data Gui f = Gui

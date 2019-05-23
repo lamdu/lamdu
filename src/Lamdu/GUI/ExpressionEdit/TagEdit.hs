@@ -1,10 +1,12 @@
 {-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
-    ( makeRecordTag, makeVariantTag, makeTagView
+    ( makeRecordTag, makeVariantTag
+    , makeTagView
     , makeParamTag, addParamId
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
+    , makeTagEdit -- ^ for panes
     ) where
 
 import qualified Control.Lens as Lens
@@ -99,9 +101,6 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
             ?? tagRenameId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
-
-tagId :: Sugar.TagRef name i o -> Widget.Id
-tagId tag = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
     ( Functor f, Has Config env
@@ -366,6 +365,41 @@ makeTagView tag =
             & Widget.toAnimId
 
 makeTagEdit ::
+    ( Monad i, Applicative o
+    , Has (Texts.Name Text) env
+    , Has (Texts.CodeUI Text) env
+    , TextEdit.HasTexts env
+    , Glue.HasTexts env
+    ) =>
+    Sugar.Tag (Name o) -> ExprGuiM env i o (TextWidget o)
+makeTagEdit tag =
+    do
+        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
+        nameView <-
+            (Widget.makeFocusableView ?? viewId <&> fmap) <*>
+            makeTagView tag
+        env <- Lens.view id
+        let renameEventMap =
+                tagRenameId myId
+                & pure & E.keysEventMapMovesCursor
+                (env ^. has . Config.jumpToDefinitionKeys)
+                (E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . Texts.tag
+                    , has . Texts.renameTag
+                    ])
+        let hover = Hover.hoverBeside Align.tValue ?? nameView
+        case tag ^? Sugar.tagName . Name._Stored of
+            Just storedName | isRenaming ->
+                hover <*>
+                (makeTagNameEdit storedName myId <&> (^. Align.tValue))
+            _ -> nameView <&> Widget.weakerEvents renameEventMap & pure
+        & GuiState.assignCursor myId viewId
+    where
+        myId = tag ^. Sugar.tagInstance & WidgetIds.fromEntityId
+        viewId = tagViewId myId
+
+makeTagRefEdit ::
     ( Monad i, Monad o
     , Glue.HasTexts env
     , TextEdit.HasTexts env, SearchMenu.HasTexts env
@@ -375,15 +409,14 @@ makeTagEdit ::
     ) =>
     Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
-makeTagEdit = makeTagEditWith id (const Nothing) <&> fmap snd
+makeTagRefEdit = makeTagRefEditWith id (const Nothing) <&> fmap snd
 
-data TagEditType
-    = TagRename
-    | TagHole
+data TagRefEditType
+    = TagHole
     | SimpleView
     deriving (Eq)
 
-makeTagEditWith ::
+makeTagRefEditWith ::
     ( Monad i, Applicative o, MonadReader nenv n
     , GuiState.HasCursor nenv, Has TextView.Style nenv, Has (Texts.Name Text) nenv
     , Element.HasAnimIdPrefix nenv, Has Theme nenv, Glue.HasTexts nenv
@@ -396,29 +429,21 @@ makeTagEditWith ::
      ExprGuiM env i o (TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Sugar.TagRef (Name o) i o ->
-    ExprGuiM env i o (TagEditType, TextWidget o)
-makeTagEditWith onView onPickNext tag =
+    ExprGuiM env i o (TagRefEditType, TextWidget o)
+makeTagRefEditWith onView onPickNext tag =
     do
-        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
-        let mRenamingStoredName
-                | isRenaming = tag ^? Sugar.tagRefTag . Sugar.tagName . Name._Stored
-                | otherwise = Nothing
-        isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
+        isHole <- GuiState.isSubCursor ?? holeId
         env <- Lens.view id
-        let eventMap =
-                ( case tag ^. Sugar.tagRefTag . Sugar.tagName of
-                    Name.Stored{} ->
-                        E.keysEventMapMovesCursor
-                        (env ^. has . Config.jumpToDefinitionKeys)
-                        (E.toDoc env
-                            [ has . MomentuTexts.edit
-                            , has . Texts.tag
-                            , has . Texts.renameTag
-                            ])
-                        (pure (tagRenameId myId))
-                    _ -> mempty
-                )
-                <>
+        let jumpToTagEventMap jump =
+                jump <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor
+                (env ^. has . Config.jumpToDefinitionKeys)
+                (E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . Texts.tag
+                    , has . Texts.jumpToTag
+                    ])
+        let chooseNewTagEventMap =
                 E.keysEventMapMovesCursor
                 (Config.delKeys env <> env ^. has . Config.jumpToDefinitionKeys)
                 ( E.toDoc env
@@ -426,36 +451,33 @@ makeTagEditWith onView onPickNext tag =
                     , has . Texts.tag
                     , has . MomentuTexts.choose
                     ] ) chooseAction
+        let eventMap =
+                foldMap jumpToTagEventMap (tag ^. Sugar.tagRefJumpTo)
+                <> chooseNewTagEventMap
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            makeTagView (tag ^. Sugar.tagRefTag)
+            makeTagView info
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
-        let hover = Hover.hoverBeside Align.tValue ?? nameView
-        case mRenamingStoredName of
-            Just storedName ->
-                hover <*>
-                (makeTagNameEdit storedName myId <&> (^. Align.tValue))
-                <&> (,) TagRename
-            Nothing
-                | isHole ->
-                    makeTagHoleEdit (tag ^. Sugar.tagRefReplace) mkPickResult (WidgetIds.tagHoleId (tagId tag))
-                    <&> Align.tValue %~ Widget.weakerEvents leaveEventMap
-                    <&> (,) TagHole
-                | otherwise -> pure (SimpleView, nameView)
-                where
-                    leaveEventMap =
-                        E.keysEventMapMovesCursor
-                        (env ^.
-                            has . Config.completion . Config.completionCloseKeys)
-                        (E.toDoc env
-                            [ has . MomentuTexts.navigation
-                            , has . Texts.closeHole
-                            ])
-                        (pure myId)
-    & GuiState.assignCursor myId viewId
+        let leaveHoleEventMap =
+                E.keysEventMapMovesCursor
+                (env ^. has . Config.completion . Config.completionCloseKeys)
+                (E.toDoc env
+                    [ has . MomentuTexts.navigation
+                    , has . Texts.closeHole
+                    ])
+                (pure myId)
+        if isHole
+            then
+                makeTagHoleEdit (tag ^. Sugar.tagRefReplace) mkPickResult holeId
+                <&> Align.tValue %~ Widget.weakerEvents leaveHoleEventMap
+                <&> (,) TagHole
+            else pure (SimpleView, nameView)
+        & GuiState.assignCursor myId viewId
     where
-        myId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        info = tag ^. Sugar.tagRefTag
+        myId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
+        holeId = WidgetIds.tagHoleId myId
         viewId = tagViewId myId
         mkPickResult tagInstance () =
             Menu.PickResult
@@ -479,7 +501,7 @@ makeRecordTag ::
     Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeRecordTag =
-    makeTagEdit <&> Styled.withColor TextColors.recordTagColor
+    makeTagRefEdit <&> Styled.withColor TextColors.recordTagColor
 
 makeVariantTag ::
     ( Monad i, Monad o
@@ -492,7 +514,7 @@ makeVariantTag ::
     Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeVariantTag tag =
-    makeTagEdit tag
+    makeTagRefEdit tag
     & Styled.withColor TextColors.caseTagColor
 
 addParamId :: Widget.Id -> Widget.Id
@@ -512,7 +534,7 @@ makeLHSTag onPickNext color tag =
     do
         env <- Lens.view id
         (tagEditType, tagEdit) <-
-            makeTagEditWith onView onPickNext tag
+            makeTagRefEditWith onView onPickNext tag
             & Styled.withColor color
             & Reader.local (has .~ env ^. has . Style.nameAtBinder)
         let chooseEventMap =

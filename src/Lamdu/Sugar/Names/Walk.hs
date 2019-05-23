@@ -289,20 +289,22 @@ toTagRefOf ::
     MonadNaming m =>
     NameType -> Sugar.TagRef (OldName m) (IM m) o ->
     m (Sugar.TagRef (NewName m) (IM m) o)
-toTagRefOf nameType (Sugar.TagRef info actions) =
+toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
     <$> toTagOf nameType info
     <*> toTagReplace actions
+    ?? jumpTo
 
 withTagRef ::
     MonadNaming m =>
     NameType -> Sugar.VarInfo ->
     Sugar.TagRef (OldName m) (IM m) o ->
     CPS m (Sugar.TagRef (NewName m) (IM m) o)
-withTagRef nameType varInfo (Sugar.TagRef info actions) =
+withTagRef nameType varInfo (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
     <$> tagName (opWithName varInfo nameType) info
     <*> liftCPS (toTagReplace actions)
+    ?? jumpTo
 
 toAnnotatedArg ::
     MonadNaming m =>

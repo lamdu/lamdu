@@ -281,12 +281,18 @@ convertPaneBody ::
     T m
     (PaneBody
         InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
+convertPaneBody _ _ (Anchors.PaneTag tag) =
+    PaneTag Tag
+    { _tagName = nameWithoutContext tag
+    , _tagInstance = EntityId.ofTagPane tag
+    , _tagVal = tag
+    } & pure
 convertPaneBody env cp (Anchors.PaneDefinition defI) =
     do
         bodyS <-
             ExprLoad.def defI <&> Definition.defPayload .~ defI
             >>= convertDefBody env cp
-        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
+        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env cp defVar
         OrderTags.orderDef Definition
             { _drEntityId = EntityId.ofIRef defI
             , _drName = tag
@@ -297,6 +303,10 @@ convertPaneBody env cp (Anchors.PaneDefinition defI) =
             } <&> PaneDefinition
     where
         defVar = ExprIRef.globalId defI
+
+paneEntityId :: Anchors.Pane dummy -> EntityId
+paneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
+paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 
 convertPane ::
     ( Monad m, Has LangId env, Has Dir.Layout env
@@ -324,7 +334,7 @@ convertPane env cp replEntityId (Property panes setPanes) i pane =
                 entityId =
                     newPanes ^? Lens.ix i
                     <|> newPanes ^? Lens.ix (i-1)
-                    <&> (EntityId.ofIRef . (^. Anchors._PaneDefinition))
+                    <&> paneEntityId
                     & fromMaybe replEntityId
                 newPanes = removeAt i panes
         movePane oldIndex newIndex =

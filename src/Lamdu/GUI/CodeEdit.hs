@@ -181,27 +181,25 @@ makePaneBodyEdit ::
 makePaneBodyEdit pane =
     do
         env <- Lens.view id
+        let eventMap def =
+                do
+                    Property.setP
+                        (def ^. Sugar.drDefinitionState & Property.MkProperty)
+                        Sugar.DeletedDefinition
+                    pane ^. Sugar.paneClose
+                    <&> WidgetIds.fromEntityId
+                    & E.keysEventMapMovesCursor (Config.delKeys env)
+                    (E.toDoc env
+                        [ has . MomentuTexts.edit
+                        , has . Texts.def
+                        , has . MomentuTexts.delete
+                        ])
         case pane ^. Sugar.paneBody of
             Sugar.PaneTag tag ->
-                TagEdit.makeTagView tag
-                <&> Responsive.fromTextView
+                TagEdit.makeTagEdit tag <&> Responsive.fromWithTextPos
             Sugar.PaneDefinition def ->
-                DefinitionEdit.make eventMap def
-                <&> Lens.mapped %~ IOTrans.liftTrans
-                where
-                    eventMap =
-                        do
-                            Property.setP
-                                (def ^. Sugar.drDefinitionState & Property.MkProperty)
-                                Sugar.DeletedDefinition
-                            pane ^. Sugar.paneClose
-                            <&> WidgetIds.fromEntityId
-                            & E.keysEventMapMovesCursor (Config.delKeys env)
-                            (E.toDoc env
-                                [ has . MomentuTexts.edit
-                                , has . Texts.def
-                                , has . MomentuTexts.delete
-                                ])
+                DefinitionEdit.make (eventMap def) def
+            <&> Lens.mapped %~ IOTrans.liftTrans
 
 makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
@@ -219,7 +217,8 @@ makePaneEdit theExportActions pane =
         let paneEventMap =
                 [ pane ^. Sugar.paneClose & IOTrans.liftTrans
                   <&> WidgetIds.fromEntityId
-                  & E.keysEventMapMovesCursor (paneConfig ^. Config.paneCloseKeys)
+                  & E.keysEventMapMovesCursor
+                    (paneConfig ^. Config.paneCloseKeys <> Config.delKeys env)
                     (viewDoc [Texts.pane, Texts.close])
                 , pane ^. Sugar.paneMoveDown <&> IOTrans.liftTrans
                   & foldMap

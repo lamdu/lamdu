@@ -29,10 +29,7 @@ type T = Transaction
 data AllowAnonTag = AllowAnon | RequireTag
 
 getTagsProp ::
-    ( MonadReader env m
-    , Anchors.HasCodeAnchors env n
-    ) =>
-    m (MkProperty' (T n) (Set T.Tag))
+    Anchors.HasCodeAnchors env m => env -> MkProperty' (T m) (Set T.Tag)
 getTagsProp = Lens.view Anchors.codeAnchors <&> Anchors.tags
 
 withoutContext :: EntityId -> T.Tag -> Tag InternalName
@@ -52,23 +49,34 @@ ref ::
     (T.Tag -> T m ()) ->
     ConvertM m (TagRef name (T m) (T m))
 ref tag name forbiddenTags mkInstance setTag =
-    do
-        env <- Lens.view id
-        getTagsProp
-            <&> refWith env tag name forbiddenTags RequireTag mkInstance setTag
+    Lens.view id
+    <&> \env ->
+    getTagsProp env
+    & refWith env (env ^. Anchors.codeAnchors) tag name forbiddenTags RequireTag
+    mkInstance setTag
 
 refWith ::
-    (Monad m, Has LangId env, Has Dir.Layout env) =>
-    env ->
+    ( Monad m, Has LangId env, Has Dir.Layout env
+    ) =>
+    env -> Anchors.CodeAnchors m ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
     TagRef name (T m) (T m)
-refWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
-    replaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
-    & TagRef Tag
-    { _tagName = name tag
-    , _tagInstance = mkInstance tag
-    , _tagVal = tag
+refWith env cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
+    TagRef
+    { _tagRefTag = Tag
+        { _tagName = name tag
+        , _tagInstance = mkInstance tag
+        , _tagVal = tag
+        }
+    , _tagRefReplace =
+        replaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
+    , _tagRefJumpTo =
+        if tag == Anchors.anonTag
+        then Nothing
+        else Just
+             (EntityId.ofTagPane tag
+                 <$ DataOps.newPane cp (Anchors.PaneTag tag))
     }
 
 replace ::
@@ -76,10 +84,10 @@ replace ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     ConvertM m (TagReplace name (T m) (T m) a)
 replace name forbiddenTags allowAnon mkInstance setTag =
-    do
-        env <- Lens.view id
-        getTagsProp <&>
-            replaceWith env name forbiddenTags allowAnon mkInstance setTag
+    Lens.view id
+    <&> \env ->
+    getTagsProp env
+    & replaceWith env name forbiddenTags allowAnon mkInstance setTag
 
 replaceWith ::
     (Monad m, Has LangId env, Has Dir.Layout env) =>
@@ -118,25 +126,27 @@ replaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp =
             , _toPick = setTag x
             }
 
+-- NOTE: Used for panes, outside ConvertM, so has no ConvertM.Context env
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 taggedEntityWith ::
     ( UniqueId.ToUUID a, MonadTransaction n m
     , Has LangId env, Has Dir.Layout env
     ) =>
-    env ->
+    env -> Anchors.CodeAnchors n ->
     a -> MkProperty' (T n) (Set T.Tag) -> m (TagRef InternalName (T n) (T n))
-taggedEntityWith env entity tagsProp =
+taggedEntityWith env cp entity tagsProp =
     getP prop
     <&>
     \entityTag ->
-    refWith env entityTag (nameWithContext entity) mempty AllowAnon
+    refWith env cp entityTag (nameWithContext entity) mempty AllowAnon
     (EntityId.ofTaggedEntity entity) (setP prop) tagsProp
     where
         prop = Anchors.assocTag entity
 
 taggedEntity ::
-    (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (TagRef InternalName (T m) (T m))
+    (UniqueId.ToUUID a, Monad m) =>
+    a -> ConvertM m (TagRef InternalName (T m) (T m))
 taggedEntity entity =
     do
         env <- Lens.view id
-        getTagsProp >>= taggedEntityWith env entity
+        taggedEntityWith env (env ^. Anchors.codeAnchors) entity (getTagsProp env)

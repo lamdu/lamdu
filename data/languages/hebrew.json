@@ -62,6 +62,7 @@
             "blocked": "(חסום)",
             "prev": "הקודם",
             "next": "הבא",
+            "jumpToTag": "קפוץ לתג",
             "jumpToDef": "קפוץ להגדרה",
             "jumpToDefBody": "קפוץ לגוף ההגדרה",
             "jumpToFirstUse": "קפוץ לשימוש הראשון",
