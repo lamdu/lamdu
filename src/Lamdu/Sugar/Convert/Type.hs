@@ -16,6 +16,7 @@ import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -31,14 +32,10 @@ convertComposite entityId (MkPure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         convertComposite (EntityId.ofRestOfComposite entityId) rest
-            <&> compositeFields %~ ((info, typS): )
+            <&> compositeFields %~ ((tagS, typS): )
     where
-        info =
-            Tag
-            { _tagName = nameWithoutContext tag
-            , _tagInstance = EntityId.ofTag entityId tag
-            , _tagVal = tag
-            }
+        tagS = ConvertTag.withoutContext entityId tag
+
 convertComposite _ (MkPure (T.RVar v)) =
     CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
 convertComposite _ (MkPure T.REmpty) = CompositeFields mempty Nothing & pure

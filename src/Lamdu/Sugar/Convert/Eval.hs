@@ -7,8 +7,8 @@ module Lamdu.Sugar.Convert.Eval
 import           AST (Tree, Pure(..))
 import           AST.Knot.Ann (Ann(..), val)
 import           AST.Term.Nominal (NominalInst(..))
-import           AST.Term.Scheme (QVarInstances(..))
 import           AST.Term.Row (RowExtend(..))
+import           AST.Term.Scheme (QVarInstances(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -26,6 +26,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -63,17 +64,10 @@ flattenRecord (Ann _ (ER.RRecExtend (RowExtend tag v rest))) =
 flattenRecord (Ann _ (ER.RError err)) = Left err
 flattenRecord _ = Left (EvalTypeError "Record extents non-record")
 
-mkTag :: EntityId -> T.Tag -> Tag InternalName
-mkTag entityId tag =
-    Tag
-    { _tagName = nameWithoutContext tag
-    , _tagInstance = EntityId.ofTag entityId tag
-    , _tagVal = tag
-    }
-
 convertNullaryInject :: EntityId -> V.Inject (ER.Val pl) -> Maybe (ResVal InternalName)
 convertNullaryInject entityId (V.Inject tag (Ann _ ER.RRecEmpty)) =
-    RInject (ResInject (mkTag entityId tag) Nothing) & ResVal entityId & Just
+    RInject (ResInject (ConvertTag.withoutContext entityId tag) Nothing)
+    & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
 convertList :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
@@ -91,7 +85,7 @@ simpleInject :: EntityId -> V.Inject ERV -> ResVal InternalName
 simpleInject entityId (V.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
-    & ResInject (mkTag entityId tag) & RInject
+    & ResInject (ConvertTag.withoutContext entityId tag) & RInject
     & ResVal entityId
 
 convertInject :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> ResVal InternalName
@@ -111,7 +105,7 @@ convertPlainRecord entityId (Right fields) =
     where
         convertField (tag, x) =
             convertVal (EntityId.ofEvalField tag entityId) x
-            & (,) (mkTag entityId tag)
+            & (,) (ConvertTag.withoutContext entityId tag)
 
 convertTree ::
     EntityId -> Tree Pure T.Type -> Either e (Map T.Tag ERV) ->

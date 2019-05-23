@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Tag
-    ( ref, replace
+    ( ref, replace, withoutContext
     , taggedEntity
     , taggedEntityWith
     , AllowAnonTag(..)
@@ -32,6 +32,14 @@ data AllowAnonTag = AllowAnon | RequireTag
 getTagsProp :: Monad m => ConvertM m (MkProperty' (T m) (Set T.Tag))
 getTagsProp =
     Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
+
+withoutContext :: EntityId -> T.Tag -> Tag InternalName
+withoutContext entityId tag =
+    Tag
+    { _tagName = nameWithoutContext tag
+    , _tagInstance = EntityId.ofTag entityId tag
+    , _tagVal = tag
+    }
 
 -- forbiddenTags are sibling tags in the same record/funcParams/etc,
 -- NOT type-level constraints on tags. Violation of constraints is
