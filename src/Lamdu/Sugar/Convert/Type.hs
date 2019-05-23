@@ -34,7 +34,7 @@ convertComposite entityId (MkPure (T.RExtend (RowExtend tag typ rest))) =
             <&> compositeFields %~ ((info, typS): )
     where
         info =
-            TagInfo
+            Tag
             { _tagName = nameWithoutContext tag
             , _tagInstance = EntityId.ofTag entityId tag
             , _tagVal = tag

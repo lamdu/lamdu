@@ -355,7 +355,7 @@ makeTagView ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
     , Has Theme env, Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
-    Sugar.TagInfo (Name f) -> m (WithTextPos View)
+    Sugar.Tag (Name f) -> m (WithTextPos View)
 makeTagView tag =
     NameView.make (tag ^. Sugar.tagName)
     & Reader.local (Element.animIdPrefix .~ animId)

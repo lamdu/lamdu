@@ -14,12 +14,12 @@ import           AST.Term.Scheme (QVars)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.EntityId (EntityId)
-import           Lamdu.Sugar.Types.Tag (TagInfo)
+import           Lamdu.Sugar.Types.Tag (Tag)
 
 import           Lamdu.Prelude
 
 data CompositeFields name a = CompositeFields
-    { _compositeFields :: [(TagInfo name, a)]
+    { _compositeFields :: [(Tag name, a)]
     , _compositeExtension :: Maybe name -- TyVar of more possible fields
     } deriving (Functor, Foldable, Traversable, Generic)
 

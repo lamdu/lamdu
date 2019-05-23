@@ -53,7 +53,7 @@ convertTagWith ::
     TagRef name (T m) (T m)
 convertTagWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
     convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
-    & TagRef (TagInfo (name tag) (mkInstance tag) tag)
+    & TagRef (Tag (name tag) (mkInstance tag) tag)
 
 convertTagReplace ::
     Monad m =>
@@ -93,7 +93,7 @@ convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag tagsPro
     where
         toOption x =
             TagOption
-            { _toInfo = TagInfo (name x) (mkInstance x) x
+            { _toInfo = Tag (name x) (mkInstance x) x
             , _toPick = setTag x
             }
 

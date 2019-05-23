@@ -63,9 +63,9 @@ flattenRecord (Ann _ (ER.RRecExtend (RowExtend tag v rest))) =
 flattenRecord (Ann _ (ER.RError err)) = Left err
 flattenRecord _ = Left (EvalTypeError "Record extents non-record")
 
-mkTagInfo :: EntityId -> T.Tag -> TagInfo InternalName
-mkTagInfo entityId tag =
-    TagInfo
+mkTag :: EntityId -> T.Tag -> Tag InternalName
+mkTag entityId tag =
+    Tag
     { _tagName = nameWithoutContext tag
     , _tagInstance = EntityId.ofTag entityId tag
     , _tagVal = tag
@@ -73,7 +73,7 @@ mkTagInfo entityId tag =
 
 convertNullaryInject :: EntityId -> V.Inject (ER.Val pl) -> Maybe (ResVal InternalName)
 convertNullaryInject entityId (V.Inject tag (Ann _ ER.RRecEmpty)) =
-    RInject (ResInject (mkTagInfo entityId tag) Nothing) & ResVal entityId & Just
+    RInject (ResInject (mkTag entityId tag) Nothing) & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
 convertList :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
@@ -91,7 +91,7 @@ simpleInject :: EntityId -> V.Inject ERV -> ResVal InternalName
 simpleInject entityId (V.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
-    & ResInject (mkTagInfo entityId tag) & RInject
+    & ResInject (mkTag entityId tag) & RInject
     & ResVal entityId
 
 convertInject :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> ResVal InternalName
@@ -111,7 +111,7 @@ convertPlainRecord entityId (Right fields) =
     where
         convertField (tag, x) =
             convertVal (EntityId.ofEvalField tag entityId) x
-            & (,) (mkTagInfo entityId tag)
+            & (,) (mkTag entityId tag)
 
 convertTree ::
     EntityId -> Tree Pure T.Type -> Either e (Map T.Tag ERV) ->

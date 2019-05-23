@@ -15,7 +15,7 @@ import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
-import           Lamdu.Sugar.Types
+import           Lamdu.Sugar.Types hiding (Tag(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -79,7 +79,7 @@ toCompositeFields (CompositeFields fields mExt) =
     <$> traverse toField fields
     <*> Lens._Just (opGetName Nothing TypeVar) mExt
     where
-        toField (tag, typ) = (,) <$> toTagInfoOf Tag tag <*> toType typ
+        toField (tag, typ) = (,) <$> toTagOf Tag tag <*> toType typ
 
 toTId :: MonadNaming m => TId (OldName m) -> m (TId (NewName m))
 toTId = tidName %%~ opGetName Nothing TaggedNominal
@@ -142,7 +142,7 @@ toNodeActions = wrapInRecord toTagReplace
 toResRecord ::
     MonadNaming m =>
     ResRecord (OldName m) a -> m (ResRecord (NewName m) a)
-toResRecord = recordFields . traverse . _1 %%~ toTagInfoOf Tag
+toResRecord = recordFields . traverse . _1 %%~ toTagOf Tag
 
 toResBody ::
     MonadNaming m =>
@@ -157,9 +157,9 @@ toResBody f =
     RArray   x -> RArray x & pure
     RList    x -> RList x & pure
     RTree    x -> RTree x & pure
-    RTable   x -> (rtHeaders . traverse) (toTagInfoOf Tag) x <&> RTable
+    RTable   x -> (rtHeaders . traverse) (toTagOf Tag) x <&> RTable
     RRecord  x -> toResRecord x <&> RRecord
-    RInject  x -> riTag (toTagInfoOf Tag) x <&> RInject
+    RInject  x -> riTag (toTagOf Tag) x <&> RInject
     <&> (>>= traverse f)
 
 toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
@@ -272,9 +272,9 @@ toLam ::
     m (Tree (Lambda (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
 toLam = lamFunc toFunction
 
-toTagInfoOf ::
-    MonadNaming m => NameType -> TagInfo (OldName m) -> m (TagInfo (NewName m))
-toTagInfoOf nameType = tagName (opGetName Nothing nameType)
+toTagOf ::
+    MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
+toTagOf nameType = tagName (opGetName Nothing nameType)
 
 toTagReplace ::
     MonadNaming m =>
@@ -283,7 +283,7 @@ toTagReplace ::
 toTagReplace t =
     opRun
     <&>
-    \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagInfoOf Tag))
+    \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagOf Tag))
 
 toTagRefOf ::
     MonadNaming m =>
@@ -291,7 +291,7 @@ toTagRefOf ::
     m (Sugar.TagRef (NewName m) (IM m) o)
 toTagRefOf nameType (Sugar.TagRef info actions) =
     Sugar.TagRef
-    <$> toTagInfoOf nameType info
+    <$> toTagOf nameType info
     <*> toTagReplace actions
 
 withTagRef ::
@@ -311,7 +311,7 @@ toAnnotatedArg ::
     m (AnnotatedArg (NewName m) b)
 toAnnotatedArg expr (AnnotatedArg tag e) =
     AnnotatedArg
-    <$> toTagInfoOf Tag tag
+    <$> toTagOf Tag tag
     <*> expr e
 
 toLabeledApply ::

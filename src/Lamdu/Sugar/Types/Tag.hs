@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
     ( TagRef(..), tagInfo, tagReplace
-    , TagInfo(..), tagName, tagVal, tagInstance
+    , Tag(..), tagName, tagVal, tagInstance
     , TagReplace(..), tsOptions, tsNewTag, tsAnon
     , TagOption(..), toInfo, toPick
     ) where
@@ -12,14 +12,14 @@ import           Lamdu.Sugar.Internal.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
-data TagInfo name = TagInfo
+data Tag name = Tag
     { _tagName :: name
     , _tagInstance :: EntityId -- Unique across different uses of a tag
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Generic)
 
 data TagOption name o a = TagOption
-    { _toInfo :: TagInfo name
+    { _toInfo :: Tag name
     , _toPick :: o a
     } deriving (Functor, Foldable, Traversable)
 
@@ -38,11 +38,11 @@ data TagReplace name i o a = TagReplace
 
 -- | A mutable tag (that can be replaced with a different tag)
 data TagRef name i o = TagRef
-    { _tagInfo :: TagInfo name
+    { _tagInfo :: Tag name
     , _tagReplace :: TagReplace name i o ()
     } deriving Generic
 
 Lens.makeLenses ''TagRef
-Lens.makeLenses ''TagInfo
+Lens.makeLenses ''Tag
 Lens.makeLenses ''TagOption
 Lens.makeLenses ''TagReplace

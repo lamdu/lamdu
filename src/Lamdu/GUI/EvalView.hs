@@ -45,7 +45,7 @@ textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
 makeField ::
     (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    Sugar.TagInfo (Name f) -> ResVal (Name g) -> ExprGuiM env i o [Aligned View]
+    Sugar.Tag (Name f) -> ResVal (Name g) -> ExprGuiM env i o [Aligned View]
 makeField tag val =
     do
         tagView <- makeTagView tag

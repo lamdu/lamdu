@@ -54,7 +54,7 @@ import           Lamdu.Prelude
 type Expression name i o a = Tree (Ann a) (Body name i o)
 
 data AnnotatedArg name expr = AnnotatedArg
-    { _aaTag :: TagInfo name
+    { _aaTag :: Tag name
     , _aaExpr :: expr
     } deriving (Functor, Foldable, Traversable, Generic)
 

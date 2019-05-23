@@ -117,9 +117,9 @@ pane body =
     , Sugar._paneMoveUp = Nothing
     }
 
-tagInfo :: Maybe UUID -> T.Tag -> Sugar.TagInfo InternalName
+tagInfo :: Maybe UUID -> T.Tag -> Sugar.Tag InternalName
 tagInfo var tag =
-    Sugar.TagInfo
+    Sugar.Tag
     { Sugar._tagName = maybe nameWithoutContext taggedEntityName var tag
     , Sugar._tagInstance = "dummy"
     , Sugar._tagVal = tag

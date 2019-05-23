@@ -28,7 +28,7 @@ class Order m name o t where
         OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
     order = children (Proxy @(Order m name o)) orderNode
 
-orderByTag :: Monad m => (a -> Sugar.TagInfo name) -> OrderT m [a]
+orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
 orderByTag toTag =
     fmap (map fst . sortOn snd) . traverse loadOrder
     where

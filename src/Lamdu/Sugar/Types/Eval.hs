@@ -33,11 +33,11 @@ import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Prelude
 
 newtype ResRecord name v = ResRecord
-    { _recordFields :: [(TagInfo name, v)]
+    { _recordFields :: [(Tag name, v)]
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data ResInject name v = ResInject
-    { _riTag :: TagInfo name
+    { _riTag :: Tag name
     , _riVal :: Maybe v
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -47,7 +47,7 @@ data ResTree v = ResTree
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data ResTable name v = ResTable
-    { _rtHeaders :: [TagInfo name]
+    { _rtHeaders :: [Tag name]
     , _rtRows :: [[v]] -- All rows are same length as each other and the headers
     } deriving (Functor, Foldable, Traversable, Generic)
 

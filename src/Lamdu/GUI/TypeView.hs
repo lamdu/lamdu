@@ -173,7 +173,7 @@ makeField ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
+    (Sugar.Tag (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
     (,)
@@ -185,7 +185,7 @@ makeVariantField ::
     , Has Theme env, Element.HasAnimIdPrefix env
     , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
+    (Sugar.Tag (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     makeTagView tag <&> (, Element.empty)
@@ -212,7 +212,7 @@ makeComposite ::
     ) =>
     Text -> Text ->
     m (WithTextPos View) -> m (WithTextPos View) ->
-    ((Sugar.TagInfo (Name f), Sugar.Type (Name f)) ->
+    ((Sugar.Tag (Name f), Sugar.Type (Name f)) ->
          m (WithTextPos View, WithTextPos View)) ->
     Sugar.CompositeFields (Name f) (Sugar.Type (Name f)) ->
     m (WithTextPos View)
