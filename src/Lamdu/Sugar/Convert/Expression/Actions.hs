@@ -77,7 +77,7 @@ mkExtractToDef exprPl =
         newDefI <-
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
-            & DataOps.newPublicDefinitionWithPane (ctx ^. ConvertM.scCodeAnchors)
+            & DataOps.newPublicDefinitionWithPane (ctx ^. has)
         PostProcess.def infer (ctx ^. ConvertM.scDebugMonitors) newDefI
             >>=
             \case

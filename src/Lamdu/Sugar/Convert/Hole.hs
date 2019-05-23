@@ -162,7 +162,7 @@ getListing ::
     (Anchors.CodeAnchors f -> MkProperty' (T m) (Set a)) ->
     ConvertM.Context f -> T m [a]
 getListing anchor sugarContext =
-    sugarContext ^. ConvertM.scCodeAnchors
+    sugarContext ^. has
     & anchor & Property.getP <&> Set.toList
 
 getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, Tree Pure (NominalDecl T.Type))]
