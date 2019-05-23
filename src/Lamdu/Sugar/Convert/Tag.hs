@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Tag
-    ( convertTag, convertTagReplace, convertTaggedEntityWith, convertTaggedEntity
+    ( convertTagRef, convertTagReplace, convertTaggedEntityWith, convertTaggedEntity
     , AllowAnonTag(..)
     ) where
 
@@ -34,24 +34,24 @@ getTagsProp =
 -- forbiddenTags are sibling tags in the same record/funcParams/etc,
 -- NOT type-level constraints on tags. Violation of constraints is
 -- allowed, generating ordinary type errors
-convertTag ::
+convertTagRef ::
     Monad m =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) ->
     ConvertM m (TagRef name (T m) (T m))
-convertTag tag name forbiddenTags mkInstance setTag =
+convertTagRef tag name forbiddenTags mkInstance setTag =
     do
         env <- Lens.view id
         getTagsProp
-            <&> convertTagWith env tag name forbiddenTags RequireTag mkInstance setTag
+            <&> convertTagRefWith env tag name forbiddenTags RequireTag mkInstance setTag
 
-convertTagWith ::
+convertTagRefWith ::
     (Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
     TagRef name (T m) (T m)
-convertTagWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
+convertTagRefWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
     convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
     & TagRef Tag
     { _tagName = name tag
@@ -117,7 +117,7 @@ convertTaggedEntityWith env entity tagsProp =
     getP prop
     <&>
     \entityTag ->
-    convertTagWith env entityTag (nameWithContext entity) mempty AllowAnon
+    convertTagRefWith env entityTag (nameWithContext entity) mempty AllowAnon
     (EntityId.ofTaggedEntity entity) (setP prop) tagsProp
     where
         prop = Anchors.assocTag entity

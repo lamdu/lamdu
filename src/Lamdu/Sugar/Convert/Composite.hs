@@ -19,7 +19,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagReplace, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Tag (convertTagRef, convertTagReplace, AllowAnonTag(..))
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -161,7 +161,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. Property.pVal
-        tagS <- convertTag tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
+        tagS <- convertTagRef tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
         pure CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS

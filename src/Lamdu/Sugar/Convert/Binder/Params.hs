@@ -42,7 +42,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagReplace, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Tag (convertTagRef, convertTaggedEntity, convertTagReplace, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -396,7 +396,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 paramInfo <-
                     ParamInfo
                     <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
-                            >>= convertTag tag (nameWithContext param)
+                            >>= convertTagRef tag (nameWithContext param)
                                 (Set.delete tag (Set.fromList tagList))
                                 (EntityId.ofTaggedEntity param)
                         )
