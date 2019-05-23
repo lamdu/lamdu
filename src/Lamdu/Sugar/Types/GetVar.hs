@@ -32,14 +32,16 @@ data ParamRef name o = ParamRef
     , _pBinderMode :: BinderMode
     } deriving Generic
 
-data DefinitionOutdatedType name a = DefinitionOutdatedType
+data DefinitionOutdatedType name o a = DefinitionOutdatedType
     { _defTypeWhenUsed :: Scheme name
     , _defTypeCurrent :: Scheme name
-    , _defTypeUseCurrent :: a
+    , _defTypeUseCurrent :: o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data DefinitionForm name o =
-    DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType name (o EntityId))
+data DefinitionForm name o
+    = DefUpToDate
+    | DefDeleted
+    | DefTypeChanged (DefinitionOutdatedType name o EntityId)
     deriving (Generic)
 
 data BinderVarForm name o

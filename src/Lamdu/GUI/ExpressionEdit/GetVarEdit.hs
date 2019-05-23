@@ -197,7 +197,7 @@ definitionTypeChangeBox ::
     , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType (Name x) (f Sugar.EntityId) -> Widget.Id ->
+    Sugar.DefinitionOutdatedType (Name x) f Sugar.EntityId -> Widget.Id ->
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do

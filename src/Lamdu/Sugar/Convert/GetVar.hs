@@ -104,7 +104,7 @@ convertGlobal var exprPl =
                 DeletedDefinition -> DefDeleted
                 LiveDefinition ->
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at var
-                    <&> Lens.mapped . Lens.mapped .~ exprPl ^. Input.entityId
+                    <&> Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
         nameRef <- globalNameRef (ctx ^. ConvertM.scCodeAnchors) defI & lift
         inline <-

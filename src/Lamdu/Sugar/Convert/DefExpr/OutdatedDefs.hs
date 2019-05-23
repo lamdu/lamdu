@@ -237,7 +237,7 @@ scan ::
     EntityId -> Def.Expr (Val (ValP m)) ->
     (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcess.Result ->
-    T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ())))
+    T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m) ()))
 scan entityId defExpr setDefExpr typeCheck =
     defExpr ^. Def.exprFrozenDeps . depsGlobalTypes
     & Map.toList & traverse (uncurry scanDef) <&> mconcat
@@ -256,5 +256,6 @@ scan entityId defExpr setDefExpr typeCheck =
                         { Sugar._defTypeWhenUsed = usedTypeS
                         , Sugar._defTypeCurrent = currentTypeS
                         , Sugar._defTypeUseCurrent =
-                            updateDefType usedType newUsedDefType globalVar defExpr setDefExpr typeCheck
+                            updateDefType usedType newUsedDefType globalVar
+                            defExpr setDefExpr typeCheck
                         } & Map.singleton globalVar & pure

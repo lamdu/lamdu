@@ -101,7 +101,8 @@ data Context m = Context
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcess.Result
-    , _scOutdatedDefinitions :: Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m ()))
+    , _scOutdatedDefinitions ::
+        Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m) ())
     , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
     , _scFrozenDeps :: Property (T m) Deps
     , _scDebugMonitors :: Debug.Monitors

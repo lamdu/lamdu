@@ -105,8 +105,8 @@ toScheme (Scheme tvs typ) = Scheme tvs <$> toType typ
 
 toDefinitionOutdatedType ::
     MonadNaming m =>
-    DefinitionOutdatedType (OldName m) p ->
-    m (DefinitionOutdatedType (NewName m) p)
+    DefinitionOutdatedType (OldName m) o a ->
+    m (DefinitionOutdatedType (NewName m) o a)
 toDefinitionOutdatedType (DefinitionOutdatedType whenUsed current useCur) =
     DefinitionOutdatedType <$> toScheme whenUsed <*> toScheme current ?? useCur
 
