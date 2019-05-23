@@ -19,7 +19,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagSelection, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Tag (convertTag, convertTagReplace, AllowAnonTag(..))
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -41,7 +41,7 @@ convertAddItem ::
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Set T.Tag ->
     Input.Payload m a ->
-    ConvertM m (TagSelection InternalName (T m) (T m) EntityId)
+    ConvertM m (TagReplace InternalName (T m) (T m) EntityId)
 convertAddItem extendOp existingTags pl =
     do
         addItem <-
@@ -53,7 +53,7 @@ convertAddItem extendOp existingTags pl =
                 _ <- protectedSetToVal stored resultI
                 DataOps.setTagOrder tag (Set.size existingTags)
                 EntityId.ofValI newValI & pure
-        convertTagSelection nameWithoutContext existingTags RequireTag (EntityId.ofTag (pl ^. Input.entityId)) addItem
+        convertTagReplace nameWithoutContext existingTags RequireTag (EntityId.ofTag (pl ^. Input.entityId)) addItem
     where
         stored = pl ^. Input.stored
 

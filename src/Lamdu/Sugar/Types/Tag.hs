@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
-    ( Tag(..), tagInfo, tagSelection
+    ( Tag(..), tagInfo, tagReplace
     , TagInfo(..), tagName, tagVal, tagInstance
-    , TagSelection(..), tsOptions, tsNewTag, tsAnon
+    , TagReplace(..), tsOptions, tsNewTag, tsAnon
     , TagOption(..), toInfo, toPick
     ) where
 
@@ -23,7 +23,7 @@ data TagOption name o a = TagOption
     , _toPick :: o a
     } deriving (Functor, Foldable, Traversable)
 
-data TagSelection name i o a = TagSelection
+data TagReplace name i o a = TagReplace
     { _tsOptions :: i [TagOption name o a]
     , -- Ideally tsNewTag would be an additional TagOption,
       -- and this would also fix animation artifacts for picking new tags.
@@ -38,10 +38,10 @@ data TagSelection name i o a = TagSelection
 
 data Tag name i o = Tag
     { _tagInfo :: TagInfo name
-    , _tagSelection :: TagSelection name i o ()
+    , _tagReplace :: TagReplace name i o ()
     } deriving Generic
 
 Lens.makeLenses ''Tag
 Lens.makeLenses ''TagInfo
 Lens.makeLenses ''TagOption
-Lens.makeLenses ''TagSelection
+Lens.makeLenses ''TagReplace

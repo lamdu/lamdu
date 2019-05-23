@@ -176,7 +176,7 @@ makeAltsWidget ::
     ) =>
     Maybe Tag ->
     [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
-    Sugar.TagSelection (Name o) i o Sugar.EntityId ->
+    Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Widget.Id ->
     ExprGuiM env i o (Gui Responsive o)
 makeAltsWidget mActiveTag alts addAlt altsId =
@@ -202,7 +202,7 @@ makeAddAltRow ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.TagSelection (Name o) i o Sugar.EntityId -> Widget.Id ->
+    Sugar.TagReplace (Name o) i o Sugar.EntityId -> Widget.Id ->
     ExprGuiM env i o (Gui Responsive.TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId

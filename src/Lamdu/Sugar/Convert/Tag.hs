@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Tag
-    ( convertTag, convertTagSelection, convertTaggedEntityWith, convertTaggedEntity
+    ( convertTag, convertTagReplace, convertTaggedEntityWith, convertTaggedEntity
     , AllowAnonTag(..)
     ) where
 
@@ -52,27 +52,27 @@ convertTagWith ::
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
     Tag name (T m) (T m)
 convertTagWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
-    convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
+    convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
     & Tag (TagInfo (name tag) (mkInstance tag) tag)
 
-convertTagSelection ::
+convertTagReplace ::
     Monad m =>
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
-    ConvertM m (TagSelection name (T m) (T m) a)
-convertTagSelection name forbiddenTags allowAnon mkInstance setTag =
+    ConvertM m (TagReplace name (T m) (T m) a)
+convertTagReplace name forbiddenTags allowAnon mkInstance setTag =
     do
         env <- Lens.view id
         getTagsProp <&>
-            convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag
+            convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag
 
-convertTagSelectionWith ::
+convertTagReplaceWith ::
     (Monad m, Has LangId env, Has Dir.Layout env) =>
     env ->
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
-    TagSelection name (T m) (T m) a
-convertTagSelectionWith env name forbiddenTags allowAnon mkInstance setTag tagsProp =
-    TagSelection
+    TagReplace name (T m) (T m) a
+convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp =
+    TagReplace
     { _tsOptions =
         getP tagsProp
         <&> (`Set.difference` forbiddenTags)

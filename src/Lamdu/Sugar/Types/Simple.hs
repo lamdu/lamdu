@@ -36,7 +36,7 @@ data CompositeItem name i o expr = CompositeItem
 data Composite name i o expr = Composite
     { _cItems :: [CompositeItem name i o expr]
     , _cTail :: CompositeTail o expr
-    , _cAddItem :: TagSelection name i o EntityId
+    , _cAddItem :: TagReplace name i o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data CaseArg o expr = CaseArg

@@ -128,7 +128,7 @@ tagInfo var tag =
 mkTag :: Maybe UUID -> T.Tag -> Sugar.Tag InternalName Identity Unit
 mkTag var tag =
     Sugar.Tag
-    { Sugar._tagSelection = tagSelection
+    { Sugar._tagReplace = tagReplace
     , Sugar._tagInfo = tagInfo var tag
     }
 
@@ -175,7 +175,7 @@ mkFuncParam (paramVar, paramTag) =
         { Sugar._piTag = mkTag (Just paramVar) paramTag
         , Sugar._piActions =
             Sugar.FuncParamActions
-            { Sugar._fpAddNext = Sugar.AddNext tagSelection
+            { Sugar._fpAddNext = Sugar.AddNext tagReplace
             , Sugar._fpDelete = Unit
             , Sugar._fpMOrderBefore = Nothing
             , Sugar._fpMOrderAfter = Nothing
@@ -192,7 +192,7 @@ funcExpr params pn =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
-    , Sugar._fAddFirstParam = Sugar.PrependParam tagSelection
+    , Sugar._fAddFirstParam = Sugar.PrependParam tagReplace
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._fBody = pn & val %~ Sugar.BinderExpr
     }
@@ -233,7 +233,7 @@ nodeActions =
     , Sugar._setToLiteral = pure Unit
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
-    , Sugar._wrapInRecord = tagSelection
+    , Sugar._wrapInRecord = tagReplace
     , Sugar._mNewLet = Nothing
     }
 
@@ -244,9 +244,9 @@ taggedEntityName ctx tag =
     , _inTag = tag
     }
 
-tagSelection :: Sugar.TagSelection name Identity Unit ()
-tagSelection =
-    Sugar.TagSelection
+tagReplace :: Sugar.TagReplace name Identity Unit ()
+tagReplace =
+    Sugar.TagReplace
     { Sugar._tsOptions = pure []
     , Sugar._tsNewTag = const Unit
     , Sugar._tsAnon = Nothing

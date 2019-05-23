@@ -137,7 +137,7 @@ toNodeActions ::
     MonadNaming m =>
     NodeActions (OldName m) (IM m) o ->
     m (NodeActions (NewName m) (IM m) o)
-toNodeActions = wrapInRecord toTagSelection
+toNodeActions = wrapInRecord toTagReplace
 
 toResRecord ::
     MonadNaming m =>
@@ -226,7 +226,7 @@ toAddFirstParam ::
     MonadNaming m =>
     AddFirstParam (OldName m) (IM m) o ->
     m (AddFirstParam (NewName m) (IM m) o)
-toAddFirstParam = _PrependParam toTagSelection
+toAddFirstParam = _PrependParam toTagReplace
 
 toFunction ::
     MonadNaming m =>
@@ -276,11 +276,11 @@ toTagInfoOf ::
     MonadNaming m => NameType -> TagInfo (OldName m) -> m (TagInfo (NewName m))
 toTagInfoOf nameType = tagName (opGetName Nothing nameType)
 
-toTagSelection ::
+toTagReplace ::
     MonadNaming m =>
-    TagSelection (OldName m) (IM m) o a ->
-    m (TagSelection (NewName m) (IM m) o a)
-toTagSelection t =
+    TagReplace (OldName m) (IM m) o a ->
+    m (TagReplace (NewName m) (IM m) o a)
+toTagReplace t =
     opRun
     <&>
     \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagInfoOf Tag))
@@ -292,7 +292,7 @@ toTagOf ::
 toTagOf nameType (Sugar.Tag info actions) =
     Sugar.Tag
     <$> toTagInfoOf nameType info
-    <*> toTagSelection actions
+    <*> toTagReplace actions
 
 withTag ::
     MonadNaming m =>
@@ -302,7 +302,7 @@ withTag ::
 withTag nameType varInfo (Sugar.Tag info actions) =
     Sugar.Tag
     <$> tagName (opWithName varInfo nameType) info
-    <*> liftCPS (toTagSelection actions)
+    <*> liftCPS (toTagReplace actions)
 
 toAnnotatedArg ::
     MonadNaming m =>
@@ -368,7 +368,7 @@ toComposite ::
 toComposite expr Composite{_cItems, _cAddItem, _cTail} =
     (\_cItems _cAddItem -> Composite{_cItems, _cAddItem, _cTail})
     <$> (traverse . ciTag) (toTagOf Tag) _cItems
-    <*> toTagSelection _cAddItem
+    <*> toTagReplace _cAddItem
     >>= traverse expr
 
 toCase ::
@@ -383,7 +383,7 @@ toInjectVal ::
     Tree (InjectContent (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
     m (Tree (InjectContent (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
 toInjectVal (InjectVal v) = toExpression v <&> InjectVal
-toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagSelection)) n <&> InjectNullary
+toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
 
 toInject ::
     MonadNaming m =>
@@ -454,7 +454,7 @@ withParamInfo ::
 withParamInfo varInfo (ParamInfo tag fpActions) =
     ParamInfo
     <$> withTag TaggedVar varInfo tag
-    <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagSelection fpActions)
+    <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagReplace fpActions)
 
 withFuncParam ::
     MonadNaming m =>

@@ -42,7 +42,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
-import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagSelection, AllowAnonTag(..))
+import           Lamdu.Sugar.Convert.Tag (convertTag, convertTaggedEntity, convertTagReplace, AllowAnonTag(..))
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -273,7 +273,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                              storedLam ?? newTag)
                     postProcess
         addNext <-
-            convertTagSelection (nameWithContext param)
+            convertTagReplace (nameWithContext param)
             (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param) addParamAfter
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
         pure FuncParamActions
@@ -375,7 +375,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                         >>= (add mPresMode DataOps.newHole binderKind storedLam ?? tag)
                     postProcess
         addFirstSelection <-
-            convertTagSelection (nameWithContext param)
+            convertTagReplace (nameWithContext param)
             (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param)
             addFirst
         pure ConventionalParams
@@ -522,7 +522,7 @@ makeNonRecordParamActions binderKind storedLam =
             if oldParam == Anchors.anonTag
             then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
             else
-                convertTagSelection (nameWithContext param)
+                convertTagReplace (nameWithContext param)
                 (Set.singleton oldParam) RequireTag (EntityId.ofTaggedEntity param)
                 addParamAfter
                 <&> AddNext
@@ -592,7 +592,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             ?? NewParamBefore
             <&> Lens.mapped %~ (<* postProcess)
         addFirstSelection <-
-            convertTagSelection (nameWithContext param) (Set.singleton oldParam)
+            convertTagReplace (nameWithContext param) (Set.singleton oldParam)
             RequireTag (EntityId.ofTaggedEntity param) addFirst
         pure ConventionalParams
             { cpTags = mempty
