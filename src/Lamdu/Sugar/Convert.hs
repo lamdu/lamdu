@@ -271,12 +271,61 @@ convertRepl env cp =
             prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
-loadAnnotatedDef ::
-    Monad m =>
-    (pl -> DefI m) ->
-    pl -> T m (Definition.Definition (Val (ValP m)) pl)
-loadAnnotatedDef getDefI x =
-    getDefI x & ExprLoad.def <&> Definition.defPayload .~ x
+convertPane ::
+    ( Monad m, Has LangId env, Has Dir.Layout env
+    , Has Debug.Monitors env
+    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    ) =>
+    env -> Anchors.CodeAnchors m -> EntityId ->
+    Property (T m) [Anchors.Pane dummy] ->
+    Int -> Anchors.Pane m ->
+    T m
+    (Pane InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
+convertPane env cp replEntityId (Property panes setPanes) i pane =
+    do
+        bodyS <-
+            ExprLoad.def defI <&> Definition.defPayload .~ defI
+            >>= convertDefBody env cp
+        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
+        defS <-
+            OrderTags.orderDef Definition
+            { _drEntityId = EntityId.ofIRef defI
+            , _drName = tag
+            , _drBody = bodyS
+            , _drDefinitionState =
+                Anchors.assocDefinitionState defI ^. Property.mkProperty
+            , _drDefI = defVar
+            }
+        pure Pane
+            { _paneBody = PaneDefinition defS
+            , _paneClose = mkDelPane
+            , _paneMoveDown = mkMMovePaneDown
+            , _paneMoveUp = mkMMovePaneUp
+            }
+    where
+        defVar = ExprIRef.globalId defI
+        defI = pane ^. Anchors._PaneDefinition
+        mkDelPane =
+            entityId <$ setPanes newPanes
+            where
+                entityId =
+                    newPanes ^? Lens.ix i
+                    <|> newPanes ^? Lens.ix (i-1)
+                    <&> (EntityId.ofIRef . (^. Anchors._PaneDefinition))
+                    & fromMaybe replEntityId
+                newPanes = removeAt i panes
+        movePane oldIndex newIndex =
+            insertAt newIndex item (before ++ after)
+            & setPanes
+            where
+                (before, item:after) = splitAt oldIndex panes
+        mkMMovePaneDown
+            | i+1 < length panes = Just $ movePane i (i+1)
+            | otherwise = Nothing
+        mkMMovePaneUp
+            | i-1 >= 0 = Just $ movePane i (i-1)
+            | otherwise = Nothing
 
 loadPanes ::
     ( Monad m, Has LangId env, Has Dir.Layout env
@@ -290,54 +339,9 @@ loadPanes ::
         (Payload InternalName (T m) (T m) [EntityId])]
 loadPanes env cp replEntityId =
     do
-        Property panes setPanes <- Anchors.panes cp ^. Property.mkProperty
-        paneDefs <- traverse (loadAnnotatedDef (^. Anchors._PaneDefinition)) panes
-        let mkDelPane i =
-                entityId <$ setPanes newPanes
-                where
-                    entityId =
-                        newPanes ^? Lens.ix i
-                        <|> newPanes ^? Lens.ix (i-1)
-                        <&> (EntityId.ofIRef . (^. Anchors._PaneDefinition))
-                        & fromMaybe replEntityId
-                    newPanes = removeAt i panes
-        let movePane oldIndex newIndex =
-                insertAt newIndex item (before ++ after)
-                & setPanes
-                where
-                    (before, item:after) = splitAt oldIndex panes
-        let mkMMovePaneDown i
-                | i+1 < length paneDefs = Just $ movePane i (i+1)
-                | otherwise = Nothing
-        let mkMMovePaneUp i
-                | i-1 >= 0 = Just $ movePane i (i-1)
-                | otherwise = Nothing
-        let convertPane i def =
-                do
-                    bodyS <-
-                        def
-                        <&> (^. Anchors._PaneDefinition)
-                        & convertDefBody env cp
-                    tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
-                    defS <-
-                        OrderTags.orderDef Definition
-                        { _drEntityId = EntityId.ofIRef defI
-                        , _drName = tag
-                        , _drBody = bodyS
-                        , _drDefinitionState =
-                            Anchors.assocDefinitionState defI ^. Property.mkProperty
-                        , _drDefI = defVar
-                        }
-                    pure Pane
-                        { _paneBody = PaneDefinition defS
-                        , _paneClose = mkDelPane i
-                        , _paneMoveDown = mkMMovePaneDown i
-                        , _paneMoveUp = mkMMovePaneUp i
-                        }
-                where
-                    defVar = ExprIRef.globalId defI
-                    defI = def ^. Definition.defPayload . Anchors._PaneDefinition
-        paneDefs & Lens.itraversed %%@~ convertPane
+        prop <- Anchors.panes cp ^. Property.mkProperty
+        Property.value prop
+            & Lens.itraversed %%@~ convertPane env cp replEntityId prop
 
 loadWorkArea ::
     ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
