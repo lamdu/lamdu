@@ -16,7 +16,7 @@ data TagInfo name = TagInfo
     { _tagName :: name
     , _tagInstance :: EntityId -- Unique across different uses of a tag
     , _tagVal :: T.Tag
-    } deriving (Eq, Ord, Show, Generic)
+    } deriving (Eq, Ord, Generic)
 
 data TagOption name o a = TagOption
     { _toInfo :: TagInfo name
@@ -40,9 +40,6 @@ data Tag name i o = Tag
     { _tagInfo :: TagInfo name
     , _tagSelection :: TagSelection name i o ()
     } deriving Generic
-
-instance Show name => Show (Tag name i o) where
-    show (Tag info _) = "(Tag " ++ show info ++ ")"
 
 Lens.makeLenses ''Tag
 Lens.makeLenses ''TagInfo

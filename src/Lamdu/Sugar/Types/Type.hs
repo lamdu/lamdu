@@ -21,12 +21,12 @@ import           Lamdu.Prelude
 data CompositeFields name a = CompositeFields
     { _compositeFields :: [(TagInfo name, a)]
     , _compositeExtension :: Maybe name -- TyVar of more possible fields
-    } deriving (Show, Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data TId name = TId
     { _tidName :: name
     , _tidTId :: T.NominalId
-    } deriving (Eq, Ord, Show, Generic)
+    } deriving (Eq, Ord, Generic)
 
 data TBody name a
     = TVar name
@@ -40,17 +40,17 @@ data TBody name a
       -- ^ Lifts a composite record type
     | TVariant (CompositeFields name a)
       -- ^ Lifts a composite variant type
-    deriving (Show, Functor, Foldable, Traversable, Generic)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data Type name = Type
     { _tPayload :: EntityId
     , _tBody :: TBody name (Type name)
-    } deriving (Show, Generic)
+    } deriving (Generic)
 
 data Scheme name = Scheme
     { _schemeForAll :: Tree T.Types QVars
     , _schemeType :: Type name
-    } deriving (Show, Generic)
+    } deriving (Generic)
 
 Lens.makeLenses ''CompositeFields
 Lens.makeLenses ''Scheme

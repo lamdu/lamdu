@@ -43,7 +43,7 @@ import           Lamdu.Prelude
 
 -- Can a lambda be called more than once? (Used for scope selector presentations)
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Generic)
 
 -- Value annotations may also have types as fallbacks in scopes where no value was calculated
 data ValAnnotation name i =
@@ -76,15 +76,11 @@ data FuncParamActions name i o =
 newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
     } deriving Generic
-instance Show (NullParamActions o) where
-    show (NullParamActions _) = "(NullParamActions)"
 
 data ParamInfo name i o = ParamInfo
     { _piTag :: Tag name i o
     , _piActions :: FuncParamActions name i o
     } deriving Generic
-instance Show name => Show (ParamInfo name i o) where
-    show (ParamInfo tag _) = show tag
 
 data FuncParam name i info = FuncParam
     { _fpAnnotation :: Annotation name i
@@ -148,8 +144,6 @@ data Payload name i o a = Payload
     , _plEntityId :: EntityId
     , _plData :: a
     } deriving (Functor, Foldable, Traversable, Generic)
-instance Show a => Show (Payload name i o a) where
-    show (Payload _ann _ _actions _entityId data_) = show data_
 
 newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId

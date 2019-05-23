@@ -34,26 +34,26 @@ import           Lamdu.Prelude
 
 newtype ResRecord name v = ResRecord
     { _recordFields :: [(TagInfo name, v)]
-    } deriving (Show, Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data ResInject name v = ResInject
     { _riTag :: TagInfo name
     , _riVal :: Maybe v
-    } deriving (Show, Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data ResTree v = ResTree
     { _rtRoot :: v
     , _rtSubtrees :: [v]
-    } deriving (Show, Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data ResTable name v = ResTable
     { _rtHeaders :: [TagInfo name]
     , _rtRows :: [[v]] -- All rows are same length as each other and the headers
-    } deriving (Show, Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 newtype ResList v = ResList
     { _rsHead :: v
-    } deriving (Show, Functor, Foldable, Traversable, Generic)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data ResBody name v
     = RRecord (ResRecord name v)
@@ -68,12 +68,12 @@ data ResBody name v
     | RList (ResList v)
     | RTree (ResTree v)
     | RText Text
-    deriving (Show, Functor, Foldable, Traversable, Generic)
+    deriving (Functor, Foldable, Traversable, Generic)
 
 data ResVal name = ResVal
     { _resPayload :: EntityId
     , _resBody :: ResBody name (ResVal name)
-    } deriving (Show, Generic)
+    } deriving (Generic)
 
 type EvalScopes a = CurAndPrev (Map ScopeId a)
 

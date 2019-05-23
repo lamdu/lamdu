@@ -20,14 +20,12 @@ import           Lamdu.Sugar.Types.Type
 import           Lamdu.Prelude
 
 data BinderMode = NormalBinder | LightLambda
-    deriving (Show, Generic, Eq)
+    deriving (Generic, Eq)
 
 data NameRef name o = NameRef
     { _nrName :: name
     , _nrGotoDefinition :: o EntityId
     } deriving Generic
-instance Show name => Show (NameRef name o) where
-    show (NameRef name _) = show name
 
 data ParamRef name o = ParamRef
     { _pNameRef :: NameRef name o
@@ -39,18 +37,15 @@ data DefinitionOutdatedType name a = DefinitionOutdatedType
     , _defTypeCurrent :: Scheme name
     , _defTypeUseCurrent :: a
     } deriving (Functor, Foldable, Traversable, Generic)
-instance Show name => Show (DefinitionOutdatedType name a) where
-    show (DefinitionOutdatedType usedType newType _) =
-        "(Used @type: " ++ show usedType ++ " now type: " ++ show newType ++ ")"
 
 data DefinitionForm name o =
     DefUpToDate | DefDeleted | DefTypeChanged (DefinitionOutdatedType name (o EntityId))
-    deriving (Show, Generic)
+    deriving (Generic)
 
 data BinderVarForm name o
     = GetDefinition (DefinitionForm name o)
     | GetLet
-    deriving (Show, Generic)
+    deriving (Generic)
 
 data BinderVarInline o
     = InlineVar (o EntityId)
@@ -65,8 +60,6 @@ data BinderVarRef name o = BinderVarRef
     , -- Just means it is stored and inlinable:
       _bvInline :: BinderVarInline o
     } deriving Generic
-instance Show name => Show (BinderVarRef name o) where
-    show (BinderVarRef nameRef form _ _) = "(BinderVar " ++ show nameRef ++ " (form=" ++ show form ++ "))"
 
 newtype ParamsRecordVarRef name = ParamsRecordVarRef
     { _prvFieldNames :: [name]
