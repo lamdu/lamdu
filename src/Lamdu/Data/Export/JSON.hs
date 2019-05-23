@@ -231,9 +231,9 @@ importRepl defExpr =
     Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
 importTag :: T.Tag -> Tag -> T ViewM ()
-importTag tagId tagInfo =
+importTag tagId tagData =
     do
-        Transaction.writeIRef (ExprIRef.tagI tagId) tagInfo
+        Transaction.writeIRef (ExprIRef.tagI tagId) tagData
         tagId `insertTo` DbLayout.tags
 
 importLamVar :: Monad m => Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T m ()
@@ -254,7 +254,7 @@ importNominal tag nomId nominal =
 importOne :: Codec.Entity -> T ViewM ()
 importOne (Codec.EntityDef def) = importDef def
 importOne (Codec.EntityRepl x) = importRepl x
-importOne (Codec.EntityTag tagId tagInfo) = importTag tagId tagInfo
+importOne (Codec.EntityTag tagId tagData) = importTag tagId tagData
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar paramList tag lamUUID var) = importLamVar paramList tag lamUUID var
 importOne (Codec.EntitySchemaVersion _) =
