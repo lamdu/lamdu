@@ -26,7 +26,7 @@ import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Folder (Folder, Selection(..))
+import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Sampler (Sampler, sConfigData, sThemeData, sLanguageData)
 import qualified Lamdu.Config.Sampler as ConfigSampler
@@ -235,7 +235,7 @@ backgroundId :: M.AnimId
 backgroundId = ["background"]
 
 titledLangSelection ::
-    Selection (Folder Language) -> IO (TitledSelection Folder.Language)
+    Selection Folder.Language -> IO (TitledSelection Folder.Language)
 titledLangSelection sel =
     Folder.selectionToPath (Proxy @Language) sel
     >>= evalWriterT . AesonConfig.load
