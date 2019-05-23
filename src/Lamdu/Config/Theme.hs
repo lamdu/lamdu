@@ -11,7 +11,7 @@ module Lamdu.Config.Theme
     , FontSel(..), fontSelWidth, fontSelStyle, fontSelSlant, fontSelWeight
         , fontSel
     , Theme(..)
-        , fonts, baseTextSize, animationTimePeriodSec
+        , title, fonts, baseTextSize, animationTimePeriodSec
         , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
         , textColors, topPadding, statusBar, deleted, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorOverlayColor
@@ -128,7 +128,8 @@ fontSel sel =
     I18N.Fonts.choice (sel ^. fontSelWeight)
 
 data Theme = Theme
-    { _fonts :: Fonts FontSel
+    { _title :: Map Text Text
+    , _fonts :: Fonts FontSel
     , _baseTextSize :: FontSize
     , _animationTimePeriodSec :: Double
     , _animationRemainInPeriod :: Double

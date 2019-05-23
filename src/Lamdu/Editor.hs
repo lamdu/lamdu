@@ -216,7 +216,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
 
 makeMainGui ::
     HasCallStack =>
-    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
+    [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> T DbLayout.DbM (Gui Widget IO)
 makeMainGui themeNames langNames dbToIO env =
@@ -245,6 +245,21 @@ titledLangSelection sel =
     , _selection = sel
     }
 
+titledThemeSelection ::
+    Selection Folder.Language ->
+    Selection Folder.Theme ->
+    IO (TitledSelection Folder.Theme)
+titledThemeSelection (Selection lang) sel =
+    Folder.selectionToPath (Proxy @Theme) sel
+    >>= evalWriterT . AesonConfig.load
+    <&> \conf ->
+    TitledSelection
+    { _title =
+        conf ^. Theme.title . Lens.at lang
+        & fromMaybe (conf ^. Theme.title . Lens.ix "english")
+    , _selection = sel
+    }
+
 makeRootWidget ::
     HasCallStack =>
     Env -> Debug.Monitors ->
@@ -252,7 +267,9 @@ makeRootWidget ::
     IO (Gui Widget IO)
 makeRootWidget env perfMonitors db evaluator sample =
     do
-        themeNames <- Folder.getSelections (Proxy @Theme)
+        themeNames <-
+            Folder.getSelections (Proxy @Theme)
+            >>= traverse (titledThemeSelection selectedLang)
         langNames <-
             Folder.getSelections (Proxy @Language)
             >>= traverse titledLangSelection
@@ -261,6 +278,7 @@ makeRootWidget env perfMonitors db evaluator sample =
             <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where
+        selectedLang = env ^. Env.settings . Property.pVal . Settings.sSelectedLanguage
         monitors =
             Debug.addBreakPoints
             (sample ^. sConfigData . Config.debug . Config.breakpoints)

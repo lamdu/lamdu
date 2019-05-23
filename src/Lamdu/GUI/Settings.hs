@@ -19,13 +19,12 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
-import qualified GUI.Momentu.Widgets.Label as Label
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Ann
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Folder (Selection, _Selection)
+import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
@@ -103,12 +102,12 @@ makeStatusWidgets ::
     , Has (Texts.StatusBar Text) env
     , Glue.HasTexts env
     ) =>
-    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
+    [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
-    <*> (traverse rawOpt themeNames
+    <*> (traverse opt themeNames
             >>= StatusBar.makeSwitchStatusWidget
             (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
             Config.changeThemeKeys themeProp)
@@ -127,7 +126,6 @@ makeStatusWidgets themeNames langNames prop =
                     <&> AnimId.augmentId (sel ^. selection)
                     <&> WidgetId.Id)
             <&> (,) (sel ^. selection)
-        rawOpt sel = Label.makeFocusable (sel ^. _Selection) <&> (,) sel
         helpVals =
             Styled.mkFocusableLabel
             <&> \mk ->

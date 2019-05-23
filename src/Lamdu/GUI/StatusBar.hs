@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
-import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -56,7 +55,7 @@ make ::
     , Has (Texts.CodeUI Text) env
     ) =>
     StatusWidget (IOTrans n) ->
-    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
+    [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings ->
     Widget.R -> VCActions.Actions n (IOTrans n) ->
     m (StatusWidget (IOTrans n))

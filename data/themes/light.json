@@ -1,5 +1,9 @@
 {
     "imports": ["base.mixin.json"],
+    "title": {
+        "english": "Light",
+        "hebrew": "בהיר"
+    },
     "narrowUnderlineWidth"          : 0.03,
     "wideUnderlineWidth"            : 0.1,
     "cursorColor"                   : [0.35, 0.35, 0.7, 0.3],

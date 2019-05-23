@@ -29,7 +29,6 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -84,7 +83,7 @@ type Ctx env =
 
 layout ::
     Ctx env =>
-    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
+    [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings ->
     ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
 layout themeNames langNames settingsProp =
@@ -122,7 +121,7 @@ layout themeNames langNames settingsProp =
 
 make ::
     Ctx env =>
-    [Selection Folder.Theme] -> [TitledSelection Folder.Language] ->
+    [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings -> env ->
     T DbM (Gui Widget (IOTrans DbM))
 make themeNames langNames settingsProp env =
