@@ -42,7 +42,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.ParamList (ParamList)
-import           Lamdu.Sugar.Convert.Tag (convertTagRef, convertTaggedEntity, convertTagReplace, AllowAnonTag(..))
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -273,8 +273,9 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                              storedLam ?? newTag)
                     postProcess
         addNext <-
-            convertTagReplace (nameWithContext param)
-            (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param) addParamAfter
+            ConvertTag.replace (nameWithContext param)
+            (Set.fromList tags) ConvertTag.RequireTag
+            (EntityId.ofTaggedEntity param) addParamAfter
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
         pure FuncParamActions
             { _fpAddNext = AddNext addNext
@@ -375,8 +376,9 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                         >>= (add mPresMode DataOps.newHole binderKind storedLam ?? tag)
                     postProcess
         addFirstSelection <-
-            convertTagReplace (nameWithContext param)
-            (Set.fromList tags) RequireTag (EntityId.ofTaggedEntity param)
+            ConvertTag.replace (nameWithContext param)
+            (Set.fromList tags) ConvertTag.RequireTag
+            (EntityId.ofTaggedEntity param)
             addFirst
         pure ConventionalParams
             { cpTags = Set.fromList tags
@@ -396,7 +398,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 paramInfo <-
                     ParamInfo
                     <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
-                            >>= convertTagRef tag (nameWithContext param)
+                            >>= ConvertTag.ref tag (nameWithContext param)
                                 (Set.delete tag (Set.fromList tagList))
                                 (EntityId.ofTaggedEntity param)
                         )
@@ -522,10 +524,9 @@ makeNonRecordParamActions binderKind storedLam =
             if oldParam == Anchors.anonTag
             then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
             else
-                convertTagReplace (nameWithContext param)
-                (Set.singleton oldParam) RequireTag (EntityId.ofTaggedEntity param)
-                addParamAfter
-                <&> AddNext
+                ConvertTag.replace (nameWithContext param)
+                (Set.singleton oldParam) ConvertTag.RequireTag
+                (EntityId.ofTaggedEntity param) addParamAfter <&> AddNext
         pure FuncParamActions
             { _fpAddNext = addNext
             , _fpDelete = del
@@ -577,7 +578,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
                     info = funcParamActions ^. fpDelete & void & NullParamActions
             _ ->
                 do
-                    tag <- convertTaggedEntity param
+                    tag <- ConvertTag.taggedEntity param
                     mkFuncParam (tag ^. tagRefTag . tagInstance) lamExprPl
                         ParamInfo
                         { _piTag = tag
@@ -592,8 +593,8 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             ?? NewParamBefore
             <&> Lens.mapped %~ (<* postProcess)
         addFirstSelection <-
-            convertTagReplace (nameWithContext param) (Set.singleton oldParam)
-            RequireTag (EntityId.ofTaggedEntity param) addFirst
+            ConvertTag.replace (nameWithContext param) (Set.singleton oldParam)
+            ConvertTag.RequireTag (EntityId.ofTaggedEntity param) addFirst
         pure ConventionalParams
             { cpTags = mempty
             , _cpParamInfos = Map.empty

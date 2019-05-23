@@ -36,7 +36,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
-import           Lamdu.Sugar.Convert.Tag (convertTagReplace, AllowAnonTag(..))
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -133,7 +133,8 @@ mkWrapInRecord exprPl =
                 >>= ExprIRef.newValI . V.BRecExtend . RowExtend tag (stored ^. Property.pVal)
                 >>= typeProtectedSetToVal stored
                 & void
-        convertTagReplace nameWithoutContext mempty RequireTag tempMkEntityId recWrap
+        ConvertTag.replace nameWithoutContext mempty ConvertTag.RequireTag
+            tempMkEntityId recWrap
     where
         stored = exprPl ^. Input.stored
         -- TODO: The entity-ids created here don't match the resulting entity ids of the record.

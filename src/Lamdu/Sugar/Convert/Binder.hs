@@ -6,8 +6,8 @@ module Lamdu.Sugar.Convert.Binder
 
 import           AST (Knot, Tree, Children(..), overChildren, monoChildren)
 import           AST.Class.Recursive (Recursive(..), foldMapRecursive)
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Infer (irScope)
+import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
@@ -30,7 +30,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.Tag (convertTaggedEntity)
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -69,7 +69,7 @@ convertLet ::
     (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertLet float pl redex =
     do
-        tag <- convertTaggedEntity param
+        tag <- ConvertTag.taggedEntity param
         (_pMode, value) <-
             convertAssignment binderKind param (redex ^. Redex.arg)
             <&> _2 . ann . pInput . Input.entityId .~

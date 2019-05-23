@@ -46,7 +46,7 @@ import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
-import           Lamdu.Sugar.Convert.Tag (convertTaggedEntityWith)
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -318,7 +318,7 @@ loadPanes env cp replEntityId =
                         def
                         <&> Anchors.paneDef
                         & convertDefBody env cp
-                    tag <- Anchors.tags cp & convertTaggedEntityWith env defVar
+                    tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
                     defS <-
                         OrderTags.orderDef Definition
                         { _drEntityId = EntityId.ofIRef defI
