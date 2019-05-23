@@ -38,7 +38,8 @@ type T = Transaction
 
 jumpToDefI ::
     Monad m => Anchors.CodeAnchors m -> DefI m -> T m EntityId
-jumpToDefI cp defI = EntityId.ofIRef defI <$ DataOps.newDefPane cp defI
+jumpToDefI cp defI =
+    EntityId.ofIRef defI <$ DataOps.newPane cp (Anchors.PaneDefinition defI)
 
 inlineDef :: Monad m => V.Var -> ValP m -> ConvertM m (T m EntityId)
 inlineDef globalId dest =

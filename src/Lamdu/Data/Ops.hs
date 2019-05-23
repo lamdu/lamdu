@@ -8,7 +8,7 @@ module Lamdu.Data.Ops
     , genNewTag, assocTagName
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
-    , newDefPane
+    , newPane
     , newIdentityLambda
     , setTagOrder
     ) where
@@ -144,13 +144,12 @@ assocTagName env tag =
                         & tagNames . Lens.at lang ?~ name
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
 
-newDefPane :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m ()
-newDefPane codeAnchors defI =
+newPane :: Monad m => Anchors.CodeAnchors m -> Anchors.Pane m -> T m ()
+newPane codeAnchors pane =
     do
-        let panesProp = Anchors.panes codeAnchors
-        panes <- Property.getP panesProp
-        when (Anchors.PaneDefinition defI `notElem` panes) $
-            Property.setP panesProp $ panes ++ [Anchors.PaneDefinition defI]
+        Property panes setPanes <-
+            Anchors.panes codeAnchors ^. Property.mkProperty
+        panes ++ [pane] & setPanes & when (pane `notElem` panes)
 
 newDefinition :: Monad m => PresentationMode -> Definition (ValI m) () -> T m (DefI m)
 newDefinition presentationMode def =
@@ -168,7 +167,7 @@ newPublicDefinitionToIRef codeAnchors def defI =
     do
         Transaction.writeIRef defI def
         Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
-        newDefPane codeAnchors defI
+        newPane codeAnchors (Anchors.PaneDefinition defI)
 
 newPublicDefinitionWithPane ::
     Monad m =>
@@ -177,7 +176,7 @@ newPublicDefinitionWithPane codeAnchors def =
     do
         defI <- newDefinition Verbose def
         Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
-        newDefPane codeAnchors defI
+        newPane codeAnchors (Anchors.PaneDefinition defI)
         pure defI
 
 newIdentityLambda :: Monad m => T m (V.Var, ValI m)
