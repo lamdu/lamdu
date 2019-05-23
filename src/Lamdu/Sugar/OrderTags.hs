@@ -57,7 +57,7 @@ orderRecord ::
     OrderT m (Sugar.Composite name (T m) o (Sugar.Expression name (T m) o (Sugar.Payload name i o a)))
 orderRecord r =
     r
-    & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagInfo))
+    & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag))
     >>= traverse orderNode
 
 instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)

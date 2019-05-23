@@ -85,7 +85,7 @@ convertExtend cons extendOp valS exprPl extendV restC =
             & cItems %~ (itemS :)
             & pure
     where
-        restTags = restC ^.. cItems . traverse . ciTag . tagInfo . tagVal
+        restTags = restC ^.. cItems . traverse . ciTag . tagRefTag . tagVal
 
 convertOneItemOpenComposite ::
     Monad m =>

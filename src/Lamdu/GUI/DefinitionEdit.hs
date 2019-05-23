@@ -84,7 +84,7 @@ makeExprDefinition defEventMap def bodyExpr =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent)
-    & assignCursor myId (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagInfo . Sugar.tagInstance))
+    & assignCursor myId (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagRefTag . Sugar.tagInstance))
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 

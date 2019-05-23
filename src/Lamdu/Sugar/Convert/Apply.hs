@@ -83,7 +83,7 @@ validateDefParamsMatchArgs var record frozenDeps =
             & maybeToMPlus
         defArgs ^? freRest . _Pure . T._REmpty & maybeToMPlus
         let sFields =
-                record ^.. cItems . traverse . ciTag . tagInfo . tagVal
+                record ^.. cItems . traverse . ciTag . tagRefTag . tagVal
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
 
@@ -114,7 +114,7 @@ convertLabeled subexprs funcS argS exprPl =
             & unless (Just var == (recursiveRef <&> (^. ConvertM.rrDefI) <&> ExprIRef.globalId))
         let getArg field =
                 AnnotatedArg
-                    { _aaTag = field ^. ciTag . tagInfo
+                    { _aaTag = field ^. ciTag . tagRefTag
                     , _aaExpr = field ^. ciExpr
                     }
         let args = record ^. cItems <&> getArg

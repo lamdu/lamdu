@@ -117,8 +117,8 @@ pane body =
     , Sugar._paneMoveUp = Nothing
     }
 
-tagInfo :: Maybe UUID -> T.Tag -> Sugar.Tag InternalName
-tagInfo var tag =
+tagRefTag :: Maybe UUID -> T.Tag -> Sugar.Tag InternalName
+tagRefTag var tag =
     Sugar.Tag
     { Sugar._tagName = maybe nameWithoutContext taggedEntityName var tag
     , Sugar._tagInstance = "dummy"
@@ -128,8 +128,8 @@ tagInfo var tag =
 mkTag :: Maybe UUID -> T.Tag -> Sugar.TagRef InternalName Identity Unit
 mkTag var tag =
     Sugar.TagRef
-    { Sugar._tagReplace = tagReplace
-    , Sugar._tagInfo = tagInfo var tag
+    { Sugar._tagRefReplace = tagRefReplace
+    , Sugar._tagRefTag = tagRefTag var tag
     }
 
 def ::
@@ -175,7 +175,7 @@ mkFuncParam (paramVar, paramTag) =
         { Sugar._piTag = mkTag (Just paramVar) paramTag
         , Sugar._piActions =
             Sugar.FuncParamActions
-            { Sugar._fpAddNext = Sugar.AddNext tagReplace
+            { Sugar._fpAddNext = Sugar.AddNext tagRefReplace
             , Sugar._fpDelete = Unit
             , Sugar._fpMOrderBefore = Nothing
             , Sugar._fpMOrderAfter = Nothing
@@ -192,7 +192,7 @@ funcExpr params pn =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
-    , Sugar._fAddFirstParam = Sugar.PrependParam tagReplace
+    , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._fBody = pn & val %~ Sugar.BinderExpr
     }
@@ -233,7 +233,7 @@ nodeActions =
     , Sugar._setToLiteral = pure Unit
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
-    , Sugar._wrapInRecord = tagReplace
+    , Sugar._wrapInRecord = tagRefReplace
     , Sugar._mNewLet = Nothing
     }
 
@@ -244,8 +244,8 @@ taggedEntityName ctx tag =
     , _inTag = tag
     }
 
-tagReplace :: Sugar.TagReplace name Identity Unit ()
-tagReplace =
+tagRefReplace :: Sugar.TagReplace name Identity Unit ()
+tagRefReplace =
     Sugar.TagReplace
     { Sugar._tsOptions = pure []
     , Sugar._tsNewTag = const Unit

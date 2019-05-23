@@ -401,7 +401,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                                 (EntityId.ofTaggedEntity param)
                         )
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
-                let paramEntityId = paramInfo ^. piTag . tagInfo . tagInstance
+                let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
                 typeS <- convertType (EntityId.ofTypeOf paramEntityId) (fpFieldType fp)
                 pure FuncParam
                     { _fpAnnotation =
@@ -578,7 +578,7 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
             _ ->
                 do
                     tag <- convertTaggedEntity param
-                    mkFuncParam (tag ^. tagInfo . tagInstance) lamExprPl
+                    mkFuncParam (tag ^. tagRefTag . tagInstance) lamExprPl
                         ParamInfo
                         { _piTag = tag
                         , _piActions = funcParamActions

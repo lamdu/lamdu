@@ -101,7 +101,7 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
 
 tagId :: Sugar.TagRef name i o -> Widget.Id
-tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+tagId tag = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
     ( Functor f, Has Config env
@@ -137,8 +137,8 @@ makeNewTag ::
     Functor o =>
     Text -> Sugar.TagReplace (Name o) i o a ->
     (EntityId -> a -> b) -> o b
-makeNewTag searchTerm tagReplace mkPickResult =
-    (tagReplace ^. Sugar.tsNewTag) searchTerm <&> uncurry mkPickResult
+makeNewTag searchTerm tagRefReplace mkPickResult =
+    (tagRefReplace ^. Sugar.tsNewTag) searchTerm <&> uncurry mkPickResult
 
 makeNewTagPreEvent ::
     ( Has (Texts.CodeUI Text) env
@@ -146,12 +146,12 @@ makeNewTagPreEvent ::
     ) =>
     env -> Text -> Sugar.TagReplace (Name o) i o a ->
     (EntityId -> a -> r) -> Maybe (Widget.PreEvent (o r))
-makeNewTagPreEvent env searchTerm tagReplace mkPickResult
+makeNewTagPreEvent env searchTerm tagRefReplace mkPickResult
     | Text.null searchTerm = Nothing
     | otherwise =
         Just Widget.PreEvent
         { Widget._pDesc = env ^. has . Texts.newName
-        , Widget._pAction = makeNewTag searchTerm tagReplace mkPickResult
+        , Widget._pAction = makeNewTag searchTerm tagRefReplace mkPickResult
         , Widget._pTextRemainder = ""
         }
 
@@ -165,8 +165,8 @@ addNewTag ::
     (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     Maybe (Menu.Option f o)
-addNewTag env tagReplace mkPickResult ctx =
-    makeNewTagPreEvent env searchTerm tagReplace mkPickResult
+addNewTag env tagRefReplace mkPickResult ctx =
+    makeNewTagPreEvent env searchTerm tagRefReplace mkPickResult
     <&> \preEvent ->
     Menu.Option
     { Menu._oId = optionId
@@ -202,7 +202,7 @@ makeOptions ::
     (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     ExprGuiM env i o (Menu.OptionList (Menu.Option m o))
-makeOptions tagReplace mkPickResult ctx
+makeOptions tagRefReplace mkPickResult ctx
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         do
@@ -210,7 +210,7 @@ makeOptions tagReplace mkPickResult ctx
                 Lens.view
                 (has . Config.completion . Config.completionResultCount)
             results <-
-                tagReplace ^. Sugar.tsOptions
+                tagRefReplace ^. Sugar.tsOptions
                 <&> concatMap withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 & ExprGuiM.im
@@ -221,7 +221,7 @@ makeOptions tagReplace mkPickResult ctx
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (allowedTagName searchTerm) = id
                     | otherwise =
-                        maybe id (:) (addNewTag env tagReplace mkPickResult ctx)
+                        maybe id (:) (addNewTag env tagRefReplace mkPickResult ctx)
             let makeOption opt =
                     Menu.Option
                     { Menu._oId = optionWId
@@ -285,17 +285,17 @@ makeHoleSearchTerm ::
     Sugar.TagReplace (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
     m (SearchMenu.Term o)
-makeHoleSearchTerm tagReplace mkPickResult holeId =
+makeHoleSearchTerm tagRefReplace mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let allowNewTag = allowedTagName searchTerm
         newTagEventMap <-
             if allowNewTag
-            then makeNewTag searchTerm tagReplace mkPickResult & makePickEventMap
+            then makeNewTag searchTerm tagRefReplace mkPickResult & makePickEventMap
             else pure mempty
         env <- Lens.view id
         let newTagPreEvents =
-                makeNewTagPreEvent env searchTerm tagReplace mkPickResult
+                makeNewTagPreEvent env searchTerm tagRefReplace mkPickResult
                 ^.. Lens._Just
                 <&> fmap (mempty <$)
         let addPreEvents =
@@ -345,10 +345,10 @@ makeTagHoleEdit ::
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
     ExprGuiM env i o (TextWidget o)
-makeTagHoleEdit tagReplace mkPickResult holeId =
+makeTagHoleEdit tagRefReplace mkPickResult holeId =
     SearchMenu.make
-    (const (makeHoleSearchTerm tagReplace mkPickResult holeId))
-    (makeOptions tagReplace mkPickResult) Element.empty holeId
+    (const (makeHoleSearchTerm tagRefReplace mkPickResult holeId))
+    (makeOptions tagRefReplace mkPickResult) Element.empty holeId
     ?? Menu.AnyPlace
 
 makeTagView ::
@@ -401,12 +401,12 @@ makeTagEditWith onView onPickNext tag =
     do
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
         let mRenamingStoredName
-                | isRenaming = tag ^? Sugar.tagInfo . Sugar.tagName . Name._Stored
+                | isRenaming = tag ^? Sugar.tagRefTag . Sugar.tagName . Name._Stored
                 | otherwise = Nothing
         isHole <- GuiState.isSubCursor ?? WidgetIds.tagHoleId myId
         env <- Lens.view id
         let eventMap =
-                ( case tag ^. Sugar.tagInfo . Sugar.tagName of
+                ( case tag ^. Sugar.tagRefTag . Sugar.tagName of
                     Name.Stored{} ->
                         E.keysEventMapMovesCursor
                         (env ^. has . Config.jumpToDefinitionKeys)
@@ -428,7 +428,7 @@ makeTagEditWith onView onPickNext tag =
                     ] ) chooseAction
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            makeTagView (tag ^. Sugar.tagInfo)
+            makeTagView (tag ^. Sugar.tagRefTag)
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
         let hover = Hover.hoverBeside Align.tValue ?? nameView
@@ -439,7 +439,7 @@ makeTagEditWith onView onPickNext tag =
                 <&> (,) TagRename
             Nothing
                 | isHole ->
-                    makeTagHoleEdit (tag ^. Sugar.tagReplace) mkPickResult (WidgetIds.tagHoleId (tagId tag))
+                    makeTagHoleEdit (tag ^. Sugar.tagRefReplace) mkPickResult (WidgetIds.tagHoleId (tagId tag))
                     <&> Align.tValue %~ Widget.weakerEvents leaveEventMap
                     <&> (,) TagHole
                 | otherwise -> pure (SimpleView, nameView)
@@ -455,7 +455,7 @@ makeTagEditWith onView onPickNext tag =
                         (pure myId)
     & GuiState.assignCursor myId viewId
     where
-        myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        myId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         viewId = tagViewId myId
         mkPickResult tagInstance () =
             Menu.PickResult
@@ -463,7 +463,7 @@ makeTagEditWith onView onPickNext tag =
             , Menu._pickMNextEntry = onPickNext tagInstance
             }
         chooseAction =
-            case tag ^. Sugar.tagReplace . Sugar.tsAnon of
+            case tag ^. Sugar.tagRefReplace . Sugar.tsAnon of
             Nothing -> pure myId
             Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
@@ -532,11 +532,11 @@ makeLHSTag onPickNext color tag =
             (WidgetIds.tagHoleId myId)
             <$ guard (Char.isAlpha c)
             <&> pure
-        myId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        myId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         -- Apply the name style only when the tag is a view. If it is
         -- a tag hole, the name style (indicating auto-name) makes no sense
         onView =
-            Styled.nameAtBinder (tag ^. Sugar.tagInfo . Sugar.tagName) .
+            Styled.nameAtBinder (tag ^. Sugar.tagRefTag . Sugar.tagName) .
             Styled.withColor color
 
 makeParamTag ::

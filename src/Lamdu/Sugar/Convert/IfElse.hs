@@ -44,7 +44,7 @@ convertIfElse setToVal caseBody =
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0
             _ -> Nothing
-        tagOf alt = alt ^. ciTag . tagInfo . tagVal
+        tagOf alt = alt ^. ciTag . tagRefTag . tagVal
         convIfElse cond altTrue altFalse =
             Just IfElse
             { _iIf = cond

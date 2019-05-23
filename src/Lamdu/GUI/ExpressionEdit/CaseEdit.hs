@@ -152,7 +152,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
         pre <-
             ( TagEdit.makeVariantTag tag
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-                <&> if mActiveTag == Just (tag ^. Sugar.tagInfo . Sugar.tagVal)
+                <&> if mActiveTag == Just (tag ^. Sugar.tagRefTag . Sugar.tagVal)
                     then addBg
                     else id
             ) /|/ grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace
@@ -163,7 +163,7 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
             }
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
     where
-        altId = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        altId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makeAltsWidget ::
     ( Monad i, Monad o

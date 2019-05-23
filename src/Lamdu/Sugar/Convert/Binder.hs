@@ -225,7 +225,7 @@ convertLam lam exprPl =
             (lam ^. V.lamIn & Anchors.assocScopeRef)
             convParams (lam ^. V.lamOut)
         let paramNames =
-                func ^.. fParams . _Params . traverse . fpInfo . piTag . tagInfo . tagName
+                func ^.. fParams . _Params . traverse . fpInfo . piTag . tagRefTag . tagName
                 & Set.fromList
         let lambda
                 | useNormalLambda paramNames func =

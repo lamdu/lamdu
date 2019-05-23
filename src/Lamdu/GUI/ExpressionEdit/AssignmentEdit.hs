@@ -306,7 +306,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 <&> namedParamEditInfo widgetId (x ^. Sugar.piActions)
                 where
                     widgetId =
-                        x ^. Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+                        x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
     where
         fromParamList delDestFirst delDestLast paramList =
             withPrevNext delDestFirst delDestLast
@@ -425,7 +425,7 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
             case func ^. Sugar.fParams of
             Sugar.NullParam{} -> bodyId
             Sugar.Params ps ->
-                ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+                ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
         funcPl = func ^. Sugar.fBody . ann
         bodyId = WidgetIds.fromExprPayload funcPl
@@ -548,6 +548,6 @@ make pMode defEventMap tag color assignment =
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
-        delParamDest = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        delParamDest = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         Ann pl assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]

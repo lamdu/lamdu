@@ -88,8 +88,8 @@ verifyNoBrokenDefsTest =
         db <- readFreshDb
         let tags =
                 Map.fromList
-                [ (tag, tagInfo ^. tagNames . Lens.ix (LangId "english"))
-                | (tag, tagInfo) <- db ^.. Lens.folded . JsonCodec._EntityTag
+                [ (tag, tagRefTag ^. tagNames . Lens.ix (LangId "english"))
+                | (tag, tagRefTag) <- db ^.. Lens.folded . JsonCodec._EntityTag
                 ]
         let defs = db ^.. Lens.folded . JsonCodec._EntityDef
         traverse_ verifyTag (defs <&> (^. Def.defPayload))

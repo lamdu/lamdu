@@ -139,7 +139,7 @@ testLambdaDelete =
             fromWorkArea baseEnv
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fParams . Sugar._Params . Lens.ix 0 . Sugar.fpInfo .
-             Sugar.piTag . Sugar.tagInfo . Sugar.tagInstance)
+             Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
             <&> WidgetIds.fromEntityId
         let delEvent = MetaKey noMods GLFW.Key'Backspace & simpleKeyEvent
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt delEvent

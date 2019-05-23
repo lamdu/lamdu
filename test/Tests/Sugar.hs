@@ -92,7 +92,7 @@ testChangeParam =
             workArea ^?!
             replBody . _BodySimpleApply . V.applyFunc .
             val . _BodySimpleApply . V.applyArg .
-            val . lamFirstParam . fpInfo . piTag . tagReplace . tsNewTag
+            val . lamFirstParam . fpInfo . piTag . tagRefReplace . tsNewTag
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error

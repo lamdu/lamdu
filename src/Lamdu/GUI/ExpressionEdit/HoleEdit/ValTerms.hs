@@ -70,7 +70,7 @@ ofBody env =
         -- field names/vals
         ["{}", "()", "[]"]
     BodyGetField gf ->
-        ofName (gf ^. gfTag . tagInfo . tagName) <&> ("." <>)
+        ofName (gf ^. gfTag . tagRefTag . tagName) <&> ("." <>)
     BodyCase cas ->
         [ env ^. has . Texts.case_
         , env ^. has . Texts.of_
@@ -87,7 +87,7 @@ ofBody env =
     -- So these terms are used to filter the whole group, and then
     -- isExactMatch (see below) is used to filter each entry.
     BodyInject (Inject tag _) ->
-        (<>) <$> ofName (tag ^. tagInfo . tagName) <*> [":", "."]
+        (<>) <$> ofName (tag ^. tagRefTag . tagName) <*> [":", "."]
     BodyLiteral {} -> []
     BodyGetVar GetParamsRecord {} -> [env ^. has . Texts.paramsRecordOpener]
     BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
