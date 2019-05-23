@@ -9,8 +9,8 @@ import           AST (Tree, Pure(..), _Pure, overChildren)
 import           AST.Infer (irType)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
-import qualified AST.Term.Scheme as S
 import           AST.Term.Row (RowExtend(..))
+import qualified AST.Term.Scheme as S
 import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
@@ -21,12 +21,13 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Calc.Infer (runPureInfer)
 import           Lamdu.Calc.Definition (depsGlobalTypes, depsNominals)
+import           Lamdu.Calc.Infer (runPureInfer)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -77,7 +78,7 @@ mkExtractToDef exprPl =
         newDefI <-
             Definition.Definition
             (Definition.BodyExpr (Definition.Expr valI deps)) scheme ()
-            & DataOps.newPublicDefinitionWithPane (ctx ^. has)
+            & DataOps.newPublicDefinitionWithPane (ctx ^. Anchors.codeAnchors)
         PostProcess.def infer (ctx ^. ConvertM.scDebugMonitors) newDefI
             >>=
             \case

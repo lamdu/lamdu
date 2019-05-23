@@ -1,4 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents, ConstraintKinds, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
+{-# LANGUAGE ConstraintKinds, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
@@ -8,7 +10,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scPostProcessRoot, siRecursiveRef, scConfig
-    , scCodeAnchors, scScopeInfo, scDebugMonitors, scCacheFunctions
+    , scScopeInfo, scDebugMonitors, scCacheFunctions
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinition
 
     , cachedFunc
@@ -116,7 +118,8 @@ data Context m = Context
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
-instance Has (Anchors.CodeAnchors m) (Context m) where has = scCodeAnchors
+instance Anchors.HasCodeAnchors (Context m) m where codeAnchors = scCodeAnchors
+
 instance Has LangId (Context m) where has = scLanguageIdentifier
 instance Has Dir.Layout (Context m) where has = scLanguageDir
 

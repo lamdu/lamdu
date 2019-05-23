@@ -1,10 +1,12 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.Data.Anchors
     ( Gui(..), onGui
     , Code(..), onCode
     , Revision(..), onRevision
     , Pane(..), _PaneDefinition
     , GuiAnchors, CodeAnchors, RevisionProps
+    , HasCodeAnchors(..)
     , assocBranchNameRef
     , assocTag, anonTag
     , assocScopeRef
@@ -81,6 +83,9 @@ newtype BinderParamScopeId = BinderParamScopeId
 type GuiAnchors i o = Gui (MkProperty i o)
 type CodeAnchors m = Code (MkProperty' (T m)) m
 type RevisionProps m = Revision (MkProperty' (T m)) m
+
+class HasCodeAnchors env m where
+    codeAnchors :: Lens' env (CodeAnchors m)
 
 assocBranchNameRef :: Monad m => Branch m -> MkProperty' (T m) Text
 assocBranchNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID

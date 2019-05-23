@@ -49,7 +49,7 @@ inlineDef globalId dest =
     <&>
     \(ctx, postProcess) ->
     do
-        let gotoDef = jumpToDefI (ctx ^. has) defI
+        let gotoDef = jumpToDefI (ctx ^. Anchors.codeAnchors) defI
         let doInline def defExpr =
                 do
                     (dest ^. Property.pSet) (defExpr ^. Def.expr)
@@ -107,7 +107,7 @@ convertGlobal var exprPl =
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at var
                     <&> Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
-        nameRef <- globalNameRef (ctx ^. has) defI & lift
+        nameRef <- globalNameRef (ctx ^. Anchors.codeAnchors) defI & lift
         inline <-
             case defForm of
             DefUpToDate

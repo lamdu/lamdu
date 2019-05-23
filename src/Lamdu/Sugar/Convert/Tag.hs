@@ -17,7 +17,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
-import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal hiding (replaceWith)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -29,9 +28,12 @@ type T = Transaction
 
 data AllowAnonTag = AllowAnon | RequireTag
 
-getTagsProp :: Monad m => ConvertM m (MkProperty' (T m) (Set T.Tag))
-getTagsProp =
-    Lens.view ConvertM.scCodeAnchors <&> Anchors.tags
+getTagsProp ::
+    ( MonadReader env m
+    , Anchors.HasCodeAnchors env n
+    ) =>
+    m (MkProperty' (T n) (Set T.Tag))
+getTagsProp = Lens.view Anchors.codeAnchors <&> Anchors.tags
 
 withoutContext :: EntityId -> T.Tag -> Tag InternalName
 withoutContext entityId tag =

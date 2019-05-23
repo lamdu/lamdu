@@ -38,8 +38,8 @@ import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
-import qualified Lamdu.GUI.StatusBar as StatusBar
 import           Lamdu.GUI.StatusBar (TitledSelection(..), title, selection)
+import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.GUI.VersionControl.Config as VCConfig
 import           Lamdu.GUI.WidgetIds (defaultCursor)

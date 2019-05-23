@@ -63,7 +63,7 @@ moveToGlobalScope =
             Right x -> pure x
         let defExprI = defExpr <&> Property.value
         DataOps.newPublicDefinitionToIRef
-            (ctx ^. has)
+            (ctx ^. Anchors.codeAnchors)
             (Definition.Definition (Definition.BodyExpr defExprI) scheme ())
             (ExprIRef.defI param)
         Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
