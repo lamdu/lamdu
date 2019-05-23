@@ -271,6 +271,33 @@ convertRepl env cp =
             prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
+convertPaneBody ::
+    ( Monad m, Has LangId env, Has Dir.Layout env
+    , Has Debug.Monitors env
+    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    ) =>
+    env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
+    T m
+    (PaneBody
+        InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
+convertPaneBody env cp (Anchors.PaneDefinition defI) =
+    do
+        bodyS <-
+            ExprLoad.def defI <&> Definition.defPayload .~ defI
+            >>= convertDefBody env cp
+        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
+        OrderTags.orderDef Definition
+            { _drEntityId = EntityId.ofIRef defI
+            , _drName = tag
+            , _drBody = bodyS
+            , _drDefinitionState =
+                Anchors.assocDefinitionState defI ^. Property.mkProperty
+            , _drDefI = defVar
+            } <&> PaneDefinition
+    where
+        defVar = ExprIRef.globalId defI
+
 convertPane ::
     ( Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
@@ -283,29 +310,14 @@ convertPane ::
     T m
     (Pane InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertPane env cp replEntityId (Property panes setPanes) i pane =
-    do
-        bodyS <-
-            ExprLoad.def defI <&> Definition.defPayload .~ defI
-            >>= convertDefBody env cp
-        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env defVar
-        defS <-
-            OrderTags.orderDef Definition
-            { _drEntityId = EntityId.ofIRef defI
-            , _drName = tag
-            , _drBody = bodyS
-            , _drDefinitionState =
-                Anchors.assocDefinitionState defI ^. Property.mkProperty
-            , _drDefI = defVar
-            }
-        pure Pane
-            { _paneBody = PaneDefinition defS
-            , _paneClose = mkDelPane
-            , _paneMoveDown = mkMMovePaneDown
-            , _paneMoveUp = mkMMovePaneUp
-            }
+    convertPaneBody env cp pane
+    <&> \body -> Pane
+    { _paneBody = body
+    , _paneClose = mkDelPane
+    , _paneMoveDown = mkMMovePaneDown
+    , _paneMoveUp = mkMMovePaneUp
+    }
     where
-        defVar = ExprIRef.globalId defI
-        defI = pane ^. Anchors._PaneDefinition
         mkDelPane =
             entityId <$ setPanes newPanes
             where
