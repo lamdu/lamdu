@@ -59,7 +59,7 @@ data DefinitionBody name i o a
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Definition name i o a = Definition
-    { _drName :: Tag name i o
+    { _drName :: TagRef name i o
     , _drDefI :: V.Var
     , _drDefinitionState :: i (Property o Meta.DefinitionState)
     , _drEntityId :: EntityId

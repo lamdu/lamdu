@@ -78,7 +78,7 @@ newtype NullParamActions o = NullParamActions
     } deriving Generic
 
 data ParamInfo name i o = ParamInfo
-    { _piTag :: Tag name i o
+    { _piTag :: TagRef name i o
     , _piActions :: FuncParamActions name i o
     } deriving Generic
 

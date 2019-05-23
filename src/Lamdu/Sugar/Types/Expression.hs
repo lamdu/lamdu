@@ -73,7 +73,7 @@ data InjectContent name i o f
     deriving Generic
 
 data Inject name i o f = Inject
-    { _iTag :: Tag name i o
+    { _iTag :: TagRef name i o
     , _iContent :: InjectContent name i o f
     } deriving Generic
 
@@ -154,7 +154,7 @@ data Let name i o f = Let
     { _lValue :: Tie f (Assignment name i o) -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
-    , _lName :: Tag name i o -- let [[foo]] = bar in x
+    , _lName :: TagRef name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
     , _lBodyScope :: ChildScopes
     , _lBody :: Tie f (Binder name i o) -- "let foo = bar in [[x]]"

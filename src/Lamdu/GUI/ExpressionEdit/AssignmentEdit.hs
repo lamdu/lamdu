@@ -492,7 +492,7 @@ make ::
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     Gui EventMap o ->
-    Sugar.Tag (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
+    Sugar.TagRef (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Sugar.Assignment (Name o) i o) ->
     ExprGuiM env i o (Gui Responsive o)

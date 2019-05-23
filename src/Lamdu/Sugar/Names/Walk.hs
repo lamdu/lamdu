@@ -15,8 +15,8 @@ import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
+import           Lamdu.Sugar.Types
 import qualified Lamdu.Sugar.Types as Sugar
-import           Lamdu.Sugar.Types hiding (Tag)
 
 import           Lamdu.Prelude
 
@@ -207,7 +207,7 @@ toLet ::
 toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
-            unCPS (withTag TaggedVar _lVarInfo _lName)
+            unCPS (withTagRef TaggedVar _lVarInfo _lName)
             (toNode toBinder _lBody)
         _lValue <- toAssignment _lValue
         pure let_{_lName, _lBody, _lValue}
@@ -285,22 +285,22 @@ toTagReplace t =
     <&>
     \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagInfoOf Tag))
 
-toTagOf ::
+toTagRefOf ::
     MonadNaming m =>
-    NameType -> Sugar.Tag (OldName m) (IM m) o ->
-    m (Sugar.Tag (NewName m) (IM m) o)
-toTagOf nameType (Sugar.Tag info actions) =
-    Sugar.Tag
+    NameType -> Sugar.TagRef (OldName m) (IM m) o ->
+    m (Sugar.TagRef (NewName m) (IM m) o)
+toTagRefOf nameType (Sugar.TagRef info actions) =
+    Sugar.TagRef
     <$> toTagInfoOf nameType info
     <*> toTagReplace actions
 
-withTag ::
+withTagRef ::
     MonadNaming m =>
     NameType -> Sugar.VarInfo ->
-    Sugar.Tag (OldName m) (IM m) o ->
-    CPS m (Sugar.Tag (NewName m) (IM m) o)
-withTag nameType varInfo (Sugar.Tag info actions) =
-    Sugar.Tag
+    Sugar.TagRef (OldName m) (IM m) o ->
+    CPS m (Sugar.TagRef (NewName m) (IM m) o)
+withTagRef nameType varInfo (Sugar.TagRef info actions) =
+    Sugar.TagRef
     <$> tagName (opWithName varInfo nameType) info
     <*> liftCPS (toTagReplace actions)
 
@@ -367,7 +367,7 @@ toComposite ::
     m (Composite (NewName m) (IM m) o b)
 toComposite expr Composite{_cItems, _cAddItem, _cTail} =
     (\_cItems _cAddItem -> Composite{_cItems, _cAddItem, _cTail})
-    <$> (traverse . ciTag) (toTagOf Tag) _cItems
+    <$> (traverse . ciTag) (toTagRefOf Tag) _cItems
     <*> toTagReplace _cAddItem
     >>= traverse expr
 
@@ -390,7 +390,7 @@ toInject ::
     Tree (Inject (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
     m (Tree (Inject (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
 toInject (Inject t v) =
-    Inject <$> toTagOf Tag t <*> toInjectVal v
+    Inject <$> toTagRefOf Tag t <*> toInjectVal v
 
 toElse ::
     MonadNaming m =>
@@ -432,7 +432,7 @@ toBody =
     BodyFragment     x -> x & toFragment <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
     where
-        toTag = toTagOf Tag
+        toTag = toTagRefOf Tag
 
 funcSignature :: LabeledApply name i o a -> FunctionSignature
 funcSignature apply =
@@ -453,7 +453,7 @@ withParamInfo ::
     CPS m (ParamInfo (NewName m) (IM m) o)
 withParamInfo varInfo (ParamInfo tag fpActions) =
     ParamInfo
-    <$> withTag TaggedVar varInfo tag
+    <$> withTagRef TaggedVar varInfo tag
     <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagReplace fpActions)
 
 withFuncParam ::
@@ -500,7 +500,7 @@ toDef def@Definition{_drName, _drBody} =
     do
         -- NOTE: A global def binding is not considered a binder, as
         -- it exists everywhere, not just inside the binding
-        _drName <- toTagOf GlobalDef _drName
+        _drName <- toTagRefOf GlobalDef _drName
         _drBody <- toDefinitionBody _drBody
         pure def{_drName, _drBody}
 

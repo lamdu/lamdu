@@ -29,7 +29,7 @@ import           Lamdu.Prelude
 {- Composites start -}
 data CompositeItem name i o expr = CompositeItem
     { _ciDelete :: o EntityId
-    , _ciTag :: Tag name i o
+    , _ciTag :: TagRef name i o
     , _ciExpr :: expr
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -57,7 +57,7 @@ data Case name i o expr = Case
 
 data GetField name i o expr = GetField
     { _gfRecord :: expr
-    , _gfTag :: Tag name i o
+    , _gfTag :: TagRef name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Nominal name expr = Nominal

@@ -38,7 +38,7 @@ convertTag ::
     Monad m =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) ->
-    ConvertM m (Tag name (T m) (T m))
+    ConvertM m (TagRef name (T m) (T m))
 convertTag tag name forbiddenTags mkInstance setTag =
     do
         env <- Lens.view id
@@ -50,10 +50,10 @@ convertTagWith ::
     env ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
-    Tag name (T m) (T m)
+    TagRef name (T m) (T m)
 convertTagWith env tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
     convertTagReplaceWith env name forbiddenTags allowAnon mkInstance setTag tagsProp
-    & Tag (TagInfo (name tag) (mkInstance tag) tag)
+    & TagRef (TagInfo (name tag) (mkInstance tag) tag)
 
 convertTagReplace ::
     Monad m =>
@@ -103,7 +103,7 @@ convertTaggedEntityWith ::
     , Has LangId env, Has Dir.Layout env
     ) =>
     env ->
-    a -> MkProperty' (T n) (Set T.Tag) -> m (Tag InternalName (T n) (T n))
+    a -> MkProperty' (T n) (Set T.Tag) -> m (TagRef InternalName (T n) (T n))
 convertTaggedEntityWith env entity tagsProp =
     getP prop
     <&>
@@ -114,7 +114,7 @@ convertTaggedEntityWith env entity tagsProp =
         prop = Anchors.assocTag entity
 
 convertTaggedEntity ::
-    (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (Tag InternalName (T m) (T m))
+    (UniqueId.ToUUID a, Monad m) => a -> ConvertM m (TagRef InternalName (T m) (T m))
 convertTaggedEntity entity =
     do
         env <- Lens.view id

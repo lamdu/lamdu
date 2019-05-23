@@ -100,7 +100,7 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
 
-tagId :: Sugar.Tag name i o -> Widget.Id
+tagId :: Sugar.TagRef name i o -> Widget.Id
 tagId tag = tag ^. Sugar.tagInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makePickEventMap ::
@@ -373,7 +373,7 @@ makeTagEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeTagEdit = makeTagEditWith id (const Nothing) <&> fmap snd
 
@@ -395,7 +395,7 @@ makeTagEditWith ::
     (n (TextWidget o) ->
      ExprGuiM env i o (TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TagEditType, TextWidget o)
 makeTagEditWith onView onPickNext tag =
     do
@@ -476,7 +476,7 @@ makeRecordTag ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeRecordTag =
     makeTagEdit <&> Styled.withColor TextColors.recordTagColor
@@ -489,7 +489,7 @@ makeVariantTag ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeVariantTag tag =
     makeTagEdit tag
@@ -506,7 +506,7 @@ makeLHSTag ::
     , Has (Texts.Navigation Text) env
     ) =>
     (Sugar.EntityId -> Maybe Widget.Id) ->
-    Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
+    Lens.ALens' TextColors Draw.Color -> Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeLHSTag onPickNext color tag =
     do
@@ -546,7 +546,7 @@ makeParamTag ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
@@ -575,7 +575,7 @@ makeBinderTagEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Lens.ALens' TextColors Draw.Color -> Sugar.Tag (Name o) i o ->
+    Lens.ALens' TextColors Draw.Color -> Sugar.TagRef (Name o) i o ->
     ExprGuiM env i o (TextWidget o)
 makeBinderTagEdit color tag =
     makeLHSTag (const Nothing) color tag

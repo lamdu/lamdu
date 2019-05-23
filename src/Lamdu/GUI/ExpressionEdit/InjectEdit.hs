@@ -59,7 +59,7 @@ makeInject ::
     , Has (Texts.Navigation Text) env
     ) =>
     ExprGui.SugarExpr i o ->
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM env i o (Gui Responsive o)
 makeInject val tag pl =
@@ -106,7 +106,7 @@ makeNullaryInject ::
     ) =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Const (Sugar.NullaryVal (Name o) i o)) ->
-    Sugar.Tag (Name o) i o ->
+    Sugar.TagRef (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     ExprGuiM env i o (Gui Responsive o)
 makeNullaryInject nullary tag pl =

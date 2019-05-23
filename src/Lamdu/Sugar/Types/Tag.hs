@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Tag
-    ( Tag(..), tagInfo, tagReplace
+    ( TagRef(..), tagInfo, tagReplace
     , TagInfo(..), tagName, tagVal, tagInstance
     , TagReplace(..), tsOptions, tsNewTag, tsAnon
     , TagOption(..), toInfo, toPick
@@ -36,12 +36,13 @@ data TagReplace name i o a = TagReplace
       _tsAnon :: Maybe (o (EntityId, a))
     } deriving (Functor, Generic)
 
-data Tag name i o = Tag
+-- | A mutable tag (that can be replaced with a different tag)
+data TagRef name i o = TagRef
     { _tagInfo :: TagInfo name
     , _tagReplace :: TagReplace name i o ()
     } deriving Generic
 
-Lens.makeLenses ''Tag
+Lens.makeLenses ''TagRef
 Lens.makeLenses ''TagInfo
 Lens.makeLenses ''TagOption
 Lens.makeLenses ''TagReplace

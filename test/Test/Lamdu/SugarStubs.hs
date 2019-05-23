@@ -125,9 +125,9 @@ tagInfo var tag =
     , Sugar._tagVal = tag
     }
 
-mkTag :: Maybe UUID -> T.Tag -> Sugar.Tag InternalName Identity Unit
+mkTag :: Maybe UUID -> T.Tag -> Sugar.TagRef InternalName Identity Unit
 mkTag var tag =
-    Sugar.Tag
+    Sugar.TagRef
     { Sugar._tagReplace = tagReplace
     , Sugar._tagInfo = tagInfo var tag
     }
