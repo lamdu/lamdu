@@ -9,7 +9,7 @@ module Lamdu.Expr.IRef
     , addProperties
 
     , globalId, defI, nominalI, tagI
-    , readTagInfo
+    , readTagData
 
     , readValI, writeValI, newValI
     ) where
@@ -52,8 +52,8 @@ nominalI :: T.NominalId -> IRef m (Tree Pure (NominalDecl T.Type))
 nominalI (T.NominalId (Identifier bs)) =
     UUIDUtils.fromSBS16 bs & IRef.unsafeFromUUID
 
-readTagInfo :: Monad m => T.Tag -> T m Tag
-readTagInfo tag =
+readTagData :: Monad m => T.Tag -> T m Tag
+readTagData tag =
     Transaction.irefExists iref
     >>=
     \case

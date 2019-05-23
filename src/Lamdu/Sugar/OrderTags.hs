@@ -34,7 +34,7 @@ orderByTag toTag =
     where
         loadOrder x =
             toTag x ^. Sugar.tagVal
-            & ExprIRef.readTagInfo
+            & ExprIRef.readTagData
             <&> (,) x . (^. tagOrder)
 
 orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Sugar.Type a))

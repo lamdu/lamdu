@@ -104,7 +104,7 @@ exportTag :: Monad m => T.Tag -> Export m ()
 exportTag tag
     | tag == Anchors.anonTag = error "Attempt to export the anonymous tag"
     | otherwise =
-        ExprIRef.readTagInfo tag & trans
+        ExprIRef.readTagData tag & trans
         >>= tell . Codec.EntityTag tag
         & withVisited visitedTags tag
 

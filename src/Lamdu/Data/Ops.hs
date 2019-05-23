@@ -120,7 +120,7 @@ assocTagName ::
     (Monad m, Has LangId env, Has Dir.Layout env) =>
     env -> T.Tag -> MkProperty' (T m) Text
 assocTagName env tag =
-    ExprIRef.readTagInfo tag
+    ExprIRef.readTagData tag
     <&> result
     & Property.MkProperty
     where
@@ -190,6 +190,6 @@ newIdentityLambda =
 
 setTagOrder :: Monad m => T.Tag -> Int -> T m ()
 setTagOrder tag order =
-    ExprIRef.readTagInfo tag
+    ExprIRef.readTagData tag
     <&> tagOrder .~ order
     >>= Transaction.writeIRef (ExprIRef.tagI tag)
