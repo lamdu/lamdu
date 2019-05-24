@@ -2,8 +2,7 @@
 
 module GUI.Momentu.Animation
     ( R, Size
-    , AnimMode(..)
-    , Image(..), iAnimId, iAnimMode, iUnitImage, iRect
+    , Image(..), iAnimId, iUnitImage, iRect
     , Frame(..), frameImages, unitImages, images
     , draw
     , mapIdentities
@@ -28,11 +27,8 @@ import           Lamdu.Prelude
 
 type Size = Vector2 R
 
-data AnimMode = AnimAll | AnimDeletionOnly
-
 data Image = Image
     { _iAnimId :: AnimId
-    , _iAnimMode :: !AnimMode
     , _iUnitImage :: !(Draw.Image ())
         -- iUnitImage always occupies (0,0)..(1,1),
         -- the translation/scaling occurs when drawing
@@ -42,7 +38,7 @@ Lens.makeLenses ''Image
 
 -- Custom instance that skips iUnitImage which has no real idea of forcing
 instance NFData Image where
-    rnf (Image animId _ _image rect) = animId `deepseq` rect `deepseq` ()
+    rnf (Image animId _image rect) = animId `deepseq` rect `deepseq` ()
 
 newtype Frame = Frame
     { _frameImages :: [Image]
@@ -66,7 +62,7 @@ singletonFrame size animId =
     singletonUnitImage .
     (Draw.scaleV (1 / size) %%)
     where
-        singletonUnitImage image = Frame [Image animId AnimAll image (Rect 0 1)]
+        singletonUnitImage image = Frame [Image animId image (Rect 0 1)]
 
 draw :: Frame -> Draw.Image ()
 draw frame =
@@ -75,7 +71,7 @@ draw frame =
     <&> posImage
     & mconcat
     where
-        posImage (Image _ _ img rect) =
+        posImage (Image _ img rect) =
             Draw.translateV (rect ^. Rect.topLeft) %%
             Draw.scaleV (rect ^. Rect.size) %%
             img
