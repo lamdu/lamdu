@@ -10,8 +10,7 @@ import           Data.Binary (Binary)
 import           Lamdu.Prelude
 
 newtype LangId = LangId Text
-    deriving newtype
-    ( Show, Eq, Ord, FromJSON, ToJSON, Binary, ToJSONKey, FromJSONKey
-    )
+    deriving newtype (Eq, Ord, FromJSON, ToJSON, Binary, ToJSONKey, FromJSONKey)
+    deriving stock Show
 
 Lens.makePrisms ''LangId

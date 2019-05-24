@@ -23,8 +23,8 @@ import           Prelude hiding (filter)
 
 -- | A Map with a sensible Monoid/Semigroup instance
 newtype MMap k v = MMap (Map k v)
-    deriving newtype (Eq, Ord, Show, Read, Binary, Functor, Foldable)
-    deriving stock (Generic, Traversable)
+    deriving newtype (Eq, Ord, Binary, Functor, Foldable)
+    deriving stock (Generic, Traversable, Show, Read)
     deriving Monoid via ExtendSemigroup (MMap k v)
 
 instance (Ord k, Semigroup v) => Semigroup (MMap k v) where
