@@ -1,6 +1,6 @@
 # Contributors wanted
 
-Lamdu is an open-source project passionately developed by [Peaker](https://github.com/Peaker) and [yairchu](https://github.com/yairchu), part-time since late 2011.
+Lamdu is an open-source project passionately developed by [Eyal Lotem](https://github.com/Peaker) and [Yair Chuchem](https://github.com/yairchu), part-time since late 2011.
 
 We'd love for more contributors who share our dream to join our cause and help us realize it!
 
@@ -33,8 +33,7 @@ Great! It's quite a simple process:
 
 * Add a language file to the [languages folder](https://github.com/lamdu/lamdu/tree/master/data/languages)
   (use the existing languages as examples)
-* If the fonts currently included in Lamdu don't support the letters of your language,
-  find suitable fonts (with a compatible license),
+* If the fonts currently included in Lamdu don't support your language, find suitable fonts (with a compatible license),
   add them to [the fonts folder](https://github.com/lamdu/lamdu/tree/master/data/fonts),
   and set your language to use these fonts
 * Add names in your language to stdlib tags in `lamdu/data/freshdb.json` (the tags are at the beginning of the file)
