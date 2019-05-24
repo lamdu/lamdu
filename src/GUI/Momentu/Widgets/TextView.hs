@@ -65,13 +65,13 @@ fontRender s =
 
 nestedFrame ::
     Show a =>
-    Style ->
     (a, RenderedText (Draw.Image ())) -> RenderedText (AnimId -> Anim.Frame)
-nestedFrame s (i, RenderedText size img) =
+nestedFrame (i, RenderedText size img) =
     RenderedText size draw
     where
-        draw animId = Anim.singletonFrame anchorSize (Anim.augmentId i animId) img
-        anchorSize = pure (lineHeight s)
+        draw animId =
+            Anim.singletonFrame (size ^. bounding) (Anim.augmentId i animId) img
+            & Anim.images . Anim.iAnimMode .~ Anim.AnimDeletionOnly
 
 -- | Returns at least one rect
 letterRects :: Style -> Text -> [[Rect]]
@@ -99,7 +99,7 @@ drawText ::
     (MonadReader env m, Has Style env) =>
     m (Text -> RenderedText (AnimId -> Anim.Frame))
 drawText =
-    Lens.view has <&> \s text -> nestedFrame s ("text" :: Text, fontRender s text)
+    Lens.view has <&> \s text -> nestedFrame ("text" :: Text, fontRender s text)
 
 make ::
     (MonadReader env m, Has Style env) =>

@@ -16,7 +16,10 @@ import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
 import qualified Data.Vector.Vector2 as Vector2
-import           GUI.Momentu.Animation (Image, iRect, iAnimId, iUnitImage, Frame(..), frameImages, images, R)
+import           GUI.Momentu.Animation
+    ( Image, iRect, iAnimId, iAnimMode, AnimMode(..)
+    , iUnitImage, Frame(..), frameImages, images, R
+    )
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
 import qualified Graphics.DrawingCombinators as Draw
@@ -163,7 +166,9 @@ setNewDest destFrame interpolations =
             & fromMaybe (Rect (d ^. iRect . Rect.center) 0)
             & modifying d
         modifying destImage prevRect =
-            Modifying (rImg & iRect .~ prevRect) (destImage ^. iRect)
+            case destImage ^. iAnimMode of
+            AnimDeletionOnly -> Final destImage
+            AnimAll -> Modifying (rImg & iRect .~ prevRect) (destImage ^. iRect)
             where
                 rImg
                     | duplicateDestIds ^. Lens.contains (destImage ^. iAnimId)
