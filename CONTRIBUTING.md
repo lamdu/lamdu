@@ -1,8 +1,8 @@
 # Contributors wanted
 
-Lamdu is an open-source project passionately developed by [Eyal Lotem](https://github.com/Peaker) and [Yair Chuchem](https://github.com/yairchu), part-time since late 2011.
+Lamdu is an open-source project passionately developed by [Eyal Lotem](https://github.com/Peaker) and [Yair Chuchem](https://github.com/yairchu), part-time since late 2011. You may say we are dreamers, but we're not the only ones. We hope some day you'll join us and programming will be fun.
 
-We'd love for more contributors who share our dream to join our cause and help us realize it!
+Help us realize the dream!
 
 ## How to contact us
 
