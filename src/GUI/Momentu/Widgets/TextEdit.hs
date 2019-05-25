@@ -207,7 +207,8 @@ makeFocused env str empty cursor myId =
         Widget.setFocusedWith cursorRect
         (eventMap env cursor str myId)
     where
-        cursorRect@(Rect origin size) = mkCursorRect env cursor str
+        actualStr = if Text.null str then empty ^. focused else str
+        cursorRect@(Rect origin size) = mkCursorRect env cursor actualStr
         cursorFrame =
             Anim.unitSquare ["text-cursor"]
             & Anim.unitImages %~ Draw.tint (env ^. has . sCursorColor)
