@@ -11,7 +11,7 @@ module Lamdu.Config.Theme
     , FontSel(..), fontSelWidth, fontSelStyle, fontSelSlant, fontSelWeight
         , fontSel
     , Theme(..)
-        , title, fonts, baseTextSize, animationTimePeriodSec
+        , title, fonts, sprites, baseTextSize, animationTimePeriodSec
         , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
         , textColors, topPadding, statusBar, deleted, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorOverlayColor
@@ -37,6 +37,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config.Folder (HasConfigFolder(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme.Fonts (FontSize, Fonts)
+import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.Config.Theme.Name (Name(..))
 import           Lamdu.Config.Theme.TextColors (TextColors(..))
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation(..))
@@ -130,6 +131,7 @@ fontSel sel =
 data Theme = Theme
     { _title :: Map Text Text
     , _fonts :: Fonts FontSel
+    , _sprites :: Sprites FilePath
     , _baseTextSize :: FontSize
     , _animationTimePeriodSec :: Double
     , _animationRemainInPeriod :: Double

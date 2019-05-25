@@ -12,10 +12,12 @@ import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
 import           Data.Text (unpack)
+import qualified GUI.Momentu.Draw as Draw
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
 
@@ -27,8 +29,21 @@ test =
     [ testCase "config-parse" (verifyJson (Proxy @Config) "config.json")
     , testCase "themes-parse" (verifyConfigFolder (Proxy @Theme))
     , testCase "languages-parse" (verifyConfigFolder (Proxy @Language))
+    , testCase "sprites" verifySprites
     , languagesDupTest
     ]
+
+verifySprites :: IO ()
+verifySprites =
+    Folder.getSelections (Proxy @Theme)
+    >>= traverse (Folder.selectionToPath (Proxy @Theme))
+    >>= traverse loadJsonPath
+    >>= traverse_ verifySpritesOf
+    where
+        verifySpritesOf theme =
+            theme ^. Theme.sprites
+            & traverse Folder.spritePath
+            >>= traverse_ Draw.openSprite
 
 verifyConfigFolder ::
     (HasConfigFolder a, Aeson.FromJSON a, Aeson.ToJSON a) =>

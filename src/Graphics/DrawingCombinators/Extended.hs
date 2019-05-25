@@ -4,17 +4,23 @@ module Graphics.DrawingCombinators.Extended
     ( module Graphics.DrawingCombinators
     , square
     , scaleV, translateV
+    , openSprite
     ) where
 
 import           Control.Monad (void)
+import           Control.Exception (Exception, SomeException(..), catch, throwIO)
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Foreign.C.Types.Instances ()
 import           GHC.Generics (Generic)
-import           Graphics.DrawingCombinators
+import qualified Graphics.DrawingCombinators as DrawingCombinators
+import           Graphics.DrawingCombinators hiding (openSprite)
 
 import           Prelude
+
+data OpenSpriteFailed = OpenSpriteFailed FilePath SomeException
+    deriving (Show, Exception)
 
 deriving instance Read Color
 deriving instance Generic Color
@@ -33,3 +39,8 @@ translateV (Vector2 x y) = translate (roundR x, roundR y)
 
 square :: Image ()
 square = void $ convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
+
+openSprite :: FilePath -> IO Sprite
+openSprite path =
+    DrawingCombinators.openSprite path
+    `catch` \e@SomeException{} -> throwIO (OpenSpriteFailed path e)

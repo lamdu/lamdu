@@ -7,8 +7,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "graphics-drawingcombinators";
-    sha256 = "0j8iiymqp10z8zm08c5056a8czcvp5h4kqcfnw9yql8zpdxv7kk3";
-    rev = "2c2ffef583656529db66512e2ecdd164b80748b9";
+    sha256 = "05aybqdjd30c4744lc8fr4p0s1jl1wlyhbl1yn9c7f7cnvvjp53f";
+    rev = "6253576fdd9233df5c3f43002310f38b0928c2d5";
   };
   isLibrary = true;
   isExecutable = true;

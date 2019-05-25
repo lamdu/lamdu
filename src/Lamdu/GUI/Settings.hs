@@ -27,6 +27,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme.Sprites as Sprites
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
@@ -34,6 +35,7 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
+import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
 
@@ -59,15 +61,15 @@ hoist f (StatusWidgets x y z a) =
     where
         h = StatusBar.hoist f
 
-unlabeledHeader ::
-    Applicative f =>
+withHeader ::
+    f View ->
     OneOf Texts.StatusBar ->
     OneOf Texts.StatusBar -> StatusBar.Header (f View)
-unlabeledHeader switchLens categoryLens =
+withHeader header switchLens categoryLens =
     StatusBar.Header
-    { StatusBar.headerSwitchTextLens = switchLens
-    , StatusBar.headerCategoryTextLens = categoryLens
-    , StatusBar.headerWidget = pure Element.empty
+    { StatusBar.headerCategoryTextLens = categoryLens
+    , StatusBar.headerSwitchTextLens = switchLens
+    , StatusBar.headerWidget = header
     }
 
 makeAnnotationsSwitcher ::
@@ -100,25 +102,33 @@ makeStatusWidgets ::
     , Has (Choice.Texts Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.StatusBar Text) env
+    , Style.HasStyle env
     , Glue.HasTexts env
     ) =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
-    StatusWidgets
-    <$> makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
-    <*> (traverse opt themeNames
-            >>= StatusBar.makeSwitchStatusWidget
-            (unlabeledHeader Texts.sbSwitchTheme Texts.sbTheme)
-            Config.changeThemeKeys themeProp)
-    <*> (traverse opt langNames
-            >>= StatusBar.makeSwitchStatusWidget
-            (unlabeledHeader Texts.sbSwitchLanguage Texts.sbLanguage)
-            Config.changeLanguageKeys langProp)
-    <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
-            (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
-            Config.helpKeys helpProp
-        )
+    do
+        -- TODO: Is this the right to figure the status bar height?
+        height <- Lens.view has <&> TextView.lineHeight
+        let worldSprite =
+                Styled.sprite ["language-selection-globe"] Sprites.earthGlobe
+                <&> Element.scale (pure height)
+        StatusWidgets
+            <$> makeAnnotationsSwitcher
+                (composeLens Settings.sAnnotationMode prop)
+            <*> (traverse opt themeNames
+                    >>= StatusBar.makeSwitchStatusWidget
+                    (withHeader (pure Element.empty) Texts.sbSwitchTheme
+                        Texts.sbTheme) Config.changeThemeKeys themeProp)
+            <*> (traverse opt langNames
+                    >>= StatusBar.makeSwitchStatusWidget
+                    (withHeader worldSprite Texts.sbSwitchLanguage
+                        Texts.sbLanguage) Config.changeLanguageKeys langProp)
+            <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
+                    (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
+                    Config.helpKeys helpProp
+                )
     where
         opt sel =
             (TextView.makeFocusable ?? (sel ^. title))

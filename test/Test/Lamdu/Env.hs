@@ -15,6 +15,7 @@ import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Color(..))
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import           GUI.Momentu.State (HasCursor, GUIState(..))
@@ -27,7 +28,9 @@ import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
+import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
@@ -106,6 +109,10 @@ make =
             I18N.Fonts.light
             & Paths.getDataFileName
             >>= openFont LCDSubPixelDisabled (testTheme ^. baseTextSize)
+        sprites <-
+            testTheme ^. Theme.sprites
+            & traverse Folder.spritePath
+            >>= traverse Draw.openSprite
         pure Env
             { _eTheme = testTheme
             , _eConfig = testConfig
@@ -124,7 +131,7 @@ make =
             , _eTasksMonitor = Debug.noopMonitors
             , _eResults = pure EvalResults.empty
             , _eCacheFunctions = cache
-            , _eStyle = MakeStyle.make (font <$ testTheme ^. fonts) testTheme
+            , _eStyle = MakeStyle.make (font <$ testTheme ^. fonts) sprites testTheme
             , _eSpacing = 1
             , _eTextEditStyle =
                 TextEdit.Style

@@ -19,6 +19,9 @@
         "framePadding": [1, 1],
         "bgPadding": [7.0, 7.0]
     },
+    "sprites": {
+        "earthGlobe": "earth-globe-world.png"
+    },
     "fonts": {
         "base"        : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Light" },
         "help"        : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Light" },

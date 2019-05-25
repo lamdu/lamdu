@@ -3,9 +3,10 @@
 module GUI.Momentu.Draw
     ( addInnerFrame, backgroundColor
     , alphaChannel
-    , Draw.line, Draw.convexPoly, Draw.sprite
+    , Draw.line, Draw.convexPoly
     , Draw.tint
     , Draw.Color(..), Draw.R, Image
+    , Draw.openSprite, Draw.Sprite, Draw.sprite
     ) where
 
 import           Data.Vector.Vector2 (Vector2(..))

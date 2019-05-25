@@ -37,6 +37,7 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
 import qualified Lamdu.I18N.Versioning as Texts
 import           Lamdu.Settings (Settings)
+import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl.Actions as VCActions
 
 import           Lamdu.Prelude
@@ -49,6 +50,7 @@ make ::
     , Grid.HasTexts env
     , Has VCConfig.Config env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
     , Has Config env
+    , Has Style.Style env
     , Has (Texts.StatusBar Text) env
     , Has (Choice.Texts Text) env
     , Has (Texts.Versioning Text) env

@@ -12,6 +12,7 @@ module Lamdu.GUI.Styled
     , actionable
     , withColor
     , nameAtBinder
+    , sprite
     ) where
 
 import qualified Control.Lens as Lens
@@ -30,8 +31,11 @@ import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
+import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Graphics.DrawingCombinators.Extended as GLDraw
+import           Graphics.DrawingCombinators.Extended ((%%))
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -223,3 +227,16 @@ nameAtBinder name act =
                     Name.Unnamed {}       -> Style.autoNameOrigin
                     Name.Stored {}        -> Style.nameAtBinder
         act & Reader.local (has .~ textEditStyle)
+
+sprite ::
+    (MonadReader env m, Style.HasStyle env) =>
+    AnimId -> Lens.ALens' Style.LoadedSprites Draw.Sprite -> m View
+sprite animId lens =
+    Lens.view (has . Style.sprites . Lens.cloneLens lens)
+    <&> Draw.sprite
+    <&> void
+    -- (-1..1) -> (0..2)
+    <&> (GLDraw.translateV 1 %%)
+    -- (0..2) -> (0..1)
+    <&> (GLDraw.scaleV 0.5 %%)
+    <&> \img -> Anim.singletonFrame 1 animId img & View.make 1

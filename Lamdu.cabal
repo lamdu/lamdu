@@ -39,6 +39,7 @@ Data-files:          config.json
                    , languages/hebrew.json
                    , languages/left-to-right.mixin.json
                    , languages/right-to-left.mixin.json
+                   , sprites/earth-globe-world.png
                    , themes/base.mixin.json
                    , themes/dark.json
                    , themes/light.json
@@ -266,6 +267,7 @@ Library
                   , Lamdu.Config.Theme
                   , Lamdu.Config.Theme.Fonts
                   , Lamdu.Config.Theme.Name
+                  , Lamdu.Config.Theme.Sprites
                   , Lamdu.Config.Theme.TextColors
                   , Lamdu.Config.Theme.ValAnnotation
                   , Lamdu.Data.Anchors

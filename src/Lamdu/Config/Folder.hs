@@ -6,6 +6,7 @@ module Lamdu.Config.Folder
     , selectionToPath
     , HasConfigFolder(..)
     , Language, Theme
+    , spritePath
     ) where
 
 import qualified Control.Lens as Lens
@@ -31,10 +32,13 @@ class HasConfigFolder a where
     type Folder a
     configFolderName :: proxy a -> FilePath
 
-configFolder :: HasConfigFolder a => proxy a -> IO FilePath
-configFolder p =
+configSibling :: FilePath -> IO FilePath
+configSibling name =
     Paths.getDataFileName "config.json"
-    <&> FilePath.takeDirectory <&> (</> configFolderName p)
+    <&> FilePath.takeDirectory <&> (</> name)
+
+configFolder :: HasConfigFolder a => proxy a -> IO FilePath
+configFolder = configSibling . configFolderName
 
 selectionToPath ::
     HasConfigFolder a => Proxy a -> Selection (Folder a) -> IO FilePath
@@ -56,3 +60,6 @@ pathToSelection = Selection . Text.pack . FilePath.takeFileName . FilePath.dropE
 
 getSelections :: HasConfigFolder a => proxy a -> IO [Selection (Folder a)]
 getSelections p = getFiles p <&> map pathToSelection
+
+spritePath :: FilePath -> IO FilePath
+spritePath path = configSibling "sprites" <&> (</> path)

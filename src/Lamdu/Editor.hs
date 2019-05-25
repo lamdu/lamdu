@@ -28,7 +28,8 @@ import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as Folder
-import           Lamdu.Config.Sampler (Sampler, sConfigData, sThemeData, sLanguageData)
+import           Lamdu.Config.Sampler
+    ( Sampler, sConfigData, sThemeData, sLanguageData, sSpritesData )
 import qualified Lamdu.Config.Sampler as ConfigSampler
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -175,7 +176,8 @@ mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
             , _config = sample ^. sConfigData
             , _theme = sample ^. sThemeData
             , _settings = settings
-            , _style = MakeStyle.make fonts (sample ^. sThemeData)
+            , _style =
+                MakeStyle.make fonts (sample ^. sSpritesData) (sample ^. sThemeData)
             , _mainLoop = mainEnv
             , _animIdPrefix = mempty
             , _debugMonitors = monitors

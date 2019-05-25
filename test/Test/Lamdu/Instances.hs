@@ -31,6 +31,7 @@ import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Name as Theme
+import           Lamdu.Config.Theme.Sprites (Sprites(..))
 import qualified Lamdu.Config.Theme.TextColors as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
@@ -75,6 +76,7 @@ deriving instance Data Theme.ToolTip
 deriving instance Data Theme.ValAnnotation
 deriving instance Data VcGuiConfig.Theme
 deriving instance Data a => Data (TextEdit.Modes a)
+deriving instance Data a => Data (Sprites a)
 deriving instance Data a => Data (Fonts a)
 deriving instance Data a => Data (Vector2 a)
 
