@@ -36,14 +36,14 @@ data FiledConfig a = FiledConfig
     { _primaryPath :: FilePath
     , _dependencyPaths :: ![FilePath]
     , _fileData :: !a
-    } deriving (Eq)
+    }
 Lens.makeLenses ''FiledConfig
 
 data SampleData = SampleData
     { _sConfig :: FiledConfig Config
     , _sTheme :: FiledConfig Theme
     , _sLanguage :: FiledConfig Language
-    } deriving (Eq)
+    }
 Lens.makeLenses ''SampleData
 
 data Sample = Sample
