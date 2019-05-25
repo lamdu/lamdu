@@ -223,10 +223,17 @@ mkCursorRect env cursor str =
     where
         beforeCursorLines = Text.splitOn "\n" $ Text.take cursor str
         lineHeight = TextView.lineHeight (env ^. has . sTextViewStyle)
-        cursorPos = Vector2 cursorPosX cursorPosY
-        cursorSize = Vector2 (env ^. has . sCursorWidth) lineHeight
+        maybeMirror =
+            case env ^. has of
+            Dir.LeftToRight -> id
+            Dir.RightToLeft -> (totalWidth -)
+        cursorPos = Vector2 (maybeMirror cursorPosX) cursorPosY
+        cursorSize = Vector2 cursorWidth lineHeight
+        cursorWidth = env ^. has . sCursorWidth
+        totalWidth = draw str ^. TextView.renderedTextSize . Font.bounding . _1
+        draw = TextView.drawText env
         cursorPosX =
-            TextView.drawText env (last beforeCursorLines) ^.
+            draw (last beforeCursorLines) ^.
             TextView.renderedTextSize . Font.advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
