@@ -83,7 +83,7 @@ The calculus is decribed below in a human readable "pseudo-syntax".
 Lamdu does not store code this way, but as an AST.
 
 These are the terms of the language
-(defined by [`Lamdu.Calc.Val`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Val.hs):
+(defined by [`Lamdu.Calc.Term`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Term.hs):
 
 * `?` - Holes (Used to store incomplete code)
 * `5` - Literals
