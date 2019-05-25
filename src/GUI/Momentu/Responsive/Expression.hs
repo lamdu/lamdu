@@ -49,7 +49,8 @@ disambiguators =
         Options.Disambiguators <$> h <*> v & pure
 
 addParens ::
-    (MonadReader env m, Has TextView.Style env, Functor f) =>
+    ( MonadReader env m, Has TextView.Style env, Functor f, Has Dir.Layout env
+    ) =>
     m (AnimId -> TextWidget f -> TextWidget f)
 addParens =
     Lens.view id <&>

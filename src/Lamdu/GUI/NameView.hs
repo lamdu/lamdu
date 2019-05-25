@@ -26,7 +26,7 @@ import qualified Lamdu.Name as Name
 import           Lamdu.Prelude
 
 makeCollisionSuffixLabel ::
-    ( MonadReader env m
+    ( MonadReader env m, Has Dir.Layout env
     , Has TextView.Style env, Element.HasAnimIdPrefix env, Has Theme env
     ) => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel collisionColor mCollision =

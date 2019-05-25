@@ -14,6 +14,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -155,6 +156,7 @@ makeScopeEventMap env prevKey nextKey cursor setter =
 makeScopeNavArrow ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Monoid a, Applicative o
+    , Has Dir.Layout env
     ) =>
     (w -> o a) -> Text -> Maybe w -> m (WithTextPos (Widget (o a)))
 makeScopeNavArrow setScope arrowText mScopeId =

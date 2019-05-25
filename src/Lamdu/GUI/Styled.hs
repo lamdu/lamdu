@@ -19,8 +19,9 @@ import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation.Id (AnimId, ElemIds(..))
 import qualified GUI.Momentu.Animation as Anim
+import           GUI.Momentu.Animation.Id (AnimId, ElemIds(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
@@ -31,8 +32,8 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.Config as Config
 import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
@@ -50,14 +51,16 @@ grammar :: (MonadReader env m, Has Theme env, Has TextView.Style env) => m a -> 
 grammar = withColor TextColors.grammarColor
 
 rawText ::
-    (MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env) =>
+    ( MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env
+    , Has Dir.Layout env
+    ) =>
     AnimId -> Text -> f (WithTextPos View)
 rawText animIdSuffix txt =
     (TextView.make ?? txt) <*> (Element.subAnimId ?? animIdSuffix)
 
 text ::
     ( MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env
+    , Has (t Text) env, Has Dir.Layout env
     ) =>
     AnimId -> OneOf t -> f (WithTextPos View)
 text animIdSuffix txtLens =
@@ -69,7 +72,7 @@ newtype OneOfT a = OneOf (OneOf a)
 
 mkLabel ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t
+    , Has (t Text) env, Has Dir.Layout env, ElemIds t
     ) =>
     m (OneOfT t -> WithTextPos View)
 mkLabel =
@@ -80,7 +83,7 @@ mkLabel =
 mkFocusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
     , Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t
+    , Has (t Text) env, ElemIds t, Has Dir.Layout env
     ) =>
     m (OneOfT t -> TextWidget f)
 mkFocusableLabel =
@@ -91,7 +94,7 @@ mkFocusableLabel =
 
 label ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t
+    , Has (t Text) env, ElemIds t, Has Dir.Layout env
     ) =>
     OneOf t -> m (WithTextPos View)
 label lens = mkLabel ?? OneOf lens
@@ -99,7 +102,7 @@ label lens = mkLabel ?? OneOf lens
 focusableLabel ::
     ( MonadReader env m, Applicative f, State.HasCursor env
     , Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t
+    , Has (t Text) env, ElemIds t, Has Dir.Layout env
     ) =>
     OneOf t -> m (TextWidget f)
 focusableLabel lens = mkFocusableLabel ?? OneOf lens
@@ -187,7 +190,7 @@ withColor textColor act =
 actionable ::
     ( Element.HasAnimIdPrefix env, Has TextView.Style env
     , GuiState.HasCursor env, Has Config env, Has Theme env
-    , Applicative f, MonadReader env m
+    , Applicative f, MonadReader env m, Has Dir.Layout env
     , Has (t Text) env, ElemIds t
     ) =>
     Widget.Id -> OneOf t -> E.Doc -> f Widget.Id -> m (TextWidget f)

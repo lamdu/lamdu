@@ -15,6 +15,7 @@ import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import           GUI.Momentu.Animation.Id (ElemIds(..))
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element(..))
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -73,6 +74,7 @@ data Header w = Header
 type LabelConstraints env m =
     ( MonadReader env m, Has TextView.Style env, Has Theme env
     , Element.HasAnimIdPrefix env, Has (Texts.StatusBar Text) env
+    , Has Dir.Layout env
     )
 
 labelHeader ::

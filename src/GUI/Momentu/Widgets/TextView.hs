@@ -20,6 +20,7 @@ import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Font (Font, RenderedText(..), renderedText, renderedTextSize, bounding, advance)
 import qualified GUI.Momentu.Font as Font
 import           GUI.Momentu.Rect (Rect(Rect))
@@ -28,7 +29,7 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Extended as Draw
 
 import           Lamdu.Prelude
 
@@ -64,14 +65,21 @@ fontRender s =
     Font.render (s ^. styleFont) (s ^. styleColor) (s ^. styleUnderline) . Bidi.toVisual
 
 nestedFrame ::
-    Show a =>
-    Style ->
+    (Show a, Has Dir.Layout env, Has Style env) =>
+    env ->
     (a, RenderedText (Draw.Image ())) -> RenderedText (AnimId -> Anim.Frame)
-nestedFrame s (i, RenderedText size img) =
+nestedFrame env (i, RenderedText size img) =
     RenderedText size draw
     where
-        draw animId = Anim.singletonFrame anchorSize (Anim.augmentId i animId) img
-        anchorSize = pure (lineHeight s)
+        toFrame animId = Anim.singletonFrame anchorSize (Anim.augmentId i animId)
+        widthV = Vector2 (size ^. bounding . _1) 0
+        draw animId =
+            case env ^. has of
+            Dir.LeftToRight -> toFrame animId img
+            Dir.RightToLeft ->
+                (Draw.translateV (-widthV) Draw.%% img) & toFrame animId
+                & Anim.translate widthV
+        anchorSize = env ^. has & lineHeight & pure
 
 -- | Returns at least one rect
 letterRects :: Style -> Text -> [[Rect]]
@@ -96,13 +104,15 @@ letterRects s text =
                     Rect (Vector2 (xpos ^. advance) 0) (size ^. bounding)
 
 drawText ::
-    (MonadReader env m, Has Style env) =>
+    (MonadReader env m, Has Dir.Layout env, Has Style env) =>
     m (Text -> RenderedText (AnimId -> Anim.Frame))
 drawText =
-    Lens.view has <&> \s text -> nestedFrame s ("text" :: Text, fontRender s text)
+    Lens.view id
+    <&> \env text ->
+    nestedFrame env ("text" :: Text, fontRender (env ^. has) text)
 
 make ::
-    (MonadReader env m, Has Style env) =>
+    (MonadReader env m, Has Dir.Layout env, Has Style env) =>
     m (Text -> AnimId -> WithTextPos View)
 make =
     drawText <&> \draw text animId ->
@@ -113,7 +123,9 @@ make =
         }
 
 makeFocusable ::
-    (MonadReader env m, Applicative f, State.HasCursor env, Has Style env) =>
+    ( MonadReader env m, Applicative f, State.HasCursor env
+    , Has Dir.Layout env, Has Style env
+    ) =>
     m (Text -> Widget.Id -> TextWidget f)
 makeFocusable =
     do

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DisambiguateRecordFields #-}
+{-# LANGUAGE TemplateHaskell, DisambiguateRecordFields, ConstraintKinds #-}
 
 module GUI.Momentu.Widgets.Menu
     ( Style(..), submenuSymbolColorUnselected, submenuSymbolColorSelected
@@ -16,7 +16,7 @@ module GUI.Momentu.Widgets.Menu
     , Placement(..)
     , make, makeHovered, hoverOptions, makePickEventMap
     , noResultsId
-    , Texts(..), noResults
+    , HasTexts, Texts(..), noResults
     ) where
 
 import           Control.Applicative (liftA2)
@@ -27,6 +27,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos, TextWidget, Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -173,11 +174,13 @@ optionWidgets f (Option i w s) =
     <$> (Lens.mapped . rWidget) f w
     <*> (_SubmenuItems . Lens.mapped . Lens.mapped . optionWidgets) f s
 
+type HasTexts env = (Has (Texts Text) env, Has Dir.Layout env)
+
 makeNoResults ::
     ( MonadReader env m
-    , Has TextView.Style env
     , Element.HasAnimIdPrefix env
-    , Has (Texts Text) env
+    , Has TextView.Style env
+    , HasTexts env
     ) =>
     m (WithTextPos View)
 makeNoResults =
@@ -209,7 +212,7 @@ blockEvents env =
 
 makeSubmenuSymbol ::
     ( MonadReader env m, Has Config env, Element.HasAnimIdPrefix env
-    , Has TextView.Style env, Has (Texts Text) env
+    , Has TextView.Style env, HasTexts env
     ) =>
     Bool -> m (WithTextPos View)
 makeSubmenuSymbol isSelected =

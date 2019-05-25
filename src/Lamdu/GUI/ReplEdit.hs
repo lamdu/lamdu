@@ -10,6 +10,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -110,7 +111,7 @@ indicatorColor Prev _ = Lens.view (has . Theme.disabledColor)
 
 makeIndicator ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env
     ) =>
     CurPrevTag -> Lens' Theme Draw.Color -> Text -> m (Align.WithTextPos View)
 makeIndicator tag enabledColor text =

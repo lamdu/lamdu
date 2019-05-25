@@ -11,6 +11,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Animation.Id (augmentId)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -199,7 +200,7 @@ makeRecord postProcess fieldGuis =
 
 addPostTags ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
+    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env, Has Dir.Layout env
     ) =>
     [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
 addPostTags items =

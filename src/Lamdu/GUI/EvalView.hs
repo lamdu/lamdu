@@ -40,6 +40,7 @@ import           Lamdu.Prelude
 
 textView ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
+    , Has Dir.Layout env
     ) => Text -> m (WithTextPos View)
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
@@ -62,6 +63,7 @@ makeField tag val =
 
 makeError ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
+    , Has Dir.Layout env
     ) => Sugar.EvalTypeError -> m (WithTextPos View)
 makeError (Sugar.EvalTypeError msg) =
     textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
@@ -219,7 +221,7 @@ makeInner (Sugar.ResVal entityId body) =
 
 toText ::
     ( Format r, MonadReader env m, Has TextView.Style env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env
     ) => r -> m (WithTextPos View)
 toText val =
     textView cut

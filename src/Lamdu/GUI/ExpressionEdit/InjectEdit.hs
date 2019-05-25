@@ -7,6 +7,7 @@ import           AST (Tree, Ann(..), ann)
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu.Align (WithTextPos)
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -44,6 +45,7 @@ import           Lamdu.Prelude
 injectIndicator ::
     ( MonadReader env f, Has TextView.Style env, Has Theme env
     , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
+    , Has Dir.Layout env
     ) => OneOf Texts.Code -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)
 

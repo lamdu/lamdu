@@ -65,14 +65,14 @@ sanitize = Text.replace "\0" ""
 
 grammar ::
     ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env
     ) =>
     Text -> m (WithTextPos View)
 grammar = Styled.grammar . Label.make . sanitize
 
 parensAround ::
     ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env
     ) =>
     WithTextPos View -> m (WithTextPos View)
 parensAround view =
@@ -83,7 +83,7 @@ parensAround view =
 
 parens ::
     ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env
     ) =>
     Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
@@ -163,7 +163,7 @@ addTypeBG view =
 
 makeEmptyComposite ::
     ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env
+    , Element.HasAnimIdPrefix env, Has Dir.Layout env
     ) =>
     m (WithTextPos View)
 makeEmptyComposite = grammar "Ø"

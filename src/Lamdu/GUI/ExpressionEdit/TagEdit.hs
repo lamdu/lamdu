@@ -156,7 +156,7 @@ makeNewTagPreEvent env searchTerm tagRefReplace mkPickResult
 
 addNewTag ::
     ( Applicative o, MonadReader env f, GuiState.HasCursor env, Has Theme env
-    , Has TextView.Style env, Element.HasAnimIdPrefix env
+    , Has TextView.Style env, Element.HasAnimIdPrefix env, Has Dir.Layout env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.CodeUI Text) menv
     ) =>

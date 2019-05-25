@@ -78,6 +78,7 @@ withStyle whichStyle =
 genericEdit ::
     ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    , Has Dir.Layout env
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->

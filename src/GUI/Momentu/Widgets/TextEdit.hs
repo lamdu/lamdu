@@ -144,7 +144,7 @@ makeInternal env mode str emptyStrings myId =
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter ?~
         Widget.enterFuncAddVirtualCursor (Rect 0 (v ^. Element.size))
-        (enterFromDirection (v ^. Element.size) (env ^. has) str myId)
+        (enterFromDirection env (v ^. Element.size) str myId)
     where
         emptyColor = env ^. has . sEmptyStringsColors . mode
         emptyView = mkView (emptyStrings ^. mode) (TextView.color .~ emptyColor)
@@ -167,9 +167,10 @@ cursorNearRect s str fromRect =
     & minimumIndex -- cursorRects(TextView.letterRects) should never return an empty list
 
 enterFromDirection ::
-    Widget.Size -> Style -> Text -> Widget.Id ->
+    (Has Dir.Layout env, HasStyle env) =>
+    env -> Widget.Size -> Text -> Widget.Id ->
     FocusDirection -> Gui Widget.EnterResult ((,) Text)
-enterFromDirection sz sty str myId dir =
+enterFromDirection env sz str myId dir =
     encodeCursor myId cursor
     & State.updateCursor
     & (,) str
@@ -184,8 +185,8 @@ enterFromDirection sz sty str myId dir =
             FromAbove r -> Rect 0 0    & Rect.horizontalRange .~ r & fromRect
             FromBelow r -> edgeRect _2 & Rect.horizontalRange .~ r & fromRect
         edgeRect l = Rect (0 & Lens.cloneLens l .~ sz ^. Lens.cloneLens l) 0
-        cursorRect = mkCursorRect sty cursor str
-        fromRect = cursorNearRect (sty ^. sTextViewStyle) str
+        cursorRect = mkCursorRect env cursor str
+        fromRect = cursorNearRect (env ^. has . sTextViewStyle) str
 
 eventResult :: Widget.Id -> Text -> Cursor -> (Text, State.Update)
 eventResult myId newText newCursor =
@@ -206,7 +207,7 @@ makeFocused env str empty cursor myId =
         Widget.setFocusedWith cursorRect
         (eventMap env cursor str myId)
     where
-        cursorRect@(Rect origin size) = mkCursorRect (env ^. has) cursor str
+        cursorRect@(Rect origin size) = mkCursorRect env cursor str
         cursorFrame =
             Anim.unitSquare ["text-cursor"]
             & Anim.unitImages %~ Draw.tint (env ^. has . sCursorColor)
@@ -216,16 +217,16 @@ makeFocused env str empty cursor myId =
             & Anim.scale size
             & Anim.translate origin
 
-mkCursorRect :: Style -> Cursor -> Text -> Rect
-mkCursorRect s cursor str =
+mkCursorRect :: (HasStyle env, Has Dir.Layout env) => env -> Cursor -> Text -> Rect
+mkCursorRect env cursor str =
     Rect cursorPos cursorSize
     where
         beforeCursorLines = Text.splitOn "\n" $ Text.take cursor str
-        lineHeight = TextView.lineHeight (s ^. sTextViewStyle)
+        lineHeight = TextView.lineHeight (env ^. has . sTextViewStyle)
         cursorPos = Vector2 cursorPosX cursorPosY
-        cursorSize = Vector2 (s ^. sCursorWidth) lineHeight
+        cursorSize = Vector2 (env ^. has . sCursorWidth) lineHeight
         cursorPosX =
-            TextView.drawText (s ^. sTextViewStyle) (last beforeCursorLines) ^.
+            TextView.drawText env (last beforeCursorLines) ^.
             TextView.renderedTextSize . Font.advance . _1
         cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
