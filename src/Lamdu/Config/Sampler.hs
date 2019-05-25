@@ -1,10 +1,9 @@
 {-# LANGUAGE TemplateHaskell, ScopedTypeVariables, TypeApplications #-}
 module Lamdu.Config.Sampler
     ( Sampler, new, setSelection
-    , FiledConfig(..), primaryPath, dependencyPaths, fileData
-        , filePaths, sampleFilePaths
+    , FiledConfig(..), primaryPath, fileData
     , SampleData(..), sConfig, sTheme, sLanguage
-    , Sample(..), sData
+    , Sample(..), sData, sDependencyPaths
     , sConfigData, sThemeData, sLanguageData
     , getSample
     ) where
@@ -13,7 +12,7 @@ import           Control.Concurrent.Extended (ThreadId, threadDelay, forkIOUnmas
 import           Control.Concurrent.MVar
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.FastWriter as Writer
+import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Time.Clock (UTCTime)
@@ -34,7 +33,6 @@ type ModificationTime = UTCTime
 
 data FiledConfig a = FiledConfig
     { _primaryPath :: FilePath
-    , _dependencyPaths :: ![FilePath]
     , _fileData :: !a
     }
 Lens.makeLenses ''FiledConfig
@@ -43,6 +41,7 @@ data SampleData = SampleData
     { _sConfig :: FiledConfig Config
     , _sTheme :: FiledConfig Theme
     , _sLanguage :: FiledConfig Language
+    , _sDependencyPaths :: ![FilePath]
     }
 Lens.makeLenses ''SampleData
 
@@ -67,40 +66,27 @@ data Sampler = Sampler
     , setSelection :: Selection Folder.Theme -> Selection Folder.Language -> IO ()
     }
 
-filePaths :: Lens.Traversal' (FiledConfig a) FilePath
-filePaths f (FiledConfig p ps a) = FiledConfig <$> f p <*> traverse f ps ?? a
-
-sampleFilePaths :: Lens.Traversal' SampleData FilePath
-sampleFilePaths f (SampleData conf theme language) =
-    SampleData
-    <$> filePaths f conf
-    <*> filePaths f theme
-    <*> filePaths f language
-
 getSampleMTimes :: SampleData -> IO [ModificationTime]
 getSampleMTimes sampleData =
-    sampleData ^.. sampleFilePaths & traverse getModificationTime
+    sampleData ^. sDependencyPaths & traverse getModificationTime
 
-withMTime :: IO SampleData -> IO Sample
-withMTime act =
-    do
-        sampleData <- act
-        mtimes <- getSampleMTimes sampleData
-        Sample mtimes sampleData & pure
+withMTime :: SampleData -> IO Sample
+withMTime sampleData =
+    getSampleMTimes sampleData <&> (`Sample` sampleData)
 
-loadConfigFile :: FromJSON a => FilePath -> IO (FiledConfig a)
-loadConfigFile path =
-    AesonConfig.load path & Writer.runWriterT
-    <&> uncurry (flip (FiledConfig path))
+loadConfigFile :: FromJSON a => FilePath -> WriterT [FilePath] IO (FiledConfig a)
+loadConfigFile path = AesonConfig.load path <&> FiledConfig path
 
 loadPaths :: FilePath -> FilePath -> IO Sample
 loadPaths themePath langPath =
     do
-        config <- Paths.getDataFileName "config.json" >>= loadConfigFile
+        config <- Paths.getDataFileName "config.json" & lift >>= loadConfigFile
         SampleData config
             <$> loadConfigFile themePath
             <*> loadConfigFile langPath
-            & withMTime
+        & runWriterT
+        <&> uncurry ($)
+        >>= withMTime
 
 load :: Selection Folder.Theme -> Selection Folder.Language -> IO Sample
 load themeName langName =
