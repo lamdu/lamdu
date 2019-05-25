@@ -239,29 +239,15 @@ mkCursorRect env cursor str =
 
 -- TODO: Implement intra-TextEdit virtual cursor
 eventMap ::
-    ( Has (Texts Text) env, Has (Dir.Texts Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
+    HasTexts env =>
     env -> Cursor -> Text -> Widget.Id -> Widget.EventContext ->
     EventMap (Text, State.Update)
-eventMap txt cursor str myId _eventContext =
+eventMap env cursor str myId _eventContext =
     mconcat $ concat [
-        [ moveRelative (-1)
-            & E.keyPressOrRepeat (noMods MetaKey.Key'Left) (moveDoc [has . Dir.left])
-        | cursor > 0 ],
-
-        [ moveRelative 1
-            & E.keyPressOrRepeat (noMods MetaKey.Key'Right) (moveDoc [has . Dir.right])
-        | cursor < textLength ],
-
-        [ keys
-            (moveWordDoc [has . Dir.left]) [ctrl MetaKey.Key'Left]
-            backMoveWord
-        | cursor > 0 ],
-
-        [ keys (moveWordDoc [has . Dir.right])
-            [ctrl MetaKey.Key'Right] moveWord
-        | cursor < textLength ],
+        [ moveRelative (-1) & logicalRetreat | cursor > 0 ],
+        [ moveRelative   1  & logicalAdvance | cursor < textLength ],
+        [ logicalRetreatWord backMoveWord | cursor > 0 ],
+        [ logicalAdvanceWord moveWord | cursor < textLength ],
 
         [ moveRelative (- cursorX - 1 - Text.length (Text.drop cursorX prevLine))
             & E.keyPressOrRepeat (noMods MetaKey.Key'Up)
@@ -346,11 +332,24 @@ eventMap txt cursor str myId _eventContext =
 
         ]
     where
+        leftWord = keys (moveWordDoc [has . Dir.left]) [ctrl MetaKey.Key'Left]
+        rightWord = keys (moveWordDoc [has . Dir.right]) [ctrl MetaKey.Key'Right]
+        left =
+            E.keyPressOrRepeat (noMods MetaKey.Key'Left)
+            (moveDoc [has . Dir.left])
+        right =
+            E.keyPressOrRepeat (noMods MetaKey.Key'Right)
+            (moveDoc [has . Dir.right])
+        ( logicalRetreatWord, logicalAdvanceWord
+            , logicalRetreat, logicalAdvance) =
+            case env ^. has of
+            Dir.LeftToRight -> (leftWord , rightWord, left , right)
+            Dir.RightToLeft -> (rightWord, leftWord , right, left )
         editDoc = toDoc . (has . MomentuTexts.edit :)
         deleteDoc = editDoc . (has . MomentuTexts.delete :)
         insertDoc = editDoc . (has . MomentuTexts.insert :)
         moveWordDoc = moveDoc . (has . textWord :)
-        toDoc = E.toDoc txt
+        toDoc = E.toDoc env
         moveDoc =
             toDoc
             . (has . MomentuTexts.navigation :)
