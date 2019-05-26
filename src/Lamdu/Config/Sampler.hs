@@ -129,8 +129,8 @@ new sampleUpdated initialTheme initialLang =
             , getSample = readMVar ref
             , setSelection =
                 \theme lang ->
-                takeMVar ref
-                >> load theme lang
+                modifyMVar ref $ \_oldVal ->
+                load theme lang
                 >>= E.evaluate
-                >>= putMVar ref
+                <&> flip (,) ()
             }
