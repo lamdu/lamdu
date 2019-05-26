@@ -3,6 +3,7 @@ module Lamdu.Editor.Fonts
     ) where
 
 import qualified Control.Lens.Extended as Lens
+import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import qualified GUI.Momentu as M
 import           Lamdu.Config.Sampler (Sampler, Sample)
@@ -15,6 +16,7 @@ import qualified Lamdu.Font as Font
 import qualified Lamdu.I18N.Language as Language
 import           System.FilePath ((</>))
 import qualified System.FilePath as FilePath
+import           System.Mem (performGC)
 
 import           Lamdu.Prelude
 
@@ -54,9 +56,24 @@ makeGetFonts ::
     Sampler -> Font.LCDSubPixelEnabled ->
     IO (M.Zoom -> IO (Fonts M.Font))
 makeGetFonts configSampler subpixel =
-    Font.new subpixel & uncurry & memoIO
-    <&> f
+    do
+        timeTillGc <- newIORef gcEvery
+        let maybePerformGC =
+                atomicModifyIORef timeTillGc
+                (\ttl -> (if ttl == 0 then (gcEvery, performGC) else (ttl-1, pure ())))
+                & join
+        fmap f . memoIO . uncurry $
+            \path fonts ->
+            do
+                -- If we don't force full GC once in a while, these
+                -- fonts linger and are uncollected. They leak not
+                -- only memory but file descriptors, and those run out
+                -- first, crashing lamdu if fonts are reloaded too frequently
+                maybePerformGC
+                Font.new subpixel path fonts
     where
+        gcEvery :: Int
+        gcEvery = 10
         f cachedLoadFonts zoom =
             do
                 sizeFactor <- M.getZoomFactor zoom
