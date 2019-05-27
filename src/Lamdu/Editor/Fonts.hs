@@ -60,7 +60,7 @@ makeGetFonts configSampler subpixel =
         timeTillGc <- newIORef gcEvery
         let maybePerformGC =
                 atomicModifyIORef timeTillGc
-                (\ttl -> (if ttl == 0 then (gcEvery, performGC) else (ttl-1, pure ())))
+                (\ttl -> if ttl == 0 then (gcEvery, performGC) else (ttl-1, pure ()))
                 & join
         fmap f . memoIO . uncurry $
             \path fonts ->
