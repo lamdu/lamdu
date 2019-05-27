@@ -34,12 +34,13 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Graphics.DrawingCombinators.Extended as GLDraw
 import           Graphics.DrawingCombinators.Extended ((%%))
+import qualified Graphics.DrawingCombinators.Extended as GLDraw
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Name (Name(..))
@@ -229,9 +230,8 @@ nameAtBinder name act =
         act & Reader.local (has .~ textEditStyle)
 
 sprite ::
-    (MonadReader env m, Style.HasStyle env) =>
-    AnimId -> Lens.ALens' Style.LoadedSprites Draw.Sprite -> m View
-sprite animId lens =
+    (MonadReader env m, Style.HasStyle env) => OneOf Sprites -> m View
+sprite lens =
     Lens.view (has . Style.sprites . Lens.cloneLens lens)
     <&> Draw.sprite
     <&> void
@@ -239,4 +239,4 @@ sprite animId lens =
     <&> (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
     <&> (GLDraw.scaleV 0.5 %%)
-    <&> \img -> Anim.singletonFrame 1 animId img & View.make 1
+    <&> \img -> Anim.singletonFrame 1 (elemIds ^# lens) img & View.make 1

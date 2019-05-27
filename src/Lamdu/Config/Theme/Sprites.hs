@@ -1,5 +1,5 @@
 -- | The Sprites component of the Lamdu Theme
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.Config.Theme.Sprites
     ( Sprites(..)
     , earthGlobe
@@ -7,11 +7,15 @@ module Lamdu.Config.Theme.Sprites
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
+import           GUI.Momentu.Animation.Id (ElemIds)
 
 import           Lamdu.Prelude
 
 newtype Sprites a = Sprites
     { _earthGlobe :: a
-    } deriving (Eq, Generic, Show, Functor, Foldable, Traversable)
+    }
+    deriving stock (Eq, Generic, Generic1, Show, Functor, Foldable, Traversable)
+    deriving Applicative via (Generically1 Sprites)
+    deriving anyclass (ElemIds)
 JsonTH.derivePrefixed "_" ''Sprites
 Lens.makeLenses ''Sprites

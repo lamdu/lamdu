@@ -112,7 +112,7 @@ makeStatusWidgets themeNames langNames prop =
         -- TODO: Is this the right to figure the status bar height?
         height <- Lens.view has <&> TextView.lineHeight
         let worldSprite =
-                Styled.sprite ["language-selection-globe"] Sprites.earthGlobe
+                Styled.sprite Sprites.earthGlobe
                 <&> Element.scale (pure height)
         StatusWidgets
             <$> makeAnnotationsSwitcher
