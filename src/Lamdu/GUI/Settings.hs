@@ -110,11 +110,6 @@ makeStatusWidgets ::
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
     do
-        -- TODO: Is this the right to figure the status bar height?
-        height <- Lens.view has <&> TextView.lineHeight
-        let worldSprite =
-                Styled.sprite Sprites.earthGlobe
-                <&> Element.scale (pure height)
         StatusWidgets
             <$> makeAnnotationsSwitcher
                 (composeLens Settings.sAnnotationMode prop)
@@ -124,8 +119,9 @@ makeStatusWidgets themeNames langNames prop =
                         Texts.sbTheme) Config.changeThemeKeys themeProp)
             <*> (traverse opt langNames
                     >>= StatusBar.makeSwitchStatusWidget
-                    (withHeader worldSprite Texts.sbSwitchLanguage
-                        Texts.sbLanguage) Config.changeLanguageKeys langProp)
+                    (withHeader (Styled.sprite Sprites.earthGlobe)
+                        Texts.sbSwitchLanguage Texts.sbLanguage)
+                    Config.changeLanguageKeys langProp)
             <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
                     (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
                     Config.helpKeys helpProp

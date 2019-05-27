@@ -12,7 +12,7 @@ module Lamdu.GUI.Styled
     , actionable
     , withColor
     , nameAtBinder
-    , sprite
+    , unitSprite, sprite
     ) where
 
 import qualified Control.Lens as Lens
@@ -230,14 +230,26 @@ nameAtBinder name act =
                     Name.Stored {}        -> Style.nameAtBinder
         act & Reader.local (has .~ textEditStyle)
 
-sprite ::
-    (MonadReader env m, Has (Sprites Sprite) env) => OneOf Sprites -> m View
-sprite lens =
-    Lens.view (has . Lens.cloneLens lens)
-    <&> Draw.sprite
-    <&> void
+-- Sprite the size of unit (1 pixel)
+unitSprite ::
+    (MonadReader env m, Has (Sprites Sprite) env) =>
+    OneOf Sprites -> m View
+unitSprite lens =
+    Lens.view id
+    <&> \env ->
+    Draw.sprite (env ^. has . Lens.cloneLens lens)
+    & void
     -- (-1..1) -> (0..2)
-    <&> (GLDraw.translateV 1 %%)
+    & (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
-    <&> (GLDraw.scaleV 0.5 %%)
-    <&> \img -> Anim.singletonFrame 1 (elemIds ^# lens) img & View.make 1
+    & (GLDraw.scaleV 0.5 %%)
+    & Anim.singletonFrame 1 (elemIds ^# lens)
+    & View.make 1
+
+sprite ::
+    (MonadReader env m, Has (Sprites Sprite) env, Has TextView.Style env) =>
+    OneOf Sprites -> m View
+sprite lens =
+    do
+        height <- Lens.view has <&> TextView.lineHeight
+        unitSprite lens <&> Element.scale (realToFrac height)
