@@ -11,38 +11,38 @@ Category:            Graphics
 Build-type:          Simple
 Cabal-version:       >= 1.10
 Data-dir:            data
-Data-files:          fonts/DejaVuSans.ttf
+Data-files:          config.json
+                   , default-settings.json
+                   , doc/JSExportReadMe.md
                    , fonts/DejaVuSans-Bold.ttf
                    , fonts/DejaVuSans-BoldOblique.ttf
                    , fonts/DejaVuSans-Oblique.ttf
-                   , fonts/DejaVuSansMono.ttf
+                   , fonts/DejaVuSans.ttf
                    , fonts/DejaVuSansMono-Bold.ttf
                    , fonts/DejaVuSansMono-BoldOblique.ttf
                    , fonts/DejaVuSansMono-Oblique.ttf
-                   , fonts/DejaVuSerif.ttf
+                   , fonts/DejaVuSansMono.ttf
                    , fonts/DejaVuSerif-Bold.ttf
                    , fonts/DejaVuSerif-BoldItalic.ttf
                    , fonts/DejaVuSerif-Italic.ttf
+                   , fonts/DejaVuSerif.ttf
                    , fonts/Purisa.ttf
-                   , config.json
-                   , default-settings.json
+                   , freshdb.json
+                   , js/README
+                   , js/anchors.js
+                   , js/export/rtsConfig.js
+                   , js/protocol.js
+                   , js/rts.js
+                   , js/rtsConfig.js
+                   , languages/base.mixin.json
+                   , languages/english.json
+                   , languages/hebrew.json
+                   , languages/left-to-right.mixin.json
+                   , languages/right-to-left.mixin.json
                    , themes/base.mixin.json
                    , themes/dark.json
                    , themes/light.json
                    , themes/retro.json
-                   , languages/base.mixin.json
-                   , languages/left-to-right.mixin.json
-                   , languages/right-to-left.mixin.json
-                   , languages/english.json
-                   , languages/hebrew.json
-                   , freshdb.json
-                   , js/README
-                   , js/anchors.js
-                   , js/protocol.js
-                   , js/rts.js
-                   , js/rtsConfig.js
-                   , js/export/rtsConfig.js
-                   , doc/JSExportReadMe.md
 
 source-repository head
   type: git
