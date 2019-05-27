@@ -75,11 +75,12 @@ withHeader header switchLens categoryLens =
 
 makeAnnotationsSwitcher ::
     ( MonadReader env m, Applicative f
-    , Has Config env, Has Theme env
+    , Has Config env
     , Has TextView.Style env
     , Has (Texts.StatusBar Text) env
     , Has (Choice.Texts Text) env
     , Has (Texts.CodeUI Text) env
+    , Has (Sprites Sprite) env
     , Glue.HasTexts env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env, Has Hover.Style env
     ) =>
@@ -93,7 +94,11 @@ makeAnnotationsSwitcher annotationModeProp =
             , (Ann.None, mk1 (OneOf Texts.sbNone))
             ]
             & StatusBar.makeSwitchStatusWidget
-            (StatusBar.labelHeader Texts.sbSwitchAnnotations Texts.sbAnnotations)
+            StatusBar.Header
+            { StatusBar.headerCategoryTextLens = Texts.sbAnnotations
+            , StatusBar.headerSwitchTextLens = Texts.sbSwitchAnnotations
+            , StatusBar.headerWidget = Styled.sprite Sprites.pencilLine
+            }
             Config.nextAnnotationModeKeys annotationModeProp
 
 makeStatusWidgets ::

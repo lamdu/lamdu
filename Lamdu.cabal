@@ -39,7 +39,9 @@ Data-files:          config.json
                    , languages/hebrew.json
                    , languages/left-to-right.mixin.json
                    , languages/right-to-left.mixin.json
+                   , sprites/Credits.html
                    , sprites/earth-globe-world.png
+                   , sprites/pencil-line.png
                    , themes/base.mixin.json
                    , themes/dark.json
                    , themes/light.json
