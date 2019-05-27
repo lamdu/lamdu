@@ -18,13 +18,14 @@ module Lamdu.GUI.Styled
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
+import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Animation.Id (AnimId, ElemIds(..))
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Draw (Sprite)
+import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -239,10 +240,12 @@ unitSprite lens =
     <&> \env ->
     Draw.sprite (env ^. has . Lens.cloneLens lens)
     & void
+    -- Y goes up by default in DrawingCombinators, switch that
+    & (GLDraw.scaleV (Vector2 1 (-1)) %%)
     -- (-1..1) -> (0..2)
     & (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
-    & (GLDraw.scaleV 0.5 %%)
+    & (GLDraw.scaleV (Vector2 0.5 0.5) %%)
     & Anim.singletonFrame 1 (elemIds ^# lens)
     & View.make 1
 
