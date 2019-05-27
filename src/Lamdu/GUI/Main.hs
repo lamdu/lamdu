@@ -12,6 +12,7 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
@@ -32,6 +33,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Debug as Debug
@@ -79,6 +81,7 @@ type Ctx env =
     , Has SearchMenu.TermStyle env
     , Has (Texts.StatusBar Text) env
     , Language.HasLanguage env
+    , Has (Sprites Sprite) env
     )
 
 layout ::

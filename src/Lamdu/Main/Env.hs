@@ -8,6 +8,7 @@ module Lamdu.Main.Env
     , config
     , theme
     , settings
+    , sprites
     , style
     , mainLoop
     , animIdPrefix
@@ -20,6 +21,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
+import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
@@ -36,6 +38,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Sprites (Sprites(..))
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.Main as GUIMain
@@ -55,6 +58,7 @@ data Env = Env
     , _exportActions :: GUIMain.ExportActions ViewM
     , _config :: Config
     , _theme :: Theme
+    , _sprites :: Sprites Sprite
     , _settings :: Property IO Settings
     , _style :: Style.Style
     , _mainLoop :: MainLoop.Env
@@ -91,4 +95,5 @@ instance Has Cache.Functions Env where has = cachedFunctions
 instance Has Dir.Layout Env where has = language . has
 instance Has Language Env where has = language
 instance Has LangId Env where has = language . has
+instance Has (Sprites Sprite) Env where has = sprites
 instance Has (t Text) (Texts Text) => Has (t Text) Env where has = language . has

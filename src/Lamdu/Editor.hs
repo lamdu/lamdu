@@ -176,8 +176,8 @@ mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
             , _config = sample ^. sConfigData
             , _theme = sample ^. sThemeData
             , _settings = settings
-            , _style =
-                MakeStyle.make fonts (sample ^. sSpritesData) (sample ^. sThemeData)
+            , _style = MakeStyle.make fonts (sample ^. sThemeData)
+            , _sprites = sample ^. sSpritesData
             , _mainLoop = mainEnv
             , _animIdPrefix = mempty
             , _debugMonitors = monitors

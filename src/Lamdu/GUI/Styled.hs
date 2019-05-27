@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Animation as Anim
 import           GUI.Momentu.Animation.Id (AnimId, ElemIds(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.Draw (Sprite)
 import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -230,9 +231,9 @@ nameAtBinder name act =
         act & Reader.local (has .~ textEditStyle)
 
 sprite ::
-    (MonadReader env m, Style.HasStyle env) => OneOf Sprites -> m View
+    (MonadReader env m, Has (Sprites Sprite) env) => OneOf Sprites -> m View
 sprite lens =
-    Lens.view (has . Style.sprites . Lens.cloneLens lens)
+    Lens.view (has . Lens.cloneLens lens)
     <&> Draw.sprite
     <&> void
     -- (-1..1) -> (0..2)

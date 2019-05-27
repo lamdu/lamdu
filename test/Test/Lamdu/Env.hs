@@ -14,7 +14,7 @@ import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
-import           GUI.Momentu.Draw (Color(..))
+import           GUI.Momentu.Draw (Color(..), Sprite)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
@@ -31,6 +31,7 @@ import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Sprites (Sprites)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
@@ -64,6 +65,7 @@ data Env =
     , _eTasksMonitor :: Debug.Monitors
     , _eResults :: EvalResults
     , _eCacheFunctions :: Cache.Functions
+    , _eSprites :: Sprites Sprite
     , _eStyle :: Style
     , _eTextEditStyle :: TextEdit.Style
     , _eDirLayout :: Dir.Layout
@@ -88,6 +90,7 @@ instance Has Cache.Functions Env where has = eCacheFunctions
 instance Has SugarConfig.Config Env where has = has . Config.sugar
 instance Has EvalResults Env where has = eResults
 instance Has Annotations.Mode Env where has = has . sAnnotationMode
+instance Has (Sprites Sprite) Env where has = eSprites
 instance Has (t Text) (Texts Text) => Has (t Text) Env where has = eLanguage . has
 
 makeLang :: IO Language
@@ -131,7 +134,8 @@ make =
             , _eTasksMonitor = Debug.noopMonitors
             , _eResults = pure EvalResults.empty
             , _eCacheFunctions = cache
-            , _eStyle = MakeStyle.make (font <$ testTheme ^. fonts) sprites testTheme
+            , _eStyle = MakeStyle.make (font <$ testTheme ^. fonts) testTheme
+            , _eSprites = sprites
             , _eSpacing = 1
             , _eTextEditStyle =
                 TextEdit.Style

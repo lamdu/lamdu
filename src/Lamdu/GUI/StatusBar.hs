@@ -10,6 +10,7 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
@@ -24,6 +25,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import           Lamdu.GUI.Settings (TitledSelection(..), title, selection)
@@ -37,7 +39,6 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
 import qualified Lamdu.I18N.Versioning as Texts
 import           Lamdu.Settings (Settings)
-import qualified Lamdu.Style as Style
 import qualified Lamdu.VersionControl.Actions as VCActions
 
 import           Lamdu.Prelude
@@ -50,7 +51,7 @@ make ::
     , Grid.HasTexts env
     , Has VCConfig.Config env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
     , Has Config env
-    , Has Style.Style env
+    , Has (Sprites Sprite) env
     , Has (Texts.StatusBar Text) env
     , Has (Choice.Texts Text) env
     , Has (Texts.Versioning Text) env

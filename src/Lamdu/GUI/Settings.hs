@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property, composeLens)
 import qualified GUI.Momentu.Animation.Id as AnimId
+import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
@@ -27,6 +28,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
+import           Lamdu.Config.Theme.Sprites (Sprites)
 import qualified Lamdu.Config.Theme.Sprites as Sprites
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (OneOfT(..))
@@ -35,7 +37,6 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import qualified Lamdu.Settings as Settings
-import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
 
@@ -102,7 +103,7 @@ makeStatusWidgets ::
     , Has (Choice.Texts Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.StatusBar Text) env
-    , Style.HasStyle env
+    , Has (Sprites Sprite) env
     , Glue.HasTexts env
     ) =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->

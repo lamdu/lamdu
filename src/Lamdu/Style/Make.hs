@@ -36,7 +36,7 @@ import           Lamdu.Config.Theme.Fonts (Fonts)
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.I18N.Language (Language)
-import           Lamdu.Style (Style(..), LoadedSprites)
+import           Lamdu.Style (Style(..))
 
 import           Lamdu.Prelude
 
@@ -54,8 +54,8 @@ helpStyle font theme =
     , EventMapHelp._styleTint = theme ^. Theme.helpTint
     }
 
-make :: Fonts Font -> LoadedSprites -> Theme -> Style
-make fonts sprites theme =
+make :: Fonts Font -> Theme -> Style
+make fonts theme =
     Style
     { _base           = textEdit TextColors.baseColor    Fonts.base
     , _autoNameOrigin = textEdit TextColors.baseColor    Fonts.autoName
@@ -63,7 +63,6 @@ make fonts sprites theme =
     , _bytes          = textEdit TextColors.literalColor Fonts.literalBytes
     , _text           = textEdit TextColors.literalColor Fonts.literalText
     , _num            = textEdit TextColors.literalColor Fonts.base
-    , _sprites        = sprites
     }
     where
         textEdit color font =
