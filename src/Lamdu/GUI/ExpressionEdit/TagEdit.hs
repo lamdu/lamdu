@@ -233,16 +233,13 @@ allowedTagName =
     where
         f x = Char.isAlpha x || elem x Chars.operator
 
-type HasSearchTermEnv env =
-    ( Has Theme env, Has Config env, GuiState.HasState env
+makeHoleSearchTerm ::
+    ( MonadReader env m, Applicative o
+    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
+    , Has Theme env, Has Config env, GuiState.HasState env
     , TextEdit.HasStyle env, Has Hover.Style env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
-    )
-
-makeHoleSearchTerm ::
-    ( MonadReader env m, Applicative o, HasSearchTermEnv env, Glue.HasTexts env
-    , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
     ) =>
     Sugar.TagReplace (Name o) i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
