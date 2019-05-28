@@ -6,7 +6,9 @@ module Lamdu.GUI.ExpressionEdit.TagEdit
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
-    , makeTagEdit -- ^ for panes
+
+    , -- Used by tag pane edit
+      tagViewId
     ) where
 
 import qualified Control.Lens as Lens
@@ -24,7 +26,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
@@ -35,7 +36,6 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
@@ -62,45 +62,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-tagRenameId :: Widget.Id -> Widget.Id
-tagRenameId = (`Widget.joinId` ["rename"])
-
 tagViewId :: Widget.Id -> Widget.Id
 tagViewId = (`Widget.joinId` ["view"])
-
-disallowedNameChars :: String
-disallowedNameChars = ",[]\\`()"
-
-makeTagNameEdit ::
-    ( MonadReader env m, Applicative f
-    , Has (Texts.CodeUI Text) env
-    , TextEdit.HasStyle env, GuiState.HasCursor env, TextEdit.HasTexts env
-    ) =>
-    Name.StoredName f -> Widget.Id ->
-    m (TextWidget f)
-makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
-    do
-        env <- Lens.view id
-        let stopEditingEventMap =
-                E.keysEventMapMovesCursor
-                [ MetaKey noMods MetaKey.Key'Escape
-                , MetaKey noMods MetaKey.Key'Enter
-                ]
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . Texts.tag
-                    , has . Texts.stopEditing
-                    ]
-                ) (pure (tagViewId myId))
-        TextEdits.makeWordEdit
-            ?? TextEdit.Modes
-                { TextEdit._unfocused = tagText ^. Name.ttText
-                , TextEdit._focused = ""
-                }
-            ?? prop
-            ?? tagRenameId myId
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)
-            <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
 
 makePickEventMap ::
     ( Functor f, Has Config env
@@ -363,41 +326,6 @@ makeTagView tag =
             tag ^. Sugar.tagInstance
             & WidgetIds.fromEntityId
             & Widget.toAnimId
-
-makeTagEdit ::
-    ( Monad i, Applicative o
-    , Has (Texts.Name Text) env
-    , Has (Texts.CodeUI Text) env
-    , TextEdit.HasTexts env
-    , Glue.HasTexts env
-    ) =>
-    Sugar.Tag (Name o) -> ExprGuiM env i o (TextWidget o)
-makeTagEdit tag =
-    do
-        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
-        nameView <-
-            (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            makeTagView tag
-        env <- Lens.view id
-        let renameEventMap =
-                tagRenameId myId
-                & pure & E.keysEventMapMovesCursor
-                (env ^. has . Config.jumpToDefinitionKeys)
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . Texts.tag
-                    , has . Texts.renameTag
-                    ])
-        let hover = Hover.hoverBeside Align.tValue ?? nameView
-        case tag ^? Sugar.tagName . Name._Stored of
-            Just storedName | isRenaming ->
-                hover <*>
-                (makeTagNameEdit storedName myId <&> (^. Align.tValue))
-            _ -> nameView <&> Widget.weakerEvents renameEventMap & pure
-        & GuiState.assignCursor myId viewId
-    where
-        myId = tag ^. Sugar.tagInstance & WidgetIds.fromEntityId
-        viewId = tagViewId myId
 
 makeTagRefEdit ::
     ( Monad i, Monad o
