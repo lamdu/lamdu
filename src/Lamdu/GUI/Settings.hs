@@ -114,23 +114,22 @@ makeStatusWidgets ::
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property f Settings -> m (StatusWidgets f)
 makeStatusWidgets themeNames langNames prop =
-    do
-        StatusWidgets
-            <$> makeAnnotationsSwitcher
-                (composeLens Settings.sAnnotationMode prop)
-            <*> (traverse opt themeNames
-                    >>= StatusBar.makeSwitchStatusWidget
-                    (withHeader (pure Element.empty) Texts.sbSwitchTheme
-                        Texts.sbTheme) Config.changeThemeKeys themeProp)
-            <*> (traverse opt langNames
-                    >>= StatusBar.makeSwitchStatusWidget
-                    (withHeader (Styled.sprite Sprites.earthGlobe)
-                        Texts.sbSwitchLanguage Texts.sbLanguage)
-                    Config.changeLanguageKeys langProp)
-            <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
-                    (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
-                    Config.helpKeys helpProp
-                )
+    StatusWidgets
+    <$> makeAnnotationsSwitcher
+        (composeLens Settings.sAnnotationMode prop)
+    <*> (traverse opt themeNames
+            >>= StatusBar.makeSwitchStatusWidget
+            (withHeader (pure Element.empty) Texts.sbSwitchTheme
+                Texts.sbTheme) Config.changeThemeKeys themeProp)
+    <*> (traverse opt langNames
+            >>= StatusBar.makeSwitchStatusWidget
+            (withHeader (Styled.sprite Sprites.earthGlobe)
+                Texts.sbSwitchLanguage Texts.sbLanguage)
+            Config.changeLanguageKeys langProp)
+    <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
+            (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
+            Config.helpKeys helpProp
+        )
     where
         opt sel =
             (TextView.makeFocusable ?? (sel ^. title))
