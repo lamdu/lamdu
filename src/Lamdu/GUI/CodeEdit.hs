@@ -183,8 +183,7 @@ makePaneBodyEdit ::
     ExprGuiM env i o (Gui Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
-    Sugar.PaneTag tag ->
-        TagPaneEdit.make (tag ^. Sugar.tpTag) <&> Responsive.fromWithTextPos
+    Sugar.PaneTag tag -> TagPaneEdit.make tag
     Sugar.PaneDefinition def ->
         do
             env <- Lens.view id

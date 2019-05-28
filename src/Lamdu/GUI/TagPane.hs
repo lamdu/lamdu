@@ -12,6 +12,9 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.Responsive (Responsive)
+import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -62,7 +65,7 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
                 }
             ?? prop
             ?? tagRenameId myId
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem`disallowedNameChars)
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
 
 make ::
@@ -78,30 +81,33 @@ make ::
     , Has Config.Config env
     , Has Hover.Style env
     ) =>
-    Sugar.Tag (Name o) -> m (TextWidget o)
-make tag =
+    Sugar.TagPane (Name o) o -> m (Gui Responsive o)
+make tagPane =
     do
-        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             TagEdit.makeTagView tag
-        env <- Lens.view id
-        let renameEventMap =
-                tagRenameId myId
-                & pure & E.keysEventMapMovesCursor
-                (env ^. has . Config.jumpToDefinitionKeys)
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . Texts.tag
-                    , has . Texts.renameTag
-                    ])
-        let hover = Hover.hoverBeside Align.tValue ?? nameView
+        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
         case tag ^? Sugar.tagName . Name._Stored of
             Just storedName | isRenaming ->
-                hover <*>
+                (Hover.hoverBeside Align.tValue ?? nameView) <*>
                 (makeTagNameEdit storedName myId <&> (^. Align.tValue))
-            _ -> nameView <&> Widget.weakerEvents renameEventMap & pure
-        & GuiState.assignCursor myId viewId
+            _ ->
+                Lens.view id <&>
+                \env ->
+                let renameEventMap =
+                        tagRenameId myId
+                        & pure & E.keysEventMapMovesCursor
+                        (env ^. has . Config.jumpToDefinitionKeys)
+                        (E.toDoc env
+                            [ has . MomentuTexts.edit
+                            , has . Texts.tag
+                            , has . Texts.renameTag
+                            ])
+                in nameView <&> Widget.weakerEvents renameEventMap
+    & GuiState.assignCursor myId viewId
+    <&> Responsive.fromWithTextPos
     where
+        tag = tagPane ^. Sugar.tpTag
         myId = tag ^. Sugar.tagInstance & WidgetIds.fromEntityId
         viewId = TagEdit.tagViewId myId
