@@ -173,7 +173,7 @@ makePaneBodyEdit ::
     , Has (Choice.Texts Text) env, Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env, Has (Texts.Definitions Text) env
     , Has (Texts.Name Text) env, Has (Texts.Navigation Text) env
-    , Has LangId env
+    , Has LangId env, Has (Map LangId Text) env
     ) =>
     Sugar.Pane (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
