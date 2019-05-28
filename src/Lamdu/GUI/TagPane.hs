@@ -5,6 +5,7 @@ module Lamdu.GUI.TagPane
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
@@ -16,8 +17,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
@@ -65,13 +66,19 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
 
 make ::
-    ( Monad i, Applicative o
+    ( MonadReader env m
+    , Applicative o
     , Has (Texts.Name Text) env
     , Has (Texts.CodeUI Text) env
-    , TextEdit.HasTexts env
+    , TextEdit.Deps env
     , Glue.HasTexts env
+    , GuiState.HasCursor env
+    , Has Theme env
+    , Element.HasAnimIdPrefix env
+    , Has Config.Config env
+    , Has Hover.Style env
     ) =>
-    Sugar.Tag (Name o) -> ExprGuiM env i o (TextWidget o)
+    Sugar.Tag (Name o) -> m (TextWidget o)
 make tag =
     do
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
