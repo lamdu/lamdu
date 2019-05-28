@@ -22,6 +22,7 @@ import           Lamdu.I18N.Code
 import           Lamdu.I18N.CodeUI
 import           Lamdu.I18N.Collaboration
 import           Lamdu.I18N.Definitions
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.I18N.Name
 import           Lamdu.I18N.Navigation
 import           Lamdu.I18N.StatusBar
@@ -30,7 +31,8 @@ import           Lamdu.I18N.Versioning
 import           Lamdu.Prelude
 
 data Texts a = Texts
-    { _code :: Code a
+    { _languageNames :: Map LangId a
+    , _code :: Code a
     , _codeUI :: CodeUI a
     , _commonTexts :: MomentuTexts.Texts a
     , _collaborationTexts :: Collaboration a
@@ -56,6 +58,7 @@ data Texts a = Texts
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
+instance Has (Map LangId         Text) (Texts Text) where has = languageNames
 instance Has (EventMap.Texts     Text) (Texts Text) where has = eventMap
 instance Has (Dir.Texts          Text) (Texts Text) where has = dir
 instance Has (Glue.Texts         Text) (Texts Text) where has = glue

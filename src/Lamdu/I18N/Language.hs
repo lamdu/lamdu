@@ -65,6 +65,7 @@ type HasLanguage env =
     , Has (Texts.Definitions   Text) env
     , Has (Choice.Texts        Text) env
     , Has (Texts.Name          Text) env
+    , Has (Map LangId          Text) env
     , Has Language env
     )
 

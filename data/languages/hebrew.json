@@ -3,6 +3,9 @@
     "identifier": "hebrew",
     "title": "עברית",
     "texts": {
+        "languageNames": {
+            "english": "אנגלית"
+        },
         "commonTexts": {
             "edit": "עריכה",
             "view": "תצוגה",

@@ -3,6 +3,8 @@
     "identifier": "english",
     "title": "English",
     "texts": {
+        "languageNames": {
+        },
         "commonTexts": {
             "edit": "Edit",
             "view": "View",
