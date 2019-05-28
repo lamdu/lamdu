@@ -19,26 +19,16 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui, HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
+import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -74,24 +64,6 @@ replExpr = Sugar.waRepl . Sugar.replExpr . val . Sugar._BinderExpr
 wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
-makePaneGui ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Choice.Texts Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Sugar.PaneBody (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM.ExprGuiM env i o (Gui Responsive o)
-makePaneGui (Sugar.PaneDefinition def) = DefinitionEdit.make mempty def
-makePaneGui (Sugar.PaneTag tag) =
-    TagEdit.makeTagEdit tag <&> Responsive.fromWithTextPos
-
 makeGui :: String -> Env -> T ViewM (Gui Responsive (T ViewM))
 makeGui afterDoc env =
     do
@@ -105,8 +77,8 @@ makeGui afterDoc env =
                     & GuiState.assignCursor WidgetIds.replId replExprId
                 paneGuis <-
                     workArea ^..
-                    Sugar.waPanes . traverse . Sugar.paneBody
-                    & traverse makePaneGui
+                    Sugar.waPanes . traverse
+                    & traverse CodeEdit.makePaneBodyEdit
                 Responsive.vbox ?? (replGui : paneGuis)
             & ExprGuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui

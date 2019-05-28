@@ -3,6 +3,9 @@ module Lamdu.GUI.CodeEdit
     ( make
     , EvalResults
     , ReplEdit.ExportRepl(..), ExportActions(..)
+
+    , -- exported for tests
+      makePaneBodyEdit
     ) where
 
 import           AST (_Pure)
@@ -164,7 +167,7 @@ exportPaneEventMap env theExportActions paneBody =
             (E.toDoc (env ^. has) [Texts.collaboration, docLens])
 
 makePaneBodyEdit ::
-    ( Monad m
+    ( Monad i, Monad o
     , Grid.HasTexts env
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
@@ -175,9 +178,9 @@ makePaneBodyEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Pane (Name (T m)) (T m) (T m)
-    (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM env (T m) (T m) (Gui Responsive (IOTrans m))
+    Sugar.Pane (Name o) i o
+    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    ExprGuiM env i o (Gui Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag ->
@@ -197,7 +200,6 @@ makePaneBodyEdit pane =
                         , has . MomentuTexts.delete
                         ])
             DefinitionEdit.make eventMap def
-    <&> Lens.mapped %~ IOTrans.liftTrans
 
 makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
@@ -230,6 +232,7 @@ makePaneEdit theExportActions pane =
                 ] & mconcat
             paneConfig = env ^. has . Config.pane
         makePaneBodyEdit pane
+            <&> Lens.mapped %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinition ::
