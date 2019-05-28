@@ -506,12 +506,15 @@ toDef def@Definition{_drName, _drBody} =
         _drBody <- toDefinitionBody _drBody
         pure def{_drName, _drBody}
 
+toTagPane :: MonadNaming m => TagPane (OldName m) o -> m (TagPane (NewName m) o)
+toTagPane (TagPane tag i18n) = toTagOf Tag tag <&> (`TagPane` i18n)
+
 toPaneBody ::
     MonadNaming m =>
     PaneBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
     m (PaneBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toPaneBody (PaneDefinition def) = toDef def <&> PaneDefinition
-toPaneBody (PaneTag tag) = toTagOf Tag tag <&> PaneTag
+toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
 
 toPane ::
     MonadNaming m =>

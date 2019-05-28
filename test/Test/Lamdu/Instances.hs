@@ -38,6 +38,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import qualified Lamdu.I18N.Fonts as I18N.Fonts
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Precedence (HasPrecedence(..))
@@ -218,6 +219,7 @@ deriving instance Eq n => Eq (Sugar.ResVal n)
 deriving instance Eq n => Eq (Sugar.Scheme n)
 deriving instance Eq n => Eq (Sugar.TagRef n Unit Unit)
 deriving instance Eq n => Eq (Sugar.TagOption n Unit a)
+deriving instance Eq n => Eq (Sugar.TagPane n Unit)
 deriving instance Eq n => Eq (Sugar.TagReplace n Unit Unit a)
 deriving instance Eq n => Eq (Sugar.Type n)
 deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
@@ -281,6 +283,7 @@ instance NFData ExprGui.Payload
 instance NFData Name.Collision
 instance NFData Name.TagText
 instance NFData ShowAnnotation
+instance NFData LangId
 instance NFData Sugar.BinderBodyScope
 instance NFData Sugar.BinderMode
 instance NFData Sugar.BinderParamScopeId
@@ -314,6 +317,7 @@ instance NFData n => NFData (Sugar.ParamsRecordVarRef n)
 instance NFData n => NFData (Sugar.ResVal n)
 instance NFData n => NFData (Sugar.Scheme n)
 instance NFData n => NFData (Sugar.TId n)
+instance NFData n => NFData (Sugar.TagPane n (T o))
 instance NFData n => NFData (Sugar.TagRef n (T i) (T o))
 instance NFData n => NFData (Sugar.Tag n)
 instance NFData n => NFData (Sugar.Type n)

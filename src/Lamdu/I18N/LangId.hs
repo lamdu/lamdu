@@ -11,6 +11,6 @@ import           Lamdu.Prelude
 
 newtype LangId = LangId Text
     deriving newtype (Eq, Ord, FromJSON, ToJSON, Binary, ToJSONKey, FromJSONKey)
-    deriving stock Show
+    deriving stock (Generic, Show)
 
 Lens.makePrisms ''LangId

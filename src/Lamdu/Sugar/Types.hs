@@ -4,6 +4,7 @@ module Lamdu.Sugar.Types
     , EntityId
     , PaneBody(..), _PaneDefinition
     , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp
+    , TagPane(..), tpTag, tpLocalizedNames
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
@@ -20,6 +21,7 @@ import           Data.Property (Property)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
+import           Lamdu.I18N.LangId (LangId(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
@@ -67,9 +69,14 @@ data Definition name i o a = Definition
     , _drBody :: DefinitionBody name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
+data TagPane name o = TagPane
+    { _tpTag :: Tag name
+    , _tpLocalizedNames :: Map LangId (Property o Text)
+    } deriving Generic
+
 data PaneBody name i o a
     = PaneDefinition (Definition name i o a)
-    | PaneTag (Tag name)
+    | PaneTag (TagPane name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane name i o a = Pane
@@ -105,6 +112,7 @@ data WorkArea name i o a = WorkArea
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionBuiltin
 Lens.makeLenses ''Pane
+Lens.makeLenses ''TagPane
 Lens.makeLenses ''WorkArea
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''PaneBody

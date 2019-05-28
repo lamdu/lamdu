@@ -158,7 +158,7 @@ exportPaneEventMap env theExportActions paneBody =
     Sugar.PaneDefinition def ->
         exportEventMap exportDef (def ^. Sugar.drDefI) Texts.exportDefToJSON
     Sugar.PaneTag tag ->
-        exportEventMap exportTag (tag ^. Sugar.tagVal) Texts.exportTagToJSON
+        exportEventMap exportTag (tag ^. Sugar.tpTag . Sugar.tagVal) Texts.exportTagToJSON
     where
         exportKeys = env ^. has . Config.export . Config.exportKeys
         exportEventMap act arg docLens =
@@ -184,7 +184,7 @@ makePaneBodyEdit ::
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag ->
-        TagEdit.makeTagEdit tag <&> Responsive.fromWithTextPos
+        TagEdit.makeTagEdit (tag ^. Sugar.tpTag) <&> Responsive.fromWithTextPos
     Sugar.PaneDefinition def ->
         do
             env <- Lens.view id

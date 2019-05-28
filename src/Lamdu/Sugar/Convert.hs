@@ -23,6 +23,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
@@ -281,12 +282,29 @@ convertPaneBody ::
     T m
     (PaneBody
         InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
-convertPaneBody _ _ (Anchors.PaneTag tag) =
-    PaneTag Tag
-    { _tagName = nameWithoutContext tag
-    , _tagInstance = EntityId.ofTagPane tag
-    , _tagVal = tag
-    } & pure
+convertPaneBody _ _ (Anchors.PaneTag tagId) =
+    ExprIRef.readTagData tagId <&>
+    \tagData ->
+    let mkNameProp langId text =
+            Property.Property
+            { Property._pVal = text
+            , Property._pSet =
+                \newText ->
+                tagData
+                & Tag.tagNames . Lens.at langId ?~ newText
+                & Transaction.writeIRef (ExprIRef.tagI tagId)
+            }
+    in
+    PaneTag TagPane
+    { _tpTag =
+        Tag
+        { _tagName = nameWithoutContext tagId
+        , _tagInstance = EntityId.ofTagPane tagId
+        , _tagVal = tagId
+        }
+    , _tpLocalizedNames =
+        tagData ^. Tag.tagNames & Lens.imap mkNameProp
+    }
 convertPaneBody env cp (Anchors.PaneDefinition defI) =
     do
         bodyS <-
