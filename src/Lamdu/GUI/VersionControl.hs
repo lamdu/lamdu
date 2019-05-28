@@ -94,11 +94,11 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 makeBranchSelector ::
-    ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.HasStyle env
+    ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.Deps env
     , Applicative mw, Has Hover.Style env, Element.HasAnimIdPrefix env
     , Has VersionControl.Config env, Has VersionControl.Theme env
     , Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env
-    , TextEdit.HasTexts env, Has (Choice.Texts Text) env
+    , Has (Choice.Texts Text) env
     , Has (Glue.Texts Text) env
     ) =>
     (forall a. Transaction n a -> mw a) ->

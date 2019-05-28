@@ -5,14 +5,13 @@
 module GUI.Momentu.Widgets.TextEdit
     ( Style(..)
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
-    , HasStyle
     , Modes(..), focused, unfocused
     , EmptyStrings
     , make
     , defaultStyle
     , getCursor, encodeCursor
     , Texts(..)
-    , HasTexts
+    , Deps, HasTexts
     ) where
 
 import qualified Control.Lens as Lens
@@ -91,6 +90,8 @@ data Style = Style
 Lens.makeLenses ''Style
 
 type HasStyle env = (Has Style env, Has TextView.Style env)
+
+type Deps env = (HasStyle env, HasTexts env)
 
 instance Has TextView.Style Style where has = sTextViewStyle
 

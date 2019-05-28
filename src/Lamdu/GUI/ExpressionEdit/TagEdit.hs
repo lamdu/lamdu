@@ -235,10 +235,9 @@ allowedTagName =
 
 makeHoleSearchTerm ::
     ( MonadReader env m, Applicative o
-    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
+    , Glue.HasTexts env, TextEdit.Deps env, SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env, Has Hover.Style env
     , Has Theme env, Has Config env, GuiState.HasState env
-    , TextEdit.HasStyle env, Has Hover.Style env
     , HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     Sugar.TagReplace (Name o) i o a ->

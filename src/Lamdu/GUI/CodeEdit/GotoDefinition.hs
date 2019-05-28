@@ -106,10 +106,10 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
 
 make ::
     ( MonadReader env m, Applicative o
-    , Has Theme env, Element.HasAnimIdPrefix env, TextEdit.HasStyle env
+    , Has Theme env, Element.HasAnimIdPrefix env
     , Has Menu.Config env, Has Hover.Style env, GuiState.HasState env
     , Has SearchMenu.TermStyle env, Has (Navigation Text) env
-    , Glue.HasTexts env, TextEdit.HasTexts env
+    , Glue.HasTexts env, TextEdit.Deps env
     , SearchMenu.HasTexts env, Has (Texts.Name Text) env
     ) =>
     m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)

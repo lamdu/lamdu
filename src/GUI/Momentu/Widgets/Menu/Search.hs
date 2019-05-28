@@ -146,7 +146,7 @@ defaultEmptyStrings = TextEdit.Modes "  " "  "
 --     addPickFirstResultEvent to add it
 basicSearchTermEdit ::
     ( MonadReader env m, Applicative f, HasTexts env
-    , TextEdit.HasStyle env, HasState env, TextEdit.HasTexts env
+    , TextEdit.Deps env, HasState env
     ) =>
     Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
 basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
@@ -215,7 +215,7 @@ addSearchTermBgColor myId =
         bgAnimId = Widget.toAnimId myId <> ["hover background"]
 
 addSearchTermEmptyColors ::
-    ( MonadReader env m, Has TermStyle env, TextEdit.HasStyle env
+    ( MonadReader env m, Has TermStyle env, Has TextEdit.Style env
     ) =>
     m a -> m a
 addSearchTermEmptyColors act =
@@ -224,7 +224,7 @@ addSearchTermEmptyColors act =
         Reader.local (has . TextEdit.sEmptyStringsColors .~ colors) act
 
 addSearchTermStyle ::
-    ( MonadReader env m, Has TermStyle env, TextEdit.HasStyle env
+    ( MonadReader env m, Has TermStyle env, Has TextEdit.Style env
     , Functor f, State.HasCursor env
     ) =>
     Widget.Id -> m (Term f) -> m (Term f)
@@ -234,8 +234,8 @@ addSearchTermStyle myId act =
 
 searchTermEdit ::
     ( MonadReader env m, Applicative f, Has TermStyle env
-    , TextEdit.HasStyle env, Has Menu.Config env, State.HasState env
-    , TextEdit.HasTexts env, HasTexts env
+    , TextEdit.Deps env, Has Menu.Config env, State.HasState env
+    , HasTexts env
     ) =>
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =

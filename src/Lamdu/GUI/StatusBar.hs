@@ -45,9 +45,8 @@ import           Lamdu.Prelude
 
 make ::
     ( MonadReader env m, MonadTransaction n m
-    , TextEdit.HasStyle env, Has Theme env, Has Hover.Style env
+    , TextEdit.Deps env, Has Theme env, Has Hover.Style env
     , GuiState.HasState env, Element.HasAnimIdPrefix env
-    , TextEdit.HasTexts env
     , Grid.HasTexts env
     , Has VCConfig.Config env, Has VCConfig.Theme env, Spacer.HasStdSpacing env
     , Has Config env

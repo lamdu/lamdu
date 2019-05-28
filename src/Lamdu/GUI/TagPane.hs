@@ -36,7 +36,7 @@ disallowedNameChars = ",[]\\`()"
 makeTagNameEdit ::
     ( MonadReader env m, Applicative f
     , Has (Texts.CodeUI Text) env
-    , TextEdit.HasStyle env, GuiState.HasCursor env, TextEdit.HasTexts env
+    , TextEdit.Deps env, GuiState.HasCursor env
     ) =>
     Name.StoredName f -> Widget.Id ->
     m (TextWidget f)

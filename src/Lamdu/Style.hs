@@ -8,6 +8,7 @@ module Lamdu.Style
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Widgets.TextView as TextView
 
 import           Lamdu.Prelude
 
@@ -21,4 +22,4 @@ data Style = Style
     }
 Lens.makeLenses ''Style
 
-type HasStyle env = (TextEdit.HasStyle env, Has Style env)
+type HasStyle env = (Has TextEdit.Style env, Has TextView.Style env, Has Style env)
