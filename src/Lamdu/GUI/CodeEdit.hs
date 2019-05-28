@@ -179,27 +179,27 @@ makePaneBodyEdit ::
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
     ExprGuiM env (T m) (T m) (Gui Responsive (IOTrans m))
 makePaneBodyEdit pane =
-    do
-        env <- Lens.view id
-        let eventMap def =
-                do
-                    Property.setP
-                        (def ^. Sugar.drDefinitionState & Property.MkProperty)
-                        Sugar.DeletedDefinition
-                    pane ^. Sugar.paneClose
-                    <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys env)
-                    (E.toDoc env
-                        [ has . MomentuTexts.edit
-                        , has . Texts.def
-                        , has . MomentuTexts.delete
-                        ])
-        case pane ^. Sugar.paneBody of
-            Sugar.PaneTag tag ->
-                TagEdit.makeTagEdit tag <&> Responsive.fromWithTextPos
-            Sugar.PaneDefinition def ->
-                DefinitionEdit.make (eventMap def) def
-            <&> Lens.mapped %~ IOTrans.liftTrans
+    case pane ^. Sugar.paneBody of
+    Sugar.PaneTag tag ->
+        TagEdit.makeTagEdit tag <&> Responsive.fromWithTextPos
+    Sugar.PaneDefinition def ->
+        do
+            env <- Lens.view id
+            let eventMap =
+                    do
+                        Property.setP
+                            (def ^. Sugar.drDefinitionState & Property.MkProperty)
+                            Sugar.DeletedDefinition
+                        pane ^. Sugar.paneClose
+                        <&> WidgetIds.fromEntityId
+                        & E.keysEventMapMovesCursor (Config.delKeys env)
+                        (E.toDoc env
+                            [ has . MomentuTexts.edit
+                            , has . Texts.def
+                            , has . MomentuTexts.delete
+                            ])
+            DefinitionEdit.make eventMap def
+    <&> Lens.mapped %~ IOTrans.liftTrans
 
 makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
