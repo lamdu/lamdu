@@ -141,7 +141,7 @@ def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkTag (Just var) tag
     , Sugar._drDefI = "def"
-    , Sugar._drDefinitionState = prop Sugar.LiveDefinition & pure
+    , Sugar._drDefinitionState = prop Sugar.LiveDefinition
     , Sugar._drEntityId = "dummy"
     , Sugar._drBody =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression

@@ -187,17 +187,15 @@ makePaneBodyEdit pane =
             env <- Lens.view id
             let eventMap =
                     do
-                        Property.setP
-                            (def ^. Sugar.drDefinitionState & Property.MkProperty)
-                            Sugar.DeletedDefinition
+                        _ <- Property.set (def ^. Sugar.drDefinitionState) Sugar.DeletedDefinition
                         pane ^. Sugar.paneClose
-                        <&> WidgetIds.fromEntityId
-                        & E.keysEventMapMovesCursor (Config.delKeys env)
-                        (E.toDoc env
-                            [ has . MomentuTexts.edit
-                            , has . Texts.def
-                            , has . MomentuTexts.delete
-                            ])
+                    <&> WidgetIds.fromEntityId
+                    & E.keysEventMapMovesCursor (Config.delKeys env)
+                    (E.toDoc env
+                        [ has . MomentuTexts.edit
+                        , has . Texts.def
+                        , has . MomentuTexts.delete
+                        ])
             DefinitionEdit.make eventMap def
     <&> Lens.mapped %~ IOTrans.liftTrans
 

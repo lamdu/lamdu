@@ -285,6 +285,7 @@ instance NFData Sugar.BinderBodyScope
 instance NFData Sugar.BinderMode
 instance NFData Sugar.BinderParamScopeId
 instance NFData Sugar.CompiledErrorType
+instance NFData Sugar.DefinitionState
 instance NFData Sugar.Error
 instance NFData Sugar.EvalTypeError
 instance NFData Sugar.FuncApplyLimit

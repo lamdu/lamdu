@@ -293,12 +293,12 @@ convertPaneBody env cp (Anchors.PaneDefinition defI) =
             ExprLoad.def defI <&> Definition.defPayload .~ defI
             >>= convertDefBody env cp
         tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env cp defVar
+        defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty
         OrderTags.orderDef Definition
             { _drEntityId = EntityId.ofIRef defI
             , _drName = tag
             , _drBody = bodyS
-            , _drDefinitionState =
-                Anchors.assocDefinitionState defI ^. Property.mkProperty
+            , _drDefinitionState = defState
             , _drDefI = defVar
             } <&> PaneDefinition
     where

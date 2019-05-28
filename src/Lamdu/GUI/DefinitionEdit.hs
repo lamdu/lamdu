@@ -29,7 +29,6 @@ import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -140,8 +139,6 @@ make ::
     ExprGuiM env i o (Gui Responsive o)
 make defEventMap def =
     do
-        defStateProp <- def ^. Sugar.drDefinitionState & ExprGuiM.im
-        let defState = Property.value defStateProp
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
@@ -149,7 +146,7 @@ make defEventMap def =
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
                 <&> Widget.weakerEvents defEventMap
-        case defState of
+        case defStateProp ^. Property.pVal of
             Sugar.LiveDefinition -> pure defGui
             Sugar.DeletedDefinition ->
                 do
@@ -164,6 +161,7 @@ make defEventMap def =
                     Responsive.vbox ?? [buttonGui, defGuiStyled]
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
+        defStateProp = def ^. Sugar.drDefinitionState
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 topLevelSchemeTypeView ::
