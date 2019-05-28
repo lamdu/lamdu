@@ -67,7 +67,7 @@ mkOptions ::
 mkOptions sugarContext argI argS exprPl =
     Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
     <&> (pure fragmentOptions <>)
-    <&> Lens.mapped %~ (`Hole.addWithoutDups` mkSuggested)
+    <&> Lens.mapped %~ Hole.addWithoutDups mkSuggested
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
