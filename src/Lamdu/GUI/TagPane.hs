@@ -3,10 +3,13 @@ module Lamdu.GUI.TagPane
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Property (Property, pVal)
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation.Id (augmentId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -17,13 +20,16 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
+import           Lamdu.I18N.LangId (LangId(..))
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -68,25 +74,18 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
 
-make ::
+makeTopRow ::
     ( MonadReader env m
     , Applicative o
-    , Has (Texts.Name Text) env
-    , Has (Texts.CodeUI Text) env
-    , TextEdit.Deps env
-    , Glue.HasTexts env
-    , GuiState.HasCursor env
-    , Has Theme env
-    , Element.HasAnimIdPrefix env
-    , Has Config.Config env
-    , Has Hover.Style env
+    , Has (Texts.Name Text) env, Has (Texts.CodeUI Text) env
+    , TextEdit.Deps env, Glue.HasTexts env
+    , GuiState.HasCursor env, Has Theme env
+    , Element.HasAnimIdPrefix env, Has Config.Config env, Has Hover.Style env
     ) =>
-    Sugar.TagPane (Name o) o -> m (Gui Responsive o)
-make tagPane =
+    Widget.Id -> Sugar.Tag (Name o) -> m (Gui Responsive o)
+makeTopRow myId tag =
     do
-        nameView <-
-            (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            TagEdit.makeTagView tag
+        nameView <- (Widget.makeFocusableView ?? viewId <&> fmap) <*> TagEdit.makeTagView tag
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
         case tag ^? Sugar.tagName . Name._Stored of
             Just storedName | isRenaming ->
@@ -108,6 +107,49 @@ make tagPane =
     & GuiState.assignCursor myId viewId
     <&> Responsive.fromWithTextPos
     where
-        tag = tagPane ^. Sugar.tpTag
-        myId = tag ^. Sugar.tagInstance & WidgetIds.fromEntityId
         viewId = TagEdit.tagViewId myId
+
+makeLocalizedNames ::
+    ( MonadReader env m
+    , Applicative o
+    , TextEdit.Deps env, Glue.HasTexts env, Spacer.HasStdSpacing env
+    , Has LangId env
+    ) =>
+    Widget.Id -> Map LangId (Property o Text) -> m (Gui Responsive o)
+makeLocalizedNames myId names =
+    do
+        curLang <- Lens.view has
+        let makeName lang name
+                | lang == curLang = pure []
+                | otherwise = makeLocalizedName lang name <&> (:[])
+        Responsive.taggedList <*> (Lens.itraverse makeName names <&> (^.. traverse) <&> concat)
+    where
+        makeLocalizedName (LangId lang) name =
+            Responsive.TaggedItem
+            <$> ((TextView.make ?? lang ?? langId <> ["key"])
+                /|/ Spacer.stdHSpace
+                <&> Align.tValue %~ Widget.fromView)
+            <*> (TextView.make ?? name ^. pVal ?? langId <> ["val"] <&> Responsive.fromTextView)
+            <*> pure Element.empty
+            where
+                langId = augmentId lang (Widget.toAnimId myId)
+
+make ::
+    ( MonadReader env m
+    , Applicative o
+    , Has (Texts.Name Text) env, Has (Texts.CodeUI Text) env
+    , TextEdit.Deps env, Glue.HasTexts env, Has LangId env
+    , GuiState.HasCursor env, Has Theme env
+    , Element.HasAnimIdPrefix env, Has Config.Config env
+    , Has Hover.Style env, Spacer.HasStdSpacing env
+    ) =>
+    Sugar.TagPane (Name o) o -> m (Gui Responsive o)
+make tagPane =
+    Responsive.vbox <*>
+    sequenceA
+    [ makeTopRow myId (tagPane ^. Sugar.tpTag)
+    , Spacer.stdVSpace <&> Responsive.fromView
+    , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
+    ]
+    where
+        myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId

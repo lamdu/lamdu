@@ -66,6 +66,7 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
+import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
@@ -168,15 +169,11 @@ exportPaneEventMap env theExportActions paneBody =
 
 makePaneBodyEdit ::
     ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Choice.Texts Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
+    , Grid.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
+    , Has (Choice.Texts Text) env, Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env, Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env, Has (Texts.Navigation Text) env
+    , Has LangId env
     ) =>
     Sugar.Pane (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
