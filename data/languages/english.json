@@ -70,8 +70,6 @@
             "moveInwards": "Move inwards"
         },
         "codeUI": {
-            "hidden": "Hidden",
-            "shown": "Shown",
             "hide": "Hide",
             "show": "Show",
             "createNew": "Create new",

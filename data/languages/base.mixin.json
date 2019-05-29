@@ -9,6 +9,10 @@
             "lam": "λ",
             "recordSep": ","
         },
+        "codeUI": {
+            "hidden": "◎",
+            "shown": "◉"
+        },
         "statusBar": {
             "branch": "⎇"
         }

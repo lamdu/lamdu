@@ -73,8 +73,6 @@
             "moveInwards": "הזז פנימה"
         },
         "codeUI": {
-            "hidden": "חבוי",
-            "shown": "מוצג",
             "hide": "החבא",
             "show": "הצג",
             "createNew": "צור חדש",
