@@ -38,6 +38,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+-- NOTE: We are hard-coded to ExprGuiM because of the expression depth
+-- ttl that eval results respect and change
+
 textView ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env
