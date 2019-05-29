@@ -125,6 +125,12 @@ allowedSearchTermCommon suffixes searchTerm =
     , (`Text.isPrefixOf` "{}")
     , (== "\\")
     , Lens.has (Lens.reversed . Lens._Cons . Lens.filtered inj)
+    , -- Allow typing records in wrong direction of keyboard input,
+      -- for example when editing in right-to-left but not switching the input language.
+      -- Then the '}' key would had inserted a '{' but inserts a '}'.
+      -- In this case it would probably help to still allow it
+      -- as the user intended to create a record.
+      (== "}")
     ]
     where
         inj (lastChar, revInit) =
