@@ -46,6 +46,18 @@ import           Lamdu.Prelude
 sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
+widgetSize :: Lens' (Widget a) (Vector2 Double)
+widgetSize f w =
+    w
+    & wSize f
+    <&> sizedState <. (_StateFocused . Lens.argument) %@~ fixSurrounding
+    where
+        fixSurrounding (Vector2 nw nh) surrounding =
+            surrounding
+            & sRight +~ nw - ow
+            & sBottom +~ nh - oh
+        Vector2 ow oh = w ^. wSize
+
 instance (Functor f, a ~ f Update) => Element (Widget a) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
@@ -56,11 +68,11 @@ instance (Functor f, a ~ f Update) => Element (Widget a) where
     padImpl leftAndTop rightAndBottom w =
         w
         & wState .~ translate leftAndTop w
-        & wSize +~ leftAndTop + rightAndBottom
+        & widgetSize +~ leftAndTop + rightAndBottom
     scale mult w =
         w
         & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
-        & wSize *~ mult
+        & widgetSize *~ mult
         & wFocused . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & eventMapMaker . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
@@ -69,16 +81,7 @@ instance (Functor f, a ~ f Update) => Element (Widget a) where
         & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeftAndSize *~ mult
 
 instance (Functor f, a ~ f Update) => SizedElement (Widget a) where
-    size f w =
-        w
-        & wSize f
-        <&> sizedState <. (_StateFocused . Lens.argument) %@~ fixSurrounding
-        where
-            fixSurrounding (Vector2 nw nh) surrounding =
-                surrounding
-                & sRight +~ nw - ow
-                & sBottom +~ nh - oh
-            Vector2 ow oh = w ^. wSize
+    size = widgetSize
 
 instance
     ( Functor f, a ~ f Update, Has Dir.Layout env
