@@ -222,15 +222,20 @@ fuzzyMaker = memo Fuzzy.make
 
 holeMatches :: Monad i => Text -> [Group i o] -> [Group i o]
 holeMatches searchTerm groups =
-    groups ^@.. Lens.ifolded
-    <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
-    & concat
-    & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
-    <&> snd
-    & nubBy ((==) `on` fst)
-    <&> snd
+    filteredGroups
     <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
     where
+        filteredGroups
+            | Text.null searchTerm = groups
+            | otherwise =
+                groups
+                ^@.. Lens.ifolded
+                <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
+                & concat
+                & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
+                <&> snd
+                & nubBy ((==) `on` fst)
+                <&> snd
         searchText = ValTerms.definitePart searchTerm
         searchTerms group =
             case group ^. groupSearchTerms of
