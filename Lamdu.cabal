@@ -361,6 +361,7 @@ Library
                   , Lamdu.GUI.StatusBar.Common
                   , Lamdu.GUI.Styled
                   , Lamdu.GUI.TagPane
+                  , Lamdu.GUI.TagView
                   , Lamdu.GUI.TypeView
                   , Lamdu.GUI.VersionControl
                   , Lamdu.GUI.VersionControl.Config

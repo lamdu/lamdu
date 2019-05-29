@@ -1,14 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.ExpressionEdit.TagEdit
     ( makeRecordTag, makeVariantTag
-    , makeTagView
     , makeParamTag, addParamId
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
-
-    , -- Used by tag pane edit
-      tagViewId
     ) where
 
 import qualified Control.Lens as Lens
@@ -50,6 +46,7 @@ import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
@@ -61,9 +58,6 @@ import           Lamdu.Sugar.EntityId (EntityId)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-tagViewId :: Widget.Id -> Widget.Id
-tagViewId = (`Widget.joinId` ["view"])
 
 makePickEventMap ::
     ( Functor f, Has Config env
@@ -309,20 +303,6 @@ makeTagHoleEdit tagRefReplace mkPickResult holeId =
     (makeOptions tagRefReplace mkPickResult) Element.empty holeId
     ?? Menu.AnyPlace
 
-makeTagView ::
-    ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has Theme env, Has Dir.Layout env, Has (Texts.Name Text) env
-    ) =>
-    Sugar.Tag (Name f) -> m (WithTextPos View)
-makeTagView tag =
-    NameView.make (tag ^. Sugar.tagName)
-    & Reader.local (Element.animIdPrefix .~ animId)
-    where
-        animId =
-            tag ^. Sugar.tagInstance
-            & WidgetIds.fromEntityId
-            & Widget.toAnimId
-
 makeTagRefEdit ::
     ( Monad i, Monad o
     , Glue.HasTexts env
@@ -380,7 +360,7 @@ makeTagRefEditWith onView onPickNext tag =
                 <> chooseNewTagEventMap
         nameView <-
             (Widget.makeFocusableView ?? viewId <&> fmap) <*>
-            makeTagView info
+            TagView.make info
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
         let leaveHoleEventMap =
@@ -402,7 +382,7 @@ makeTagRefEditWith onView onPickNext tag =
         info = tag ^. Sugar.tagRefTag
         myId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
         holeId = WidgetIds.tagHoleId myId
-        viewId = tagViewId myId
+        viewId = TagView.id myId
         mkPickResult tagInstance () =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId tagInstance

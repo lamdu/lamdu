@@ -27,9 +27,9 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.GUI.ExpressionEdit.TagEdit (makeTagView)
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.Name as Texts
@@ -177,7 +177,7 @@ makeField ::
     m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
     (,)
-    <$> makeTagView tag
+    <$> TagView.make tag
     <*> makeInternal (Prec 0) fieldType
 
 makeVariantField ::
@@ -188,7 +188,7 @@ makeVariantField ::
     (Sugar.Tag (Name f), Sugar.Type (Name f)) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
-    makeTagView tag <&> (, Element.empty)
+    TagView.make tag <&> (, Element.empty)
     -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 

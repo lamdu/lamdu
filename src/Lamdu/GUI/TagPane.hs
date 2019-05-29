@@ -29,7 +29,7 @@ import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.I18N.LangId (LangId(..), _LangId)
@@ -66,7 +66,7 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
                     , has . Texts.tag
                     , has . Texts.stopEditing
                     ]
-                ) (pure (TagEdit.tagViewId myId))
+                ) (pure (TagView.id myId))
         TextEdits.makeWordEdit
             ?? TextEdit.Modes
                 { TextEdit._unfocused = tagText ^. Name.ttText
@@ -88,7 +88,7 @@ makeTopRow ::
     Widget.Id -> Sugar.Tag (Name o) -> m (Gui Responsive o)
 makeTopRow myId tag =
     do
-        nameView <- (Widget.makeFocusableView ?? viewId <&> fmap) <*> TagEdit.makeTagView tag
+        nameView <- (Widget.makeFocusableView ?? viewId <&> fmap) <*> TagView.make tag
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
         case tag ^? Sugar.tagName . Name._Stored of
             Just storedName | isRenaming ->
@@ -110,7 +110,7 @@ makeTopRow myId tag =
     & GuiState.assignCursor myId viewId
     <&> Responsive.fromWithTextPos
     where
-        viewId = TagEdit.tagViewId myId
+        viewId = TagView.id myId
 
 makeLanguageTitle ::
     ( MonadReader env m

@@ -27,9 +27,9 @@ import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionEdit.TagEdit (makeTagView)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
@@ -49,7 +49,7 @@ makeField ::
     Sugar.Tag (Name f) -> ResVal (Name g) -> ExprGuiM env i o [Aligned View]
 makeField tag val =
     do
-        tagView <- makeTagView tag
+        tagView <- TagView.make tag
         space <- Spacer.stdHSpace
         valView <- makeInner val
         pure
@@ -79,7 +79,7 @@ makeTable ::
     Sugar.ResTable (Name f) (ResVal (Name g)) -> ExprGuiM env i o (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
-        header <- traverse makeTagView headers
+        header <- traverse TagView.make headers
         rows <- take (tableCutoff-1) valss & traverse . traverse %%~ makeInner
         s <- Spacer.stdHSpace
         table <-
@@ -170,8 +170,8 @@ makeInject ::
     ExprGuiM env i o (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     case mVal of
-    Nothing -> makeTagView tag
-    Just val -> makeTagView tag /|/ Spacer.stdHSpace /|/ makeInner val
+    Nothing -> TagView.make tag
+    Just val -> TagView.make tag /|/ Spacer.stdHSpace /|/ makeInner val
 
 depthCounts :: ResVal name -> [Int]
 depthCounts v =
