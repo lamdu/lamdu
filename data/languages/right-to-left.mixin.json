@@ -11,7 +11,8 @@
             "textOpener": "”",
             "textCloser": "„",
             "recordOpener": "}",
-            "recordCloser": "{"
+            "recordCloser": "{",
+            "variantTypeOpener": "}+"
         },
         "navigationTexts": {
             "nextScopeArrow": "◀",

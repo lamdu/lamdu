@@ -26,7 +26,8 @@
             "elseShort": "או ",
             "injectSymbol": ":",
             "nullaryInjectSymbol": ".",
-            "paramsRecordOpener": "פרמטרים }"
+            "paramsRecordOpener": "פרמטרים }",
+            "variantTypeSep": "או: "
         },
         "collaborationTexts": {
             "collaboration": "שיתוף",

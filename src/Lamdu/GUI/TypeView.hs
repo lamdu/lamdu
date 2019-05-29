@@ -208,21 +208,20 @@ gridViewTopLeftAlign =
 makeComposite ::
     ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    , Has (Texts.Name Text) env
+    , Has (Texts.Name Text) env, Has (Texts.Code Text) env
     ) =>
-    Text -> Text ->
-    m (WithTextPos View) -> m (WithTextPos View) ->
+    m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
     ((Sugar.Tag (Name f), Sugar.Type (Name f)) ->
          m (WithTextPos View, WithTextPos View)) ->
     Sugar.CompositeFields (Name f) (Sugar.Type (Name f)) ->
     m (WithTextPos View)
-makeComposite o c mkPre mkPost mkField composite =
+makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of
     Sugar.CompositeFields [] Nothing -> makeEmptyComposite
     Sugar.CompositeFields fields extension ->
         do
-            opener <- grammar o
-            closer <- grammar c
+            opener <- Styled.grammar mkOpener
+            closer <- Styled.label Texts.recordCloser & Styled.grammar
             fieldsView <-
                 gridViewTopLeftAlign <*>
                 ( traverse mkField fields
@@ -271,9 +270,14 @@ makeInternal parentPrecedence (Sugar.Type entityId tbody) =
     Sugar.TVar var -> NameView.make var
     Sugar.TFun a b -> makeTFun parentPrecedence a b
     Sugar.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
-    Sugar.TRecord composite -> makeComposite "{" "}" (pure Element.empty) (grammar ",") makeField composite
+    Sugar.TRecord composite ->
+        makeComposite (Styled.label Texts.recordOpener)
+        (pure Element.empty) (Styled.grammar (Styled.label Texts.recordSep))
+        makeField composite
     Sugar.TVariant composite ->
-        makeComposite "+{" "}" (grammar "or: ") (pure Element.empty) makeVariantField composite
+        makeComposite (Styled.label Texts.variantTypeOpener)
+        (Styled.grammar (Styled.label Texts.variantTypeSep)) (pure Element.empty)
+        makeVariantField composite
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId

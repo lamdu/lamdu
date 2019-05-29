@@ -41,6 +41,9 @@ data Code a = Code
       _recordOpener :: a
     , _recordSep :: a
     , _recordCloser :: a
+      -- Types
+    , _variantTypeOpener :: a
+    , _variantTypeSep :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds

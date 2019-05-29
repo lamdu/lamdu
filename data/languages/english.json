@@ -23,7 +23,8 @@
             "if_": "if",
             "else_": "else",
             "elseShort": "el",
-            "paramsRecordOpener": "Params {"
+            "paramsRecordOpener": "Params {",
+            "variantTypeSep": "or: "
         },
         "collaborationTexts": {
             "collaboration": "Collaboration",
