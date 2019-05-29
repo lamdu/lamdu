@@ -68,14 +68,16 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
                     ]
                 ) (pure (TagView.id myId))
         TextEdits.makeWordEdit
-            ?? TextEdit.Modes
-                { TextEdit._unfocused = tagText ^. Name.ttText
-                , TextEdit._focused = ""
-                }
+            ?? empty
             ?? prop
             ?? tagRenameId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
             <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
+    where
+        empty = TextEdit.Modes
+            { TextEdit._unfocused = tagText ^. Name.ttText
+            , TextEdit._focused = ""
+            }
 
 makeTopRow ::
     ( MonadReader env m
@@ -88,7 +90,8 @@ makeTopRow ::
     Widget.Id -> Sugar.Tag (Name o) -> m (Gui Responsive o)
 makeTopRow myId tag =
     do
-        nameView <- (Widget.makeFocusableView ?? viewId <&> fmap) <*> TagView.make tag
+        nameView <-
+            (Widget.makeFocusableView ?? viewId <&> fmap) <*> TagView.make tag
         isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
         case tag ^? Sugar.tagName . Name._Stored of
             Just storedName | isRenaming ->
