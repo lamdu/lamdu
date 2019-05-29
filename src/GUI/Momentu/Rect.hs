@@ -131,4 +131,4 @@ isWithin v r =
     inside <$> v - r ^. topLeft <*> r ^. size
     & and
     where
-        inside x l = 0 <= x && x < l
+        inside x l = 0 <= x && x <= l
