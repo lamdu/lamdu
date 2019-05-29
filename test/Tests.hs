@@ -7,6 +7,7 @@ import qualified Tests.Config
 import qualified Tests.DataFiles
 import qualified Tests.EventMap
 import qualified Tests.Gui
+import qualified Tests.Hover
 import qualified Tests.JsExport
 import qualified Tests.JsRtsTags
 import qualified Tests.Momentu
@@ -33,6 +34,7 @@ main =
             , Tests.DataFiles.test
             , Tests.EventMap.test
             , Tests.Gui.test
+            , Tests.Hover.test
             , Tests.JsExport.test
             , Tests.JsRtsTags.test
             , Tests.Momentu.test

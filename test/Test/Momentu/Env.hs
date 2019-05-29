@@ -2,8 +2,12 @@
 module Test.Momentu.Env where
 
 import qualified Control.Lens as Lens
+import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
+import           GUI.Momentu.Draw (Color(..))
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Widgets.Grid as Grid
 
@@ -15,6 +19,8 @@ data Env = Env
     , _eGlueTexts :: Glue.Texts Text
     , _eGridTexts :: Grid.Texts Text
     , _eMomentuTexts :: MomentuTexts.Texts Text
+    , _eAnimId :: Anim.AnimId
+    , _eHoverStyle :: Hover.Style
     }
 
 env :: Env
@@ -50,10 +56,20 @@ env =
         , MomentuTexts._forward = "Forward"
         , MomentuTexts._backward = "Backward"
         }
+    , _eAnimId = ["foo"]
+    , _eHoverStyle =
+        Hover.Style
+        { Hover._frameColor = Color 1 1 1 1
+        , Hover._framePadding = pure 0
+        , Hover._bgColor = Color 0 0 0 0
+        , Hover._bgPadding = pure 0
+        }
     }
 
 Lens.makeLenses ''Env
 
+instance Element.HasAnimIdPrefix Env where animIdPrefix = eAnimId
+instance Has Hover.Style Env where has = eHoverStyle
 instance Has Dir.Layout Env where has = eDirLayout
 instance Has (Dir.Texts Text) Env where has = eDirTexts
 instance Has (Glue.Texts Text) Env where has = eGlueTexts

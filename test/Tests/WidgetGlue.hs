@@ -11,7 +11,6 @@ import           Data.Semigroup (First(..), Last(..))
 import           GUI.Momentu as X
 import           GUI.Momentu.Direction (Orientation(..))
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.EventMap as EventMap
 import           GUI.Momentu.Glue as X
 import qualified GUI.Momentu.Hover as Hover
@@ -70,14 +69,6 @@ glueFocused :: GluesTo TestEnv.Env a b c => GlueOrder -> Orientation -> a -> b -
 glueFocused FocusedFirst = glue TestEnv.env
 glueFocused FocusedLast = glue TestEnv.env <&> flip
 
-data Env = Env
-    { _eAnimId :: AnimId
-    , _eHoverStyle :: Hover.Style
-    }
-Lens.makeLenses ''Env
-
-instance HasAnimIdPrefix Env where animIdPrefix = eAnimId
-instance Has Hover.Style Env where has = eHoverStyle
 
 toWidgetFocused :: Applicative f => FocusedWidget (Maybe Widget.Id) -> Gui Widget f
 toWidgetFocused (FocusedLeaf size) =
@@ -103,15 +94,7 @@ toWidgetFocused (FocusedGlue hoverMode glueOrder orientation foc unf) =
             [glueFocused glueOrder orientation (hov pop)
                 (Hover.anchor Dir.LeftToRight anc)]
             (Hover.anchor Dir.LeftToRight anc)
-        hov =
-            Env ["foo"]
-            Hover.Style
-            { Hover._frameColor = Draw.Color 1 1 1 1
-            , Hover._framePadding = pure 0
-            , Hover._bgColor = Draw.Color 0 0 0 0
-            , Hover._bgPadding = pure 0
-            }
-            & Hover.hover
+        hov = Hover.hover TestEnv.env
 
 propFocusedWidgetHasFocus :: FocusedWidget () -> Bool
 propFocusedWidgetHasFocus tree =

@@ -97,6 +97,7 @@ Test-Suite Tests
                , Tests.DataFiles
                , Tests.EventMap
                , Tests.Gui
+               , Tests.Hover
                , Tests.JsExport
                , Tests.JsRtsTags
                , Tests.Momentu
