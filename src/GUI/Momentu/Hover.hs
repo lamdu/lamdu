@@ -116,7 +116,7 @@ instance
         Glue.glueH f env orientation ow0 ow1 & Hover
         where
             f (AnchoredWidget pos w0) w1 =
-                Widget.glueStates env orientation Forward w0 w1
+                Widget.glueStates env orientation Forward Forward w0 w1
                 & AnchoredWidget pos
 
 instance
@@ -131,7 +131,7 @@ instance
                 -- The hover is always logically "after" the
                 -- lower-layer widgets, no matter if it is glued
                 -- before/after geometrically
-                Widget.glueStates env orientation Backward w0 w1
+                Widget.glueStates env orientation Forward Backward w0 w1
                 & AnchoredWidget pos
 
 data Ordered a = Ordered

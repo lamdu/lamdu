@@ -101,32 +101,32 @@ instance
     ) => Glue env (Widget a) (Widget b) where
     type Glued (Widget a) (Widget b) = Widget a
     glue env orientation =
-        Glue.glueH (glueStates env orientation Forward) env orientation
+        Glue.glueH (glueStates env orientation Forward Forward) env orientation
 
 glueStates ::
     (Applicative f, Glue.HasTexts env) =>
-    env -> Orientation -> Order ->
+    env -> Orientation -> Order -> Order ->
     Gui Widget f -> Gui Widget f -> Gui Widget f
-glueStates env orientation order w0 w1 =
+glueStates env orientation order strollOrder w0 w1 =
     w0
     & wState .~
-        combineStates env orientation order (w0 ^. wState) (w1 ^. wState)
+        combineStates env orientation order strollOrder (w0 ^. wState) (w1 ^. wState)
 
 combineStates ::
     (Applicative f, Glue.HasTexts env) =>
-    env -> Orientation -> Order ->
+    env -> Orientation -> Order -> Order ->
     Gui State f -> Gui State f -> Gui State f
-combineStates _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
-combineStates env o order (StateUnfocused u0) (StateUnfocused u1) =
+combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
+combineStates env o _ strollOrder (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
-    (applyOrder order (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
+    (applyOrder strollOrder (<>) (u0 ^. uMStroll) (u1 ^. uMStroll))
     (u0 ^. uLayers <> u1 ^. uLayers) & StateUnfocused
     where
         e = combineMEnters env o (u0 ^. uMEnter) (u1 ^. uMEnter)
-combineStates env orientation order (StateUnfocused u) (StateFocused f) =
-    combineStates env orientation (reverseOrder order)
+combineStates env orientation order strollOrder (StateUnfocused u) (StateFocused f) =
+    combineStates env orientation (reverseOrder order) (reverseOrder strollOrder)
     (StateFocused f) (StateUnfocused u)
-combineStates env orientation order (StateFocused f) (StateUnfocused u) =
+combineStates env orientation order strollOrder (StateFocused f) (StateUnfocused u) =
     f
     <&> fMEnterPoint %~
         unionMaybeWith combineEnterPoints (u ^. uMEnter <&> (. Point))
@@ -142,7 +142,7 @@ combineStates env orientation order (StateFocused f) (StateUnfocused u) =
             -- | If the unfocused one has a stroll destination for us
             -- Use it in each event that prefers the stroll position
             case u ^. uMStroll of
-            Just (Semigroup.First fwd, _) | order == Forward ->
+            Just (Semigroup.First fwd, _) | strollOrder == Forward ->
                 events <&> Lens.mapped %~
                 \e ->
                 if e ^. State.uPreferStroll . Lens._Wrapped
@@ -170,7 +170,7 @@ combineStates env orientation order (StateFocused f) (StateUnfocused u) =
                 , env ^. has . Dir.textLens orientation order])
         dir = env ^. has
         strollEvents (Semigroup.First fwd, Semigroup.Last bwd)
-            | order == Backward =
+            | strollOrder == Backward =
                 EventMap.keysEventMapMovesCursor strollBackKeys
                 (Glue.strollDoc env MomentuTexts.backward) (pure bwd)
             | otherwise =
