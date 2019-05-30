@@ -40,6 +40,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -150,7 +151,7 @@ make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
                 stdWrapParentExpr pl
                 <*> (makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure)
             else makeUnit pl
-make (Sugar.Composite fields _relayed recordTail addField) pl =
+make (Sugar.Composite fields relayed recordTail addField) pl =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-
@@ -159,7 +160,13 @@ make (Sugar.Composite fields _relayed recordTail addField) pl =
                 closedRecordEventMap actions
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
-        fieldGuis <- traverse makeFieldRow fields
+        relayedGuis <-
+            case relayed of
+            [] -> pure []
+            _ ->
+                GetVarEdit.makeRelayedVars relayed
+                <&> (\x -> [TaggedItem Nothing x Nothing])
+        fieldGuis <- traverse makeFieldRow fields <&> (++ relayedGuis)
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField

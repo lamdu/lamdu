@@ -11,7 +11,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Data.List.Extended (isLengthAtLeast)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
@@ -30,7 +29,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.Nominal (convertAppliedFromNom)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (childPayloads)
+import           Lamdu.Sugar.Lens (childPayloads, getVarName)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 
@@ -68,7 +67,10 @@ convert app@(V.Apply funcI argI) exprPl =
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
-    V.Var -> Composite name i o expr -> Deps -> m ()
+    V.Var ->
+    Tree (Composite InternalName i o) (Ann a) ->
+    Deps ->
+    m ()
 validateDefParamsMatchArgs var record frozenDeps =
     do
         defArgs <-
@@ -79,7 +81,8 @@ validateDefParamsMatchArgs var record frozenDeps =
             & maybeToMPlus
         defArgs ^? freRest . _Pure . T._REmpty & maybeToMPlus
         let sFields =
-                record ^.. cItems . traverse . ciTag . tagRefTag . tagVal
+                (record ^.. cItems . traverse . ciTag . tagRefTag . tagVal) <>
+                (record ^.. cRelayedItems . traverse . val . Lens._Wrapped . getVarName . inTag)
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
 
@@ -99,7 +102,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
-        isLengthAtLeast 2 (record ^. cItems) & guard
+        length (record ^. cItems) + length (record ^. cRelayedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
         let var = sBinderVar ^. bvVar
         -- If it is an external (non-recursive) def (i.e: not in
@@ -113,10 +116,10 @@ convertLabeled subexprs funcS argS exprPl =
                     { _aaTag = field ^. ciTag . tagRefTag
                     , _aaExpr = field ^. ciExpr
                     }
-        let args = record ^. cItems <&> getArg
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (funcS ^. ann) (Const sBinderVar)) args exprPl
+            (Ann (funcS ^. ann) (Const sBinderVar))
+            (record ^. cItems <&> getArg) (record ^. cRelayedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. childPayloads)

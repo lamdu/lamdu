@@ -8,7 +8,6 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
-import           Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Lamdu.Data.Anchors as Anchors
@@ -27,15 +26,15 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Tree (Ann (ConvertPayload m a))
-        (Const (Sugar.BinderVarRef InternalName (T m))) ->
+    Tree (Ann (ConvertPayload m a)) (Const (Sugar.BinderVarRef InternalName (T m))) ->
     [ Sugar.AnnotatedArg InternalName
         (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))
     ] ->
+    [Tree (Ann (ConvertPayload m a)) (Const (Sugar.GetVar InternalName (T m)))] ->
     Input.Payload m a ->
     ConvertM m
     (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
-makeLabeledApply func args exprPl =
+makeLabeledApply func args relayedArgs exprPl =
     do
         presentationMode <- func ^. val . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -47,41 +46,30 @@ makeLabeledApply func args exprPl =
                         (other ^. ann . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
-        let (specialArgs, otherArgs) =
+        let (specialArgs, removedKeys) =
                 case traverse argExpr presentationMode of
                 Just (Sugar.Infix (l, la) (r, ra)) ->
                     ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
-                    , argsMap
-                        & Map.delete l
-                        & Map.delete r
-                        & Map.elems
+                    , [l, r]
                     )
                 Just (Sugar.Object (o, oa)) ->
                     ( Sugar.Object oa
-                    , Map.delete o argsMap & Map.elems
+                    , [o]
                     )
-                _ -> (Sugar.Verbose, args)
-            (annotatedArgs, relayedArgs) =
-                otherArgs <&> processArg & partitionEithers
+                _ -> (Sugar.Verbose, [])
         pure Sugar.LabeledApply
             { Sugar._aFunc = func
             , Sugar._aSpecialArgs = specialArgs
-            , Sugar._aAnnotatedArgs = annotatedArgs
-            , Sugar._aRelayedArgs = relayedArgs
+            , Sugar._aAnnotatedArgs =
+                filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
+            , Sugar._aRelayedArgs =
+                filter
+                ((`notElem` removedKeys) . (^?! val . Lens._Wrapped . SugarLens.getVarName . inTag))
+                relayedArgs
             }
     where
         argsMap =
             args
-            <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x))
+            <&> (\x -> (x ^. Sugar.aaTag . Sugar.tagVal, x ^. Sugar.aaExpr))
             & Map.fromList
-        argExpr t = Map.lookup t argsMap <&> (^. Sugar.aaExpr) <&> (,) t
-        processArg arg =
-            do
-                getVar <- arg ^? Sugar.aaExpr . val . Sugar._BodyGetVar
-                name <- getVar ^? SugarLens.getVarName
-                _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
-                Right Ann
-                    { _val = Const getVar
-                    , _ann = arg ^. Sugar.aaExpr . ann
-                    } & Just
-                & fromMaybe (Left arg)
+        argExpr t = Map.lookup t argsMap <&> (,) t

@@ -35,6 +35,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -82,7 +83,7 @@ make ::
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     GuiM env i o (Gui Responsive o)
-make (Sugar.Case mArg (Sugar.Composite alts _relayed caseTail addAlt)) pl =
+make (Sugar.Case mArg (Sugar.Composite alts relayed caseTail addAlt)) pl =
     do
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
@@ -113,7 +114,7 @@ make (Sugar.Case mArg (Sugar.Composite alts _relayed caseTail addAlt)) pl =
                         ?? [caseLabel, argEdit, ofLabel]
                         <&> (,) mTag
         altsGui <-
-            makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts addAlt altsId
+            makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts relayed addAlt altsId
             >>= case caseTail of
             Sugar.ClosedComposite actions ->
                 pure . Widget.weakerEvents (closedCaseEventMap env actions)
@@ -175,15 +176,26 @@ makeAltsWidget ::
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Grid.Texts Text) env
     ) =>
     Maybe Tag ->
     [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
+    [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Const (Sugar.GetVar (Name o) o))] ->
     Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Gui Responsive o)
-makeAltsWidget mActiveTag alts addAlt altsId =
+makeAltsWidget mActiveTag alts relayed addAlt altsId =
     do
-        existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
+        relayedWidgets <-
+            case relayed of
+            [] -> pure []
+            _ ->
+                GetVarEdit.makeRelayedVars relayed
+                <&> (\x -> [TaggedItem Nothing x Nothing])
+        existingAltWidgets <-
+            traverse (makeAltRow mActiveTag) alts
+            <&> (++ relayedWidgets)
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId
             <&> guard

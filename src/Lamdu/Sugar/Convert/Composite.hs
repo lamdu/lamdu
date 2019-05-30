@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Composite
 
 import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), ann, val)
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Term as V
@@ -22,6 +22,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -69,21 +70,28 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Tree k (Body InternalName (T m) (T m)) ->
+    Tree (Ann b) (Body InternalName (T m) (T m)) ->
     Input.Payload m a ->
     ExtendVal m (Input.Payload m a) ->
-    Tree (Composite InternalName (T m) (T m)) k ->
-    ConvertM m (Tree (Composite InternalName (T m) (T m)) k)
+    Tree (Composite InternalName (T m) (T m)) (Ann b) ->
+    ConvertM m (Tree (Composite InternalName (T m) (T m)) (Ann b))
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
             convertItem cons (exprPl ^. Input.stored)
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . Property.pVal))
-        addItem <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
-        restC
-            & cAddItem .~ addItem
-            & cItems %~ (itemS :)
+        let addItem =
+                do
+                    getVar <- itemS ^? ciExpr . val . _BodyGetVar
+                    name <- getVar ^? SugarLens.getVarName
+                    _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
+                    let relayed = Ann (itemS ^. ciExpr . ann) (Const getVar)
+                    Just (cRelayedItems %~ (relayed :))
+                & fromMaybe (cItems %~ (itemS :))
+        addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
+        addItem restC
+            & cAddItem .~ addItemAction
             & pure
     where
         restTags = restC ^.. cItems . traverse . ciTag . tagRefTag . tagVal
