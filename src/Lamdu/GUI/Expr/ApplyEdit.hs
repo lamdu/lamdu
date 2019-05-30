@@ -1,4 +1,3 @@
-{-# LANGUAGE DisambiguateRecordFields #-}
 module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
@@ -25,7 +24,6 @@ import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
-import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -138,21 +136,6 @@ makeArgRow arg =
             , Responsive._tagPost = Element.empty
             }
 
-mkRelayedArgs ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    ) =>
-    [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Const (Sugar.GetVar (Name o) o))] ->
-    GuiM env i o (Gui Responsive o)
-mkRelayedArgs args =
-    do
-        argEdits <- traverse (\(Ann a v) -> GetVarEdit.make (v ^. Lens._Wrapped) a) args
-        collapsed <- grammar (label Texts.relay) <&> Responsive.fromTextView
-        Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
-
 mkBoxed ::
     ( Monad i, Monad o
     , Glue.HasTexts env
@@ -175,7 +158,7 @@ mkBoxed apply funcRow =
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
             [] -> pure []
-            args -> mkRelayedArgs args <&> (:[])
+            args -> GetVarEdit.makeRelayedVars args <&> (:[])
         Styled.addValFrame
             <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
 

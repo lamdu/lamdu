@@ -1,8 +1,10 @@
 module Lamdu.GUI.Expr.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
+    , makeRelayedVars
     , Role(..)
     ) where
 
+import           AST (Tree, Ann(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
@@ -362,3 +364,18 @@ make ::
     GuiM env i o (Gui Responsive o)
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)
+
+makeRelayedVars ::
+    ( Monad i, Monad o
+    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env, Grid.HasTexts env
+    ) =>
+    [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Const (Sugar.GetVar (Name o) o))] ->
+    GuiM env i o (Gui Responsive o)
+makeRelayedVars args =
+    do
+        argEdits <- traverse (\(Ann a v) -> make (v ^. Lens._Wrapped) a) args
+        collapsed <- grammar (label Texts.relay) <&> Responsive.fromTextView
+        Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
