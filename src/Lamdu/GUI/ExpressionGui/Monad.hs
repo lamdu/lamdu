@@ -94,7 +94,7 @@ data Askable env i o = Askable
         -- env
     }
 
-newtype GuiM env i (o :: * -> *) a =
+newtype GuiM env i o a =
     GuiM (ReaderT (Askable env i o) i a)
     deriving newtype (Functor, Applicative, Monad, MonadReader (Askable env i o))
     deriving (Semigroup, Monoid) via (Monoid.Ap (GuiM env i o) a)
