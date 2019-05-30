@@ -139,7 +139,7 @@ data EvalResDisplay name = EvalResDisplay
     }
 
 makeEvaluationResultView ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
+    (Monad i, Has (Texts.Name Text) env) =>
     EvalResDisplay (Name f) ->
     GuiM env i o (WithTextPos View)
 makeEvaluationResultView res =
@@ -157,7 +157,7 @@ data NeighborVals a = NeighborVals
     } deriving (Functor, Foldable, Traversable)
 
 makeEvalView ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
+    (Monad i, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
     EvalResDisplay (Name g) -> GuiM env i o (WithTextPos View)
 makeEvalView mNeighbours evalRes =
@@ -234,7 +234,7 @@ addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
 addEvaluationResult ::
-    (Monad i, Monad o, Functor f, Has (Texts.Name Text) env) =>
+    (Monad i, Functor f, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
     EvalResDisplay (Name g) -> WideAnnotationBehavior ->
     GuiM env i o

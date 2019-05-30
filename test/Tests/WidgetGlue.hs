@@ -1,5 +1,4 @@
-{-# LANGUAGE StandaloneDeriving, TemplateHaskell, TypeFamilies, DeriveTraversable #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
 module Tests.WidgetGlue
     ( module X, module Tests.WidgetGlue, module Lens, module Widget, encodeS
     ) where
