@@ -141,10 +141,10 @@ data Composite name i o expr = Composite
     , _cAddItem :: TagReplace name i o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Case name i o expr = Case
-    { _cKind :: CaseKind o expr
-    , _cBody :: Composite name i o expr
-    } deriving (Functor, Foldable, Traversable, Generic)
+data Case name i o f = Case
+    { _cKind :: CaseKind o (Tie f (Body name i o))
+    , _cBody :: Composite name i o (Tie f (Body name i o))
+    } deriving Generic
 
 data Body name i o f
     = BodyLam (Lambda name i o f)
@@ -154,7 +154,7 @@ data Body name i o f
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o (Tie f (Body name i o)))
     | BodyGetField (GetField name i o (Tie f (Body name i o)))
-    | BodyCase (Case name i o (Tie f (Body name i o)))
+    | BodyCase (Case name i o f)
     | BodyIfElse (IfElse name i o f)
     | BodyInject (Inject name i o f)
     | BodyGetVar (GetVar name o)
@@ -229,6 +229,7 @@ makeChildren ''Assignment
 makeChildren ''AssignPlain
 makeChildren ''Body
 makeChildren ''Binder
+makeChildren ''Case
 makeChildren ''Else
 makeChildren ''ElseIfContent
 makeChildren ''Fragment

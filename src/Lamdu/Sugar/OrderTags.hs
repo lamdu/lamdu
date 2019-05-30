@@ -64,7 +64,7 @@ instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
 
 orderCase ::
     Monad m =>
-    OrderT m (Sugar.Case name (T m) o (Sugar.Expression name (T m) o (Sugar.Payload name i o a)))
+    OrderT m (Tree (Sugar.Case name (T m) o) (Ann (Sugar.Payload name i o a)))
 orderCase = Sugar.cBody orderRecord
 
 instance Monad m => Order m name o (Sugar.Lambda name (T m) o)

@@ -375,10 +375,9 @@ toComposite expr Composite{_cItems, _cAddItem, _cTail} =
 
 toCase ::
     MonadNaming m =>
-    (a -> m b) ->
-    Case (OldName m) (IM m) o a ->
-    m (Case (NewName m) (IM m) o b)
-toCase expr (Case k c) = Case <$> traverse expr k <*> toComposite expr c
+    Tree (Case (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
+    m (Tree (Case (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+toCase (Case k c) = Case <$> traverse toExpression k <*> toComposite toExpression c
 
 toInjectVal ::
     MonadNaming m =>
@@ -421,7 +420,7 @@ toBody =
     BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField
     BodyInject       x -> x & toInject <&> BodyInject
     BodyRecord       x -> x & toComposite toExpression <&> BodyRecord
-    BodyCase         x -> x & toCase toExpression <&> BodyCase
+    BodyCase         x -> x & toCase <&> BodyCase
     BodyIfElse       x -> x & toIfElse <&> BodyIfElse
     BodySimpleApply  x -> x & applyChildren toExpression <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply

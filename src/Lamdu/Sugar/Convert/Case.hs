@@ -41,7 +41,8 @@ convertAbsurd pl =
     <&> BodyCase
     >>= addActions [] pl
 
-_CaseThatIsLambdaCase :: Lens.Prism' (Case name i o expr) (Composite name i o expr)
+_CaseThatIsLambdaCase ::
+    Lens.Prism' (Tree (Case name i o) k) (Composite name i o (Tree k (Body name i o)))
 _CaseThatIsLambdaCase =
     Lens.prism' (Case LambdaCase) $ \case
     Case LambdaCase x -> Just x

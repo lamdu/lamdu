@@ -24,7 +24,7 @@ type T = Transaction
 convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
-    Case InternalName (T m) (T m) (ExpressionU m a) ->
+    Tree (Case InternalName (T m) (T m)) (Ann (ConvertPayload m a)) ->
     Maybe (Tree (IfElse InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
 convertIfElse setToVal caseBody =
     do

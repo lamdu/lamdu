@@ -2,7 +2,7 @@ module Lamdu.GUI.Expr.CaseEdit
     ( make
     ) where
 
-import           AST (ann)
+import           AST (Tree, Ann, ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Vector.Vector2 (Vector2(..))
@@ -77,7 +77,8 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Case (Name o) i o (ExprGui.SugarExpr i o) ->
+    Tree (Sugar.Case (Name o) i o)
+        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     GuiM env i o (Gui Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =

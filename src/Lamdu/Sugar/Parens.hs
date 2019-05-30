@@ -7,7 +7,7 @@ module Lamdu.Sugar.Parens
     , addToBinderWith
     ) where
 
-import           AST (Tree, overChildren)
+import           AST (Tree, overChildren, monoChildren)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Term as V
@@ -132,7 +132,7 @@ loopExprBody parentPrec body_ =
     BodyHole         x -> result False (BodyHole x)
     BodyFragment     x -> mkUnambiguous fExpr BodyFragment x
     BodyRecord       x -> mkUnambiguous Lens.mapped BodyRecord x
-    BodyCase         x -> mkUnambiguous Lens.mapped BodyCase x
+    BodyCase         x -> mkUnambiguous monoChildren BodyCase x
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
     BodyInject       x -> inject x
