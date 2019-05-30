@@ -1,9 +1,12 @@
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.EvalView
-    ( make
+    ( make, Deps
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
+import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
 import qualified Data.List as List
 import qualified Data.Text as Text
@@ -27,8 +30,6 @@ import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Name as Texts
@@ -37,6 +38,25 @@ import           Lamdu.Sugar.Types (ResVal)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+data Env env = Env
+    { _depthLeft :: !Int
+    , _base :: env
+    }
+Lens.makeLenses ''Env
+
+instance Element.HasAnimIdPrefix env => Element.HasAnimIdPrefix (Env env) where
+    animIdPrefix = base . Element.animIdPrefix
+instance Spacer.HasStdSpacing env => Spacer.HasStdSpacing (Env env) where
+    stdSpacing = base . Spacer.stdSpacing
+instance Has r env => Has r (Env env) where has = base . has
+
+type Deps env =
+    ( Has TextView.Style env, Element.HasAnimIdPrefix env
+    , Has Theme.Theme env, Has Dir.Layout env, Has (Texts.Name Text) env
+    , Spacer.HasStdSpacing env
+    )
+type M env = ReaderT (Env env)
 
 -- NOTE: We are hard-coded to GuiM because of the expression depth
 -- ttl that eval results respect and change
@@ -48,8 +68,8 @@ textView ::
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
 makeField ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    Sugar.Tag (Name f) -> ResVal (Name g) -> GuiM env i o [Aligned View]
+    (Monad m, Deps env) =>
+    Sugar.Tag (Name f) -> ResVal (Name g) -> M env m [Aligned View]
 makeField tag val =
     do
         tagView <- TagView.make tag
@@ -67,9 +87,18 @@ makeField tag val =
 makeError ::
     ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env
-    ) => Sugar.EvalTypeError -> m (WithTextPos View)
+    ) =>
+    Sugar.EvalTypeError -> m (WithTextPos View)
 makeError (Sugar.EvalTypeError msg) =
     textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
+
+advanceDepth :: (Monad m, Deps env) => M env m (WithTextPos View) -> M env m (WithTextPos View)
+advanceDepth action =
+    do
+        depth <- Lens.view depthLeft
+        if depth <= 0
+            then Label.make "..."
+            else action & Reader.local (depthLeft -~ 1)
 
 arrayCutoff :: Int
 arrayCutoff = 10
@@ -78,8 +107,8 @@ tableCutoff :: Int
 tableCutoff = 6
 
 makeTable ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    Sugar.ResTable (Name f) (ResVal (Name g)) -> GuiM env i o (WithTextPos View)
+    (Monad m, Deps env) =>
+    Sugar.ResTable (Name f) (ResVal (Name g)) -> M env m (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
         header <- traverse TagView.make headers
@@ -99,8 +128,8 @@ makeTable (Sugar.ResTable headers valss) =
             <&> (^. Align.value)
 
 makeArray ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    [ResVal (Name f)] -> GuiM env i o (WithTextPos View)
+    (Monad m, Deps env) =>
+    [ResVal (Name f)] -> M env m (WithTextPos View)
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
@@ -124,8 +153,8 @@ makeArray items =
             & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
 
 makeTree ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    Sugar.ResTree (ResVal (Name f)) -> GuiM env i o (WithTextPos View)
+    (Monad m, Deps env) =>
+    Sugar.ResTree (ResVal (Name f)) -> M env m (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
@@ -144,15 +173,15 @@ makeTree (Sugar.ResTree root subtrees) =
 
 
 makeRecord ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    Sugar.ResRecord (Name f) (ResVal (Name g)) -> GuiM env i o (WithTextPos View)
+    (Monad m, Deps env) =>
+    Sugar.ResRecord (Name f) (ResVal (Name g)) -> M env m (WithTextPos View)
 makeRecord (Sugar.ResRecord fields) =
     GridView.make <*> traverse (uncurry makeField) fields <&> snd
     <&> Align.WithTextPos 0
 
 makeList ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    Sugar.ResList (ResVal (Name f)) -> GuiM env i o (WithTextPos View)
+    (Monad m, Deps env) =>
+    Sugar.ResList (ResVal (Name f)) -> M env m (WithTextPos View)
 makeList (Sugar.ResList head_) =
     do
         (preLabel, postLabel) <-
@@ -168,9 +197,9 @@ makeList (Sugar.ResList head_) =
             (pure (Aligned align l) /|/ pure (Aligned align r)) <&> (^. Align.value)
 
 makeInject ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
+    (Monad m, Deps env) =>
     Sugar.ResInject (Name f) (ResVal (Name g)) ->
-    GuiM env i o (WithTextPos View)
+    M env m (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     case mVal of
     Nothing -> TagView.make tag
@@ -198,8 +227,8 @@ fixSize view =
             (Draw.scaleV (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
 makeInner ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    ResVal (Name f) -> GuiM env i o (WithTextPos View)
+    (Monad m, Deps env) =>
+    ResVal (Name f) -> M env m (WithTextPos View)
 makeInner (Sugar.ResVal entityId body) =
     case body of
     Sugar.RError err -> makeError err
@@ -213,13 +242,13 @@ makeInner (Sugar.ResVal entityId body) =
     Sugar.RTree x -> makeTree x
     Sugar.RTable x -> makeTable x
     Sugar.RList x -> makeList x
-    & advanceDepth
+    & advanceDepthParents
     & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         -- Only cut non-leaf expressions due to depth limits
-        advanceDepth
-            | Lens.has Lens.folded body = GuiM.advanceDepth pure
+        advanceDepthParents
+            | Lens.has Lens.folded body = advanceDepth
             | otherwise = id
 
 toText ::
@@ -247,14 +276,12 @@ toText val =
             where
                 (start, rest) = Text.splitAt 100 ln
 
-make ::
-    (Monad i, Monad o, Has (Texts.Name Text) env) =>
-    ResVal (Name f) -> GuiM env i o (WithTextPos View)
+make :: (MonadReader env m, Deps env) => ResVal (Name f) -> m (WithTextPos View)
 make v =
     do
-        maxEvalViewSize <- Lens.view (has . Theme.maxEvalViewSize)
+        env <- Lens.view id
         let depthLimit =
                 depthCounts v & scanl (+) 0 & tail
-                & takeWhile (< maxEvalViewSize) & length
-        makeInner v & GuiM.resetDepth depthLimit
+                & takeWhile (< env ^. has . Theme.maxEvalViewSize) & length
+        runReaderT (makeInner v) Env{ _depthLeft = depthLimit, _base = env }
     <&> fixSize
