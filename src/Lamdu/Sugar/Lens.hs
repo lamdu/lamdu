@@ -12,6 +12,7 @@ module Lamdu.Sugar.Lens
     , annotationTypes
     , onSubExprParams
     , paramsAnnotations
+    , getVarName
     ) where
 
 import           AST (Knot, Tree, Children(..), ChildrenWithConstraint)
@@ -189,3 +190,8 @@ onSubExprParams p f x =
         (Proxy @(Recursive (HasBinderParams p)))
         (AST.overChildren (Proxy @(Recursive Children))
             (onSubExprParams p f))
+
+getVarName :: Lens.Traversal' (GetVar a o) a
+getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam
+getVarName f (GetBinder x) = (bvNameRef . nrName) f x <&> GetBinder
+getVarName _ (GetParamsRecord x) = GetParamsRecord x & pure

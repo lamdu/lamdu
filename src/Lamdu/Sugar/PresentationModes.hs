@@ -17,6 +17,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -77,11 +78,7 @@ makeLabeledApply func args exprPl =
         processArg arg =
             do
                 getVar <- arg ^? Sugar.aaExpr . val . Sugar._BodyGetVar
-                name <-
-                    case getVar of
-                    Sugar.GetParam x -> x ^. Sugar.pNameRef . Sugar.nrName & Just
-                    Sugar.GetBinder x -> x ^. Sugar.bvNameRef . Sugar.nrName & Just
-                    Sugar.GetParamsRecord _ -> Nothing
+                name <- getVar ^? SugarLens.getVarName
                 _ <- internalNameMatch (arg ^. Sugar.aaTag . Sugar.tagName) name
                 Right Ann
                     { _val = Const getVar
