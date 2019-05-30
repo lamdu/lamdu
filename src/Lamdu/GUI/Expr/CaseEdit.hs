@@ -81,7 +81,7 @@ make ::
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     GuiM env i o (Gui Responsive o)
-make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
+make (Sugar.Case mArg (Sugar.Composite alts _relayed caseTail addAlt)) pl =
     do
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))

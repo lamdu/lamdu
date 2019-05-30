@@ -376,9 +376,10 @@ toComposite ::
     MonadNaming m =>
     Tree (Composite (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
     m (Tree (Composite (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
-toComposite (Composite items tail_ addItem) =
+toComposite (Composite items relayed tail_ addItem) =
     Composite
     <$> traverse (toCompositeItem toExpression) items
+    <*> traverse (toNode (Lens._Wrapped toGetVar)) relayed
     <*> (_OpenComposite . _2) toExpression tail_
     <*> toTagReplace addItem
 

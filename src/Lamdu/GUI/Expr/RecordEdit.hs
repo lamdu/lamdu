@@ -139,7 +139,7 @@ make ::
     Tree (Sugar.Composite (Name o) i o) (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     GuiM env i o (Gui Responsive o)
-make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
+make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     do
@@ -149,7 +149,7 @@ make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
                 stdWrapParentExpr pl
                 <*> (makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure)
             else makeUnit pl
-make (Sugar.Composite fields recordTail addField) pl =
+make (Sugar.Composite fields _relayed recordTail addField) pl =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-

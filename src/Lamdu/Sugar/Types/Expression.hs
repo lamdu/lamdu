@@ -34,7 +34,7 @@ module Lamdu.Sugar.Types.Expression
     , Else(..), _SimpleElse, _ElseIf
     , IfElse(..), iIf, iThen, iElse
     -- Record & Cases
-    , Composite(..), cItems, cAddItem, cTail
+    , Composite(..), cItems, cRelayedItems, cAddItem, cTail
     , Case(..), cKind, cBody
     ) where
 
@@ -137,6 +137,8 @@ data IfElse name i o f = IfElse
 
 data Composite name i o f = Composite
     { _cItems :: [CompositeItem name i o (Tie f (Body name i o))]
+    , -- Relayed items are like Haskell's NamedFieldPuns
+      _cRelayedItems :: [Tie f (Lens.Const (GetVar name o))]
     , _cTail :: CompositeTail o (Tie f (Body name i o))
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic

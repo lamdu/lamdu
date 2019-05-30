@@ -37,7 +37,7 @@ convert (V.Inject tag injected) exprPl =
                 case injectedS of
                 Ann pl
                     (BodyRecord
-                     (Composite []
+                     (Composite [] []
                       (ClosedComposite closedCompositeActions) addItem)) ->
                     NullaryVal closedCompositeActions addItem
                     & Const

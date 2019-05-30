@@ -7,7 +7,7 @@ module Lamdu.Sugar.Parens
     , addToBinderWith
     ) where
 
-import           AST (Tree, overChildren, monoChildren)
+import           AST (Tree, overChildren)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Term as V
@@ -130,9 +130,9 @@ loopExprBody parentPrec body_ =
     BodyLiteral      x -> result False (BodyLiteral x)
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyHole         x -> result False (BodyHole x)
-    BodyFragment     x -> mkUnambiguous fExpr BodyFragment x
-    BodyRecord       x -> mkUnambiguous monoChildren BodyRecord x
-    BodyCase         x -> mkUnambiguous monoChildren BodyCase x
+    BodyFragment     x -> x & fExpr %~ loopExpr 0 unambiguous & BodyFragment & result False
+    BodyRecord       x -> overChildren p addToNode x & BodyRecord & result False
+    BodyCase         x -> overChildren p addToNode x & BodyCase & result False
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
     BodyInject       x -> inject x
@@ -142,10 +142,9 @@ loopExprBody parentPrec body_ =
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
     where
+        p = Proxy @AddParens
         result True = (,) NeedsParens
         result False = (,) NoNeedForParens
-        mkUnambiguous l cons x =
-            x & l %~ loopExpr 0 unambiguous & cons & result False
         leftSymbol = sideSymbol (\_ _ -> addToNode) before after
         rightSymbol = sideSymbol loopExpr after before
         sideSymbol :: SideSymbol
@@ -178,7 +177,7 @@ loopExprBody parentPrec body_ =
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
-                overChildren (Proxy @AddParens) addToNode x
+                overChildren p addToNode x
                 & BodyLabeledApply & result False
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =

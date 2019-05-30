@@ -76,7 +76,7 @@ ofBody env =
         , env ^. has . Texts.of_
         ] ++
         case cas of
-            Case LambdaCase (Composite [] ClosedComposite{} _) ->
+            Case LambdaCase (Composite [] [] ClosedComposite{} _) ->
                 [env ^. has . Texts.absurd]
             _ -> []
     BodyIfElse {} -> [env ^. has . Texts.if_, ":"]

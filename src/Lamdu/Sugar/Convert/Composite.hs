@@ -105,6 +105,7 @@ convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
             (extendV & extendRest %~ (^. Input.stored . Property.pVal))
             <&> (:[])
         )
+    <*> pure []
     <*> (convertOpenCompositeActions leaf (extendV ^. extendRest . Input.stored) <&> (`OpenComposite` restS))
     <*> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
 
@@ -141,6 +142,7 @@ convertEmpty extendOp exprPl =
         addItem <- convertAddItem extendOp mempty exprPl
         pure Composite
             { _cItems = []
+            , _cRelayedItems = []
             , _cTail = ClosedComposite actions
             , _cAddItem = addItem
             }

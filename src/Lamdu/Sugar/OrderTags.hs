@@ -55,10 +55,13 @@ orderType = Sugar.tBody orderTBody
 orderRecord ::
     Monad m =>
     OrderT m (Tree (Sugar.Composite name (T m) o) (Ann (Sugar.Payload name i o a)))
-orderRecord r =
-    r
-    & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag))
-    >>= monoChildren orderNode
+orderRecord (Sugar.Composite items relayed tail_ addItem) =
+    Sugar.Composite
+    <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
+        >>= (traverse . traverse) orderNode)
+    <*> pure relayed
+    <*> traverse orderNode tail_
+    <*> pure addItem
 
 instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
 
