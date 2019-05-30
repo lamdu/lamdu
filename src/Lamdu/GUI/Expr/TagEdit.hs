@@ -1,5 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
-module Lamdu.GUI.ExpressionEdit.TagEdit
+module Lamdu.GUI.Expr.TagEdit
     ( makeRecordTag, makeVariantTag
     , makeParamTag, addParamId
     , makeArgTag

@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns, NoMonomorphismRestriction #-}
-module Lamdu.GUI.ExpressionEdit.BinderEdit
+module Lamdu.GUI.Expr.BinderEdit
     ( make
     ) where
 
@@ -25,8 +25,8 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

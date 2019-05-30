@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
-module Lamdu.GUI.ExpressionEdit
+module Lamdu.GUI.Expr
     ( make
     ) where
 
@@ -15,19 +15,19 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified Lamdu.GUI.ExpressionEdit.ApplyEdit as ApplyEdit
-import qualified Lamdu.GUI.ExpressionEdit.CaseEdit as CaseEdit
-import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
-import qualified Lamdu.GUI.ExpressionEdit.FragmentEdit as FragmentEdit
-import qualified Lamdu.GUI.ExpressionEdit.GetFieldEdit as GetFieldEdit
-import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit as HoleEdit
-import qualified Lamdu.GUI.ExpressionEdit.IfElseEdit as IfElseEdit
-import qualified Lamdu.GUI.ExpressionEdit.InjectEdit as InjectEdit
-import qualified Lamdu.GUI.ExpressionEdit.LambdaEdit as LambdaEdit
-import qualified Lamdu.GUI.ExpressionEdit.LiteralEdit as LiteralEdit
-import qualified Lamdu.GUI.ExpressionEdit.NominalEdit as NominalEdit
-import qualified Lamdu.GUI.ExpressionEdit.RecordEdit as RecordEdit
+import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
+import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
+import qualified Lamdu.GUI.Expr.Dotter as Dotter
+import qualified Lamdu.GUI.Expr.FragmentEdit as FragmentEdit
+import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
+import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.HoleEdit as HoleEdit
+import qualified Lamdu.GUI.Expr.IfElseEdit as IfElseEdit
+import qualified Lamdu.GUI.Expr.InjectEdit as InjectEdit
+import qualified Lamdu.GUI.Expr.LambdaEdit as LambdaEdit
+import qualified Lamdu.GUI.Expr.LiteralEdit as LiteralEdit
+import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
+import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

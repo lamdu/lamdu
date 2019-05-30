@@ -23,7 +23,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.Styled as Styled

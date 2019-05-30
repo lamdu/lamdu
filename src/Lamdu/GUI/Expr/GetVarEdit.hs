@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.GetVarEdit
+module Lamdu.GUI.Expr.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
     , Role(..)
     ) where

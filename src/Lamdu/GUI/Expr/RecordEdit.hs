@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.RecordEdit
+module Lamdu.GUI.Expr.RecordEdit
     ( make
     ) where
 
@@ -37,7 +37,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

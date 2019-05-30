@@ -322,30 +322,30 @@ Library
                   , Lamdu.GUI.CodeEdit.Load
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView
-                  , Lamdu.GUI.ExpressionEdit
-                  , Lamdu.GUI.ExpressionEdit.ApplyEdit
-                  , Lamdu.GUI.ExpressionEdit.AssignmentEdit
-                  , Lamdu.GUI.ExpressionEdit.BinderEdit
-                  , Lamdu.GUI.ExpressionEdit.BuiltinEdit
-                  , Lamdu.GUI.ExpressionEdit.CaseEdit
-                  , Lamdu.GUI.ExpressionEdit.Dotter
-                  , Lamdu.GUI.ExpressionEdit.EventMap
-                  , Lamdu.GUI.ExpressionEdit.FragmentEdit
-                  , Lamdu.GUI.ExpressionEdit.GetFieldEdit
-                  , Lamdu.GUI.ExpressionEdit.GetVarEdit
-                  , Lamdu.GUI.ExpressionEdit.IfElseEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
-                  , Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds
-                  , Lamdu.GUI.ExpressionEdit.InjectEdit
-                  , Lamdu.GUI.ExpressionEdit.LambdaEdit
-                  , Lamdu.GUI.ExpressionEdit.LiteralEdit
-                  , Lamdu.GUI.ExpressionEdit.NominalEdit
-                  , Lamdu.GUI.ExpressionEdit.RecordEdit
-                  , Lamdu.GUI.ExpressionEdit.TagEdit
+                  , Lamdu.GUI.Expr
+                  , Lamdu.GUI.Expr.ApplyEdit
+                  , Lamdu.GUI.Expr.AssignmentEdit
+                  , Lamdu.GUI.Expr.BinderEdit
+                  , Lamdu.GUI.Expr.BuiltinEdit
+                  , Lamdu.GUI.Expr.CaseEdit
+                  , Lamdu.GUI.Expr.Dotter
+                  , Lamdu.GUI.Expr.EventMap
+                  , Lamdu.GUI.Expr.FragmentEdit
+                  , Lamdu.GUI.Expr.GetFieldEdit
+                  , Lamdu.GUI.Expr.GetVarEdit
+                  , Lamdu.GUI.Expr.IfElseEdit
+                  , Lamdu.GUI.Expr.HoleEdit
+                  , Lamdu.GUI.Expr.HoleEdit.ResultGroups
+                  , Lamdu.GUI.Expr.HoleEdit.ResultWidget
+                  , Lamdu.GUI.Expr.HoleEdit.SearchArea
+                  , Lamdu.GUI.Expr.HoleEdit.ValTerms
+                  , Lamdu.GUI.Expr.HoleEdit.WidgetIds
+                  , Lamdu.GUI.Expr.InjectEdit
+                  , Lamdu.GUI.Expr.LambdaEdit
+                  , Lamdu.GUI.Expr.LiteralEdit
+                  , Lamdu.GUI.Expr.NominalEdit
+                  , Lamdu.GUI.Expr.RecordEdit
+                  , Lamdu.GUI.Expr.TagEdit
                   , Lamdu.GUI.ExpressionGui.Annotation
                   , Lamdu.GUI.ExpressionGui.Monad
                   , Lamdu.GUI.ExpressionGui.Payload

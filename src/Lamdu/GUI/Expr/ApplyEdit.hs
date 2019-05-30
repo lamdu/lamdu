@@ -1,5 +1,5 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
-module Lamdu.GUI.ExpressionEdit.ApplyEdit
+module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
 
@@ -19,8 +19,8 @@ import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.GUI.ExpressionEdit.GetVarEdit as GetVarEdit
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

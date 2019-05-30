@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
-module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget
+module Lamdu.GUI.Expr.HoleEdit.ResultWidget
     ( make
     ) where
 
@@ -27,7 +27,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (getSearchStringRemainder)
+import           Lamdu.GUI.Expr.HoleEdit.ValTerms (getSearchStringRemainder)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

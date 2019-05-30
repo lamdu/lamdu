@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.EventMap
+module Lamdu.GUI.Expr.EventMap
     ( add
     , Options(..), defaultOptions
     , ExprInfo(..), addWith
@@ -19,8 +19,8 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedFragmentSearchTerm)
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

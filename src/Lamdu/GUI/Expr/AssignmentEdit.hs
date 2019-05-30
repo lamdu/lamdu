@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.AssignmentEdit
+module Lamdu.GUI.Expr.AssignmentEdit
     ( make
     , Parts(..), makeFunctionParts
     ) where
@@ -46,7 +46,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM

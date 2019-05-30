@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.LambdaEdit
+module Lamdu.GUI.Expr.LambdaEdit
     ( make
     ) where
 
@@ -28,7 +28,7 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
-import qualified Lamdu.GUI.ExpressionEdit.AssignmentEdit as AssignmentEdit
+import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)

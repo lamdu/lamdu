@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.GetFieldEdit
+module Lamdu.GUI.Expr.GetFieldEdit
     ( make
     ) where
 
@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

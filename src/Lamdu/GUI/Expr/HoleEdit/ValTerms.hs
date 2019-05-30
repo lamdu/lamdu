@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms
+module Lamdu.GUI.Expr.HoleEdit.ValTerms
     ( expr
     , binder
     , allowedSearchTermCommon

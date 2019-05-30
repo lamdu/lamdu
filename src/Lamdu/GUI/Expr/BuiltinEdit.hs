@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.BuiltinEdit
+module Lamdu.GUI.Expr.BuiltinEdit
     ( make
     ) where
 

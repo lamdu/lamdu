@@ -18,8 +18,8 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.Dotter as Dotter
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.Dotter as Dotter
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

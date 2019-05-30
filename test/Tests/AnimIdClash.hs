@@ -7,8 +7,8 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.Expr as ExpressionEdit
+import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView

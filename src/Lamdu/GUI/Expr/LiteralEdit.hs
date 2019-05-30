@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.LiteralEdit
+module Lamdu.GUI.Expr.LiteralEdit
     ( make, makeLiteralEventMap
     ) where
 
@@ -37,7 +37,7 @@ import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)

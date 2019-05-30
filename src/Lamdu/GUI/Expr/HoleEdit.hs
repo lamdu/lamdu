@@ -1,4 +1,4 @@
-module Lamdu.GUI.ExpressionEdit.HoleEdit
+module Lamdu.GUI.Expr.HoleEdit
     ( make
     ) where
 
@@ -16,12 +16,12 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea as SearchArea
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms (allowedSearchTermCommon)
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionEdit.LiteralEdit (makeLiteralEventMap)
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
+import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
+import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.Expr.LiteralEdit (makeLiteralEventMap)
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

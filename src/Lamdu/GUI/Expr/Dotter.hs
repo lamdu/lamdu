@@ -12,7 +12,7 @@
 --
 -- In this state, the gui presents a dot besides the dotted expression.
 
-module Lamdu.GUI.ExpressionEdit.Dotter
+module Lamdu.GUI.Expr.Dotter
     ( with, addEventMap
     ) where
 
@@ -35,7 +35,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar

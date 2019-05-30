@@ -35,8 +35,8 @@ import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.GUI.ExpressionEdit.EventMap as ExprEventMap
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, makeBinder)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans(..))

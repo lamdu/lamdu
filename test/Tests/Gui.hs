@@ -23,9 +23,9 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
-import qualified Lamdu.GUI.ExpressionEdit as ExpressionEdit
-import qualified Lamdu.GUI.ExpressionEdit.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import qualified Lamdu.GUI.Expr as ExpressionEdit
+import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

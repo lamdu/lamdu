@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
-module Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups
+module Lamdu.GUI.Expr.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
     , ResultGroup(..), rgPrefixId, rgMain, rgExtra
@@ -23,7 +23,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Config as Config
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ValTerms as ValTerms
+import qualified Lamdu.GUI.Expr.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

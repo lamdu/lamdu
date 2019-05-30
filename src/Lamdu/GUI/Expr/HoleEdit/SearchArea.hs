@@ -4,7 +4,7 @@
 --
 -- For non-fragments this is the whole hole.
 
-module Lamdu.GUI.ExpressionEdit.HoleEdit.SearchArea
+module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
     ) where
 
@@ -37,11 +37,11 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultGroups as ResultGroups
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.ResultWidget as ResultWidget
-import           Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds (WidgetIds(..))
-import qualified Lamdu.GUI.ExpressionEdit.HoleEdit.WidgetIds as HoleWidgetIds
+import           Lamdu.GUI.Expr.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
+import qualified Lamdu.GUI.Expr.HoleEdit.ResultGroups as ResultGroups
+import qualified Lamdu.GUI.Expr.HoleEdit.ResultWidget as ResultWidget
+import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)

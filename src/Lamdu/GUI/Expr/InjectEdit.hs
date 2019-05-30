@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
-module Lamdu.GUI.ExpressionEdit.InjectEdit
+module Lamdu.GUI.Expr.InjectEdit
     ( make
     ) where
 
@@ -25,7 +25,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
-import qualified Lamdu.GUI.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
