@@ -33,6 +33,9 @@ module Lamdu.Sugar.Types.Expression
     , ElseIfContent(..), eiScopes, eiContent
     , Else(..), _SimpleElse, _ElseIf
     , IfElse(..), iIf, iThen, iElse
+    -- Record & Cases
+    , Composite(..), cItems, cAddItem, cTail
+    , Case(..), cKind, cBody
     ) where
 
 import           AST (Tree, Tie, Ann, Children, Recursive, makeChildren)
@@ -132,6 +135,17 @@ data IfElse name i o f = IfElse
     , _iElse :: Tie f (Else name i o)
     } deriving Generic
 
+data Composite name i o expr = Composite
+    { _cItems :: [CompositeItem name i o expr]
+    , _cTail :: CompositeTail o expr
+    , _cAddItem :: TagReplace name i o EntityId
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data Case name i o expr = Case
+    { _cKind :: CaseKind o expr
+    , _cBody :: Composite name i o expr
+    } deriving (Functor, Foldable, Traversable, Generic)
+
 data Body name i o f
     = BodyLam (Lambda name i o f)
     | BodySimpleApply (Apply (Body name i o) f)
@@ -192,6 +206,8 @@ data Assignment name i o f
 
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignPlain
+Lens.makeLenses ''Case
+Lens.makeLenses ''Composite
 Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
