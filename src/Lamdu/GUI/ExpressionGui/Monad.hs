@@ -18,7 +18,7 @@ module Lamdu.GUI.ExpressionGui.Monad
 
     , makeSubexpression, makeBinder
 
-    , ExprGuiM, run
+    , GuiM, run
     ) where
 
 import           AST (Tree, Ann(..), ann)
@@ -75,11 +75,11 @@ data Askable env i o = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> ExprGuiM env i o (Gui Responsive o)
+    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Gui Responsive o)
     , _aMakeBinder ::
         Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Binder (Name o) i o) ->
-        ExprGuiM env i o (Gui Responsive o)
+        GuiM env i o (Gui Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -94,10 +94,10 @@ data Askable env i o = Askable
         -- env
     }
 
-newtype ExprGuiM env i (o :: * -> *) a =
-    ExprGuiM (ReaderT (Askable env i o) i a)
+newtype GuiM env i (o :: * -> *) a =
+    GuiM (ReaderT (Askable env i o) i a)
     deriving newtype (Functor, Applicative, Monad, MonadReader (Askable env i o))
-    deriving (Semigroup, Monoid) via (Monoid.Ap (ExprGuiM env i o) a)
+    deriving (Semigroup, Monoid) via (Monoid.Ap (GuiM env i o) a)
 
 Lens.makeLenses ''Askable
 
@@ -121,17 +121,17 @@ instance Has Dir.Layout (Askable env i o) where has = aDirLayout
 instance Has LangId env => Has LangId (Askable env i o) where has = aEnv . has
 instance Has (f Text) env => Has (f Text) (Askable env i o) where has = aEnv . has
 
-im :: Monad i => i a -> ExprGuiM env i o a
-im = ExprGuiM . lift
+im :: Monad i => i a -> GuiM env i o a
+im = GuiM . lift
 
 newtype IOM i o = IOM (forall x. i x -> o x)
-iom :: Monad i => ExprGuiM env i o (IOM i o)
+iom :: Monad i => GuiM env i o (IOM i o)
 iom = Lens.view id <&> \askable -> IOM (aIom askable)
 
 readGuiAnchors :: MonadReader (Askable env i o) m => m (Anchors.GuiAnchors i o)
 readGuiAnchors = Lens.view aGuiAnchors
 
-mkPrejumpPosSaver :: (Monad i, Monad o) => ExprGuiM env i o (o ())
+mkPrejumpPosSaver :: (Monad i, Monad o) => GuiM env i o (o ())
 mkPrejumpPosSaver =
     do
         preJumpsMkProp <- readGuiAnchors <&> Anchors.preJumps
@@ -159,15 +159,15 @@ withLocalMScopeId ::
     MonadReader (Askable env i o) m => CurAndPrev (Maybe ScopeId) -> m a -> m a
 withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
 
-instance MonadTransaction n i => MonadTransaction n (ExprGuiM env i o) where
+instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
     transaction = im . transaction
 
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Ann (Sugar.Payload name i o a) e -> ExprGuiM env i o (Gui Responsive.Responsive o)) ->
+        (Ann (Sugar.Payload name i o a) e -> GuiM env i o (Gui Responsive.Responsive o)) ->
     Ann (Sugar.Payload name i o a) e ->
-    ExprGuiM env i o (Gui Responsive.Responsive o)
+    GuiM env i o (Gui Responsive.Responsive o)
 make sub expr =
     do
         maker <- Lens.view sub
@@ -180,13 +180,13 @@ make sub expr =
 makeSubexpression ::
     Monad i =>
     Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM env i o (Gui Responsive.Responsive o)
+    GuiM env i o (Gui Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
-    ExprGuiM env i o (Gui Responsive.Responsive o)
+    GuiM env i o (Gui Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
 isHoleResult :: MonadReader (Askable env i o) m => m Bool
@@ -200,13 +200,13 @@ run ::
     , Has Config env, Has Theme env
     , Has Settings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr i o -> ExprGuiM env i o (Gui Responsive o)) ->
+    (ExprGui.SugarExpr i o -> GuiM env i o (Gui Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Binder (Name o) i o)
-        -> ExprGuiM env i o (Gui Responsive o)) ->
+        -> GuiM env i o (Gui Responsive o)) ->
     Anchors.GuiAnchors i o ->
-    env -> (forall x. i x -> o x) -> ExprGuiM env i o a -> i a
-run makeSubexpr mkBinder theGuiAnchors env liftIom (ExprGuiM action) =
+    env -> (forall x. i x -> o x) -> GuiM env i o a -> i a
+run makeSubexpr mkBinder theGuiAnchors env liftIom (GuiM action) =
     runReaderT action
     Askable
     { _aState = env ^. has

@@ -28,7 +28,7 @@ import qualified Lamdu.GUI.Expr.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.Expr.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -52,7 +52,7 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    ExprGui.SugarExpr i o -> ExprGuiM env i o (Gui Responsive o)
+    ExprGui.SugarExpr i o -> GuiM env i o (Gui Responsive o)
 make (Ann pl body) =
     makeEditor body pl & assignCursor
     where
@@ -65,7 +65,7 @@ make (Ann pl body) =
 placeHolder ::
     (Monad i, Applicative o) =>
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 placeHolder pl =
     (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
     <*> Label.make "★"
@@ -85,7 +85,7 @@ makeEditor ::
     Tree (Sugar.Body (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeEditor body pl =
     do
         d <- Dotter.addEventMap ?? myId

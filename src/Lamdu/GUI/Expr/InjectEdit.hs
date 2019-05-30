@@ -26,8 +26,8 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (text, grammar)
@@ -63,13 +63,13 @@ makeInject ::
     ExprGui.SugarExpr i o ->
     Sugar.TagRef (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
     do
         env <- Lens.view id
         let delDoc = E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete]
-        arg <- ExprGuiM.makeSubexpression val
+        arg <- GuiM.makeSubexpression val
         let replaceParentEventMap replaceParent =
                 -- Deleting the inject is replacing the whole expr
                 -- with the injected value "child"
@@ -110,7 +110,7 @@ makeNullaryInject ::
     (Const (Sugar.NullaryVal (Name o) i o)) ->
     Sugar.TagRef (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
     >>= \case
@@ -151,7 +151,7 @@ make ::
     Tree (Sugar.Inject (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make (Sugar.Inject tag mVal) =
     case mVal of
     Sugar.InjectNullary nullary -> makeNullaryInject nullary tag

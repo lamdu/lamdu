@@ -29,7 +29,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.LightLambda as LightLambda
@@ -163,7 +163,7 @@ make ::
     Tree (Sugar.Lambda (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make lam pl =
     do
         AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap _rhsId <-

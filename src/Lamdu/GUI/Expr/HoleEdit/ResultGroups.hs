@@ -24,8 +24,8 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.Expr.HoleEdit.ValTerms as ValTerms
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -163,7 +163,7 @@ makeAll ::
     ) =>
     [Sugar.HoleOption (Name o1) i o1] ->
     SearchMenu.ResultsContext ->
-    ExprGuiM env i o (Menu.OptionList (ResultGroup i o1))
+    GuiM env i o (Menu.OptionList (ResultGroup i o1))
 makeAll options ctx =
     do
         config <- Lens.view (has . Config.completion)
@@ -174,7 +174,7 @@ makeAll options ctx =
             <&> ListClass.mapL (makeResultGroup ctx)
             <&> ListClass.catMaybes
             >>= collectResults config
-            & ExprGuiM.im
+            & GuiM.im
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 

@@ -31,11 +31,11 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-toExprGuiMPayload ::
+toGuiMPayload ::
     ( AddParens.MinOpPrec, AddParens.NeedsParens
     , Sugar.Payload name i o [Sugar.EntityId]
     ) -> Sugar.Payload name i o ExprGui.Payload
-toExprGuiMPayload (minOpPrec, needParens, pl) =
+toGuiMPayload (minOpPrec, needParens, pl) =
     pl <&>
     \entityIds ->
     ExprGui.Payload entityIds
@@ -62,6 +62,6 @@ loadWorkArea env cp =
     SugarConvert.loadWorkArea env cp
     >>= report . AddNames.addToWorkArea env (DataOps.assocTagName env)
     <&> AddParens.addToWorkArea
-    <&> Lens.mapped %~ toExprGuiMPayload
+    <&> Lens.mapped %~ toGuiMPayload
     where
         Debug.EvaluatorM report = env ^. has . Debug.naming . Debug.mAction

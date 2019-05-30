@@ -37,7 +37,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM, makeBinder)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM, makeBinder)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
@@ -244,7 +244,7 @@ make ::
     ExportRepl m ->
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    ExprGuiM env (T m) (T m) (Gui Responsive (IOTrans m))
+    GuiM env (T m) (T m) (Gui Responsive (IOTrans m))
 make exportRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         env <- Lens.view id

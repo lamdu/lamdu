@@ -39,8 +39,8 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.LightLambda as LightLambda
@@ -145,10 +145,10 @@ makeNameRef ::
     Role ->
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
     Sugar.NameRef (Name x) o ->
-    ExprGuiM env i o (TextWidget o)
+    GuiM env i o (TextWidget o)
 makeNameRef role color myId nameRef =
     do
-        savePrecursor <- ExprGuiM.mkPrejumpPosSaver
+        savePrecursor <- GuiM.mkPrejumpPosSaver
         env <- Lens.view id
         let jumpToDefinitionEventMap =
                 E.keysEventMapMovesCursor
@@ -296,7 +296,7 @@ makeGetBinder ::
     , Grid.HasTexts env
     ) =>
     Role -> Sugar.BinderVarRef (Name x) o -> Widget.Id ->
-    ExprGuiM env i o (TextWidget o)
+    GuiM env i o (TextWidget o)
 makeGetBinder role binderVar myId =
     do
         env <- Lens.view id
@@ -319,7 +319,7 @@ makeGetParam ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Sugar.ParamRef (Name x) o -> Widget.Id ->
-    ExprGuiM env i o (TextWidget o)
+    GuiM env i o (TextWidget o)
 makeGetParam param myId =
     do
         underline <- Lens.view has <&> LightLambda.underline
@@ -341,7 +341,7 @@ makeNoActions ::
     ) =>
     Sugar.GetVar (Name o) o ->
     Widget.Id ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -359,6 +359,6 @@ make ::
     ) =>
     Sugar.GetVar (Name o) o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)

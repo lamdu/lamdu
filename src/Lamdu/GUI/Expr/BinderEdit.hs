@@ -27,8 +27,8 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (grammar, label)
@@ -59,7 +59,7 @@ makeLetEdit ::
     ) =>
     Tree (Sugar.Let (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeLetEdit item =
     do
         env <- Lens.view id
@@ -117,9 +117,9 @@ make ::
     ) =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Binder (Name o) i o) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make (Ann pl (Sugar.BinderExpr assignmentBody)) =
-    Ann pl assignmentBody & ExprGuiM.makeSubexpression
+    Ann pl assignmentBody & GuiM.makeSubexpression
 make (Ann pl (Sugar.BinderLet l)) =
     do
         env <- Lens.view id
@@ -135,7 +135,7 @@ make (Ann pl (Sugar.BinderLet l)) =
                     , has . CodeUI.letClause
                     , has . Texts.moveInwards
                     ]) . void)
-        mOuterScopeId <- ExprGuiM.readMScopeId
+        mOuterScopeId <- GuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         stdWrapParentExpr pl
             <*>
@@ -144,7 +144,7 @@ make (Ann pl (Sugar.BinderLet l)) =
                 sequence
                 [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
                 , make body
-                & ExprGuiM.withLocalMScopeId letBodyScope
+                & GuiM.withLocalMScopeId letBodyScope
                 ]
             )
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)

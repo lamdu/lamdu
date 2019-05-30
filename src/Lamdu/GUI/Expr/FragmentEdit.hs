@@ -29,8 +29,8 @@ import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -77,7 +77,7 @@ make ::
     Tree (Sugar.Fragment (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
@@ -86,7 +86,7 @@ make fragment pl =
             makeFragmentExprEdit fragment & GuiState.assignCursor myId innerId
         hover <- Hover.hover
         searchAreaGui <- SearchArea.make (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm
-        isHoleResult <- ExprGuiM.isHoleResult
+        isHoleResult <- GuiM.isHoleResult
         let mkSearchArea
                 | isHoleResult = const Element.empty
                 | otherwise = searchAreaGui
@@ -130,7 +130,7 @@ make fragment pl =
                     & E.keysEventMapMovesCursor
                         (Config.delKeys env <> env ^. has . Config.healKeys)
                         (fragmentDoc env (has . Texts.heal))
-        isInAHole <- ExprGuiM.isHoleResult
+        isInAHole <- GuiM.isHoleResult
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
             <&> Widget.widget %~ Widget.weakerEvents healEventMap
@@ -147,7 +147,7 @@ makeFragmentExprEdit ::
     (Monad i, Functor o) =>
     Tree (Sugar.Fragment (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeFragmentExprEdit fragment =
     do
         theme <- Lens.view has
@@ -157,7 +157,7 @@ makeFragmentExprEdit fragment =
                 Sugar.HealAction {} -> Theme.successColor
                 Sugar.TypeMismatch {} -> Theme.errorColor
         let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
-        fragmentExprGui <- ExprGuiM.makeSubexpression (fragment ^. Sugar.fExpr)
+        fragmentExprGui <- GuiM.makeSubexpression (fragment ^. Sugar.fExpr)
         MDraw.addInnerFrame
             ?? frameColor ?? frameWidth
             ?? Element.padAround (frameWidth & _2 .~ 0) fragmentExprGui

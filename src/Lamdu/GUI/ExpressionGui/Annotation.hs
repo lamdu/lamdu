@@ -33,8 +33,8 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.EvalView as EvalView
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -141,7 +141,7 @@ data EvalResDisplay name = EvalResDisplay
 makeEvaluationResultView ::
     (Monad i, Monad o, Has (Texts.Name Text) env) =>
     EvalResDisplay (Name f) ->
-    ExprGuiM env i o (WithTextPos View)
+    GuiM env i o (WithTextPos View)
 makeEvaluationResultView res =
     do
         th <- Lens.view has
@@ -159,7 +159,7 @@ data NeighborVals a = NeighborVals
 makeEvalView ::
     (Monad i, Monad o, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
-    EvalResDisplay (Name g) -> ExprGuiM env i o (WithTextPos View)
+    EvalResDisplay (Name g) -> GuiM env i o (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view (has . Theme.eval)
@@ -237,7 +237,7 @@ addEvaluationResult ::
     (Monad i, Monad o, Functor f, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
     EvalResDisplay (Name g) -> WideAnnotationBehavior ->
-    ExprGuiM env i o
+    GuiM env i o
     ((Widget.R -> Widget.R) ->
      Gui Widget f ->
      Gui Widget f)
@@ -257,7 +257,7 @@ maybeAddAnnotationPl ::
     , Has (Texts.Name Text) env
     ) =>
     Sugar.Payload (Name o) i o1 ExprGui.Payload ->
-    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
+    GuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
@@ -279,13 +279,13 @@ maybeAddAnnotationPl pl =
 evaluationResult ::
     Monad i =>
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM env i o (Maybe (Sugar.ResVal name))
+    GuiM env i o (Maybe (Sugar.ResVal name))
 evaluationResult pl =
     do
-        scopeId <- ExprGuiM.readMScopeId
+        scopeId <- GuiM.readMScopeId
         case pl ^? Sugar.plAnnotation . Sugar._AnnotationVal . Sugar.annotationVal of
             Nothing -> pure Nothing
-            Just x -> valOfScope x scopeId & ExprGuiM.im <&> Lens._Just %~ erdVal
+            Just x -> valOfScope x scopeId & GuiM.im <&> Lens._Just %~ erdVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
@@ -294,7 +294,7 @@ data EvalAnnotationOptions
 getAnnotationMode ::
     Monad i =>
     EvalAnnotationOptions -> Sugar.EvaluationScopes name i ->
-    ExprGuiM env i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
+    GuiM env i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
 getAnnotationMode opt annotation =
     do
         neighbourVals <-
@@ -304,11 +304,11 @@ getAnnotationMode opt annotation =
                 -- neighbors <&> (>>= valOfScopePreferCur annotation . (^. Sugar.bParamScopeId))
                 -- & Just
                 neighbors & traverse . Lens._Just %%~
-                    ExprGuiM.im . valOfScopePreferCur annotation . (^. Sugar.bParamScopeId)
+                    GuiM.im . valOfScopePreferCur annotation . (^. Sugar.bParamScopeId)
                 <&> traverse %~ join
                 <&> Just
-        ExprGuiM.readMScopeId
-            >>= ExprGuiM.im . valOfScope annotation
+        GuiM.readMScopeId
+            >>= GuiM.im . valOfScope annotation
             <&> Lens.mapped %~ (, neighbourVals)
 
 maybeAddAnnotationWith ::
@@ -317,7 +317,7 @@ maybeAddAnnotationWith ::
     ) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.Annotation (Name o) i ->
-    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
+    GuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
     case annotation of
     Sugar.AnnotationNone -> pure id
@@ -331,7 +331,7 @@ maybeAddValAnnotationWith ::
     ) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
     Sugar.ValAnnotation (Name o) i ->
-    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
+    GuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
     getAnnotationMode opt (ann ^. Sugar.annotationVal)
     >>=
@@ -352,7 +352,7 @@ maybeAddAnnotation ::
     , Has (Texts.Name Text) env
     ) =>
     WideAnnotationBehavior -> Sugar.Annotation (Name o) i ->
-    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
+    GuiM env i o (Gui Widget o -> Gui Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
 valOfScope ::

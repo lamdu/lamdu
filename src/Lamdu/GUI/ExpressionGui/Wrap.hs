@@ -21,7 +21,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.Dotter as Dotter
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -63,7 +63,7 @@ stdWrap ::
     , Grid.HasTexts env
     ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o
+    GuiM env i o
     (Gui Responsive o -> Gui Responsive o)
 stdWrap pl =
     (takeFocusIfNeeded pl <&> (Widget.widget %~))
@@ -95,7 +95,7 @@ stdWrapParentExpr ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o -> Gui Responsive o)
+    GuiM env i o (Gui Responsive o -> Gui Responsive o)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl
@@ -104,7 +104,7 @@ stdWrapParentExpr pl =
 takeFocusIfNeeded ::
     Monad i =>
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Widget o -> Gui Widget o)
+    GuiM env i o (Gui Widget o -> Gui Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor
     <&>

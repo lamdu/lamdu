@@ -25,7 +25,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -139,7 +139,7 @@ make ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Name o) i (Info i o) ->
-    ExprGuiM env i o [Gui Responsive o]
+    GuiM env i o [Gui Responsive o]
 make annotationOpts prevId nextId param =
     do
         env <- Lens.view id

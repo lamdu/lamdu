@@ -48,8 +48,8 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
@@ -117,15 +117,15 @@ mkChosenScopeCursor ::
     Monad i =>
     Tree (Sugar.Function (Name o) i o)
         (Ann (Sugar.Payload name i o ExprGui.Payload)) ->
-    ExprGuiM env i o (CurAndPrev (Maybe ScopeCursor))
+    GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
-        mOuterScopeId <- ExprGuiM.readMScopeId
+        mOuterScopeId <- GuiM.readMScopeId
         case func ^. Sugar.fBodyScopes of
             Sugar.SameAsParentScope ->
                 mOuterScopeId <&> fmap (trivialScopeCursor . Sugar.BinderParamScopeId) & pure
             Sugar.BinderBodyScope assignmentBodyScope ->
-                readFunctionChosenScope func & ExprGuiM.im
+                readFunctionChosenScope func & GuiM.im
                 <&> \mChosenScope ->
                 liftA2 lookupMKey mOuterScopeId assignmentBodyScope
                 <&> (>>= scopeCursor mChosenScope)
@@ -207,14 +207,14 @@ makeScopeNavEdit ::
     , Glue.HasTexts env
     ) =>
     Sugar.Function name i o expr -> Widget.Id -> ScopeCursor ->
-    ExprGuiM env i o
+    GuiM env i o
     ( Gui EventMap o
     , Maybe (Gui Widget o)
     )
 makeScopeNavEdit func myId curCursor =
     do
         evalConfig <- Lens.view (has . Config.eval)
-        chosenScopeProp <- func ^. Sugar.fChosenScopeProp & ExprGuiM.im
+        chosenScopeProp <- func ^. Sugar.fChosenScopeProp & GuiM.im
         let setScope =
                 (mempty <$) .
                 Property.set chosenScopeProp . Just
@@ -286,7 +286,7 @@ makeParamsEdit ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name o) i o ->
-    ExprGuiM env i o [Gui Responsive o]
+    GuiM env i o [Gui Responsive o]
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam p ->
@@ -332,7 +332,7 @@ makeMParamsEdit ::
     Widget.Id ->
     Sugar.AddFirstParam (Name o) i o ->
     Maybe (Sugar.BinderParams (Name o) i o) ->
-    ExprGuiM env i o (Maybe (Gui Responsive o))
+    GuiM env i o (Maybe (Gui Responsive o))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
     do
         isPrepend <- GuiState.isSubCursor ?? prependId
@@ -350,7 +350,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
             Just params ->
                 makeParamsEdit annotationMode
                 delVarBackwardsId myId bodyId params
-                & ExprGuiM.withLocalMScopeId
+                & GuiM.withLocalMScopeId
                     ( mScopeCursor
                         <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
                     )
@@ -392,7 +392,7 @@ makeFunctionParts ::
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Widget.Id ->
-    ExprGuiM env i o (Parts o)
+    GuiM env i o (Parts o)
 makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
@@ -414,13 +414,13 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
             paramsEdit <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
-            rhs <- ExprGuiM.makeBinder (func ^. Sugar.fBody)
+            rhs <- GuiM.makeBinder (func ^. Sugar.fBody)
             wrap <- stdWrap pl
             Parts paramsEdit mScopeNavEdit rhs scopeEventMap wrap bodyId & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
-            & ExprGuiM.withLocalMScopeId binderScopeId
+            & GuiM.withLocalMScopeId binderScopeId
     where
         myId = WidgetIds.fromExprPayload pl
         destId =
@@ -446,7 +446,7 @@ makePlainParts ::
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Widget.Id ->
-    ExprGuiM env i o (Parts o)
+    GuiM env i o (Parts o)
 makePlainParts assignPlain pl delVarBackwardsId =
     do
         mParamsEdit <-
@@ -454,7 +454,7 @@ makePlainParts assignPlain pl delVarBackwardsId =
             (assignPlain ^. Sugar.apAddFirstParam) Nothing
         rhs <-
             assignPlain ^. Sugar.apBody & Ann pl
-            & ExprGuiM.makeBinder
+            & GuiM.makeBinder
         Parts mParamsEdit Nothing rhs mempty id myId & pure
     where
         myId = WidgetIds.fromExprPayload pl
@@ -474,7 +474,7 @@ makeParts ::
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Assignment (Name o) i o) ->
     Widget.Id ->
-    ExprGuiM env i o (Parts o)
+    GuiM env i o (Parts o)
 makeParts funcApplyLimit (Ann pl assignmentBody) =
     case assignmentBody of
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
@@ -497,14 +497,14 @@ make ::
     Sugar.TagRef (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Sugar.Assignment (Name o) i o) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make pMode defEventMap tag color assignment =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-
             makeParts Sugar.UnlimitedFuncApply assignment delParamDest
         env <- Lens.view id
         rhsJumperEquals <-
-            ExprGuiM.mkPrejumpPosSaver
+            GuiM.mkPrejumpPosSaver
             <&> Lens.mapped .~ GuiState.updateCursor rhsId
             <&> const
             <&> E.charGroup Nothing
@@ -517,7 +517,7 @@ make pMode defEventMap tag color assignment =
             case assignmentBody of
             Sugar.BodyPlain{} -> pure Nothing
             Sugar.BodyFunction x ->
-                pMode & sequenceA & ExprGuiM.im
+                pMode & sequenceA & GuiM.im
                 >>= traverse
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         addFirstParamEventMap <-

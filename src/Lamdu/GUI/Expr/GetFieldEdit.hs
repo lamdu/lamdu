@@ -17,8 +17,8 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Styled as Styled
@@ -45,10 +45,10 @@ make ::
     ) =>
     Sugar.GetField (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make (Sugar.GetField recExpr tag) pl =
     do
-        recExprEdit <- ExprGuiM.makeSubexpression recExpr
+        recExprEdit <- GuiM.makeSubexpression recExpr
         dotLabel <- Label.make "." & Styled.grammar
         env <- Lens.view id
         let mkDelEventMap del =

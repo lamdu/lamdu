@@ -44,8 +44,8 @@ import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.I18N.Code as Texts
@@ -85,12 +85,12 @@ makeRenderedResult ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result i o ->
-    ExprGuiM env i o (Menu.RenderedOption o)
+    GuiM env i o (Menu.RenderedOption o)
 makeRenderedResult pl ctx result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
-        res <- rHoleResult result & ExprGuiM.im
+        res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
             & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
             & ResultWidget.make ctx (rId result)
@@ -115,7 +115,7 @@ postProcessSugar minOpPrec binder =
 makeResultOption ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
     Sugar.Payload name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
-    ResultGroup i o -> Menu.Option (ExprGuiM env i o) o
+    ResultGroup i o -> Menu.Option (GuiM env i o) o
 makeResultOption pl ctx results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
@@ -171,7 +171,7 @@ make ::
     i [Sugar.HoleOption (Name o) i o] ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
-    ExprGuiM env i o (Menu.Placement -> Gui Responsive o)
+    GuiM env i o (Menu.Placement -> Gui Responsive o)
 make mkOptions pl allowedTerms =
     do
         env <- Lens.view id
@@ -188,14 +188,14 @@ make mkOptions pl allowedTerms =
         let inPlaceOfClosed open =
                 closedSearchTermGui & Widget.widget %~
                 (anc open `Hover.emplaceAt`) . anc
-        isAHoleInHole <- ExprGuiM.isHoleResult
+        isAHoleInHole <- GuiM.isHoleResult
         if isActive && not isAHoleInHole
             then
                 do
                     annotation <-
                         Annotation.annotationSpacer
                         /-/ makeInferredTypeAnnotation pl
-                    options <- ExprGuiM.im mkOptions
+                    options <- GuiM.im mkOptions
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
                     -- important in the case the FD is selected, and

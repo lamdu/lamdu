@@ -27,8 +27,8 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (label, grammar)
@@ -59,13 +59,13 @@ makeIfThen ::
     WithTextPos View -> AnimId ->
     Tree (Sugar.IfElse (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM env i o (Row (Gui Responsive o))
+    GuiM env i o (Row (Gui Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
-            ExprGuiM.makeSubexpression (ifElse ^. Sugar.iIf)
+            GuiM.makeSubexpression (ifElse ^. Sugar.iIf)
             /|/ (grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace)
-        thenGui <- ExprGuiM.makeSubexpression (ifElse ^. Sugar.iThen)
+        thenGui <- GuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             pure prefixLabel
             /|/ grammar (label Texts.if_)
@@ -94,20 +94,20 @@ makeElseBody ::
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     Tree (Sugar.Else (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM env i o [Row (Gui Responsive o)]
+    GuiM env i o [Row (Gui Responsive o)]
 makeElseBody pl (Sugar.SimpleElse expr) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
         <*> (grammar (label Texts.injectSymbol)
                 & Reader.local (Element.animIdPrefix .~ elseAnimId)
                 <&> Responsive.fromTextView)
-    ) <*> ExprGuiM.makeSubexpression (Ann pl expr)
+    ) <*> GuiM.makeSubexpression (Ann pl expr)
     <&> pure
     where
         elseAnimId = WidgetIds.fromExprPayload pl & Widget.toAnimId
 makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
     do
-        mOuterScopeId <- ExprGuiM.readMScopeId
+        mOuterScopeId <- GuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- grammar (label Texts.elseShort)
@@ -119,7 +119,7 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
                 )
             <*> makeElse (content ^. Sugar.iElse)
             & Reader.local (Element.animIdPrefix .~ animId)
-            & ExprGuiM.withLocalMScopeId mInnerScope
+            & GuiM.withLocalMScopeId mInnerScope
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         entityId = pl ^. Sugar.plEntityId
@@ -134,7 +134,7 @@ makeElse ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
-    ExprGuiM env i o [Row (Gui Responsive o)]
+    GuiM env i o [Row (Gui Responsive o)]
 makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
@@ -196,7 +196,7 @@ make ::
     Tree (Sugar.IfElse (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows (ExprGui.mParensId pl)

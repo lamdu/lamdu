@@ -26,7 +26,7 @@ import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -73,14 +73,14 @@ makeGui afterDoc env =
         gui <-
             do
                 replGui <-
-                    ExprGuiM.makeBinder repl
+                    GuiM.makeBinder repl
                     & GuiState.assignCursor WidgetIds.replId replExprId
                 paneGuis <-
                     workArea ^..
                     Sugar.waPanes . traverse
                     & traverse CodeEdit.makePaneBodyEdit
                 Responsive.vbox ?? (replGui : paneGuis)
-            & ExprGuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
+            & GuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))

@@ -21,8 +21,8 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.NameView as NameView
@@ -57,9 +57,9 @@ makeToNom ::
             (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
             (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeToNom nom pl =
-    nom <&> ExprGuiM.makeBinder
+    nom <&> GuiM.makeBinder
     & mkNomGui id Texts.deleteToNominal Texts.toNom mDel pl
     where
         mDel =
@@ -77,9 +77,9 @@ makeFromNom ::
     ) =>
     Sugar.Nominal (Name o) (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeFromNom nom pl =
-    nom <&> ExprGuiM.makeSubexpression
+    nom <&> GuiM.makeSubexpression
     & mkNomGui reverse Texts.deleteFromNominal Texts.fromNom mDel pl
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
@@ -95,8 +95,8 @@ mkNomGui ::
     ([Gui Responsive o] -> [Gui Responsive o]) ->
     OneOf Texts.CodeUI -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Nominal (Name o) (ExprGuiM env i o (Gui Responsive o)) ->
-    ExprGuiM env i o (Gui Responsive o)
+    Sugar.Nominal (Name o) (GuiM env i o (Gui Responsive o)) ->
+    GuiM env i o (Gui Responsive o)
 mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)

@@ -38,8 +38,8 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import           Lamdu.GUI.Styled (label, grammar)
@@ -107,7 +107,7 @@ makeUnit ::
     , Grid.HasTexts env
     ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
@@ -137,7 +137,7 @@ make ::
     ) =>
     Sugar.Composite (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -225,7 +225,7 @@ makeAddFieldRow ::
     ) =>
     Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui Responsive.TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
@@ -253,11 +253,11 @@ makeFieldRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    ExprGuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui Responsive.TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
-        fieldGui <- ExprGuiM.makeSubexpression fieldExpr
+        fieldGui <- GuiM.makeSubexpression fieldExpr
         pre <-
             ( TagEdit.makeRecordTag tag
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
@@ -277,7 +277,7 @@ separationBar theme animId width =
 makeOpenRecord ::
     (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    Gui Responsive o -> ExprGuiM env i o (Gui Responsive o)
+    Gui Responsive o -> GuiM env i o (Gui Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view has
@@ -288,7 +288,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
                 & E.keysEventMapMovesCursor (Config.delKeys env)
                 (doc env Texts.close)
         restExpr <-
-            Styled.addValPadding <*> ExprGuiM.makeSubexpression rest
+            Styled.addValPadding <*> GuiM.makeSubexpression rest
             <&> Widget.weakerEvents restEventMap
         animId <- Lens.view Element.animIdPrefix
         (|---|) <- Glue.mkGlue ?? Glue.Vertical

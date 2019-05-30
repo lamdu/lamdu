@@ -28,7 +28,7 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
@@ -48,7 +48,7 @@ undeleteButton ::
     , Has (MomentuTexts.Texts Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    o Widget.Id -> ExprGuiM env i o (TextWidget o)
+    o Widget.Id -> GuiM env i o (TextWidget o)
 undeleteButton undelete =
     do
         actionId <- Element.subAnimId ?? ["Undelete"] <&> Widget.Id
@@ -78,7 +78,7 @@ makeExprDefinition ::
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionExpression (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeExprDefinition defEventMap def bodyExpr =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
@@ -99,7 +99,7 @@ makeBuiltinDefinition ::
     ) =>
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionBuiltin (Name g) o ->
-    ExprGuiM env i o (TextWidget o)
+    GuiM env i o (TextWidget o)
 makeBuiltinDefinition def builtin =
     TagEdit.makeBinderTagEdit TextColors.definitionColor name
     /|/ Label.make " = "
@@ -136,7 +136,7 @@ make ::
     ) =>
     Gui EventMap o ->
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make defEventMap def =
     do
         defGui <-
@@ -170,7 +170,7 @@ topLevelSchemeTypeView ::
     , Has (Texts.Name Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.Scheme (Name g) -> ExprGuiM env i o (WithTextPos View)
+    Sugar.Scheme (Name g) -> GuiM env i o (WithTextPos View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

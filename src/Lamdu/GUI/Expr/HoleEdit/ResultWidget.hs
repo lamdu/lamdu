@@ -28,8 +28,8 @@ import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (getSearchStringRemainder)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name(..))
@@ -68,20 +68,20 @@ makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
-    ExprGuiM env i o (TextWidget o)
+    GuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
         theme <- Lens.view (has . Theme.hole)
         stdSpacing <- Spacer.getSpaceSize
         let padding = theme ^. Theme.holeResultPadding & (* stdSpacing)
-        ExprGuiM.makeBinder holeResultConverted
+        GuiM.makeBinder holeResultConverted
             <&> Widget.enterResultCursor .~ resultId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
             <&> Element.padAround padding
-            & ExprGuiM.withLocalIsHoleResult
+            & GuiM.withLocalIsHoleResult
 
 make ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
@@ -89,7 +89,7 @@ make ::
     Widget.Id ->
     o () ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
-    ExprGuiM env i o (Menu.RenderedOption o)
+    GuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>
     makeWidget resultId holeResultConverted

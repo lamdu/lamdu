@@ -21,8 +21,8 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -52,12 +52,12 @@ defaultOptions =
 
 exprInfoFromPl ::
     Monad i =>
-    ExprGuiM env i o
+    GuiM env i o
     (Sugar.Payload name i0 o0 ExprGui.Payload -> ExprInfo name i0 o0)
 exprInfoFromPl =
     (,)
     <$> GuiState.isSubCursor
-    <*> ExprGuiM.isHoleResult
+    <*> GuiM.isHoleResult
     <&> \(isSubCursor, isHoleResult) pl ->
     let isSelected = WidgetIds.fromExprPayload pl & isSubCursor in
     ExprInfo
@@ -80,7 +80,7 @@ add ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Options -> Sugar.Payload name i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui w o -> Gui w o)
+    GuiM env i o (Gui w o -> Gui w o)
 add options pl = (exprInfoFromPl ?? pl) >>= addWith options
 
 addWith ::
@@ -89,7 +89,7 @@ addWith ::
     , Has (Texts.Definitions Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Options -> ExprInfo name i o -> ExprGuiM env i o (Gui w o -> Gui w o)
+    Options -> ExprInfo name i o -> GuiM env i o (Gui w o -> Gui w o)
 addWith options exprInfo =
     actionsEventMap options exprInfo <&> Widget.weakerEventsWithContext
 
@@ -118,11 +118,11 @@ addLetEventMap ::
     , Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    o Sugar.EntityId -> ExprGuiM env i o (Gui EventMap o)
+    o Sugar.EntityId -> GuiM env i o (Gui EventMap o)
 addLetEventMap addLet =
     do
         env <- Lens.view id
-        savePos <- ExprGuiM.mkPrejumpPosSaver
+        savePos <- GuiM.mkPrejumpPosSaver
         savePos >> addLet
             <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor
@@ -141,7 +141,7 @@ actionsEventMap ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Options -> ExprInfo name i o ->
-    ExprGuiM env i o (EventContext -> Gui EventMap o)
+    GuiM env i o (EventContext -> Gui EventMap o)
 actionsEventMap options exprInfo =
     ( mconcat
         [ detachEventMap ?? exprInfo ?? actions ^. Sugar.detach

@@ -21,8 +21,8 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
 import           Lamdu.GUI.Styled (label, grammar)
@@ -50,7 +50,7 @@ makeFunc ::
     GetVarEdit.Role ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Const (Sugar.BinderVarRef (Name o) o)) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeFunc role func =
     stdWrap pl <*>
     ( GetVarEdit.makeGetBinder role (func ^. val . Lens._Wrapped) myId
@@ -77,7 +77,7 @@ makeFuncRow ::
     Maybe AnimId ->
     Tree (Sugar.LabeledApply (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.Verbose -> makeFunc GetVarEdit.Normal func
@@ -85,17 +85,17 @@ makeFuncRow mParensId apply =
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ makeFunc GetVarEdit.Normal func
-        , ExprGuiM.makeSubexpression arg
+        , GuiM.makeSubexpression arg
         ]
     Sugar.Infix l r ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
-            [ ExprGuiM.makeSubexpression l
+            [ GuiM.makeSubexpression l
             , makeFunc GetVarEdit.Infix func
             ]
-        , ExprGuiM.makeSubexpression r
+        , GuiM.makeSubexpression r
         ]
     where
         func = apply ^. Sugar.aFunc
@@ -112,7 +112,7 @@ makeLabeled ::
     Tree (Sugar.LabeledApply (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeLabeled apply pl =
     stdWrapParentExpr pl
     <*> (makeFuncRow (ExprGui.mParensId pl) apply >>= addBox)
@@ -124,10 +124,10 @@ makeLabeled apply pl =
 makeArgRow ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Name Text) env ) =>
     Sugar.AnnotatedArg (Name o) (ExprGui.SugarExpr i o) ->
-    ExprGuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui Responsive.TaggedItem o)
 makeArgRow arg =
     do
-        expr <- ExprGuiM.makeSubexpression (arg ^. Sugar.aaExpr)
+        expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
         pre <-
             TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName)
             (arg ^. Sugar.aaTag . Sugar.tagInstance)
@@ -146,7 +146,7 @@ mkRelayedArgs ::
     ) =>
     [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Const (Sugar.GetVar (Name o) o))] ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 mkRelayedArgs args =
     do
         argEdits <- traverse (\(Ann a v) -> GetVarEdit.make (v ^. Lens._Wrapped) a) args
@@ -162,7 +162,7 @@ mkBoxed ::
     ) =>
     Tree (Sugar.LabeledApply (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Gui Responsive o -> ExprGuiM env i o (Gui Responsive o)
+    Gui Responsive o -> GuiM env i o (Gui Responsive o)
 mkBoxed apply funcRow =
     do
         argRows <-
@@ -191,12 +191,12 @@ makeSimple ::
     Tree (Sugar.Apply (Sugar.Body (Name o) i o))
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeSimple (Sugar.Apply func arg) pl =
     stdWrapParentExpr pl
     <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> sequenceA
-            [ ExprGuiM.makeSubexpression func
-            , ExprGuiM.makeSubexpression arg
+            [ GuiM.makeSubexpression func
+            , GuiM.makeSubexpression arg
             ]
         )

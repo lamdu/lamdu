@@ -9,7 +9,7 @@ import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -78,7 +78,7 @@ testFragment =
                 & annotations . Sugar.plData .~ adhocPayload
         let gui =
                 ExpressionEdit.make expr
-                & ExprGuiM.run ExpressionEdit.make BinderEdit.make
+                & GuiM.run ExpressionEdit.make BinderEdit.make
                 Env.dummyAnchors env (const Unit)
                 & runIdentity
         let widget = gui ^. Responsive.rWide . Align.tValue

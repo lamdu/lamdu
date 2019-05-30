@@ -38,7 +38,7 @@ import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
 import           Lamdu.GUI.Styled (label)
@@ -285,7 +285,7 @@ make ::
     ) =>
     Sugar.Literal (Property o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make lit pl =
     stdWrap pl
     <*>

@@ -36,8 +36,8 @@ import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as ExprGuiM
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
+import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import           Lamdu.GUI.Styled (label, grammar)
@@ -79,7 +79,7 @@ make ::
     ) =>
     Sugar.Case (Name o) i o (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
     do
         caseLabel <-
@@ -101,7 +101,7 @@ make (Sugar.Case mArg (Sugar.Composite alts caseTail addAlt)) pl =
             Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
                 do
                     argEdit <-
-                        ExprGuiM.makeSubexpression arg
+                        GuiM.makeSubexpression arg
                         <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
                     mTag <-
                         Annotation.evaluationResult (arg ^. ann)
@@ -141,14 +141,14 @@ makeAltRow ::
     ) =>
     Maybe Tag ->
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    ExprGuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui Responsive.TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         env <- Lens.view id
         addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap env delete
         altExprGui <-
-            ExprGuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
+            GuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
         pre <-
             ( TagEdit.makeVariantTag tag
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
@@ -178,7 +178,7 @@ makeAltsWidget ::
     [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
     Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Widget.Id ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 makeAltsWidget mActiveTag alts addAlt altsId =
     do
         existingAltWidgets <- traverse (makeAltRow mActiveTag) alts
@@ -203,7 +203,7 @@ makeAddAltRow ::
     , SearchMenu.HasTexts env
     ) =>
     Sugar.TagReplace (Name o) i o Sugar.EntityId -> Widget.Id ->
-    ExprGuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui Responsive.TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
@@ -233,7 +233,7 @@ makeOpenCase ::
     , Grid.HasTexts env
     ) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    AnimId -> Gui Responsive o -> ExprGuiM env i o (Gui Responsive o)
+    AnimId -> Gui Responsive o -> GuiM env i o (Gui Responsive o)
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view has
@@ -241,7 +241,7 @@ makeOpenCase actions rest animId altsGui =
         env <- Lens.view id
         restExpr <-
             Styled.addValPadding
-            <*> ExprGuiM.makeSubexpression rest
+            <*> GuiM.makeSubexpression rest
             <&> Widget.weakerEvents (openCaseEventMap env actions)
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         vbox <- Responsive.vboxWithSeparator

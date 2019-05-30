@@ -22,7 +22,7 @@ import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Expr.LiteralEdit (makeLiteralEventMap)
-import           Lamdu.GUI.ExpressionGui.Monad (ExprGuiM)
+import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -67,7 +67,7 @@ make ::
     ) =>
     Sugar.Hole (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    ExprGuiM env i o (Gui Responsive o)
+    GuiM env i o (Gui Responsive o)
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
