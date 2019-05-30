@@ -362,22 +362,31 @@ toFragment Fragment{_fExpr, _fHeal, _fOptions} =
                      (run . toNode toBinder)
             }
 
-toComposite ::
+toCompositeItem ::
     MonadNaming m =>
     (a -> m b) ->
-    Composite (OldName m) (IM m) o a ->
-    m (Composite (NewName m) (IM m) o b)
-toComposite expr Composite{_cItems, _cAddItem, _cTail} =
-    (\_cItems _cAddItem -> Composite{_cItems, _cAddItem, _cTail})
-    <$> (traverse . ciTag) (toTagRefOf Tag) _cItems
-    <*> toTagReplace _cAddItem
-    >>= traverse expr
+    CompositeItem (OldName m) (IM m) o a ->
+    m (CompositeItem (NewName m) (IM m) o b)
+toCompositeItem toExpr (CompositeItem del tag e) =
+    CompositeItem del
+    <$> toTagRefOf Tag tag
+    <*> toExpr e
+
+toComposite ::
+    MonadNaming m =>
+    Tree (Composite (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
+    m (Tree (Composite (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+toComposite (Composite items tail_ addItem) =
+    Composite
+    <$> traverse (toCompositeItem toExpression) items
+    <*> (_OpenComposite . _2) toExpression tail_
+    <*> toTagReplace addItem
 
 toCase ::
     MonadNaming m =>
     Tree (Case (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
     m (Tree (Case (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
-toCase (Case k c) = Case <$> traverse toExpression k <*> toComposite toExpression c
+toCase (Case k c) = Case <$> traverse toExpression k <*> toComposite c
 
 toInjectVal ::
     MonadNaming m =>
@@ -419,7 +428,7 @@ toBody =
     \case
     BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField
     BodyInject       x -> x & toInject <&> BodyInject
-    BodyRecord       x -> x & toComposite toExpression <&> BodyRecord
+    BodyRecord       x -> x & toComposite <&> BodyRecord
     BodyCase         x -> x & toCase <&> BodyCase
     BodyIfElse       x -> x & toIfElse <&> BodyIfElse
     BodySimpleApply  x -> x & applyChildren toExpression <&> BodySimpleApply

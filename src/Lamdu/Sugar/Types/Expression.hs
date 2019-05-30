@@ -135,15 +135,15 @@ data IfElse name i o f = IfElse
     , _iElse :: Tie f (Else name i o)
     } deriving Generic
 
-data Composite name i o expr = Composite
-    { _cItems :: [CompositeItem name i o expr]
-    , _cTail :: CompositeTail o expr
+data Composite name i o f = Composite
+    { _cItems :: [CompositeItem name i o (Tie f (Body name i o))]
+    , _cTail :: CompositeTail o (Tie f (Body name i o))
     , _cAddItem :: TagReplace name i o EntityId
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
 data Case name i o f = Case
     { _cKind :: CaseKind o (Tie f (Body name i o))
-    , _cBody :: Composite name i o (Tie f (Body name i o))
+    , _cBody :: Composite name i o f
     } deriving Generic
 
 data Body name i o f
@@ -152,7 +152,7 @@ data Body name i o f
     | BodyLabeledApply (LabeledApply name i o f)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
-    | BodyRecord (Composite name i o (Tie f (Body name i o)))
+    | BodyRecord (Composite name i o f)
     | BodyGetField (GetField name i o (Tie f (Body name i o)))
     | BodyCase (Case name i o f)
     | BodyIfElse (IfElse name i o f)
@@ -230,6 +230,7 @@ makeChildren ''AssignPlain
 makeChildren ''Body
 makeChildren ''Binder
 makeChildren ''Case
+makeChildren ''Composite
 makeChildren ''Else
 makeChildren ''ElseIfContent
 makeChildren ''Fragment

@@ -146,7 +146,6 @@ instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
 
 deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
-deriving instance (Eq a, Eq n) => Eq (Sugar.Composite n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.CompositeFields n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.CompositeItem n Unit Unit a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Definition n Unit Unit a)
@@ -171,6 +170,7 @@ deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Assignment n Unit Unit) (Ann a
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Binder n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Body n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Case n Unit Unit) (Ann a))
+deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Composite n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Else n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.ElseIfContent n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Fragment n Unit Unit) (Ann a))
@@ -225,7 +225,6 @@ deriving instance Eq n => Eq (Sugar.Type n)
 deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
 
 instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a)
-instance (NFData a, NFData n) => NFData (Sugar.Composite n (T i) (T o) a)
 instance (NFData a, NFData n) => NFData (Sugar.CompositeFields n a)
 instance (NFData a, NFData n) => NFData (Sugar.CompositeItem n (T i) (T o) a)
 instance (NFData a, NFData n) => NFData (Sugar.Definition n (T i) (T o) a)
@@ -250,6 +249,7 @@ instance (NFData a, NFData n) => NFData (Tree (Sugar.Assignment n (T i) (T o)) (
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Binder n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Body n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Case n (T i) (T o)) (Ann a))
+instance (NFData a, NFData n) => NFData (Tree (Sugar.Composite n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Else n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.ElseIfContent n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Fragment n (T i) (T o)) (Ann a))

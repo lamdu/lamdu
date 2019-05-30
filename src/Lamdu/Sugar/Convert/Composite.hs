@@ -69,11 +69,11 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    expr ->
+    Tree k (Body InternalName (T m) (T m)) ->
     Input.Payload m a ->
     ExtendVal m (Input.Payload m a) ->
-    Composite InternalName (T m) (T m) expr ->
-    ConvertM m (Composite InternalName (T m) (T m) expr)
+    Tree (Composite InternalName (T m) (T m)) k ->
+    ConvertM m (Tree (Composite InternalName (T m) (T m)) k)
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -93,10 +93,11 @@ convertOneItemOpenComposite ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    expr -> expr ->
+    Tree k (Body InternalName (T m) (T m)) ->
+    Tree k (Body InternalName (T m) (T m)) ->
     Input.Payload m a ->
     ExtendVal m (Input.Payload m a) ->
-    ConvertM m (Composite InternalName (T m) (T m) expr)
+    ConvertM m (Tree (Composite InternalName (T m) (T m)) k)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
@@ -174,7 +175,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 type BodyPrism m a =
     Lens.Prism'
     (Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
-    (Composite InternalName (T m) (T m) (ExpressionU m a))
+    (Tree (Composite InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
 
 convert ::
     (Monad m, Monoid a) =>

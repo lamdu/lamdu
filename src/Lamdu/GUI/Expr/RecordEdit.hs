@@ -2,7 +2,8 @@ module Lamdu.GUI.Expr.RecordEdit
     ( make
     ) where
 
-import           AST.Knot.Ann (val)
+import           AST (Tree)
+import           AST.Knot.Ann (Ann, val)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
@@ -135,7 +136,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Composite (Name o) i o (ExprGui.SugarExpr i o) ->
+    Tree (Sugar.Composite (Name o) i o) (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     GuiM env i o (Gui Responsive o)
 make (Sugar.Composite [] Sugar.ClosedComposite{} addField) pl =

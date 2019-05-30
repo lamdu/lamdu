@@ -54,11 +54,11 @@ orderType = Sugar.tBody orderTBody
 
 orderRecord ::
     Monad m =>
-    OrderT m (Sugar.Composite name (T m) o (Sugar.Expression name (T m) o (Sugar.Payload name i o a)))
+    OrderT m (Tree (Sugar.Composite name (T m) o) (Ann (Sugar.Payload name i o a)))
 orderRecord r =
     r
     & Sugar.cItems (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag))
-    >>= traverse orderNode
+    >>= monoChildren orderNode
 
 instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
 

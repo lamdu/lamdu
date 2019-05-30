@@ -131,7 +131,7 @@ loopExprBody parentPrec body_ =
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyHole         x -> result False (BodyHole x)
     BodyFragment     x -> mkUnambiguous fExpr BodyFragment x
-    BodyRecord       x -> mkUnambiguous Lens.mapped BodyRecord x
+    BodyRecord       x -> mkUnambiguous monoChildren BodyRecord x
     BodyCase         x -> mkUnambiguous monoChildren BodyCase x
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
