@@ -1,4 +1,3 @@
-{-# LANGUAGE DisambiguateRecordFields, NamedFieldPuns #-}
 module Main
     ( main
     ) where

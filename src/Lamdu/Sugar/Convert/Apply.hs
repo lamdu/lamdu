@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where

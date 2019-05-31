@@ -1,6 +1,6 @@
 -- | Make Lamdu Style
-{-# LANGUAGE TemplateHaskell, NamedFieldPuns, DisambiguateRecordFields #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ConstraintKinds #-}
+{-# LANGUAGE TemplateHaskell, DisambiguateRecordFields #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module Lamdu.Style.Make
     ( make

@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , EvalResults

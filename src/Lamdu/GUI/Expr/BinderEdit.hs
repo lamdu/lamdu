@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns, NoMonomorphismRestriction #-}
 module Lamdu.GUI.Expr.BinderEdit
     ( make
     ) where

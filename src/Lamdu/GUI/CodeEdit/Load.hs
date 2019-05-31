@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields #-}
 -- | Load the sugared code
 
 module Lamdu.GUI.CodeEdit.Load

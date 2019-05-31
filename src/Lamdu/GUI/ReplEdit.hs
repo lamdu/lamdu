@@ -1,5 +1,5 @@
 -- | REPL Edit
-{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, RankNTypes #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make, isExecutableType
     ) where
@@ -90,14 +90,14 @@ replEventMap ::
     ) =>
     env -> ExportRepl m -> Sugar.Payload name i (T m) a ->
     Gui EventMap (IOTrans m)
-replEventMap env (ExportRepl exportRepl exportFancy _execRepl) replExprPl =
+replEventMap env (ExportRepl expRepl expFancy _execRepl) replExprPl =
     mconcat
     [ extractEventMap env replExprPl (env ^. has . Config.extractKeys)
         <&> IOTrans.liftTrans
     , E.keysEventMap (exportConfig ^. Config.exportKeys)
-      (toDoc [Texts.exportReplToJSON]) exportRepl
+      (toDoc [Texts.exportReplToJSON]) expRepl
     , E.keysEventMap (exportConfig ^. Config.exportFancyKeys)
-      (toDoc [Texts.exportReplToJS]) exportFancy
+      (toDoc [Texts.exportReplToJS]) expFancy
     ]
     where
         toDoc = E.toDoc (env ^. has)
@@ -213,7 +213,7 @@ resultWidget ::
     ) =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
     m (TextWidget (IOTrans o))
-resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
+resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
         toDoc <- Lens.view has <&> E.toDoc
@@ -222,7 +222,7 @@ resultWidget exportRepl varInfo tag Sugar.EvalSuccess{} =
                 do
                     actionKeys <- Lens.view (has . Config.actionKeys)
                     let executeEventMap =
-                            executeIOProcess exportRepl
+                            executeIOProcess expRepl
                             & IOTrans.liftIO
                             & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
                     (Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~)) ?? view
@@ -245,12 +245,12 @@ make ::
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
     GuiM env (T m) (T m) (Gui Responsive (IOTrans m))
-make exportRepl (Sugar.Repl replExpr varInfo replResult) =
+make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         env <- Lens.view id
         let buttonExtractKeys = env ^. has . Config.actionKeys
         result <-
-            (resultWidget exportRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
+            (resultWidget expRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & sequenceA
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
@@ -270,7 +270,7 @@ make exportRepl (Sugar.Repl replExpr varInfo replResult) =
             , makeBinder replExpr
                 <&> Lens.mapped %~ IOTrans.liftTrans
             ]
-            <&> Widget.weakerEvents (replEventMap env exportRepl replExprPl)
+            <&> Widget.weakerEvents (replEventMap env expRepl replExprPl)
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         replSymId = Widget.joinId WidgetIds.replId ["symbol"]

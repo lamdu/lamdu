@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, ConstraintKinds #-}
-{-# LANGUAGE DisambiguateRecordFields, MultiParamTypeClasses, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, ConstraintKinds #-}
+{-# LANGUAGE DisambiguateRecordFields, MultiParamTypeClasses #-}
 module GUI.Momentu.Widgets.Grid
     ( make, makeWithKeys
     , Keys(..), stdKeys
