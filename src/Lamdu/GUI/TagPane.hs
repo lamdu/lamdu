@@ -19,6 +19,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -144,10 +145,10 @@ makeLocalizedNames myId names =
         let makeName lang name
                 | lang == curLang = pure []
                 | otherwise = makeLocalizedName lang name <&> (:[])
-        Responsive.taggedList <*> (Lens.itraverse makeName names <&> (^.. traverse) <&> concat)
+        taggedList <*> (Lens.itraverse makeName names <&> (^.. traverse) <&> concat)
     where
         makeLocalizedName lang name =
-            Responsive.TaggedItem
+            TaggedItem
             <$> (makeLanguageTitle langId lang
                 /|/ Spacer.stdHSpace
                 <&> Align.tValue %~ Widget.fromView)

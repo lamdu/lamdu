@@ -14,6 +14,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -122,7 +123,7 @@ makeLabeled apply pl =
 makeArgRow ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Name Text) env ) =>
     Sugar.AnnotatedArg (Name o) (ExprGui.SugarExpr i o) ->
-    GuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui TaggedItem o)
 makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
@@ -130,10 +131,10 @@ makeArgRow arg =
             TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName)
             (arg ^. Sugar.aaTag . Sugar.tagInstance)
             /|/ Spacer.stdHSpace
-        pure Responsive.TaggedItem
-            { Responsive._tagPre = pre <&> Widget.fromView
-            , Responsive._taggedItem = expr
-            , Responsive._tagPost = Element.empty
+        pure TaggedItem
+            { _tagPre = pre <&> Widget.fromView
+            , _taggedItem = expr
+            , _tagPost = Element.empty
             }
 
 mkBoxed ::
@@ -151,10 +152,7 @@ mkBoxed apply funcRow =
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> pure []
-            xs ->
-                Responsive.taggedList
-                <*> traverse makeArgRow xs
-                <&> (:[])
+            xs -> taggedList <*> traverse makeArgRow xs <&> (:[])
         relayedArgs <-
             case apply ^. Sugar.aRelayedArgs of
             [] -> pure []

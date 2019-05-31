@@ -232,6 +232,7 @@ Library
                   , GUI.Momentu.Responsive
                   , GUI.Momentu.Responsive.Expression
                   , GUI.Momentu.Responsive.Options
+                  , GUI.Momentu.Responsive.TaggedList
                   , GUI.Momentu.Scroll
                   , GUI.Momentu.State
                   , GUI.Momentu.Test

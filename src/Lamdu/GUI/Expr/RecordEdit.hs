@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList, tagPost)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -188,13 +189,13 @@ makeRecord ::
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
     (Gui Responsive o -> m (Gui Responsive o)) ->
-    [Gui Responsive.TaggedItem o] ->
+    [Gui TaggedItem o] ->
     m (Gui Responsive o)
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
     ( grammar (label Texts.recordOpener)
-        /|/ (Responsive.taggedList
+        /|/ (taggedList
                 <*> addPostTags fieldGuis
                 >>= postProcess)
     )
@@ -203,7 +204,7 @@ addPostTags ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env, Has Dir.Layout env
     ) =>
-    [Gui Responsive.TaggedItem o] -> m [Gui Responsive.TaggedItem o]
+    [Gui TaggedItem o] -> m [Gui TaggedItem o]
 addPostTags items =
     do
         let f idx item =
@@ -212,7 +213,7 @@ addPostTags items =
                     else label Texts.recordCloser
                 ) & grammar
                 & Reader.local (Element.animIdPrefix %~ augmentId idx)
-                <&> \lbl -> item & Responsive.tagPost .~ (lbl <&> Widget.fromView)
+                <&> \lbl -> item & tagPost .~ (lbl <&> Widget.fromView)
         Lens.itraverse f items
     where
         lastIdx = length items - 1
@@ -226,16 +227,16 @@ makeAddFieldRow ::
     ) =>
     Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Sugar.Payload name i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
     <&>
     \tagHole ->
-    Responsive.TaggedItem
-    { Responsive._tagPre = tagHole
-    , Responsive._taggedItem = Element.empty
-    , Responsive._tagPost = Element.empty
+    TaggedItem
+    { _tagPre = tagHole
+    , _taggedItem = Element.empty
+    , _tagPost = Element.empty
     }
     where
         tagHoleId = addFieldId (WidgetIds.fromExprPayload pl)
@@ -254,7 +255,7 @@ makeFieldRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    GuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -263,10 +264,10 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
             ( TagEdit.makeRecordTag tag
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
             ) /|/ Spacer.stdHSpace
-        pure Responsive.TaggedItem
-            { Responsive._tagPre = pre
-            , Responsive._taggedItem = Widget.weakerEvents itemEventMap fieldGui
-            , Responsive._tagPost = Element.empty
+        pure TaggedItem
+            { _tagPre = pre
+            , _taggedItem = Widget.weakerEvents itemEventMap fieldGui
+            , _tagPost = Element.empty
             }
 
 separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View

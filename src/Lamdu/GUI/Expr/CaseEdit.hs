@@ -18,6 +18,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -142,7 +143,7 @@ makeAltRow ::
     ) =>
     Maybe Tag ->
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    GuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         env <- Lens.view id
@@ -157,10 +158,10 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
                     then addBg
                     else id
             ) /|/ grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace
-        pure Responsive.TaggedItem
-            { Responsive._tagPre = pre
-            , Responsive._taggedItem = altExprGui
-            , Responsive._tagPost = Element.empty
+        pure TaggedItem
+            { _tagPre = pre
+            , _taggedItem = altExprGui
+            , _tagPost = Element.empty
             }
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
     where
@@ -193,7 +194,7 @@ makeAltsWidget mActiveTag alts addAlt altsId =
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
                 <*> grammar (label Texts.absurd)
                 <&> Responsive.fromWithTextPos
-            altWidgtes -> Responsive.taggedList ?? altWidgtes
+            altWidgtes -> taggedList ?? altWidgtes
 
 makeAddAltRow ::
     ( Monad i, Applicative o
@@ -204,16 +205,16 @@ makeAddAltRow ::
     , SearchMenu.HasTexts env
     ) =>
     Sugar.TagReplace (Name o) i o Sugar.EntityId -> Widget.Id ->
-    GuiM env i o (Gui Responsive.TaggedItem o)
+    GuiM env i o (Gui TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
     <&>
     \tagHole ->
-    Responsive.TaggedItem
-    { Responsive._tagPre = tagHole
-    , Responsive._taggedItem = Element.empty
-    , Responsive._tagPost = Element.empty
+    TaggedItem
+    { _tagPre = tagHole
+    , _taggedItem = Element.empty
+    , _tagPost = Element.empty
     }
     where
         mkPickResult _ dst =
