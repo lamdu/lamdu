@@ -151,9 +151,10 @@ makeLocalizedNames myId names =
             TaggedItem
             <$> (makeLanguageTitle langId lang
                 /|/ Spacer.stdHSpace
-                <&> Align.tValue %~ Widget.fromView)
+                <&> Align.tValue %~ Widget.fromView
+                <&> Just)
             <*> (TextView.make ?? name ^. pVal ?? langId <> ["val"] <&> Responsive.fromTextView)
-            <*> pure Element.empty
+            <*> pure Nothing
             where
                 langId = augmentId lang (Widget.toAnimId myId)
 

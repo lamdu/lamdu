@@ -7,7 +7,6 @@ import           AST.Knot.Ann (Ann(..), ann, val)
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
@@ -121,7 +120,7 @@ makeLabeled apply pl =
             | otherwise = pure
 
 makeArgRow ::
-    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Name Text) env ) =>
+    (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
     Sugar.AnnotatedArg (Name o) (ExprGui.SugarExpr i o) ->
     GuiM env i o (Gui TaggedItem o)
 makeArgRow arg =
@@ -132,9 +131,9 @@ makeArgRow arg =
             (arg ^. Sugar.aaTag . Sugar.tagInstance)
             /|/ Spacer.stdHSpace
         pure TaggedItem
-            { _tagPre = pre <&> Widget.fromView
+            { _tagPre = pre <&> Widget.fromView & Just
             , _taggedItem = expr
-            , _tagPost = Element.empty
+            , _tagPost = Nothing
             }
 
 mkBoxed ::

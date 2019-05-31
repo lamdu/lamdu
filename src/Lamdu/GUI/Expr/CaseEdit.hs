@@ -159,9 +159,9 @@ makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
                     else id
             ) /|/ grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace
         pure TaggedItem
-            { _tagPre = pre
+            { _tagPre = Just pre
             , _taggedItem = altExprGui
-            , _tagPost = Element.empty
+            , _tagPost = Nothing
             }
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
     where
@@ -212,9 +212,9 @@ makeAddAltRow addAlt myId =
     <&>
     \tagHole ->
     TaggedItem
-    { _tagPre = tagHole
+    { _tagPre = Just tagHole
     , _taggedItem = Element.empty
-    , _tagPost = Element.empty
+    , _tagPost = Nothing
     }
     where
         mkPickResult _ dst =

@@ -213,7 +213,7 @@ addPostTags items =
                     else label Texts.recordCloser
                 ) & grammar
                 & Reader.local (Element.animIdPrefix %~ augmentId idx)
-                <&> \lbl -> item & tagPost .~ (lbl <&> Widget.fromView)
+                <&> \lbl -> item & tagPost ?~ (lbl <&> Widget.fromView)
         Lens.itraverse f items
     where
         lastIdx = length items - 1
@@ -234,9 +234,9 @@ makeAddFieldRow addField pl =
     <&>
     \tagHole ->
     TaggedItem
-    { _tagPre = tagHole
+    { _tagPre = Just tagHole
     , _taggedItem = Element.empty
-    , _tagPost = Element.empty
+    , _tagPost = Just Element.empty
     }
     where
         tagHoleId = addFieldId (WidgetIds.fromExprPayload pl)
@@ -265,9 +265,9 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
             ) /|/ Spacer.stdHSpace
         pure TaggedItem
-            { _tagPre = pre
+            { _tagPre = Just pre
             , _taggedItem = Widget.weakerEvents itemEventMap fieldGui
-            , _tagPost = Element.empty
+            , _tagPost = Just Element.empty
             }
 
 separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View

@@ -5,7 +5,7 @@ module GUI.Momentu.Responsive.TaggedList
     , taggedList
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
@@ -21,9 +21,9 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Prelude
 
 data TaggedItem a = TaggedItem
-    { _tagPre :: WithTextPos (Widget a)
+    { _tagPre :: Maybe (WithTextPos (Widget a))
     , _taggedItem :: Responsive a
-    , _tagPost :: WithTextPos (Widget a)
+    , _tagPost :: Maybe (WithTextPos (Widget a))
     } deriving Functor
 
 Lens.makeLenses ''TaggedItem
@@ -41,9 +41,10 @@ taggedList =
     <*> (Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0)
     <&>
     \(doPad, (/|/), vboxed, vspace) items ->
-    let preWidth = items ^.. traverse . tagPre . Element.width & maximum
-        postWidth = items ^.. traverse . tagPost . Element.width & maximum
-        renderItem ((pre, post), item) =
+    let preWidth = items ^.. traverse . tagPre . Lens._Just . Element.width & maximum
+        postWidth = items ^.. traverse . tagPost . Lens._Just . Element.width & maximum
+        renderItem ((Nothing, post), item) = (item, post)
+        renderItem ((Just pre, post), item) =
             ( doPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
                 /|/ item
             , post
@@ -51,10 +52,13 @@ taggedList =
         renderItems xs =
             xs <&> renderRow & List.intersperse vspace & vboxed
             where
-                renderRow (item, post) =
+                renderRow (item, Nothing) = item
+                renderRow (item, Just post) =
                     item /|/
                     doPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
-                itemWidth = xs ^.. traverse . _1 . Element.width & maximum
+                itemWidth =
+                    xs ^.. traverse . Lens.filteredBy (_2 . Lens._Just) . _1 . Element.width
+                    & maximum
         idx =
             NarrowLayoutParams
             { _layoutWidth = preWidth + postWidth
