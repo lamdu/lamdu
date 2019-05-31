@@ -66,9 +66,6 @@ convert app@(V.Apply funcI argI) exprPl =
         convertLabeled (app ^.. monoChildren) funcS argS exprPl & justToLeft
         convertPrefix (app ^.. monoChildren) funcS argS exprPl & lift
 
-noDuplicates :: Ord a => [a] -> Bool
-noDuplicates x = length x == Set.size (Set.fromList x)
-
 validateDefParamsMatchArgs ::
     MonadPlus m =>
     V.Var -> Composite name i o expr -> Deps -> m ()
@@ -117,8 +114,6 @@ convertLabeled subexprs funcS argS exprPl =
                     , _aaExpr = field ^. ciExpr
                     }
         let args = record ^. cItems <&> getArg
-        let tags = args ^.. Lens.traversed . aaTag . tagVal
-        unless (noDuplicates tags) $ lift $ fail "Duplicate tags shouldn't type-check"
         bod <-
             PresentationModes.makeLabeledApply
             (Ann (funcS ^. ann) (Const sBinderVar)) args exprPl
