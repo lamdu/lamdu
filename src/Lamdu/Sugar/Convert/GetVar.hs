@@ -14,6 +14,7 @@ import qualified Control.Monad.Transaction as Transaction
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
+import qualified Data.Set as Set
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -93,6 +94,16 @@ globalNameRef cp defI =
     , _nrGotoDefinition = jumpToDefI cp defI
     }
 
+inlineableDefinition :: ConvertM.Context m -> V.Var -> EntityId -> Bool
+inlineableDefinition ctx var entityId =
+    Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f) (ctx ^. ConvertM.scTopLevelExpr)
+    where
+        recursiveVars =
+            ctx ^.
+            ConvertM.scScopeInfo . ConvertM.siRecursiveRef . Lens._Just . ConvertM.rrDefI .
+            Lens.to (Set.singleton . ExprIRef.globalId)
+        f pl v = v == var && entityId `notElem` pl ^. Input.userData
+
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGlobal var exprPl =
@@ -111,7 +122,7 @@ convertGlobal var exprPl =
         inline <-
             case defForm of
             DefUpToDate
-                | (ctx ^. ConvertM.scInlineableDefinition) var (exprPl ^. Input.entityId) ->
+                | inlineableDefinition ctx var (exprPl ^. Input.entityId) ->
                     inlineDef var (exprPl ^. Input.stored) & lift <&> InlineVar
             _ -> pure CannotInline
         GetBinder BinderVarRef

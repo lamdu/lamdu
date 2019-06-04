@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Monad
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
     , scScopeInfo, scDebugMonitors, scCacheFunctions
-    , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinition
+    , scOutdatedDefinitions, scFrozenDeps
 
     , cachedFunc
 
@@ -106,7 +106,6 @@ data Context m = Context
       _scPostProcessRoot :: T m PostProcess.Result
     , _scOutdatedDefinitions ::
         Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m) ())
-    , _scInlineableDefinition :: V.Var -> Sugar.EntityId -> Bool
     , _scFrozenDeps :: Property (T m) Deps
     , _scDebugMonitors :: Debug.Monitors
     , _scCacheFunctions :: Cache.Functions

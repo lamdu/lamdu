@@ -19,7 +19,6 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -94,12 +93,6 @@ emptyScopeInfo recursiveRef =
     , _siRecursiveRef = recursiveRef
     }
 
-canInlineDefinition :: Val (Input.Payload m [EntityId]) -> Set V.Var -> V.Var -> EntityId -> Bool
-canInlineDefinition defExpr recursiveVars var entityId =
-    Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f) defExpr
-    where
-        f pl v = v == var && entityId `notElem` pl ^. Input.userData
-
 trimParamAnnotation :: Annotations.Mode -> Annotation name i -> Annotation name i
 trimParamAnnotation Annotations.None _ = AnnotationNone
 trimParamAnnotation Annotations.Evaluation (AnnotationVal x) =
@@ -148,7 +141,6 @@ convertInferDefExpr env cp defType defExpr defI =
                 , _scTopLevelExpr = valInferred
                 , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
-                , _scInlineableDefinition = canInlineDefinition valInferred (Set.singleton defVar)
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
@@ -235,7 +227,6 @@ convertRepl env cp =
                 , _scTopLevelExpr = valInferred
                 , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
-                , _scInlineableDefinition = canInlineDefinition valInferred mempty
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
