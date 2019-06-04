@@ -222,7 +222,7 @@ typeMismatchPayloads ::
     (a -> Identity a) ->
     Tree (Body name i o) (Ann a) -> Identity (Tree (Body name i o) (Ann a))
 typeMismatchPayloads =
-    _BodyFragment . Lens.filtered (Lens.has (fHeal . _TypeMismatch)) . fExpr . ann
+    _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . ann
 
 setChildReplaceParentActions ::
     Monad m =>
@@ -243,7 +243,7 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     bod
-    & Lens.filtered (not . Lens.has (_BodyFragment . fHeal . _TypeMismatch)) %~
+    & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
         overChildren p (ann %~ join setToExpr)
     & overChildren p (fixReplaceParent setToExpr)
     where

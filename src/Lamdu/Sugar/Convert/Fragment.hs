@@ -139,8 +139,8 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                            (argI ^. ann . Input.stored . Property.pVal)
                            <* postProcess
                            <&> EntityId.ofValI
-                           & HealAction
-                      else TypeMismatch
+                      else argI ^. ann . Input.entityId & pure -- TODO!
+                , _fTypeMatch = isTypeMatch
                 , _fOptions = options
                 } & pure
             >>= addActions [funcI, argI] exprPl

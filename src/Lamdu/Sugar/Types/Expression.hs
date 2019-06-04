@@ -8,7 +8,7 @@ module Lamdu.Sugar.Types.Expression
     , Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
-    , Fragment(..), fExpr, fHeal, fOptions
+    , Fragment(..), fExpr, fHeal, fTypeMatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , InjectContent(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iContent
@@ -90,7 +90,8 @@ data Lambda name i o f = Lambda
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment name i o f = Fragment
     { _fExpr :: Tie f (Body name i o)
-    , _fHeal :: Heal o
+    , _fHeal :: o EntityId
+    , _fTypeMatch :: Bool
     , _fOptions :: i [HoleOption name i o]
     } deriving Generic
 

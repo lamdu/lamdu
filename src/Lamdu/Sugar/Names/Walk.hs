@@ -348,18 +348,18 @@ toFragment ::
     m
     (Tree (Fragment (NewName m) (IM m) o)
         (Ann (Payload (NewName m) (IM m) o a)))
-toFragment Fragment{_fExpr, _fHeal, _fOptions} =
+toFragment Fragment{_fExpr, _fHeal, _fTypeMatch, _fOptions} =
     do
         run <- opRun
         newExpr <- toExpression _fExpr
         pure Fragment
             { _fExpr = newExpr
-            , _fHeal = _fHeal
             , _fOptions =
                  _fOptions
                  <&> Lens.mapped %~
                      SugarLens.holeOptionTransformExprs
                      (run . toNode toBinder)
+            , _fHeal, _fTypeMatch
             }
 
 toCompositeItem ::

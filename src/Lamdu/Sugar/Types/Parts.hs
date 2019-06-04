@@ -30,7 +30,6 @@ module Lamdu.Sugar.Types.Parts
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
-    , Heal(..), _HealAction, _TypeMismatch
     ) where
 
 import qualified Control.Lens as Lens
@@ -164,11 +163,6 @@ data NullaryVal name i o = NullaryVal
     , _nullaryAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
-data Heal o
-    = HealAction (o EntityId)
-    | TypeMismatch
-    deriving Generic
-
 data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f ByteString)
@@ -198,6 +192,5 @@ Lens.makePrisms ''BinderParams
 Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''DetachAction
 Lens.makePrisms ''FuncApplyLimit
-Lens.makePrisms ''Heal
 Lens.makePrisms ''Literal
 Lens.makePrisms ''VarInfo

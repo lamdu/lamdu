@@ -118,18 +118,10 @@ make fragment pl =
                                     [Rect 0 (w ^. Widget.wSize)]
                             | otherwise = w
         let healEventMap =
-                case fragment ^. Sugar.fHeal of
-                Sugar.TypeMismatch ->
-                    pl ^. Sugar.plEntityId & HoleWidgetIds.make
-                    & HoleWidgetIds.hidOpen & pure
-                    & E.keysEventMapMovesCursor
-                    (env ^. has . Config.healKeys)
-                    (fragmentDoc env (has . Texts.showResults))
-                Sugar.HealAction heal ->
-                    heal <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor
-                        (Config.delKeys env <> env ^. has . Config.healKeys)
-                        (fragmentDoc env (has . Texts.heal))
+                fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor
+                    (Config.delKeys env <> env ^. has . Config.healKeys)
+                    (fragmentDoc env (has . Texts.heal))
         isInAHole <- GuiM.isHoleResult
         ExprEventMap.add ExprEventMap.defaultOptions pl
             ?? responsiveLiftA3 f fragmentExprGui searchAreaAbove searchAreaBelow
@@ -153,9 +145,9 @@ makeFragmentExprEdit fragment =
         theme <- Lens.view has
         let frameColor =
                 theme ^.
-                case fragment ^. Sugar.fHeal of
-                Sugar.HealAction {} -> Theme.successColor
-                Sugar.TypeMismatch {} -> Theme.errorColor
+                if fragment ^. Sugar.fTypeMatch
+                then Theme.successColor
+                else Theme.errorColor
         let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
         fragmentExprGui <- GuiM.makeSubexpression (fragment ^. Sugar.fExpr)
         MDraw.addInnerFrame
