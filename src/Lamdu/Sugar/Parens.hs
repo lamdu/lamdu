@@ -11,8 +11,7 @@ import           AST (Tree, overChildren)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Precedence
-    (Prec, Precedence(..), HasPrecedence(..), before, after, maxNamePrec)
+import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -77,7 +76,7 @@ instance HasPrecedence name => AddParens (Body name i o) where
 instance AddParens (Const a) where
     addToBody (Const x) = Const x
     addToNode (Ann pl (Const x)) =
-        Ann (maxNamePrec + 1, NoNeedForParens, pl) (Const x)
+        Ann (0, NoNeedForParens, pl) (Const x)
 
 addToExprWith ::
     HasPrecedence name =>
