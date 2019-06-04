@@ -129,17 +129,18 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 >>= (mkOptions sugarContext argI ?? exprPl)
             BodyFragment Fragment
                 { _fExpr =
-                      argS
-                      & ann . pActions . detach .~ FragmentExprAlready storedEntityId
-                      & ann . pActions . mSetToHole ?~
+                    argS
+                    & ann . pActions . detach .~ FragmentExprAlready storedEntityId
+                    & ann . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
-                      if isTypeMatch
-                      then DataOps.replace stored
-                           (argI ^. ann . Input.stored . Property.pVal)
-                           <* postProcess
-                           <&> EntityId.ofValI
-                      else argI ^. ann . Input.entityId & pure -- TODO!
+                    if isTypeMatch
+                    then
+                        DataOps.replace stored
+                        (argI ^. ann . Input.stored . Property.pVal)
+                        <* postProcess
+                        <&> EntityId.ofValI
+                    else argI ^. ann . Input.entityId & pure -- TODO!
                 , _fTypeMatch = isTypeMatch
                 , _fOptions = options
                 } & pure
