@@ -32,6 +32,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
+import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
@@ -125,6 +126,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl
                 & annotations %~ (,) showAnn
                 & annotations (convertPayload Annotations.None)
                 >>= (mkOptions sugarContext argI ?? exprPl)
+            healMis <- healMismatch
             BodyFragment Fragment
                 { _fExpr =
                     argS
@@ -132,13 +134,11 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl
                     & ann . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
-                    if isTypeMatch
-                    then
-                        DataOps.replace stored
-                        (argI ^. ann . Input.stored . Property.pVal)
-                        <* postProcess
-                        <&> EntityId.ofValI
-                    else argI ^. ann . Input.entityId & pure -- TODO!
+                    ( if isTypeMatch
+                        then DataOps.replace stored argIRef <* postProcess
+                        else argIRef <$ healMis stored argIRef
+                    )
+                    <&> EntityId.ofValI
                 , _fTypeMatch = isTypeMatch
                 , _fOptions = options
                 } & pure
@@ -147,6 +147,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl
         & Just
     | otherwise = Nothing
     where
+        argIRef = argI ^. ann . Input.stored . Property.pVal
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI
 
