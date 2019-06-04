@@ -2,7 +2,7 @@
 
 module Test.Lamdu.SugarStubs where
 
-import           AST (Tree, Tie)
+import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), val)
 import           AST.Term.Scheme (QVars(..))
 import           Control.Monad.Unit (Unit(Unit))
@@ -49,8 +49,8 @@ defRef var tag =
     }
 
 node ::
-    Tie knot (Ann (Sugar.Payload name Identity Unit ())) ->
-    Ann (Sugar.Payload name Identity Unit ()) knot
+    Tree knot (Ann (Sugar.Payload name Identity Unit ())) ->
+    Tree (Ann (Sugar.Payload name Identity Unit ())) knot
 node = Ann payload
 
 labeledApplyFunc ::
