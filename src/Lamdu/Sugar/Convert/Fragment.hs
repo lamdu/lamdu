@@ -14,6 +14,7 @@ import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Unify (unify, applyBindings, newTerm)
 import           AST.Unify.Binding (UVar)
+import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
@@ -110,14 +111,13 @@ convertAppliedHole ::
     ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedHole (V.Apply funcI argI) argS exprPl =
-    do
-        guard (Lens.has ExprLens.valHole funcI)
-        isTypeMatch <-
-            checkTypeMatch (argI ^. ann . Input.inferResult . irType)
-            (exprPl ^. Input.inferResult . irType) & lift
-        postProcess <- lift ConvertM.postProcessAssert
+convertAppliedHole (V.Apply funcI argI) argS exprPl
+    | Lens.has ExprLens.valHole funcI =
         do
+            isTypeMatch <-
+                checkTypeMatch (argI ^. ann . Input.inferResult . irType)
+                (exprPl ^. Input.inferResult . irType)
+            postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
             let showAnn
                     | sugarContext ^. ConvertM.scConfig . Config.showAllAnnotations = alwaysShowAnnotations
@@ -145,8 +145,9 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl =
                 , _fOptions = options
                 } & pure
             >>= addActions [funcI, argI] exprPl
-            & lift
-            <&> ann . pActions . detach .~ FragmentAlready storedEntityId
+        & lift
+        <&> ann . pActions . detach .~ FragmentAlready storedEntityId
+    | otherwise = empty
     where
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI
