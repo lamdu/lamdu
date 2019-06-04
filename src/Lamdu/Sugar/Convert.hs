@@ -145,6 +145,7 @@ convertInferDefExpr env cp defType defExpr defI =
                     )
                 , _scDebugMonitors = env ^. has
                 , _scCacheFunctions = env ^. has
+                , _scTopLevelExpr = valInferred
                 , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinition = canInlineDefinition valInferred (Set.singleton defVar)
@@ -231,6 +232,7 @@ convertRepl env cp =
                 , _scScopeInfo = emptyScopeInfo Nothing
                 , _scDebugMonitors = env ^. has
                 , _scCacheFunctions = env ^. has
+                , _scTopLevelExpr = valInferred
                 , _scPostProcessRoot = postProcess
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scInlineableDefinition = canInlineDefinition valInferred mempty

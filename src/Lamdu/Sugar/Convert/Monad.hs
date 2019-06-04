@@ -9,7 +9,7 @@ module Lamdu.Sugar.Convert.Monad
     , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
 
     , Context(..)
-    , scInferContext, scPostProcessRoot, siRecursiveRef, scConfig
+    , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
     , scScopeInfo, scDebugMonitors, scCacheFunctions
     , scOutdatedDefinitions, scFrozenDeps, scInlineableDefinition
 
@@ -100,6 +100,7 @@ data Context m = Context
     { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
+    , _scTopLevelExpr :: Val (Input.Payload m [Sugar.EntityId])
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcess.Result
