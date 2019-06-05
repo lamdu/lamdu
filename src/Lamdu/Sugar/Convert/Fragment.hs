@@ -136,7 +136,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl
                 , _fHeal =
                     ( if isTypeMatch
                         then DataOps.replace stored argIRef <* postProcess
-                        else argIRef <$ healMis stored argIRef
+                        else argIRef <$ healMis (stored ^. Property.pVal)
                     )
                     <&> EntityId.ofValI
                 , _fTypeMatch = isTypeMatch

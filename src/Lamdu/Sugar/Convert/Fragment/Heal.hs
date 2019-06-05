@@ -1,25 +1,26 @@
+{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
+
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
 
 import           AST (Tree, monoChildren)
-import           AST.Infer (ITerm(..), IResult(..), infer, iType, iScope, irType)
+import           AST.Infer (Infer(..), ITerm(..), IResult(..))
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Apply (applyArg)
+import qualified AST.Term.Row as Row
 import           AST.Unify (unify, applyBindings, newUnbound)
 import           AST.Unify.Binding (UVar)
 import           AST.Unify.Generalize (GTerm(..))
 import qualified Control.Lens.Extended as Lens
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.State (MonadState(..), State, execState)
-import           Data.Property (Property)
+import           Control.Monad.State (MonadState(..), State, evalState)
+import           Data.List (sortOn)
 import qualified Data.Property as Property
-import           Data.Sequence (Seq, ViewL(..), (><))
-import qualified Data.Sequence as Seq
-import           Lamdu.Calc.Infer (runPureInfer, InferState(..), loadDeps, emptyPureInferState, varGen)
-import qualified Lamdu.Calc.Lens as ExprLens
+import           Lamdu.Calc.Infer (PureInfer, runPureInfer, InferState(..), loadDeps, emptyPureInferState, varGen)
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValI, ValP, globalId)
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -31,110 +32,121 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-healSpine ::
+data EditAction a
+    = OnUnify a
+    | OnNoUnify a
+Lens.makePrisms ''EditAction
+
+data PriorityClass
+    = HealPoint
+    | InFragment
+    | Other
+    deriving (Eq, Ord)
+
+type Priority = (PriorityClass, Int)
+
+fixPriorities ::
+    Tree (Ann ((a, Int), b)) Term ->
+    Tree (Ann ((a, Int), b)) Term
+fixPriorities x@(Ann ((cat, priority), pl) b) =
+    case b of
+    V.BGetField g ->
+        g & V.getFieldRecord . score +~ (-1) & V.BGetField
+        & res 1
+    V.BRecExtend r -> V.BRecExtend r & res (-1)
+    V.BCase c -> c & Row.eVal . score +~ (-1) & V.BCase & res (-1)
+    _ -> x
+    where
+        res diff = Ann ((cat, priority + diff), pl)
+        score = ann . _1 . _2
+
+prepareInFragExpr ::
+    Monad m =>
+    Tree (Ann (ValP m)) Term ->
+    Tree (Ann (Priority, EditAction (T m ()))) Term
+prepareInFragExpr (Ann a v) =
+    v & monoChildren %~ prepareInFragExpr
+    & Ann ((InFragment, 0), OnNoUnify (() <$ DataOps.applyHoleTo a))
+    & fixPriorities
+
+prepare ::
+    Monad m =>
     ValI m ->
     Tree (Ann (ValP m)) Term ->
-    Tree (Ann (Maybe (Tree (Ann (ValP m)) Term))) Term
-healSpine fragI tree
-    | fragI == tree ^. ann . Property.pVal =
-        tree ^?! val . V._BApp . applyArg & annotations .~ Nothing
-    | Lens.has (monoChildren . ann . Lens._Nothing) treatedBody =
-        Ann Nothing treatedBody
-    | otherwise =
-        Ann (Just tree) (V.BLeaf V.LHole)
-        where
-            treatedBody = tree ^. val & monoChildren %~ healSpine fragI
-
-reconstructQueue ::
-    Monad m =>
-    State (InferState, Seq (Tree (Ann (ValP m)) Term, IResult UVar Term), [T m ()]) ()
-reconstructQueue =
-    popQueue >>=
-    \case
-    Nothing -> pure ()
-    Just (Ann pos body, IResult var scope) ->
-        do
-            inferState0 <- Lens.use Lens._1
-            let Right (inferredTop, inferState1) = runPureInfer scope inferState0 (infer top)
-            case runPureInfer scope inferState1 (unify var (inferredTop ^. iType)) of
-                Right (res, inferState2) | occursChecks ->
-                    Lens._1 .= inferState2
-                    where
-                        occursChecks =
-                            runPureInfer (inferredTop ^. iScope) inferState2 (applyBindings res)
-                            & Lens.has Lens._Right
-                _ ->
-                    do
-                        Lens._1 .= inferState1
-                        Lens._3 %= ((() <$ DataOps.applyHoleTo pos) :)
-            reconstructTerm inferredTop
-        where
-            top = body & monoChildren %~ (`Ann` V.BLeaf V.LHole) . Just & Ann Nothing
+    Tree (Ann (Priority, EditAction (T m ()))) Term
+prepare fragI (Ann a v) =
+    if fragI == a ^. Property.pVal
+    then
+        fragmented ^. val & monoChildren %~ prepareInFragExpr
+        & Ann ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. ann . Property.pVal)))
+    else
+        v & monoChildren %~ prepare fragI
+        & Ann ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a))
+    & fixPriorities
     where
-        popQueue =
-            do
-                queue <- get
-                case Seq.viewl queue of
-                    EmptyL -> pure Nothing
-                    x :< rest -> Just x <$ put rest
-            & Lens.zoom Lens._2
+        fragmented = v ^?! V._BApp . applyArg
 
+inferBodies ::
+    Tree UVar T.Type ->
+    Tree (Ann a) Term ->
+    PureInfer (Tree (Ann (a, Tree UVar T.Type, Tree UVar T.Type)) Term)
+inferBodies extTyp (Ann a v) =
+    v & monoChildren %~ childPre
+    & inferBody
+    >>=
+    \(intTyp, infBody) ->
+    monoChildren childPost infBody
+    <&> Ann (a, extTyp, intTyp)
+    where
+        childPre x = Ann x (V.BLeaf V.LHole)
+        childPost (ITerm x (IResult childTyp childScope) _) =
+            inferBodies childTyp x
+            & Reader.local (id .~ childScope)
 
-reconstructTerm ::
-    Monad m =>
-    Tree (ITerm (Maybe (Tree (Ann (ValP m)) Term)) UVar) Term ->
-    State (InferState, Seq (Tree (Ann (ValP m)) Term, IResult UVar Term), [T m ()]) ()
-reconstructTerm iterm =
+tryUnify ::
+    Monoid a =>
+    (EditAction a, Tree UVar T.Type, Tree UVar T.Type) ->
+    State InferState a
+tryUnify (act, outTyp, inTyp) =
     do
-        Lens._2 %= (>< newTodo)
-        reconstructQueue
-    where
-        newTodo =
-            iterm ^@..
-            ExprLens.itermAnn . annotations . Lens.filteredBy (Lens._1 . Lens._Just) <. Lens._2
-            & Seq.fromList
+        s0 <- get
+        case runPureInfer V.emptyScope s0 (unify outTyp inTyp) of
+            Left{} -> pure (act ^. _OnNoUnify)
+            Right (t, s1) ->
+                case runPureInfer V.emptyScope s1 (applyBindings t) of
+                Left{} -> pure (act ^. _OnNoUnify)
+                Right{} -> act ^. _OnUnify <$ put s1
 
-healMismatch :: Monad m => ConvertM m (Property (T m) (ValI m) -> ValI m -> T m ())
+healMismatch :: Monad m => ConvertM m (ValI m -> T m ())
 healMismatch =
     do
         postProcess <- ConvertM.postProcessAssert
-        topLevelExpr <- Lens.view ConvertM.scTopLevelExpr
+        topLevelExpr <-
+            Lens.view ConvertM.scTopLevelExpr
+            <&> annotations %~ (^. Input.stored)
         deps <- Lens.view (ConvertM.scFrozenDeps . Property.pVal)
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
         pure $
-            \fragment arg ->
-            let mSpine =
+            \fragment ->
+            let mPrep =
                     do
-                        processInfer <-
-                            case recursiveRef of
-                            Nothing -> pure id
-                            Just rr ->
-                                newUnbound
-                                <&>
-                                \defTv action ->
-                                do
-                                    res <-
-                                        Reader.local
-                                        (V.scopeVarTypes . Lens.at (globalId (rr ^. ConvertM.rrDefI)) ?~ GMono defTv)
-                                        action
-                                    res <$ unify defTv (res ^. iType)
+                        topVar <- newUnbound
+                        let processInfer =
+                                case recursiveRef of
+                                Nothing -> id
+                                Just rr ->
+                                    V.scopeVarTypes . Lens.at (globalId (rr ^. ConvertM.rrDefI)) ?~ GMono topVar
                         addDeps <- loadDeps deps
-                        healSpine (fragment ^. Property.pVal) (topLevelExpr & annotations %~ (^. Input.stored))
-                            & infer
-                            & processInfer
-                            & Reader.local addDeps
+                        prepare fragment topLevelExpr
+                            & inferBodies topVar
+                            & Reader.local (processInfer . addDeps)
                     & runPureInfer V.emptyScope (InferState emptyPureInferState varGen)
+                (prep, inferState) = mPrep ^?! Lens._Right
             in
-            case mSpine of
-            Right (spine, inferState) | occursChecks ->
-                do
-                    _ <- DataOps.replace fragment arg
-                    sequence_ actions
-                    postProcess
-                where
-                    (_, _, actions) = execState (reconstructTerm spine) (inferState, mempty, [])
-                    occursChecks =
-                        runPureInfer (spine ^. iScope) inferState
-                        (traverse_ applyBindings (spine ^.. ExprLens.itermAnn . annotations . Lens._2 . irType))
-                        & Lens.has Lens._Right
-            _ -> pure () -- Cannot heal at all!
+            prep ^.. annotations
+            & sortOn (^. Lens._1 . Lens._1)
+            <&> Lens._1 %~ (^. Lens._2)
+            & traverse tryUnify
+            & (`evalState` inferState)
+            & sequence_
+            >> postProcess
