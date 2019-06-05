@@ -333,6 +333,10 @@ programTest baseEnv filename =
     do
         baseGui <- makeGui "" baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
+        let narrowSize =
+                (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)
+                ^. Align.tValue . Widget.wSize
+        when (size ^. _1 < narrowSize ^. _1) (fail "wide size is narrower than narrow!")
         w <- focusedWidget baseGui & either fail pure
         let enterPoint =
                 w ^. Widget.fMEnterPoint
