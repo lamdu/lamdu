@@ -41,8 +41,8 @@ taggedList =
     <*> (Spacer.stdVSpace <&> Widget.fromView <&> WithTextPos 0)
     <&>
     \(doPad, (/|/), vboxed, vspace) items ->
-    let preWidth = items ^.. traverse . tagPre . Lens._Just . Element.width & maximum
-        postWidth = items ^.. traverse . tagPost . Lens._Just . Element.width & maximum
+    let preWidth = items ^.. traverse . tagPre . Lens._Just . Element.width & maxOr0
+        postWidth = items ^.. traverse . tagPost . Lens._Just . Element.width & maxOr0
         renderItem ((Nothing, post), item) = (item, post)
         renderItem ((Just pre, post), item) =
             ( doPad (Vector2 (preWidth - pre ^. Element.width) 0) 0 pre
@@ -58,7 +58,7 @@ taggedList =
                     doPad (Vector2 (itemWidth - item ^. Element.width) 0) 0 post
                 itemWidth =
                     xs ^.. traverse . Lens.filteredBy (_2 . Lens._Just) . _1 . Element.width
-                    & maximum
+                    & maxOr0
         idx =
             NarrowLayoutParams
             { _layoutWidth = preWidth + postWidth
@@ -72,3 +72,5 @@ taggedList =
     }
     where
         prepItem (TaggedItem pre x post) = ((pre, post), x)
+        maxOr0 [] = 0
+        maxOr0 xs = maximum xs
