@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -170,11 +171,13 @@ make ::
     ) =>
     Sugar.TagPane (Name o) o -> m (Gui Responsive o)
 make tagPane =
-    Responsive.vbox <*>
-    sequenceA
-    [ makeTopRow myId (tagPane ^. Sugar.tpTag)
-    , Spacer.stdVSpace <&> Responsive.fromView
-    , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
-    ]
+    Styled.addValFrame <*>
+    ( Responsive.vbox <*>
+        sequenceA
+        [ makeTopRow myId (tagPane ^. Sugar.tpTag)
+        , Spacer.stdVSpace <&> Responsive.fromView
+        , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
+        ]
+    )
     where
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
