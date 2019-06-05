@@ -43,6 +43,11 @@ test =
     , testFloatToRepl
     , floatLetWithGlobalRef
     , testHoleTypeShown
+    , testGroup "insist-tests"
+        [ testInsistEq
+        , testInsistIf
+        , testInsistSubsets
+        ]
     ]
 
 testSugarActionsWith ::
@@ -228,6 +233,77 @@ testExtractForRecursion =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             ann . plActions . extract
+
+testInsistEq :: Test
+testInsistEq =
+    testSugarActions "compare-int-and-text.json"
+    [ void . (^?! insist)
+    , verify
+    ]
+    & testCase "insist-eq"
+    where
+        insist =
+            replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _2 .
+            val . _BodyFragment . fHeal
+        verify workArea
+            | Lens.has expected workArea = pure ()
+            | otherwise = fail "fragment not created at expected position"
+        expected =
+            replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _1 .
+            val . _BodyFragment
+
+testInsistIf :: Test
+testInsistIf =
+    testSugarActions "if-with-mismatch.json"
+    [ void . (^?! insist)
+    , verify
+    ]
+    & testCase "insist-if"
+    where
+        insist =
+            replBody . _BodyIfElse . iThen .
+            val . _BodyLam . lamFunc . fBody .
+            val . _BinderExpr . _BodyFragment . fHeal
+        verify workArea
+            | Lens.has expected workArea = pure ()
+            | otherwise = fail "fragment not created at expected position"
+        expected =
+            replBody . _BodyIfElse . iElse .
+            val . _SimpleElse . _BodyLam . lamFunc . fBody .
+            val . _BinderExpr . _BodyFragment
+
+testInsistSubsets :: Test
+testInsistSubsets =
+    testSugarActions "subsets.json"
+    [ void . (^?! openDef)
+    , void . (^?! insist)
+    , verify
+    ]
+    & testCase "insist-subsets"
+    where
+        openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
+        consArgs ::
+            Lens.ATraversal' (WorkArea name i o a)
+            (Tree (Ann a) (Body name i o), Tree (Ann a) (Body name i o))
+        consArgs =
+            waPanes . traverse . paneBody . _PaneDefinition .
+            drBody . _DefinitionBodyExpression . deContent .
+            val . _BodyFunction . fBody .
+            val . _BinderExpr . _BodyCase . cBody . cItems . Lens.ix 1 . ciExpr .
+            val . _BodyLam . lamFunc . fBody .
+            val . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Infix
+        insist =
+            Lens.cloneTraversal consArgs . Lens._2 .
+            val . _BodyLam . lamFunc . fBody .
+            val . _BinderLet . lBody .
+            val . _BinderExpr . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
+            val . _BodyLam . lamFunc . fBody .
+            val . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Infix . Lens._1 .
+            val . _BodyFragment . fHeal
+        verify workArea
+            | Lens.has expected workArea = pure ()
+            | otherwise = fail "fragment not created at expected position"
+        expected = Lens.cloneTraversal consArgs . Lens._1 . val . _BodyFragment
 
 testLightLambda :: Test
 testLightLambda =
