@@ -44,7 +44,8 @@ test =
     , floatLetWithGlobalRef
     , testHoleTypeShown
     , testGroup "insist-tests"
-        [ testInsistEq
+        [ testInsistFactorial
+        , testInsistEq
         , testInsistIf
         , testInsistSubsets
         ]
@@ -234,6 +235,36 @@ testExtractForRecursion =
             drBody . _DefinitionBodyExpression . deContent .
             ann . plActions . extract
 
+testInsistFactorial :: Test
+testInsistFactorial =
+    testSugarActions "factorial-mismatch.json"
+    [ void . (^?! openDef)
+    , void . (^?! insist)
+    , verify
+    ]
+    & testCase "insist-factorial"
+    where
+        openDef =
+            replBody . _BodySimpleApply . applyFunc .
+            val . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
+        ifElse =
+            waPanes . traverse . paneBody . _PaneDefinition .
+            drBody . _DefinitionBodyExpression . deContent .
+            val . _BodyFunction . fBody .
+            val . _BinderExpr . _BodyIfElse
+        insist =
+            Lens.cloneTraversal ifElse . iThen .
+            val . _BodyLam . lamFunc . fBody .
+            val . _BinderExpr . _BodyFragment . fHeal
+        verify workArea
+            | Lens.has unexpected workArea = fail "fragment created at unexpected position"
+            | otherwise = pure ()
+        unexpected =
+            Lens.cloneTraversal ifElse . iElse .
+            val . _SimpleElse . _BodyLam . lamFunc . fBody .
+            val . _BinderExpr . _BodySimpleApply . applyFunc .
+            val . _BodyFragment
+
 testInsistEq :: Test
 testInsistEq =
     testSugarActions "compare-int-and-text.json"
@@ -282,9 +313,6 @@ testInsistSubsets =
     & testCase "insist-subsets"
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
-        consArgs ::
-            Lens.ATraversal' (WorkArea name i o a)
-            (Tree (Ann a) (Body name i o), Tree (Ann a) (Body name i o))
         consArgs =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
