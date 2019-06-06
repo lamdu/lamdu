@@ -91,9 +91,11 @@ makeElse ::
     , Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
+    AnimId ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
+        (Sugar.Else (Name o) i o) ->
     GuiM env i o [Row (Gui Responsive o)]
-makeElse (Ann pl (Sugar.SimpleElse expr)) =
+makeElse parentAnimId (Ann pl (Sugar.SimpleElse expr)) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
         <*> (grammar (label Texts.injectSymbol)
@@ -102,8 +104,8 @@ makeElse (Ann pl (Sugar.SimpleElse expr)) =
     ) <*> GuiM.makeSubexpression (Ann pl expr)
     <&> pure
     where
-        elseAnimId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-makeElse (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
+        elseAnimId = parentAnimId <> ["else"]
+makeElse _ (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
     do
         mOuterScopeId <- GuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
@@ -115,7 +117,7 @@ makeElse (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
             <$> ( makeIfThen elseLabel animId content
                   <&> Lens.mapped %~ Widget.weakerEvents letEventMap
                 )
-            <*> makeElse (content ^. Sugar.iElse)
+            <*> makeElse animId (content ^. Sugar.iElse)
             & Reader.local (Element.animIdPrefix .~ animId)
             & GuiM.withLocalMScopeId mInnerScope
     where
@@ -190,7 +192,7 @@ make ifElse pl =
             <*>
             ( (:)
                 <$> makeIfThen Element.empty animId ifElse
-                <*> makeElse (ifElse ^. Sugar.iElse)
+                <*> makeElse animId (ifElse ^. Sugar.iElse)
             )
         )
     where
