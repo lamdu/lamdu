@@ -41,6 +41,9 @@ import           Test.Lamdu.Gui (verifyLayers)
 import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 import           Tests.Momentu (simpleKeyEvent)
+import           Text.PrettyPrint (($+$))
+import qualified Text.PrettyPrint as Pretty
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Test.Lamdu.Prelude
@@ -221,14 +224,16 @@ testKeyboardDirAndBack posEnv posVirt way back =
         (simpleKeyEvent back)
         >>=
         \case
-        Nothing -> fail (baseInfo <> "can't move back with cursor keys")
+        Nothing -> fail (show baseInfo <> " can't move back with cursor keys")
         Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
-            baseInfo <> "moving back with cursor keys goes to different place: " <>
+            show baseInfo <> "moving back with cursor keys goes to different place: " <>
             show (updBack ^. GuiState.uCursor)
             & fail
         Just{} -> pure ()
     where
-        baseInfo = show (posEnv ^. GuiState.cursor, way, back) <> ": "
+        baseInfo =
+            Pretty.text (show (posEnv ^. GuiState.cursor)) $+$
+            pPrint way $+$ pPrint back <> ": "
 
 comparePositions :: Rect -> Rect -> Ordering
 comparePositions (Rect p0 s0) (Rect p1 s1) =

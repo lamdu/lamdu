@@ -19,6 +19,8 @@ import qualified GUI.Momentu.ModKey as ModKey
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
 import qualified System.Info as SysInfo
+import qualified Text.PrettyPrint as Pretty
+import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 import           Text.Read (readMaybe)
 
 import           Lamdu.Prelude
@@ -74,6 +76,9 @@ parse s =
             , _shiftOn = "Shift" `elem` modsTexts
             , _metaOn = "Meta" `elem` modsTexts
             }
+
+instance Pretty MetaKey where
+    pPrint = Pretty.text . Text.unpack . format
 
 format :: MetaKey -> Text
 format (MetaKey mods k) =
