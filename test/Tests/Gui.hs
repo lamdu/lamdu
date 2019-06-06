@@ -332,9 +332,9 @@ testProgramGuiAtPos baseEnv enter =
 nubOn :: Ord k => (a -> k) -> [a] -> [a]
 nubOn f xs = (xs <&> (\x -> (f x, x)) & Map.fromList) ^.. Lens.folded
 
-programTest :: HasCallStack => Env.Env -> FilePath -> Test
+programTest :: HasCallStack => Env.Env -> FilePath -> IO ()
 programTest baseEnv filename =
-    testCase filename . testProgram filename $
+    testProgram filename $
     do
         baseGui <- makeGui "" baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
@@ -355,11 +355,12 @@ testPrograms :: Test
 testPrograms =
     do
         baseEnv <- Env.make
+        let testProg filename = programTest baseEnv filename & testCase filename
         listDirectory "test/programs"
             <&> filter (`notElem` skipped)
-            <&> Lens.mapped %~ programTest baseEnv
+            <&> Lens.mapped %~ testProg
             <&> testGroup "program-tests"
-    & buildTest
+        & buildTest
     where
         skipped =
             [ -- The tests import a program without first importing freshdb.
@@ -369,3 +370,9 @@ testPrograms =
             , "let-with-global-reference.json"
             , "if-with-mismatch.json" -- TODO: Why do we need to skip this?
             ]
+
+testOne :: FilePath -> IO ()
+testOne filename =
+    do
+        baseEnv <- Env.make
+        programTest baseEnv filename
