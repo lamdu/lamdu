@@ -85,17 +85,15 @@ makeIfThen prefixLabel animId ifElse =
             (Widget.weakerEvents eventMap thenGui)
             & pure
 
-makeElseBody ::
+makeElse ::
     ( Monad i, Monad o
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Tree (Sugar.Else (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
     GuiM env i o [Row (Gui Responsive o)]
-makeElseBody pl (Sugar.SimpleElse expr) =
+makeElse (Ann pl (Sugar.SimpleElse expr)) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
         <*> (grammar (label Texts.injectSymbol)
@@ -105,7 +103,7 @@ makeElseBody pl (Sugar.SimpleElse expr) =
     <&> pure
     where
         elseAnimId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
+makeElse (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
     do
         mOuterScopeId <- GuiM.readMScopeId
         let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
@@ -125,17 +123,6 @@ makeElseBody pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content)) =
         entityId = pl ^. Sugar.plEntityId
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
-
--- TODO inline and use "case"
-makeElse ::
-    ( Monad i, Monad o
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Else (Name o) i o) ->
-    GuiM env i o [Row (Gui Responsive o)]
-makeElse (Ann pl x) = makeElseBody pl x
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
