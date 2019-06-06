@@ -55,6 +55,7 @@ fixPriorities x@(Ann ((cat, priority), pl) b) =
         & res 1
     V.BRecExtend r -> V.BRecExtend r & res (-1)
     V.BCase c -> c & Row.eVal . score +~ (-1) & V.BCase & res (-1)
+    V.BApp a -> a & V.applyFunc . score +~ (-1) & V.BApp & res 0
     _ -> x
     where
         res diff = Ann ((cat, priority + diff), pl)
