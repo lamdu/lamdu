@@ -368,7 +368,8 @@ testPrograms =
               -- is not compatible with that
               "old-codec-factorial.json"
             , "let-with-global-reference.json"
-            , "if-with-mismatch.json" -- TODO: Why do we need to skip this?
+            , "if-with-mismatch.json"
+              -- Hovering fragment closed hole violates reversible navigation
             ]
 
 testOne :: FilePath -> IO ()
