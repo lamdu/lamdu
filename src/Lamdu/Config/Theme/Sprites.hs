@@ -11,6 +11,7 @@ import           Lamdu.Prelude
 data Sprites a = Sprites
     { _earthGlobe :: a
     , _pencilLine :: a
+    , _theme :: a
     }
     deriving stock (Eq, Generic, Generic1, Show, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Sprites)

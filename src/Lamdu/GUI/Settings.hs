@@ -119,7 +119,7 @@ makeStatusWidgets themeNames langNames prop =
         (composeLens Settings.sAnnotationMode prop)
     <*> (traverse opt themeNames
             >>= StatusBar.makeSwitchStatusWidget
-            (withHeader (pure Element.empty) Texts.sbSwitchTheme
+            (withHeader (Styled.sprite Sprites.theme) Texts.sbSwitchTheme
                 Texts.sbTheme) Config.changeThemeKeys themeProp)
     <*> (traverse opt langNames
             >>= StatusBar.makeSwitchStatusWidget

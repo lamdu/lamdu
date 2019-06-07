@@ -21,7 +21,8 @@
     },
     "sprites": {
         "earthGlobe": "earth-globe-world.png",
-        "pencilLine": "pencil-line.png"
+        "pencilLine": "pencil-line.png",
+        "theme": "theme.png"
     },
     "fonts": {
         "base"        : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Light" },

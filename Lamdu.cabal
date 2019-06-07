@@ -42,6 +42,7 @@ Data-files:          config.json
                    , sprites/Credits.html
                    , sprites/earth-globe-world.png
                    , sprites/pencil-line.png
+                   , sprites/theme.png
                    , themes/base.mixin.json
                    , themes/dark.json
                    , themes/light.json
