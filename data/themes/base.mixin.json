@@ -10,7 +10,7 @@
     "presentationChoiceScaleFactor": [0.5, 0.5],
     "topPadding": 0.5,
     "statusBar": {
-        "hspaces": 5
+        "hspaces": 3
     },
     "deleted": {
         "useDiagonalWidth": 0.1
