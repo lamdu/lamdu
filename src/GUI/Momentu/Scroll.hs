@@ -3,6 +3,7 @@ module GUI.Momentu.Scroll
     ) where
 
 import qualified Control.Lens as Lens
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.State (Gui)
@@ -16,9 +17,9 @@ focusAreaInto ::
     Functor f =>
     Widget.Size -> Gui Widget f -> Gui Widget f
 focusAreaInto regionSize widget =
+    Element.pad Dir.LeftToRight translation2d
+    (regionSize - widget ^. Element.size - translation2d)
     widget
-    & Widget.wState .~ Widget.translate translation2d widget
-    & Widget.wSize .~ regionSize
     where
         translation2d =
             translation1d <$> widget ^. Element.size <*> regionSize <*> focalCenter
