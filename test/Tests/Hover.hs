@@ -4,6 +4,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Main.Events as Events
 import qualified GUI.Momentu.Hover as H
 import qualified GUI.Momentu.ModKey as ModKey
@@ -53,12 +54,12 @@ testHover topLeft bottomRight widget =
             , Events.keModKeys = mempty
             }
 
-test :: Test
-test =
+positioningTest :: Test
+positioningTest =
     do
         testHover 0 (Vector2 2 2) widget
         testHover (Vector2 2 2) 0 widget
-    & testCase "hover"
+    & testCase "positioning"
     where
         widget =
             H.hoverInPlaceOf
@@ -68,3 +69,19 @@ test =
             square
             & W.takesFocus (const (pure "blah"))
             & H.anchor env
+
+anchorPointTest :: Test
+anchorPointTest =
+    assertEqual "unexpected anchor point" (widget ^. H.unHover . H.anchorPoint) (Vector2 0 1)
+    & testCase "anchor-point"
+    where
+        widget =
+            (H.hover ?? square) /-/ (H.anchor ?? square)
+            $ env
+
+test :: Test
+test =
+    testGroup "hover"
+    [ positioningTest
+    , anchorPointTest
+    ]

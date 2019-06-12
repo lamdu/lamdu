@@ -11,6 +11,9 @@ module GUI.Momentu.Hover
     , Orientation(..)
     , hoverBeside
     , emplaceAt
+
+    , -- For tests
+      anchorPoint, unHover
     ) where
 
 import qualified Control.Lens as Lens
