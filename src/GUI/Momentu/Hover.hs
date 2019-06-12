@@ -92,17 +92,29 @@ instance
     ( Functor f, Has Dir.Layout env
     ) => Glue env (AnchoredWidget f) (Hover View) where
     type Glued (AnchoredWidget f) (Hover View) = Hover (AnchoredWidget f)
-    glue env o ow (Hover ov) =
-        Glue.glueH f env o ow ov & Hover
-        where
-            f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
+    glue env o ow (Hover ov) = Glue.glue env o ow ov & Hover
 
 instance
     ( Functor f, Has Dir.Layout env
     ) => Glue env (Hover View) (AnchoredWidget f) where
     type Glued (Hover View) (AnchoredWidget f) = Hover (AnchoredWidget f)
-    glue env o (Hover ov) =
-        Glue.glueH f env o ov <&> Hover
+    glue env o (Hover ov) ow = Glue.glue env o ov ow & Hover
+
+instance
+    ( Functor f, Has Dir.Layout env
+    ) => Glue env (AnchoredWidget f) View where
+    type Glued (AnchoredWidget f) View = AnchoredWidget f
+    glue =
+        Glue.glueH f
+        where
+            f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
+
+instance
+    ( Functor f, Has Dir.Layout env
+    ) => Glue env View (AnchoredWidget f) where
+    type Glued View (AnchoredWidget f) = AnchoredWidget f
+    glue =
+        Glue.glueH f
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 

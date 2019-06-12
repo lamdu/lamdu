@@ -415,7 +415,7 @@ hoverOptions =
             results ^. Hover.backward
             & Align.tValue %~ hover
             & Align.fromWithTextPos alignment
-        annotatedTerm alignment = searchTerm & Widget.widget %~ (|---| annotation) & Aligned alignment
+        annotatedTerm alignment = searchTerm |---| annotation & Aligned alignment
         aboveRight = resultsAbove 0 |---| annotatedTerm 0
         aboveLeft = resultsAbove 1 |---| annotatedTerm 1
         annotatedResultsBelow =
