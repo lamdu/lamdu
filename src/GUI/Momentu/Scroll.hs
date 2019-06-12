@@ -6,7 +6,6 @@ import qualified Control.Lens as Lens
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 
@@ -15,7 +14,7 @@ import           Lamdu.Prelude
 -- Focus area into the given region
 focusAreaInto ::
     Functor f =>
-    Widget.Size -> Gui Widget f -> Gui Widget f
+    Widget.Size -> Widget f -> Widget f
 focusAreaInto regionSize widget =
     Element.pad Dir.LeftToRight translation2d
     (regionSize - widget ^. Element.size - translation2d)

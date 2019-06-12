@@ -39,7 +39,6 @@ import qualified GUI.Momentu.Main.Events as Events
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget.Id (Id)
 import qualified Graphics.UI.GLFW as GLFW
@@ -341,7 +340,7 @@ keysEventMap keys doc act = withFrozenCallStack $ keyPresses (keys <&> toModKey)
 
 -- | Convenience method to just set the cursor
 keysEventMapMovesCursor ::
-    (HasCallStack, Functor f) => [MetaKey] -> Doc -> f Id -> Gui EventMap f
+    (HasCallStack, Functor f) => [MetaKey] -> Doc -> f Id -> EventMap (f State.Update)
 keysEventMapMovesCursor keys doc act = withFrozenCallStack $ keyPresses (keys <&> toModKey) doc (act <&> State.updateCursor)
 
 keyPress :: HasCallStack => ModKey -> Doc -> a -> EventMap a

@@ -12,7 +12,6 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
-import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Responsive
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -20,11 +19,11 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
 
-data TaggedItem a = TaggedItem
-    { _tagPre :: Maybe (WithTextPos (Widget a))
-    , _taggedItem :: Responsive a
-    , _tagPost :: Maybe (WithTextPos (Widget a))
-    } deriving Functor
+data TaggedItem f = TaggedItem
+    { _tagPre :: Maybe (WithTextPos (Widget f))
+    , _taggedItem :: Responsive f
+    , _tagPost :: Maybe (WithTextPos (Widget f))
+    }
 
 Lens.makeLenses ''TaggedItem
 
@@ -32,7 +31,7 @@ taggedList ::
     ( MonadReader env m, Spacer.HasStdSpacing env, Applicative f
     , Glue.HasTexts env
     ) =>
-    m ([Gui TaggedItem f] -> Gui Responsive f)
+    m ([TaggedItem f] -> Responsive f)
 taggedList =
     (,,,)
     <$> Element.pad

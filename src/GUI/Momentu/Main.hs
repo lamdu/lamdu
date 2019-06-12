@@ -41,7 +41,7 @@ import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (GUIState(..), Gui)
+import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
@@ -100,7 +100,7 @@ data Options = Options
     }
 
 data Handlers = Handlers
-    { makeWidget :: Env -> IO (Gui Widget IO)
+    { makeWidget :: Env -> IO (Widget IO)
     , options :: Options
     }
 
@@ -151,13 +151,13 @@ defaultOptions env =
             }
 
 quitEventMap ::
-    (MonadReader env m, Functor f, Has (Texts Text) env) => m (Gui EventMap f)
+    (MonadReader env m, Functor f, Has (Texts Text) env) => m (EventMap (f State.Update))
 quitEventMap =
     Lens.view (has . textQuit) <&> \txt ->
     E.keysEventMap [MetaKey.cmd MetaKey.Key'Q] (E.Doc [txt]) (error "Quit")
 
 mkJumpToSourceEventMap ::
-    Functor f => Texts Text -> DebugOptions -> f () -> IO (Gui EventMap f)
+    Functor f => Texts Text -> DebugOptions -> f () -> IO (EventMap (f State.Update))
 mkJumpToSourceEventMap txt debug act =
     jumpToSourceKeys debug
     <&> \keys ->
@@ -257,8 +257,8 @@ virtualCursorImage (Just (State.VirtualCursor r)) debug =
 
 wrapMakeWidget ::
     Zoom -> Options -> IORef LookupMode ->
-    (Env -> IO (Gui Widget IO)) ->
-    Widget.Size -> IO (Gui Widget IO)
+    (Env -> IO (Widget IO)) ->
+    Widget.Size -> IO (Widget IO)
 wrapMakeWidget zoom options lookupModeRef mkWidgetUnmemod size =
     do
         s <- Property.getP stateStorage
@@ -294,7 +294,7 @@ wrapMakeWidget zoom options lookupModeRef mkWidgetUnmemod size =
             | otherwise = fail "Creating widget on the empty cursor failed"
         bgColorAnimId :: AnimId
         bgColorAnimId = ["invalid-cursor-background"]
-        showInvalidCursor :: Widget.Id -> Gui Widget IO -> IO (Gui Widget IO)
+        showInvalidCursor :: Widget.Id -> Widget IO -> IO (Widget IO)
         showInvalidCursor cursor widget =
             do
                 putStrLn $ "Invalid cursor: " ++ show cursor

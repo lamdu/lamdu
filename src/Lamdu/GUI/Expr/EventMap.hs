@@ -11,7 +11,6 @@ import qualified Data.Text as Text
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (HasWidget(..), EventContext)
 import qualified GUI.Momentu.Widget as Widget
@@ -80,7 +79,7 @@ add ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Options -> Sugar.Payload name i o ExprGui.Payload ->
-    GuiM env i o (Gui w o -> Gui w o)
+    GuiM env i o (w o -> w o)
 add options pl = (exprInfoFromPl ?? pl) >>= addWith options
 
 addWith ::
@@ -89,7 +88,7 @@ addWith ::
     , Has (Texts.Definitions Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Options -> ExprInfo name i o -> GuiM env i o (Gui w o -> Gui w o)
+    Options -> ExprInfo name i o -> GuiM env i o (w o -> w o)
 addWith options exprInfo =
     actionsEventMap options exprInfo <&> Widget.weakerEventsWithContext
 
@@ -103,7 +102,7 @@ extractEventMap ::
     , Has (Texts.Definitions Text) env
     , Functor o
     ) =>
-    m (Sugar.NodeActions name i o -> Gui EventMap o)
+    m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
 extractEventMap =
     Lens.view id
     <&>
@@ -118,7 +117,7 @@ addLetEventMap ::
     , Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    o Sugar.EntityId -> GuiM env i o (Gui EventMap o)
+    o Sugar.EntityId -> GuiM env i o (EventMap (o GuiState.Update))
 addLetEventMap addLet =
     do
         env <- Lens.view id
@@ -141,7 +140,7 @@ actionsEventMap ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Options -> ExprInfo name i o ->
-    GuiM env i o (EventContext -> Gui EventMap o)
+    GuiM env i o (EventContext -> EventMap (o GuiState.Update))
 actionsEventMap options exprInfo =
     ( mconcat
         [ detachEventMap ?? exprInfo ?? actions ^. Sugar.detach
@@ -208,7 +207,7 @@ transformEventMap ::
     ( MonadReader env m, Applicative o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
-    m (Options -> ExprInfo name i o -> EventContext -> Gui EventMap o)
+    m (Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update))
 transformEventMap =
     transformSearchTerm
     <&> \transform options exprInfo eventCtx ->
@@ -231,7 +230,7 @@ detachEventMap ::
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Functor f
     ) =>
-    m (ExprInfo name i o -> Sugar.DetachAction f -> Gui EventMap f)
+    m (ExprInfo name i o -> Sugar.DetachAction f -> EventMap (f GuiState.Update))
 detachEventMap =
     Lens.view id
     <&>
@@ -254,7 +253,7 @@ replaceEventMap ::
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Functor f
     ) =>
-    f Sugar.EntityId-> m (Gui EventMap f)
+    f Sugar.EntityId-> m (EventMap (f GuiState.Update))
 replaceEventMap action =
     Lens.view id
     <&>

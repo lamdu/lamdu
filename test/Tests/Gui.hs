@@ -16,7 +16,7 @@ import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui, HasCursor(..), VirtualCursor(..))
+import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
@@ -64,10 +64,10 @@ replExpr ::
     (Tree (Sugar.Body name i o) (Ann a))
 replExpr = Sugar.waRepl . Sugar.replExpr . val . Sugar._BinderExpr
 
-wideFocused :: Lens.Traversal' (Responsive a) (Widget.Surrounding -> Widget.Focused a)
+wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
-makeGui :: String -> Env -> T ViewM (Gui Responsive (T ViewM))
+makeGui :: String -> Env -> T ViewM (Responsive (T ViewM))
 makeGui afterDoc env =
     do
         workArea <- convertWorkArea env
@@ -88,7 +88,7 @@ makeGui afterDoc env =
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
-focusedWidget :: HasCallStack => Responsive a -> Either String (Widget.Focused a)
+focusedWidget :: HasCallStack => Responsive f -> Either String (Widget.Focused (f GuiState.Update))
 focusedWidget gui =
     widget <$ verifyLayers (widget ^. Widget.fLayers)
     where

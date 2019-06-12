@@ -19,7 +19,6 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -82,7 +81,7 @@ make ::
     Tree (Sugar.Case (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts relayed caseTail addAlt)) pl =
     do
         caseLabel <-
@@ -144,7 +143,7 @@ makeAltRow ::
     ) =>
     Maybe Tag ->
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    GuiM env i o (Gui TaggedItem o)
+    GuiM env i o (TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
         env <- Lens.view id
@@ -184,7 +183,7 @@ makeAltsWidget ::
     [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Const (Sugar.GetVar (Name o) o))] ->
     Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Widget.Id ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeAltsWidget mActiveTag alts relayed addAlt altsId =
     do
         relayedWidgets <-
@@ -217,7 +216,7 @@ makeAddAltRow ::
     , SearchMenu.HasTexts env
     ) =>
     Sugar.TagReplace (Name o) i o Sugar.EntityId -> Widget.Id ->
-    GuiM env i o (Gui TaggedItem o)
+    GuiM env i o (TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
@@ -247,7 +246,7 @@ makeOpenCase ::
     , Grid.HasTexts env
     ) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    AnimId -> Gui Responsive o -> GuiM env i o (Gui Responsive o)
+    AnimId -> Responsive o -> GuiM env i o (Responsive o)
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view has
@@ -270,7 +269,7 @@ openCaseEventMap ::
     , Monad o
     ) =>
     env -> Sugar.OpenCompositeActions o ->
-    Gui EventMap o
+    EventMap (o GuiState.Update)
 openCaseEventMap env (Sugar.OpenCompositeActions close) =
     close <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env) (doc env Texts.close)
@@ -282,7 +281,7 @@ closedCaseEventMap ::
     , Monad o
     ) =>
     env -> Sugar.ClosedCompositeActions o ->
-    Gui EventMap o
+    EventMap (o GuiState.Update)
 closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env Texts.open)
@@ -293,7 +292,7 @@ caseDelEventMap ::
     , Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
-    env -> o Sugar.EntityId -> Gui EventMap o
+    env -> o Sugar.EntityId -> EventMap (o GuiState.Update)
 caseDelEventMap env delete =
     delete <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)
@@ -305,7 +304,7 @@ toLambdaCaseEventMap ::
     , Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
-    env -> o Sugar.EntityId -> Gui EventMap o
+    env -> o Sugar.EntityId -> EventMap (o GuiState.Update)
 toLambdaCaseEventMap env toLamCase =
     toLamCase <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, TypeFamilies #-}
-{-# LANGUAGE RankNTypes, UndecidableInstances, DerivingVia #-}
+{-# LANGUAGE RankNTypes, DerivingVia #-}
 module GUI.Momentu.Hover
     ( Style(..), frameColor, framePadding, bgColor, bgPadding
     , Hover, hover, sequenceHover
@@ -26,8 +26,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue, GluesTo)
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Rect (Rect(..))
-import           GUI.Momentu.State (Gui)
-import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), R)
@@ -48,10 +46,10 @@ Lens.makeLenses ''Style
 backgroundColor :: Has Style env => Lens' env Draw.Color
 backgroundColor = has . bgColor
 
-data AnchoredWidget a = AnchoredWidget
+data AnchoredWidget f = AnchoredWidget
     { _anchorPoint :: Vector2 R
-    , _anchored :: Widget a
-    } deriving Functor
+    , _anchored :: Widget f
+    }
 Lens.makeLenses ''AnchoredWidget
 
 newtype Hover a = Hover { _unHover :: a }
@@ -69,7 +67,7 @@ instance SizedElement a => SizedElement (Hover a) where
 
 instance Widget.HasWidget AnchoredWidget where widget = anchored
 
-instance (Functor f, a ~ f State.Update) => Element (AnchoredWidget a) where
+instance Functor f => Element (AnchoredWidget f) where
     setLayers = anchored . Element.setLayers
     hoverLayers = anchored %~ Element.hoverLayers
     empty = AnchoredWidget 0 Element.empty
@@ -84,34 +82,31 @@ instance (Functor f, a ~ f State.Update) => Element (AnchoredWidget a) where
         , _anchored = Element.scale ratio w
         }
 
-instance (Functor f, a ~ f State.Update) => SizedElement (AnchoredWidget a) where
+instance Functor f => SizedElement (AnchoredWidget f) where
     size = anchored . Element.size
 
 instance
-    ( Functor f, a ~ f State.Update, Has Dir.Layout env
-    ) => Glue env (AnchoredWidget a) (Hover View) where
-    type Glued (AnchoredWidget a) (Hover View) =
-        Hover (AnchoredWidget a)
+    ( Functor f, Has Dir.Layout env
+    ) => Glue env (AnchoredWidget f) (Hover View) where
+    type Glued (AnchoredWidget f) (Hover View) = Hover (AnchoredWidget f)
     glue env o ow (Hover ov) =
         Glue.glueH f env o ow ov & Hover
         where
             f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance
-    ( Functor f, a ~ f State.Update, Has Dir.Layout env
-    ) => Glue env (Hover View) (AnchoredWidget a) where
-    type Glued (Hover View) (AnchoredWidget a) =
-        Hover (AnchoredWidget a)
+    ( Functor f, Has Dir.Layout env
+    ) => Glue env (Hover View) (AnchoredWidget f) where
+    type Glued (Hover View) (AnchoredWidget f) = Hover (AnchoredWidget f)
     glue env o (Hover ov) =
         Glue.glueH f env o ov <&> Hover
         where
             f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance
-    ( Applicative f, a ~ b, b ~ f State.Update, Glue.HasTexts env
-    ) => Glue env (AnchoredWidget a) (Hover (Widget b)) where
-    type Glued (AnchoredWidget a) (Hover (Widget b)) =
-        Hover (AnchoredWidget a)
+    ( Applicative f, f ~ g, Glue.HasTexts env
+    ) => Glue env (AnchoredWidget f) (Hover (Widget g)) where
+    type Glued (AnchoredWidget f) (Hover (Widget g)) = Hover (AnchoredWidget f)
     glue env orientation ow0 (Hover ow1) =
         Glue.glueH f env orientation ow0 ow1 & Hover
         where
@@ -120,10 +115,10 @@ instance
                 & AnchoredWidget pos
 
 instance
-    ( Applicative f, a ~ b, b ~ f State.Update, Glue.HasTexts env
-    ) => Glue env (Hover (Widget a)) (AnchoredWidget b) where
-    type Glued (Hover (Widget a)) (AnchoredWidget b) =
-        Hover (AnchoredWidget a)
+    ( Applicative f, f ~ g, Glue.HasTexts env
+    ) => Glue env (Hover (Widget f)) (AnchoredWidget g) where
+    type Glued (Hover (Widget f)) (AnchoredWidget g) =
+        Hover (AnchoredWidget f)
     glue env orientation (Hover ow0) =
         Glue.glueH f env orientation ow0 <&> Hover
         where
@@ -200,9 +195,9 @@ sequenceHover (Hover x) = x <&> Hover
 
 emplaceAt ::
     Functor f =>
-    Gui AnchoredWidget f ->
-    Gui AnchoredWidget f ->
-    Gui Widget f
+    AnchoredWidget f ->
+    AnchoredWidget f ->
+    Widget f
 emplaceAt h place =
     Element.padImpl translation postPad (h ^. anchored)
     where
@@ -214,8 +209,8 @@ emplaceAt h place =
 -- it as such?
 hoverInPlaceOf ::
     Functor f =>
-    [Hover (Gui AnchoredWidget f)] ->
-    Gui AnchoredWidget f -> Gui Widget f
+    [Hover (AnchoredWidget f)] ->
+    AnchoredWidget f -> Widget f
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
     | null focusedOptions =
@@ -256,14 +251,14 @@ hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
                 br = h ^. Element.size - place ^. Element.size - tl
 
 hoverBeside ::
-    ( GluesTo env (Hover w) (Gui AnchoredWidget f) (Hover (Gui AnchoredWidget f))
+    ( GluesTo env (Hover w) (AnchoredWidget f) (Hover (AnchoredWidget f))
     , MonadReader env m, Functor f, SizedElement w
     , Element.HasAnimIdPrefix env, Has Style env, Has Dir.Layout env
     ) =>
     (forall a b. Lens (t a) (t b) a b) ->
     m
-    ( t (Gui Widget f) ->
-      w -> t (Gui Widget f)
+    ( t (Widget f) ->
+      w -> t (Widget f)
     )
 hoverBeside lens =
     (,,) <$> hoverBesideOptions <*> hover <*> anchor

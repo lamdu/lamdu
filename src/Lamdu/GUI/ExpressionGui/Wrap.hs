@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive(..))
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -64,7 +63,7 @@ stdWrap ::
     ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     GuiM env i o
-    (Gui Responsive o -> Gui Responsive o)
+    (Responsive o -> Responsive o)
 stdWrap pl =
     (takeFocusIfNeeded pl <&> (Widget.widget %~))
     <<< (maybeAddAnnotationPl pl <&> (Widget.widget %~))
@@ -80,7 +79,7 @@ parentDelegator ::
     , GuiState.HasCursor env
     , Applicative o
     ) => Widget.Id ->
-    m (Gui Responsive o -> Gui Responsive o)
+    m (Responsive o -> Responsive o)
 parentDelegator myId =
     FocusDelegator.make <*> parentExprFDConfig
     ?? FocusDelegator.FocusEntryChild ?? myId
@@ -95,7 +94,7 @@ stdWrapParentExpr ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o -> Gui Responsive o)
+    GuiM env i o (Responsive o -> Responsive o)
 stdWrapParentExpr pl =
     (.)
     <$> stdWrap pl
@@ -104,7 +103,7 @@ stdWrapParentExpr pl =
 takeFocusIfNeeded ::
     Monad i =>
     Sugar.Payload name i o ExprGui.Payload ->
-    GuiM env i o (Gui Widget o -> Gui Widget o)
+    GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor
     <&>

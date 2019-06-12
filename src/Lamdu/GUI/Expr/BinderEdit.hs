@@ -14,7 +14,6 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -58,7 +57,7 @@ makeLetEdit ::
     ) =>
     Tree (Sugar.Let (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeLetEdit item =
     do
         env <- Lens.view id
@@ -116,7 +115,7 @@ make ::
     ) =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Binder (Name o) i o) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make (Ann pl (Sugar.BinderExpr assignmentBody)) =
     Ann pl assignmentBody & GuiM.makeSubexpression
 make (Ann pl (Sugar.BinderLet l)) =

@@ -23,7 +23,6 @@ import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -74,7 +73,7 @@ extractEventMap ::
     ( Functor m
     , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
     ) =>
-    env -> Sugar.Payload name i (T m) a -> [MetaKey] -> Gui EventMap (T m)
+    env -> Sugar.Payload name i (T m) a -> [MetaKey] -> EventMap (T m GuiState.Update)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
@@ -89,7 +88,7 @@ replEventMap ::
     , Has (Texts.Collaboration Text) env
     ) =>
     env -> ExportRepl m -> Sugar.Payload name i (T m) a ->
-    Gui EventMap (IOTrans m)
+    EventMap (IOTrans m GuiState.Update)
 replEventMap env (ExportRepl expRepl expFancy _execRepl) replExprPl =
     mconcat
     [ extractEventMap env replExprPl (env ^. has . Config.extractKeys)
@@ -230,7 +229,7 @@ resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
             _ -> view & Align.tValue %~ Widget.fromView & pure
 resultWidget _ _ tag (Sugar.EvalError err) =
     errorIndicator indicatorId tag err
-    <&> Align.tValue . Lens.mapped %~ IOTrans.liftTrans
+    <&> Align.tValue . Widget.updates %~ IOTrans.liftTrans
 
 make ::
     ( Monad m
@@ -244,7 +243,7 @@ make ::
     ExportRepl m ->
     Sugar.Repl (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    GuiM env (T m) (T m) (Gui Responsive (IOTrans m))
+    GuiM env (T m) (T m) (Responsive (IOTrans m))
 make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         env <- Lens.view id
@@ -264,11 +263,10 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
             [ (Widget.makeFocusableView ?? replSymId <&> (Align.tValue %~))
               <*> label Texts.repl
               <&> Lens.mapped %~ Widget.weakerEvents extractEvents
-              <&> Lens.mapped . Lens.mapped %~ IOTrans.liftTrans
+              <&> Lens.mapped . Widget.updates %~ IOTrans.liftTrans
               <&> maybe id centeredBelow result
               <&> Responsive.fromWithTextPos
-            , makeBinder replExpr
-                <&> Lens.mapped %~ IOTrans.liftTrans
+            , makeBinder replExpr <&> Widget.updates %~ IOTrans.liftTrans
             ]
             <&> Widget.weakerEvents (replEventMap env expRepl replExprPl)
             & GuiState.assignCursor WidgetIds.replId replExprId

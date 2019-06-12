@@ -5,7 +5,6 @@ module GUI.Momentu.State
     ( VirtualCursor(..), vcRect
     , GUIState(..), sCursor, sWidgetStates
     , Update(..), uCursor, uPreferStroll, uWidgetStateUpdates, uVirtualCursor
-    , Gui
     , update
     , updateCursor, fullUpdate
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
@@ -53,8 +52,6 @@ data Update = Update
     deriving stock Generic
     deriving (Semigroup, Monoid) via Generically Update
 Lens.makeLenses ''Update
-
-type Gui w f = w (f Update)
 
 updateCursor :: Id -> Update
 updateCursor c = mempty { _uCursor = Just c & Monoid.Last }

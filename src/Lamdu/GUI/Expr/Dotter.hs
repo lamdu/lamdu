@@ -16,7 +16,6 @@ module Lamdu.GUI.Expr.Dotter
     ( with, addEventMap
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
@@ -26,7 +25,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -49,7 +47,7 @@ add ::
     , Grid.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
-    m (Gui Responsive o -> Gui Responsive o)
+    m (Responsive o -> Responsive o)
 add pl =
     do
         ev <- eventMap ?? pl
@@ -59,7 +57,7 @@ add pl =
                 r ||| label
                 & Widget.setFocused
                 & Widget.weakerEvents ev
-                & Widget.widget %~ Widget.addPreEventWith (liftA2 mappend) preEvent
+                & Widget.widget %~ Widget.addPreEvent preEvent
         pure f
     where
         preEvent =
@@ -75,7 +73,7 @@ eventMap ::
     , Has (Texts.CodeUI Text) env
     , Grid.HasTexts env
     ) =>
-    m (Sugar.Payload name i o expr -> Gui EventMap o)
+    m (Sugar.Payload name i o expr -> EventMap (o GuiState.Update))
 eventMap =
     (,) <$> Lens.view id <*> delDotEventMap
     <&> \(env, delDotEvents) pl ->
@@ -91,7 +89,7 @@ with ::
     , Grid.HasTexts env
     ) =>
     Sugar.Payload name i o a ->
-    m (Gui Responsive o -> Gui Responsive o)
+    m (Responsive o -> Responsive o)
 with pl =
     do
         isActive <-
@@ -108,7 +106,7 @@ fragmentEventMap ::
     , Has (MomentuTexts.Texts Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Sugar.Payload name i o expr -> Gui EventMap o
+    env -> Sugar.Payload name i o expr -> EventMap (o GuiState.Update)
 fragmentEventMap env pl =
     E.charEventMap "Letter"
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.getField])
@@ -130,7 +128,7 @@ delDotEventMap ::
     , Has (MomentuTexts.Texts Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    m (Widget.Id -> Gui EventMap f)
+    m (Widget.Id -> EventMap (f GuiState.Update))
 delDotEventMap =
     (,) <$> Lens.view id <*> Config.delKeys
     <&>
@@ -144,7 +142,7 @@ addEventMap ::
     , Has (MomentuTexts.Texts Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    m (Widget.Id -> Gui w f -> Gui w f)
+    m (Widget.Id -> w f -> w f)
 addEventMap =
     Lens.view id
     <&> \env myId ->

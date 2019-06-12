@@ -17,7 +17,6 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -47,7 +46,7 @@ import           Lamdu.Prelude
 
 addScopeEdit ::
     (MonadReader env m, Applicative o, Glue.HasTexts env) =>
-    m (Maybe (Gui Widget o) -> Gui Responsive o -> Gui Responsive o)
+    m (Maybe (Widget o) -> Responsive o -> Responsive o)
 addScopeEdit =
     Glue.mkGlue ?? Glue.Vertical
     <&> (\(|---|) mScopeEdit ->
@@ -56,8 +55,8 @@ addScopeEdit =
 mkLhsEdits ::
     (MonadReader env m, Applicative o, Glue.HasTexts env) =>
     m
-    (Maybe (Gui Responsive o) ->
-     Maybe (Gui Widget o) -> [Gui Responsive o])
+    (Maybe (Responsive o) ->
+     Maybe (Widget o) -> [Responsive o])
 mkLhsEdits =
     addScopeEdit <&> \add mParamsEdit mScopeEdit ->
     mParamsEdit ^.. Lens._Just <&> add mScopeEdit
@@ -66,7 +65,7 @@ mkExpanded ::
     ( Monad o, MonadReader env f, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    f (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) -> [Gui Responsive o])
+    f (Maybe (Responsive o) -> Maybe (Widget o) -> [Responsive o])
 mkExpanded =
     (,)
     <$> mkLhsEdits
@@ -84,7 +83,7 @@ mkShrunk ::
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Gui Widget o) -> [Gui Responsive o])
+    f (Maybe (Widget o) -> [Responsive o])
 mkShrunk paramIds myId =
     do
         env <- Lens.view id
@@ -120,8 +119,8 @@ mkLightLambda ::
     ) =>
     Sugar.BinderParams a i o -> Widget.Id ->
     f
-    (Maybe (Gui Responsive o) -> Maybe (Gui Widget o) ->
-     [Gui Responsive o])
+    (Maybe (Responsive o) -> Maybe (Widget o) ->
+     [Responsive o])
 mkLightLambda params myId =
     do
         isSelected <-
@@ -163,7 +162,7 @@ make ::
     Tree (Sugar.Lambda (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make lam pl =
     do
         AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap _rhsId <-

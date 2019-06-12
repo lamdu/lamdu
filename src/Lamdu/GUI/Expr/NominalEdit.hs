@@ -14,7 +14,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -57,7 +56,7 @@ makeToNom ::
             (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
             (Sugar.Binder (Name o) i o)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeToNom nom pl =
     nom <&> GuiM.makeBinder
     & mkNomGui id Texts.deleteToNominal Texts.toNom mDel pl
@@ -77,7 +76,7 @@ makeFromNom ::
     ) =>
     Sugar.Nominal (Name o) (ExprGui.SugarExpr i o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeFromNom nom pl =
     nom <&> GuiM.makeSubexpression
     & mkNomGui reverse Texts.deleteFromNominal Texts.fromNom mDel pl
@@ -92,11 +91,11 @@ mkNomGui ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    ([Gui Responsive o] -> [Gui Responsive o]) ->
+    ([Responsive o] -> [Responsive o]) ->
     OneOf Texts.CodeUI -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Nominal (Name o) (GuiM env i o (Gui Responsive o)) ->
-    GuiM env i o (Gui Responsive o)
+    Sugar.Nominal (Name o) (GuiM env i o (Responsive o)) ->
+    GuiM env i o (Responsive o)
 mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)

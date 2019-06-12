@@ -14,7 +14,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as Texts
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.State (Gui)
+import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
@@ -55,7 +55,7 @@ newtype Zoom = Zoom
 
 eventMap ::
     (Has (Texts Text) env, Has (Texts.Texts Text) env) =>
-    Zoom -> env -> Config -> Gui EventMap IO
+    Zoom -> env -> Config -> EventMap (IO State.Update)
 eventMap (Zoom ref) env config =
     mconcat
     [ modifyIORef ref (* config ^. enlargeFactor)

@@ -11,7 +11,7 @@ import qualified Control.Lens as Lens
 import           GUI.Momentu.EventMap (EventMap)
 import           Control.Monad.Fail (MonadFail)
 import qualified GUI.Momentu.Main as Main
-import           GUI.Momentu.State (Gui, GUIState)
+import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget, R)
 import qualified GUI.Momentu.Widget as Widget
@@ -65,8 +65,8 @@ applyUpdate act env =
 mainLoop ::
     forall m.
     MonadFail m =>
-    Main.Env -> (Main.Env -> m (Gui Widget m)) ->
-    [Gui (TestEvent m) m] -> m ()
+    Main.Env -> (Main.Env -> m (Widget m)) ->
+    [TestEvent m (m State.Update)] -> m ()
 mainLoop initEnv mkWidget =
     foldM step (initEnv, Nothing)
     <&> void

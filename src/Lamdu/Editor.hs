@@ -18,7 +18,6 @@ import           GHC.Stack (SrcLoc(..))
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           Graphics.UI.GLFW.Utils (printGLVersion)
@@ -220,10 +219,10 @@ makeMainGui ::
     HasCallStack =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> T DbLayout.DbM (Gui Widget IO)
+    Env -> T DbLayout.DbM (Widget IO)
 makeMainGui themeNames langNames dbToIO env =
     GUIMain.make themeNames langNames (env ^. Env.settings) env
-    <&> Lens.mapped %~
+    <&> Widget.updates %~
     \act ->
     act ^. ioTrans . Lens._Wrapped
     <&> (^. Lens._Wrapped)
@@ -266,7 +265,7 @@ makeRootWidget ::
     HasCallStack =>
     Env -> Debug.Monitors ->
     Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
-    IO (Gui Widget IO)
+    IO (Widget IO)
 makeRootWidget env perfMonitors db evaluator sample =
     do
         themeNames <-

@@ -38,7 +38,7 @@ import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import           GUI.Momentu.State (Gui, GUIState(..))
+import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
@@ -75,11 +75,11 @@ data Askable env i o = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
-    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Gui Responsive o)
+    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
     , _aMakeBinder ::
         Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Binder (Name o) i o) ->
-        GuiM env i o (Gui Responsive o)
+        GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -165,9 +165,9 @@ instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Ann (Sugar.Payload name i o a) e -> GuiM env i o (Gui Responsive.Responsive o)) ->
+        (Ann (Sugar.Payload name i o a) e -> GuiM env i o (Responsive.Responsive o)) ->
     Ann (Sugar.Payload name i o a) e ->
-    GuiM env i o (Gui Responsive.Responsive o)
+    GuiM env i o (Responsive.Responsive o)
 make sub expr =
     do
         maker <- Lens.view sub
@@ -180,13 +180,13 @@ make sub expr =
 makeSubexpression ::
     Monad i =>
     Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    GuiM env i o (Gui Responsive.Responsive o)
+    GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
-    GuiM env i o (Gui Responsive.Responsive o)
+    GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
 isHoleResult :: MonadReader (Askable env i o) m => m Bool
@@ -200,10 +200,10 @@ run ::
     , Has Config env, Has Theme env
     , Has Settings env, HasStyle env
     ) =>
-    (ExprGui.SugarExpr i o -> GuiM env i o (Gui Responsive o)) ->
+    (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
     (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Binder (Name o) i o)
-        -> GuiM env i o (Gui Responsive o)) ->
+        -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> GuiM env i o a -> i a
 run makeSubexpr mkBinder theGuiAnchors env liftIom (GuiM action) =

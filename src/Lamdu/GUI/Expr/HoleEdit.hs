@@ -9,7 +9,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -67,7 +66,7 @@ make ::
     ) =>
     Sugar.Hole (Name o) i o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make hole pl =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId

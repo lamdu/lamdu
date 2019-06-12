@@ -23,8 +23,6 @@ import           GUI.Momentu.Responsive
     , rWide, rWideDisambig, rNarrow
     , layoutWidth, vbox, fromView, vertLayoutMaybeDisambiguate
     )
-import           GUI.Momentu.State (Gui)
-import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -32,18 +30,18 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
 
-data WideLayouts a = WideLayouts
-    { _lWide :: WithTextPos (Widget a)
-    , _lWideDisambig :: WithTextPos (Widget a)
-    } deriving Functor
+data WideLayouts f = WideLayouts
+    { _lWide :: WithTextPos (Widget f)
+    , _lWideDisambig :: WithTextPos (Widget f)
+    }
 Lens.makeLenses ''WideLayouts
 
-data WideLayoutOption t a = WideLayoutOption
+data WideLayoutOption t f = WideLayoutOption
     { _wContexts ::
         Lens.ATraversal
-        (t (Responsive a)) (t (WithTextPos (Widget a)))
-        (Responsive a) (WideLayouts a)
-    , _wLayout :: t (WithTextPos (Widget a)) -> WideLayouts a
+        (t (Responsive f)) (t (WithTextPos (Widget f)))
+        (Responsive f) (WideLayouts f)
+    , _wLayout :: t (WithTextPos (Widget f)) -> WideLayouts f
     }
 Lens.makeLenses ''WideLayoutOption
 
@@ -69,7 +67,7 @@ tryWideLayout layoutOption elements fallback =
             , _lWideDisambig = element ^. rWideDisambig
             }
 
-type HorizDisambiguator a = WithTextPos (Widget a) -> WithTextPos (Widget a)
+type HorizDisambiguator f = WithTextPos (Widget f) -> WithTextPos (Widget f)
 
 makeWideLayouts :: HorizDisambiguator a -> WithTextPos (Widget a) -> WideLayouts a
 makeWideLayouts disamb w =
@@ -80,7 +78,7 @@ makeWideLayouts disamb w =
 
 hbox ::
     (MonadReader env m, Glue.HasTexts env, Applicative f) =>
-    m (HorizDisambiguator (f State.Update) -> ([TextWidget f] -> [TextWidget f]) -> Gui (WideLayoutOption []) f)
+    m (HorizDisambiguator f -> ([TextWidget f] -> [TextWidget f]) -> WideLayoutOption [] f)
 hbox =
     Glue.hbox <&>
     \box disamb spacer ->
@@ -95,7 +93,7 @@ table ::
     ( MonadReader env m, Traversable t0, Traversable t1, Applicative f
     , Grid.HasTexts env
     ) =>
-    m (Gui (WideLayoutOption (Compose t0 t1)) f)
+    m (WideLayoutOption (Compose t0 t1) f)
 table =
     Grid.make <&>
     \makeGrid ->
@@ -133,8 +131,8 @@ boxH ::
     (Applicative f, MonadReader env m, Glue.HasTexts env) =>
     m
     ( ([TextWidget f] -> [TextWidget f]) ->
-      ([Gui Responsive f] -> [Gui Responsive f]) -> Gui Disambiguators f ->
-      [Gui Responsive f] -> Gui Responsive f )
+      ([Responsive f] -> [Responsive f]) -> Disambiguators f ->
+      [Responsive f] -> Responsive f )
 boxH =
     (,) <$> hbox <*> vbox
     <&> \(horiz, vert) onHGuis onVGuis disamb guis ->
@@ -145,16 +143,16 @@ boxH =
 box ::
     (Applicative f, MonadReader env m, Glue.HasTexts env) =>
     m
-    ( Gui Disambiguators f ->
-      [Gui Responsive f] ->
-      Gui Responsive f )
+    ( Disambiguators f ->
+      [Responsive f] ->
+      Responsive f )
 box = boxH ?? id ?? id
 
 boxSpaced ::
     ( Applicative f, MonadReader env m, Spacer.HasStdSpacing env
     , Glue.HasTexts env
     ) =>
-    m (Gui Disambiguators f -> [Gui Responsive f] -> Gui Responsive f)
+    m (Disambiguators f -> [Responsive f] -> Responsive f)
 boxSpaced =
     do
         hSpace <- Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0

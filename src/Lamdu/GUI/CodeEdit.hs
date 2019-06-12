@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -109,7 +108,7 @@ make ::
     , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
-    n (StatusBar.StatusWidget (IOTrans m), Gui Widget (IOTrans m))
+    n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
 make cp gp width =
     do
         theExportActions <- Lens.view has
@@ -126,7 +125,8 @@ make cp gp width =
                 workArea ^. Sugar.waPanes
                 & traverse (makePaneEdit theExportActions)
             newDefinitionButton <-
-                makeNewDefinitionButton cp <&> fmap IOTrans.liftTrans
+                makeNewDefinitionButton cp
+                <&> Widget.updates %~ IOTrans.liftTrans
                 <&> Responsive.fromWidget
             eventMap <-
                 panesEventMap theExportActions cp gp
@@ -153,7 +153,7 @@ exportPaneEventMap ::
     , Has (Texts.Collaboration Text) env
     ) =>
     env -> ExportActions m -> Sugar.PaneBody name i o dummy ->
-    Gui EventMap (IOTrans m)
+    EventMap (IOTrans m GuiState.Update)
 exportPaneEventMap env theExportActions paneBody =
     case paneBody of
     Sugar.PaneDefinition def ->
@@ -177,7 +177,7 @@ makePaneBodyEdit ::
     ) =>
     Sugar.Pane (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag -> TagPaneEdit.make tag
@@ -202,7 +202,7 @@ makePaneEdit ::
     ExportActions m ->
     Sugar.Pane (Name (T m)) (T m) (T m)
     (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
-    GuiM env (T m) (T m) (Gui Responsive (IOTrans m))
+    GuiM env (T m) (T m) (Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do
         env <- Lens.view id
@@ -228,7 +228,7 @@ makePaneEdit theExportActions pane =
                 ] & mconcat
             paneConfig = env ^. has . Config.pane
         makePaneBodyEdit pane
-            <&> Lens.mapped %~ IOTrans.liftTrans
+            <&> Widget.updates %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinition ::
@@ -259,7 +259,7 @@ newDefinitionDoc =
 
 makeNewDefinitionButton ::
     (Monad m, Language.HasLanguage env) =>
-    Anchors.CodeAnchors m -> GuiM env (T m) (T m) (Gui Widget (T m))
+    Anchors.CodeAnchors m -> GuiM env (T m) (T m) (Widget (T m))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
@@ -278,7 +278,7 @@ jumpBack gp =
 panesEventMap ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    Sugar.VarInfo -> GuiM env (T m) (T m) (Gui EventMap (IOTrans m))
+    Sugar.VarInfo -> GuiM env (T m) (T m) (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replVarInfo =
     do
         env <- Lens.view id

@@ -21,7 +21,6 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -41,7 +40,7 @@ disambiguators ::
     ( MonadReader env m, Functor f, Has Style env, Spacer.HasStdSpacing env
     , Has Dir.Layout env
     ) =>
-    m (AnimId -> Gui Options.Disambiguators f)
+    m (AnimId -> Options.Disambiguators f)
 disambiguators =
     do
         h <- addParens
@@ -64,7 +63,7 @@ indent ::
     ( MonadReader env m, Functor f, Has Style env, Spacer.HasStdSpacing env
     , Has Dir.Layout env
     ) =>
-    m (AnimId -> Gui Responsive f -> Gui Responsive f)
+    m (AnimId -> Responsive f -> Responsive f)
 indent =
     do
         bWidth <- totalBarWidth
@@ -107,14 +106,14 @@ boxSpacedDisambiguated ::
     ( MonadReader env m, Applicative f, Has Style env, Spacer.HasStdSpacing env
     , Glue.HasTexts env
     ) =>
-    m (AnimId -> [Gui Responsive f] -> Gui Responsive f)
+    m (AnimId -> [Responsive f] -> Responsive f)
 boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     ( MonadReader env m, Applicative f, Has Style env, Spacer.HasStdSpacing env
     , Glue.HasTexts env
     ) =>
-    m (Maybe AnimId -> [Gui Responsive f] -> Gui Responsive f)
+    m (Maybe AnimId -> [Responsive f] -> Responsive f)
 boxSpacedMDisamb =
     do
         disamb <- disambiguators

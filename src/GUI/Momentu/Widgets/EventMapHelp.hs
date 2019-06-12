@@ -40,7 +40,6 @@ import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.ModKey as ModKey
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..), vAnimLayers)
 import           GUI.Momentu.Widget (Widget)
@@ -337,7 +336,7 @@ toggledHelpAdder ::
     , Element.HasAnimIdPrefix env
     , Has Config env, HasStyle env, HasTexts env
     ) =>
-    m (Property f IsHelpShown -> Widget.Size -> Gui Widget f -> Gui Widget f)
+    m (Property f IsHelpShown -> Widget.Size -> Widget f -> Widget f)
 toggledHelpAdder =
     Lens.view id <&> \env prop size widget ->
     widget & Widget.wState %~

@@ -28,7 +28,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -80,7 +79,7 @@ makeParamsRecord ::
     , Glue.HasTexts env, Has (Texts.Code Text) env, Has (Texts.Name Text) env
     , Applicative f
     ) =>
-    Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Gui Responsive f)
+    Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Responsive f)
 makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
@@ -180,7 +179,7 @@ makeInlineEventMap ::
     , Applicative f
     ) =>
     env -> Sugar.BinderVarInline f ->
-    Gui EventMap f
+    EventMap (f GuiState.Update)
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
@@ -343,7 +342,7 @@ makeNoActions ::
     ) =>
     Sugar.GetVar (Name o) o ->
     Widget.Id ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeNoActions getVar myId =
     case getVar of
     Sugar.GetBinder binderVar ->
@@ -361,7 +360,7 @@ make ::
     ) =>
     Sugar.GetVar (Name o) o ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)
 
@@ -373,7 +372,7 @@ makeRelayedVars ::
     ) =>
     [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Const (Sugar.GetVar (Name o) o))] ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeRelayedVars args =
     do
         argEdits <- traverse (\(Ann a v) -> make (v ^. Lens._Wrapped) a) args

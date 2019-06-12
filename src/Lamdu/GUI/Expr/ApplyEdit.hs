@@ -14,7 +14,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -48,7 +47,7 @@ makeFunc ::
     GetVarEdit.Role ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Const (Sugar.BinderVarRef (Name o) o)) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeFunc role func =
     stdWrap pl <*>
     ( GetVarEdit.makeGetBinder role (func ^. val . Lens._Wrapped) myId
@@ -75,7 +74,7 @@ makeFuncRow ::
     Maybe AnimId ->
     Tree (Sugar.LabeledApply (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.Verbose -> makeFunc GetVarEdit.Normal func
@@ -110,7 +109,7 @@ makeLabeled ::
     Tree (Sugar.LabeledApply (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeLabeled apply pl =
     stdWrapParentExpr pl
     <*> (makeFuncRow (ExprGui.mParensId pl) apply >>= addBox)
@@ -122,7 +121,7 @@ makeLabeled apply pl =
 makeArgRow ::
     (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
     Sugar.AnnotatedArg (Name o) (ExprGui.SugarExpr i o) ->
-    GuiM env i o (Gui TaggedItem o)
+    GuiM env i o (TaggedItem o)
 makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
@@ -145,7 +144,7 @@ mkBoxed ::
     ) =>
     Tree (Sugar.LabeledApply (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Gui Responsive o -> GuiM env i o (Gui Responsive o)
+    Responsive o -> GuiM env i o (Responsive o)
 mkBoxed apply funcRow =
     do
         argRows <-
@@ -171,7 +170,7 @@ makeSimple ::
     Tree (Sugar.Apply (Sugar.Body (Name o) i o))
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeSimple (Sugar.Apply func arg) pl =
     stdWrapParentExpr pl
     <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)

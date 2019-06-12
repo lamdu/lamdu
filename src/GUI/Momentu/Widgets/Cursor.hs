@@ -33,10 +33,10 @@ data Config = Config
     }
 
 render ::
-    Widget a ->
+    Widget f ->
     ( Config -> Anim.Frame
-    , Maybe (Vector2 Widget.R -> Widget.EnterResult a)
-    , Maybe (Rect, State.VirtualCursor -> EventMap a)
+    , Maybe (Vector2 Widget.R -> Widget.EnterResult (f State.Update))
+    , Maybe (Rect, State.VirtualCursor -> EventMap (f State.Update))
     )
 render w =
     case w ^. Widget.wState of

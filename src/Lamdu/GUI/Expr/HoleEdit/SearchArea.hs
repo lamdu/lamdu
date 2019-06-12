@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -170,7 +169,7 @@ make ::
     i [Sugar.HoleOption (Name o) i o] ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
     (Text -> Bool) ->
-    GuiM env i o (Menu.Placement -> Gui Responsive o)
+    GuiM env i o (Menu.Placement -> Responsive o)
 make mkOptions pl allowedTerms =
     do
         env <- Lens.view id

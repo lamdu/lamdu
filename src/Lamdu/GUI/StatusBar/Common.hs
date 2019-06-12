@@ -13,7 +13,7 @@ module Lamdu.GUI.StatusBar.Common
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
-import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
+import           GUI.Momentu.Align (WithTextPos(..), TextWidget, tValue)
 import           GUI.Momentu.Animation.Id (ElemIds(..))
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (Element(..))
@@ -24,7 +24,6 @@ import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.MetaKey (MetaKey)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (R)
@@ -43,7 +42,7 @@ import           Lamdu.Prelude
 
 data StatusWidget f = StatusWidget
     { _widget :: TextWidget f
-    , _globalEventMap :: Gui EventMap f
+    , _globalEventMap :: EventMap (f GuiState.Update)
     }
 Lens.makeLenses ''StatusWidget
 
@@ -57,7 +56,7 @@ instance Functor f => Element (StatusWidget f) where
 hoist :: (f GuiState.Update -> g GuiState.Update) -> StatusWidget f -> StatusWidget g
 hoist f (StatusWidget w e) =
     StatusWidget
-    { _widget = w <&> fmap f
+    { _widget = w & tValue . Widget.updates %~ f
     , _globalEventMap = e <&> f
     }
 

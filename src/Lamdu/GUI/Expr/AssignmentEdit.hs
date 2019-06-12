@@ -29,7 +29,6 @@ import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -70,11 +69,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 data Parts o = Parts
-    { pMParamsEdit :: Maybe (Gui Responsive o)
-    , pMScopesEdit :: Maybe (Gui Widget o)
-    , pBodyEdit :: Gui Responsive o
-    , pEventMap :: Gui EventMap o
-    , pWrap :: Gui Responsive o -> Gui Responsive o
+    { pMParamsEdit :: Maybe (Responsive o)
+    , pMScopesEdit :: Maybe (Widget o)
+    , pBodyEdit :: Responsive o
+    , pEventMap :: EventMap (o GuiState.Update)
+    , pWrap :: Responsive o -> Responsive o
     , pRhsId :: Widget.Id
     }
 
@@ -136,7 +135,7 @@ makeScopeEventMap ::
     , Functor o
     ) =>
     env -> [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
-    Gui EventMap o
+    EventMap (o GuiState.Update)
 makeScopeEventMap env prevKey nextKey cursor setter =
     mkEventMap (sMPrevParamScope, prevKey, Texts.prev) ++
     mkEventMap (sMNextParamScope, nextKey, Texts.next)
@@ -155,10 +154,10 @@ makeScopeEventMap env prevKey nextKey cursor setter =
 
 makeScopeNavArrow ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Monoid a, Applicative o
+    , Element.HasAnimIdPrefix env, Applicative o
     , Has Dir.Layout env
     ) =>
-    (w -> o a) -> Text -> Maybe w -> m (WithTextPos (Widget (o a)))
+    (w -> o GuiState.Update) -> Text -> Maybe w -> m (WithTextPos (Widget o))
 makeScopeNavArrow setScope arrowText mScopeId =
     do
         theme <- Lens.view has
@@ -189,7 +188,7 @@ blockEventMap ::
     ( Has (Texts.Navigation Text) env
     , Has (MomentuTexts.Texts Text) env
     , Applicative m
-    ) => env -> Gui EventMap m
+    ) => env -> EventMap (m GuiState.Update)
 blockEventMap env =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
@@ -208,8 +207,8 @@ makeScopeNavEdit ::
     ) =>
     Sugar.Function name i o expr -> Widget.Id -> ScopeCursor ->
     GuiM env i o
-    ( Gui EventMap o
-    , Maybe (Gui Widget o)
+    ( EventMap (o GuiState.Update)
+    , Maybe (Widget o)
     )
 makeScopeNavEdit func myId curCursor =
     do
@@ -286,7 +285,7 @@ makeParamsEdit ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Name o) i o ->
-    GuiM env i o [Gui Responsive o]
+    GuiM env i o [Responsive o]
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam p ->
@@ -332,7 +331,7 @@ makeMParamsEdit ::
     Widget.Id ->
     Sugar.AddFirstParam (Name o) i o ->
     Maybe (Sugar.BinderParams (Name o) i o) ->
-    GuiM env i o (Maybe (Gui Responsive o))
+    GuiM env i o (Maybe (Responsive o))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
     do
         isPrepend <- GuiState.isSubCursor ?? prependId
@@ -493,11 +492,11 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
-    Gui EventMap o ->
+    EventMap (o GuiState.Update) ->
     Sugar.TagRef (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
     (Sugar.Assignment (Name o) i o) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make pMode defEventMap tag color assignment =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-

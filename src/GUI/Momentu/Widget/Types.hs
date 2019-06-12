@@ -19,15 +19,15 @@ import           GUI.Momentu.FocusDirection (FocusDirection)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Rect (Rect)
-import           GUI.Momentu.State (VirtualCursor)
+import           GUI.Momentu.State (VirtualCursor, Update)
 import           GUI.Momentu.Widget.Id (Id)
 
 import           Lamdu.Prelude
 
-data Widget a = Widget
+data Widget f = Widget
     { _wSize :: Size
-    , _wState :: State a
-    } deriving Functor
+    , _wState :: State (f Update)
+    }
 
 data State a
     = StateUnfocused (Unfocused a)

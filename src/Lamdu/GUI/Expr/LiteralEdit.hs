@@ -2,7 +2,6 @@ module Lamdu.GUI.Expr.LiteralEdit
     ( make, makeLiteralEventMap
     ) where
 
-import           Control.Applicative (liftA2)
 import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -23,7 +22,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -60,7 +58,7 @@ mkEditEventMap ::
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
-    m (Text -> o Sugar.EntityId -> Gui EventMap o)
+    m (Text -> o Sugar.EntityId -> EventMap (o GuiState.Update))
 mkEditEventMap =
     Lens.view id
     <&> \env valText setToHole ->
@@ -82,7 +80,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
-    Sugar.Payload name i o ExprGui.Payload -> f (Gui Responsive o)
+    Sugar.Payload name i o ExprGui.Payload -> f (Responsive o)
 genericEdit whichStyle prop pl =
     do
         editEventMap <-
@@ -254,9 +252,9 @@ numEdit prop pl =
                 -- Avoid taking keys that don't belong to us,
                 -- so weakerEvents with them will work.
                 E.filter (Lens.has Lens._Just . parseNum . fst)
-            <&> Align.tValue . Lens.mapped %~ event
+            <&> Align.tValue . Widget.updates %~ event
             <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> newLiteralEvent <> strollEvent)
-            <&> Align.tValue %~ Widget.addPreEventWith (liftA2 mappend) preEvent
+            <&> Align.tValue %~ Widget.addPreEvent preEvent
         & withStyle Style.num
     where
         prevVal = prop ^. Property.pVal
@@ -285,7 +283,7 @@ make ::
     ) =>
     Sugar.Literal (Property o) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make lit pl =
     stdWrap pl
     <*>
@@ -298,7 +296,7 @@ makeLiteralEventMap ::
     ( MonadReader env m, Monad o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
-    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> Gui EventMap o)
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
     Lens.view id <&> E.toDoc
     <&> \toDoc makeLiteral ->

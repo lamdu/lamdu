@@ -14,7 +14,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -43,7 +42,7 @@ eventMapAddFirstParam ::
     ) =>
     Widget.Id ->
     Sugar.AddFirstParam name i o ->
-    m (Gui EventMap o)
+    m (EventMap (o GuiState.Update))
 eventMapAddFirstParam binderId addFirst =
     Lens.view id
     <&>
@@ -68,7 +67,7 @@ eventMapAddNextParam ::
     , Has Config env
     ) =>
     env -> Widget.Id -> Sugar.AddNextParam name i o ->
-    Gui EventMap o
+    EventMap (o GuiState.Update)
 eventMapAddNextParam env myId addNext =
     E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . doc]) (pure dst)
@@ -91,7 +90,7 @@ eventMapOrderParam ::
     env ->
     Lens.ALens' Config [MetaKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> m () ->
-    Gui EventMap m
+    EventMap (m GuiState.Update)
 eventMapOrderParam env keys moveDoc =
     E.keysEventMap (env ^# has . keys)
     (E.toDoc env
@@ -104,7 +103,7 @@ eventParamDelEventMap ::
     ) =>
     env -> m () ->
     Lens.ALens' Config [MetaKey] ->
-    Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> Gui EventMap m
+    Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> EventMap (m GuiState.Update)
 eventParamDelEventMap env fpDel keys delParam dstPosId =
     GuiState.updateCursor dstPosId <$ fpDel
     & E.keyPresses (env ^# has . keys <&> toModKey)
@@ -139,7 +138,7 @@ make ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.FuncParam (Name o) i (Info i o) ->
-    GuiM env i o [Gui Responsive o]
+    GuiM env i o [Responsive o]
 make annotationOpts prevId nextId param =
     do
         env <- Lens.view id

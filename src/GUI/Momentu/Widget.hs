@@ -11,6 +11,7 @@ module GUI.Momentu.Widget
 
     , HasWidget(..)
 
+    , updates
     , isFocused
     , wFocused
 
@@ -28,7 +29,7 @@ module GUI.Momentu.Widget
     , strongerEvents
     , weakerEvents
     , weakerEventsWithContext
-    , addPreEvent, addPreEventWith
+    , addPreEvent
     , eventMapMaker
 
     -- Operations:
@@ -58,7 +59,7 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (VirtualCursor(..), HasCursor(..), Gui)
+import           GUI.Momentu.State (VirtualCursor(..), HasCursor(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import           GUI.Momentu.Widget.Id (Id(..))
@@ -71,10 +72,13 @@ import           Lamdu.Prelude
 class HasWidget w where widget :: Lens.Setter (w a) (w b) (Widget a) (Widget b)
 instance HasWidget Widget where widget = id
 
+updates :: HasWidget w => Lens.Setter (w f) (w g) (f State.Update) (g State.Update)
+updates = widget . wState . Lens.mapped
+
 isFocused :: Widget a -> Bool
 isFocused = Lens.has (wState . _StateFocused)
 
-enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (Gui w f) Id
+enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w f) Id
 enterResultCursor =
     widget . enterResult . enterResultEvent . Lens.mapped . State.uCursor . Lens.mapped
 
@@ -85,7 +89,7 @@ takesStroll myId =
 
 takesFocus ::
     (HasWidget w, Functor f) =>
-    (FocusDirection -> f Id) -> Gui w f -> Gui w f
+    (FocusDirection -> f Id) -> w f -> w f
 takesFocus enterFunc =
     widget %~
     \w ->
@@ -103,8 +107,8 @@ takesFocus enterFunc =
 enterFuncAddVirtualCursor ::
     Functor f =>
     Rect ->
-    (FocusDirection -> Gui EnterResult f) ->
-    FocusDirection -> Gui EnterResult f
+    (FocusDirection -> EnterResult (f State.Update)) ->
+    FocusDirection -> EnterResult (f State.Update)
 enterFuncAddVirtualCursor destRect =
     Lens.imapped <. (enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
     where
@@ -133,8 +137,10 @@ addPreEventToEventMap append preEvent e =
 
 -- | New pre-event is not added to the pre-events if pre-event is
 -- BlockEvents (but still added to the event map)
-addPreEventWith :: (a -> a -> a) -> PreEvent a -> Widget a -> Widget a
-addPreEventWith append preEvent =
+addPreEvent ::
+    Applicative f =>
+    PreEvent (f State.Update) -> Widget f -> Widget f
+addPreEvent preEvent =
     wFocused %~ onFocused
     where
         onFocused f =
@@ -145,15 +151,12 @@ addPreEventWith append preEvent =
             ctx
             & ePrevTextRemainder %~ (preEvent ^. pTextRemainder <>)
             & mk
-            & addPreEventToEventMap append preEvent
-
-addPreEvent :: Monoid a => PreEvent a -> Widget a -> Widget a
-addPreEvent = addPreEventWith mappend
+            & addPreEventToEventMap (liftA2 mappend) preEvent
 
 addEventsWithContext ::
-    (Applicative f, Monoid a, HasWidget w) =>
-    (EventMap (f a) -> EventMap (f a) -> EventMap (f a)) ->
-    (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
+    (Applicative f, HasWidget w) =>
+    (EventMap (f State.Update) -> EventMap (f State.Update) -> EventMap (f State.Update)) ->
+    (EventContext -> EventMap (f State.Update)) -> w f -> w f
 addEventsWithContext append mkEvents =
     widget . wFocused %~ onFocused
     where
@@ -171,45 +174,45 @@ addEventsWithContext append mkEvents =
                         & append
 
 addEvents ::
-    (Applicative f, Monoid a, HasWidget w) =>
-    (EventMap (f a) -> EventMap (f a) -> EventMap (f a)) ->
-    EventMap (f a) -> w (f a) -> w (f a)
+    (Applicative f, HasWidget w) =>
+    (EventMap (f State.Update) -> EventMap (f State.Update) -> EventMap (f State.Update)) ->
+    EventMap (f State.Update) -> w f -> w f
 addEvents append = addEventsWithContext append . const
 
 strongerEvents ::
-    (Applicative f, Monoid a, HasWidget w) => EventMap (f a) -> w (f a) -> w (f a)
+    (Applicative f, HasWidget w) => EventMap (f State.Update) -> w f -> w f
 strongerEvents = addEvents mappend
 
 weakerEvents ::
-    (Applicative f, Monoid a, HasWidget w) => EventMap (f a) -> w (f a) -> w (f a)
+    (Applicative f, HasWidget w) => EventMap (f State.Update) -> w f -> w f
 weakerEvents = addEvents (flip mappend)
 
 weakerEventsWithContext ::
-    (Applicative f, Monoid a, HasWidget w) =>
-    (EventContext -> EventMap (f a)) -> w (f a) -> w (f a)
+    (Applicative f, HasWidget w) =>
+    (EventContext -> EventMap (f State.Update)) -> w f -> w f
 weakerEventsWithContext = addEventsWithContext (flip mappend)
 
 strongerEventsWithoutPreevents ::
-    HasWidget w => EventMap a -> w a -> w a
+    HasWidget w => EventMap (f State.Update) -> w f -> w f
 strongerEventsWithoutPreevents eventMap =
     widget . eventMapMaker . Lens.mapped %~ (eventMap <>)
 
 weakerEventsWithoutPreevents ::
-    HasWidget w => EventMap a -> w a -> w a
+    HasWidget w => EventMap (f State.Update) -> w f -> w f
 weakerEventsWithoutPreevents eventMap =
     widget . eventMapMaker . Lens.mapped %~ (<> eventMap)
 
 translateFocused ::
     Functor f =>
-    Vector2 R -> (Surrounding -> Gui Focused f) ->
-    Surrounding -> Gui Focused f
+    Vector2 R -> (Surrounding -> Focused (f State.Update)) ->
+    Surrounding -> Focused (f State.Update)
 translateFocused pos = translateFocusedGeneric (fmap (translateUpdate pos)) pos
 
 setFocused :: HasWidget w => w a -> w a
 setFocused = widget %~ \w -> setFocusedWith (Rect 0 (w ^. wSize)) mempty w
 
 setFocusedWith ::
-    Rect -> (EventContext -> EventMap a) -> Widget a -> Widget a
+    Rect -> (EventContext -> EventMap (f State.Update)) -> Widget f -> Widget f
 setFocusedWith rect eventMap =
     wState %~
     \s ->
@@ -245,13 +248,13 @@ respondToCursorPrefix =
 
 makeFocusableView ::
     (MonadReader env m, HasCursor env, Applicative f) =>
-    m (Id -> View -> Gui Widget f)
+    m (Id -> View -> Widget f)
 makeFocusableView = makeFocusableWidget <&> Lens.mapped . Lens.argument %~ fromView
 
 -- TODO: Describe why makeFocusableView is to be usually preferred
 makeFocusableWidget ::
     (MonadReader env m, HasCursor env, Applicative f) =>
-    m (Id -> Gui Widget f -> Gui Widget f)
+    m (Id -> Widget f -> Widget f)
 makeFocusableWidget =
     respondToCursorPrefix
     <&> \respond myIdPrefix w ->

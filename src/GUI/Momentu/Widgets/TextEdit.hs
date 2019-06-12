@@ -35,7 +35,6 @@ import           GUI.Momentu.ModKey (ModKey(..))
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -169,7 +168,7 @@ cursorNearRect s str fromRect =
 enterFromDirection ::
     (Has Dir.Layout env, HasStyle env) =>
     env -> Widget.Size -> Text -> Widget.Id ->
-    FocusDirection -> Gui Widget.EnterResult ((,) Text)
+    FocusDirection -> Widget.EnterResult (Text, State.Update)
 enterFromDirection env sz str myId dir =
     encodeCursor myId cursor
     & State.updateCursor

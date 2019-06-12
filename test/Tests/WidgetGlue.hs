@@ -50,7 +50,7 @@ instance Arbitrary a => Arbitrary (FocusedWidget a) where
 instance Arbitrary a => Arbitrary (UnfocusedWidget a) where
     arbitrary = genericArbitraryRec uniform `withBaseCase` (UnfocusedLeaf <$> arbitrary <*> arbitrary)
 
-toWidgetUnfocused :: Applicative f => UnfocusedWidget (Maybe Widget.Id) -> Gui Widget f
+toWidgetUnfocused :: Applicative f => UnfocusedWidget (Maybe Widget.Id) -> Widget f
 toWidgetUnfocused (UnfocusedLeaf size x) =
     Widget.StateUnfocused Widget.Unfocused
     { Widget._uMEnter = Nothing -- TODO
@@ -69,7 +69,7 @@ glueFocused FocusedFirst = glue TestEnv.env
 glueFocused FocusedLast = glue TestEnv.env <&> flip
 
 
-toWidgetFocused :: Applicative f => FocusedWidget (Maybe Widget.Id) -> Gui Widget f
+toWidgetFocused :: Applicative f => FocusedWidget (Maybe Widget.Id) -> Widget f
 toWidgetFocused (FocusedLeaf size) =
     const Widget.Focused
     { Widget._fFocalAreas = [Rect (pure 0) size]
@@ -98,11 +98,11 @@ toWidgetFocused (FocusedGlue hoverMode glueOrder orientation foc unf) =
 propFocusedWidgetHasFocus :: FocusedWidget () -> Bool
 propFocusedWidgetHasFocus tree =
     Widget.isFocused
-    (toWidgetFocused (Nothing <$ tree) :: Gui Widget Identity)
+    (toWidgetFocused (Nothing <$ tree) :: Widget Identity)
 
 propUnfocusedWidgetIsntFocused :: UnfocusedWidget () -> Bool
 propUnfocusedWidgetIsntFocused tree =
-    (toWidgetUnfocused (Nothing <$ tree) :: Gui Widget Identity)
+    (toWidgetUnfocused (Nothing <$ tree) :: Widget Identity)
     & Widget.isFocused & not
 
 expectedStrollDests :: FocusedWidget (Maybe a) -> (Maybe a, Maybe a)
@@ -137,7 +137,7 @@ propStrollsCorrectly tree =
         mkEventMap =
             mkFocused (Widget.Surrounding 0 0 0 0) ^. Widget.fEventMap
         mkFocused =
-            (toWidgetFocused treeWithIds :: Gui Widget Identity)
+            (toWidgetFocused treeWithIds :: Widget Identity)
             ^?! Widget.wState . Widget._StateFocused
         treeWithIds =
             tree & Lens.traversed . Lens._Just %@~ (\idx () -> Widget.Id [encodeS idx])

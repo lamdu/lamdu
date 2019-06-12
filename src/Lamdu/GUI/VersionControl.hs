@@ -17,7 +17,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -51,7 +50,7 @@ branchNameFDConfig txt = FocusDelegator.Config
 
 undoEventMap ::
     (Has (MomentuTexts.Texts Text) env, Has (Texts.Versioning Text) env) =>
-    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
+    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.undo])
@@ -59,7 +58,7 @@ undoEventMap env config =
 
 redoEventMap ::
     (Has (MomentuTexts.Texts Text) env, Has (Texts.Versioning Text) env) =>
-    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> Gui EventMap m
+    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.redo])
@@ -69,7 +68,7 @@ eventMap ::
     ( MonadReader env m, Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env, Applicative f
     ) =>
-    m (VersionControl.Config -> A.Actions t f -> Gui EventMap f)
+    m (VersionControl.Config -> A.Actions t f -> EventMap (f GuiState.Update))
 eventMap =
     Lens.view id
     <&> \env config actions ->

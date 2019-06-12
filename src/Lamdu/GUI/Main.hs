@@ -19,7 +19,6 @@ import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Scroll as Scroll
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -88,7 +87,7 @@ layout ::
     Ctx env =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings ->
-    ReaderT env (T DbM) (Gui Widget (IOTrans DbM))
+    ReaderT env (T DbM) (Widget (IOTrans DbM))
 layout themeNames langNames settingsProp =
     do
         vcActions <-
@@ -101,7 +100,7 @@ layout themeNames langNames settingsProp =
             CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> _1 %~ StatusBar.hoist viewToDb
-            <&> _2 . Lens.mapped %~ viewToDb
+            <&> _2 . Widget.updates %~ viewToDb
         statusBar <-
             StatusBar.make gotoDefinition themeNames langNames settingsProp
             (fullSize ^. _1) vcActions
@@ -126,7 +125,7 @@ make ::
     Ctx env =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings -> env ->
-    T DbM (Gui Widget (IOTrans DbM))
+    T DbM (Widget (IOTrans DbM))
 make themeNames langNames settingsProp env =
     layout themeNames langNames settingsProp
     & GuiState.assignCursor mempty defaultCursor

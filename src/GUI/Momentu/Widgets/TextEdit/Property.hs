@@ -31,7 +31,7 @@ make =
     where
         f mk empty textRef myId =
             mk empty (Property.value textRef) myId
-            & Align.tValue . Lens.mapped %~ setter
+            & Align.tValue . Widget.updates %~ setter
             where
                 setter (newText, eventRes) =
                     eventRes <$

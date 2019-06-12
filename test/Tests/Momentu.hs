@@ -18,7 +18,7 @@ import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui, GUIState(..), VirtualCursor(..))
+import           GUI.Momentu.State (GUIState(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -104,7 +104,7 @@ gridStrollTest =
     >>= testStroll W.strollBackKeys 0
     & void
     where
-        makeGrid :: Int -> Gui Widget Identity
+        makeGrid :: Int -> Widget Identity
         makeGrid pos =
             Grid.make env
             [ [ Aligned 0 (mkWidget pos 0)
@@ -115,7 +115,7 @@ gridStrollTest =
               ]
             ] & snd
         eventCtx = W.EventContext (VirtualCursor (Rect 0 0)) ""
-        getEventMap :: Gui Widget Identity -> Gui E.EventMap Identity
+        getEventMap :: Widget Identity -> E.EventMap (Identity State.Update)
         getEventMap w =
             w ^. W.wState . W._StateFocused .
             Lens.to ($ W.Surrounding 0 0 0 0) .
@@ -137,7 +137,7 @@ gridStrollTest =
                     (keyEventTarget
                      ("Strolling to " ++ show idx ++ " via " ++ show keys) keys w)
                 pure (makeGrid idx)
-        mkWidget :: Int -> Int -> Gui Widget Identity
+        mkWidget :: Int -> Int -> Widget Identity
         mkWidget pos i =
             W.makeFocusableView
             GUIState
@@ -168,8 +168,11 @@ verticalDisambigTest =
                     }
                 box =
                     Options.box env disambig [unitItem, unitItem]
-                    <&> (<>[]) -- to avoid ambiguous type var
-        unitItem = Element.pad Dir.LeftToRight 0 1 Element.empty
+                    &
+                        -- to avoid ambiguous type var
+                        Responsive.rWide . Align.tValue . W.wState . Lens.mapped %~ (<>[])
+        unitItem =
+            Element.pad Dir.LeftToRight 0 1 Element.empty
         disambig =
             Options.disambiguationNone
             & Options.disambVert .~ Element.pad Dir.LeftToRight (Vector2 0.5 0) 0

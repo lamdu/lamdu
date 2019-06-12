@@ -20,7 +20,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -89,7 +88,7 @@ makeTopRow ::
     , GuiState.HasCursor env, Has Theme env
     , Element.HasAnimIdPrefix env, Has Config.Config env, Has Hover.Style env
     ) =>
-    Widget.Id -> Sugar.Tag (Name o) -> m (Gui Responsive o)
+    Widget.Id -> Sugar.Tag (Name o) -> m (Responsive o)
 makeTopRow myId tag =
     do
         nameView <-
@@ -139,7 +138,7 @@ makeLocalizedNames ::
     , TextEdit.Deps env, Glue.HasTexts env, Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Widget.Id -> Map LangId (Property o Text) -> m (Gui Responsive o)
+    Widget.Id -> Map LangId (Property o Text) -> m (Responsive o)
 makeLocalizedNames myId names =
     do
         curLang <- Lens.view has
@@ -169,7 +168,7 @@ make ::
     , Has Hover.Style env, Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Sugar.TagPane (Name o) o -> m (Gui Responsive o)
+    Sugar.TagPane (Name o) o -> m (Responsive o)
 make tagPane =
     Styled.addValFrame <*>
     ( Responsive.vbox <*>

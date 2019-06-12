@@ -96,7 +96,7 @@ instance Has (MomentuTexts.Texts Text) HelpEnv where has = heCommonTexts
 
 addHelp ::
     Config -> Theme -> Language -> Font ->
-    Widget.Size -> Widget (f a) -> Widget (f a)
+    Widget.Size -> Widget f -> Widget f
 addHelp config theme language font size widget =
     widget
     & Widget.wState . Widget._StateFocused . Lens.mapped %~

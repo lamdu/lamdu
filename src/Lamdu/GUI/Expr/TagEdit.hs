@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -66,7 +65,7 @@ makePickEventMap ::
     , MonadReader env m
     ) =>
     f Menu.PickResult ->
-    m (Gui EventMap f)
+    m (EventMap (f GuiState.Update))
 makePickEventMap action =
     Lens.view id <&>
     \env ->

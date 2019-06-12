@@ -1,6 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
-{-# LANGUAGE MultiParamTypeClasses, TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, TypeFamilies, FlexibleInstances #-}
 module GUI.Momentu.Widget.Instances
     ( sizedState, stateLayers, stateLens, enterResult, wFocused
     , glueStates
@@ -34,7 +33,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Gui, Update)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
@@ -43,7 +41,7 @@ import           GUI.Momentu.Widgets.StdKeys (stdDirKeys, dirKey)
 
 import           Lamdu.Prelude
 
-sizedState :: Lens.IndexedLens' Size (Widget a) (State a)
+sizedState :: Lens.IndexedLens' Size (Widget f) (State (f State.Update))
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz
 
 widgetSize :: Lens' (Widget a) (Vector2 Double)
@@ -58,7 +56,7 @@ widgetSize f w =
             & sBottom +~ nh - oh
         Vector2 ow oh = w ^. wSize
 
-instance (Functor f, a ~ f Update) => Element (Widget a) where
+instance Functor f => Element (Widget f) where
     setLayers = sizedState <. stateLayers
     hoverLayers w =
         w
@@ -78,35 +76,35 @@ instance (Functor f, a ~ f Update) => Element (Widget a) where
         & enterResult . enterResultRect . Rect.topLeftAndSize *~ mult
         & wState . _StateUnfocused . uMEnter . Lens._Just . Lens.argument %~ FDir.scale (1 / mult)
         & wFocused . fMEnterPoint . Lens._Just . Lens.argument //~ mult
-        & Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeftAndSize *~ mult
+        & wState . Lens.mapped . Lens.mapped . State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeftAndSize *~ mult
 
-instance (Functor f, a ~ f Update) => SizedElement (Widget a) where
+instance Functor f => SizedElement (Widget f) where
     size = widgetSize
 
 instance
-    ( Functor f, a ~ f Update, Has Dir.Layout env
-    ) => Glue env (Widget a) View where
-    type Glued (Widget a) View = Widget a
+    ( Functor f, Has Dir.Layout env
+    ) => Glue env (Widget f) View where
+    type Glued (Widget f) View = Widget f
     glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance
-    ( Functor f, a ~ f Update, Has Dir.Layout env
-    ) => Glue env View (Widget a) where
-    type Glued View (Widget a) = Widget a
+    ( Functor f, Has Dir.Layout env
+    ) => Glue env View (Widget f) where
+    type Glued View (Widget f) = Widget f
     glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
 
 instance
-    ( Applicative f, a ~ b, a ~ f Update
+    ( Applicative f, f ~ g
     , Glue.HasTexts env
-    ) => Glue env (Widget a) (Widget b) where
-    type Glued (Widget a) (Widget b) = Widget a
+    ) => Glue env (Widget f) (Widget g) where
+    type Glued (Widget f) (Widget g) = Widget f
     glue env orientation =
         Glue.glueH (glueStates env orientation Forward Forward) env orientation
 
 glueStates ::
     (Applicative f, Glue.HasTexts env) =>
     env -> Orientation -> Order -> Order ->
-    Gui Widget f -> Gui Widget f -> Gui Widget f
+    Widget f -> Widget f -> Widget f
 glueStates env orientation order strollOrder w0 w1 =
     w0
     & wState .~
@@ -115,7 +113,7 @@ glueStates env orientation order strollOrder w0 w1 =
 combineStates ::
     (Applicative f, Glue.HasTexts env) =>
     env -> Orientation -> Order -> Order ->
-    Gui State f -> Gui State f -> Gui State f
+    State (f State.Update) -> State (f State.Update) -> State (f State.Update)
 combineStates _ _ _ _ StateFocused{} StateFocused{} = error "joining two focused widgets!!"
 combineStates env o _ strollOrder (StateUnfocused u0) (StateUnfocused u1) =
     Unfocused e
@@ -248,13 +246,13 @@ chooseEnter Dir.RightToLeft Horizontal FromRight{} r0 _  = r0
 stateLayers :: Lens.Setter' (State a) Element.Layers
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 
-enterResult :: Lens.Setter' (Widget a) (EnterResult a)
+enterResult :: Lens.Setter' (Widget f) (EnterResult (f State.Update))
 enterResult = wState . stateEnterResult
 
-wFocused :: Lens.IndexedSetter' Size (Widget a) (Focused a)
+wFocused :: Lens.IndexedSetter' Size (Widget f) (Focused (f State.Update))
 wFocused = sizedState <. _StateFocused . Lens.mapped
 
-eventMapMaker :: Lens.Setter' (Widget a) (EventContext -> EventMap a)
+eventMapMaker :: Lens.Setter' (Widget f) (EventContext -> EventMap (f State.Update))
 eventMapMaker = wFocused . fEventMap
 
 stateLens ::
@@ -281,13 +279,13 @@ onState _   onFocused (StateFocused   x) = onFocused   x <&> StateFocused
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 -- Should expose higher-level combinators instead?
-translate :: Functor f => Vector2 R -> Gui Widget f -> Gui State f
+translate :: Functor f => Vector2 R -> Widget f -> State (f State.Update)
 translate pos = translateGeneric (fmap (translateUpdate pos)) pos
 
-translateUpdate :: Vector2 R -> Update -> Update
+translateUpdate :: Vector2 R -> State.Update -> State.Update
 translateUpdate = (State.uVirtualCursor . Lens.mapped . State.vcRect . Rect.topLeft +~)
 
-translateGeneric :: (a -> b) -> Vector2 R -> Widget a -> State b
+translateGeneric :: (f State.Update -> b) -> Vector2 R -> Widget f -> State b
 translateGeneric f pos w =
     w ^. wState
     & onStatePure translateUnfocused (translateFocusedGeneric f pos)

@@ -49,7 +49,7 @@ import qualified GUI.Momentu.I18N as Texts
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
-import           GUI.Momentu.State (HasState, Gui)
+import           GUI.Momentu.State (HasState)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -93,7 +93,7 @@ Lens.makeLenses ''TermStyle
 
 data Term f = Term
     { _termWidget :: TextWidget f
-    , _termEditEventMap :: Gui EventMap f
+    , _termEditEventMap :: EventMap (f State.Update)
     }
 Lens.makeLenses ''Term
 
@@ -111,7 +111,7 @@ emptyPickEventMap ::
     ( MonadReader env m, Has Menu.Config env, Has (Texts Text) env
     , Applicative f
     ) =>
-    m (Gui EventMap f)
+    m (EventMap (f State.Update))
 emptyPickEventMap =
     Lens.view id
     <&> \env ->
@@ -169,7 +169,7 @@ basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
             TextEdit.make ?? textEditEmpty ?? searchTerm ?? searchTermEditId myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (_tcTextEdit . allowedSearchTerm . fst)
-            <&> Align.tValue . Lens.mapped %~ pure . onEvents
+            <&> Align.tValue . Widget.updates %~ pure . onEvents
             <&> Align.tValue %~ Widget.takesStroll myId
         env <- Lens.view id
         pure Term
@@ -331,7 +331,7 @@ make makeSearchTerm makeOptions annotation myId =
 
 searchTermEditEventMap ::
     (Applicative f, HasTexts env) =>
-    env -> Id -> (Text -> Bool) -> Text -> Gui EventMap f
+    env -> Id -> (Text -> Bool) -> Text -> EventMap (f State.Update)
 searchTermEditEventMap env myId allowedTerms searchTerm =
     appendCharEventMap <> deleteCharEventMap
     <&> State.updateWidgetState myId

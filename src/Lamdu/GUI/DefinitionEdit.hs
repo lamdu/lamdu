@@ -16,7 +16,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui, assignCursor)
+import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -74,16 +74,17 @@ makeExprDefinition ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Gui EventMap o ->
+    EventMap (o GuiState.Update) ->
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
     Sugar.DefinitionExpression (Name o) i o
     (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeExprDefinition defEventMap def bodyExpr =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
     (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent)
-    & assignCursor myId (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagRefTag . Sugar.tagInstance))
+    & GuiState.assignCursor myId
+        (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagRefTag . Sugar.tagInstance))
     where
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
@@ -134,9 +135,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Gui EventMap o ->
+    EventMap (o GuiState.Update) ->
     Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make defEventMap def =
     do
         defGui <-

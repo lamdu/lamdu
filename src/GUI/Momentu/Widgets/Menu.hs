@@ -19,7 +19,6 @@ module GUI.Momentu.Widgets.Menu
     , HasTexts, Texts(..), noResults
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Aeson.TH.Extended as JsonTH
@@ -40,7 +39,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget)
@@ -193,7 +191,7 @@ blockEvents ::
     , Has (Texts Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    env -> Hover.Ordered (Gui Widget f -> Gui Widget f)
+    env -> Hover.Ordered (Widget f -> Widget f)
 blockEvents env =
     Hover.Ordered
     { _forward = blockDirection MetaKey.Key'Down downBlocked
@@ -296,7 +294,7 @@ instance Semigroup (OptionList a) where
 
 makePickEventMap ::
     (MonadReader env m, Has Config env, Has (Texts Text) env, Applicative f) =>
-    m (Widget.PreEvent (f PickResult) -> Gui EventMap f)
+    m (Widget.PreEvent (f PickResult) -> EventMap (f State.Update))
 makePickEventMap =
     Lens.view id
     <&>
@@ -320,8 +318,8 @@ makePickEventMap =
 addPickers ::
     (MonadReader env m, Has Config env, Applicative f, Has (Texts Text) env) =>
     m ( Widget.PreEvent (f PickResult) ->
-        Gui Widget f ->
-        Gui Widget f
+        Widget f ->
+        Widget f
       )
 addPickers =
     makePickEventMap
@@ -333,7 +331,7 @@ addPickers =
             <&> fmap State.updateCursor
     in
     w
-    & Widget.addPreEventWith (liftA2 mappend) preEvent
+    & Widget.addPreEvent preEvent
     & Widget.eventMapMaker . Lens.mapped %~ mappend (pickEventMap pick)
 
 noResultsId :: Widget.Id -> Widget.Id
@@ -407,8 +405,8 @@ hoverOptions ::
     m ( Placement ->
         View ->
         Hover.Ordered (TextWidget f) ->
-        Gui Hover.AnchoredWidget f ->
-        [Hover (Gui Hover.AnchoredWidget f)]
+        Hover.AnchoredWidget f ->
+        [Hover (Hover.AnchoredWidget f)]
       )
 hoverOptions =
     (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> (Glue.mkPoly ?? Glue.Vertical) <*> Hover.hover
@@ -466,7 +464,7 @@ makeHovered ::
     OptionList (Option m f) ->
     m
     ( PickFirstResult f
-    , Placement -> Gui Widget f -> Gui Widget f
+    , Placement -> Widget f -> Widget f
     )
 makeHovered myId annotation options =
     do

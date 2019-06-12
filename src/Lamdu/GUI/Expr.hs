@@ -8,7 +8,6 @@ import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -52,7 +51,7 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    ExprGui.SugarExpr i o -> GuiM env i o (Gui Responsive o)
+    ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
 make (Ann pl body) =
     makeEditor body pl & assignCursor
     where
@@ -65,7 +64,7 @@ make (Ann pl body) =
 placeHolder ::
     (Monad i, Applicative o) =>
     Sugar.Payload name i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 placeHolder pl =
     (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
     <*> Label.make "★"
@@ -85,7 +84,7 @@ makeEditor ::
     Tree (Sugar.Body (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeEditor body pl =
     do
         d <- Dotter.addEventMap ?? myId

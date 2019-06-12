@@ -22,7 +22,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList, tagPost)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -75,7 +74,7 @@ mkAddFieldEventMap ::
     , Has (Texts.CodeUI Text) env
     , Applicative o
     ) =>
-    Widget.Id -> m (Gui EventMap o)
+    Widget.Id -> m (EventMap (o GuiState.Update))
 mkAddFieldEventMap myId =
     Lens.view id
     <&>
@@ -89,7 +88,7 @@ addFieldWithSearchTermEventMap ::
     ( Has (MomentuTexts.Texts Text) env
     , Has (Texts.CodeUI Text) env
     , Applicative o
-    ) => env -> Widget.Id -> Gui EventMap o
+    ) => env -> Widget.Id -> EventMap (o GuiState.Update)
 addFieldWithSearchTermEventMap env myId =
     E.charEventMap "Letter" (doc env Texts.addField) f
     where
@@ -110,7 +109,7 @@ makeUnit ::
     , Grid.HasTexts env
     ) =>
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
@@ -140,7 +139,7 @@ make ::
     ) =>
     Tree (Sugar.Composite (Name o) i o) (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -195,9 +194,9 @@ makeRecord ::
     , Spacer.HasStdSpacing env, Applicative o
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Gui Responsive o -> m (Gui Responsive o)) ->
-    [Gui TaggedItem o] ->
-    m (Gui Responsive o)
+    (Responsive o -> m (Responsive o)) ->
+    [TaggedItem o] ->
+    m (Responsive o)
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
@@ -211,7 +210,7 @@ addPostTags ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
     , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env, Has Dir.Layout env
     ) =>
-    [Gui TaggedItem o] -> m [Gui TaggedItem o]
+    [TaggedItem o] -> m [TaggedItem o]
 addPostTags items =
     do
         let f idx item =
@@ -234,7 +233,7 @@ makeAddFieldRow ::
     ) =>
     Sugar.TagReplace (Name o) i o Sugar.EntityId ->
     Sugar.Payload name i o ExprGui.Payload ->
-    GuiM env i o (Gui TaggedItem o)
+    GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
@@ -262,7 +261,7 @@ makeFieldRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
-    GuiM env i o (Gui TaggedItem o)
+    GuiM env i o (TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -286,7 +285,7 @@ separationBar theme animId width =
 makeOpenRecord ::
     (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
     Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
-    Gui Responsive o -> GuiM env i o (Gui Responsive o)
+    Responsive o -> GuiM env i o (Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view has
@@ -313,7 +312,7 @@ openRecordEventMap ::
     ) =>
     Sugar.OpenCompositeActions o ->
     Sugar.Expression name i o a ->
-    m (Gui EventMap o)
+    m (EventMap (o GuiState.Update))
 openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
         Lens.view id
@@ -332,7 +331,7 @@ closedRecordEventMap ::
     , Has (Texts.CodeUI Text) env
     , Functor o
     ) =>
-    Sugar.ClosedCompositeActions o -> m (Gui EventMap o)
+    Sugar.ClosedCompositeActions o -> m (EventMap (o GuiState.Update))
 closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     Lens.view id
     <&>
@@ -347,7 +346,7 @@ recordDelEventMap ::
     , Has (Texts.CodeUI Text) env
     , Functor o
     ) =>
-    o Sugar.EntityId -> m (Gui EventMap o)
+    o Sugar.EntityId -> m (EventMap (o GuiState.Update))
 recordDelEventMap delete =
     Lens.view id
     <&>

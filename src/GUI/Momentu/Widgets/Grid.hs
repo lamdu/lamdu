@@ -30,7 +30,6 @@ import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (R, Widget(Widget))
 import qualified GUI.Momentu.Widget as Widget
@@ -80,8 +79,8 @@ mkNavDests ::
     Functor f =>
     Dir.Layout ->
     Cursor -> State.VirtualCursor ->
-    [[Maybe (FocusDirection -> Gui Widget.EnterResult f)]] ->
-    Gui NavDests f
+    [[Maybe (FocusDirection -> Widget.EnterResult (f State.Update))]] ->
+    NavDests (f State.Update)
 mkNavDests dir (Cursor (Vector2 cursorX cursorY)) virtCursor rows =
     NavDests
     { cursorLeft  =
@@ -195,8 +194,8 @@ make ::
     , HasTexts env, Applicative f
     ) =>
     m
-    (vert (horiz (Aligned (Gui Widget f))) ->
-     (vert (horiz (Aligned ())), Gui Widget f))
+    (vert (horiz (Aligned (Widget f))) ->
+     (vert (horiz (Aligned ())), Widget f))
 make = makeWithKeys ?? (stdKeys <&> MetaKey.toModKey)
 
 makeWithKeys ::
@@ -205,8 +204,8 @@ makeWithKeys ::
     ) =>
     m
     (Keys ModKey ->
-     vert (horiz (Aligned (Gui Widget f))) ->
-     (vert (horiz (Aligned ())), Gui Widget f))
+     vert (horiz (Aligned (Widget f))) ->
+     (vert (horiz (Aligned ())), Widget f))
 makeWithKeys =
     Lens.view id <&>
     \env keys children ->
@@ -227,8 +226,8 @@ each2d =
 toWidgetWithKeys ::
     (HasTexts env, Applicative f) =>
     env -> Keys ModKey -> Widget.Size ->
-    [[(Rect, Gui Widget f)]] ->
-    Gui Widget f
+    [[(Rect, Widget f)]] ->
+    Widget f
 toWidgetWithKeys env keys size sChildren =
     Widget
     { _wSize = size

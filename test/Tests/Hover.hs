@@ -8,19 +8,19 @@ import qualified GUI.Momentu.Main.Events as Events
 import qualified GUI.Momentu.Hover as H
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.Rect as R
-import           GUI.Momentu.State (Update, VirtualCursor(..))
+import           GUI.Momentu.State (VirtualCursor(..))
 import qualified GUI.Momentu.Widget as W
 import           Test.Momentu.Env (env)
 
 import           Test.Lamdu.Prelude
 
-square :: W.Widget (Identity Update)
+square :: W.Widget Identity
 square = Element.padAround 0.5 Element.empty
 
-focusedSquare :: W.Widget (Identity Update)
+focusedSquare :: W.Widget Identity
 focusedSquare = W.setFocused square
 
-testHover :: Vector2 Double -> Vector2 Double -> W.Widget (Identity Update) -> IO ()
+testHover :: Vector2 Double -> Vector2 Double -> W.Widget Identity -> IO ()
 testHover topLeft bottomRight widget =
     do
         traverse_ checkFocal focalAreas

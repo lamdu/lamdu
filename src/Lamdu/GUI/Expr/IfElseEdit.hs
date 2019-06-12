@@ -20,7 +20,6 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.State (Gui)
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -59,7 +58,7 @@ makeIfThen ::
     WithTextPos View -> AnimId ->
     Tree (Sugar.IfElse (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    GuiM env i o (Row (Gui Responsive o))
+    GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
@@ -94,7 +93,7 @@ makeElse ::
     AnimId ->
     Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
         (Sugar.Else (Name o) i o) ->
-    GuiM env i o [Row (Gui Responsive o)]
+    GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann pl (Sugar.SimpleElse expr)) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
@@ -129,7 +128,7 @@ makeElse _ (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , Has ResponsiveExpr.Style env, Glue.HasTexts env
-    ) => f (Row (Gui Responsive o) -> Gui Responsive o)
+    ) => f (Row (Responsive o) -> Responsive o)
 verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
@@ -146,7 +145,7 @@ renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , Has ResponsiveExpr.Style env
     , Grid.HasTexts env
-    ) => Maybe AnimId -> f ([Row (Gui Responsive o)] -> Gui Responsive o)
+    ) => Maybe AnimId -> f ([Row (Responsive o)] -> Responsive o)
 renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
@@ -185,7 +184,7 @@ make ::
     Tree (Sugar.IfElse (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make ifElse pl =
     stdWrapParentExpr pl
     <*> ( renderRows (ExprGui.mParensId pl)

@@ -15,7 +15,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
-import           GUI.Momentu.State (Gui)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -77,7 +76,7 @@ make ::
     Tree (Sugar.Fragment (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
     Sugar.Payload (Name o) i o ExprGui.Payload ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 make fragment pl =
     do
         isSelected <- GuiState.isSubCursor ?? myId
@@ -139,7 +138,7 @@ makeFragmentExprEdit ::
     (Monad i, Functor o) =>
     Tree (Sugar.Fragment (Name o) i o)
         (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    GuiM env i o (Gui Responsive o)
+    GuiM env i o (Responsive o)
 makeFragmentExprEdit fragment =
     do
         theme <- Lens.view has
