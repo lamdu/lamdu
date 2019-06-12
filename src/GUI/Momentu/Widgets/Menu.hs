@@ -421,7 +421,6 @@ hoverOptions =
         annotatedResultsBelow =
             (results ^. Hover.forward) |---| annotation
             & Align.tValue %~ hover
-        resultsBelow = results ^. Hover.forward & Align.tValue %~ hover
         belowRight =
             Aligned 0 searchTerm
             |---|
@@ -430,7 +429,6 @@ hoverOptions =
             Aligned 1 searchTerm
             |---|
             Align.fromWithTextPos 1 annotatedResultsBelow
-        centerRight = annotatedTerm 0.5 ||| Align.fromWithTextPos 0.5 resultsBelow
         rightAbove = annotatedTerm 1 ||| resultsAbove 1
         leftAbove = resultsAbove 1 ||| annotatedTerm 1
     in
@@ -444,7 +442,6 @@ hoverOptions =
         , aboveRight
         , belowLeft
         , aboveLeft
-        , centerRight
         ]
     Below ->
         [ belowRight
