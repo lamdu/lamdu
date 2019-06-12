@@ -194,9 +194,9 @@ sequenceHover :: Functor f => Hover (f a) -> f (Hover a)
 sequenceHover (Hover x) = x <&> Hover
 
 emplaceAt ::
-    Functor f =>
+    (Functor f, Functor g) =>
     AnchoredWidget f ->
-    AnchoredWidget f ->
+    AnchoredWidget g ->
     Widget f
 emplaceAt h place =
     Element.padImpl translation postPad (h ^. anchored)
@@ -208,9 +208,9 @@ emplaceAt h place =
 -- TODO: Second argument here is really only (anchorPoint,size), take
 -- it as such?
 hoverInPlaceOf ::
-    Functor f =>
+    (Functor f, Functor g) =>
     [Hover (AnchoredWidget f)] ->
-    AnchoredWidget f -> Widget f
+    AnchoredWidget g -> Widget f
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
     | null focusedOptions =
