@@ -55,6 +55,7 @@ data Texts a = Texts
     , _textCharacter :: a
     , _textClipboard :: a
     , _textPaste :: a
+    , _textCopy :: a
     } deriving Eq
 
 JsonTH.derivePrefixed "_text" ''Texts
@@ -328,7 +329,10 @@ eventMap env cursor str myId _eventContext =
             [noMods MetaKey.Key'Space, ModKey.shift MetaKey.Key'Space] (insert " ") ],
 
         [ E.pasteOnKey (cmd MetaKey.Key'V)
-            (toDoc [has . textClipboard, has . textPaste]) insert ]
+            (toDoc [has . textClipboard, has . textPaste]) insert ],
+
+        [ keys (toDoc [has . textClipboard, has . textCopy])
+            [cmd MetaKey.Key'C] (str, mempty & State.uSetSystemClipboard ?~ str ) ]
 
         ]
     where

@@ -352,6 +352,8 @@ runInner refreshAction run win handlers =
                                 Property.modP (stateStorage opts)
                                     (State.update res)
                                 writeIORef virtCursorRef (res ^. State.uVirtualCursor . Lens._Wrapped)
+                                res ^.. State.uSetSystemClipboard . Lens._Just &
+                                    traverse_ (GLFW.setClipboardString win . Text.unpack)
                                 newWidget
                     pure (Lens.has Lens._Just mRes)
             , MainAnim.makeFrame =

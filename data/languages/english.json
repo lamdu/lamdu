@@ -218,6 +218,7 @@
             "endOfText": "End Of Text",
             "swapLetters": "Swap Letters",
             "clipboard": "Clipboard",
+            "copy": "Copy",
             "paste": "Paste",
             "character": "Character"
         },

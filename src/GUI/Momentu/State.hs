@@ -4,7 +4,7 @@
 module GUI.Momentu.State
     ( VirtualCursor(..), vcRect
     , GUIState(..), sCursor, sWidgetStates
-    , Update(..), uCursor, uPreferStroll, uWidgetStateUpdates, uVirtualCursor
+    , Update(..), uCursor, uPreferStroll, uWidgetStateUpdates, uVirtualCursor, uSetSystemClipboard
     , update
     , updateCursor, fullUpdate
     , HasCursor(..), subId, isSubCursor, assignCursor, assignCursorPrefix
@@ -48,6 +48,7 @@ data Update = Update
     , _uPreferStroll :: Monoid.Any
     , _uWidgetStateUpdates :: Map Id ByteString
     , _uVirtualCursor :: Monoid.Last VirtualCursor
+    , _uSetSystemClipboard :: Maybe Text
     }
     deriving stock Generic
     deriving (Semigroup, Monoid) via Generically Update
