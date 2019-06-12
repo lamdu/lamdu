@@ -68,8 +68,6 @@ instance Element a => Element (Hover a) where
 instance SizedElement a => SizedElement (Hover a) where
     size = unHover . Element.size
 
-instance Widget.HasWidget AnchoredWidget where widget = anchored
-
 instance Functor f => Element (AnchoredWidget f) where
     setLayers = anchored . Element.setLayers
     hoverLayers = anchored %~ Element.hoverLayers
