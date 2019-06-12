@@ -224,7 +224,7 @@ allowedTagName :: Text -> Bool
 allowedTagName =
     Lens.anyOf (Lens.ix 0) f
     where
-        f x = Char.isAlpha x || elem x Chars.operator
+        f x = Char.isAlpha x || elem x Chars.operator || x == '_'
 
 makeHoleSearchTerm ::
     ( MonadReader env m, Applicative o

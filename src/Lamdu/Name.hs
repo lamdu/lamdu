@@ -73,5 +73,7 @@ instance HasPrecedence (Name o) where
 
 isValidText :: Text -> Bool
 isValidText x =
-    Text.all Char.isAlphaNum x
+    Text.all f x
     || Text.all (`elem` Chars.operator) x
+    where
+        f c = Char.isAlphaNum c || c == '_'
