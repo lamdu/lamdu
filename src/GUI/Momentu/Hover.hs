@@ -199,10 +199,9 @@ emplaceAt ::
     AnchoredWidget g ->
     Widget f
 emplaceAt h place =
-    Element.padImpl translation postPad (h ^. anchored)
+    Element.padImpl translation 0 (h ^. anchored)
+    & Widget.wSize .~ place ^. Element.size
     where
-        postPad =
-            place ^. Element.size - h ^. Element.size - translation <&> max 0
         translation = place ^. anchorPoint - h ^. anchorPoint
 
 -- TODO: Second argument here is really only (anchorPoint,size), take
@@ -213,8 +212,7 @@ hoverInPlaceOf ::
     AnchoredWidget g -> Widget f
 hoverInPlaceOf [] _ = error "no hover options!"
 hoverInPlaceOf hoverOptions@(Hover defaultOption:_) place
-    | null focusedOptions =
-        defaultOption `emplaceAt` place
+    | null focusedOptions = defaultOption `emplaceAt` place
     | otherwise =
         Widget
         { Widget._wSize = place ^. Element.size
