@@ -10,7 +10,6 @@ module GUI.Momentu.Hover
     , hoverBesideOptionsAxis
     , Orientation(..)
     , hoverBeside
-    , emplaceAt
 
     , -- For tests
       anchorPoint, unHover

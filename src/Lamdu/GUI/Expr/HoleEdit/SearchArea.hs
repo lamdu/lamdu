@@ -19,7 +19,6 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -179,13 +178,11 @@ make mkOptions pl allowedTerms =
                 <&> (Align.tValue %~)
         term <- makeTerm Menu.NoPickFirstResult
         closedSearchTermGui <-
-            (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
-            (fdWrap ?? term ^. SearchMenu.termWidget <&> Responsive.fromWithTextPos)
+            (maybeAddAnnotationPl pl <&> (Align.tValue %~)) <*>
+            (fdWrap ?? term ^. SearchMenu.termWidget)
         isActive <- HoleWidgetIds.isActive widgetIds
-        anc <- Hover.anchor
-        let inPlaceOfClosed open =
-                closedSearchTermGui & Widget.widget %~
-                (anc open `Hover.emplaceAt`) . anc
+        padToSize <- Element.padToSize
+        let inPlaceOfClosed = padToSize (closedSearchTermGui ^. Element.size) 0
         isAHoleInHole <- GuiM.isHoleResult
         if isActive && not isAHoleInHole
             then
@@ -202,9 +199,10 @@ make mkOptions pl allowedTerms =
                     (fdWrap <&> (Lens.mapped %~))
                         <*> SearchMenu.make makeTerm
                             (filteredOptions options) annotation searchMenuId
-                        <&> Lens.mapped %~ inPlaceOfClosed . (^. Align.tValue)
+                        <&> Lens.mapped . Align.tValue %~ inPlaceOfClosed
+                        <&> Lens.mapped %~ Responsive.fromWithTextPos
             else
-                closedSearchTermGui
+                Responsive.fromWithTextPos closedSearchTermGui
                 & (if isActive
                     then Widget.setFocused
                     else id
