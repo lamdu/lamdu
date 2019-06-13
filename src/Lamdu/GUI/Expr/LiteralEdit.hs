@@ -263,7 +263,7 @@ numEdit prop pl =
         curVal = prop ^. Property.pVal
         event (newText, update) =
             GuiState.updateWidgetState myId newText <> update <$
-            maybe (pure ()) (prop ^. Property.pSet) (parseNum newText)
+            traverse_ (prop ^. Property.pSet) (parseNum newText)
         empty =
             TextEdit.Modes
             { TextEdit._unfocused = "0"

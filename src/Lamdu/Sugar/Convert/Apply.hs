@@ -45,7 +45,7 @@ convert app@(V.Apply funcI argI) exprPl =
         (funcS, argS) <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift
-                convertAppliedHole app argS exprPl & maybe (pure ()) ((>>= throwE) . lift)
+                convertAppliedHole app argS exprPl & traverse_ ((>>= throwE) . lift)
                 convertAppliedFromNom app argS exprPl & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal

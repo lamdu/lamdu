@@ -62,7 +62,7 @@ new br@(Branch branchDataIRef) =
     where
         applyHistory view versionData =
             do
-                maybe (pure ()) (applyHistory view <=< Version.versionData) . Version.parent $ versionData
+                traverse_ (applyHistory view <=< Version.versionData) . Version.parent $ versionData
                 applyChangesToView view Change.newValue $ Version.changes versionData
 
 curVersion :: Monad m => View m -> T m (Version m)

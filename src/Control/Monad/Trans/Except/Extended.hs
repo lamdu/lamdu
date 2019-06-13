@@ -8,6 +8,7 @@ import Control.Monad ((<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe (MaybeT(..))
+import Data.Foldable (traverse_)
 
 import Prelude
 
@@ -18,7 +19,7 @@ runMatcherT :: Functor m => MatcherT m a -> m a
 runMatcherT = fmap uneither . runExceptT
 
 justToLeft :: Monad m => MaybeT m a -> ExceptT a m ()
-justToLeft = maybe (pure ()) throwE <=< lift . runMaybeT
+justToLeft = traverse_ throwE <=< lift . runMaybeT
 
 uneither :: Either a a -> a
 uneither = either id id
