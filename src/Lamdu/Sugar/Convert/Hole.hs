@@ -87,10 +87,12 @@ type Preconversion m a = Val (Input.Payload m a) -> Val (Input.Payload m ())
 
 type ResultGen m = StateT InferState (ListT (T m))
 
-convert :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert holePl =
+convert ::
+    (Monad m, Monoid a) =>
+    ConvertM.PositionInfo -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+convert posInfo holePl =
     Hole
-    <$> mkOptions holeResultProcessor holePl
+    <$> mkOptions posInfo holeResultProcessor holePl
     <*> makeSetToLiteral holePl
     <*> pure Nothing
     <&> BodyHole
@@ -199,9 +201,9 @@ mkNominalOptions nominals =
 
 mkOptions ::
     Monad m =>
-    ResultProcessor m -> Input.Payload m a ->
+    ConvertM.PositionInfo -> ResultProcessor m -> Input.Payload m a ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
-mkOptions resultProcessor holePl =
+mkOptions posInfo resultProcessor holePl =
     Lens.view id
     <&>
     \sugarContext ->
@@ -217,7 +219,9 @@ mkOptions resultProcessor holePl =
             , [ P.abs "NewLambda" P.hole
               , P.recEmpty
               , P.absurd
-              , P.abs "NewLambda" P.hole P.$$ P.hole
+              ]
+            , [ P.abs "NewLambda" P.hole P.$$ P.hole
+              | posInfo == ConvertM.BinderPos
               ]
             ]
             <&> mkOption sugarContext resultProcessor holePl

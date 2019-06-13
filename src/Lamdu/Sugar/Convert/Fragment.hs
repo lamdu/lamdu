@@ -59,13 +59,14 @@ fragmentResultProcessor topEntityId fragment =
 
 mkOptions ::
     Monad m =>
+    ConvertM.PositionInfo ->
     ConvertM.Context m ->
     Val (Input.Payload m a) ->
     Expression name i o (Payload name i o a) ->
     Input.Payload m a ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
-mkOptions sugarContext argI argS exprPl =
-    Hole.mkOptions (fragmentResultProcessor topEntityId argI) exprPl
+mkOptions posInfo sugarContext argI argS exprPl =
+    Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (pure fragmentOptions <>)
     <&> Lens.mapped %~ Hole.addWithoutDups mkSuggested
     where
@@ -106,11 +107,12 @@ checkTypeMatch x y =
 
 convertAppliedHole ::
     (Monad m, Monoid a) =>
+    ConvertM.PositionInfo ->
     Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
     ExpressionU m a ->
     Input.Payload m a ->
     Maybe (ConvertM m (ExpressionU m a))
-convertAppliedHole (V.Apply funcI argI) argS exprPl
+convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl
     | Lens.has ExprLens.valHole funcI =
         do
             isTypeMatch <-
@@ -125,7 +127,7 @@ convertAppliedHole (V.Apply funcI argI) argS exprPl
                 argS
                 & annotations %~ (,) showAnn
                 & annotations (convertPayload Annotations.None)
-                >>= (mkOptions sugarContext argI ?? exprPl)
+                >>= (mkOptions posInfo sugarContext argI ?? exprPl)
             healMis <- healMismatch
             BodyFragment Fragment
                 { _fExpr =

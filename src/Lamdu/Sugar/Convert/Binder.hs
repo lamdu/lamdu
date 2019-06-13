@@ -132,7 +132,10 @@ convertBinder ::
 convertBinder expr@(Ann pl body) =
     case Redex.check body of
     Nothing ->
-        ConvertM.convertSubexpression expr & localNewExtractDestPos pl
+        do
+            convertSub <- Lens.view (Lens.to ConvertM.scConvertSubexpression)
+            convertSub ConvertM.BinderPos expr
+        & localNewExtractDestPos pl
         <&> \exprS ->
         exprS
         & val %~ BinderExpr

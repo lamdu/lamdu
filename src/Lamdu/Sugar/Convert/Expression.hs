@@ -20,6 +20,7 @@ import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
@@ -57,12 +58,12 @@ convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert ::
     (Monad m, Monoid a) =>
-    Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
-convert v =
+    ConvertM.PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+convert posInfo v =
     v ^. ann
     & case v ^. val of
       V.BLam x -> ConvertBinder.convertLam x
-      V.BApp x -> ConvertApply.convert x
+      V.BApp x -> ConvertApply.convert posInfo x
       V.BRecExtend x -> ConvertRecord.convertExtend x
       V.BGetField x -> ConvertGetField.convert x
       V.BInject x -> ConvertInject.convert x
@@ -73,7 +74,7 @@ convert v =
           case PrimVal.toKnown literal of
           PrimVal.Float x -> convertLiteralFloat x
           PrimVal.Bytes x -> convertLiteralBytes x
-      V.BLeaf V.LHole -> ConvertHole.convert
+      V.BLeaf V.LHole -> ConvertHole.convert posInfo
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
       V.BLeaf V.LFromNom{} -> error "TODO: support un-applied FromNom"

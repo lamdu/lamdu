@@ -17,6 +17,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , ConvertM(..), run
     , local
+    , PositionInfo(..)
     , convertSubexpression
     , typeProtectedSetToVal, postProcessAssert, postProcessWith
     ) where
@@ -96,6 +97,8 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
 instance Monad m => MonadTransaction m (ConvertM m) where
     transaction = ConvertM . lift
 
+data PositionInfo = BinderPos | ExpressionPos deriving Eq
+
 data Context m = Context
     { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
@@ -111,7 +114,7 @@ data Context m = Context
     , _scCacheFunctions :: Cache.Functions
     , _scConfig :: Config
     , scConvertSubexpression ::
-        forall a. Monoid a => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+        forall a. Monoid a => PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     , _scLanguageIdentifier :: LangId
     , _scLanguageDir :: Dir.Layout
     }
@@ -180,8 +183,9 @@ local :: (Context m -> Context m) -> ConvertM m a -> ConvertM m a
 local f (ConvertM act) = ConvertM $ Reader.local f act
 
 convertSubexpression ::
-    (Monad m, Monoid a) => Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+    (Monad m, Monoid a) =>
+    Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =
     do
         convertSub <- Lens.view (Lens.to scConvertSubexpression)
-        convertSub exprI
+        convertSub ExpressionPos exprI
