@@ -6,7 +6,7 @@ packages:
   extra-dep: True
 - location:
     git: https://github.com/lamdu/lamdu-calculus
-    commit: e57d99244f27d9b6d5d7b9ff0002c58bf4a89b0d
+    commit: 916532504e9c8fc4ebe05e7fb302f9dc15230cc7
   extra-dep: True
 - location:
     git: https://github.com/lamdu/graphics-drawingcombinators
