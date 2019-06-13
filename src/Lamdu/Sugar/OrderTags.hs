@@ -4,7 +4,8 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
-import           AST (Tree, Children(..), Ann(..), monoChildren)
+import           AST (Tree, Children(..), monoChildren)
+import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import           Lamdu.Data.Tag (tagOrder)
@@ -37,20 +38,20 @@ orderByTag toTag =
             & ExprIRef.readTagData
             <&> (,) x . (^. tagOrder)
 
-orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Sugar.Type a))
+orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Tree (Ann a) (Sugar.Type name)))
 orderComposite =
     Sugar.compositeFields $
     \fields -> fields & orderByTag (^. _1) >>= traverse . _2 %%~ orderType
 
-orderTBody :: Monad m => OrderT m (Sugar.TBody name (Sugar.Type name))
+orderTBody :: Monad m => OrderT m (Tree (Sugar.Type name) (Ann a))
 orderTBody t =
     t
     & Sugar._TRecord %%~ orderComposite
     >>= Sugar._TVariant %%~ orderComposite
-    >>= traverse orderType
+    >>= monoChildren orderType
 
-orderType :: Monad m => OrderT m (Sugar.Type name)
-orderType = Sugar.tBody orderTBody
+orderType :: Monad m => OrderT m (Tree (Ann a) (Sugar.Type name))
+orderType = val orderTBody
 
 orderRecord ::
     Monad m =>

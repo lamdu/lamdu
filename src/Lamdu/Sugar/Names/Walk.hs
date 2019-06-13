@@ -8,8 +8,10 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
-import           AST (Tree, Ann(..))
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), val)
 import           AST.Term.Apply (applyChildren)
+import           AST.Term.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T
@@ -72,8 +74,8 @@ binderVarType (GetDefinition _) = GlobalDef
 
 toCompositeFields ::
     MonadNaming m =>
-    CompositeFields (OldName m) (Type (OldName m)) ->
-    m (CompositeFields (NewName m) (Type (NewName m)))
+    CompositeFields (OldName m) (Tree (Ann a) (Type (OldName m))) ->
+    m (CompositeFields (NewName m) (Tree (Ann a) (Type (NewName m))))
 toCompositeFields (CompositeFields fields mExt) =
     CompositeFields
     <$> traverse toField fields
@@ -86,10 +88,10 @@ toTId = tidName %%~ opGetName Nothing TaggedNominal
 
 toTBody ::
     MonadNaming m =>
-    TBody (OldName m) (Type (OldName m)) ->
-    m (TBody (NewName m) (Type (NewName m)))
+    Tree (Type (OldName m)) (Ann a) ->
+    m (Tree (Type (NewName m)) (Ann a))
 toTBody (TVar tv) = opGetName Nothing TypeVar tv <&> TVar
-toTBody (TFun a b) = TFun <$> toType a <*> toType b
+toTBody (TFun (FuncType a b)) = FuncType <$> toType a <*> toType b <&> TFun
 toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
 toTBody (TVariant composite) = TVariant <$> toCompositeFields composite
 toTBody (TInst tid params) =
@@ -97,8 +99,11 @@ toTBody (TInst tid params) =
     where
         f (k, v) = (,) <$> opGetName Nothing TypeVar k <*> toType v
 
-toType :: MonadNaming m => Type (OldName m) -> m (Type (NewName m))
-toType = tBody %%~ toTBody
+toType ::
+    MonadNaming m =>
+    Tree (Ann a) (Type (OldName m)) ->
+    m (Tree (Ann a) (Type (NewName m)))
+toType = val toTBody
 
 toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
 toScheme (Scheme tvs typ) = Scheme tvs <$> toType typ

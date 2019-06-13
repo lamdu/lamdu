@@ -32,6 +32,7 @@ module Lamdu.Sugar.Types.Parts
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
     ) where
 
+import           AST (Tree, Ann)
 import qualified Control.Lens as Lens
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
@@ -48,11 +49,11 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
 data ValAnnotation name i =
     ValAnnotation
     { _annotationVal :: EvaluationScopes name i
-    , _annotationType :: Maybe (Type name)
+    , _annotationType :: Maybe (Tree (Ann EntityId) (Type name))
     } deriving Generic
 
 data Annotation name i
-    = AnnotationType (Type name)
+    = AnnotationType (Tree (Ann EntityId) (Type name))
     | AnnotationVal (ValAnnotation name i)
     | AnnotationNone
     deriving Generic

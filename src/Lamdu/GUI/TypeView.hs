@@ -3,6 +3,9 @@ module Lamdu.GUI.TypeView
     ( make, makeScheme
     ) where
 
+import           AST (Tree)
+import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
@@ -95,10 +98,13 @@ makeTFun ::
     , Element.HasAnimIdPrefix env, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    Prec -> Sugar.Type (Name f) -> Sugar.Type (Name f) -> m (WithTextPos View)
+    Prec ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) ->
+    m (WithTextPos View)
 makeTFun parentPrecedence a b =
     Glue.hbox <*>
-    ( case a ^. Sugar.tBody of
+    ( case a ^. val of
         Sugar.TRecord (Sugar.CompositeFields [] Nothing) ->
             [ grammar "|"
             , Spacer.stdHSpace <&> WithTextPos 0
@@ -116,7 +122,8 @@ makeTInst ::
     , Element.HasAnimIdPrefix env, Has (Texts.Name Text) env
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    Prec -> Sugar.TId (Name f) -> [(Name f, Sugar.Type (Name f))] ->
+    Prec -> Sugar.TId (Name f) ->
+    [(Name f, Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)))] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
@@ -173,7 +180,7 @@ makeField ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Sugar.Tag (Name f), Sugar.Type (Name f)) ->
+    (Sugar.Tag (Name f), Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
     m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
     (,)
@@ -185,9 +192,9 @@ makeVariantField ::
     , Has Theme env, Element.HasAnimIdPrefix env
     , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Sugar.Tag (Name f), Sugar.Type (Name f)) ->
+    (Sugar.Tag (Name f), Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
     m (WithTextPos View, WithTextPos View)
-makeVariantField (tag, Sugar.Type _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
+makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
     -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
@@ -211,9 +218,9 @@ makeComposite ::
     , Has (Texts.Name Text) env, Has (Texts.Code Text) env
     ) =>
     m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
-    ((Sugar.Tag (Name f), Sugar.Type (Name f)) ->
+    ((Sugar.Tag (Name f), Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
          m (WithTextPos View, WithTextPos View)) ->
-    Sugar.CompositeFields (Name f) (Sugar.Type (Name f)) ->
+    Sugar.CompositeFields (Name f) (Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
     m (WithTextPos View)
 makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of
@@ -264,11 +271,11 @@ makeInternal ::
     , Has (Texts.Name Text) env
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    Prec -> Sugar.Type (Name f) -> m (WithTextPos View)
-makeInternal parentPrecedence (Sugar.Type entityId tbody) =
+    Prec -> Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) -> m (WithTextPos View)
+makeInternal parentPrecedence (Ann entityId tbody) =
     case tbody of
     Sugar.TVar var -> NameView.make var
-    Sugar.TFun a b -> makeTFun parentPrecedence a b
+    Sugar.TFun (FuncType a b) -> makeTFun parentPrecedence a b
     Sugar.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     Sugar.TRecord composite ->
         makeComposite (Styled.label Texts.recordOpener)
@@ -289,7 +296,8 @@ make ::
     , Has (Texts.Name Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.Type (Name f) -> m (WithTextPos View)
+    Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) ->
+    m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
 makeScheme ::

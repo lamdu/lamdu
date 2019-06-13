@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Type
     , convertScheme
     ) where
 
-import           AST (Tree, Pure(..))
+import           AST (Tree, Pure(..), Ann(..))
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
@@ -26,7 +26,7 @@ import           Lamdu.Prelude
 convertComposite ::
     MonadTransaction n m =>
     EntityId -> Tree Pure T.Row ->
-    m (CompositeFields InternalName (Type InternalName))
+    m (CompositeFields InternalName (Tree (Ann EntityId) (Type InternalName)))
 convertComposite entityId (MkPure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
@@ -39,14 +39,17 @@ convertComposite _ (MkPure (T.RVar v)) =
     CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
 convertComposite _ (MkPure T.REmpty) = CompositeFields mempty Nothing & pure
 
-convertType :: MonadTransaction n m => EntityId -> Tree Pure T.Type -> m (Type InternalName)
+convertType ::
+    MonadTransaction n m =>
+    EntityId -> Tree Pure T.Type -> m (Tree (Ann EntityId) (Type InternalName))
 convertType entityId (MkPure typ) =
     case typ of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure
     T.TFun (FuncType param res) ->
-        TFun
+        FuncType
         <$> convertType (ofFunParam entityId) param
         <*> convertType (ofFunResult entityId) res
+        <&> TFun
     T.TInst (NominalInst tid args)
         | Map.null rParams ->
             TInst
@@ -61,7 +64,7 @@ convertType entityId (MkPure typ) =
                 <*> convertType (EntityId.ofTInstParam tv entityId) val
     T.TRecord composite -> TRecord <$> convertComposite entityId composite
     T.TVariant composite -> TVariant <$> convertComposite entityId composite
-    <&> Type entityId
+    <&> Ann entityId
 
 convertScheme :: MonadTransaction n m => EntityId -> Tree Pure T.Scheme -> m (Scheme InternalName)
 convertScheme entityId (MkPure (S.Scheme tvs typ)) =

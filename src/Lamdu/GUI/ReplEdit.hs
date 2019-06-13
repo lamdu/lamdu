@@ -4,6 +4,8 @@ module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make, isExecutableType
     ) where
 
+import           AST (Tree)
+import           AST.Knot.Ann (Ann, val)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
@@ -195,9 +197,9 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
 indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
 
-isExecutableType :: Sugar.Type name -> Bool
+isExecutableType :: Tree (Ann a) (Sugar.Type name) -> Bool
 isExecutableType t =
-    case t ^. Sugar.tBody of
+    case t ^. val of
     Sugar.TInst tid _ -> tid ^. Sugar.tidTId == Builtins.mutTid
     _ -> False
 

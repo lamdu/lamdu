@@ -4,6 +4,7 @@ module Test.Lamdu.SugarStubs where
 
 import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), val)
+import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Scheme (QVars(..))
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
@@ -23,8 +24,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.Prelude
 
 infixr 1 ~>
-(~>) :: Sugar.Type name -> Sugar.Type name -> Sugar.Type name
-param ~> res = Sugar.TFun param res & Sugar.Type "dummy"
+(~>) ::
+    Tree (Ann Sugar.EntityId) (Sugar.Type name) ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type name) ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type name)
+param ~> res = FuncType param res & Sugar.TFun & Ann "dummy"
 
 nameRef :: name -> Sugar.NameRef name Unit
 nameRef = (`Sugar.NameRef` Unit)
@@ -134,7 +138,8 @@ mkTag var tag =
     }
 
 def ::
-    Sugar.Type InternalName -> UUID -> T.Tag ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type InternalName) ->
+    UUID -> T.Tag ->
     Tree (Ann expr) (Sugar.Assignment InternalName Identity Unit) ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
@@ -209,12 +214,10 @@ expr ::
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr = node
 
-numType :: Sugar.Type InternalName
+numType :: Tree (Ann Sugar.EntityId) (Sugar.Type InternalName)
 numType =
-    Sugar.Type
-    { Sugar._tPayload = "dummy"
-    , Sugar._tBody = Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
-    }
+    Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
+    & Ann "dummy"
 
 payload :: Sugar.Payload name Identity Unit ()
 payload =

@@ -136,7 +136,7 @@ assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
 assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 
-annotationTypes :: Lens.Traversal' (Annotation name i) (Type name)
+annotationTypes :: Lens.Traversal' (Annotation name i) (Tree (Ann EntityId) (Type name))
 annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal

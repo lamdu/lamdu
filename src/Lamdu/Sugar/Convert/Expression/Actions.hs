@@ -290,7 +290,8 @@ addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
     exprPl bodyS
 
-makeTypeAnnotation :: Monad m => Input.Payload m a -> ConvertM m (Type InternalName)
+makeTypeAnnotation ::
+    Monad m => Input.Payload m a -> ConvertM m (Tree (Ann EntityId) (Type InternalName))
 makeTypeAnnotation payload =
     convertType (EntityId.ofTypeOf entityId) typ
     where

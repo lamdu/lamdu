@@ -1,15 +1,15 @@
 -- | Sugaring of Lamdu.Calc.Type modules/ASTs
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, UndecidableInstances #-}
 module Lamdu.Sugar.Types.Type
     ( Scheme(..), schemeForAll, schemeType
     , T.NominalId
     , CompositeFields(..), compositeFields, compositeExtension
-    , TBody(..), _TVar, _TFun, _TInst, _TRecord, _TVariant
-    , Type(..), tPayload, tBody
+    , Type(..), _TVar, _TFun, _TInst, _TRecord, _TVariant
     , TId(..), tidName, tidTId
     ) where
 
-import           AST (Tree)
+import           AST (Tree, Ann, Tie, makeChildren)
+import           AST.Term.FuncType (FuncType)
 import           AST.Term.Scheme (QVars)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
@@ -18,6 +18,7 @@ import           Lamdu.Sugar.Types.Tag (Tag)
 
 import           Lamdu.Prelude
 
+-- TODO: Will making this a knot will not require `UndecidableInstances`?
 data CompositeFields name a = CompositeFields
     { _compositeFields :: [(Tag name, a)]
     , _compositeExtension :: Maybe name -- TyVar of more possible fields
@@ -28,33 +29,27 @@ data TId name = TId
     , _tidTId :: T.NominalId
     } deriving (Eq, Ord, Generic)
 
-data TBody name a
+data Type name k
     = TVar name
       -- ^ A type variable
-    | TFun a a
+    | TFun (FuncType (Type name) k)
       -- ^ A (non-dependent) function of the given parameter and result types
-    | TInst (TId name) [(name, a)]
+    | TInst (TId name) [(name, Tie k (Type name))]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
-    | TRecord (CompositeFields name a)
+    | TRecord (CompositeFields name (Tie k (Type name)))
       -- ^ Lifts a composite record type
-    | TVariant (CompositeFields name a)
+    | TVariant (CompositeFields name (Tie k (Type name)))
       -- ^ Lifts a composite variant type
-    deriving (Functor, Foldable, Traversable, Generic)
-
-data Type name = Type
-    { _tPayload :: EntityId
-    , _tBody :: TBody name (Type name)
-    } deriving (Generic)
+    deriving Generic
 
 data Scheme name = Scheme
     { _schemeForAll :: Tree T.Types QVars
-    , _schemeType :: Type name
-    } deriving (Generic)
+    , _schemeType :: Tree (Ann EntityId) (Type name)
+    } deriving Generic
 
 Lens.makeLenses ''CompositeFields
 Lens.makeLenses ''Scheme
 Lens.makeLenses ''TId
-Lens.makeLenses ''Type
-Lens.makePrisms ''TBody
-
+Lens.makePrisms ''Type
+makeChildren ''Type
