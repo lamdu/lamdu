@@ -3,6 +3,7 @@ module Lamdu.GUI.TagPane
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.Property (Property, pVal)
 import           GUI.Momentu.Align (TextWidget)
@@ -178,5 +179,6 @@ make tagPane =
         , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
         ]
     )
+    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
