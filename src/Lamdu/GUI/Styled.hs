@@ -219,7 +219,7 @@ actionable myId txtLens doc action =
             <&> Align.tValue %~ Widget.weakerEvents eventMap
 
 nameAtBinder ::
-    (MonadReader env m, Style.HasStyle env) => Name n -> m b -> m b
+    (MonadReader env m, Style.HasStyle env) => Name -> m a -> m a
 nameAtBinder name act =
     do
         style <- Lens.view has

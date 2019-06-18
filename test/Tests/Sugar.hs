@@ -54,8 +54,8 @@ test =
 testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
-    [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
-        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) ->
+    [WorkArea Name (T ViewM) (T ViewM)
+        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload) ->
         T ViewM a] ->
     Env ->
     IO ()
@@ -67,8 +67,8 @@ testSugarActionsWith program actions env =
 testSugarActions ::
     HasCallStack =>
     FilePath ->
-    [WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
-        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload) ->
+    [WorkArea Name (T ViewM) (T ViewM)
+        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload) ->
         T ViewM a] ->
     IO ()
 testSugarActions program actions =

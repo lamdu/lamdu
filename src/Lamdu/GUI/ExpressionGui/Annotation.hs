@@ -140,7 +140,7 @@ data EvalResDisplay name = EvalResDisplay
 
 makeEvaluationResultView ::
     (Monad i, Has (Texts.Name Text) env) =>
-    EvalResDisplay (Name f) ->
+    EvalResDisplay Name ->
     GuiM env i o (WithTextPos View)
 makeEvaluationResultView res =
     do
@@ -158,8 +158,8 @@ data NeighborVals a = NeighborVals
 
 makeEvalView ::
     (Monad i, Has (Texts.Name Text) env) =>
-    Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
-    EvalResDisplay (Name g) -> GuiM env i o (WithTextPos View)
+    Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
+    EvalResDisplay Name -> GuiM env i o (WithTextPos View)
 makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view (has . Theme.eval)
@@ -228,15 +228,15 @@ addInferredType ::
     , Element.HasAnimIdPrefix env, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    Tree (Ann Sugar.EntityId) (Sugar.Type (Name g)) -> WideAnnotationBehavior ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type Name) -> WideAnnotationBehavior ->
     m (Widget f -> Widget f)
 addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
 
 addEvaluationResult ::
     (Monad i, Functor f, Has (Texts.Name Text) env) =>
-    Maybe (NeighborVals (Maybe (EvalResDisplay (Name f)))) ->
-    EvalResDisplay (Name g) -> WideAnnotationBehavior ->
+    Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
+    EvalResDisplay Name -> WideAnnotationBehavior ->
     GuiM env i o
     ((Widget.R -> Widget.R) ->
      Widget f ->
@@ -256,7 +256,7 @@ maybeAddAnnotationPl ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    Sugar.Payload (Name o) i o1 ExprGui.Payload ->
+    Sugar.Payload Name i o1 ExprGui.Payload ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotationPl pl =
     do
@@ -316,7 +316,7 @@ maybeAddAnnotationWith ::
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
-    Sugar.Annotation (Name o) i ->
+    Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
     case annotation of
@@ -330,7 +330,7 @@ maybeAddValAnnotationWith ::
     , Has (Texts.Name Text) env
     ) =>
     EvalAnnotationOptions -> WideAnnotationBehavior ->
-    Sugar.ValAnnotation (Name o) i ->
+    Sugar.ValAnnotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
     getAnnotationMode opt (ann ^. Sugar.annotationVal)
@@ -351,7 +351,7 @@ maybeAddAnnotation ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    WideAnnotationBehavior -> Sugar.Annotation (Name o) i ->
+    WideAnnotationBehavior -> Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 

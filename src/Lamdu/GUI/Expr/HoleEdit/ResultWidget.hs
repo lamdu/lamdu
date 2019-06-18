@@ -67,7 +67,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o) ->
     GuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
@@ -88,7 +88,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o) ->
     GuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>

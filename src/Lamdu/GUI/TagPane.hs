@@ -5,7 +5,7 @@ module Lamdu.GUI.TagPane
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
-import           Data.Property (Property, pVal)
+import           Data.Property (Property(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation.Id (AnimId, augmentId)
@@ -35,7 +35,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.I18N.LangId (LangId(..), _LangId)
 import           Lamdu.Name (Name(..))
-import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -50,9 +49,9 @@ makeTagNameEdit ::
     ( MonadReader env m, Applicative f
     , TextEdit.Deps env, GuiState.HasCursor env
     ) =>
-    Name.StoredName f -> Widget.Id ->
+    Property f Text -> Text -> Widget.Id ->
     m (TextWidget f)
-makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
+makeTagNameEdit prop emptyText myId =
     TextEdits.makeWordEdit
     ?? empty
     ?? prop
@@ -60,7 +59,7 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
     where
         empty = TextEdit.Modes
-            { TextEdit._unfocused = tagText ^. Name.ttText
+            { TextEdit._unfocused = emptyText
             , TextEdit._focused = ""
             }
 
@@ -72,8 +71,8 @@ makeTopRow ::
     , GuiState.HasCursor env
     , Has Config.Config env
     ) =>
-    Widget.Id -> Sugar.Tag (Name o) -> m (Responsive o)
-makeTopRow myId tag =
+    Property o Text -> Text -> Widget.Id -> m (Responsive o)
+makeTopRow prop emptyText myId =
     do
         env <- Lens.view id
         let fdConfig =
@@ -98,8 +97,9 @@ makeTopRow myId tag =
                 }
         (FocusDelegator.make ?? fdConfig ?? FocusDelegator.FocusEntryParent ?? myId
             <&> (Align.tValue %~))
-            <*> makeTagNameEdit (tag ^?! Sugar.tagName . Name._Stored) (tagRenameId myId)
+            <*> makeTagNameEdit prop emptyText (tagRenameId myId)
     <&> Responsive.fromWithTextPos
+
 
 makeLanguageTitle ::
     ( MonadReader env m
@@ -123,7 +123,7 @@ makeLocalizedNames ::
     , TextEdit.Deps env, Glue.HasTexts env, Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Widget.Id -> Map LangId (Property o Text) -> m (Responsive o)
+    Widget.Id -> Map LangId Text -> m (Responsive o)
 makeLocalizedNames myId names =
     do
         curLang <- Lens.view has
@@ -138,7 +138,7 @@ makeLocalizedNames myId names =
                 /|/ Spacer.stdHSpace
                 <&> Align.tValue %~ Widget.fromView
                 <&> Just)
-            <*> (TextView.make ?? name ^. pVal ?? langId <> ["val"] <&> Responsive.fromTextView)
+            <*> (TextView.make ?? name ?? langId <> ["val"] <&> Responsive.fromTextView)
             <*> pure Nothing
             where
                 langId = augmentId lang (Widget.toAnimId myId)
@@ -153,16 +153,22 @@ make ::
     , Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Sugar.TagPane (Name o) o -> m (Responsive o)
+    Sugar.TagPane Name o -> m (Responsive o)
 make tagPane =
     Styled.addValFrame <*>
-    ( Responsive.vbox <*>
-        sequenceA
-        [ makeTopRow myId (tagPane ^. Sugar.tpTag)
-        , Spacer.stdVSpace <&> Responsive.fromView
-        , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
-        ]
-    )
+    do
+        lang <- Lens.view has
+        let prop =
+                Property
+                (tagPane ^. Sugar.tpLocalizedNames . Lens.ix lang)
+                ((tagPane ^. Sugar.tpSetName) lang)
+        Responsive.vbox <*>
+            sequenceA
+            [ makeTopRow prop fallback myId
+            , Spacer.stdVSpace <&> Responsive.fromView
+            , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
+            ]
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        fallback = tagPane ^. Sugar.tpLocalizedNames . Lens.ix (LangId "english")

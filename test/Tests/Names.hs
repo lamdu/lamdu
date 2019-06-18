@@ -47,7 +47,7 @@ nameTexts =
     , Texts._autoNameFuncPrefixes = "f g"
     }
 
-assertNoCollisions :: Name o -> IO ()
+assertNoCollisions :: Name -> IO ()
 assertNoCollisions name =
     case Name.visible name nameTexts of
     (Name.TagText _ Name.NoCollision, Name.NoCollision) -> pure ()
@@ -58,7 +58,7 @@ assertNoCollisions name =
         ] & assertString
 
 testWorkArea ::
-    (Name Unit -> IO b) ->
+    (Name -> IO b) ->
     Sugar.WorkArea InternalName Identity Unit
     (Sugar.Payload InternalName Identity Unit a) ->
     IO ()

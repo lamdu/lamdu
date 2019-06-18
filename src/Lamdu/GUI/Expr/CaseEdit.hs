@@ -78,9 +78,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Case (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Case Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts relayed caseTail addAlt)) pl =
     do
@@ -142,7 +142,7 @@ makeAltRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe Tag ->
-    Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o) ->
     GuiM env i o (TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
@@ -179,9 +179,9 @@ makeAltsWidget ::
     , Has (Grid.Texts Text) env
     ) =>
     Maybe Tag ->
-    [Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o)] ->
-    [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Const (Sugar.GetVar (Name o) o))] ->
-    Sugar.TagReplace (Name o) i o Sugar.EntityId ->
+    [Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o)] ->
+    [Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Const (Sugar.GetVar Name o))] ->
+    Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)
 makeAltsWidget mActiveTag alts relayed addAlt altsId =
@@ -215,7 +215,7 @@ makeAddAltRow ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.TagReplace (Name o) i o Sugar.EntityId -> Widget.Id ->
+    Sugar.TagReplace Name i o Sugar.EntityId -> Widget.Id ->
     GuiM env i o (TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId

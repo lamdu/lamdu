@@ -112,7 +112,7 @@ eventParamDelEventMap env fpDel keys delParam dstPosId =
 data Info i o = Info
     { iNameEdit :: TextWidget o
     , iDel :: o ()
-    , iAddNext :: Maybe (Sugar.AddNextParam (Name o) i o)
+    , iAddNext :: Maybe (Sugar.AddNextParam Name i o)
     , iMOrderBefore :: Maybe (o ())
     , iMOrderAfter :: Maybe (o ())
     , iId :: Widget.Id
@@ -137,7 +137,7 @@ make ::
     ) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.FuncParam (Name o) i (Info i o) ->
+    Sugar.FuncParam Name i (Info i o) ->
     GuiM env i o [Responsive o]
 make annotationOpts prevId nextId param =
     do

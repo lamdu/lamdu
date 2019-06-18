@@ -21,7 +21,7 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Property (Property(..), MkProperty)
+import           Data.Property (MkProperty)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
@@ -45,13 +45,11 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude hiding (Map)
 
-type StoredText o = Property o Text
-
 ------------------------------
 ---------- Pass 0 ------------
 ------------------------------
-data P0Name o = P0Name
-    { __p0TagName :: StoredText o
+data P0Name = P0Name
+    { __p0TagName :: Text
     , _p0InternalName :: InternalName
     }
 Lens.makeLenses ''P0Name
@@ -70,7 +68,7 @@ runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
 
 instance Monad i => MonadNaming (Pass0LoadNames i o) where
     type OldName (Pass0LoadNames i o) = InternalName
-    type NewName (Pass0LoadNames i o) = P0Name o
+    type NewName (Pass0LoadNames i o) = P0Name
     type IM (Pass0LoadNames i o) = i
     opRun = Reader.ask <&> runPass0LoadNames
     opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
@@ -79,11 +77,12 @@ instance Monad i => MonadNaming (Pass0LoadNames i o) where
 p0lift :: Monad i => i a -> Pass0LoadNames i o a
 p0lift = Pass0LoadNames . lift
 
-getP0Name :: Monad i => InternalName -> Pass0LoadNames i o (P0Name o)
+getP0Name :: Monad i => InternalName -> Pass0LoadNames i o P0Name
 getP0Name internalName =
     do
         nameProp <- Lens.view p0GetNameProp
         nameProp (internalName ^. inTag) ^. Property.mkProperty & p0lift
+    <&> (^. Property.pVal)
     <&> (`P0Name` internalName)
 
 ------------------------------
@@ -116,10 +115,10 @@ data P1Out = P1Out
     deriving (Semigroup, Monoid) via Generically P1Out
 Lens.makeLenses ''P1Out
 
-data P1KindedName o = P1StoredName Annotated.Name (StoredText o) | P1AnonName UUID
+data P1KindedName = P1StoredName Annotated.Name Text | P1AnonName UUID
 
-data P1Name o = P1Name
-    { p1KindedName :: P1KindedName o
+data P1Name = P1Name
+    { p1KindedName :: P1KindedName
     , p1LocalsBelow :: MMap T.Tag Clash.Info
         -- ^ Allow checking collisions for names hidden behind monadic
         -- actions:
@@ -139,15 +138,15 @@ tellSome :: MonadWriter w m => Lens.ASetter' w a -> a -> m ()
 tellSome l v = mempty & l .~ v & Writer.tell
 
 instance Monad i => MonadNaming (Pass1PropagateUp i o) where
-    type OldName (Pass1PropagateUp i o) = P0Name o
-    type NewName (Pass1PropagateUp i o) = P1Name o
+    type OldName (Pass1PropagateUp i o) = P0Name
+    type NewName (Pass1PropagateUp i o) = P1Name
     type IM (Pass1PropagateUp i o) = i
     opRun = pure (pure . fst . runPass1PropagateUp)
     opWithName _ = p1Name Nothing
     opGetName mDisambiguator nameType p0Name =
         p1Name mDisambiguator nameType p0Name & runcps
 
-p1Anon :: Maybe UUID -> CPS (Pass1PropagateUp i o) (P1Name o)
+p1Anon :: Maybe UUID -> CPS (Pass1PropagateUp i o) P1Name
 p1Anon Nothing = error "Anon tag with no context"
 p1Anon (Just uuid) =
     CPS (Writer.listen <&> Lens.mapped %~ Tuple.swap . (_2 %~ f))
@@ -165,18 +164,18 @@ displayOf env text
     | otherwise = text
 
 p1Tagged ::
-    Maybe Disambiguator -> Walk.NameType -> P0Name o ->
-    CPS (Pass1PropagateUp i o) (P1Name o)
-p1Tagged mDisambiguator nameType (P0Name prop internalName) =
+    Maybe Disambiguator -> Walk.NameType -> P0Name ->
+    CPS (Pass1PropagateUp i o) P1Name
+p1Tagged mDisambiguator nameType (P0Name txt internalName) =
     CPS $ \inner ->
-    tellSome p1Texts (Lens.singletonAt (prop ^. Property.pVal) (Set.singleton tag))
+    tellSome p1Texts (Lens.singletonAt txt (Set.singleton tag))
     *> inner
     & Writer.censor (p1lens <>~ myTags)
     & Writer.listen
     <&> Tuple.swap
     <&> _1 %~ \innerOut ->
     P1Name
-    { p1KindedName = P1StoredName aName prop
+    { p1KindedName = P1StoredName aName txt
     , p1LocalsBelow = innerOut ^. p1Locals
     , p1TextsBelow = innerOut ^. p1Texts
     }
@@ -194,8 +193,8 @@ p1Tagged mDisambiguator nameType (P0Name prop internalName) =
             }
 
 p1Name ::
-    Maybe Disambiguator -> Walk.NameType -> P0Name o ->
-    CPS (Pass1PropagateUp i o) (P1Name o)
+    Maybe Disambiguator -> Walk.NameType -> P0Name ->
+    CPS (Pass1PropagateUp i o) P1Name
 p1Name mDisambiguator nameType p0Name =
     -- NOTE: We depend on the anonTag key in the map
     liftCPS (traverse_ tellCtx ctx)
@@ -382,19 +381,19 @@ getCollision tagsBelow aName =
         InternalName mCtx tag = aName ^. Annotated.internal
 
 instance Monad i => MonadNaming (Pass2MakeNames i o) where
-    type OldName (Pass2MakeNames i o) = P1Name o
-    type NewName (Pass2MakeNames i o) = Name o
+    type OldName (Pass2MakeNames i o) = P1Name
+    type NewName (Pass2MakeNames i o) = Name
     type IM (Pass2MakeNames i o) = i
     opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
     opWithName varInfo _ = p2cpsNameConvertor varInfo
     opGetName _ = p2nameConvertor
 
-getTagText :: T.Tag -> StoredText o -> Pass2MakeNames i o TagText
-getTagText tag prop =
+getTagText :: T.Tag -> Text -> Pass2MakeNames i o TagText
+getTagText tag txt =
     Lens.view id
     <&>
     \env ->
-    let displayText = displayOf env (prop ^. Property.pVal)
+    let displayText = displayOf env txt
         collision
             | env ^. p2Texts . Lens.contains displayText = UnknownCollision
             | otherwise = NoCollision
@@ -403,17 +402,17 @@ getTagText tag prop =
     & fromMaybe (TagText displayText collision)
 
 storedName ::
-    MMap T.Tag Clash.Info -> Annotated.Name -> StoredText o ->
-    Pass2MakeNames i o (Name o)
-storedName tagsBelow aName prop =
-    StoredName prop
-    <$> getTagText tag prop
+    MMap T.Tag Clash.Info -> Annotated.Name -> Text ->
+    Pass2MakeNames i o Name
+storedName tagsBelow aName txt =
+    StoredName
+    <$> getTagText tag txt
     <*> getCollision tagsBelow aName
     <&> Stored
     where
         tag = aName ^. Annotated.tag
 
-p2nameConvertor :: Walk.NameType -> P1Name o -> Pass2MakeNames i o (Name o)
+p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
 p2nameConvertor nameType (P1Name (P1StoredName aName text) tagsBelow _) =
     storedName tagsBelow aName text
     <&>
@@ -493,7 +492,7 @@ addToWorkArea ::
     env ->
     (T.Tag -> MkProperty i o Text) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
-    i (WorkArea (Name o) i o (Payload (Name o) i o a))
+    i (WorkArea Name i o (Payload Name i o a))
 addToWorkArea env getNameProp =
     runPasses env getNameProp f f f
     where

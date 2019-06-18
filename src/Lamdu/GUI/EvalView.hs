@@ -69,7 +69,7 @@ textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
 makeField ::
     (Monad m, Deps env) =>
-    Sugar.Tag (Name f) -> ResVal (Name g) -> M env m [Aligned View]
+    Sugar.Tag Name -> ResVal Name -> M env m [Aligned View]
 makeField tag val =
     do
         tagView <- TagView.make tag
@@ -108,7 +108,7 @@ tableCutoff = 6
 
 makeTable ::
     (Monad m, Deps env) =>
-    Sugar.ResTable (Name f) (ResVal (Name g)) -> M env m (WithTextPos View)
+    Sugar.ResTable Name (ResVal Name) -> M env m (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
         header <- traverse TagView.make headers
@@ -129,7 +129,7 @@ makeTable (Sugar.ResTable headers valss) =
 
 makeArray ::
     (Monad m, Deps env) =>
-    [ResVal (Name f)] -> M env m (WithTextPos View)
+    [ResVal Name] -> M env m (WithTextPos View)
 makeArray items =
     do
         itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
@@ -154,7 +154,7 @@ makeArray items =
 
 makeTree ::
     (Monad m, Deps env) =>
-    Sugar.ResTree (ResVal (Name f)) -> M env m (WithTextPos View)
+    Sugar.ResTree (ResVal Name) -> M env m (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
@@ -174,14 +174,14 @@ makeTree (Sugar.ResTree root subtrees) =
 
 makeRecord ::
     (Monad m, Deps env) =>
-    Sugar.ResRecord (Name f) (ResVal (Name g)) -> M env m (WithTextPos View)
+    Sugar.ResRecord Name (ResVal Name) -> M env m (WithTextPos View)
 makeRecord (Sugar.ResRecord fields) =
     GridView.make <*> traverse (uncurry makeField) fields <&> snd
     <&> Align.WithTextPos 0
 
 makeList ::
     (Monad m, Deps env) =>
-    Sugar.ResList (ResVal (Name f)) -> M env m (WithTextPos View)
+    Sugar.ResList (ResVal Name) -> M env m (WithTextPos View)
 makeList (Sugar.ResList head_) =
     do
         (preLabel, postLabel) <-
@@ -198,7 +198,7 @@ makeList (Sugar.ResList head_) =
 
 makeInject ::
     (Monad m, Deps env) =>
-    Sugar.ResInject (Name f) (ResVal (Name g)) ->
+    Sugar.ResInject Name (ResVal Name) ->
     M env m (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     case mVal of
@@ -228,7 +228,7 @@ fixSize view =
 
 makeInner ::
     (Monad m, Deps env) =>
-    ResVal (Name f) -> M env m (WithTextPos View)
+    ResVal Name -> M env m (WithTextPos View)
 makeInner (Sugar.ResVal entityId body) =
     case body of
     Sugar.RError err -> makeError err
@@ -276,7 +276,7 @@ toText val =
             where
                 (start, rest) = Text.splitAt 100 ln
 
-make :: (MonadReader env m, Deps env) => ResVal (Name f) -> m (WithTextPos View)
+make :: (MonadReader env m, Deps env) => ResVal Name -> m (WithTextPos View)
 make v =
     do
         env <- Lens.view id

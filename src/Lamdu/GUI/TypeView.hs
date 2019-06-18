@@ -99,8 +99,8 @@ makeTFun ::
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
     Prec ->
-    Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) ->
-    Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type Name) ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type Name) ->
     m (WithTextPos View)
 makeTFun parentPrecedence a b =
     Glue.hbox <*>
@@ -122,8 +122,8 @@ makeTInst ::
     , Element.HasAnimIdPrefix env, Has (Texts.Name Text) env
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    Prec -> Sugar.TId (Name f) ->
-    [(Name f, Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)))] ->
+    Prec -> Sugar.TId Name ->
+    [(Name, Tree (Ann Sugar.EntityId) (Sugar.Type Name))] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
@@ -180,7 +180,7 @@ makeField ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Sugar.Tag (Name f), Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
+    (Sugar.Tag Name, Tree (Ann Sugar.EntityId) (Sugar.Type Name)) ->
     m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
     (,)
@@ -192,7 +192,7 @@ makeVariantField ::
     , Has Theme env, Element.HasAnimIdPrefix env
     , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    (Sugar.Tag (Name f), Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
+    (Sugar.Tag Name, Tree (Ann Sugar.EntityId) (Sugar.Type Name)) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
@@ -218,9 +218,9 @@ makeComposite ::
     , Has (Texts.Name Text) env, Has (Texts.Code Text) env
     ) =>
     m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
-    ((Sugar.Tag (Name f), Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
+    ((Sugar.Tag Name, Tree (Ann Sugar.EntityId) (Sugar.Type Name)) ->
          m (WithTextPos View, WithTextPos View)) ->
-    Sugar.CompositeFields (Name f) (Tree (Ann Sugar.EntityId) (Sugar.Type (Name f))) ->
+    Sugar.CompositeFields Name (Tree (Ann Sugar.EntityId) (Sugar.Type Name)) ->
     m (WithTextPos View)
 makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of
@@ -271,7 +271,7 @@ makeInternal ::
     , Has (Texts.Name Text) env
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    Prec -> Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) -> m (WithTextPos View)
+    Prec -> Tree (Ann Sugar.EntityId) (Sugar.Type Name) -> m (WithTextPos View)
 makeInternal parentPrecedence (Ann entityId tbody) =
     case tbody of
     Sugar.TVar var -> NameView.make var
@@ -296,7 +296,7 @@ make ::
     , Has (Texts.Name Text) env
     , Glue.HasTexts env
     ) =>
-    Tree (Ann Sugar.EntityId) (Sugar.Type (Name f)) ->
+    Tree (Ann Sugar.EntityId) (Sugar.Type Name) ->
     m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
@@ -305,5 +305,5 @@ makeScheme ::
     , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
     , Glue.HasTexts env, Has (Texts.Name Text) env
     ) =>
-    Sugar.Scheme (Name f) -> m (WithTextPos View)
+    Sugar.Scheme Name -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)

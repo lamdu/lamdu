@@ -61,7 +61,7 @@ stdWrap ::
     , Has (Texts.Definitions Text) env
     , Grid.HasTexts env
     ) =>
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o
     (Responsive o -> Responsive o)
 stdWrap pl =
@@ -93,7 +93,7 @@ stdWrapParentExpr ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o -> Responsive o)
 stdWrapParentExpr pl =
     (.)

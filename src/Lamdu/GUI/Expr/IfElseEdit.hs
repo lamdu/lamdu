@@ -56,8 +56,8 @@ makeIfThen ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     WithTextPos View -> AnimId ->
-    Tree (Sugar.IfElse (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.IfElse Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
@@ -91,8 +91,8 @@ makeElse ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     AnimId ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Sugar.Else (Name o) i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Sugar.Else Name i o) ->
     GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann pl (Sugar.SimpleElse expr)) =
     ( Row elseAnimId
@@ -181,9 +181,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.IfElse (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.IfElse Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make ifElse pl =
     stdWrapParentExpr pl

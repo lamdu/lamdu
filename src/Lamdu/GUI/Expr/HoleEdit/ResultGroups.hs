@@ -41,7 +41,7 @@ data Group i o = Group
     , _groupResults ::
         ListT i
         ( Sugar.HoleResultScore
-        , i (Sugar.HoleResult (Name o) i o)
+        , i (Sugar.HoleResult Name i o)
         )
     }
 Lens.makeLenses ''Group
@@ -50,7 +50,7 @@ data Result i o = Result
     { _rScore :: Sugar.HoleResultScore
     , -- Warning: This action should be ran at most once!
       -- Running it more than once will cause inconsistencies.
-      rHoleResult :: i (Sugar.HoleResult (Name o) i o)
+      rHoleResult :: i (Sugar.HoleResult Name i o)
         -- TODO: Unit monad instead of i o for Expression above?
     , rId :: WidgetId.Id
     }
@@ -70,7 +70,7 @@ Lens.makeLenses ''ResultGroup
 mResultGroupOf ::
     WidgetId.Id ->
     [ ( Sugar.HoleResultScore
-      , i (Sugar.HoleResult (Name o) i o)
+      , i (Sugar.HoleResult Name i o)
       )
     ] ->
     Maybe (ResultGroup i o)
@@ -161,7 +161,7 @@ makeAll ::
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    [Sugar.HoleOption (Name o1) i o1] ->
+    [Sugar.HoleOption Name i o1] ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (ResultGroup i o1))
 makeAll options ctx =
@@ -190,7 +190,7 @@ mkGroup ::
     , Has (Texts.CodeUI Text) env
     ) =>
     env ->
-    Sugar.HoleOption (Name o) i o ->
+    Sugar.HoleOption Name i o ->
     i (Group i o)
 mkGroup env option =
     option ^. Sugar.hoSugaredBaseExpr

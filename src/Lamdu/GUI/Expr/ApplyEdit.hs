@@ -45,8 +45,8 @@ makeFunc ::
     , Has (Texts.Navigation Text) env
     ) =>
     GetVarEdit.Role ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Const (Sugar.BinderVarRef (Name o) o)) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Const (Sugar.BinderVarRef Name o)) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
     stdWrap pl <*>
@@ -72,8 +72,8 @@ makeFuncRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe AnimId ->
-    Tree (Sugar.LabeledApply (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.LabeledApply Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
@@ -106,9 +106,9 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.LabeledApply (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.LabeledApply Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled apply pl =
     stdWrapParentExpr pl
@@ -120,7 +120,7 @@ makeLabeled apply pl =
 
 makeArgRow ::
     (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
-    Sugar.AnnotatedArg (Name o) (ExprGui.SugarExpr i o) ->
+    Sugar.AnnotatedArg Name (ExprGui.SugarExpr i o) ->
     GuiM env i o (TaggedItem o)
 makeArgRow arg =
     do
@@ -142,8 +142,8 @@ mkBoxed ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Tree (Sugar.LabeledApply (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.LabeledApply Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     Responsive o -> GuiM env i o (Responsive o)
 mkBoxed apply funcRow =
     do
@@ -167,9 +167,9 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Apply (Sugar.Body (Name o) i o))
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Apply (Sugar.Body Name i o))
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeSimple (Sugar.Apply func arg) pl =
     stdWrapParentExpr pl

@@ -60,8 +60,8 @@ makeInject ::
     , Has (Texts.Navigation Text) env
     ) =>
     ExprGui.SugarExpr i o ->
-    Sugar.TagRef (Name o) i o ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.TagRef Name i o ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeInject val tag pl =
     stdWrapParentExpr pl <*>
@@ -105,10 +105,10 @@ makeNullaryInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-    (Const (Sugar.NullaryVal (Name o) i o)) ->
-    Sugar.TagRef (Name o) i o ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    (Const (Sugar.NullaryVal Name i o)) ->
+    Sugar.TagRef Name i o ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
@@ -147,9 +147,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Inject (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Inject Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Inject tag mVal) =
     case mVal of

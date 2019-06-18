@@ -66,7 +66,7 @@ makeSimpleView ::
     , Applicative f, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
-    Lens.ALens' TextColors Draw.Color -> Name x -> Widget.Id ->
+    Lens.ALens' TextColors Draw.Color -> Name -> Widget.Id ->
     m (TextWidget f)
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
@@ -79,7 +79,7 @@ makeParamsRecord ::
     , Glue.HasTexts env, Has (Texts.Code Text) env, Has (Texts.Name Text) env
     , Applicative f
     ) =>
-    Widget.Id -> Sugar.ParamsRecordVarRef (Name f) -> m (Responsive f)
+    Widget.Id -> Sugar.ParamsRecordVarRef Name -> m (Responsive f)
 makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
@@ -145,7 +145,7 @@ makeNameRef ::
     ) =>
     Role ->
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
-    Sugar.NameRef (Name x) o ->
+    Sugar.NameRef Name o ->
     GuiM env i o (TextWidget o)
 makeNameRef role color myId nameRef =
     do
@@ -198,7 +198,7 @@ definitionTypeChangeBox ::
     , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
-    Sugar.DefinitionOutdatedType (Name x) f Sugar.EntityId -> Widget.Id ->
+    Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> Widget.Id ->
     m (TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
@@ -239,7 +239,7 @@ processDefinitionWidget ::
     , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
-    Sugar.DefinitionForm (Name x) f -> Widget.Id ->
+    Sugar.DefinitionForm Name f -> Widget.Id ->
     m (TextWidget f) ->
     m (TextWidget f)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
@@ -296,7 +296,7 @@ makeGetBinder ::
     , Has (Texts.Name Text) env
     , Grid.HasTexts env
     ) =>
-    Role -> Sugar.BinderVarRef (Name x) o -> Widget.Id ->
+    Role -> Sugar.BinderVarRef Name o -> Widget.Id ->
     GuiM env i o (TextWidget o)
 makeGetBinder role binderVar myId =
     do
@@ -319,7 +319,7 @@ makeGetParam ::
     , Has (Texts.Name Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Sugar.ParamRef (Name x) o -> Widget.Id ->
+    Sugar.ParamRef Name o -> Widget.Id ->
     GuiM env i o (TextWidget o)
 makeGetParam param myId =
     do
@@ -340,7 +340,7 @@ makeNoActions ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Sugar.GetVar (Name o) o ->
+    Sugar.GetVar Name o ->
     Widget.Id ->
     GuiM env i o (Responsive o)
 makeNoActions getVar myId =
@@ -358,8 +358,8 @@ make ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Sugar.GetVar (Name o) o ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.GetVar Name o ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)
@@ -370,8 +370,8 @@ makeRelayedVars ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    [Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Const (Sugar.GetVar (Name o) o))] ->
+    [Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Const (Sugar.GetVar Name o))] ->
     GuiM env i o (Responsive o)
 makeRelayedVars args =
     do

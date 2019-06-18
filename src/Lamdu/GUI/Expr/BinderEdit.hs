@@ -55,8 +55,8 @@ makeLetEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Let (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Let Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Responsive o)
 makeLetEdit item =
     do
@@ -113,8 +113,8 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Sugar.Binder Name i o) ->
     GuiM env i o (Responsive o)
 make (Ann pl (Sugar.BinderExpr assignmentBody)) =
     Ann pl assignmentBody & GuiM.makeSubexpression

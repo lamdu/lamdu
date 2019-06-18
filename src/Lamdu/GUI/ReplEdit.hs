@@ -243,8 +243,8 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     ExportRepl m ->
-    Sugar.Repl (Name (T m)) (T m) (T m)
-    (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload) ->
+    Sugar.Repl Name (T m) (T m)
+    (Sugar.Payload Name (T m) (T m) ExprGui.Payload) ->
     GuiM env (T m) (T m) (Responsive (IOTrans m))
 make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do

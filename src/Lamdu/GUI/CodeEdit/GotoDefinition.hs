@@ -46,7 +46,7 @@ allowSearchTerm = Name.isValidText
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameSearchTerm :: (MonadReader env m, Has (Texts.Name Text) env) => Name o -> m Text
+nameSearchTerm :: (MonadReader env m, Has (Texts.Name Text) env) => Name -> m Text
 nameSearchTerm name =
     Name.visible name <&>
     \(Name.TagText text textCol, tagCol) ->
@@ -61,7 +61,7 @@ makeOptions ::
     , Has TextView.Style env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
     , Has (Navigation Text) env, Has (Texts.Name Text) env, Has Dir.Layout env
     ) =>
-    m [Sugar.NameRef (Name g) o] ->
+    m [Sugar.NameRef Name o] ->
     SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
 makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.TooMany
@@ -112,7 +112,7 @@ make ::
     , Glue.HasTexts env, TextEdit.Deps env
     , SearchMenu.HasTexts env, Has (Texts.Name Text) env
     ) =>
-    m [Sugar.NameRef (Name g) o] -> m (StatusBar.StatusWidget o)
+    m [Sugar.NameRef Name o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
         goto <- Lens.view (has . Navigation.goto)

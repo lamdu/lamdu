@@ -114,7 +114,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Tree (Sugar.Function (Name o) i o)
+    Tree (Sugar.Function Name i o)
         (Ann (Sugar.Payload name i o ExprGui.Payload)) ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
@@ -260,7 +260,7 @@ nullParamEditInfo widgetId nameEdit mActions =
     }
 
 namedParamEditInfo ::
-    Widget.Id -> Sugar.FuncParamActions (Name o) i o ->
+    Widget.Id -> Sugar.FuncParamActions Name i o ->
     TextWidget o ->
     ParamEdit.Info i o
 namedParamEditInfo widgetId actions nameEdit =
@@ -284,7 +284,7 @@ makeParamsEdit ::
     ) =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
-    Sugar.BinderParams (Name o) i o ->
+    Sugar.BinderParams Name i o ->
     GuiM env i o [Responsive o]
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
@@ -329,8 +329,8 @@ makeMParamsEdit ::
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
-    Sugar.AddFirstParam (Name o) i o ->
-    Maybe (Sugar.BinderParams (Name o) i o) ->
+    Sugar.AddFirstParam Name i o ->
+    Maybe (Sugar.BinderParams Name i o) ->
     GuiM env i o (Maybe (Responsive o))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
     do
@@ -387,9 +387,9 @@ makeFunctionParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Tree (Sugar.Function (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Function Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts o)
 makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
@@ -441,9 +441,9 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Tree (Sugar.AssignPlain (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.AssignPlain Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts o)
 makePlainParts assignPlain pl delVarBackwardsId =
@@ -470,8 +470,8 @@ makeParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Sugar.Assignment (Name o) i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Sugar.Assignment Name i o) ->
     Widget.Id ->
     GuiM env i o (Parts o)
 makeParts funcApplyLimit (Ann pl assignmentBody) =
@@ -493,9 +493,9 @@ make ::
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     EventMap (o GuiState.Update) ->
-    Sugar.TagRef (Name o) i o -> Lens.ALens' TextColors Draw.Color ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-    (Sugar.Assignment (Name o) i o) ->
+    Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    (Sugar.Assignment Name i o) ->
     GuiM env i o (Responsive o)
 make pMode defEventMap tag color assignment =
     do

@@ -81,9 +81,9 @@ makeEditor ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Tree (Sugar.Body (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Body Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeEditor body pl =
     do

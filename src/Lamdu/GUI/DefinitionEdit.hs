@@ -75,9 +75,9 @@ makeExprDefinition ::
     , Has (Texts.Navigation Text) env
     ) =>
     EventMap (o GuiState.Update) ->
-    Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    Sugar.DefinitionExpression (Name o) i o
-    (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Definition Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
+    Sugar.DefinitionExpression Name i o
+    (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makeExprDefinition defEventMap def bodyExpr =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
@@ -98,8 +98,8 @@ makeBuiltinDefinition ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
-    Sugar.DefinitionBuiltin (Name g) o ->
+    Sugar.Definition Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
+    Sugar.DefinitionBuiltin Name o ->
     GuiM env i o (TextWidget o)
 makeBuiltinDefinition def builtin =
     TagEdit.makeBinderTagEdit TextColors.definitionColor name
@@ -136,7 +136,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     EventMap (o GuiState.Update) ->
-    Sugar.Definition (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Definition Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 make defEventMap def =
     do
@@ -171,7 +171,7 @@ topLevelSchemeTypeView ::
     , Has (Texts.Name Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.Scheme (Name g) -> GuiM env i o (WithTextPos View)
+    Sugar.Scheme Name -> GuiM env i o (WithTextPos View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

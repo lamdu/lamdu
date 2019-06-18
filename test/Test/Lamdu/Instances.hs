@@ -144,6 +144,9 @@ instance Eq (Unit a) where _ == _ = True
 instance Eq (a -> Unit b) where _ == _ = True
 instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
+instance Eq n => Eq (Sugar.TagPane n Unit) where
+    Sugar.TagPane t0 n0 _ == Sugar.TagPane t1 n1 _ =
+        t0 == t1 && n0 == n1
 
 deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.CompositeFields n a)
@@ -181,8 +184,6 @@ deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.LabeledApply n Unit Unit) (Ann
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Lambda n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Let n Unit Unit) (Ann a))
 deriving instance (Eq a, Eq n) => Eq (Tree (Sugar.Type n) (Ann a))
-deriving instance Eq (Name Unit)
-deriving instance Eq (Name.StoredName Unit)
 deriving instance Eq (Sugar.BinderVarInline Unit)
 deriving instance Eq (Sugar.ClosedCompositeActions Unit)
 deriving instance Eq (Sugar.DetachAction Unit)
@@ -218,7 +219,6 @@ deriving instance Eq n => Eq (Sugar.ResVal n)
 deriving instance Eq n => Eq (Sugar.Scheme n)
 deriving instance Eq n => Eq (Sugar.TagRef n Unit Unit)
 deriving instance Eq n => Eq (Sugar.TagOption n Unit a)
-deriving instance Eq n => Eq (Sugar.TagPane n Unit)
 deriving instance Eq n => Eq (Sugar.TagReplace n Unit Unit a)
 deriving instance Eq n => Eq (Sugar.ValAnnotation n Unit)
 
@@ -258,8 +258,6 @@ instance (NFData a, NFData n) => NFData (Tree (Sugar.LabeledApply n (T i) (T o))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Lambda n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Let n (T i) (T o)) (Ann a))
 instance (NFData a, NFData n) => NFData (Tree (Sugar.Type n) (Ann a))
-instance NFData (Name (T o))
-instance NFData (Name.StoredName (T o))
 instance NFData (Sugar.AddFirstParam n (T i) (T o))
 instance NFData (Sugar.AddNextParam n (T i) (T o))
 instance NFData (Sugar.BinderVarInline (T o))
@@ -277,7 +275,9 @@ instance NFData (Sugar.TagReplace n (T i) (T o) a)
 instance NFData Def.FFIName
 instance NFData EntityId
 instance NFData ExprGui.Payload
+instance NFData Name
 instance NFData Name.Collision
+instance NFData Name.StoredName
 instance NFData Name.TagText
 instance NFData ShowAnnotation
 instance NFData LangId

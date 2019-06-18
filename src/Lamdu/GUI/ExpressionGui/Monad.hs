@@ -77,8 +77,8 @@ data Askable env i o = Askable
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
     , _aMakeBinder ::
-        Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Sugar.Binder (Name o) i o) ->
+        Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Sugar.Binder Name i o) ->
         GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
@@ -179,13 +179,13 @@ make sub expr =
 
 makeSubexpression ::
     Monad i =>
-    Sugar.Expression (Name o) i o (Sugar.Payload (Name o) i o ExprGui.Payload) ->
+    Sugar.Expression Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o) ->
     GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -201,8 +201,8 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
-    (Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-        (Sugar.Binder (Name o) i o)
+    (Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        (Sugar.Binder Name i o)
         -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> GuiM env i o a -> i a

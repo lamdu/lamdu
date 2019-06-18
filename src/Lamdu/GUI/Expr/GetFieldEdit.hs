@@ -42,8 +42,8 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.GetField (Name o) i o (ExprGui.SugarExpr i o) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.GetField Name i o (ExprGui.SugarExpr i o) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.GetField recExpr tag) pl =
     do

@@ -95,8 +95,8 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Tree (Ann (Sugar.Payload (Name o) i o ())) (Sugar.Binder (Name o) i o) ->
-    Tree (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) (Sugar.Binder (Name o) i o)
+    Tree (Ann (Sugar.Payload Name i o ())) (Sugar.Binder Name i o) ->
+    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o)
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
     & annotations %~ pl
@@ -138,7 +138,7 @@ makeInferredTypeAnnotation ::
     , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Glue.HasTexts env
     , Has (Texts.Code Text) env
     ) =>
-    Sugar.Payload (Name g) i o a0 -> m View
+    Sugar.Payload Name i o a0 -> m View
 makeInferredTypeAnnotation pl =
     Annotation.addAnnotationBackground
     <*> TypeView.make (pl ^?! Sugar.plAnnotation . SugarLens.annotationTypes)
@@ -165,8 +165,8 @@ make ::
     , Has (TextEdit.Texts Text) env
     , SearchMenu.HasTexts env
     ) =>
-    i [Sugar.HoleOption (Name o) i o] ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    i [Sugar.HoleOption Name i o] ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     (Text -> Bool) ->
     GuiM env i o (Menu.Placement -> Responsive o)
 make mkOptions pl allowedTerms =

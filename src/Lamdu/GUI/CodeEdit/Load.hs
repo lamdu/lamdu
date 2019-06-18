@@ -55,8 +55,8 @@ loadWorkArea ::
     ) =>
     env -> Anchors.CodeAnchors m ->
     T m
-    (Sugar.WorkArea (Name (T m)) (T m) (T m)
-        (Sugar.Payload (Name (T m)) (T m) (T m) ExprGui.Payload))
+    (Sugar.WorkArea Name (T m) (T m)
+        (Sugar.Payload Name (T m) (T m) ExprGui.Payload))
 loadWorkArea env cp =
     SugarConvert.loadWorkArea env cp
     >>= report . AddNames.addToWorkArea env (DataOps.assocTagName env)

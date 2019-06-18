@@ -137,8 +137,8 @@ convertWorkArea ::
     ) =>
     env ->
     T ViewM
-    (WorkArea (Name (T ViewM)) (T ViewM) (T ViewM)
-        (Sugar.Payload (Name (T ViewM)) (T ViewM) (T ViewM) ExprGui.Payload))
+    (WorkArea Name (T ViewM) (T ViewM)
+        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload))
 convertWorkArea env = loadWorkArea env codeAnchors >>= validate
 
 testProgram :: FilePath -> T ViewM a -> IO a

@@ -108,7 +108,7 @@ makeUnit ::
     , Has (Texts.Name Text) env
     , Grid.HasTexts env
     ) =>
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeUnit pl =
     do
@@ -137,8 +137,8 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Composite (Name o) i o) (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Composite Name i o) (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
     -- Ignore the ClosedComposite actions - it only has the open
@@ -231,7 +231,7 @@ makeAddFieldRow ::
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
     ) =>
-    Sugar.TagReplace (Name o) i o Sugar.EntityId ->
+    Sugar.TagReplace Name i o Sugar.EntityId ->
     Sugar.Payload name i o ExprGui.Payload ->
     GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =
@@ -260,7 +260,7 @@ makeFieldRow ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.CompositeItem (Name o) i o (ExprGui.SugarExpr i o) ->
+    Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o) ->
     GuiM env i o (TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do

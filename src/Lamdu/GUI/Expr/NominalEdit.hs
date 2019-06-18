@@ -51,11 +51,11 @@ makeToNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.Nominal (Name o)
+    Sugar.Nominal Name
         (Tree
-            (Ann (Sugar.Payload (Name o) i o ExprGui.Payload))
-            (Sugar.Binder (Name o) i o)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+            (Ann (Sugar.Payload Name i o ExprGui.Payload))
+            (Sugar.Binder Name i o)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeToNom nom pl =
     nom <&> GuiM.makeBinder
@@ -74,8 +74,8 @@ makeFromNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.Nominal (Name o) (ExprGui.SugarExpr i o) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.Nominal Name (ExprGui.SugarExpr i o) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeFromNom nom pl =
     nom <&> GuiM.makeSubexpression
@@ -93,8 +93,8 @@ mkNomGui ::
     ) =>
     ([Responsive o] -> [Responsive o]) ->
     OneOf Texts.CodeUI -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
-    Sugar.Nominal (Name o) (GuiM env i o (Responsive o)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
+    Sugar.Nominal Name (GuiM env i o (Responsive o)) ->
     GuiM env i o (Responsive o)
 mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
     do

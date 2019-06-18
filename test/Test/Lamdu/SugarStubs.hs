@@ -260,8 +260,8 @@ addNamesToExpr ::
     Language ->
     Sugar.Expression InternalName Identity Unit
     (Sugar.Payload InternalName Identity Unit a) ->
-    Sugar.Expression (Name Unit) Identity Unit
-    (Sugar.Payload (Name Unit) Identity Unit a)
+    Sugar.Expression Name Identity Unit
+    (Sugar.Payload Name Identity Unit a)
 addNamesToExpr lang x =
     AddNames.runPasses lang
     getNameProp NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x

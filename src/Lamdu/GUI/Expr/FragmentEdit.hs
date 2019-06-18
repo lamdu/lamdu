@@ -73,9 +73,9 @@ make ::
     , Has (Texts.Definitions Text) env
     , SearchMenu.HasTexts env
     ) =>
-    Tree (Sugar.Fragment (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Tree (Sugar.Fragment Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make fragment pl =
     do
@@ -136,8 +136,8 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Tree (Sugar.Fragment (Name o) i o)
-        (Ann (Sugar.Payload (Name o) i o ExprGui.Payload)) ->
+    Tree (Sugar.Fragment Name i o)
+        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Responsive o)
 makeFragmentExprEdit fragment =
     do

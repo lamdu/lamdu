@@ -46,8 +46,8 @@ testTypeView =
         nullType entityId = recType entityId []
         recType ::
             Sugar.EntityId ->
-            [(Sugar.Tag (Name.Name o), Tree (Ann Sugar.EntityId) (Sugar.Type (Name.Name o)))] ->
-            Tree (Ann Sugar.EntityId) (Sugar.Type (Name.Name o))
+            [(Sugar.Tag Name.Name, Tree (Ann Sugar.EntityId) (Sugar.Type Name.Name))] ->
+            Tree (Ann Sugar.EntityId) (Sugar.Type Name.Name)
         recType entityId fields =
             Sugar.CompositeFields
             { Sugar._compositeFields = fields

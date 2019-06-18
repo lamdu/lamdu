@@ -64,8 +64,8 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Hole (Name o) i o ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.Hole Name i o ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make hole pl =
     do

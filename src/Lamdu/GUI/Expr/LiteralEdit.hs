@@ -282,7 +282,7 @@ make ::
     , Grid.HasTexts env
     ) =>
     Sugar.Literal (Property o) ->
-    Sugar.Payload (Name o) i o ExprGui.Payload ->
+    Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make lit pl =
     stdWrap pl

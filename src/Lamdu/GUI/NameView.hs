@@ -51,7 +51,7 @@ make ::
     , Has Theme env, Element.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
-    Name f -> m (WithTextPos View)
+    Name -> m (WithTextPos View)
 make name =
     do
         (Name.TagText visibleName textCollision, tagCollision) <- Name.visible name

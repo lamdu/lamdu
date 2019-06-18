@@ -278,16 +278,6 @@ convertPaneBody ::
 convertPaneBody _ _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId <&>
     \tagData ->
-    let mkNameProp langId text =
-            Property.Property
-            { Property._pVal = text
-            , Property._pSet =
-                \newText ->
-                tagData
-                & Tag.tagNames . Lens.at langId ?~ newText
-                & Transaction.writeIRef (ExprIRef.tagI tagId)
-            }
-    in
     PaneTag TagPane
     { _tpTag =
         Tag
@@ -295,8 +285,12 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
         , _tagInstance = EntityId.ofTagPane tagId
         , _tagVal = tagId
         }
-    , _tpLocalizedNames =
-        tagData ^. Tag.tagNames & Lens.imap mkNameProp
+    , _tpLocalizedNames = tagData ^. Tag.tagNames
+    , _tpSetName =
+        \langId text ->
+        tagData
+        & Tag.tagNames . Lens.at langId ?~ text
+        & Transaction.writeIRef (ExprIRef.tagI tagId)
     }
 convertPaneBody env cp (Anchors.PaneDefinition defI) =
     do

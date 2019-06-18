@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types
     , EntityId
     , PaneBody(..), _PaneDefinition
     , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp
-    , TagPane(..), tpTag, tpLocalizedNames
+    , TagPane(..), tpTag, tpLocalizedNames, tpSetName
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
@@ -71,7 +71,8 @@ data Definition name i o a = Definition
 
 data TagPane name o = TagPane
     { _tpTag :: Tag name
-    , _tpLocalizedNames :: Map LangId (Property o Text)
+    , _tpLocalizedNames :: Map LangId Text
+    , _tpSetName :: LangId -> Text -> o ()
     } deriving Generic
 
 data PaneBody name i o a
