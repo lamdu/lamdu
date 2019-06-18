@@ -14,7 +14,6 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -24,6 +23,7 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
@@ -31,11 +31,9 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Styled as Styled
-import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.I18N.LangId (LangId(..), _LangId)
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
@@ -50,31 +48,16 @@ disallowedNameChars = ",[]\\`()"
 
 makeTagNameEdit ::
     ( MonadReader env m, Applicative f
-    , Has (Texts.CodeUI Text) env
     , TextEdit.Deps env, GuiState.HasCursor env
     ) =>
     Name.StoredName f -> Widget.Id ->
     m (TextWidget f)
 makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
-    do
-        env <- Lens.view id
-        let stopEditingEventMap =
-                E.keysEventMapMovesCursor
-                [ MetaKey noMods MetaKey.Key'Escape
-                , MetaKey noMods MetaKey.Key'Enter
-                ]
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . Texts.tag
-                    , has . Texts.stopEditing
-                    ]
-                ) (pure (TagView.id myId))
-        TextEdits.makeWordEdit
-            ?? empty
-            ?? prop
-            ?? tagRenameId myId
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
-            <&> Align.tValue %~ Widget.weakerEvents stopEditingEventMap
+    TextEdits.makeWordEdit
+    ?? empty
+    ?? prop
+    ?? tagRenameId myId
+    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
     where
         empty = TextEdit.Modes
             { TextEdit._unfocused = tagText ^. Name.ttText
@@ -84,38 +67,39 @@ makeTagNameEdit (Name.StoredName prop tagText _tagCollision) myId =
 makeTopRow ::
     ( MonadReader env m
     , Applicative o
-    , Has (Texts.Name Text) env, Has (Texts.CodeUI Text) env
-    , TextEdit.Deps env, Glue.HasTexts env
-    , GuiState.HasCursor env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has Config.Config env, Has Hover.Style env
+    , Has (Texts.CodeUI Text) env
+    , TextEdit.Deps env
+    , GuiState.HasCursor env
+    , Has Config.Config env
     ) =>
     Widget.Id -> Sugar.Tag (Name o) -> m (Responsive o)
 makeTopRow myId tag =
     do
-        nameView <-
-            (Widget.makeFocusableView ?? viewId <&> fmap) <*> TagView.make tag
-        isRenaming <- GuiState.isSubCursor ?? tagRenameId myId
-        case tag ^? Sugar.tagName . Name._Stored of
-            Just storedName | isRenaming ->
-                (Hover.hoverBeside Align.tValue ?? nameView) <*>
-                (makeTagNameEdit storedName myId <&> (^. Align.tValue))
-            _ ->
-                Lens.view id <&>
-                \env ->
-                let renameEventMap =
-                        tagRenameId myId
-                        & pure & E.keysEventMapMovesCursor
-                        (env ^. has . Config.jumpToDefinitionKeys)
-                        (E.toDoc env
-                            [ has . MomentuTexts.edit
-                            , has . Texts.tag
-                            , has . Texts.renameTag
-                            ])
-                in nameView <&> Widget.weakerEvents renameEventMap
-    & GuiState.assignCursor myId viewId
+        env <- Lens.view id
+        let fdConfig =
+                FocusDelegator.Config
+                { FocusDelegator.focusChildKeys = env ^. has . Config.jumpToDefinitionKeys
+                , FocusDelegator.focusChildDoc =
+                    E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . Texts.tag
+                    , has . Texts.renameTag
+                    ]
+                , FocusDelegator.focusParentKeys =
+                    [ MetaKey noMods MetaKey.Key'Escape
+                    , MetaKey noMods MetaKey.Key'Enter
+                    ]
+                , FocusDelegator.focusParentDoc =
+                    E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . Texts.tag
+                    , has . Texts.stopEditing
+                    ]
+                }
+        (FocusDelegator.make ?? fdConfig ?? FocusDelegator.FocusEntryParent ?? myId
+            <&> (Align.tValue %~))
+            <*> makeTagNameEdit (tag ^?! Sugar.tagName . Name._Stored) (tagRenameId myId)
     <&> Responsive.fromWithTextPos
-    where
-        viewId = TagView.id myId
 
 makeLanguageTitle ::
     ( MonadReader env m
@@ -162,11 +146,11 @@ makeLocalizedNames myId names =
 make ::
     ( MonadReader env m
     , Applicative o
-    , Has (Texts.Name Text) env, Has (Texts.CodeUI Text) env
+    , Has (Texts.CodeUI Text) env
     , TextEdit.Deps env, Glue.HasTexts env
     , GuiState.HasCursor env, Has Theme env
     , Element.HasAnimIdPrefix env, Has Config.Config env
-    , Has Hover.Style env, Spacer.HasStdSpacing env
+    , Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
     Sugar.TagPane (Name o) o -> m (Responsive o)

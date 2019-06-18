@@ -2,7 +2,6 @@
 
 module Lamdu.GUI.TagView
     ( make
-    , id
     ) where
 
 import qualified Control.Monad.Reader as Reader
@@ -19,10 +18,7 @@ import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
-import           Lamdu.Prelude hiding (id)
-
-id :: Widget.Id -> Widget.Id
-id = (`Widget.joinId` ["view"])
+import           Lamdu.Prelude
 
 make ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env

@@ -381,7 +381,7 @@ makeTagRefEditWith onView onPickNext tag =
         info = tag ^. Sugar.tagRefTag
         myId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
         holeId = WidgetIds.tagHoleId myId
-        viewId = TagView.id myId
+        viewId = Widget.joinId myId ["view"]
         mkPickResult tagInstance () =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId tagInstance
