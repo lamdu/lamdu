@@ -6,19 +6,19 @@ extra-deps:
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
 - url: https://github.com/lamdu/bindings-freetype-gl/archive/6efdced2d0867988a0a008145ae2c9a7bf69bb94.tar.gz
-- git: https://github.com/lamdu/syntax-tree
+- github: lamdu/syntax-tree
   commit: f30124163e1c65725bfbc95193cc793c5aff1179
-- git: https://github.com/lamdu/lamdu-calculus
+- github: lamdu/lamdu-calculus
   commit: 916532504e9c8fc4ebe05e7fb302f9dc15230cc7
-- git: https://github.com/lamdu/graphics-drawingcombinators
+- github: lamdu/graphics-drawingcombinators
   commit: 6253576fdd9233df5c3f43002310f38b0928c2d5
-- git: https://github.com/lamdu/freetype2
+- github: lamdu/freetype2
   commit: 046328d92312d65638440132c016a3081d9c32a4
-- git: https://github.com/lamdu/leveldb-haskell
+- github: lamdu/leveldb-haskell
   commit: 6f2f0b88fd7197e74cbff92bde94168adce3fb29
-- git: https://github.com/lamdu/FreetypeGL
+- github: lamdu/FreetypeGL
   commit: d2312f89cdf1412d584d13cda235ef683fa9c832
-- git: https://github.com/lamdu/nodejs-exec
+- github: lamdu/nodejs-exec
   commit: 6a8b5c7897b822f523414fe2c0e666ecb8d4ab4b
 
 resolver: lts-13.15

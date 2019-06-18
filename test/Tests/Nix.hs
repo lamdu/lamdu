@@ -40,10 +40,10 @@ stackDepsTest =
             :: IO Yaml.Value
         let deps =
                 stackYaml ^..
-                LensAeson.key "extra-deps" . LensAeson.values . Lens.filteredBy (LensAeson.key "git")
+                LensAeson.key "extra-deps" . LensAeson.values . Lens.filteredBy (LensAeson.key "github")
         traverse_ verifyStackDep deps
         let expectedNixFiles =
-                (deps ^.. traverse . LensAeson.key "git" . LensAeson._String . Lens.to Text.unpack
+                (deps ^.. traverse . LensAeson.key "github" . LensAeson._String . Lens.to Text.unpack
                     <&> packageNameFromGitUrl
                     <&> (<> ".nix")
                 ) <> extraNixFiles
@@ -61,9 +61,9 @@ stackDepsTest =
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
     do
-        git <- getKey "git"
+        github <- getKey "github"
         commit <- getKey "commit"
-        let packageName = packageNameFromGitUrl git
+        let packageName = packageNameFromGitUrl github
         do
             nixFile <- readFile ("nix/" <> packageName <> ".nix")
             let nixCommit = splitOn "rev = \"" nixFile !! 1 & takeWhile (/= '"')
