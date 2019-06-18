@@ -57,6 +57,7 @@ test =
     , testFragmentSize
     , testLambdaDelete
     , testPrograms
+    , testTagPanes
     ]
 
 replExpr ::
@@ -129,6 +130,17 @@ fromWorkArea env path = convertWorkArea env <&> (^?! Lens.cloneTraversal path)
 
 dummyVirt :: VirtualCursor
 dummyVirt = VirtualCursor (Rect 0 0)
+
+testTagPanes :: Test
+testTagPanes =
+    testCase "tag-panes" $
+    Env.make >>=
+    \baseEnv ->
+    testProgram "ab.json" $
+    do
+        fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
+            >>= sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
+        () <$ makeFocusedWidget "opened tag panes" baseEnv
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
