@@ -14,7 +14,7 @@
 
 module Tests.Nix (test) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import qualified Data.Aeson.Lens as LensAeson
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -38,7 +38,9 @@ stackDepsTest =
             Yaml.decodeFileEither "stack.yaml"
             >>= either (fail . Yaml.prettyPrintParseException) pure
             :: IO Yaml.Value
-        let deps = stackYaml ^.. LensAeson.key "packages" . LensAeson.values . LensAeson.key "location"
+        let deps =
+                stackYaml ^..
+                LensAeson.key "extra-deps" . LensAeson.values . Lens.filteredBy (LensAeson.key "git")
         traverse_ verifyStackDep deps
         let expectedNixFiles =
                 (deps ^.. traverse . LensAeson.key "git" . LensAeson._String . Lens.to Text.unpack
@@ -49,8 +51,12 @@ stackDepsTest =
         assertSetEquals "Nix files" (Set.fromList expectedNixFiles) (Set.fromList nixFiles)
         & testCase "verify-stack"
     where
-        -- Nix files that don't reflect stack.yaml dependencies
-        extraNixFiles = ["lamdu.nix"]
+        extraNixFiles =
+            [ "lamdu.nix" -- Top level nix file (implicit in stack)
+            , -- Currently specified diffently in stack.yaml to work around Stack bug.
+              -- See: https://github.com/commercialhaskell/stack/issues/4865#issuecomment-502169845
+              "bindings-freetype-gl.nix"
+            ]
 
 verifyStackDep :: Yaml.Value -> IO ()
 verifyStackDep dep =
