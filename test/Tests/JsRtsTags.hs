@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import           Lamdu.Data.Tag (tagNames)
+import           Lamdu.Data.Tag (tagNames, name)
 import           Lamdu.I18N.LangId (LangId(..))
 import           Lamdu.Paths (readDataFile)
 import           Test.Lamdu.FreshDb (readFreshDb)
@@ -19,7 +19,7 @@ test =
         freshDbTags <-
             readFreshDb
             <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . tagNames
-                 . Lens.ix (LangId "english"))
+                 . Lens.ix (LangId "english") . name)
             <&> Set.fromList
         rtsConfig <- readDataFile "js/export/rtsConfig.js"
         let (_:nameMapAndMore:_) = splitOn "var nameMap = {" rtsConfig
@@ -37,12 +37,12 @@ test =
                     -- TODO: understand and document why.
                     -- See 21782dc1a6b6fbe9f2b371b192b8f8ac3840e9a9
                 & Map.fromList
-        let verifyRtsTag name
+        let verifyRtsTag x
                 | freshDbTags ^. Lens.contains displayName = pure ()
                 | otherwise =
-                    assertString ("RTS uses tag which is not in the stdlib: " <> show name)
+                    assertString ("RTS uses tag which is not in the stdlib: " <> show x)
                 where
-                    displayName = Map.lookup name nameMap & fromMaybe name
+                    displayName = Map.lookup x nameMap & fromMaybe x
         rtsTags <-
             readDataFile "js/anchors.js"
             <&> splitOn "conf.builtinTagName('"

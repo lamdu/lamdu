@@ -7,6 +7,7 @@ module Lamdu.Data.Export.JSON.Migration
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Text (unpack)
+import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion1 as ToVersion1
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion2 as ToVersion2
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion3 as ToVersion3
@@ -44,6 +45,9 @@ versionMigrations =
     , ToVersion8.migrate
     , ToVersion9.migrate
     , ToVersion10.migrate
+    , -- Codec version 11 extends version 10.
+      -- So the "migration" just changes the version number
+      migrateToVer 11 pure
     ]
 
 currentVersion :: Int

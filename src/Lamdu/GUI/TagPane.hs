@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
+import           Lamdu.Data.Tag (LangNames(..), name)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -123,22 +124,22 @@ makeLocalizedNames ::
     , TextEdit.Deps env, Glue.HasTexts env, Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Widget.Id -> Map LangId Text -> m (Responsive o)
+    Widget.Id -> Map LangId LangNames -> m (Responsive o)
 makeLocalizedNames myId names =
     do
         curLang <- Lens.view has
-        let makeName lang name
+        let makeName lang x
                 | lang == curLang = pure []
-                | otherwise = makeLocalizedName lang name <&> (:[])
+                | otherwise = makeLocalizedName lang x <&> (:[])
         taggedList <*> (Lens.itraverse makeName names <&> (^.. traverse) <&> concat)
     where
-        makeLocalizedName lang name =
+        makeLocalizedName lang x =
             TaggedItem
             <$> (makeLanguageTitle langId lang
                 /|/ Spacer.stdHSpace
                 <&> Align.tValue %~ Widget.fromView
                 <&> Just)
-            <*> (TextView.make ?? name ?? langId <> ["val"] <&> Responsive.fromTextView)
+            <*> (TextView.make ?? x ^. name ?? langId <> ["val"] <&> Responsive.fromTextView)
             <*> pure Nothing
             where
                 langId = augmentId lang (Widget.toAnimId myId)
@@ -158,10 +159,11 @@ make tagPane =
     Styled.addValFrame <*>
     do
         lang <- Lens.view has
+        let setLang = (tagPane ^. Sugar.tpSetName) lang
         let prop =
-                Property
-                (tagPane ^. Sugar.tpLocalizedNames . Lens.ix lang)
-                ((tagPane ^. Sugar.tpSetName) lang)
+                case tagPane ^. Sugar.tpLocalizedNames . Lens.at lang of
+                Nothing -> Property "" (\x -> LangNames x Nothing Nothing & setLang)
+                Just names -> Property (names ^. name) (\x -> names & name .~ x & setLang)
         Responsive.vbox <*>
             sequenceA
             [ makeTopRow prop fallback myId
@@ -171,4 +173,4 @@ make tagPane =
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        fallback = tagPane ^. Sugar.tpLocalizedNames . Lens.ix (LangId "english")
+        fallback = tagPane ^. Sugar.tpLocalizedNames . Lens.ix (LangId "english") . name

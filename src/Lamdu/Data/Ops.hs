@@ -25,7 +25,7 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
-import           Lamdu.Data.Tag (OpName(..), tagOrder, tagNames, tagOpName, getTagName)
+import           Lamdu.Data.Tag (OpName(..), LangNames(..), tagOrder, tagNames, tagOpName, getTagName, name)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -126,22 +126,22 @@ assocTagName env tag =
     where
         lang = env ^. has
         result info =
-            Property (getTagName env info)
+            Property (getTagName env info ^. name)
             (Transaction.writeIRef (ExprIRef.tagI tag) . setName)
             where
-                setName name
-                    | name == mempty =
+                setName x
+                    | x == mempty =
                         info
                         & tagOpName .~ NotAnOp
                         & tagNames . Lens.at lang .~ Nothing
-                    | isOperator name =
+                    | isOperator x =
                         info
-                        & tagOpName .~ OpUni name
+                        & tagOpName .~ OpUni x
                         & tagNames . Lens.at lang .~ Nothing
                     | otherwise =
                         info
                         & tagOpName .~ NotAnOp
-                        & tagNames . Lens.at lang ?~ name
+                        & tagNames . Lens.at lang ?~ LangNames x Nothing Nothing
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
 
 newPane :: Monad m => Anchors.CodeAnchors m -> Anchors.Pane m -> T m ()

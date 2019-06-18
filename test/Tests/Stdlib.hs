@@ -20,7 +20,7 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import           Lamdu.Data.Tag (tagNames, tagOpName, OpName(..))
+import           Lamdu.Data.Tag (tagNames, tagOpName, name, OpName(..))
 import           Lamdu.I18N.LangId (LangId(..))
 import           Test.Lamdu.FreshDb (readFreshDb)
 
@@ -40,7 +40,7 @@ verifyTagsTest =
     <&> (^.. traverse . JsonCodec._EntityTag)
     >>= traverse verifyHasName
     <&> concat
-    >>= verifyTagNames
+    >>= verifyTagNames . fmap (^. name)
     where
         verifyHasName (tagId, tag)
             | Map.null (tag ^. tagNames) && tag ^. tagOpName == NotAnOp =
@@ -89,7 +89,7 @@ verifyNoBrokenDefsTest =
         db <- readFreshDb
         let tags =
                 Map.fromList
-                [ (tag, tagRefTag ^. tagNames . Lens.ix (LangId "english"))
+                [ (tag, tagRefTag ^. tagNames . Lens.ix (LangId "english") . name)
                 | (tag, tagRefTag) <- db ^.. Lens.folded . JsonCodec._EntityTag
                 ]
         let defs = db ^.. Lens.folded . JsonCodec._EntityDef

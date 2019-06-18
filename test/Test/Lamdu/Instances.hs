@@ -35,6 +35,7 @@ import           Lamdu.Config.Theme.Sprites (Sprites(..))
 import qualified Lamdu.Config.Theme.TextColors as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
+import           Lamdu.Data.Tag (LangNames)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import qualified Lamdu.I18N.Fonts as I18N.Fonts
@@ -279,8 +280,9 @@ instance NFData Name
 instance NFData Name.Collision
 instance NFData Name.StoredName
 instance NFData Name.TagText
-instance NFData ShowAnnotation
 instance NFData LangId
+instance NFData LangNames
+instance NFData ShowAnnotation
 instance NFData Sugar.BinderBodyScope
 instance NFData Sugar.BinderMode
 instance NFData Sugar.BinderParamScopeId
