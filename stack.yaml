@@ -5,7 +5,8 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
-- url: https://github.com/lamdu/bindings-freetype-gl/archive/6efdced2d0867988a0a008145ae2c9a7bf69bb94.tar.gz
+- github: lamdu/bindings-freetype-gl
+  commit: 6efdced2d0867988a0a008145ae2c9a7bf69bb94
 - github: lamdu/syntax-tree
   commit: f30124163e1c65725bfbc95193cc793c5aff1179
 - github: lamdu/lamdu-calculus

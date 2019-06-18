@@ -53,9 +53,6 @@ stackDepsTest =
     where
         extraNixFiles =
             [ "lamdu.nix" -- Top level nix file (implicit in stack)
-            , -- Currently specified diffently in stack.yaml to work around Stack bug.
-              -- See: https://github.com/commercialhaskell/stack/issues/4865#issuecomment-502169845
-              "bindings-freetype-gl.nix"
             ]
 
 verifyStackDep :: Yaml.Value -> IO ()
