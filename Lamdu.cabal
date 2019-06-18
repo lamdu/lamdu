@@ -54,7 +54,7 @@ source-repository head
 
 Flag ekg
   description: Enable ekg support in Lamdu
-  default: True
+  default: False
 
 Flag dev
   description: Build a dev version (faster build, no version output support)
@@ -472,4 +472,5 @@ Library
   ghc-prof-options:    -fprof-auto -fprof-cafs
   if flag(ekg)
     cpp-options: -DWITH_EKG
+  if flag(ekg)
     build-depends: ekg
