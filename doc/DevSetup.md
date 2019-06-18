@@ -31,3 +31,10 @@ To have errors show up in VS Code's problems pane:
 When running a full build, this command shows a notification when it is done:
 
     osascript -e 'display notification "'`stack build && echo Success || echo Failure`'" with title "Stack build"'
+
+## Other notes
+
+### Migrating the test programs to new schemas
+
+    for x in $(grep schemaVersion -l test/programs/*); do echo $x; ./lamdu --lamduDB tmp deletedb; ./lamdu --lamduDB tmp import $x --no-implicit-prelude; ./lamdu --lamduDB tmp export $x; done
+    rm -r tmp/
