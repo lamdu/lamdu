@@ -102,7 +102,7 @@ tell = Writer.tell . (: [])
 
 exportTag :: Monad m => T.Tag -> Export m ()
 exportTag tag
-    | tag == Anchors.anonTag = error "Attempt to export the anonymous tag"
+    | tag == Anchors.anonTag = pure ()
     | otherwise =
         ExprIRef.readTagData tag & trans
         >>= tell . Codec.EntityTag tag
@@ -120,7 +120,7 @@ exportSubexpr :: Monad m => Val (ValP m) -> Export m ()
 exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
     do
         tag <- readAssocTag lamVar & trans
-        exportTag tag & when (tag /= Anchors.anonTag)
+        exportTag tag
         mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
         Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
     where
