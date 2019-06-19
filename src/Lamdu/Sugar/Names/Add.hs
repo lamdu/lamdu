@@ -21,8 +21,6 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Property (MkProperty)
-import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
@@ -54,35 +52,34 @@ data P0Name = P0Name
     }
 Lens.makeLenses ''P0Name
 
-newtype P0Env i o = P0Env
-    { _p0GetNameProp :: T.Tag -> MkProperty i o Text
+newtype P0Env i = P0Env
+    { _p0GetName :: T.Tag -> i Text
     }
 Lens.makeLenses ''P0Env
 
-newtype Pass0LoadNames i o a =
-    Pass0LoadNames { unPass0LoadNames :: ReaderT (P0Env i o) i a }
-    deriving newtype (Functor, Applicative, Monad, MonadReader (P0Env i o))
+newtype Pass0LoadNames i a =
+    Pass0LoadNames { unPass0LoadNames :: ReaderT (P0Env i) i a }
+    deriving newtype (Functor, Applicative, Monad, MonadReader (P0Env i))
 
-runPass0LoadNames :: P0Env i o -> Pass0LoadNames i o a -> i a
+runPass0LoadNames :: P0Env i -> Pass0LoadNames i a -> i a
 runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
 
-instance Monad i => MonadNaming (Pass0LoadNames i o) where
-    type OldName (Pass0LoadNames i o) = InternalName
-    type NewName (Pass0LoadNames i o) = P0Name
-    type IM (Pass0LoadNames i o) = i
+instance Monad i => MonadNaming (Pass0LoadNames i) where
+    type OldName (Pass0LoadNames i) = InternalName
+    type NewName (Pass0LoadNames i) = P0Name
+    type IM (Pass0LoadNames i) = i
     opRun = Reader.ask <&> runPass0LoadNames
     opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
     opGetName _ _ = getP0Name
 
-p0lift :: Monad i => i a -> Pass0LoadNames i o a
+p0lift :: Monad i => i a -> Pass0LoadNames i a
 p0lift = Pass0LoadNames . lift
 
-getP0Name :: Monad i => InternalName -> Pass0LoadNames i o P0Name
+getP0Name :: Monad i => InternalName -> Pass0LoadNames i P0Name
 getP0Name internalName =
     do
-        nameProp <- Lens.view p0GetNameProp
-        nameProp (internalName ^. inTag) ^. Property.mkProperty & p0lift
-    <&> (^. Property.pVal)
+        getName <- Lens.view p0GetName
+        getName (internalName ^. inTag) & p0lift
     <&> (`P0Name` internalName)
 
 ------------------------------
@@ -472,15 +469,15 @@ runPasses ::
     , Functor i
     ) =>
     env ->
-    (T.Tag -> MkProperty i o Text) ->
-    (a -> Pass0LoadNames i o b) ->
+    (T.Tag -> i Text) ->
+    (a -> Pass0LoadNames i b) ->
     (b -> Pass1PropagateUp i o c) ->
     (c -> Pass2MakeNames i o d) ->
     a -> i d
-runPasses env getNameProp f0 f1 f2 =
+runPasses env getName f0 f1 f2 =
     fmap (pass2 . pass1) . pass0
     where
-        pass0 = runPass0LoadNames (P0Env getNameProp) . f0
+        pass0 = runPass0LoadNames (P0Env getName) . f0
         pass1 = runPass1PropagateUp . f1
         pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial env p1out
 
@@ -490,10 +487,10 @@ addToWorkArea ::
     , Monad i
     ) =>
     env ->
-    (T.Tag -> MkProperty i o Text) ->
+    (T.Tag -> i Text) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea Name i o (Payload Name i o a))
-addToWorkArea env getNameProp =
-    runPasses env getNameProp f f f
+addToWorkArea env getName =
+    runPasses env getName f f f
     where
         f = Walk.toWorkArea

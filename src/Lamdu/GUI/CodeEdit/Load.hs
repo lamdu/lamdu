@@ -6,6 +6,7 @@ module Lamdu.GUI.CodeEdit.Load
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
+import qualified Data.Property as Property
 import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
@@ -59,7 +60,7 @@ loadWorkArea ::
         (Sugar.Payload Name (T m) (T m) ExprGui.Payload))
 loadWorkArea env cp =
     SugarConvert.loadWorkArea env cp
-    >>= report . AddNames.addToWorkArea env (DataOps.assocTagName env)
+    >>= report . AddNames.addToWorkArea env (Property.getP . DataOps.assocTagName env)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toGuiMPayload
     where

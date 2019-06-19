@@ -65,7 +65,7 @@ testWorkArea ::
 testWorkArea verifyName inputWorkArea =
     do
         lang <- Env.makeLang
-        addToWorkArea lang Stub.getNameProp inputWorkArea
+        addToWorkArea lang Stub.getName inputWorkArea
             & runIdentity
             & getNames
             & traverse_ verifyName

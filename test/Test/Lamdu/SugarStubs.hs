@@ -8,7 +8,7 @@ import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Scheme (QVars(..))
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
-import           Data.Property (Property(..), MkProperty(..))
+import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Term as V
@@ -264,10 +264,8 @@ addNamesToExpr ::
     (Sugar.Payload Name Identity Unit a)
 addNamesToExpr lang x =
     AddNames.runPasses lang
-    getNameProp NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
+    getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
     & runIdentity
 
-getNameProp :: T.Tag -> MkProperty Identity Unit Text
-getNameProp tag =
-    Property (fromString (show tag)) (const Unit)
-    & Identity & MkProperty
+getName :: T.Tag -> Identity Text
+getName = Identity . fromString . show
