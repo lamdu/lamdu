@@ -47,10 +47,9 @@ import           Lamdu.Prelude hiding (Map)
 ---------- Pass 0 ------------
 ------------------------------
 data P0Name = P0Name
-    { __p0TagName :: Text
+    { _p0TagName :: Text
     , _p0InternalName :: InternalName
     }
-Lens.makeLenses ''P0Name
 
 newtype P0Env i = P0Env
     { _p0GetName :: T.Tag -> i Text
@@ -143,69 +142,58 @@ instance Monad i => MonadNaming (Pass1PropagateUp i o) where
     opGetName mDisambiguator nameType p0Name =
         p1Name mDisambiguator nameType p0Name & runcps
 
-p1Anon :: Maybe UUID -> CPS (Pass1PropagateUp i o) P1Name
-p1Anon Nothing = error "Anon tag with no context"
-p1Anon (Just uuid) =
-    CPS $ \inner ->
-    Writer.listen inner
-    <&> Tuple.swap
-    <&> _1 %~ \innerOut ->
-    P1Name
-    { p1KindedName = P1AnonName uuid
-    , p1LocalsBelow = innerOut ^. p1Locals
-    , p1TextsBelow = innerOut ^. p1Texts
-    }
-
 displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
 displayOf env text
     | Lens.has Lens._Empty text = env ^. has . Texts.emptyName
     | otherwise = text
 
-p1Tagged ::
+p1Name ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp i o) P1Name
-p1Tagged mDisambiguator nameType (P0Name txt internalName) =
-    CPS $ \inner ->
-    tellSome p1Texts (Lens.singletonAt txt (Set.singleton tag))
-    *> inner
-    & Writer.censor (p1lens <>~ myTags)
-    & Writer.listen
-    <&> Tuple.swap
-    <&> _1 %~ \innerOut ->
-    P1Name
-    { p1KindedName = P1StoredName aName txt
-    , p1LocalsBelow = innerOut ^. p1Locals
-    , p1TextsBelow = innerOut ^. p1Texts
-    }
+p1Name mDisambiguator nameType (P0Name txt internalName) =
+    -- NOTE: We depend on the anonTag key in the map
+    liftCPS (traverse_ tellCtx ctx) *>
+    CPS (\inner ->
+        tells
+        *> inner
+        & Writer.censor (p1lens <>~ myTags)
+        & Writer.listen
+        <&> Tuple.swap
+        <&> _1 %~ \innerOut ->
+        P1Name
+        { p1KindedName =
+            if tag == anonTag
+            then
+                case ctx of
+                Nothing -> error "Anon tag with no context"
+                Just uuid -> P1AnonName uuid
+            else P1StoredName aName txt
+        , p1LocalsBelow = innerOut ^. p1Locals
+        , p1TextsBelow = innerOut ^. p1Texts
+        }
+    )
     where
+        tells
+            | tag == anonTag = pure ()
+            | otherwise = tellSome p1Texts (Lens.singletonAt txt (Set.singleton tag))
         p1lens
             | Walk.isGlobal nameType = p1Globals
             | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
-        myTags = Lens.singletonAt tag (Collider (Clash.infoOf aName))
-        tag = internalName ^. inTag
+        myTags
+            | tag == anonTag = mempty
+            | otherwise = Lens.singletonAt tag (Collider (Clash.infoOf aName))
+        tellCtx x
+            | nameType == Walk.TypeVar =
+                tellSome p1TypeVars (OrderedSet.singleton x)
+            | otherwise =
+                tellSome p1Contexts (Lens.singletonAt tag (Set.singleton x))
+        InternalName ctx tag = internalName
         aName =
             Annotated.Name
             { Annotated._internal = internalName
             , Annotated._disambiguator = mDisambiguator
             , Annotated._nameType = nameType
             }
-
-p1Name ::
-    Maybe Disambiguator -> Walk.NameType -> P0Name ->
-    CPS (Pass1PropagateUp i o) P1Name
-p1Name mDisambiguator nameType p0Name =
-    -- NOTE: We depend on the anonTag key in the map
-    liftCPS (traverse_ tellCtx ctx)
-    *> if tag == anonTag
-        then p1Anon ctx
-        else p1Tagged mDisambiguator nameType p0Name
-    where
-        tellCtx x
-            | nameType == Walk.TypeVar =
-                tellSome p1TypeVars (OrderedSet.singleton x)
-            | otherwise =
-                tellSome p1Contexts (Lens.singletonAt tag (Set.singleton x))
-        InternalName ctx tag = p0Name ^. p0InternalName
 
 -------------------------------------
 ---------- Pass1 -> Pass2 -----------
