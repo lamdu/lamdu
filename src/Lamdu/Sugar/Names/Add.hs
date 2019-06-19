@@ -146,14 +146,15 @@ instance Monad i => MonadNaming (Pass1PropagateUp i o) where
 p1Anon :: Maybe UUID -> CPS (Pass1PropagateUp i o) P1Name
 p1Anon Nothing = error "Anon tag with no context"
 p1Anon (Just uuid) =
-    CPS (Writer.listen <&> Lens.mapped %~ Tuple.swap . (_2 %~ f))
-    where
-        f innerOut =
-            P1Name
-            { p1KindedName = P1AnonName uuid
-            , p1LocalsBelow = innerOut ^. p1Locals
-            , p1TextsBelow = innerOut ^. p1Texts
-            }
+    CPS $ \inner ->
+    Writer.listen inner
+    <&> Tuple.swap
+    <&> _1 %~ \innerOut ->
+    P1Name
+    { p1KindedName = P1AnonName uuid
+    , p1LocalsBelow = innerOut ^. p1Locals
+    , p1TextsBelow = innerOut ^. p1Texts
+    }
 
 displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
 displayOf env text
