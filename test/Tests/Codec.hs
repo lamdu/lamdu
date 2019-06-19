@@ -49,4 +49,5 @@ reExportTests =
     , "to-nom"
     , "foo"
     , "simple-lambda"
+    , "unnamed"
     ] <&> reExportTest & testGroup "program-tests"
