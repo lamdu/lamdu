@@ -11,7 +11,7 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.Name (Name)
+import           Lamdu.Name (Name(..))
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.HUnit (assertBool)
@@ -43,6 +43,7 @@ test =
     , testFloatToRepl
     , floatLetWithGlobalRef
     , testHoleTypeShown
+    , testUnnamed
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -85,6 +86,17 @@ replLet = replBinder . _BinderLet
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
+
+testUnnamed :: Test
+testUnnamed =
+    testSugarActions "unnamed.json" [verify]
+    & testCase "name-of-unnamed"
+    where
+        verify workArea =
+            case workArea ^?! replBody . _BodyGetVar . _GetBinder . bvNameRef . nrName of
+            Unnamed{} -> pure ()
+            _ -> fail "Unexpected name"
+
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
