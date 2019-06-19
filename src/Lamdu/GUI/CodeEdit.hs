@@ -33,6 +33,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Annotations as Annotations
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -307,7 +308,7 @@ panesEventMap theExportActions cp gp replVarInfo =
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (collaborationDoc [Texts.collaboration, Texts.importReplFromJSON])
             , case replVarInfo of
-                Sugar.VarAction ->
+                Sugar.VarNominal tid _ | tid == Builtins.mutTid ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
                     (E.toDoc (env ^. has) [Texts.execRepl])
                     (IOTrans.liftIO executeRepl)

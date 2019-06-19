@@ -166,7 +166,7 @@ repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
 repl (Ann pl x) =
     Sugar.Repl
     { Sugar._replExpr = Ann pl (Sugar.BinderExpr x)
-    , Sugar._replVarInfo = Sugar.VarNormal
+    , Sugar._replVarInfo = Sugar.VarGeneric
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
 
@@ -187,7 +187,7 @@ mkFuncParam (paramVar, paramTag) =
             , Sugar._fpMOrderAfter = Nothing
             }
         }
-    , Sugar._fpVarInfo = Sugar.VarNormal
+    , Sugar._fpVarInfo = Sugar.VarGeneric
     }
 
 funcExpr ::
@@ -264,7 +264,7 @@ addNamesToExpr ::
     (Sugar.Payload Name Identity Unit a)
 addNamesToExpr lang x =
     AddNames.runPasses lang
-    getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
+    getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
     & runIdentity
 
 getName :: T.Tag -> Identity Text

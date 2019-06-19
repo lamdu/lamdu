@@ -219,7 +219,7 @@ resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
         view <- makeIndicator tag Theme.successColor "✔"
         toDoc <- Lens.view has <&> E.toDoc
         case varInfo of
-            Sugar.VarAction ->
+            Sugar.VarNominal tid _ | tid == Builtins.mutTid ->
                 do
                     actionKeys <- Lens.view (has . Config.actionKeys)
                     let executeEventMap =

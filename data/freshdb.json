@@ -4,6 +4,35 @@
     },
     {
         "tagOrder": 0,
+        "tag": "42493a66756e6374696f6e0000000000",
+        "names": {
+            "english": "function"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a7265636f726400000000000000",
+        "names": {
+            "english": "record"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a76617269616e74000000000000",
+        "names": {
+            "english": "variant"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "names": {
+            "english": "x",
+            "hebrew": "א"
+        }
+    },
+    {
+        "tagOrder": 0,
         "tag": "059472d8b1b980682d0b787374405808",
         "names": {
             "hebrew": "ממערך",
@@ -1102,14 +1131,6 @@
         "tagOrder": 0,
         "op": "+",
         "tag": "a318c24216defe206feeb73ef5be0003"
-    },
-    {
-        "tagOrder": 0,
-        "tag": "a386d980d96f732451f7b7b7ebab441c",
-        "names": {
-            "hebrew": "א",
-            "english": "x"
-        }
     },
     {
         "tagOrder": 0,

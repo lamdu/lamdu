@@ -11,7 +11,6 @@ module Lamdu.Sugar.Names.Add
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
-import           Control.Monad.State (runState, evalState)
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Char as Char
@@ -25,8 +24,10 @@ import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
+import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.I18N.Code as Texts
@@ -36,8 +37,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
 import qualified Lamdu.Sugar.Names.Clash as Clash
-import           Lamdu.Sugar.Names.NameGen (NameGen)
-import qualified Lamdu.Sugar.Names.NameGen as NameGen
 import           Lamdu.Sugar.Names.Walk (MonadNaming(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
@@ -45,11 +44,59 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude hiding (Map)
 
 ------------------------------
+------ Pass Auto Tags --------
+------------------------------
+
+data PAName = PAName
+    { _paInternalName :: InternalName
+    , _paIsAutoGen :: Bool
+    }
+
+newtype PassAutoTags (im :: * -> *) a =
+    PassAutoTags { runPassAutoTags :: Reader (Map UUID T.Tag) a }
+    deriving newtype (Functor, Applicative, Monad, MonadReader (Map UUID T.Tag))
+
+instance Monad i => MonadNaming (PassAutoTags i) where
+    type OldName (PassAutoTags i) = InternalName
+    type NewName (PassAutoTags i) = PAName
+    type IM (PassAutoTags i) = i
+    opRun = Lens.view id <&> flip (runReader . runPassAutoTags) <&> (pure .)
+    opWithName varInfo _ = pAOpWithName varInfo
+    opGetName _ _ = pAOpGetName
+
+pAOpWithName :: VarInfo -> InternalName -> CPS (PassAutoTags i) PAName
+pAOpWithName varInfo (InternalName (Just uuid) tag)
+    | tag == anonTag =
+        CPS $ \inner ->
+        Reader.local (Lens.at uuid ?~ newTag) inner
+        <&> (,) (PAName (InternalName (Just uuid) newTag) True)
+    where
+        newTag =
+            case varInfo of
+            VarNominal _ nomTag -> nomTag
+            VarGeneric -> Builtins.genericVarTag
+            VarFunction -> Builtins.functionTag
+            VarRecord -> Builtins.recordTag
+            VarVariant -> Builtins.variantTag
+pAOpWithName _ x = PAName x False & pure
+
+pAOpGetName :: InternalName -> PassAutoTags i PAName
+pAOpGetName n@(InternalName (Just uuid) tag)
+    | tag == anonTag =
+        Lens.view (Lens.at uuid)
+        <&>
+        \case
+        Nothing -> PAName n False
+        Just newTag -> PAName (InternalName (Just uuid) newTag) True
+pAOpGetName n = PAName n False & pure
+
+------------------------------
 ---------- Pass 0 ------------
 ------------------------------
 data P0Name = P0Name
     { _p0TagName :: Text
     , _p0InternalName :: InternalName
+    , _p0IsAutoGen :: Bool
     }
 
 newtype P0Env i = P0Env
@@ -65,7 +112,7 @@ runPass0LoadNames :: P0Env i -> Pass0LoadNames i a -> i a
 runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
 
 instance Monad i => MonadNaming (Pass0LoadNames i) where
-    type OldName (Pass0LoadNames i) = InternalName
+    type OldName (Pass0LoadNames i) = PAName
     type NewName (Pass0LoadNames i) = P0Name
     type IM (Pass0LoadNames i) = i
     opRun = Reader.ask <&> runPass0LoadNames
@@ -75,12 +122,10 @@ instance Monad i => MonadNaming (Pass0LoadNames i) where
 p0lift :: Monad i => i a -> Pass0LoadNames i a
 p0lift = Pass0LoadNames . lift
 
-getP0Name :: Monad i => InternalName -> Pass0LoadNames i P0Name
-getP0Name internalName =
-    do
-        getName <- Lens.view p0GetName
-        getName (internalName ^. inTag) & p0lift
-    <&> (`P0Name` internalName)
+getP0Name :: Monad i => PAName -> Pass0LoadNames i P0Name
+getP0Name (PAName internalName isAutoGen) =
+    Lens.view p0GetName ?? internalName ^. inTag >>= p0lift
+    <&> \x -> P0Name x internalName isAutoGen
 
 ------------------------------
 ---------- Pass 1 ------------
@@ -118,12 +163,8 @@ data P1Name = P1Name
     { p1KindedName :: P1KindedName
     , p1LocalsBelow :: MMap T.Tag Clash.Info
         -- ^ Allow checking collisions for names hidden behind monadic
-        -- actions:
-    , p1TextsBelow :: MMap Text (Set T.Tag)
-        -- ^ We keep the texts below each node so we can check if an
-        -- auto-generated name collides with any name in inner scopes
-        -- We only use the keys in this map, but we do not strip the
-        -- values so all p1TextsBelow can be shared
+        -- actions.
+    , p1IsAutoGen :: Bool
     }
 newtype Pass1PropagateUp (im :: * -> *) (am :: * -> *) a =
     Pass1PropagateUp (Writer P1Out a)
@@ -151,7 +192,7 @@ displayOf env text
 p1Name ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp i o) P1Name
-p1Name mDisambiguator nameType (P0Name txt internalName) =
+p1Name mDisambiguator nameType (P0Name txt internalName autoGen) =
     -- NOTE: We depend on the anonTag key in the map
     liftCPS (traverse_ tellCtx ctx) *>
     CPS (\inner ->
@@ -170,7 +211,7 @@ p1Name mDisambiguator nameType (P0Name txt internalName) =
                 Just uuid -> P1AnonName uuid
             else P1TagName aName txt
         , p1LocalsBelow = innerOut ^. p1Locals
-        , p1TextsBelow = innerOut ^. p1Texts
+        , p1IsAutoGen = autoGen
         }
     )
     where
@@ -241,6 +282,12 @@ toSuffixMap tagContexts =
         eachTag tag contexts = contexts ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
 
+numberCycle :: [Text] -> [Text]
+numberCycle s =
+    (s <>) . mconcat . Lens.imap appendAll $ repeat s
+    where
+        appendAll num = map (<> Text.pack (show num))
+
 initialP2Env ::
     ( Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
@@ -248,9 +295,8 @@ initialP2Env ::
     env -> P1Out -> P2Env
 initialP2Env env (P1Out globals locals contexts tvs texts) =
     P2Env
-    { _p2NameGen = NameGen.initial env
-    , _p2TypeVars =
-        NameGen.numberCycle ["a", "b", "c"]
+    { _p2TypeVars =
+        numberCycle ["a", "b", "c"]
         & filter (not . (`Lens.has` texts) . Lens.ix)
         & zip (tvs ^.. Lens.folded)
         & Map.fromList
@@ -292,8 +338,7 @@ data TaggedVarId = TaggedVarId
     } deriving (Eq, Ord, Show)
 
 data P2Env = P2Env
-    { _p2NameGen :: NameGen UUID -- Map anon name contexts to chosen auto-names
-    , _p2TypeVars :: Map UUID Text
+    { _p2TypeVars :: Map UUID Text
         -- ^ Names for type variables. Globally unique.
     , _p2TagTexts :: Map T.Tag TagText
     , _p2Texts :: Set Text
@@ -364,7 +409,7 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     type NewName (Pass2MakeNames i o) = Name
     type IM (Pass2MakeNames i o) = i
     opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
-    opWithName varInfo _ = p2cpsNameConvertor varInfo
+    opWithName _ _ = p2cpsNameConvertor
     opGetName _ = p2nameConvertor
 
 getTagText :: T.Tag -> Text -> Pass2MakeNames i o TagText
@@ -381,66 +426,55 @@ getTagText tag txt =
     & fromMaybe (TagText displayText collision)
 
 p2tagName ::
-    MMap T.Tag Clash.Info -> Annotated.Name -> Text ->
+    MMap T.Tag Clash.Info -> Annotated.Name -> Text -> Bool ->
     Pass2MakeNames i o Name
-p2tagName tagsBelow aName txt =
+p2tagName tagsBelow aName txt isAutoGen =
     TagName
     <$> getTagText tag txt
     <*> getCollision tagsBelow aName
+    ?? isAutoGen
     <&> NameTag
     where
         tag = aName ^. Annotated.tag
 
+p2globalAnon :: UUID -> Pass2MakeNames i o Name
+p2globalAnon uuid =
+    Lens.view (p2TagSuffixes . Lens.at (TaggedVarId uuid anonTag))
+    <&> maybe (Unnamed 0) Unnamed
+
 p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
-p2nameConvertor nameType (P1Name (P1TagName aName text) tagsBelow _) =
-    p2tagName tagsBelow aName text <&>
+p2nameConvertor nameType (P1Name (P1TagName aName text) tagsBelow isAutoGen) =
+    p2tagName tagsBelow aName text isAutoGen <&>
     case nameType of
     Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
 p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
     case nameType of
     Walk.Tag -> error "TODO: Refactor types to rule this out"
-    Walk.TaggedVar ->
-        Lens.view p2NameGen
-        <&> evalState (NameGen.existingName uuid)
-        <&> AutoGenerated
+    Walk.TaggedVar -> p2globalAnon uuid
     Walk.TypeVar ->
         Lens.view (p2TypeVars . Lens.at uuid)
         <&> fromMaybe "?" -- TODO: Type variable in hole result
         <&> AutoGenerated
-    Walk.TaggedNominal -> globalAnon
-    Walk.GlobalDef -> globalAnon
-    where
-        globalAnon =
-            Lens.view (p2TagSuffixes . Lens.at (TaggedVarId uuid anonTag))
-            <&> maybe (Unnamed 0) Unnamed
+    Walk.TaggedNominal -> p2globalAnon uuid
+    Walk.GlobalDef -> p2globalAnon uuid
 
-p2cpsNameConvertor :: VarInfo -> Walk.CPSNameConvertor (Pass2MakeNames i o)
-p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
+p2cpsNameConvertor :: Walk.CPSNameConvertor (Pass2MakeNames i o)
+p2cpsNameConvertor (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
+p2cpsNameConvertor (P1Name (P1TagName aName text) tagsBelow isAutoGen) =
     CPS $ \inner ->
     do
         env0 <- Lens.view id
-        let accept autoText =
-                Lens.nullOf (Lens.ix autoText) textsBelow
-                && Set.notMember autoText (env0 ^. p2TextsAbove)
         (newNameForm, env1) <-
-            case kName of
-            P1TagName aName text ->
-                p2tagName tagsBelow aName text
-                <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
-                where
-                    isClash = Clash.infoOf aName
-                    tag = aName ^. Annotated.tag
-            P1AnonName ctx ->
-                NameGen.newName varInfo accept ctx
-                <&> AutoGenerated
-                & Lens.zoom p2NameGen
-                & (`runState` env0)
-                & pure
-        text <- visible newNameForm <&> (^. _1 . ttText)
-        let env2 = env1 & p2TextsAbove %~ Set.insert text
+            p2tagName tagsBelow aName text isAutoGen
+            <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
+        visText <- visible newNameForm <&> (^. _1 . ttText)
+        let env2 = env1 & p2TextsAbove %~ Set.insert visText
         res <- Reader.local (const env2) inner
         pure (newNameForm, res)
+    where
+        isClash = Clash.infoOf aName
+        tag = aName ^. Annotated.tag
 
 runPasses ::
     ( Has (Texts.Name Text) env
@@ -449,13 +483,15 @@ runPasses ::
     ) =>
     env ->
     (T.Tag -> i Text) ->
+    (z -> PassAutoTags i a) ->
     (a -> Pass0LoadNames i b) ->
     (b -> Pass1PropagateUp i o c) ->
     (c -> Pass2MakeNames i o d) ->
-    a -> i d
-runPasses env getName f0 f1 f2 =
-    fmap (pass2 . pass1) . pass0
+    z -> i d
+runPasses env getName fa f0 f1 f2 =
+    fmap (pass2 . pass1) . pass0 . passa
     where
+        passa = (`runReader` mempty) . runPassAutoTags . fa
         pass0 = runPass0LoadNames (P0Env getName) . f0
         pass1 = runPass1PropagateUp . f1
         pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial env p1out
@@ -470,6 +506,6 @@ addToWorkArea ::
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea Name i o (Payload Name i o a))
 addToWorkArea env getName =
-    runPasses env getName f f f
+    runPasses env getName f f f f
     where
         f = Walk.toWorkArea

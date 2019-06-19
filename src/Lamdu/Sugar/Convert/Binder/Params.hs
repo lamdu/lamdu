@@ -14,7 +14,6 @@ module Lamdu.Sugar.Convert.Binder.Params
 import           AST (Tree, Pure(..), _Pure, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.FuncType (FuncType(..), funcIn)
-import           AST.Term.Nominal (NominalInst(..))
 import           AST.Term.Row (RowExtend(..), FlatRowExtends(..))
 import qualified AST.Term.Row as Row
 import qualified Control.Lens as Lens
@@ -25,7 +24,6 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -413,7 +411,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                             fpValue fp & ConvertEval.param (EntityId.ofEvalOf paramEntityId)
                         }
                     , _fpInfo = paramInfo
-                    , _fpVarInfo = fpFieldType fp & mkVarInfo
+                    , _fpVarInfo = mkVarInfo typeS
                     }
             where
                 tag = fpTag fp
@@ -536,10 +534,12 @@ makeNonRecordParamActions binderKind storedLam =
     where
         param = storedLam ^. slLam . V.lamIn
 
-mkVarInfo :: Tree Pure T.Type -> VarInfo
-mkVarInfo (MkPure T.TFun{}) = VarFunction
-mkVarInfo (MkPure (T.TInst (NominalInst tid _))) | tid == Builtins.mutTid = VarAction
-mkVarInfo _ = VarNormal
+mkVarInfo :: Tree (Ann a) (Type InternalName) -> VarInfo
+mkVarInfo (Ann _ TFun{}) = VarFunction
+mkVarInfo (Ann _ TRecord{}) = VarRecord
+mkVarInfo (Ann _ TVariant{}) = VarVariant
+mkVarInfo (Ann _ TVar{}) = VarGeneric
+mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal tid (name ^. inTag)
 
 mkFuncParam ::
     Monad m =>
@@ -557,7 +557,7 @@ mkFuncParam entityId lamExprPl info =
             lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
             & ConvertEval.param (EntityId.ofEvalOf entityId)
         }
-    , _fpVarInfo = mkVarInfo typ
+    , _fpVarInfo = mkVarInfo typS
     }
     where
         typ = lamParamType lamExprPl

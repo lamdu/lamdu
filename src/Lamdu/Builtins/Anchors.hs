@@ -5,6 +5,7 @@ module Lamdu.Builtins.Anchors
     ( bytesTid, floatTid, listTid, textTid, treeTid, arrayTid, boolTid, mutTid
     , headTag, tailTag, rootTag, subtreesTag, trueTag, falseTag
     , valTypeParamId
+    , genericVarTag, functionTag, recordTag, variantTag
     ) where
 
 import           Data.List.Extended (rightPad)
@@ -65,3 +66,17 @@ subtreesTag = bi "subtrees"
 
 valTypeParamId :: T.TypeVar
 valTypeParamId = bi "val"
+
+functionTag :: Tag
+functionTag = bi "function"
+
+recordTag :: Tag
+recordTag = bi "record"
+
+variantTag :: Tag
+variantTag = bi "variant"
+
+genericVarTag :: Tag
+genericVarTag =
+    -- This random UUID was generated in the stdlib prior to being a "builtin"
+    "\xa3\x86\xd9\x80\xd9os$Q\xf7\xb7\xb7\xeb\xab\x44\x1c"

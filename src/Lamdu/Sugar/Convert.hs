@@ -252,9 +252,10 @@ convertRepl env cp =
                 (SugarLens.paramsAnnotations %~ trimParamAnnotation (env ^. has))
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
+        typS <- ConvertType.convertType (EntityId.ofTypeOf replEntityId) typ
         pure Repl
             { _replExpr = expr
-            , _replVarInfo = mkVarInfo typ
+            , _replVarInfo = mkVarInfo typS
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where
