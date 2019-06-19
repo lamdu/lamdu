@@ -138,7 +138,7 @@ addNewTag env tagRefReplace mkPickResult ctx =
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
 nameText :: Lens.Traversal' (Sugar.TagOption Name m a) Text
-nameText = Sugar.toInfo . Sugar.tagName . Name._Stored . Name.snDisplayText . Name.ttText
+nameText = Sugar.toInfo . Sugar.tagName . Name._NameTag . Name.tnDisplayText . Name.ttText
 
 {-# NOINLINE fuzzyMaker #-}
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)

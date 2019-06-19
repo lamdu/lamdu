@@ -278,7 +278,7 @@ instance NFData EntityId
 instance NFData ExprGui.Payload
 instance NFData Name
 instance NFData Name.Collision
-instance NFData Name.StoredName
+instance NFData Name.TagName
 instance NFData Name.TagText
 instance NFData LangId
 instance NFData LangNames

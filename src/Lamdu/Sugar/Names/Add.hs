@@ -112,7 +112,7 @@ data P1Out = P1Out
     deriving (Semigroup, Monoid) via Generically P1Out
 Lens.makeLenses ''P1Out
 
-data P1KindedName = P1StoredName Annotated.Name Text | P1AnonName UUID
+data P1KindedName = P1TagName Annotated.Name Text | P1AnonName UUID
 
 data P1Name = P1Name
     { p1KindedName :: P1KindedName
@@ -168,7 +168,7 @@ p1Name mDisambiguator nameType (P0Name txt internalName) =
                 case ctx of
                 Nothing -> error "Anon tag with no context"
                 Just uuid -> P1AnonName uuid
-            else P1StoredName aName txt
+            else P1TagName aName txt
         , p1LocalsBelow = innerOut ^. p1Locals
         , p1TextsBelow = innerOut ^. p1Texts
         }
@@ -258,7 +258,8 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
     , _p2Texts = MMap.keysSet texts
     , _p2TagSuffixes = toSuffixMap collisions
     , _p2TextsAbove =
-        globals ^.. Lens.itraversed . Lens.asIndex & mapMaybe lookupText & Set.fromList
+        globals ^.. Lens.itraversed . Lens.asIndex
+        & mapMaybe lookupText & Set.fromList
     , _p2TagsAbove = uncolliders globals
         -- ^ all globals are "above" everything, and locals add up as
         -- we descend
@@ -379,23 +380,22 @@ getTagText tag txt =
     env ^. p2TagTexts . Lens.at tag
     & fromMaybe (TagText displayText collision)
 
-storedName ::
+p2tagName ::
     MMap T.Tag Clash.Info -> Annotated.Name -> Text ->
     Pass2MakeNames i o Name
-storedName tagsBelow aName txt =
-    StoredName
+p2tagName tagsBelow aName txt =
+    TagName
     <$> getTagText tag txt
     <*> getCollision tagsBelow aName
-    <&> Stored
+    <&> NameTag
     where
         tag = aName ^. Annotated.tag
 
 p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
-p2nameConvertor nameType (P1Name (P1StoredName aName text) tagsBelow _) =
-    storedName tagsBelow aName text
-    <&>
+p2nameConvertor nameType (P1Name (P1TagName aName text) tagsBelow _) =
+    p2tagName tagsBelow aName text <&>
     case nameType of
-    Walk.TaggedNominal -> _Stored . snDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
+    Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
 p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
     case nameType of
@@ -425,8 +425,8 @@ p2cpsNameConvertor varInfo (P1Name kName tagsBelow textsBelow) =
                 && Set.notMember autoText (env0 ^. p2TextsAbove)
         (newNameForm, env1) <-
             case kName of
-            P1StoredName aName text ->
-                storedName tagsBelow aName text
+            P1TagName aName text ->
+                p2tagName tagsBelow aName text
                 <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
                 where
                     isClash = Clash.infoOf aName
