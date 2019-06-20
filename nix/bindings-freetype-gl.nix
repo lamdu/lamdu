@@ -7,8 +7,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "bindings-freetype-gl";
-    sha256 = "1h7j89wlgxv5wjkd1bjw0ygwa43nb7zba9g4lmnmqaax5vvwvw5c";
-    rev = "6efdced2d0867988a0a008145ae2c9a7bf69bb94";
+    sha256 = "0m4jw3d4i92r4fbmgjzv7ygp2jx80v2bf7sa80icya4fxskjlb5w";
+    rev = "abcb891cf2ed01edb2d02197ef2b354d6ff43db5";
     fetchSubmodules = true;
   };
   enableSeparateDataOutput = true;

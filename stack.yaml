@@ -6,7 +6,7 @@ extra-deps:
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
 - github: lamdu/bindings-freetype-gl
-  commit: 6efdced2d0867988a0a008145ae2c9a7bf69bb94
+  commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/syntax-tree
   commit: f30124163e1c65725bfbc95193cc793c5aff1179
 - github: lamdu/lamdu-calculus
