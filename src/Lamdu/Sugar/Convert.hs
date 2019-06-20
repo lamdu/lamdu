@@ -131,6 +131,7 @@ convertInferDefExpr env cp defType defExpr defI =
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
+                , _scAnnotationsMode = env ^. has
                 , scConvertSubexpression = ConvertExpr.convert
                 , _scLanguageIdentifier = env ^. has
                 , _scLanguageDir = env ^. has
@@ -138,7 +139,7 @@ convertInferDefExpr env cp defType defExpr defI =
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             <&> _DefinitionBodyExpression . deContent %~ markAnnotations (env ^. has)
-            >>= (_DefinitionBodyExpression . deContent . annotations) (convertPayload (env ^. has))
+            >>= (_DefinitionBodyExpression . deContent . annotations) convertPayload
             & ConvertM.run context
     where
         cachedInfer = Cache.infer (env ^. has)
@@ -212,6 +213,7 @@ convertRepl env cp =
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
+                , _scAnnotationsMode = env ^. has
                 , scConvertSubexpression = ConvertExpr.convert
                 , _scLanguageIdentifier = env ^. has
                 , _scLanguageDir = env ^. has
@@ -227,7 +229,7 @@ convertRepl env cp =
         expr <-
             convertBinder valInferred
             <&> markAnnotations (env ^. has)
-            >>= annotations (convertPayload (env ^. has))
+            >>= annotations convertPayload
             & ConvertM.run context
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId

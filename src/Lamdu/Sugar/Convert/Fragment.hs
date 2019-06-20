@@ -17,6 +17,7 @@ import           AST.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
+import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (State, runState, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
 import qualified Data.List.Class as ListClass
@@ -126,8 +127,9 @@ convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl
             options <-
                 argS
                 & annotations %~ (,) showAnn
-                & annotations (convertPayload Annotations.None)
+                & annotations convertPayload
                 >>= (mkOptions posInfo sugarContext argI ?? exprPl)
+                & Reader.local (ConvertM.scAnnotationsMode .~ Annotations.None)
             healMis <- healMismatch
             BodyFragment Fragment
                 { _fExpr =

@@ -337,8 +337,12 @@ sugar sugarContext holePl v =
             & transaction
         convertBinder val
             <&> annotations %~ (,) neverShowAnnotations
-            >>= annotations (convertPayload Annotations.None)
-            & ConvertM.run (sugarContext & ConvertM.scInferContext .~ inferCtx)
+            >>= annotations convertPayload
+            & ConvertM.run
+                (sugarContext
+                    & ConvertM.scInferContext .~ inferCtx
+                    & ConvertM.scAnnotationsMode .~ Annotations.None
+                )
     where
         scope = holePl ^. Input.inferResult . irScope
         makePayloads (term, inferCtx) =
@@ -493,8 +497,8 @@ mkResult preConversion sugarContext updateDeps holePl x =
         writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
             (holePl ^. Input.stored) x
         <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
-        <&> (convertBinder >=> annotations (convertPayload Annotations.None) . (annotations %~ (,) showAnn))
-        >>= ConvertM.run sugarContext
+        <&> (convertBinder >=> annotations convertPayload . (annotations %~ (,) showAnn))
+        >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
         HoleResult

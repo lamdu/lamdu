@@ -10,7 +10,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
-    , scScopeInfo, scDebugMonitors, scCacheFunctions
+    , scScopeInfo, scDebugMonitors, scCacheFunctions, scAnnotationsMode
     , scOutdatedDefinitions, scFrozenDeps
 
     , cachedFunc
@@ -30,6 +30,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps)
 import           Lamdu.Calc.Infer (InferState)
@@ -113,6 +114,7 @@ data Context m = Context
     , _scDebugMonitors :: Debug.Monitors
     , _scCacheFunctions :: Cache.Functions
     , _scConfig :: Config
+    , _scAnnotationsMode :: Annotations.Mode
     , scConvertSubexpression ::
         forall a. Monoid a => PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
     , _scLanguageIdentifier :: LangId

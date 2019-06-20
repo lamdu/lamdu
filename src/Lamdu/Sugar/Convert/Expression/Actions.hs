@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, TypeFamilies #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( subexprPayloads, addActionsWith, addActions, makeAnnotation, makeActions, convertPayload
+    ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
     , makeSetToLiteral
     ) where
 
@@ -300,32 +300,33 @@ makeTypeAnnotation payload =
 
 makeAnnotation ::
     Monad m =>
-    Annotations.Mode -> Ann.ShowAnnotation -> Input.Payload m a ->
+    Ann.ShowAnnotation -> Input.Payload m a ->
     ConvertM m (Annotation InternalName (T m))
-makeAnnotation Annotations.None showAnn pl
-    | showAnn ^. Ann.showExpanded = makeTypeAnnotation pl <&> AnnotationType
-    | otherwise = pure AnnotationNone
-makeAnnotation Annotations.Types showAnn pl
-    | showAnn ^. Ann.showInTypeMode = makeTypeAnnotation pl <&> AnnotationType
-    | otherwise = pure AnnotationNone
-makeAnnotation Annotations.Evaluation showAnn pl
-    | showAnn ^. Ann.showInEvalMode =
-        guard (showAnn ^. Ann.showExpanded)
-        & Lens._Just (const (makeTypeAnnotation pl))
-        <&>
-        ValAnnotation
-        ( pl ^. Input.evalResults <&> (^. Input.eResults)
-            & ConvertEval.results (EntityId.ofEvalOf (pl ^. Input.entityId))
-        )
-        <&> AnnotationVal
-    | otherwise = pure AnnotationNone
+makeAnnotation showAnn pl =
+    Lens.view ConvertM.scAnnotationsMode >>=
+    \case
+    Annotations.None
+        | showAnn ^. Ann.showExpanded -> makeTypeAnnotation pl <&> AnnotationType
+    Annotations.Types
+        | showAnn ^. Ann.showInTypeMode -> makeTypeAnnotation pl <&> AnnotationType
+    Annotations.Evaluation
+        | showAnn ^. Ann.showInEvalMode ->
+            guard (showAnn ^. Ann.showExpanded)
+            & Lens._Just (const (makeTypeAnnotation pl))
+            <&>
+            ValAnnotation
+            ( pl ^. Input.evalResults <&> (^. Input.eResults)
+                & ConvertEval.results (EntityId.ofEvalOf (pl ^. Input.entityId))
+            )
+            <&> AnnotationVal
+    _ -> pure AnnotationNone
 
 convertPayload ::
     Monad m =>
-    Annotations.Mode -> (Ann.ShowAnnotation, ConvertPayload m a) ->
+    (Ann.ShowAnnotation, ConvertPayload m a) ->
     ConvertM m (Payload InternalName (T m) (T m) a)
-convertPayload mode (showAnn, pl) =
-    makeAnnotation mode showAnn (pl ^. pInput)
+convertPayload (showAnn, pl) =
+    makeAnnotation showAnn (pl ^. pInput)
     <&>
     \x ->
     Payload

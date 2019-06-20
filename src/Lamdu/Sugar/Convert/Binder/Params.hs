@@ -24,6 +24,7 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -546,17 +547,23 @@ mkFuncParam ::
     EntityId -> Input.Payload m a -> info ->
     ConvertM m (FuncParam InternalName (T m) info)
 mkFuncParam entityId lamExprPl info =
-    convertType (EntityId.ofTypeOf entityId) typ
-    <&> \typS ->
+    (,)
+    <$> Lens.view ConvertM.scAnnotationsMode
+    <*> convertType (EntityId.ofTypeOf entityId) typ
+    <&> \(annMode, typS) ->
     FuncParam
     { _fpInfo = info
     , _fpAnnotation =
-        AnnotationVal ValAnnotation
-        { _annotationType = Just typS
-        , _annotationVal =
-            lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
-            & ConvertEval.param (EntityId.ofEvalOf entityId)
-        }
+        case annMode of
+        Annotations.None -> AnnotationNone
+        Annotations.Types -> AnnotationType typS
+        Annotations.Evaluation ->
+            AnnotationVal ValAnnotation
+            { _annotationType = Nothing
+            , _annotationVal =
+                lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
+                & ConvertEval.param (EntityId.ofEvalOf entityId)
+            }
     , _fpVarInfo = mkVarInfo typS
     }
     where
