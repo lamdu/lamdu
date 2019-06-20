@@ -1,11 +1,9 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
-
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
 import           AST (Tree, Pure, Children, Recursive)
-import           AST.Knot.Ann (Ann, ann, annotations, val)
+import           AST.Knot.Ann (Ann, ann, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
@@ -93,21 +91,11 @@ emptyScopeInfo recursiveRef =
     , _siRecursiveRef = recursiveRef
     }
 
-trimParamAnnotation :: Annotations.Mode -> Annotation name i -> Annotation name i
-trimParamAnnotation Annotations.None _ = AnnotationNone
-trimParamAnnotation Annotations.Evaluation (AnnotationVal x) =
-    x & annotationType .~ Nothing & AnnotationVal
-trimParamAnnotation Annotations.Evaluation _ = AnnotationNone
-trimParamAnnotation Annotations.Types (AnnotationVal x) =
-    maybe AnnotationNone AnnotationType (x ^. annotationType)
-trimParamAnnotation Annotations.Types x = x
-
 assertInferSuccess :: HasCallStack => Either (Tree Pure T.TypeError) a -> a
 assertInferSuccess =
     either (error . ("Type inference failed: " ++) . show . pPrint) id
 
 convertInferDefExpr ::
-    forall m env.
     ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
     , Has (CurAndPrev (EvalResults (ValI m))) env
@@ -152,10 +140,6 @@ convertInferDefExpr env cp defType defExpr defI =
             <&> _DefinitionBodyExpression . deContent %~ markAnnotations (env ^. has)
             >>= (_DefinitionBodyExpression . deContent . annotations) (convertPayload (env ^. has))
             & ConvertM.run context
-            <&> _DefinitionBodyExpression . deContent . val %~
-                SugarLens.onSubExprParams
-                (Proxy @(BinderParams InternalName (T m) (T m)))
-                (SugarLens.paramsAnnotations %~ trimParamAnnotation (env ^. has))
     where
         cachedInfer = Cache.infer (env ^. has)
         postProcess = PostProcess.def cachedInfer (env ^. has) defI
@@ -195,7 +179,6 @@ markAnnotations config
     | otherwise = markNodeAnnotations
 
 convertRepl ::
-    forall m env.
     ( HasCallStack, Monad m
     , Has LangId env
     , Has Dir.Layout env
@@ -246,10 +229,6 @@ convertRepl env cp =
             <&> markAnnotations (env ^. has)
             >>= annotations (convertPayload (env ^. has))
             & ConvertM.run context
-            <&> val %~
-                SugarLens.onSubExprParams
-                (Proxy @(BinderParams InternalName (T m) (T m)))
-                (SugarLens.paramsAnnotations %~ trimParamAnnotation (env ^. has))
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
         typS <- ConvertType.convertType (EntityId.ofTypeOf replEntityId) typ

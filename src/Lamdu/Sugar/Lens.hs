@@ -1,7 +1,6 @@
-{-# LANGUAGE TypeApplications, ScopedTypeVariables, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
-    , HasBinderParams(..)
     , childPayloads
     , bodyUnfinished
     , defSchemes
@@ -10,17 +9,14 @@ module Lamdu.Sugar.Lens
     , binderResultExpr
     , holeTransformExprs, holeOptionTransformExprs
     , annotationTypes
-    , onSubExprParams
-    , paramsAnnotations
     , getVarName
     ) where
 
 import           AST (Knot, Tree, Children(..), ChildrenWithConstraint)
 import qualified AST
-import           AST.Class.Recursive (Recursive(..), RecursiveConstraint)
+import           AST.Class.Recursive (Recursive(..))
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
-import           Data.Constraint
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -140,56 +136,6 @@ annotationTypes :: Lens.Traversal' (Annotation name i) (Tree (Ann EntityId) (Typ
 annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal
-
--- TODO: rename paramsAnnotations
-paramsAnnotations :: Lens.Traversal' (BinderParams name i o) (Annotation name i)
-paramsAnnotations f (NullParam x) = fpAnnotation f x <&> NullParam
-paramsAnnotations f (Params xs) = (traverse . fpAnnotation) f xs <&> Params
-
-class HasBinderParams p (expr :: Knot -> *) where
-    binderParams :: Lens.Setter' (expr f) p
-
-instance HasBinderParams (BinderParams name i o) (Assignment name i o) where
-    binderParams f (BodyPlain x) = (apBody . binderParams) f x <&> BodyPlain
-    binderParams f (BodyFunction x) = binderParams f x <&> BodyFunction
-instance Recursive (HasBinderParams (BinderParams name i o)) (Assignment name i o)
-
-instance HasBinderParams (BinderParams name i o) (Binder name i o) where
-    binderParams f (BinderExpr x) = binderParams f x <&> BinderExpr
-    binderParams _ x = pure x
-instance Recursive (HasBinderParams (BinderParams name i o)) (Binder name i o)
-
-instance HasBinderParams (BinderParams name i o) (Body name i o) where
-    binderParams f (BodyLam x) = (lamFunc . binderParams) f x <&> BodyLam
-    binderParams _ x = pure x
-instance Recursive (HasBinderParams (BinderParams name i o)) (Body name i o)
-
-instance HasBinderParams (BinderParams name i o) (Const a) where
-    binderParams _ = pure
-
-instance HasBinderParams (BinderParams name i o) (Else name i o) where
-    binderParams f (SimpleElse x) = binderParams f x <&> SimpleElse
-    binderParams _ x = pure x
-instance Recursive (HasBinderParams (BinderParams name i o)) (Else name i o)
-
-instance HasBinderParams (BinderParams name i o) (Function name i o) where
-    binderParams = fParams
-instance Recursive (HasBinderParams (BinderParams name i o)) (Function name i o)
-
-onSubExprParams ::
-    forall p expr k.
-    Recursive Children k =>
-    Recursive (HasBinderParams p) expr =>
-    Proxy p -> (p -> p) -> Tree expr k -> Tree expr k
-onSubExprParams p f x =
-    withDict (recursive :: Dict (RecursiveConstraint expr (HasBinderParams p))) $
-    withDict (recursive :: Dict (RecursiveConstraint k Children)) $
-    x
-    & binderParams %~ f
-    & AST.overChildren
-        (Proxy @(Recursive (HasBinderParams p)))
-        (AST.overChildren (Proxy @(Recursive Children))
-            (onSubExprParams p f))
 
 getVarName :: Lens.Traversal' (GetVar a o) a
 getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam
