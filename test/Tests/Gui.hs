@@ -68,7 +68,9 @@ replExpr = Sugar.waRepl . Sugar.replExpr . val . Sugar._BinderExpr
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
-makeGui :: String -> Env -> T ViewM (Responsive (T ViewM))
+makeGui ::
+    HasCallStack =>
+    String -> Env -> T ViewM (Responsive (T ViewM))
 makeGui afterDoc env =
     do
         workArea <- convertWorkArea env
@@ -89,13 +91,16 @@ makeGui afterDoc env =
             then pure gui
             else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
-focusedWidget :: HasCallStack => Responsive f -> Either String (Widget.Focused (f GuiState.Update))
+focusedWidget ::
+    HasCallStack =>
+    Responsive f -> Either String (Widget.Focused (f GuiState.Update))
 focusedWidget gui =
     widget <$ verifyLayers (widget ^. Widget.fLayers)
     where
         widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
 makeFocusedWidget ::
+    HasCallStack =>
     String -> Env -> T ViewM (Widget.Focused (T ViewM GuiState.Update))
 makeFocusedWidget afterDoc env =
     makeGui afterDoc env >>= either fail pure . focusedWidget
@@ -222,8 +227,8 @@ workAreaEq x y =
                 (Sugar.Payload Name Unit Unit a)
 
 testKeyboardDirAndBack ::
-    HasCallStack => Env.Env -> VirtualCursor ->
-    MetaKey -> MetaKey -> T ViewM ()
+    HasCallStack =>
+    Env.Env -> VirtualCursor -> MetaKey -> MetaKey -> T ViewM ()
 testKeyboardDirAndBack posEnv posVirt way back =
     mApplyEvent posEnv posVirt (simpleKeyEvent way)
     >>=
@@ -256,7 +261,9 @@ rectWithin :: Rect -> Rect -> Bool
 rectWithin (Rect (Vector2 x0 y0) (Vector2 w0 h0)) (Rect (Vector2 x1 y1) (Vector2 w1 h1)) =
     x0 >= x1 && y0 >= y1 && x0 + w0 <= x1 + w1 && y0 + h0 <= h1 + h1
 
-testTabNavigation :: HasCallStack => Env.Env -> VirtualCursor -> T ViewM ()
+testTabNavigation ::
+    HasCallStack =>
+    Env.Env -> VirtualCursor -> T ViewM ()
 testTabNavigation env virtCursor =
     do
         w0 <- makeFocusedWidget "mApplyEvent" env
@@ -313,7 +320,9 @@ testConsistentKeyboardNavigation posEnv posVirt =
             Widget.toAnimId wid & Lens.has (Lens.ix 1 . Lens.only "literal edit")
         k = MetaKey noMods
 
-testActions :: Env.Env -> VirtualCursor -> T ViewM ()
+testActions ::
+    HasCallStack =>
+    Env.Env -> VirtualCursor -> T ViewM ()
 testActions env virtCursor =
     do
         w <- makeFocusedWidget "" env
@@ -331,6 +340,7 @@ testActions env virtCursor =
             & Transaction.fork & void
 
 testProgramGuiAtPos ::
+    HasCallStack =>
     Env.Env -> Widget.EnterResult (T ViewM GuiState.Update) -> T ViewM ()
 testProgramGuiAtPos baseEnv enter =
     do
@@ -344,7 +354,9 @@ testProgramGuiAtPos baseEnv enter =
 nubOn :: Ord k => (a -> k) -> [a] -> [a]
 nubOn f xs = (xs <&> (\x -> (f x, x)) & Map.fromList) ^.. Lens.folded
 
-programTest :: HasCallStack => Env.Env -> FilePath -> IO ()
+programTest ::
+    HasCallStack =>
+    Env.Env -> FilePath -> IO ()
 programTest baseEnv filename =
     testProgram filename $
     do
