@@ -4,6 +4,7 @@ module Lamdu.GUI.NameView
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -58,9 +59,11 @@ make name =
         mTextSuffixLabel <-
             makeCollisionSuffixLabel NameTheme.textCollisionSuffixBGColor textCollision
             <&> Lens._Just %~ Aligned 0.5
+            & Reader.local (Element.animIdPrefix <>~ ["text-suffix"])
         mTagSuffixLabel <-
             makeCollisionSuffixLabel NameTheme.tagCollisionSuffixBGColor tagCollision
             <&> Lens._Just %~ Aligned 0.5
+            & Reader.local (Element.animIdPrefix <>~ ["tag-suffix"])
         animId <- Element.subAnimId ?? ["name"]
         (|||) <- Glue.mkGlue ?? Glue.Horizontal
         TextView.make ?? visibleName ?? animId
