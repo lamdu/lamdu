@@ -83,11 +83,15 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setTo = protectedSetToVal (exprPl ^. Input.stored)
+        simplify <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithNominalArgument)
         let appliedCaseB =
                 caseB
                 & cKind .~ CaseWithArg
                     CaseArg
-                    { _caVal = simplifyCaseArg argS
+                    { _caVal =
+                        if simplify
+                        then simplifyCaseArg argS
+                        else argS
                     , _caToLambdaCase =
                         setTo (funcS ^. ann . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI

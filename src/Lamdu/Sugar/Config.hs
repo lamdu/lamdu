@@ -11,6 +11,9 @@ data Sugars a = Sugars
     { -- `case X of ...`, rather than (`(\case ...) X`).
       -- Disabling this also implies disabling if-expressions.
       _caseWithArgument :: a
+    , -- `case X of ...` where X is a of nominal type (hides the FromNom)
+      -- Disabling this also implies disabling if-expressions.
+      _caseWithNominalArgument :: a
     , _fragment :: a
     , _labeledApply :: a
     , _letExpression :: a

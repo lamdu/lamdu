@@ -17,6 +17,7 @@
         "showAllAnnotations": false,
         "sugarsEnabled": {
             "caseWithArgument": true,
+            "caseWithNominalArgument": true,
             "fragment": true,
             "labeledApply": true,
             "letExpression": true
