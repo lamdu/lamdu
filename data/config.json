@@ -18,7 +18,8 @@
         "sugarsEnabled": {
             "caseWithArgument": true,
             "fragment": true,
-            "labeledApply": true
+            "labeledApply": true,
+            "letExpression": true
         }
     },
     "zoom": {

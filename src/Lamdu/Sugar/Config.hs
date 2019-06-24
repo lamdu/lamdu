@@ -13,6 +13,7 @@ data Sugars a = Sugars
       _caseWithArgument :: a
     , _fragment :: a
     , _labeledApply :: a
+    , _letExpression :: a
     } deriving stock (Eq, Show, Functor, Generic, Generic1)
     deriving Applicative via Generically1 Sugars
 JsonTH.derivePrefixed "_" ''Sugars

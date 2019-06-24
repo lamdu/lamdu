@@ -20,6 +20,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
 import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams, cpAddFirstParam, mkVarInfo)
@@ -139,22 +140,29 @@ convertBinder ::
     Val (Input.Payload m a) ->
     ConvertM m (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
 convertBinder expr@(Ann pl body) =
-    case Redex.check body of
-    Nothing ->
-        do
-            convertSub <- Lens.view (Lens.to ConvertM.scConvertSubexpression)
-            convertSub ConvertM.BinderPos expr
-        & localNewExtractDestPos pl
-        <&> \exprS ->
-        exprS
-        & val %~ BinderExpr
-        & ann . pInput .~ pl -- TODO: <-- why is this necessary?
-        & ann . pInput . Input.userData .~
-            mconcat
-            (subexprPayloads
-             (body ^.. monoChildren)
-             (exprS ^.. val . SugarLens.childPayloads))
-    Just redex -> convertLet pl redex
+    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
+    \case
+    False -> convertExpr
+    True ->
+        case Redex.check body of
+        Nothing -> convertExpr
+        Just redex -> convertLet pl redex
+    where
+        convertExpr =
+            do
+                convertSub <- Lens.view (Lens.to ConvertM.scConvertSubexpression)
+                convertSub ConvertM.BinderPos expr
+            & localNewExtractDestPos pl
+            <&> \exprS ->
+            exprS
+            & val %~ BinderExpr
+            & ann . pInput .~ pl -- TODO: <-- why is this necessary?
+            & ann . pInput . Input.userData .~
+                mconcat
+                (subexprPayloads
+                (body ^.. monoChildren)
+                (exprS ^.. val . SugarLens.childPayloads))
+
 
 localNewExtractDestPos :: Input.Payload m a -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
