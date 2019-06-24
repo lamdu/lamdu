@@ -14,7 +14,10 @@
         }
     },
     "sugar": {
-        "showAllAnnotations": false
+        "showAllAnnotations": false,
+        "sugarsEnabled": {
+            "fragment": true
+        }
     },
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],

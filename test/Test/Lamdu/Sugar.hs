@@ -150,4 +150,5 @@ sugarConfig :: Config
 sugarConfig =
     Config
     { _showAllAnnotations = False
+    , _sugarsEnabled = pure True
     }

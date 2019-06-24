@@ -116,6 +116,7 @@ convertAppliedHole ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl =
     do
+        Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
         guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
