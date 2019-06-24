@@ -63,22 +63,27 @@ makeInline stored redex useId
 
 convertLet ::
     (Monad m, Monoid a) =>
-    T m ExtractDestination ->
     Input.Payload m a ->
     Redex (Input.Payload m a) ->
     ConvertM m
     (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
-convertLet float pl redex =
+convertLet pl redex =
     do
+        float <- makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
         tag <- ConvertTag.taggedEntity param
-        (_pMode, value) <-
-            convertAssignment binderKind param (redex ^. Redex.arg)
-            <&> _2 . ann . pInput . Input.entityId .~
-                EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
-        letBody <-
-            convertBinder bod
-            & ConvertM.local (scScopeInfo . siLetItems <>~
-                Map.singleton param (makeInline stored redex))
+        (value, letBody, actions) <-
+            do
+                (_pMode, value) <-
+                    convertAssignment binderKind param (redex ^. Redex.arg)
+                    <&> _2 . ann . pInput . Input.entityId .~
+                        EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
+                letBody <-
+                    convertBinder bod
+                    & ConvertM.local (scScopeInfo . siLetItems <>~
+                        Map.singleton param (makeInline stored redex))
+                actions <- makeActions pl
+                pure (value, letBody, actions)
+            & localNewExtractDestPos pl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
                 nodeActions
@@ -95,7 +100,6 @@ convertLet float pl redex =
                     redex ^. Redex.lam . V.lamOut . ann . Input.stored
                         & replaceWith stored & void
                 <* postProcess
-        actions <- makeActions pl
         typS <-
             convertType (EntityId.ofTypeOf (argAnn ^. Input.entityId))
             (argAnn ^. Input.inferredType)
@@ -150,11 +154,7 @@ convertBinder expr@(Ann pl body) =
             (subexprPayloads
              (body ^.. monoChildren)
              (exprS ^.. val . SugarLens.childPayloads))
-    Just redex ->
-        do
-            float <-
-                makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
-            convertLet float pl redex & localNewExtractDestPos pl
+    Just redex -> convertLet pl redex
 
 localNewExtractDestPos :: Input.Payload m a -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
