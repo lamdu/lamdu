@@ -14,7 +14,6 @@ import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Unify (unify, applyBindings, newTerm)
 import           AST.Unify.Binding (UVar)
-import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
@@ -115,8 +114,9 @@ convertAppliedHole ::
     ExpressionU m a ->
     Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl
-    | Lens.has ExprLens.valHole funcI =
+convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl =
+    do
+        guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
                 checkTypeMatch (argI ^. ann . Input.inferResult . irType)
@@ -149,9 +149,8 @@ convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl
                 , _fOptions = options
                 } & pure
             >>= addActions [funcI, argI] exprPl
-        & lift
-        <&> ann . pActions . detach .~ FragmentAlready storedEntityId
-    | otherwise = empty
+            & lift
+    <&> ann . pActions . detach .~ FragmentAlready storedEntityId
     where
         argIRef = argI ^. ann . Input.stored . Property.pVal
         stored = exprPl ^. Input.stored
