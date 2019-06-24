@@ -14,12 +14,14 @@ import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Unify (unify, applyBindings, newTerm)
 import           AST.Unify.Binding (UVar)
+import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (State, runState, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
+import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
@@ -112,7 +114,7 @@ convertAppliedHole ::
     Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
     ExpressionU m a ->
     Input.Payload m a ->
-    Maybe (ConvertM m (ExpressionU m a))
+    MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl
     | Lens.has ExprLens.valHole funcI =
         do
@@ -147,9 +149,9 @@ convertAppliedHole posInfo (V.Apply funcI argI) argS exprPl
                 , _fOptions = options
                 } & pure
             >>= addActions [funcI, argI] exprPl
+        & lift
         <&> ann . pActions . detach .~ FragmentAlready storedEntityId
-        & Just
-    | otherwise = Nothing
+    | otherwise = empty
     where
         argIRef = argI ^. ann . Input.stored . Property.pVal
         stored = exprPl ^. Input.stored

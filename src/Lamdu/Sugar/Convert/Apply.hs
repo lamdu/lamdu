@@ -9,7 +9,7 @@ import           AST.Term.Row (freExtends, freRest)
 import           AST.Term.Scheme (sTyp)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
-import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft, throwE)
+import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
@@ -46,7 +46,7 @@ convert posInfo app@(V.Apply funcI argI) exprPl =
         (funcS, argS) <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift
-                convertAppliedHole posInfo app argS exprPl & traverse_ ((>>= throwE) . lift)
+                convertAppliedHole posInfo app argS exprPl & justToLeft
                 convertAppliedFromNom app argS exprPl & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
