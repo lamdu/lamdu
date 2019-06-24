@@ -15,6 +15,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Config as Config
 import qualified Lamdu.Sugar.Convert.Composite as Composite
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
@@ -77,6 +78,7 @@ convertAppliedCase ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
     do
+        Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithArgument) >>= guard
         caseB <- funcS ^? val . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
