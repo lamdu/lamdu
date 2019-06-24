@@ -20,6 +20,7 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
@@ -94,6 +95,7 @@ convertLabeled ::
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled subexprs funcS argS exprPl =
     do
+        Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
         -- Make sure it's a not a param, get the var
         sBinderVar <- funcS ^? val . _BodyGetVar . _GetBinder & maybeToMPlus
         -- Make sure it is not a "let" but a "def" (recursive or external)

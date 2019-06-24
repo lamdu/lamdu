@@ -17,7 +17,8 @@
         "showAllAnnotations": false,
         "sugarsEnabled": {
             "caseWithArgument": true,
-            "fragment": true
+            "fragment": true,
+            "labeledApply": true
         }
     },
     "zoom": {

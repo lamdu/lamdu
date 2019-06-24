@@ -8,10 +8,11 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import           Lamdu.Prelude
 
 data Sugars a = Sugars
-    { _fragment :: a
-    , -- `case X of ...`, rather than (`(\case ...) X`).
+    { -- `case X of ...`, rather than (`(\case ...) X`).
       -- Disabling this also implies disabling if-expressions.
       _caseWithArgument :: a
+    , _fragment :: a
+    , _labeledApply :: a
     } deriving stock (Eq, Show, Functor, Generic, Generic1)
     deriving Applicative via Generically1 Sugars
 JsonTH.derivePrefixed "_" ''Sugars
