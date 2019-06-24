@@ -14,6 +14,9 @@ data Sugars a = Sugars
     , -- `case X of ...` where X is a of nominal type (hides the FromNom)
       -- Disabling this also implies disabling if-expressions.
       _caseWithNominalArgument :: a
+    , -- Record/case with multiple fields/alternatives, rather than a chain of rec-extends.
+      -- Disabling this also imples disabling if-expressions and labeled-applies.
+      _composite :: a
     , _fragment :: a
     , _labeledApply :: a
     , _letExpression :: a

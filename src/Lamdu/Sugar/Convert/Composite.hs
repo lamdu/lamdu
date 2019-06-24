@@ -15,6 +15,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValBody, ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -196,21 +197,27 @@ convert ::
     ExtendVal m (Input.Payload m a) ->
     ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
-    case restS ^? val . prism of
-    Just r ->
-        convertExtend cons op valS exprPl extendV r
-        <&> (prism #)
-        -- Closed sugar Composites use their tail as an entity id,
-        -- unlike other sugar constructs.  All the extend entity ids
-        -- are "hidden", the vals are directly sugared separately, so
-        -- using addActions to add the hidden payloads is complex. No
-        -- subexprs given will add no hidden payloads. Then we add the
-        -- extend only to pUserData as the hidden payload
-        >>= addActions [] exprPl
-        <&> ann . pInput . Input.entityId .~ restS ^. ann . pInput . Input.entityId
-        <&> ann . pInput . Input.userData <>~
-            (exprPl ^. Input.userData <> restS ^. ann . pInput . Input.userData)
-    Nothing ->
-        convertOneItemOpenComposite empty cons op valS restS exprPl extendV
-        <&> (prism #)
-        >>= addActions [] exprPl
+    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
+    \case
+    False -> convertOneItem
+    True ->
+        case restS ^? val . prism of
+        Nothing -> convertOneItem
+        Just r ->
+            convertExtend cons op valS exprPl extendV r
+            <&> (prism #)
+            -- Closed sugar Composites use their tail as an entity id,
+            -- unlike other sugar constructs.  All the extend entity ids
+            -- are "hidden", the vals are directly sugared separately, so
+            -- using addActions to add the hidden payloads is complex. No
+            -- subexprs given will add no hidden payloads. Then we add the
+            -- extend only to pUserData as the hidden payload
+            >>= addActions [] exprPl
+            <&> ann . pInput . Input.entityId .~ restS ^. ann . pInput . Input.entityId
+            <&> ann . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> restS ^. ann . pInput . Input.userData)
+    where
+        convertOneItem =
+            convertOneItemOpenComposite empty cons op valS restS exprPl extendV
+            <&> (prism #)
+            >>= addActions [] exprPl

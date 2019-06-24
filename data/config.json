@@ -18,6 +18,7 @@
         "sugarsEnabled": {
             "caseWithArgument": true,
             "caseWithNominalArgument": true,
+            "composite": true,
             "fragment": true,
             "labeledApply": true,
             "letExpression": true
