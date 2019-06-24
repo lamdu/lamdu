@@ -21,7 +21,8 @@
             "composite": true,
             "fragment": true,
             "labeledApply": true,
-            "letExpression": true
+            "letExpression": true,
+            "parametersRecord": true
         }
     },
     "zoom": {

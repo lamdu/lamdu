@@ -35,6 +35,7 @@ import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValI, ValP)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -669,9 +670,11 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
         tagsInOuterScope <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
+        sugarParamsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
         case lambdaPl ^. Input.inferredType . _Pure of
             T.TFun (FuncType (MkPure (T.TRecord composite)) _)
-                | FlatRowExtends fieldsMap (MkPure T.REmpty) <- composite ^. T.flatRow
+                | sugarParamsRecord
+                , FlatRowExtends fieldsMap (MkPure T.REmpty) <- composite ^. T.flatRow
                 , let fields = Map.toList fieldsMap
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
