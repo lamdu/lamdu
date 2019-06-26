@@ -29,18 +29,16 @@ imports dirName x =
     x ^.. key importsKey . values . _String
     <&> Text.unpack
     <&> addDir
-    & traverse loadRec
+    & traverse load
     <&> foldl override (x & _Object . Lens.at importsKey .~ Nothing)
     where
         addDir path
             | isRelative path = dirName </> path
             | otherwise = path
 
-loadRec :: FromJSON a => FilePath -> WriterT [FilePath] IO a
-loadRec path = Writer.tell [path] *> load path
-
 load :: FromJSON a => FilePath -> WriterT [FilePath] IO a
 load path =
+    Writer.tell [path] *>
     liftIO (LBS.readFile path)
     <&> eitherDecode'
     >>= either (fail . mappend msg) (imports (takeDirectory path))
