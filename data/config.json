@@ -16,6 +16,7 @@
     "sugar": {
         "showAllAnnotations": false,
         "sugarsEnabled": {
+            "assignmentParameters": true,
             "caseWithArgument": true,
             "caseWithNominalArgument": true,
             "composite": true,

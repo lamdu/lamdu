@@ -357,12 +357,22 @@ convertAssignment ::
     , Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
     )
 convertAssignment binderKind defVar expr =
-    do
-        (mPresentationModeProp, convParams, funcBody) <-
-            convertParams binderKind defVar expr
-        makeAssignment (Anchors.assocScopeRef defVar) convParams
-            funcBody (expr ^. ann)
-            <&> (,) mPresentationModeProp
+    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
+    >>=
+    \case
+    False ->
+        convertBinder expr
+        <&> val %~
+            BodyPlain .
+            AssignPlain (AddInitialParam (error "TODO: add param when assignment parameters not supported"))
+        <&> (,) Nothing
+    True ->
+        do
+            (mPresentationModeProp, convParams, funcBody) <-
+                convertParams binderKind defVar expr
+            makeAssignment (Anchors.assocScopeRef defVar) convParams
+                funcBody (expr ^. ann)
+                <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
