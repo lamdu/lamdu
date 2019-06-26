@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Case
     ) where
 
 import           AST (Tree)
-import           AST.Knot.Ann (Ann, ann, val)
+import           AST.Knot.Ann (Ann(..), ann, val)
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -108,5 +108,6 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
     case argS ^. val of
-    BodyFromNom nom | Lens.nullOf (nVal . val . SugarLens.bodyUnfinished) nom -> nom ^. nVal
+    BodySimpleApply (Apply (Ann _ BodyFromNom{}) x)
+        | Lens.nullOf (val . SugarLens.bodyUnfinished) x -> x
     _ -> argS

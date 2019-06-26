@@ -77,4 +77,4 @@ convert posInfo v =
       V.BLeaf V.LHole -> ConvertHole.convert posInfo
       V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
       V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
-      V.BLeaf V.LFromNom{} -> error "TODO: support un-applied FromNom"
+      V.BLeaf (V.LFromNom x) -> ConvertNominal.convertFromNom x

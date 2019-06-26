@@ -29,7 +29,6 @@ data CodeUI a = CodeUI
     , _pane :: a
     , _nominal :: a
     , _deleteToNominal :: a
-    , _deleteFromNominal :: a
     , _tag :: a
     , _record :: a
     , _inject :: a

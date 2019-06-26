@@ -51,6 +51,7 @@ import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Simple
 import           Lamdu.Sugar.Types.Tag
+import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
@@ -162,7 +163,7 @@ data Body name i o f
     | BodyInject (Inject name i o f)
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal name (Tie f (Binder name i o)))
-    | BodyFromNom (Nominal name (Tie f (Body name i o)))
+    | BodyFromNom (TId name)
     | BodyFragment (Fragment name i o f)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic

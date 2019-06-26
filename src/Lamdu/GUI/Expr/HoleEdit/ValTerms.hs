@@ -95,7 +95,7 @@ ofBody env =
     BodyToNom (Nominal tid b) ->
         ofName (tid ^. tidName)
         ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to (ofBody env)
-    BodyFromNom (Nominal tid _) ->
+    BodyFromNom tid ->
         ofName (tid ^. tidName) <>
         -- The hole's "extra" apply-form results will be an
         -- IfElse, but we give val terms only to the base expr

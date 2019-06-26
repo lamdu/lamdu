@@ -440,7 +440,7 @@ toBody =
     BodySimpleApply  x -> x & applyChildren toExpression <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
-    BodyFromNom      x -> x & traverse toExpression >>= nTId toTId <&> BodyFromNom
+    BodyFromNom      x -> x & toTId <&> BodyFromNom
     BodyToNom        x -> x & traverse (toNode toBinder) >>= nTId toTId <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure

@@ -88,7 +88,6 @@
             "pane": "Pane",
             "nominal": "Nominal",
             "deleteToNominal": "Delete ToNominal",
-            "deleteFromNominal": "Delete FromNominal",
             "tag": "Tag",
             "record": "Record",
             "inject": "Inject",

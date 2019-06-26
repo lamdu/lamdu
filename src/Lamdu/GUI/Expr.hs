@@ -101,8 +101,8 @@ makeEditor body pl =
             Sugar.BodyGetField     x -> GetFieldEdit.make     x pl <&> d
             Sugar.BodyInject       x -> InjectEdit.make       x pl
             Sugar.BodyGetVar       x -> GetVarEdit.make       x pl <&> d
-            Sugar.BodyToNom        x -> NominalEdit.makeToNom     x pl
-            Sugar.BodyFromNom      x -> NominalEdit.makeFromNom   x pl <&> d
+            Sugar.BodyToNom        x -> NominalEdit.makeToNom x pl
+            Sugar.BodyFromNom      x -> NominalEdit.makeFromNom x pl
             Sugar.BodyFragment     x -> FragmentEdit.make     x pl
             & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where

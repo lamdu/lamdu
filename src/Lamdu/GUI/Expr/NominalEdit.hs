@@ -7,6 +7,7 @@ import           AST (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
+import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -14,6 +15,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -37,12 +39,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-mReplaceParent ::
-    Lens.Traversal'
-    (Sugar.Expression name i o (Sugar.Payload name i o a))
-    (o Sugar.EntityId)
-mReplaceParent = ann . Sugar.plActions . Sugar.mReplaceParent . Lens._Just
-
 makeToNom ::
     ( Monad i, Monad o, Grid.HasTexts env
     , Has (Texts.Navigation Text) env
@@ -57,14 +53,35 @@ makeToNom ::
             (Sugar.Binder Name i o)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
-makeToNom nom pl =
-    nom <&> GuiM.makeBinder
-    & mkNomGui id Texts.deleteToNominal Texts.toNom mDel pl
+makeToNom (Sugar.Nominal tid binder) pl =
+    do
+        env <- Lens.view id
+        let mkEventMap action =
+                action <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor (Config.delKeys env)
+                (E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . Texts.nominal
+                    , has . Texts.deleteToNominal
+                    ])
+        let eventMap =
+                binder ^.
+                ann . Sugar.plActions . Sugar.mReplaceParent .
+                Lens._Just . Lens.to mkEventMap
+        stdWrapParentExpr pl
+            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+                    <*>
+                    sequence
+                    [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
+                        <*> mkNomLabel Texts.toNom tid
+                        <&> Responsive.fromWithTextPos
+                        <&> Widget.weakerEvents eventMap
+                    , GuiM.makeBinder binder
+                    ]
+                )
     where
-        mDel =
-            nom ^. Sugar.nVal . ann . Sugar.plActions .
-            Sugar.mReplaceParent
-
+        myId = WidgetIds.fromExprPayload pl
+        nameId = Widget.joinId myId ["name"]
 
 makeFromNom ::
     ( Monad i, Monad o, Grid.HasTexts env
@@ -74,65 +91,21 @@ makeFromNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.Nominal Name (ExprGui.SugarExpr i o) ->
+    Sugar.TId Name ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeFromNom nom pl =
-    nom <&> GuiM.makeSubexpression
-    & mkNomGui reverse Texts.deleteFromNominal Texts.fromNom mDel pl
-    where
-        mDel = nom ^? Sugar.nVal . mReplaceParent
-
+    stdWrapParentExpr pl
+    <*> (mkNomLabel Texts.fromNom nom <&> Responsive.fromTextView)
 
 mkNomLabel ::
-    (Monad i, Monad o, Has (Texts.Code Text) env, Has (Texts.Name Text) env) =>
+    (Monad i, Has (Texts.Code Text) env, Has (Texts.Name Text) env) =>
     OneOf Texts.Code ->
     Sugar.TId Name ->
-    Widget.Id ->
-    GuiM env i o (Responsive o)
-mkNomLabel textLens tid myId =
+    GuiM env i o (WithTextPos View)
+mkNomLabel textLens tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
-        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> grammar (label textLens)
+        grammar (label textLens)
             /|/ NameView.make (tid ^. Sugar.tidName)
-            <&> Responsive.fromWithTextPos
             & Reader.local (TextView.color .~ nomColor)
-
-mkNomGui ::
-    ( Monad i, Monad o, Grid.HasTexts env
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Definitions Text) env
-    ) =>
-    ([Responsive o] -> [Responsive o]) ->
-    OneOf Texts.CodeUI -> OneOf Texts.Code -> Maybe (o Sugar.EntityId) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
-    Sugar.Nominal Name (GuiM env i o (Responsive o)) ->
-    GuiM env i o (Responsive o)
-mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
-    do
-        env <- Lens.view id
-        let mkEventMap action =
-                action <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys env)
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . Texts.nominal
-                    , has . deleteNomText
-                    ])
-        let eventMap = mDel ^. Lens._Just . Lens.to mkEventMap
-        stdWrapParentExpr pl
-            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-                    <*>
-                    ( sequence
-                    [ mkNomLabel textLens tid nameId <&> Widget.weakerEvents eventMap
-                    , val
-                    ] <&> ordering
-                    )
-                )
-    where
-        myId = WidgetIds.fromExprPayload pl
-        nameId = Widget.joinId myId ["name"]
