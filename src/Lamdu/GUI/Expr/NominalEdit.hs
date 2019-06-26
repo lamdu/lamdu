@@ -83,6 +83,22 @@ makeFromNom nom pl =
     where
         mDel = nom ^? Sugar.nVal . mReplaceParent
 
+
+mkNomLabel ::
+    (Monad i, Monad o, Has (Texts.Code Text) env, Has (Texts.Name Text) env) =>
+    OneOf Texts.Code ->
+    Sugar.TId Name ->
+    Widget.Id ->
+    GuiM env i o (Responsive o)
+mkNomLabel textLens tid myId =
+    do
+        nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
+        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            <*> grammar (label textLens)
+            /|/ NameView.make (tid ^. Sugar.tidName)
+            <&> Responsive.fromWithTextPos
+            & Reader.local (TextView.color .~ nomColor)
+
 mkNomGui ::
     ( Monad i, Monad o, Grid.HasTexts env
     , Has (Texts.Navigation Text) env
@@ -98,7 +114,6 @@ mkNomGui ::
     GuiM env i o (Responsive o)
 mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
     do
-        nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
         env <- Lens.view id
         let mkEventMap action =
                 action <&> WidgetIds.fromEntityId
@@ -113,12 +128,7 @@ mkNomGui ordering deleteNomText textLens mDel pl (Sugar.Nominal tid val) =
             <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*>
                     ( sequence
-                    [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
-                        <*> grammar (label textLens)
-                            /|/ NameView.make (tid ^. Sugar.tidName)
-                        <&> Responsive.fromWithTextPos
-                        & Reader.local (TextView.color .~ nomColor)
-                        <&> Widget.weakerEvents eventMap
+                    [ mkNomLabel textLens tid nameId <&> Widget.weakerEvents eventMap
                     , val
                     ] <&> ordering
                     )
