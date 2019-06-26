@@ -367,13 +367,18 @@ programTest baseEnv filename =
                 ^. Align.tValue . Widget.wSize
         when (size ^. _1 < narrowSize ^. _1) (fail "wide size is narrower than narrow!")
         w <- focusedWidget baseGui & either fail pure
-        let enterPoint =
-                w ^. Widget.fMEnterPoint
-                & fromMaybe (error "unfocused widget from focusedWidget")
-        Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
-            <&> enterPoint
-            & nubOn (^. Widget.enterResultRect)
-            & traverse_ (testProgramGuiAtPos baseEnv)
+        case w ^. Widget.fMEnterPoint of
+            Nothing ->
+                do
+                    testConsistentKeyboardNavigation baseEnv virtCursor
+                    testActions baseEnv virtCursor
+                where
+                    virtCursor = VirtualCursor (w ^?! Widget.fFocalAreas . Lens.ix 0)
+            Just enterPoint ->
+                Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
+                <&> enterPoint
+                & nubOn (^. Widget.enterResultRect)
+                & traverse_ (testProgramGuiAtPos baseEnv)
 
 testPrograms :: Test
 testPrograms =
