@@ -96,7 +96,8 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
                         setTo (funcS ^. ann . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     }
-        convertIfElse setTo appliedCaseB
+        ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
+        (guard ifSugar *> convertIfElse setTo appliedCaseB)
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift

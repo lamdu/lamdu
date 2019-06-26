@@ -20,6 +20,7 @@
             "caseWithNominalArgument": true,
             "composite": true,
             "fragment": true,
+            "ifExpression": true,
             "labeledApply": true,
             "letExpression": true,
             "nullaryParameter": true,

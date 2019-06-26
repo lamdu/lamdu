@@ -18,6 +18,7 @@ data Sugars a = Sugars
       -- Disabling this also imples disabling if-expressions and labeled-applies.
       _composite :: a
     , _fragment :: a
+    , _ifExpression :: a
     , _labeledApply :: a
     , _letExpression :: a
     , _nullaryParameter :: a
