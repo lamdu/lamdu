@@ -298,7 +298,6 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
     P2Env
     { _p2TypeVars =
         numberCycle ["a", "b", "c"]
-        & filter (not . (`Lens.has` texts) . Lens.ix)
         & zip (tvs ^.. Lens.folded)
         & Map.fromList
     , _p2TagTexts = tagTexts
