@@ -1,6 +1,6 @@
 module Lamdu.GUI.Expr.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
-    , makeRelayedVars
+    , makePunnedVars
     , Role(..)
     ) where
 
@@ -364,7 +364,7 @@ make ::
 make getVar pl =
     stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)
 
-makeRelayedVars ::
+makePunnedVars ::
     ( Monad i, Monad o
     , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
@@ -373,8 +373,8 @@ makeRelayedVars ::
     [Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
         (Const (Sugar.GetVar Name o))] ->
     GuiM env i o (Responsive o)
-makeRelayedVars args =
+makePunnedVars args =
     do
         argEdits <- traverse (\(Ann a v) -> make (v ^. Lens._Wrapped) a) args
-        collapsed <- grammar (label Texts.relay) <&> Responsive.fromTextView
+        collapsed <- grammar (label Texts.punnedFields) <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits

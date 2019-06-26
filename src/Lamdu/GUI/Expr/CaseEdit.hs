@@ -82,7 +82,7 @@ make ::
         (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
-make (Sugar.Case mArg (Sugar.Composite alts relayed caseTail addAlt)) pl =
+make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
     do
         caseLabel <-
             (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
@@ -113,7 +113,7 @@ make (Sugar.Case mArg (Sugar.Composite alts relayed caseTail addAlt)) pl =
                         ?? [caseLabel, argEdit, ofLabel]
                         <&> (,) mTag
         altsGui <-
-            makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts relayed addAlt altsId
+            makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts punned addAlt altsId
             >>= case caseTail of
             Sugar.ClosedComposite actions ->
                 pure . Widget.weakerEvents (closedCaseEventMap env actions)
@@ -184,17 +184,17 @@ makeAltsWidget ::
     Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)
-makeAltsWidget mActiveTag alts relayed addAlt altsId =
+makeAltsWidget mActiveTag alts punned addAlt altsId =
     do
-        relayedWidgets <-
-            case relayed of
+        punnedWidgets <-
+            case punned of
             [] -> pure []
             _ ->
-                GetVarEdit.makeRelayedVars relayed
+                GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         existingAltWidgets <-
             traverse (makeAltRow mActiveTag) alts
-            <&> (++ relayedWidgets)
+            <&> (++ punnedWidgets)
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId
             <&> guard

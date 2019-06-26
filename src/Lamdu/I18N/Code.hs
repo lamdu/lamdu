@@ -12,7 +12,7 @@ import           Lamdu.Prelude
 -- All words here are reserved (conflicted when used as user names)
 data Code a = Code
     { _assign :: a -- Assignment
-    , _relay :: a -- Apply
+    , _punnedFields :: a -- Apply
     , _let_ :: a
     , _toNom :: a
     , _fromNom :: a

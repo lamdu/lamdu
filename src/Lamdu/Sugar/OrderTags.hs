@@ -56,11 +56,11 @@ orderType = val orderTBody
 orderRecord ::
     Monad m =>
     OrderT m (Tree (Sugar.Composite name (T m) o) (Ann (Sugar.Payload name i o a)))
-orderRecord (Sugar.Composite items relayed tail_ addItem) =
+orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
         >>= (traverse . traverse) orderNode)
-    <*> pure relayed
+    <*> pure punned
     <*> traverse orderNode tail_
     <*> pure addItem
 

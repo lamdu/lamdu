@@ -23,26 +23,26 @@ test :: Test
 test =
     testGroup "precedence"
     [ testMinOpPrecInfix
-    , testRelayedArgOp
+    , testPunnedArgOp
     , testGetFieldOfApply
     , test445
     ]
 
 -- | Test for issue #471
--- https://trello.com/c/fQmgXuRE/471-operators-on-relayed-args-dont-work-require-fragmenting-first
-testRelayedArgOp :: Test
-testRelayedArgOp =
+-- https://trello.com/c/fQmgXuRE/471-operators-on-punned-args-dont-work-require-fragmenting-first
+testPunnedArgOp :: Test
+testPunnedArgOp =
     expr ^?!
-    val . Sugar._BodyLabeledApply . Sugar.aRelayedArgs . traverse . ann . _1
-    & assertEqual "relayed arg precedence" 0
-    & testCase "relayed-arg-op"
+    val . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . ann . _1
+    & assertEqual "punned arg precedence" 0
+    & testCase "punned-arg-op"
     where
         expr =
             Sugar.BodyLabeledApply Sugar.LabeledApply
             { Sugar._aFunc = Stub.defRef "a" "a" & Const & Stub.node
             , Sugar._aSpecialArgs = Sugar.Verbose
             , Sugar._aAnnotatedArgs = []
-            , Sugar._aRelayedArgs =
+            , Sugar._aPunnedArgs =
                 [ Stub.defRef "b" "b" & Sugar.GetBinder & Const & Stub.node
                 ]
             } & Stub.node

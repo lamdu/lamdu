@@ -45,7 +45,7 @@ reExportTests =
     , "lambda-in-fragment"
     , "applied-case"
     , "extract-with-skolems"
-    , "relayed-arg"
+    , "punned-arg"
     , "to-nom"
     , "foo"
     , "simple-lambda"

@@ -150,7 +150,7 @@ make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
                 stdWrapParentExpr pl
                 <*> (makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure)
             else makeUnit pl
-make (Sugar.Composite fields relayed recordTail addField) pl =
+make (Sugar.Composite fields punned recordTail addField) pl =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-
@@ -159,13 +159,13 @@ make (Sugar.Composite fields relayed recordTail addField) pl =
                 closedRecordEventMap actions
             Sugar.OpenComposite actions restExpr ->
                 openRecordEventMap actions restExpr
-        relayedGuis <-
-            case relayed of
+        punnedGuis <-
+            case punned of
             [] -> pure []
             _ ->
-                GetVarEdit.makeRelayedVars relayed
+                GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
-        fieldGuis <- traverse makeFieldRow fields <&> (++ relayedGuis)
+        fieldGuis <- traverse makeFieldRow fields <&> (++ punnedGuis)
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField

@@ -87,8 +87,8 @@ convertExtend cons extendOp valS exprPl extendV restC =
                     getVar <- itemS ^? ciExpr . val . _BodyGetVar
                     name <- getVar ^? SugarLens.getVarName
                     _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
-                    let relayed = Ann (itemS ^. ciExpr . ann) (Const getVar)
-                    Just (cRelayedItems %~ (relayed :))
+                    let punned = Ann (itemS ^. ciExpr . ann) (Const getVar)
+                    Just (cPunnedItems %~ (punned :))
                 & fromMaybe (cItems %~ (itemS :))
         addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         addItem restC
@@ -151,7 +151,7 @@ convertEmpty extendOp exprPl =
         addItem <- convertAddItem extendOp mempty exprPl
         pure Composite
             { _cItems = []
-            , _cRelayedItems = []
+            , _cPunnedItems = []
             , _cTail = ClosedComposite actions
             , _cAddItem = addItem
             }

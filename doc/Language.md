@@ -209,13 +209,13 @@ In the underlying language, each use of the parameter is a get-field
 expression (`paramRecord.field`) and is sugared to a simple variable
 access (`field`).
 
-#### Relayed arguments
+#### Punned arguments
 
 When passing a field parameter as a field argument (i.e: both the
 caller and callee are multi-parameter functions) of the same field, a
-"relayed arguments" sugar is used.
+"punned arguments" sugar is used.
 
-Instead of showing `bound: bound`, "relayed arguments" are listed non-redundantly as
+Instead of showing `bound: bound`, "punned arguments" are listed non-redundantly as
 the last arguments after a `➾` symbol, and appears as `➾ bound`.
 
 This is especially useful in recursive code where some of parameters

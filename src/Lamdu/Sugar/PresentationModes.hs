@@ -34,7 +34,7 @@ makeLabeledApply ::
     Input.Payload m a ->
     ConvertM m
     (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
-makeLabeledApply func args relayedArgs exprPl =
+makeLabeledApply func args punnedArgs exprPl =
     do
         presentationMode <- func ^. val . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -62,10 +62,10 @@ makeLabeledApply func args relayedArgs exprPl =
             , Sugar._aSpecialArgs = specialArgs
             , Sugar._aAnnotatedArgs =
                 filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
-            , Sugar._aRelayedArgs =
+            , Sugar._aPunnedArgs =
                 filter
                 ((`notElem` removedKeys) . (^?! val . Lens._Wrapped . SugarLens.getVarName . inTag))
-                relayedArgs
+                punnedArgs
             }
     where
         argsMap =

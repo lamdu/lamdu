@@ -329,12 +329,12 @@ toLabeledApply ::
     (Tree (LabeledApply (NewName m) (IM m) o)
         (Ann (Payload (NewName m) (IM m) o a)))
 toLabeledApply
-    app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aRelayedArgs} =
+    app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
     LabeledApply
     <$> toNode (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
     <*> traverse toExpression _aSpecialArgs
     <*> traverse (toAnnotatedArg toExpression) _aAnnotatedArgs
-    <*> traverse (toNode (Lens._Wrapped toGetVar)) _aRelayedArgs
+    <*> traverse (toNode (Lens._Wrapped toGetVar)) _aPunnedArgs
 
 toHole ::
     MonadNaming m =>
@@ -381,10 +381,10 @@ toComposite ::
     MonadNaming m =>
     Tree (Composite (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
     m (Tree (Composite (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
-toComposite (Composite items relayed tail_ addItem) =
+toComposite (Composite items punned tail_ addItem) =
     Composite
     <$> traverse (toCompositeItem toExpression) items
-    <*> traverse (toNode (Lens._Wrapped toGetVar)) relayed
+    <*> traverse (toNode (Lens._Wrapped toGetVar)) punned
     <*> (_OpenComposite . _2) toExpression tail_
     <*> toTagReplace addItem
 

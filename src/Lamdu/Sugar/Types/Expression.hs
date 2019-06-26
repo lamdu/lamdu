@@ -7,7 +7,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyFromNom, _BodyToNom, _BodyIfElse
     , Expression
     , AnnotatedArg(..), aaTag, aaExpr
-    , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aRelayedArgs
+    , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
     , Fragment(..), fExpr, fHeal, fTypeMatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , InjectContent(..), _InjectVal, _InjectNullary
@@ -34,7 +34,7 @@ module Lamdu.Sugar.Types.Expression
     , Else(..), _SimpleElse, _ElseIf
     , IfElse(..), iIf, iThen, iElse
     -- Record & Cases
-    , Composite(..), cItems, cRelayedItems, cAddItem, cTail
+    , Composite(..), cItems, cPunnedItems, cAddItem, cTail
     , Case(..), cKind, cBody
     ) where
 
@@ -67,7 +67,7 @@ data LabeledApply name i o f = LabeledApply
     { _aFunc :: Tie f (Lens.Const (BinderVarRef name o))
     , _aSpecialArgs :: Meta.SpecialArgs (Tie f (Body name i o))
     , _aAnnotatedArgs :: [AnnotatedArg name (Tie f (Body name i o))]
-    , _aRelayedArgs :: [Tie f (Lens.Const (GetVar name o))]
+    , _aPunnedArgs :: [Tie f (Lens.Const (GetVar name o))]
     } deriving Generic
 
 data InjectContent name i o f
@@ -138,8 +138,8 @@ data IfElse name i o f = IfElse
 
 data Composite name i o f = Composite
     { _cItems :: [CompositeItem name i o (Tie f (Body name i o))]
-    , -- Relayed items are like Haskell's NamedFieldPuns
-      _cRelayedItems :: [Tie f (Lens.Const (GetVar name o))]
+    , -- Punned items are like Haskell's NamedFieldPuns
+      _cPunnedItems :: [Tie f (Lens.Const (GetVar name o))]
     , _cTail :: CompositeTail o (Tie f (Body name i o))
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic

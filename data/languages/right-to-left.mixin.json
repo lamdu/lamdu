@@ -3,7 +3,7 @@
     "direction": "RightToLeft",
     "texts": {
         "code": {
-            "relay": "⇐",
+            "punnedFields": "⇐",
             "toNom": "»",
             "fromNom": "«",
             "repl": "⋘",

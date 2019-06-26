@@ -60,7 +60,7 @@ makeFunc role func =
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
 isBoxed apply =
     Lens.has (Sugar.aAnnotatedArgs . traverse) apply
-    || Lens.has (Sugar.aRelayedArgs . traverse) apply
+    || Lens.has (Sugar.aPunnedArgs . traverse) apply
 
 makeFuncRow ::
     ( Monad i, Monad o
@@ -151,12 +151,12 @@ mkBoxed apply funcRow =
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> pure []
             xs -> taggedList <*> traverse makeArgRow xs <&> (:[])
-        relayedArgs <-
-            case apply ^. Sugar.aRelayedArgs of
+        punnedArgs <-
+            case apply ^. Sugar.aPunnedArgs of
             [] -> pure []
-            args -> GetVarEdit.makeRelayedVars args <&> (:[])
+            args -> GetVarEdit.makePunnedVars args <&> (:[])
         Styled.addValFrame
-            <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ relayedArgs))
+            <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ punnedArgs))
 
 makeSimple ::
     ( Monad i, Monad o
