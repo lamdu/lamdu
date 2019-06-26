@@ -17,6 +17,7 @@ data Sugars a = Sugars
     , -- Record/case with multiple fields/alternatives, rather than a chain of rec-extends.
       -- Disabling this also imples disabling if-expressions and labeled-applies.
       _composite :: a
+    , _fieldPuns :: a
     , _fragment :: a
     , _ifExpression :: a
     , _labeledApply :: a

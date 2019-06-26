@@ -82,8 +82,10 @@ convertExtend cons extendOp valS exprPl extendV restC =
             convertItem cons (exprPl ^. Input.stored)
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . Property.pVal))
+        punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
         let addItem =
                 do
+                    guard punSugar
                     getVar <- itemS ^? ciExpr . val . _BodyGetVar
                     name <- getVar ^? SugarLens.getVarName
                     _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
