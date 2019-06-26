@@ -22,6 +22,10 @@ data Sugars a = Sugars
     , _ifExpression :: a
     , _labeledApply :: a
     , _letExpression :: a
+    , -- Somewhat similar to Scala's "Placeholder Syntax for Anonymous Functions",
+      -- https://scala-lang.org/files/archive/spec/2.13/06-expressions.html#placeholder-syntax-for-anonymous-functions
+      -- Except the underlined parameters are actually named, just don't repeat in the lambda left-hand side.
+      _lightLambda :: a
     , _literalText :: a
     , _nullaryInject :: a
     , _nullaryParameter :: a

@@ -24,6 +24,7 @@
             "ifExpression": true,
             "labeledApply": true,
             "letExpression": true,
+            "lightLambda": true,
             "literalText": true,
             "nullaryInject": true,
             "nullaryParameter": true,

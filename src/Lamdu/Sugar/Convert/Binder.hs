@@ -243,8 +243,9 @@ convertLam lam exprPl =
         let paramNames =
                 func ^.. fParams . _Params . traverse . fpInfo . piTag . tagRefTag . tagName
                 & Set.fromList
+        lightLamSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.lightLambda)
         let lambda
-                | useNormalLambda paramNames func =
+                | useNormalLambda paramNames func || not lightLamSugar =
                     Lambda NormalBinder UnlimitedFuncApply func
                 | otherwise =
                     func
