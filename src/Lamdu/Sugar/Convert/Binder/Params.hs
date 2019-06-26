@@ -577,10 +577,12 @@ convertNonRecordParam ::
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
         funcParamActions <- makeNonRecordParamActions binderKind storedLam
+        nullParamSugar <-
+            Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
         funcParam <-
             case lamParamType lamExprPl of
             MkPure (T.TRecord (MkPure T.REmpty))
-                | null (lamExprPl ^. Input.varRefsOfLambda) ->
+                | nullParamSugar && null (lamExprPl ^. Input.varRefsOfLambda) ->
                     mkFuncParam (EntityId.ofBinder param) lamExprPl info <&> NullParam
                 where
                     info = funcParamActions ^. fpDelete & void & NullParamActions

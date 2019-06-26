@@ -20,6 +20,7 @@ data Sugars a = Sugars
     , _fragment :: a
     , _labeledApply :: a
     , _letExpression :: a
+    , _nullaryParameter :: a
     , _parametersRecord :: a
     } deriving stock (Eq, Show, Functor, Generic, Generic1)
     deriving Applicative via Generically1 Sugars
