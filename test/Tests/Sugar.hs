@@ -35,6 +35,7 @@ test =
     , testExtract
     , testExtractForRecursion
     , testLightLambda
+    , testNotALightLambda
     , testInline
     , testReorderLets
     , testReplaceParent
@@ -356,6 +357,16 @@ testLightLambda =
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             val . _BodyLam . lamMode . _LightLambda
+
+testNotALightLambda :: Test
+testNotALightLambda =
+    testSugarActions "lam-in-lam.json" [verify]
+    & testCase "not-a-light-lambda"
+    where
+        verify workArea
+            | Lens.has expected workArea = pure ()
+            | otherwise = fail "Expected light lambda sugar!"
+        expected = replBody . _BodyLam . lamMode . _NormalBinder
 
 delDefParam :: Test
 delDefParam =
