@@ -65,6 +65,8 @@ instance SugarExpr (Body name i o) where
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
     isUnfinished _ = False
+    isForbiddenInLightLam (BodyLam f) = isForbiddenInLightLam (f ^. lamFunc)
+    isForbiddenInLightLam x = isUnfinished x
 instance Recursive SugarExpr (Body name i o)
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
