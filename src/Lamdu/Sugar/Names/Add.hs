@@ -30,6 +30,7 @@ import           Data.UUID.Types (UUID)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name
@@ -100,7 +101,7 @@ data P0Name = P0Name
     }
 
 newtype P0Env i = P0Env
-    { _p0GetName :: T.Tag -> i Text
+    { _p0GetName :: T.Tag -> i Tag.LangNames
     }
 Lens.makeLenses ''P0Env
 
@@ -125,7 +126,7 @@ p0lift = Pass0LoadNames . lift
 getP0Name :: Monad i => PAName -> Pass0LoadNames i P0Name
 getP0Name (PAName internalName isAutoGen) =
     Lens.view p0GetName ?? internalName ^. inTag >>= p0lift
-    <&> \x -> P0Name x internalName isAutoGen
+    <&> \x -> P0Name (x ^. Tag.name) internalName isAutoGen
 
 ------------------------------
 ---------- Pass 1 ------------
@@ -482,7 +483,7 @@ runPasses ::
     , Functor i
     ) =>
     env ->
-    (T.Tag -> i Text) ->
+    (T.Tag -> i Tag.LangNames) ->
     (z -> PassAutoTags i a) ->
     (a -> Pass0LoadNames i b) ->
     (b -> Pass1PropagateUp i o c) ->
@@ -502,7 +503,7 @@ addToWorkArea ::
     , Monad i
     ) =>
     env ->
-    (T.Tag -> i Text) ->
+    (T.Tag -> i Tag.LangNames) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea Name i o (Payload Name i o a))
 addToWorkArea env getName =
