@@ -95,7 +95,7 @@ pAOpGetName n = PAName n False & pure
 ---------- Pass 0 ------------
 ------------------------------
 data P0Name = P0Name
-    { _p0TagName :: Text
+    { _p0TagName :: Tag.LangNames
     , _p0InternalName :: InternalName
     , _p0IsAutoGen :: Bool
     }
@@ -126,7 +126,7 @@ p0lift = Pass0LoadNames . lift
 getP0Name :: Monad i => PAName -> Pass0LoadNames i P0Name
 getP0Name (PAName internalName isAutoGen) =
     Lens.view p0GetName ?? internalName ^. inTag >>= p0lift
-    <&> \x -> P0Name (x ^. Tag.name) internalName isAutoGen
+    <&> \x -> P0Name x internalName isAutoGen
 
 ------------------------------
 ---------- Pass 1 ------------
@@ -193,7 +193,7 @@ displayOf env text
 p1Name ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp i o) P1Name
-p1Name mDisambiguator nameType (P0Name txt internalName autoGen) =
+p1Name mDisambiguator nameType (P0Name texts internalName autoGen) =
     -- NOTE: We depend on the anonTag key in the map
     liftCPS (traverse_ tellCtx ctx) *>
     CPS (\inner ->
@@ -216,6 +216,7 @@ p1Name mDisambiguator nameType (P0Name txt internalName autoGen) =
         }
     )
     where
+        txt = texts ^. Tag.name
         tells
             | tag == anonTag = pure ()
             | otherwise = tellSome p1Texts (Lens.singletonAt tag txt)
