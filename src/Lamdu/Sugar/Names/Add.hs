@@ -152,13 +152,15 @@ data P1Out = P1Out
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: OrderedSet UUID
         -- ^ Type vars met
-    , _p1Texts :: Map T.Tag Text
+    , _p1Texts :: Map T.Tag Tag.LangNames
     }
     deriving stock Generic
     deriving (Semigroup, Monoid) via Generically P1Out
 Lens.makeLenses ''P1Out
 
-data P1KindedName = P1TagName Annotated.Name Text | P1AnonName UUID
+data P1KindedName
+    = P1TagName Annotated.Name Tag.LangNames
+    | P1AnonName UUID
 
 data P1Name = P1Name
     { p1KindedName :: P1KindedName
@@ -210,16 +212,15 @@ p1Name mDisambiguator nameType (P0Name texts internalName autoGen) =
                 case ctx of
                 Nothing -> error "Anon tag with no context"
                 Just uuid -> P1AnonName uuid
-            else P1TagName aName txt
+            else P1TagName aName texts
         , p1LocalsBelow = innerOut ^. p1Locals
         , p1IsAutoGen = autoGen
         }
     )
     where
-        txt = texts ^. Tag.name
         tells
             | tag == anonTag = pure ()
-            | otherwise = tellSome p1Texts (Lens.singletonAt tag txt)
+            | otherwise = tellSome p1Texts (Lens.singletonAt tag texts)
         p1lens
             | Walk.isGlobal nameType = p1Globals
             | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
@@ -248,11 +249,11 @@ makeTagTexts ::
     ( Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     ) =>
-    env -> Map T.Tag Text -> Map T.Tag TagText
+    env -> Map T.Tag Tag.LangNames -> Map T.Tag TagText
 makeTagTexts env p1texts =
     p1texts
     ^@.. Lens.itraversed
-    <&> (\(tag, text) -> (text, Set.singleton tag))
+    <&> (\(tag, texts) -> (texts ^. Tag.name, Set.singleton tag))
     & MMap.fromList
     & Lens.imapped %@~ mkTagTexts
     & fold
@@ -305,7 +306,7 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
         & zip (tvs ^.. Lens.folded)
         & Map.fromList
     , _p2TagTexts = tagTexts
-    , _p2Texts = texts ^. traverse . Lens.to Set.singleton
+    , _p2Texts = texts ^. traverse . Tag.name . Lens.to Set.singleton
     , _p2TagSuffixes = toSuffixMap collisions
     , _p2TextsAbove =
         globals ^.. Lens.itraversed . Lens.asIndex
@@ -447,8 +448,8 @@ p2globalAnon uuid =
     <&> maybe (Unnamed 0) Unnamed
 
 p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
-p2nameConvertor nameType (P1Name (P1TagName aName text) tagsBelow isAutoGen) =
-    p2tagName tagsBelow aName text isAutoGen <&>
+p2nameConvertor nameType (P1Name (P1TagName aName texts) tagsBelow isAutoGen) =
+    p2tagName tagsBelow aName (texts ^. Tag.name) isAutoGen <&>
     case nameType of
     Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
@@ -465,12 +466,12 @@ p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
 
 p2cpsNameConvertor :: Walk.CPSNameConvertor (Pass2MakeNames i o)
 p2cpsNameConvertor (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
-p2cpsNameConvertor (P1Name (P1TagName aName text) tagsBelow isAutoGen) =
+p2cpsNameConvertor (P1Name (P1TagName aName texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
     do
         env0 <- Lens.view id
         (newNameForm, env1) <-
-            p2tagName tagsBelow aName text isAutoGen
+            p2tagName tagsBelow aName (texts ^. Tag.name) isAutoGen
             <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
         visText <- visible newNameForm <&> (^. _1 . ttText)
         let env2 = env1 & p2TextsAbove %~ Set.insert visText
