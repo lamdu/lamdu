@@ -152,7 +152,7 @@ data P1Out = P1Out
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: OrderedSet UUID
         -- ^ Type vars met
-    , _p1Texts :: MMap Text (Set T.Tag)
+    , _p1Texts :: Map T.Tag Text
     }
     deriving stock Generic
     deriving (Semigroup, Monoid) via Generically P1Out
@@ -218,7 +218,7 @@ p1Name mDisambiguator nameType (P0Name txt internalName autoGen) =
     where
         tells
             | tag == anonTag = pure ()
-            | otherwise = tellSome p1Texts (Lens.singletonAt txt (Set.singleton tag))
+            | otherwise = tellSome p1Texts (Lens.singletonAt tag txt)
         p1lens
             | Walk.isGlobal nameType = p1Globals
             | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
@@ -247,9 +247,12 @@ makeTagTexts ::
     ( Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     ) =>
-    env -> MMap Text (Set T.Tag) -> Map T.Tag TagText
+    env -> Map T.Tag Text -> Map T.Tag TagText
 makeTagTexts env p1texts =
     p1texts
+    ^@.. Lens.itraversed
+    <&> (\(tag, text) -> (text, Set.singleton tag))
+    & MMap.fromList
     & Lens.imapped %@~ mkTagTexts
     & fold
     where
@@ -301,7 +304,7 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
         & zip (tvs ^.. Lens.folded)
         & Map.fromList
     , _p2TagTexts = tagTexts
-    , _p2Texts = MMap.keysSet texts
+    , _p2Texts = texts ^. traverse . Lens.to Set.singleton
     , _p2TagSuffixes = toSuffixMap collisions
     , _p2TextsAbove =
         globals ^.. Lens.itraversed . Lens.asIndex
