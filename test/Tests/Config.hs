@@ -20,6 +20,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
+import           System.FilePath (takeFileName)
 
 import           Test.Lamdu.Prelude
 
@@ -69,7 +70,11 @@ verifyJson proxy jsonPath =
 
 loadJsonPath :: Aeson.FromJSON a => FilePath -> IO a
 loadJsonPath path =
-    Paths.getDataFileName path >>= Writer.evalWriterT . load
+    do
+        (json, deps) <- Paths.getDataFileName path >>= Writer.runWriterT . load
+        if elem path deps || elem path (deps <&> takeFileName)
+            then pure json
+            else fail ("config file not its own dependency " <> path <> " not in " <> show deps)
 
 languagesDupTest :: Test
 languagesDupTest =
@@ -90,4 +95,3 @@ checkDups path =
         group (sort allTexts) ^.. traverse . Lens.ix 1 & traverse_ onDup
     where
         onDup text = assertString ("duplicated text: " <> unpack text)
-
