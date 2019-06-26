@@ -45,6 +45,8 @@ verifyTagsTest =
         verifyHasName (tagId, tag)
             | Map.null (tag ^. tagNames) && tag ^. tagOpName == NotAnOp =
                 fail ("stdlib tag with no name:" <> show tagId)
+            | any (== "") (tag ^.. tagNames . traverse . name) =
+                fail ("empty name for tag:" <> show tagId)
             | otherwise = tag ^.. tagNames . Lens.ix (LangId "english") & pure
 
 verifyTagNames :: [Text] -> IO ()
