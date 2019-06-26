@@ -22,6 +22,7 @@ data Sugars a = Sugars
     , _ifExpression :: a
     , _labeledApply :: a
     , _letExpression :: a
+    , _nullaryInject :: a
     , _nullaryParameter :: a
     , _parametersRecord :: a
     } deriving stock (Eq, Show, Functor, Generic, Generic1)

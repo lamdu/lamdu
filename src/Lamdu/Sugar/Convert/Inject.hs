@@ -3,10 +3,12 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import           AST.Knot.Ann (Ann(..), ann, val)
+import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -33,16 +35,19 @@ convert (V.Inject tag injected) exprPl =
                         <&> V.Inject tag <&> V.BInject
                         >>= ExprIRef.writeValI valI
                     typeProtect <&> EntityId.ofValI
+        nullSugar <-
+            Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryInject)
         let inj =
                 case injectedS of
                 Ann pl
                     (BodyRecord
                      (Composite [] []
-                      (ClosedComposite closedCompositeActions) addItem)) ->
-                    NullaryVal closedCompositeActions addItem
-                    & Const
-                    & Ann pl
-                    & InjectNullary
+                      (ClosedComposite closedCompositeActions) addItem))
+                    | nullSugar->
+                        NullaryVal closedCompositeActions addItem
+                        & Const
+                        & Ann pl
+                        & InjectNullary
                 _ ->
                     injectedS
                     & val . _BodyHole . holeMDelete ?~ toNullary

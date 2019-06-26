@@ -24,6 +24,7 @@
             "ifExpression": true,
             "labeledApply": true,
             "letExpression": true,
+            "nullaryInject": true,
             "nullaryParameter": true,
             "parametersRecord": true
         }
