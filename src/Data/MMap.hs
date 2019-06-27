@@ -41,8 +41,8 @@ type instance Lens.IxValue (MMap k v) = v
 instance Ord k => Lens.Ixed (MMap k v) where ix k = _MMap . Lens.ix k
 instance Ord k => Lens.At (MMap k v) where at k = _MMap . Lens.at k
 
-fromList :: Ord k => [(k, v)] -> MMap k v
-fromList = MMap . Map.fromList
+fromList :: (Ord k, Semigroup v) => [(k, v)] -> MMap k v
+fromList = MMap . Map.fromListWith (<>)
 
 fromSet :: (k -> v) -> Set k -> MMap k v
 fromSet f = MMap . Map.fromSet f
