@@ -18,6 +18,7 @@ data Texts a = Texts
     , _choose :: a
     , _forward :: a
     , _backward :: a
+    , _language :: a
     } deriving stock (Eq, Generic, Generic1, Functor, Foldable, Traversable)
     deriving Applicative via (Generically1 Texts)
     deriving anyclass ElemIds

@@ -6,6 +6,7 @@
         "languageNames": {
         },
         "commonTexts": {
+            "language": "Language",
             "edit": "Edit",
             "view": "View",
             "insert": "Insert",
@@ -154,7 +155,6 @@
         "statusBar": {
             "statusBar": "Status Bar",
             "help": "Help",
-            "language": "Language",
             "theme": "Theme",
             "annotations": "Annotations",
             "types": "Types",

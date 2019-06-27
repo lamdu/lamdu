@@ -55,6 +55,7 @@ env =
         , MomentuTexts._choose = "Choose"
         , MomentuTexts._forward = "Forward"
         , MomentuTexts._backward = "Backward"
+        , MomentuTexts._language = "Language"
         }
     , _eAnimId = ["foo"]
     , _eHoverStyle =

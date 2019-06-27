@@ -15,6 +15,7 @@ import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as Texts
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Choice as Choice
@@ -110,7 +111,7 @@ makeStatusWidgets themeNames langNames prop =
     <*> (traverse opt langNames >>=
             StatusBar.makeSwitchStatusWidget
             (Styled.sprite Sprites.earthGlobe <&> WithTextPos 0)
-            Texts.sbLanguage Texts.sbSwitchLanguage
+            Texts.language Texts.sbSwitchLanguage
             Config.changeLanguageKeys langProp)
     <*> ( helpVals >>=
             StatusBar.makeSwitchStatusWidget

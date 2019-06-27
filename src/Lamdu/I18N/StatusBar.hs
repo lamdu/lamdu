@@ -18,7 +18,6 @@ data StatusBar a = StatusBar
     , _sbBranch :: a
     , _sbSwitchHelp :: a
     , _sbHelp :: a
-    , _sbLanguage :: a
     , _sbSwitchLanguage :: a
     , _sbTheme :: a
     , _sbSwitchTheme :: a
