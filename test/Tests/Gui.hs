@@ -89,7 +89,7 @@ makeGui afterDoc env =
             & GuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui
             then pure gui
-            else fail ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
+            else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
 focusedWidget ::
     HasCallStack =>
