@@ -417,12 +417,12 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     opWithName _ _ = p2cpsNameConvertor
     opGetName _ = p2nameConvertor
 
-getTagText :: T.Tag -> Text -> Pass2MakeNames i o TagText
-getTagText tag txt =
+getTagText :: T.Tag -> Tag.LangNames -> Pass2MakeNames i o TagText
+getTagText tag texts =
     Lens.view id
     <&>
     \env ->
-    let displayText = displayOf env txt
+    let displayText = displayOf env (texts ^. Tag.name)
         collision
             | env ^. p2Texts . Lens.contains displayText = UnknownCollision
             | otherwise = NoCollision
@@ -431,11 +431,11 @@ getTagText tag txt =
     & fromMaybe (TagText displayText collision)
 
 p2tagName ::
-    MMap T.Tag Clash.Info -> Annotated.Name -> Text -> Bool ->
+    MMap T.Tag Clash.Info -> Annotated.Name -> Tag.LangNames -> Bool ->
     Pass2MakeNames i o Name
-p2tagName tagsBelow aName txt isAutoGen =
+p2tagName tagsBelow aName texts isAutoGen =
     TagName
-    <$> getTagText tag txt
+    <$> getTagText tag texts
     <*> getCollision tagsBelow aName
     ?? isAutoGen
     <&> NameTag
@@ -449,7 +449,7 @@ p2globalAnon uuid =
 
 p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
 p2nameConvertor nameType (P1Name (P1TagName aName texts) tagsBelow isAutoGen) =
-    p2tagName tagsBelow aName (texts ^. Tag.name) isAutoGen <&>
+    p2tagName tagsBelow aName texts isAutoGen <&>
     case nameType of
     Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
@@ -471,7 +471,7 @@ p2cpsNameConvertor (P1Name (P1TagName aName texts) tagsBelow isAutoGen) =
     do
         env0 <- Lens.view id
         (newNameForm, env1) <-
-            p2tagName tagsBelow aName (texts ^. Tag.name) isAutoGen
+            p2tagName tagsBelow aName texts isAutoGen
             <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
         visText <- visible newNameForm <&> (^. _1 . ttText)
         let env2 = env1 & p2TextsAbove %~ Set.insert visText
