@@ -6,14 +6,20 @@
         "tagOrder": 0,
         "tag": "42493a66756e6374696f6e0000000000",
         "names": {
-            "english": "function"
+            "english": {
+                "name": "function",
+                "abbreviation": "func"
+            }
         }
     },
     {
         "tagOrder": 0,
         "tag": "42493a7265636f726400000000000000",
         "names": {
-            "english": "record"
+            "english": {
+                "name": "record",
+                "abbreviation": "rec"
+            }
         }
     },
     {
@@ -84,7 +90,10 @@
         "tag": "0f82aca66af91493b1ff401de5f1f7e3",
         "names": {
             "hebrew": "אורך",
-            "english": "length"
+            "english": {
+                "name": "length",
+                "abbreviation": "len"
+            }
         }
     },
     {
@@ -92,7 +101,10 @@
         "tag": "0fdfeaa68c7b0fbb18c7eabccafbca57",
         "names": {
             "hebrew": "עגל_מעלה",
-            "english": "ceil"
+            "english": {
+                "name": "ceiling",
+                "abbreviation": "ceil"
+            }
         }
     },
     {
@@ -140,7 +152,10 @@
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
         "names": {
             "hebrew": "מספר",
-            "english": "num"
+            "english": {
+                "name": "number",
+                "abbreviation": "num"
+            }
         }
     },
     {
@@ -308,7 +323,10 @@
         "tag": "350cadea596b45fe56f9566184c43c06",
         "names": {
             "hebrew": "הרץ_תהליך",
-            "english": "runMut"
+            "english": {
+                "name": "runMutableProcess",
+                "abbreviation": "runMut"
+            }
         }
     },
     {
@@ -367,7 +385,10 @@
         "tag": "3f4e3bced4b8540b1168ec413d790d11",
         "names": {
             "hebrew": "אורך_חלק",
-            "english": "subLen"
+            "english": {
+                "name": "subLength",
+                "abbreviation": "subLen"
+            }
         }
     },
     {
@@ -388,7 +409,10 @@
         "tag": "42493a636f6e6e656374696f6e48616e",
         "names": {
             "hebrew": "טיפול_בחיבור",
-            "english": "connectionHandler"
+            "english": {
+                "name": "connectionHandler",
+                "abbreviation": "connHandler"
+            }
         }
     },
     {
@@ -428,7 +452,10 @@
         "tag": "42493a64737450617468000000000000",
         "names": {
             "hebrew": "מסלול_ליעד",
-            "english": "dstPath"
+            "english": {
+                "name": "destinationPath",
+                "abbreviation": "dstPath"
+            }
         }
     },
     {
@@ -436,7 +463,10 @@
         "tag": "42493a656e7669726f6e6d656e740000",
         "names": {
             "hebrew": "סביבה",
-            "english": "environment"
+            "english": {
+                "name": "environment",
+                "abbreviation": "env"
+            }
         }
     },
     {
@@ -444,7 +474,10 @@
         "tag": "42493a6572726f720000000000000000",
         "names": {
             "hebrew": "שגיאה",
-            "english": "error"
+            "english": {
+                "name": "error",
+                "abbreviation": "err"
+            }
         }
     },
     {
@@ -484,7 +517,10 @@
         "tag": "42493a66696c65446573630000000000",
         "names": {
             "hebrew": "מתאר_קובץ",
-            "english": "fileDesc"
+            "english": {
+                "name": "fileDescriptor",
+                "abbreviation": "fileDesc"
+            }
         }
     },
     {
@@ -588,7 +624,10 @@
         "tag": "42493a6f626a65637400000000000000",
         "names": {
             "hebrew": "אובייקט",
-            "english": "object"
+            "english": {
+                "name": "object",
+                "abbreviation": "obj"
+            }
         }
     },
     {
@@ -644,7 +683,10 @@
         "tag": "42493a73726350617468000000000000",
         "names": {
             "hebrew": "מסלול_מקור",
-            "english": "srcPath"
+            "english": {
+                "name": "sourcePath",
+                "abbreviation": "srcPath"
+            }
         }
     },
     {
@@ -764,7 +806,10 @@
         "tag": "52d375b037a027938650e4d441e25170",
         "names": {
             "hebrew": "מערך_משתנה_מקומי",
-            "english": "localMutArray"
+            "english": {
+                "name": "localMutableArray",
+                "abbreviation": "localMutArray"
+            }
         }
     },
     {
@@ -830,7 +875,10 @@
         "tag": "631c1c400aa68c200b543c1c2266b851",
         "names": {
             "hebrew": "משתנה",
-            "english": "mut"
+            "english": {
+                "name": "mutable",
+                "abbreviation": "mut"
+            }
         }
     },
     {
@@ -867,7 +915,10 @@
         "tag": "68c199f2c5277d43bc23530b429526cd",
         "names": {
             "hebrew": "שינוי_מקומי",
-            "english": "localMut"
+            "english": {
+                "name": "localMutation",
+                "abbreviation": "localMut"
+            }
         }
     },
     {
@@ -875,7 +926,10 @@
         "tag": "692e4e5decffcf5eac86471ba27ac56a",
         "names": {
             "hebrew": "מינימום",
-            "english": "minimum"
+            "english": {
+                "name": "minimum",
+                "abbreviation": "min"
+            }
         }
     },
     {
@@ -896,7 +950,10 @@
         "tag": "6c15f96848dfbcdafa7f239af12424b1",
         "names": {
             "hebrew": "פעולה_בינארית",
-            "english": "binop"
+            "english": {
+                "name": "binaryOperator",
+                "abbreviation": "binop"
+            }
         }
     },
     {
@@ -904,7 +961,10 @@
         "tag": "6e6574776f726b000000000000000000",
         "names": {
             "hebrew": "רשת",
-            "english": "network"
+            "english": {
+                "name": "network",
+                "abbreviation": "net"
+            }
         }
     },
     {
@@ -936,7 +996,10 @@
         "tag": "6f730000000000000000000000000000",
         "names": {
             "hebrew": "מערכת_הפעלה",
-            "english": "os"
+            "english": {
+                "name": "operatingSystem",
+                "abbreviation": "os"
+            }
         }
     },
     {
@@ -952,7 +1015,10 @@
         "tag": "7068b0600f698c669f8a08fd7f58ce08",
         "names": {
             "hebrew": "הרץ_שינוי_מקומי_למערך",
-            "english": "runMutArray"
+            "english": {
+                "name": "runMutableArray",
+                "abbreviation": "runMutArray"
+            }
         }
     },
     {
@@ -999,7 +1065,10 @@
         "tag": "7a29ccaa6cf29e9406a99074cd1f0840",
         "names": {
             "hebrew": "הוסף_למערך_משתנה",
-            "english": "appendMutArray"
+            "english": {
+                "name": "appendToMutableArray",
+                "abbreviation": "appendMutArray"
+            }
         }
     },
     {
@@ -1023,7 +1092,10 @@
         "tag": "7e2131ab7c5075b12aa74cafd5f0710e",
         "names": {
             "hebrew": "שורש_ריבועי",
-            "english": "sqrt"
+            "english": {
+                "name": "squareRoot",
+                "abbreviation": "sqrt"
+            }
         }
     },
     {
@@ -1071,7 +1143,10 @@
         "tag": "8a64ff09886cc35fe5f56cd45a1f8725",
         "names": {
             "hebrew": "מקסימום",
-            "english": "maximum"
+            "english": {
+                "name": "maximum",
+                "abbreviation": "max"
+            }
         }
     },
     {
@@ -1079,7 +1154,10 @@
         "tag": "8ae53350f50a31f95ac0efe084e0d4ec",
         "names": {
             "hebrew": "צור_מערך_משתנה",
-            "english": "newMutArray"
+            "english": {
+                "name": "newMutableArray",
+                "abbreviation": "newMutArray"
+            }
         }
     },
     {
@@ -1116,7 +1194,10 @@
         "tag": "9f858a1290dd67546c895e68764512ba",
         "names": {
             "hebrew": "קרא_משתנה",
-            "english": "readMutRef"
+            "english": {
+                "name": "readMutableRef",
+                "abbreviation": "readMutRef"
+            }
         }
     },
     {
@@ -1161,7 +1242,10 @@
         "tag": "a5769cb62ef35ad35b27c45b25fc0110",
         "names": {
             "hebrew": "מערך_משתנה",
-            "english": "mutArray"
+            "english": {
+                "name": "mutableArray",
+                "abbreviation": "mutArray"
+            }
         }
     },
     {
@@ -1193,7 +1277,10 @@
         "tag": "a910a161ad1ff345b699941fb18231a0",
         "names": {
             "hebrew": "הרץ_שינוי_בלתי_בטוח",
-            "english": "unsafeRunMut"
+            "english": {
+                "name": "unsafeRunMutation",
+                "abbreviation": "unsafeRunMut"
+            }
         }
     },
     {
@@ -1233,7 +1320,10 @@
         "tag": "b2cd1c7142a495869046dfe3b4987333",
         "names": {
             "hebrew": "כתוב_למערך_משתנה",
-            "english": "writeMutArray"
+            "english": {
+                "name": "writeToMutableArray",
+                "abbreviation": "writeMutArray"
+            }
         }
     },
     {
@@ -1257,7 +1347,10 @@
         "tag": "b4022b06a879cccd437423e1a78b3cc3",
         "names": {
             "hebrew": "כתוב_למשתנה",
-            "english": "writeMutRef"
+            "english": {
+                "name": "writeToMutableReference",
+                "abbreviation": "writeMutRef"
+            }
         }
     },
     {
@@ -1372,7 +1465,10 @@
         "tag": "cf92f68d7e2f830d6722a54b13ed7deb",
         "names": {
             "hebrew": "מאסף",
-            "english": "acc"
+            "english": {
+                "name": "accumulator",
+                "abbreviation": "acc"
+            }
         }
     },
     {
@@ -1542,7 +1638,10 @@
         "tag": "f38fc647fb4b73e35d1ffec481a44dd8",
         "names": {
             "hebrew": "קודם",
-            "english": "prev"
+            "english": {
+                "name": "previous",
+                "abbreviation": "prev"
+            }
         }
     },
     {
@@ -1574,7 +1673,10 @@
         "tag": "f7a13bb9d9f9eaed7c92d889ff9d3705",
         "names": {
             "hebrew": "משוך_אחרון_ממערך_משתנה",
-            "english": "popLastMutArray"
+            "english": {
+                "name": "popLastItemFromMutableArray",
+                "abbreviation": "popLastMutArray"
+            }
         }
     },
     {
@@ -1605,7 +1707,10 @@
         "tag": "fd00218b2ffa8e23f4cbac226d48f6bb",
         "names": {
             "hebrew": "קרא_מערך_משתנה",
-            "english": "readMutArray"
+            "english": {
+                "name": "readFromMutableArray",
+                "abbreviation": "readMutArray"
+            }
         }
     },
     {

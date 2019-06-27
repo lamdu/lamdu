@@ -18,7 +18,6 @@ module.exports = {
         oldPath:           conf.builtinTagName('oldPath'),
         newPath:           conf.builtinTagName('newPath'),
         filePath:          conf.builtinTagName('filePath'),
-        fileDesc:          conf.builtinTagName('fileDesc'),
         data:              conf.builtinTagName('data'),
         mode:              conf.builtinTagName('mode'),
         size:              conf.builtinTagName('size'),

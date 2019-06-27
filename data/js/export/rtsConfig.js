@@ -4,6 +4,8 @@
 var nameMap = {
     data: '__data',
     val: 'value',
+    srcPath: 'sourcePath',
+    dstPath: 'destinationPath',
     subtrees: 'subTrees'
 };
 
