@@ -8,15 +8,14 @@ module Lamdu.GUI.Settings
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property, composeLens)
+import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Animation.Id as AnimId
 import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
@@ -31,7 +30,7 @@ import           Lamdu.Config.Theme (Theme)
 import           Lamdu.Config.Theme.Sprites (Sprites)
 import qualified Lamdu.Config.Theme.Sprites as Sprites
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import           Lamdu.GUI.Styled (OneOfT(..))
+import           Lamdu.GUI.Styled (OneOfT(..), info, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
@@ -62,17 +61,6 @@ hoist f (StatusWidgets x y z a) =
     where
         h = StatusBar.hoist f
 
-withHeader ::
-    f View ->
-    OneOf Texts.StatusBar ->
-    OneOf Texts.StatusBar -> StatusBar.Header (f View)
-withHeader header switchLens categoryLens =
-    StatusBar.Header
-    { StatusBar.headerCategoryTextLens = categoryLens
-    , StatusBar.headerSwitchTextLens = switchLens
-    , StatusBar.headerWidget = header
-    }
-
 makeAnnotationsSwitcher ::
     ( MonadReader env m, Applicative f
     , Has Config env
@@ -94,11 +82,8 @@ makeAnnotationsSwitcher annotationModeProp =
             , (Ann.None, mk1 (OneOf Texts.sbNone))
             ]
             & StatusBar.makeSwitchStatusWidget
-            StatusBar.Header
-            { StatusBar.headerCategoryTextLens = Texts.sbAnnotations
-            , StatusBar.headerSwitchTextLens = Texts.sbSwitchAnnotations
-            , StatusBar.headerWidget = Styled.sprite Sprites.pencilLine
-            }
+                (Styled.sprite Sprites.pencilLine <&> WithTextPos 0)
+                Texts.sbAnnotations Texts.sbSwitchAnnotations
             Config.nextAnnotationModeKeys annotationModeProp
 
 makeStatusWidgets ::
@@ -117,17 +102,19 @@ makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> makeAnnotationsSwitcher
         (composeLens Settings.sAnnotationMode prop)
-    <*> (traverse opt themeNames
-            >>= StatusBar.makeSwitchStatusWidget
-            (withHeader (Styled.sprite Sprites.theme) Texts.sbSwitchTheme
-                Texts.sbTheme) Config.changeThemeKeys themeProp)
-    <*> (traverse opt langNames
-            >>= StatusBar.makeSwitchStatusWidget
-            (withHeader (Styled.sprite Sprites.earthGlobe)
-                Texts.sbSwitchLanguage Texts.sbLanguage)
+    <*> (traverse opt themeNames >>=
+            StatusBar.makeSwitchStatusWidget
+            (Styled.sprite Sprites.theme <&> WithTextPos 0)
+            Texts.sbTheme Texts.sbSwitchTheme
+            Config.changeThemeKeys themeProp)
+    <*> (traverse opt langNames >>=
+            StatusBar.makeSwitchStatusWidget
+            (Styled.sprite Sprites.earthGlobe <&> WithTextPos 0)
+            Texts.sbLanguage Texts.sbSwitchLanguage
             Config.changeLanguageKeys langProp)
-    <*> ( helpVals >>= StatusBar.makeSwitchStatusWidget
-            (StatusBar.labelHeader Texts.sbSwitchHelp Texts.sbHelp)
+    <*> ( helpVals >>=
+            StatusBar.makeSwitchStatusWidget
+            (info (label Texts.sbHelp)) Texts.sbHelp Texts.sbSwitchHelp
             Config.helpKeys helpProp
         )
     where

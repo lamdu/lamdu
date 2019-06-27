@@ -3,8 +3,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
-    , Header(..), labelHeader, LabelConstraints
-    , OneOfT(..)
+    , LabelConstraints
     , hoist
     , makeSwitchStatusWidget
     , fromWidget, combine, combineEdges
@@ -35,7 +34,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.Styled (info, label, OneOfT(..))
 import qualified Lamdu.I18N.StatusBar as Texts
 
 import           Lamdu.Prelude
@@ -64,38 +62,21 @@ fromWidget :: TextWidget f -> StatusWidget f
 fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
-data Header w = Header
-    { headerCategoryTextLens :: OneOf Texts.StatusBar
-    , headerSwitchTextLens :: OneOf Texts.StatusBar
-    , headerWidget :: w
-    }
-
 type LabelConstraints env m =
     ( MonadReader env m, Has TextView.Style env, Has Theme env
     , Element.HasAnimIdPrefix env, Has (Texts.StatusBar Text) env
     , Has Dir.Layout env
     )
 
-labelHeader ::
-    LabelConstraints env m =>
-    OneOf Texts.StatusBar ->
-    OneOf Texts.StatusBar -> Header (m (WithTextPos View))
-labelHeader switchTextLens textLens =
-    Header
-    { headerCategoryTextLens = textLens
-    , headerSwitchTextLens = switchTextLens
-    , headerWidget = info (label textLens)
-    }
-
 makeChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Has Hover.Style env, GuiState.HasCursor env
     , Element.HasAnimIdPrefix env
     , Has (Choice.Texts Text) env
-    , Has (Texts.StatusBar Text) env
+    , Has (t Text) env, ElemIds t
     , Glue.HasTexts env
     ) =>
-    OneOf Texts.StatusBar -> Property f a ->
+    OneOf t -> Property f a ->
     [(a, TextWidget f)] -> m (TextWidget f)
 makeChoice headerText prop choices =
     do
@@ -109,29 +90,30 @@ labeledChoice ::
     ( MonadReader env m, Applicative f, Eq a
     , Element.HasAnimIdPrefix env
     , GuiState.HasCursor env, Has Hover.Style env
-    , Glue.GluesTo env w (TextWidget f) (TextWidget f)
     , Has (Choice.Texts Text) env
-    , Has (Texts.StatusBar Text) env
+    , Has (t Text) env, ElemIds t
     , Glue.HasTexts env
     ) =>
-    Header (m w) -> Property f a -> [(a, TextWidget f)] -> m (TextWidget f)
-labeledChoice header prop choices =
-    headerWidget header /|/ makeChoice (headerCategoryTextLens header) prop choices
+    WithTextPos View -> OneOf t -> Property f a -> [(a, TextWidget f)] -> m (TextWidget f)
+labeledChoice headerView categoryTextLens prop choices =
+    pure headerView /|/ makeChoice categoryTextLens prop choices
 
 makeSwitchStatusWidget ::
     ( MonadReader env m, Applicative f, Eq a
     , Has Config env
     , Element.HasAnimIdPrefix env, GuiState.HasCursor env
-    , Has Hover.Style env, Glue.GluesTo env w (TextWidget f) (TextWidget f)
+    , Has Hover.Style env
     , Has (Choice.Texts Text) env
     , Has (Texts.StatusBar Text) env
+    , Has (t Text) env, ElemIds t
     , Glue.HasTexts env
     ) =>
-    Header (m w) -> Lens' Config [MetaKey] -> Property f a ->
+    m (WithTextPos View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' Config [MetaKey] -> Property f a ->
     [(a, TextWidget f)] -> m (StatusWidget f)
-makeSwitchStatusWidget header keysGetter prop choiceVals =
+makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter prop choiceVals =
     do
-        w <- labeledChoice header prop choiceVals
+        header <- mkHeaderWidget
+        w <- labeledChoice header categoryTextLens prop choiceVals
         keys <- Lens.view (has . keysGetter)
         txt <- Lens.view has
         let e =
@@ -139,7 +121,7 @@ makeSwitchStatusWidget header keysGetter prop choiceVals =
                 & E.keysEventMap keys
                 (E.toDoc txt
                     [ Texts.sbStatusBar
-                    , headerSwitchTextLens header
+                    , switchTextLens
                     ])
         pure StatusWidget
             { _widget = w
