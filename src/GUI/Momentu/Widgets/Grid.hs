@@ -54,7 +54,7 @@ JsonTH.derivePrefixed "_" ''Texts
 type HasTexts env = (Glue.HasTexts env, Has (Texts Text) env)
 
 newtype Cursor = Cursor (Vector2 Int)
-    deriving (Eq)
+    deriving stock Eq
 Lens.makePrisms ''Cursor
 
 instance Field1 Cursor Cursor Int Int where _1 = _Cursor . _1

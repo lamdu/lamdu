@@ -7,7 +7,7 @@ module Lamdu.Sugar.Names.CPS
 import Lamdu.Prelude
 
 newtype CPS m a = CPS { unCPS :: forall r. m r -> m (a, r) }
-    deriving (Functor)
+    deriving stock Functor
 
 runcps :: Applicative f => CPS f b -> f b
 runcps act = unCPS act (pure ()) <&> fst

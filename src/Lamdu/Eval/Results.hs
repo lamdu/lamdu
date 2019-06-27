@@ -36,7 +36,8 @@ newtype ScopeId = ScopeId Int
     deriving newtype (Eq, Ord, Binary)
 
 newtype EvalTypeError = EvalTypeError Text
-    deriving (Show, Eq, Ord, Generic)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord)
 
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0

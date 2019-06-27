@@ -62,7 +62,7 @@ type Clipboard = Text
 
 newtype Doc = Doc
     { _docStrs :: [Text]
-    } deriving (Generic, Eq, Ord, Show)
+    } deriving stock (Generic, Eq, Ord, Show)
 Lens.makeLenses ''Doc
 
 -- | Convenience wrapper to build a Doc by fetching the Texts from

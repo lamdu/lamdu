@@ -41,7 +41,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-newtype Prec = Prec Int deriving (Eq, Ord, Show)
+newtype Prec = Prec Int deriving stock (Eq, Ord, Show)
 
 data CompositeRow a = CompositeRow
     { _crPre :: a

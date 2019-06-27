@@ -73,7 +73,7 @@ type GlobalVarName = JSS.Id ()
 
 newtype LoggingInfo = LoggingInfo
     { _liScopeDepth :: Int
-    } deriving Show
+    } deriving stock Show
 Lens.makeLenses ''LoggingInfo
 
 data Env m = Env

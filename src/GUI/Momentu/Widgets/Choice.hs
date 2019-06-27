@@ -30,7 +30,7 @@ import           Lamdu.Prelude
 
 newtype Texts a = Texts
     { _chooseSelected :: a
-    } deriving Eq
+    } deriving stock Eq
 
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts

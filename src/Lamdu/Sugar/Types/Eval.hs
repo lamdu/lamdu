@@ -34,7 +34,7 @@ import           Lamdu.Prelude
 
 newtype ResRecord name v = ResRecord
     { _recordFields :: [(Tag name, v)]
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving stock (Functor, Foldable, Traversable, Generic)
 
 data ResInject name v = ResInject
     { _riTag :: Tag name
@@ -53,7 +53,7 @@ data ResTable name v = ResTable
 
 newtype ResList v = ResList
     { _rsHead :: v
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving stock (Functor, Foldable, Traversable, Generic)
 
 data ResBody name v
     = RRecord (ResRecord name v)

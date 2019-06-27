@@ -24,7 +24,7 @@ Lens.makeLenses ''Config
 
 newtype Theme = Theme
     { _selectedBranchColor :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving stock (Eq, Show)
 JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme

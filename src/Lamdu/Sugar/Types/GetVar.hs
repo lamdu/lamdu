@@ -65,7 +65,7 @@ data BinderVarRef name o = BinderVarRef
 
 newtype ParamsRecordVarRef name = ParamsRecordVarRef
     { _prvFieldNames :: [name]
-    } deriving (Eq, Ord, Functor, Foldable, Traversable, Generic)
+    } deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic)
 
 data GetVar name o
     = GetParam (ParamRef name o)

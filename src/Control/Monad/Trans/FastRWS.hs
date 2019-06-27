@@ -25,7 +25,7 @@ import           Data.Monoid ((<>))
 import           Prelude
 
 newtype RWST r w s m a = RWST { unRWST :: r -> w -> s -> m (a, s, w) }
-    deriving Functor
+    deriving stock Functor
 
 instance Monad m => Applicative (RWST r w s m) where
     pure x = RWST $ \_ w s -> pure (x, s, w)

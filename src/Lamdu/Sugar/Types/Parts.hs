@@ -76,7 +76,7 @@ data FuncParamActions name i o =
 
 newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
-    } deriving Generic
+    } deriving stock Generic
 
 data ParamInfo name i o = ParamInfo
     { _piTag :: TagRef name i o
@@ -150,11 +150,11 @@ data Payload name i o a = Payload
 
 newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
-    } deriving Generic
+    } deriving stock Generic
 
 newtype OpenCompositeActions o = OpenCompositeActions
     { _openCompositeClose :: o EntityId
-    } deriving Generic
+    } deriving stock Generic
 
 data CompositeTail o expr
     = OpenComposite (OpenCompositeActions o) expr
