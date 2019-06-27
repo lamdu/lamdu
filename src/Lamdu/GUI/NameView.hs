@@ -5,7 +5,6 @@ module Lamdu.GUI.NameView
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.Text as Text
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
@@ -33,7 +32,7 @@ makeCollisionSuffixLabel ::
 makeCollisionSuffixLabel collisionColor mCollision =
     case mCollision of
     Name.NoCollision -> pure Nothing
-    Name.Collision suffix -> mk (Text.pack (show suffix))
+    Name.Collision suffix -> mk suffix
     Name.UnknownCollision -> mk "?"
     where
         mk text =

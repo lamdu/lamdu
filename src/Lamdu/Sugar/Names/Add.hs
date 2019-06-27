@@ -8,6 +8,7 @@ module Lamdu.Sugar.Names.Add
       InternalName(..), inTag, inContext, runPasses
     ) where
 
+import           Control.Lens (ALens)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
@@ -245,6 +246,13 @@ p1Name mDisambiguator nameType (P0Name texts internalName autoGen) =
 tagText :: Has (Texts.Name Text) env => env -> Text -> Collision -> TagText
 tagText env = TagText . displayOf env
 
+countMissing :: Int -> ALens a b (Maybe i) (Either Int i) -> [a] -> [b]
+countMissing _ _ [] = []
+countMissing c l (x:xs) =
+    case x ^# l of
+    Just i -> (x & Lens.cloneLens l .~ Right i) : countMissing c l xs
+    Nothing -> (x & Lens.cloneLens l .~ Left c) : countMissing (c+1) l xs
+
 makeTagTexts ::
     ( Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
@@ -253,24 +261,25 @@ makeTagTexts ::
 makeTagTexts env p1texts =
     p1texts
     ^@.. Lens.itraversed
-    <&> (\(tag, texts) -> (texts ^. Tag.name, Set.singleton tag))
+    <&> (\(tag, texts) -> (texts ^. Tag.name, Map.singleton tag (texts ^. Tag.disambiguationText)))
     & MMap.fromList
     & Lens.imapped %@~ mkTagTexts
     & fold
     where
         mkTagTexts fullText tags
-            | isReserved env fullText || Set.size tags > 1 =
-                tags ^.. Lens.folded & Lens.imap (mkCollision fullText) & Map.fromList
+            | isReserved env fullText || Map.size tags > 1 =
+                countMissing 0 Lens._2 (tags ^@.. Lens.itraversed)
+                <&> Lens._2 %~ tagText env fullText . Collision . either (Text.pack . show) id
+                & Map.fromList
             | otherwise =
-                Map.fromSet mkTagText tags
+                Lens.imap mkTagText tags
                 where
-                    mkTagText tag =
+                    mkTagText tag _ =
                         tagText env text NoCollision
                         where
                             text =
                                 abbreviations ^? Lens.ix tag
                                 & fromMaybe fullText
-        mkCollision text idx tag = (tag, tagText env text (Collision idx))
         fullTexts = p1texts ^.. traverse . Tag.name & Set.fromList
         abbreviationTags =
             p1texts
@@ -301,7 +310,7 @@ isReserved env name =
             <> env ^.. has @(Texts.Name Text) . Lens.folded
             & Set.fromList
 
-toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId CollisionSuffix
+toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId Int
 toSuffixMap tagContexts =
     tagContexts & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
     where
@@ -369,7 +378,7 @@ data P2Env = P2Env
     , _p2Texts :: Set Text
         -- ^ The set of all texts seen in P1 traversal (we do not see hole results)
         -- This is used to identify textual collisions in hole result tags
-    , _p2TagSuffixes :: Map TaggedVarId CollisionSuffix
+    , _p2TagSuffixes :: Map TaggedVarId Int
         -- ^ When tags collide in the overlapping scopes, the tag gets
         -- a different suffix for each of its entities in ALL scopes
     , _p2TextsAbove :: Set Text
@@ -406,7 +415,7 @@ getCollision tagsBelow aName =
         Lens.view id
         <&> \env ->
         case env ^. p2TagSuffixes . Lens.at (TaggedVarId ctx tag) of
-        Just suffix -> Collision suffix
+        Just suffix -> Collision (Text.pack (show suffix))
         Nothing ->
             -- In hole results, the collsions suffixes are not precomputed,
             -- but rather computed here:
