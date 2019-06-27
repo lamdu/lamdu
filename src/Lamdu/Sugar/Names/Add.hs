@@ -258,14 +258,36 @@ makeTagTexts env p1texts =
     & Lens.imapped %@~ mkTagTexts
     & fold
     where
-        mkTagTexts text tags
-            | isCollidingName text tags =
-                tags ^.. Lens.folded & Lens.imap (mkCollision text) & Map.fromList
+        mkTagTexts fullText tags
+            | isCollidingName fullText tags =
+                tags ^.. Lens.folded & Lens.imap (mkCollision fullText) & Map.fromList
             | otherwise =
-                Map.fromSet (const (tagText env text NoCollision)) tags
+                Map.fromSet mkTagText tags
+                where
+                    mkTagText tag =
+                        tagText env text NoCollision
+                        where
+                            text =
+                                abbreviations ^? Lens.ix tag
+                                & fromMaybe fullText
         mkCollision text idx tag = (tag, tagText env text (Collision idx))
         isCollidingName text tagsOfName =
             isReserved env text || Set.size tagsOfName > 1
+        fullTexts = p1texts ^.. traverse . Tag.name & Set.fromList
+        abbreviationTags =
+            p1texts
+            ^@.. Lens.itraversed <. Tag.abbreviation . Lens._Just
+            <&> (\(tag, abr) -> (abr, Set.singleton tag))
+            & filter (not . (`Set.member` fullTexts) . fst)
+            & MMap.fromList
+        abbreviations =
+            abbreviationTags
+            ^@.. Lens.itraversed <. Lens.to singleTag . Lens._Just
+            <&> Tuple.swap
+            & Map.fromList
+        singleTag tags
+            | Set.size tags > 1 = Nothing
+            | otherwise = Set.lookupMin tags
 
 isReserved ::
     ( Has (Texts.Name Text) env
