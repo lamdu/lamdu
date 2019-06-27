@@ -4,33 +4,32 @@ module Lamdu.GUI.TagPane
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Binary.Extended (encodeS)
 import qualified Data.Char as Char
+import           Data.List (sortOn)
 import           Data.Property (Property(..))
-import           GUI.Momentu.Align (TextWidget)
+import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation.Id (AnimId, augmentId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.Responsive (Responsive)
-import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
+import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.Data.Tag (LangNames(..), name)
+import           Lamdu.Data.Tag (LangNames(..))
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -50,21 +49,16 @@ makeTagNameEdit ::
     ( MonadReader env m, Applicative f
     , TextEdit.Deps env, GuiState.HasCursor env
     ) =>
-    Property f Text -> Text -> Widget.Id ->
+    Property f Text -> Widget.Id ->
     m (TextWidget f)
-makeTagNameEdit prop emptyText myId =
+makeTagNameEdit prop myId =
     TextEdits.makeWordEdit
-    ?? empty
+    ?? pure "  "
     ?? prop
     ?? tagRenameId myId
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
-    where
-        empty = TextEdit.Modes
-            { TextEdit._unfocused = emptyText
-            , TextEdit._focused = ""
-            }
 
-makeTopRow ::
+makeFocusableTagNameEdit ::
     ( MonadReader env m
     , Applicative o
     , Has (Texts.CodeUI Text) env
@@ -72,8 +66,8 @@ makeTopRow ::
     , GuiState.HasCursor env
     , Has Config.Config env
     ) =>
-    Property o Text -> Text -> Widget.Id -> m (Responsive o)
-makeTopRow prop emptyText myId =
+    Property o Text -> Widget.Id -> m (TextWidget o)
+makeFocusableTagNameEdit prop myId =
     do
         env <- Lens.view id
         let fdConfig =
@@ -98,79 +92,133 @@ makeTopRow prop emptyText myId =
                 }
         (FocusDelegator.make ?? fdConfig ?? FocusDelegator.FocusEntryParent ?? myId
             <&> (Align.tValue %~))
-            <*> makeTagNameEdit prop emptyText (tagRenameId myId)
-    <&> Responsive.fromWithTextPos
-
+            <*> makeTagNameEdit prop myId
 
 makeLanguageTitle ::
     ( MonadReader env m
     , Has TextView.Style env, Has Dir.Layout env
     , Has (Map LangId Text) env
     ) =>
-    AnimId -> LangId -> m (Align.WithTextPos View)
+    Widget.Id -> LangId -> m (Align.WithTextPos (Widget o))
 makeLanguageTitle myId lang =
     TextView.make
     <*> (Lens.view has <&> getLang)
-    <*> pure (myId <> ["lang-title"])
+    <*> pure (Widget.toAnimId myId <> ["lang-title"])
+    <&> Align.tValue %~ Widget.fromView
     where
         getLang :: Map LangId Text -> Text
         getLang x =
             x ^. Lens.at lang
             & fromMaybe (lang ^. _LangId & Lens.ix 0 %~ Char.toUpper)
 
-makeLocalizedNames ::
-    ( MonadReader env m
-    , Applicative o
-    , TextEdit.Deps env, Glue.HasTexts env, Spacer.HasStdSpacing env
-    , Has LangId env, Has (Map LangId Text) env
+data Row a = Row
+    { _language :: a
+    , _space0 :: a
+    , _name :: a
+    , _space1 :: a
+    , _abbreviation :: a
+    , _space2 :: a
+    , _disambig :: a
+    } deriving (Functor, Foldable, Traversable)
+
+langWidgetId :: Widget.Id -> LangId -> Widget.Id
+langWidgetId parentId lang =
+    parentId `Widget.joinId` [encodeS lang]
+
+nameId :: Widget.Id -> Widget.Id
+nameId = (`Widget.joinId` ["name"])
+
+makeLangRow ::
+    ( Applicative o
+    , MonadReader env m
+    , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
+    , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
     ) =>
-    Widget.Id -> Map LangId LangNames -> m (Responsive o)
-makeLocalizedNames myId names =
-    do
-        curLang <- Lens.view has
-        let makeName lang x
-                | lang == curLang = pure []
-                | otherwise = makeLocalizedName lang x <&> (:[])
-        taggedList <*> (Lens.itraverse makeName names <&> (^.. traverse) <&> concat)
+    Widget.Id -> (LangId -> LangNames -> o ()) -> LangId -> LangNames ->
+    m (Row (Aligned (Widget o)))
+makeLangRow parentId setName lang langNames =
+    Row
+    <$> makeLanguageTitle langId lang
+    <*> pure Element.empty
+    <*> makeFocusableTagNameEdit nameProp (nameId langId)
+    <*> pure Element.empty
+    <*> makeFocusableTagNameEdit (mkProp Tag.abbreviation) (langId `Widget.joinId` ["abbr"])
+    <*> pure Element.empty
+    <*> makeFocusableTagNameEdit (mkProp Tag.disambiguationText) (langId `Widget.joinId` ["disamb"])
+    <&> Lens.mapped %~ Align.fromWithTextPos 0
     where
-        makeLocalizedName lang x =
-            TaggedItem
-            <$> (makeLanguageTitle langId lang
-                /|/ Spacer.stdHSpace
-                <&> Align.tValue %~ Widget.fromView
-                <&> Just)
-            <*> (TextView.make ?? x ^. name ?? langId <> ["val"] <&> Responsive.fromTextView)
-            <*> pure Nothing
-            where
-                langId = augmentId lang (Widget.toAnimId myId)
+        langId = langWidgetId parentId lang
+        nameProp =
+            setName lang . (\x -> langNames & Tag.name .~ x)
+            & Property (langNames ^. Tag.name)
+        mkProp l =
+            setName lang .
+            (\x -> langNames & Lens.cloneLens l .~ if x == "" then Nothing else Just x)
+            & Property (langNames ^. Lens.cloneLens l . Lens._Just)
+
+makeMissingLangRow ::
+    ( Applicative o
+    , MonadReader env m
+    , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
+    , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
+    ) =>
+    Widget.Id -> (LangId -> LangNames -> o ()) -> LangId ->
+    m (Row (Aligned (Widget o)))
+makeMissingLangRow parentId setName lang =
+    Row
+    <$> makeLanguageTitle langId lang
+    <*> pure Element.empty
+    <*> makeFocusableTagNameEdit nameProp (nameId langId)
+    <*> pure Element.empty
+    <*> pure Element.empty
+    <*> pure Element.empty
+    <*> pure Element.empty
+    <&> Lens.mapped %~ Align.fromWithTextPos 0
+    where
+        langId = langWidgetId parentId lang
+        nameProp =
+            setName lang . (\x -> LangNames x Nothing Nothing)
+            & Property ""
 
 make ::
     ( MonadReader env m
     , Applicative o
-    , Has (Texts.CodeUI Text) env
+    , Has (Texts.CodeUI Text) env, Has (Grid.Texts Text) env
     , TextEdit.Deps env, Glue.HasTexts env
     , GuiState.HasCursor env, Has Theme env
     , Element.HasAnimIdPrefix env, Has Config.Config env
     , Spacer.HasStdSpacing env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Sugar.TagPane Name o -> m (Responsive o)
+    Sugar.TagPane Name o -> m (Widget o)
 make tagPane =
     Styled.addValFrame <*>
     do
         lang <- Lens.view has
-        let setLang = (tagPane ^. Sugar.tpSetName) lang
-        let prop =
-                case tagPane ^. Sugar.tpLocalizedNames . Lens.at lang of
-                Nothing -> Property "" (\x -> LangNames x Nothing Nothing & setLang)
-                Just names -> Property (names ^. name) (\x -> names & name .~ x & setLang)
-        Responsive.vbox <*>
-            sequenceA
-            [ makeTopRow prop fallback myId
-            , Spacer.stdVSpace <&> Responsive.fromView
-            , makeLocalizedNames myId (tagPane ^. Sugar.tpLocalizedNames)
-            ]
+        Grid.make <*>
+            sequence
+            ( ( Row
+                    (Styled.label MomentuTexts.language)
+                    (Spacer.stdHSpace <&> WithTextPos 0)
+                    (Styled.label Texts.name)
+                    (Spacer.stdHSpace <&> WithTextPos 0)
+                    (Styled.label Texts.abbreviation)
+                    (Spacer.stdHSpace <&> WithTextPos 0)
+                    (Styled.label Texts.disambiguationText)
+                    & sequenceA
+                    <&> Lens.mapped . Align.tValue %~ Widget.fromView
+                    <&> Lens.mapped %~ Align.fromWithTextPos 0
+                ) :
+                [ makeMissingLangRow myId (tagPane ^. Sugar.tpSetName) lang
+                | Lens.nullOf (Sugar.tpLocalizedNames . Lens.ix lang) tagPane
+                ] <>
+                ( tagPane ^@.. Sugar.tpLocalizedNames . Lens.itraversed
+                    & sortOn ((/= lang) . fst)
+                    <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetName))
+                )
+            )
+            <&> snd
+            & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        fallback = tagPane ^. Sugar.tpLocalizedNames . Lens.ix (LangId "english") . name

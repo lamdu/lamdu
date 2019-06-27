@@ -147,7 +147,10 @@
             "negate": "הפוך סימן",
             "value": "ערך",
             "evaluation": "הרצה",
-            "scope": "תחום"
+            "scope": "תחום",
+            "name": "שם",
+            "abbreviation": "קיצור",
+            "disambiguationText": "טקסט-להבדלה"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

@@ -181,7 +181,7 @@ makePaneBodyEdit ::
     GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
-    Sugar.PaneTag tag -> TagPaneEdit.make tag
+    Sugar.PaneTag tag -> TagPaneEdit.make tag <&> Responsive.fromWidget
     Sugar.PaneDefinition def ->
         do
             env <- Lens.view id

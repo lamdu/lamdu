@@ -144,7 +144,10 @@
             "negate": "Negate",
             "value": "Value",
             "evaluation": "Values",
-            "scope": "Scope"
+            "scope": "Scope",
+            "name": "Name",
+            "abbreviation": "Abbreviation",
+            "disambiguationText": "Disambiguation-Text"
         },
         "name": {
             "unnamed": "Unnamed",

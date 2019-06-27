@@ -19,7 +19,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.I18N.Code
-import           Lamdu.I18N.CodeUI
+import           Lamdu.I18N.CodeUI (CodeUI)
 import           Lamdu.I18N.Collaboration
 import           Lamdu.I18N.Definitions
 import           Lamdu.I18N.LangId (LangId)

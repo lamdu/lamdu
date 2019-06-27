@@ -85,6 +85,9 @@ data CodeUI a = CodeUI
     , _value :: a
     , _evaluation :: a
     , _scope :: a
+    , _name :: a
+    , _abbreviation :: a
+    , _disambiguationText :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds
