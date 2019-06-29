@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.GetVarEdit
-    ( make, makeGetBinder, makeNoActions, makeSimpleView, addInfixMarker
+    ( make, makeGetBinder, makeNoActions, makeSimpleView
     , makePunnedVars
     , Role(..)
     ) where
