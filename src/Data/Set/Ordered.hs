@@ -8,17 +8,16 @@ module Data.Set.Ordered
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Data.Monoid.Extended (ExtendSemigroup(..))
 import           Data.Semigroup (Semigroup(..))
 import           GHC.Generics (Generic)
 
-import qualified Prelude
-import           Prelude hiding (filter, null)
+import qualified Lamdu.Prelude as Prelude
+import           Lamdu.Prelude hiding (filter, null)
 
 newtype OrderedSet a = OrderedSet { _orderedSet :: [a] }
     deriving newtype (Eq, Ord, Functor, Foldable)
     deriving stock (Generic, Show, Traversable)
-    deriving Monoid via (ExtendSemigroup (OrderedSet a))
+    deriving Monoid via (Generically (OrderedSet a))
 
 instance Eq a => Semigroup (OrderedSet a) where
     OrderedSet xs <> OrderedSet ys =

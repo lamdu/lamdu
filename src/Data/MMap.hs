@@ -14,18 +14,17 @@ import           Control.Lens.Operators
 import           Data.Binary (Binary)
 import           Data.Map (Map)
 import qualified Data.Map.Extended as Map
-import           Data.Monoid.Extended (ExtendSemigroup(..))
 import           Data.Semigroup (Semigroup(..))
 import           Data.Set (Set)
 import           GHC.Generics (Generic)
 
-import           Prelude hiding (filter)
+import           Lamdu.Prelude hiding (filter)
 
 -- | A Map with a sensible Monoid/Semigroup instance
 newtype MMap k v = MMap (Map k v)
     deriving newtype (Eq, Ord, Binary, Functor, Foldable)
     deriving stock (Generic, Traversable, Show, Read)
-    deriving Monoid via ExtendSemigroup (MMap k v)
+    deriving Monoid via Generically (MMap k v)
 
 instance (Ord k, Semigroup v) => Semigroup (MMap k v) where
     MMap m1 <> MMap m2 = Map.unionWith (<>) m1 m2 & MMap

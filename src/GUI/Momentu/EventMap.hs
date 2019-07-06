@@ -31,7 +31,6 @@ import           Data.Foldable (asum)
 import qualified Data.Map as Map
 import           Data.Maybe (listToMaybe)
 import qualified Data.Maybe as Maybe
-import           Data.Monoid.Extended (ExtendSemigroup(..))
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import           GHC.Stack (CallStack, callStack, withFrozenCallStack)
@@ -139,7 +138,7 @@ data EventMap a = EventMap
 Lens.makeLenses ''EventMap
 
 instance Semigroup (EventMap a) where (<>) = overrides
-deriving via ExtendSemigroup (EventMap a) instance Monoid (EventMap a)
+deriving via Generically (EventMap a) instance Monoid (EventMap a)
 
 prettyKeyEvent :: Texts Text -> KeyEvent -> InputDoc
 prettyKeyEvent txt =

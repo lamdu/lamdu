@@ -5,6 +5,7 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
+- generic-data-0.7.0.0
 - github: lamdu/bindings-freetype-gl
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/syntax-tree
