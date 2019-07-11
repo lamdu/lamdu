@@ -1,5 +1,5 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
-, constraints, containers, deepseq, fetchFromGitHub, lattices, lens, monad-st
+, constraints, containers, deepseq, fetchFromGitHub, generic-data, lattices, lens, monad-st
 , mtl, pretty, QuickCheck, show-combinators, template-haskell, th-abstraction
 , transformers, stdenv
 }:
@@ -13,7 +13,7 @@ mkDerivation {
     rev = "411eca75f908064f77ae1432ac31acac5cbae095";
   };
   libraryHaskellDepends = [
-    base base-compat binary constraints containers deepseq lattices lens
+    base base-compat binary constraints containers deepseq generic-data lattices lens
     monad-st mtl pretty QuickCheck show-combinators template-haskell
     th-abstraction transformers
   ];
