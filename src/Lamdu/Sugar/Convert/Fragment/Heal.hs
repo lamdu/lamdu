@@ -4,13 +4,15 @@ module Lamdu.Sugar.Convert.Fragment.Heal
 
 import           AST (Tree, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           AST.Infer.Blame (Blame(..), blame)
 import           AST.Term.Apply (applyArg)
 import qualified AST.Term.Row as Row
 import           AST.Unify.Generalize (GTerm(..))
+import           AST.Unify.New (newUnbound)
 import qualified Control.Lens.Extended as Lens
+import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
-import           Lamdu.Calc.Infer (loadDeps)
-import           Lamdu.Calc.Infer.Refragment (refragment)
+import qualified Lamdu.Calc.Infer as Infer
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
@@ -87,19 +89,27 @@ healMismatch =
             <&> annotations %~ (^. Input.stored)
         deps <- Lens.view (ConvertM.scFrozenDeps . Property.pVal)
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
-        let addRecursiveRef topVar =
-                case recursiveRef of
-                Nothing -> id
-                Just rr ->
-                    V.scopeVarTypes . Lens.at (globalId (rr ^. ConvertM.rrDefI)) ?~ GMono topVar
-        let prepareInfer topVar = loadDeps deps <&> (addRecursiveRef topVar .)
         pure $
             \fragment ->
-            prepare fragment topLevelExpr
-            & refragment fst act prepareInfer
-            & sequence_
+            do
+                topLevelType <- newUnbound
+                let addRecursiveRef =
+                        case recursiveRef of
+                        Nothing -> id
+                        Just rr ->
+                            V.scopeVarTypes .
+                            Lens.at (globalId (rr ^. ConvertM.rrDefI)) ?~
+                            GMono topLevelType
+                addDeps <- Infer.loadDeps deps
+                prepare fragment topLevelExpr
+                    & blame (^. Lens._1) topLevelType
+                    & Reader.local (addRecursiveRef . addDeps)
+            <&> (^.. annotations) <&> Lens.mapped %~ act
+            & Infer.runPureInfer V.emptyScope
+                (Infer.InferState Infer.emptyPureInferState Infer.varGen)
+            & either (error "bug in heal!") (sequence_ . (^. Lens._1))
             >> postProcess
     where
-        act True (_, OnUnify x) = x
-        act False (_, OnNoUnify x) = x
-        act _ _ = pure ()
+        act (Ok ,(_, OnUnify x)) = x
+        act (TypeMismatch, (_, OnNoUnify x)) = x
+        act _ = pure ()
