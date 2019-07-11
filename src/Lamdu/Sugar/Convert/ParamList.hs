@@ -8,8 +8,9 @@ import           AST (Tree, Ann(..), annotations)
 import           AST.Infer (IResult, irType)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Row (RowExtend(..))
-import           AST.Unify (Unify, UVarOf, unify, newUnbound, newTerm)
+import           AST.Unify (Unify, UVarOf, unify)
 import           AST.Unify.Binding (UVar)
+import           AST.Unify.New (newUnbound, newTerm)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Infer (PureInfer)

@@ -11,7 +11,7 @@ import qualified AST.Term.Nominal as N
 import           AST.Term.Row (RowExtend(..))
 import qualified AST.Term.Row as Row
 import           AST.Term.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
-import           AST.Unify (QVarHasInstance)
+import           AST.Unify.QuantifiedVar (QVarHasInstance)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text

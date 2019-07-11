@@ -16,9 +16,10 @@ import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalDecl, nScheme)
 import           AST.Term.Scheme (sTyp)
 import           AST.Unify (unify)
-import qualified AST.Unify as Unify
+import           AST.Unify.Apply (applyBindings)
 import           AST.Unify.Binding (UVar)
 import           AST.Unify.Generalize (GTerm(..))
+import           AST.Unify.New (newUnbound)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
@@ -141,7 +142,7 @@ resolve =
     annotations f
     where
         f (stored, inferred) =
-            inferred ^. irType & Unify.applyBindings
+            inferred ^. irType & applyBindings
             <&> \x -> (stored, x, inferred)
 
 runInferResult ::
@@ -184,7 +185,7 @@ inferDef ::
     T m (Either (Tree Pure T.TypeError) (InferResult m))
 inferDef inferFunc monitors results defExpr defVar =
     do
-        defTv <- Unify.newUnbound
+        defTv <- newUnbound
         inferredVal <-
             inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ GMono defTv)

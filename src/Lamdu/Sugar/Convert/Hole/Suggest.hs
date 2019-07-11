@@ -13,6 +13,8 @@ import           AST.Term.Nominal
 import           AST.Term.Row (RowExtend(..))
 import           AST.Unify
 import           AST.Unify.Binding (UVar)
+import           AST.Unify.Lookup (semiPruneLookup)
+import           AST.Unify.New (newUnbound, newTerm)
 import           AST.Unify.Term
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
@@ -81,7 +83,7 @@ termTransformsWithoutSplit def src =
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (val . V._BToNom) src ->
                     do
-                        (fromNomTyp, _) <- V.LFromNom name & V.BLeaf & inferBody
+                        InferRes _ fromNomTyp <- V.LFromNom name & V.BLeaf & inferBody
                         resultType <- newUnbound
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.Apply (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
