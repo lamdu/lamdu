@@ -2,7 +2,6 @@ module Lamdu.Sugar.Convert.GetVar
     ( convert, globalNameRef
     ) where
 
-import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import           AST (_Pure)
 import           AST.Term.Row (freExtends)
 import qualified AST.Term.Scheme as S
@@ -59,7 +58,7 @@ inlineDef globalId dest =
                     def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
                         & Def.defType .~
                             _Pure # S.Scheme
-                            { S._sForAlls = T.Types (S.QVars (mempty & Lens.at "a" ?~ bottom)) (S.QVars mempty)
+                            { S._sForAlls = T.Types (S.QVars (mempty & Lens.at "a" ?~ mempty)) (S.QVars mempty)
                             , S._sTyp = _Pure # T.TVar "a"
                             }
                         & Transaction.writeIRef defI

@@ -10,7 +10,6 @@ module Lamdu.GUI.CodeEdit
 
 import           AST (_Pure)
 import           AST.Term.Scheme (Scheme(..), QVars(..))
-import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -244,7 +243,7 @@ makeNewDefinition cp =
             (Definition.BodyExpr (Definition.Expr holeI mempty))
             ( _Pure # Scheme
                 { _sForAlls =
-                    T.Types (QVars (mempty & Lens.at "a" ?~ bottom)) (QVars mempty)
+                    T.Types (QVars (mempty & Lens.at "a" ?~ mempty)) (QVars mempty)
                 , _sTyp = _Pure # T.TVar "a"
             }) ()
             & DataOps.newPublicDefinitionWithPane cp

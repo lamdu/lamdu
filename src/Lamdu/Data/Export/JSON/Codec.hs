@@ -5,7 +5,6 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           Algebra.Lattice (BoundedJoinSemiLattice(..))
 import           AST (Ann(..), monoChildren, Tree, Pure(..), _Pure)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
@@ -270,7 +269,7 @@ decodeType json =
 
 encodeCompositeVarConstraints :: T.RConstraints -> [Encoded]
 encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
-    | scopeLevel == bottom =
+    | scopeLevel == mempty =
         Set.toList forbidden
         <&> T.tagName
         <&> encodeIdent
@@ -282,7 +281,7 @@ decodeCompositeConstraints ::
     [Encoded] -> AesonTypes.Parser T.RConstraints
 decodeCompositeConstraints json =
     traverse decodeIdent json <&> map T.Tag <&> Set.fromList
-    <&> (`T.RowConstraints` bottom)
+    <&> (`T.RowConstraints` mempty)
 
 encodeTypeVars :: Tree T.Types QVars -> [AesonTypes.Pair]
 encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
@@ -301,7 +300,7 @@ decodeTypeVars obj =
         ( \tvs ->
             Aeson.parseJSON tvs
             >>= traverse decodeIdent
-            <&> map (\name -> (T.Var name, bottom))
+            <&> map (\name -> (T.Var name, mempty))
             <&> Map.fromList
         ) obj
         <&> QVars
