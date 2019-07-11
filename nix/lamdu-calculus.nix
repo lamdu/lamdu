@@ -1,6 +1,6 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
 , bytestring, constraints, containers, deepseq, fetchFromGitHub
-, generic-data hashable, lattices, lens, monad-st, mtl, pretty
+, generic-data, hashable, lattices, lens, monad-st, mtl, pretty
 , QuickCheck, syntax-tree, transformers, stdenv
 }:
 mkDerivation {
