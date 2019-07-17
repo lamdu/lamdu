@@ -27,7 +27,7 @@ import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Stack (CallStack)
 import qualified GHC.Stack as Stack
-import           GUI.Momentu.Align (Aligned(..))
+import           GUI.Momentu.Align (Aligned(..), WithTextPos)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, R)
 import qualified GUI.Momentu.Direction as Dir
@@ -128,7 +128,7 @@ groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (
 makeShortcutKeyView ::
     ( MonadReader env m, Glue.HasTexts env, HasStyle env
     , Element.HasAnimIdPrefix env
-    ) => [(CallStack, E.InputDoc)] -> m View
+    ) => [(CallStack, E.InputDoc)] -> m (WithTextPos View)
 makeShortcutKeyView inputDocs =
     (Align.vboxAlign ?? 1) <*> Lens.itraverse makeInputDoc inputDocs
     & Reader.local setColor
@@ -143,7 +143,6 @@ makeShortcutKeyView inputDocs =
         makeInputDoc i (callStack, inputDoc) =
             Label.make (inputDoc <> " ")
             /-/ Label.make (srcStr callStack <> " ")
-            <&> (^. Align.tValue)
             & Element.locallyAugmented i
         setColor env =
             env & has . TextView.styleColor .~ (env ^. has . styleInputDocColor)
@@ -151,15 +150,15 @@ makeShortcutKeyView inputDocs =
 makeTextViews ::
     ( MonadReader env m, HasStyle env, Glue.HasTexts env
     , Element.HasAnimIdPrefix env
-    ) => Tree Text [(CallStack, E.InputDoc)] -> m (Tree View View)
+    ) => Tree Text [(CallStack, E.InputDoc)] ->
+    m (Tree (WithTextPos View) (WithTextPos View))
 makeTextViews =
     go
     where
         go (Leaf s) =
             Leaf <$> makeShortcutKeyView s & Element.locallyAugmented s
         go (Branch n cs) =
-            Branch <$> label n <*> traverse go cs & Element.locallyAugmented n
-        label = fmap (^. Align.tValue) . Label.make
+            Branch <$> Label.make n <*> traverse go cs & Element.locallyAugmented n
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -213,11 +212,13 @@ makeTooltip =
     do
         helpKeys <- Lens.view (has . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
         txt <- Lens.view (has . textShowHelp)
-        (Label.make txt <&> (^. Align.tValue))
+        Label.make txt
             /|/ makeShortcutKeyView
             (helpKeys <&> (,) Stack.callStack . ModKey.pretty)
+            <&> (^. Align.tValue)
 
-mkIndent :: (MonadReader env m, Glue.HasTexts env) => m (R -> View -> View)
+mkIndent ::
+    (Glue.GluesTo env View e r, MonadReader env m) => m (R -> e -> r)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
 
 fontHeight :: (MonadReader env m, Has TextView.Style env) => m R
@@ -246,7 +247,7 @@ makeFlatTreeView =
 
 makeTreeView ::
     (MonadReader env m, Has TextView.Style env, Glue.HasTexts env) =>
-    m (Vector2 R -> [Tree View View] -> View)
+    m (Vector2 R -> [Tree (WithTextPos View) (WithTextPos View)] -> View)
 makeTreeView =
     do
         indent <- mkIndent
@@ -260,7 +261,8 @@ makeTreeView =
                 , [] )
                 where
                     (titles, inputDocs) = go ts
-        let handleResult (pairs, []) = pairs
+        let handleResult (pairs, []) =
+                pairs <&> Lens.both %~ (^. Align.tValue)
             handleResult _ = error "Leafs at root of tree!"
         makeFlatTreeView
             <&> \mk size trees -> mk size (handleResult (go trees))
