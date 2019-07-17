@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
 
 import           AST (Tree, monoChildren)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Infer
+import           AST.Infer (IResult(..), InferRes(..), irType, irScope, inferBody)
 import           AST.Term.FuncType
 import           AST.Term.Nominal
 import           AST.Term.Row (RowExtend(..))
