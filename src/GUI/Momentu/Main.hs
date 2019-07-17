@@ -22,7 +22,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2)
-import           GHC.Stack (CallStack, getCallStack, SrcLoc)
+import           GHC.Stack (CallStack, SrcLoc, prettySrcLoc, getCallStack)
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Draw as Draw
@@ -178,8 +178,11 @@ type HasMainLoopEnv env = (State.HasCursor env, Has Env env)
 jumpToTopOfCallStack :: DebugOptions -> CallStack -> IO ()
 jumpToTopOfCallStack debug callStack =
     case getCallStack callStack of
-    [] -> pure ()
-    ((_func, topFrame):_) -> jumpToSource debug topFrame
+    [] -> putStrLn "call stack empty, can't jump to it"
+    ((_func, topFrame):_) ->
+        do
+            putStrLn $ "Jumping to: " <> prettySrcLoc topFrame
+            jumpToSource debug topFrame
 
 data LookupMode = ApplyEvent | JumpToSource
 
