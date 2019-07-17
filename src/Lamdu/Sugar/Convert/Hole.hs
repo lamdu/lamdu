@@ -12,7 +12,7 @@ module Lamdu.Sugar.Convert.Hole
     ) where
 
 import           AST (Tree, Pure(..), _ToKnot, _Pure)
-import           AST.Infer (IResult(..), irType, irScope, infer)
+import           AST.Infer (IResult(..), irType, irScope)
 import           AST.Knot.Ann (Ann(..), ann, annotations)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (ToNom(..), NominalDecl, nScheme)
@@ -26,7 +26,6 @@ import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Reader (local)
 import           Control.Monad.State (State, StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)
@@ -43,9 +42,9 @@ import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import qualified Lamdu.Annotations as Annotations
+import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
-import qualified Lamdu.Calc.Infer as Infer
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
@@ -54,6 +53,7 @@ import           Lamdu.Calc.Term.Eq (couldEq)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
+import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (ValP, ValI, DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -313,12 +313,12 @@ loadInfer sugarContext scope v =
     \deps ->
     ( deps
     , do
-        addScope <- Infer.loadDeps deps
-        local addScope (infer v)
+        memoInfer (Definition.Expr v deps)
         & runPureInfer scope (sugarContext ^. ConvertM.scInferContext)
         <&> _1 %~ (^. ExprLens.itermAnn)
     )
     where
+        memoInfer = Cache.infer (sugarContext ^. ConvertM.scCacheFunctions)
         sugarDeps = sugarContext ^. ConvertM.scFrozenDeps . Property.pVal
 
 sugar ::
