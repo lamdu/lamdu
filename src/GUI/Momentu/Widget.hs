@@ -132,7 +132,7 @@ addPreEventToEventMap append preEvent e =
     & actionText %~ concatDescs (preEvent ^. pDesc)
     <&> append (preEvent ^. pAction)
     where
-        actionText = E.emHandlerDocs . E.docStrs . Lens.reversed . Lens.element 0
+        actionText = E.emHandlerDocHandlers . E.dhDoc . E.docStrs . Lens.reversed . Lens.element 0
         concatDescs x y = filter (not . Text.null) [x, y] & Text.intercalate ", "
 
 -- | New pre-event is not added to the pre-events if pre-event is

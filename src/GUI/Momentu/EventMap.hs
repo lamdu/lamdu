@@ -9,7 +9,7 @@ module GUI.Momentu.EventMap
     , Texts(..)
     , Event(..)
     , EventMap, lookup
-    , emDocs, emHandlerDocs
+    , emDocHandlers, emHandlerDocHandlers
     , charEventMap, allChars
     , charGroup
     , keyEventMap, keyPress, keyPresses, keyPressOrRepeat
@@ -76,6 +76,12 @@ data DocHandler a = DocHandler
     } deriving (Generic, Functor, Foldable, Traversable)
 Lens.makeLenses ''DocHandler
 
+-- Without the handler:
+dhPhantomPart :: Lens' (DocHandler a) (DocHandler ())
+dhPhantomPart f (DocHandler doc fileLoc hdlr) =
+    f (DocHandler doc fileLoc ())
+    <&> dhHandler .~ hdlr
+
 type InputDoc = Text
 
 -- AllCharsHandler always conflict with each other
@@ -85,10 +91,10 @@ data AllCharsHandler a = AllCharsHandler
     } deriving (Generic, Functor)
 Lens.makeLenses ''AllCharsHandler
 
-chDocs :: Lens.IndexedTraversal' InputDoc (AllCharsHandler a) Doc
-chDocs f (AllCharsHandler inputDoc docHandler) =
+chDocHandlers :: Lens.IndexedTraversal' InputDoc (AllCharsHandler a) (DocHandler (Char -> Maybe a))
+chDocHandlers f (AllCharsHandler inputDoc docHandler) =
     AllCharsHandler inputDoc
-    <$> dhDoc (Lens.indexed f inputDoc) docHandler
+    <$> Lens.indexed f inputDoc docHandler
 
 data CharGroupHandler a = CharGroupHandler
     { __cgMInputDoc :: Maybe InputDoc
@@ -96,9 +102,9 @@ data CharGroupHandler a = CharGroupHandler
     } deriving (Generic, Functor)
 Lens.makeLenses ''CharGroupHandler
 
-cgDocs :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) Doc
-cgDocs f (CharGroupHandler mInputDoc docHandler) =
-    dhDoc (Lens.indexed f inputDoc) docHandler
+cgDocHandlers :: Lens.IndexedTraversal' InputDoc (CharGroupHandler a) (DocHandler (Map Char a))
+cgDocHandlers f (CharGroupHandler mInputDoc docHandler) =
+    Lens.indexed f inputDoc docHandler
     <&> CharGroupHandler mInputDoc
     where
         inputDoc = fromMaybe autoDoc mInputDoc
@@ -114,10 +120,12 @@ data DropHandler a = DropHandler
     } deriving (Generic, Functor)
 Lens.makeLenses ''DropHandler
 
-dropHandlerDocs :: Lens.IndexedTraversal' InputDoc (DropHandler a) Doc
+dropHandlerDocs ::
+    Lens.IndexedTraversal' InputDoc (DropHandler a)
+    (DocHandler ([FilePath] -> Maybe a))
 dropHandlerDocs f (DropHandler inputDoc docHandler) =
     DropHandler inputDoc
-    <$> dhDoc (Lens.indexed f inputDoc) docHandler
+    <$> Lens.indexed f inputDoc docHandler
 
 data MaybeWantsClipboard a
     = Doesn'tWantClipboard a
@@ -147,26 +155,26 @@ prettyKeyEvent txt =
     KeyEvent ModKey.KeyState'Repeating modKey -> repeat txt <> ModKey.pretty modKey
     KeyEvent ModKey.KeyState'Released modKey -> depress txt <> ModKey.pretty modKey
 
-emDocsH ::
+emDocHandlersH ::
     (KeyEvent -> r) ->
     (InputDoc -> r) ->
-    Lens.IndexedTraversal' r (EventMap a) Doc
-emDocsH key idoc f e =
+    Lens.IndexedTraversal' r (EventMap a) (DocHandler ())
+emDocHandlersH key idoc f e =
     EventMap
-    <$> (Lens.reindexed key Lens.itraversed <. dhDoc) f (_emKeyMap e)
-    <*> (Lens.traverse .> Lens.reindexed idoc dropHandlerDocs) f (_emDropHandlers e)
-    <*> (Lens.traverse .> Lens.reindexed idoc cgDocs) f (_emCharGroupHandlers e)
-    <*> (Lens.traverse .> Lens.reindexed idoc chDocs) f (_emAllCharsHandler e)
+    <$> (Lens.reindexed key Lens.itraversed <. dhPhantomPart) f (_emKeyMap e)
+    <*> (Lens.traverse .> Lens.reindexed idoc dropHandlerDocs <. dhPhantomPart) f (_emDropHandlers e)
+    <*> (Lens.traverse .> Lens.reindexed idoc cgDocHandlers <. dhPhantomPart) f (_emCharGroupHandlers e)
+    <*> (Lens.traverse .> Lens.reindexed idoc chDocHandlers <. dhPhantomPart) f (_emAllCharsHandler e)
 
-emDocs ::
+emDocHandlers ::
     ( MonadReader env m, Has (Texts Text) env, Lens.Indexable InputDoc p
     , Applicative f
     ) =>
-    m (Lens.Over' p f (EventMap a) Doc)
-emDocs = Lens.view has <&> \txt -> emDocsH (prettyKeyEvent txt) id
+    m (Lens.Over' p f (EventMap a) (DocHandler ()))
+emDocHandlers = Lens.view has <&> \txt -> emDocHandlersH (prettyKeyEvent txt) id
 
-emHandlerDocs :: Lens.Traversal' (EventMap a) Doc
-emHandlerDocs = emDocsH (const ()) (const ())
+emHandlerDocHandlers :: Lens.Traversal' (EventMap a) (DocHandler ())
+emHandlerDocHandlers = emDocHandlersH (const ()) (const ())
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 overrides
