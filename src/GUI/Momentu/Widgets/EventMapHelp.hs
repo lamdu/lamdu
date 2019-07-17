@@ -30,7 +30,6 @@ import qualified GHC.Stack as Stack
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, R)
-import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
@@ -112,13 +111,6 @@ defaultConfig =
 data Tree n l = Leaf l | Branch n [Tree n l]
     deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
-bitraverseTree :: Applicative f => (n0 -> f n1) -> (l0 -> f l1) -> Tree n0 l0 -> f (Tree n1 l1)
-bitraverseTree _ onLeaf (Leaf l) = Leaf <$> onLeaf l
-bitraverseTree onNode onLeaf (Branch n ts) = Branch <$> onNode n <*> traverse (bitraverseTree onNode onLeaf) ts
-
-treeNodes :: Lens.Traversal (Tree n0 l) (Tree n1 l) n0 n1
-treeNodes = (`bitraverseTree` pure)
-
 groupTree :: Eq node => [([node], leaf)] -> [Tree node leaf]
 groupTree = foldr step []
     where
@@ -133,19 +125,12 @@ groupTree = foldr step []
 groupInputDocs :: [([Text], r)] -> [([Text], [r])]
 groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
 
-addAnimIds :: Show a => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
-addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
-addAnimIds animId (Branch a cs) =
-    Branch (tAnimId, a) $ map (addAnimIds tAnimId) cs
-    where
-        tAnimId = Anim.augmentId a animId
-
 makeShortcutKeyView ::
     ( MonadReader env m, Glue.HasTexts env, HasStyle env
     , Element.HasAnimIdPrefix env
     ) => [(CallStack, E.InputDoc)] -> m View
 makeShortcutKeyView inputDocs =
-    (Align.vboxAlign ?? 1) <*> traverse makeInputDoc inputDocs
+    (Align.vboxAlign ?? 1) <*> Lens.itraverse makeInputDoc inputDocs
     & Reader.local setColor
     where
         topOf callStack =
@@ -155,10 +140,11 @@ makeShortcutKeyView inputDocs =
             Stack.srcLocFile srcLoc <> ":" <> show (Stack.srcLocStartLine srcLoc)
             & Text.pack
         srcStr = fromMaybe "<no call stack>" . fmap fmtSrcLoc . topOf
-        makeInputDoc (callStack, inputDoc) =
+        makeInputDoc i (callStack, inputDoc) =
             Label.make (inputDoc <> " ")
             /-/ Label.make (srcStr callStack <> " ")
             <&> (^. Align.tValue)
+            & Element.locallyAugmented i
         setColor env =
             env & has . TextView.styleColor .~ (env ^. has . styleInputDocColor)
 
@@ -166,18 +152,14 @@ makeTextViews ::
     ( MonadReader env m, HasStyle env, Glue.HasTexts env
     , Element.HasAnimIdPrefix env
     ) => Tree Text [(CallStack, E.InputDoc)] -> m (Tree View View)
-makeTextViews tree =
-    addAnimIds helpAnimId tree
-    & traverse shortcut
-    >>= treeNodes mkDoc
+makeTextViews =
+    go
     where
-        shortcut (animId, input) =
-            makeShortcutKeyView input
-            & Reader.local (Element.animIdPrefix .~ animId)
-        mkDoc (animId, subtitle) =
-            Label.make subtitle
-            <&> (^. Align.tValue)
-            & Reader.local (Element.animIdPrefix .~ animId)
+        go (Leaf s) =
+            Leaf <$> makeShortcutKeyView s & Element.locallyAugmented s
+        go (Branch n cs) =
+            Branch <$> label n <*> traverse go cs & Element.locallyAugmented n
+        label = fmap (^. Align.tValue) . Label.make
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
