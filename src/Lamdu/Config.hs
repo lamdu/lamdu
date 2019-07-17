@@ -78,6 +78,7 @@ data Debug = Debug
     , _virtualCursorShown :: Bool
     , _breakpoints :: Debug.Tasks Bool
     , _jumpToSourceKeys :: [MetaKey]
+    , _showSourceLocs :: Bool
     } deriving (Eq, Show)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier

@@ -107,6 +107,7 @@ addHelp config theme language font size widget =
             { _heConfig =
                 EventMapHelp.Config
                 { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
+                , EventMapHelp._configShowSourceLocs = config ^. Config.debug . Config.showSourceLocs
                 }
             , _heAnimIdPrefix = ["help box"]
             , _heDirLayout = language ^. has
