@@ -52,6 +52,7 @@ helpStyle font theme =
     , EventMapHelp._styleInputDocColor = theme ^. Theme.helpInputDocColor
     , EventMapHelp._styleBGColor = theme ^. Theme.helpBGColor
     , EventMapHelp._styleTint = theme ^. Theme.helpTint
+    , EventMapHelp._styleSrcLocColor = theme ^. Theme.helpSrcLocColor
     }
 
 make :: Fonts Font -> Theme -> Style
@@ -107,7 +108,6 @@ addHelp config theme language font size widget =
             { _heConfig =
                 EventMapHelp.Config
                 { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
-                , EventMapHelp._configShowSourceLocs = config ^. Config.debug . Config.showSourceLocs
                 }
             , _heAnimIdPrefix = ["help box"]
             , _heDirLayout = language ^. has

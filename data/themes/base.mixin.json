@@ -34,7 +34,8 @@
         "debugInfo"   : { "width": "Monospace"   , "style": "Sans" , "slant": "Roman" , "weight": "Light" }
     },
     "help": {
-        "textSize": 9
+        "textSize": 9,
+        "srcLocColor": null
     },
     "searchTerm": {
         "emptyStrings": {

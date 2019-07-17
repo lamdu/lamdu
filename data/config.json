@@ -5,7 +5,6 @@
         "virtualCursorShown": false,
         "printCursor": false,
         "jumpToSourceKeys": [ "Cmd+F12" ],
-        "showSourceLocs": false,
         "breakpoints": {
             "inference": false,
             "sugaring": false,

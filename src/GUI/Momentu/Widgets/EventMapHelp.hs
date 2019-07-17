@@ -6,7 +6,7 @@ module GUI.Momentu.Widgets.EventMapHelp
     , toggledHelpAdder
     , addHelpView
     , Style(..), styleText, styleInputDocColor, styleBGColor, styleTint
-    , Config(..), configOverlayDocKeys, configShowSourceLocs
+    , Config(..), configOverlayDocKeys
     , HasStyle
     , defaultStyle
     , defaultConfig
@@ -61,6 +61,7 @@ JsonTH.derivePrefixed "" ''IsHelpShown
 data Style = Style
     { _styleText :: TextView.Style
     , _styleInputDocColor :: Draw.Color
+    , _styleSrcLocColor :: Maybe Draw.Color
     , _styleBGColor :: Draw.Color
     , _styleTint :: Draw.Color
     }
@@ -68,9 +69,8 @@ Lens.makeLenses ''Style
 
 instance Has TextView.Style Style where has = styleText
 
-data Config = Config
+newtype Config = Config
     { _configOverlayDocKeys :: [MetaKey]
-    , _configShowSourceLocs :: Bool
     }
 Lens.makeLenses ''Config
 
@@ -99,6 +99,7 @@ defaultStyle font =
         , TextView._styleUnderline = Nothing
         }
     , _styleInputDocColor = Draw.Color 0.1 0.7 0.7 1
+    , _styleSrcLocColor = Nothing
     , _styleBGColor = Draw.Color 0.2 0.15 0.1 0.5
     , _styleTint = Draw.Color 1 1 1 0.8
     }
@@ -107,7 +108,6 @@ defaultConfig :: Config
 defaultConfig =
     Config
     { _configOverlayDocKeys = [MetaKey noMods MetaKey.Key'F1]
-    , _configShowSourceLocs = False
     }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -128,12 +128,14 @@ groupInputDocs :: [([Text], r)] -> [([Text], [r])]
 groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
 
 makeShortcutKeyView ::
-    ( MonadReader env m, Glue.HasTexts env, HasStyle env, Has Config env
+    ( MonadReader env m, Glue.HasTexts env, HasStyle env
     , Element.HasAnimIdPrefix env
     ) => [(CallStack, E.InputDoc)] -> m (WithTextPos View)
 makeShortcutKeyView inputDocs =
-    (Align.vboxAlign ?? 1) <*> Lens.itraverse makeInputDoc inputDocs
-    & Reader.local setColor
+    do
+        inputDocColor <- Lens.view (has . styleInputDocColor)
+        (Align.vboxAlign ?? 1) <*> Lens.itraverse makeInputDoc inputDocs
+            & setColor inputDocColor
     where
         topOf callStack =
             Stack.getCallStack callStack ^? Lens.ix 0
@@ -143,20 +145,20 @@ makeShortcutKeyView inputDocs =
             & Text.pack
         srcStr = fromMaybe "<no call stack>" . fmap fmtSrcLoc . topOf
         maybeAddSrcLoc callStack mkInputView =
-            do
-                shouldAdd <- Lens.view (has . configShowSourceLocs)
-                if shouldAdd
-                    then mkInputView /-/ Label.make (srcStr callStack <> " ")
-                    else mkInputView
+            Lens.view (has . styleSrcLocColor)
+            >>= \case
+            Nothing -> mkInputView
+            Just color ->
+                mkInputView /-/
+                (Label.make (srcStr callStack <> " ") & setColor color)
         makeInputDoc i (callStack, inputDoc) =
             inputDoc <> " " & Label.make
             & maybeAddSrcLoc callStack
             & Element.locallyAugmented i
-        setColor env =
-            env & has . TextView.styleColor .~ (env ^. has . styleInputDocColor)
+        setColor color = Reader.local $ \env -> env & TextView.color .~ color
 
 makeTextViews ::
-    ( MonadReader env m, HasStyle env, Glue.HasTexts env, Has Config env
+    ( MonadReader env m, HasStyle env, Glue.HasTexts env
     , Element.HasAnimIdPrefix env
     ) => Tree Text [(CallStack, E.InputDoc)] ->
     m (Tree (WithTextPos View) (WithTextPos View))
@@ -183,7 +185,7 @@ columns maxHeight itemHeight =
 
 make ::
     ( MonadReader env m, Glue.HasTexts env, Has (E.Texts Text) env
-    , HasStyle env, Element.HasAnimIdPrefix env, Has Config env
+    , HasStyle env, Element.HasAnimIdPrefix env
     ) => Vector2 R -> EventMap a -> m View
 make size eventMap =
     do
@@ -201,7 +203,7 @@ make size eventMap =
 
 makeFromFocus ::
     ( MonadReader env m, Glue.HasTexts env, Has (E.Texts Text) env, HasStyle env
-    , Element.HasAnimIdPrefix env, Has Config env
+    , Element.HasAnimIdPrefix env
     ) =>
     Widget.Size -> Widget.Focused (f a) -> m View
 makeFromFocus size focus =
@@ -304,7 +306,7 @@ addHelpViewWith mkHelpView size focus =
         focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
 
 addHelpView ::
-    ( MonadReader env m, HasStyle env, Has Config env
+    ( MonadReader env m, HasStyle env
     , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (E.Texts Text) env
     ) => Widget.Size -> Widget.Focused (f a) -> m (Widget.Focused (f a))
 addHelpView = addHelpViewWith makeFromFocus

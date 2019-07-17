@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
+    ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint, helpSrcLocColor
     , Hole(..), holeResultPadding, holeFrameColor, holeFrameWidth
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
@@ -52,6 +52,7 @@ data Help = Help
     , _helpInputDocColor :: Draw.Color
     , _helpBGColor :: Draw.Color
     , _helpTint :: Draw.Color
+    , _helpSrcLocColor :: Maybe Draw.Color
     } deriving Eq
 JsonTH.derivePrefixed "_help" ''Help
 
