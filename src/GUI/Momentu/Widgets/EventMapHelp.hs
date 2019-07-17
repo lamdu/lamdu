@@ -22,8 +22,11 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
+import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import           Data.Vector.Vector2 (Vector2(..))
+import           GHC.Stack (CallStack)
+import qualified GHC.Stack as Stack
 import           GUI.Momentu.Align (Aligned(..))
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Animation (AnimId, R)
@@ -35,7 +38,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
-import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu.Glue ((/|/), (/-/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.MetaKey (MetaKey(..), toModKey, noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -127,7 +130,7 @@ groupTree = foldr step []
                 _ -> Branch at (step (as, l) []) : b
 
 -- We also rely on Map.toList returning a sorted list
-groupInputDocs :: [([Text], E.InputDoc)] -> [([Text], [E.InputDoc])]
+groupInputDocs :: [([Text], r)] -> [([Text], [r])]
 groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
 
 addAnimIds :: Show a => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
@@ -140,30 +143,36 @@ addAnimIds animId (Branch a cs) =
 makeShortcutKeyView ::
     ( MonadReader env m, Glue.HasTexts env, HasStyle env
     , Element.HasAnimIdPrefix env
-    ) => [E.InputDoc] -> m View
+    ) => [(CallStack, E.InputDoc)] -> m View
 makeShortcutKeyView inputDocs =
-    (Align.vboxAlign ?? 1)
-    <*>
-    (inputDocs
-        <&> (<> " ")
-        & traverse Label.make
-        <&> map (^. Align.tValue))
+    (Align.vboxAlign ?? 1) <*> traverse makeInputDoc inputDocs
     & Reader.local setColor
     where
+        topOf callStack =
+            Stack.getCallStack callStack ^? Lens.ix 0
+            <&> snd
+        fmtSrcLoc srcLoc =
+            Stack.srcLocFile srcLoc <> ":" <> show (Stack.srcLocStartLine srcLoc)
+            & Text.pack
+        srcStr = fromMaybe "<no call stack>" . fmap fmtSrcLoc . topOf
+        makeInputDoc (callStack, inputDoc) =
+            Label.make (inputDoc <> " ")
+            /-/ Label.make (srcStr callStack <> " ")
+            <&> (^. Align.tValue)
         setColor env =
             env & has . TextView.styleColor .~ (env ^. has . styleInputDocColor)
 
 makeTextViews ::
     ( MonadReader env m, HasStyle env, Glue.HasTexts env
     , Element.HasAnimIdPrefix env
-    ) => Tree Text [E.InputDoc] -> m (Tree View View)
+    ) => Tree Text [(CallStack, E.InputDoc)] -> m (Tree View View)
 makeTextViews tree =
     addAnimIds helpAnimId tree
     & traverse shortcut
     >>= treeNodes mkDoc
     where
-        shortcut (animId, doc) =
-            makeShortcutKeyView doc
+        shortcut (animId, input) =
+            makeShortcutKeyView input
             & Reader.local (Element.animIdPrefix .~ animId)
         mkDoc (animId, subtitle) =
             Label.make subtitle
@@ -192,10 +201,14 @@ make size eventMap =
         mkTreeView <- makeTreeView ?? size
         docs <- E.emDocHandlers
         eventMap ^.. docs . Lens.withIndex
-            <&> (_1 %~ (^. E.dhDoc . E.docStrs)) . Tuple.swap
+            <&> fromDocHandler . Tuple.swap
             & groupInputDocs & groupTree
             & traverse makeTextViews
             <&> mkTreeView
+    where
+        fromDocHandler (docHandler, inputDoc) =
+            (docHandler ^. E.dhDoc . E.docStrs,
+                (docHandler ^. E.dhFileLocation, inputDoc))
 
 makeFromFocus ::
     ( MonadReader env m, Glue.HasTexts env, Has (E.Texts Text) env, HasStyle env
@@ -219,7 +232,8 @@ makeTooltip =
         helpKeys <- Lens.view (has . configOverlayDocKeys) <&> Lens.mapped %~ toModKey
         txt <- Lens.view (has . textShowHelp)
         (Label.make txt <&> (^. Align.tValue))
-            /|/ makeShortcutKeyView (helpKeys <&> ModKey.pretty)
+            /|/ makeShortcutKeyView
+            (helpKeys <&> (,) Stack.callStack . ModKey.pretty)
 
 mkIndent :: (MonadReader env m, Glue.HasTexts env) => m (R -> View -> View)
 mkIndent = Glue.mkGlue <&> \glue -> glue Glue.Horizontal . Spacer.makeHorizontal
