@@ -5,13 +5,11 @@ module Lamdu.GUI.Expr.RecordEdit
 import           AST (Tree)
 import           AST.Knot.Ann (Ann, val)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Animation.Id (augmentId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -218,7 +216,7 @@ addPostTags items =
                     then label Texts.recordSep
                     else label Texts.recordCloser
                 ) & grammar
-                & Reader.local (Element.animIdPrefix %~ augmentId idx)
+                & Element.locallyAugmented idx
                 <&> \lbl -> item & tagPost ?~ (lbl <&> Widget.fromView)
         Lens.itraverse f items
     where

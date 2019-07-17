@@ -13,7 +13,6 @@ import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import           GUI.Momentu.Element (Element)
@@ -256,8 +255,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
             Styled.addValPadding
                 <*> (pure fieldsView /-/ pure extView <&> Align.toWithTextPos)
     where
-        addAnimIdPrefix i row =
-            row <&> Reader.local (Element.animIdPrefix %~ AnimId.augmentId i)
+        addAnimIdPrefix i row = row <&> Element.locallyAugmented i
         toRow (t, v) =
             CompositeRow mkPre (pure t) space (pure v) mkPost
             where

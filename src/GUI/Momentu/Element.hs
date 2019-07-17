@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
-    , HasAnimIdPrefix(..), subAnimId
+    , HasAnimIdPrefix(..), subAnimId, locallyAugmented
     , Layers(..), layers, translateLayers, addLayersAbove, render
     , pad, padAround
     , topLayer, bottomLayer
@@ -11,6 +11,7 @@ module GUI.Momentu.Element
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Animation (AnimId, R, Size)
 import qualified GUI.Momentu.Animation as Anim
@@ -86,6 +87,10 @@ height = size . _2
 
 class HasAnimIdPrefix env where animIdPrefix :: Lens' env AnimId
 instance HasAnimIdPrefix [ByteString] where animIdPrefix = id
+
+locallyAugmented ::
+    (HasAnimIdPrefix env, MonadReader env m, Show t) => t -> m a -> m a
+locallyAugmented x = Reader.local (animIdPrefix %~ Anim.augmentId x)
 
 subAnimId :: (MonadReader env m, HasAnimIdPrefix env) => m (AnimId -> AnimId)
 subAnimId = Lens.view animIdPrefix <&> (++)

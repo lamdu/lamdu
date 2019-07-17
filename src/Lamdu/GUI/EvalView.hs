@@ -150,7 +150,7 @@ makeArray items =
                     , [ Label.make "…" | idx == arrayCutoff ]
                     ] & concat & sequence
                 )
-            & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
+            & Element.locallyAugmented (idx :: Int)
 
 makeTree ::
     (Monad m, Deps env) =>
@@ -168,7 +168,7 @@ makeTree (Sugar.ResTree root subtrees) =
                 , [ Label.make "…" | idx == cutoff ]
                 ] & concat & sequence
             )
-            & Reader.local (Element.animIdPrefix %~ Anim.augmentId (idx :: Int))
+            & Element.locallyAugmented (idx :: Int)
         cutoff = 4
 
 
