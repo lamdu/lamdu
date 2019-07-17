@@ -66,7 +66,7 @@ Executable lamdu
   default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric, DeriveAnyClass, DerivingStrategies, FlexibleContexts
   default-language: Haskell2010
   build-depends: Lamdu, base, directory, process, template-haskell, time, base-compat
-  ghc-options: -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-options: -rtsopts -with-rtsopts=-A128M -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
   if flag(ekg)
     ghc-options: -with-rtsopts=-T
