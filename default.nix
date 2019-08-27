@@ -16,6 +16,7 @@ let config = {
                         aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
                         language-ecmascript = pkgs.haskell.lib.doJailbreak (self.callHackage "language-ecmascript" "0.19" {});
                         ekg-core = pkgs.haskell.lib.doJailbreak (self.callHackage "ekg-core" "0.1.1.4" {});
+                        th-abstraction = pkgs.haskell.lib.doJailbreak (self.callHackage "th-abstraction" "0.3.1.0" {});
                     };
                 };
             };

@@ -1,6 +1,6 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
 , constraints, containers, deepseq, fetchFromGitHub, generic-data, lattices, lens, monad-st
-, mtl, pretty, QuickCheck, show-combinators, template-haskell, th-abstraction
+, mtl, one-liner, pretty, QuickCheck, show-combinators, template-haskell, th-abstraction
 , transformers, stdenv
 }:
 mkDerivation {
@@ -14,7 +14,7 @@ mkDerivation {
   };
   libraryHaskellDepends = [
     base base-compat binary constraints containers deepseq generic-data lattices lens
-    monad-st mtl pretty QuickCheck show-combinators template-haskell
+    monad-st mtl one-liner pretty QuickCheck show-combinators template-haskell
     th-abstraction transformers
   ];
   homepage = "https://github.com/lamdu/syntax-tree.git#readme";
