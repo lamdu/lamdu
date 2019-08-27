@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
-import           AST (monoChildren)
+import           AST (traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
@@ -22,7 +22,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 redexes :: Val a -> ([(V.Var, Val a)], Val a)
-redexes (Ann _ (V.BApp (V.Apply (Ann _ (V.BLam lam)) arg))) =
+redexes (Ann _ (V.BApp (V.App (Ann _ (V.BLam lam)) arg))) =
     redexes (lam ^. V.lamOut)
     & _1 %~ (:) (lam ^. V.lamIn, arg)
 redexes v = ([], v)
@@ -32,7 +32,7 @@ wrapWithRedexes rs x =
     foldr wrapWithRedex x rs
     where
         wrapWithRedex (v, a) b =
-            V.Apply (Ann Nothing (V.BLam (V.Lam v b))) a
+            V.App (Ann Nothing (V.BLam (V.Lam v b))) a
             & V.BApp
             & Ann Nothing
 
@@ -43,7 +43,7 @@ inlineLetH var arg bod =
         go (Ann stored b) =
             case (b, arg ^. val) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
-            (V.BApp (V.Apply (Ann _ (V.BLeaf (V.LVar v))) a)
+            (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) a)
               , V.BLam (V.Lam param lamBody))
               | v == var ->
                 redexes lamBody
@@ -54,11 +54,11 @@ inlineLetH var arg bod =
                   & V.Lam param & V.BLam & Ann stored
                 )
             _ ->
-                ( r ^.. monoChildren . Lens._Wrapped . _1 . traverse
-                , r & monoChildren %~ (^. Lens._Wrapped . _2) & Ann stored
+                ( r ^.. traverseK1 . Lens._Wrapped . _1 . traverse
+                , r & traverseK1 %~ (^. Lens._Wrapped . _2) & Ann stored
                 )
                 where
-                    r = b & monoChildren %~ Lens.Const . go
+                    r = b & traverseK1 %~ Lens.Const . go
 
 cursorDest :: Val a -> a
 cursorDest x =
@@ -72,7 +72,7 @@ inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
-    <&> (^? val . V._BApp . V.applyFunc . val . V._BLam . V.lamOut . ann)
+    <&> (^? val . V._BApp . V.appFunc . val . V._BLam . V.lamOut . ann)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readVal
     <&> annotations %~ Just

@@ -9,7 +9,7 @@ module Lamdu.Sugar.Types.Simple
     , CaseKind(..), _LambdaCase, _CaseWithArg
     , Nominal(..), nTId, nVal
     , GetField(..), gfRecord, gfTag
-    , V.Apply(..), V.applyFunc, V.applyArg
+    , V.App(..), V.appFunc, V.appArg
     ) where
 
 import qualified Control.Lens as Lens

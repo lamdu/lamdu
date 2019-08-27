@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.DefExpr
     ) where
 
 import           AST (Tree, Pure, ann)
-import           AST.Infer (irType)
 import           AST.Term.Scheme (saveScheme)
 import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens as Lens
@@ -41,7 +40,7 @@ convert defType defExpr defI =
             convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
-                generalize (defExpr ^. Definition.expr . ann . Input.inferResult . irType)
+                generalize (defExpr ^. Definition.expr . ann . Input.inferResult . V.iType)
                 >>= saveScheme
                 & runPureInfer V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)

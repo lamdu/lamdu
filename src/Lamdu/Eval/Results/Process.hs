@@ -1,18 +1,18 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
-import           AST (Tree, Tie, Ann(..), Pure(..), _Pure, Recursive)
-import           AST.Class.Combinators (And, proxyNoConstraint, NoConstraint)
-import           AST.Class.HasChild (HasChild)
-import qualified AST.Class.HasChild as HasChild
+import           AST
+import           AST.Class.Has (HasChild(..))
+import qualified AST.Class.Has as HasChild
 import qualified AST.Term.Nominal as N
 import           AST.Term.Row (RowExtend(..))
 import qualified AST.Term.Row as Row
 import           AST.Term.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
-import           AST.Unify.QuantifiedVar (QVarHasInstance)
+import           AST.Unify.QuantifiedVar (HasQuantifiedVar(..))
 import qualified Control.Lens as Lens
+import           Data.Constraint (Dict(..), withDict)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -38,7 +38,7 @@ extractVariantTypeField tag typ =
     typ ^? _Pure . T._TVariant . T.flatRow
     >>= (^. Row.freExtends . Lens.at tag)
 
-type AddTypes val f = (Tree Pure T.Type -> val -> Tie f Body) -> Tree Pure T.Type -> Body f
+type AddTypes val f = (Tree Pure T.Type -> val -> Node f Body) -> Tree Pure T.Type -> Body f
 
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack
@@ -94,29 +94,45 @@ addTypesArray items go typ =
 addTypes :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Val () -> Val (Tree Pure T.Type)
 addTypes nomsMap typ (Ann () b) =
     case b of
-    RRecExtend recExtend -> recurse (addTypesRecExtend recExtend)
-    RInject inject -> recurse (addTypesInject inject)
-    RArray items -> recurse (addTypesArray items)
+    RRecExtend recExtend -> r (addTypesRecExtend recExtend)
+    RInject inject -> r (addTypesInject inject)
+    RArray items -> r (addTypesArray items)
     RFunc x -> RFunc x
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l
     RError e -> RError e
     & Ann typ
     where
-        recurse f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
+        r f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
+
+class (KFunctor k, HasQuantifiedVar k, Ord (QVar k), HasChild T.Types k) => ApplyNominal k where
+    applyNominalRecursive :: Proxy k -> Dict (NodesConstraint k ApplyNominal)
+instance ApplyNominal T.Type where applyNominalRecursive _ = Dict
+instance ApplyNominal T.Row where applyNominalRecursive _ = Dict
 
 applyNominal ::
-    Recursive
-        (HasChild (N.NomVarTypes typ) `And` QVarHasInstance Ord `And` NoConstraint)
-        typ =>
-    Tree Pure (N.NominalDecl typ) ->
-    Tree (N.NomVarTypes typ) (QVarInstances Pure) ->
-    Tree Pure (Scheme (N.NomVarTypes typ) typ)
+    Tree Pure (N.NominalDecl T.Type) ->
+    Tree T.Types (QVarInstances Pure) ->
+    Tree Pure (Scheme T.Types T.Type)
 applyNominal nom params =
-    _Pure #
-    ( N.applyNominal proxyNoConstraint (Lens._Wrapped . _Pure #) nom params
-    & runIdentity
-    )
+    nom ^. _Pure . N.nScheme & sTyp %~ subst params
+    & MkPure
+
+subst ::
+    forall t.
+    ApplyNominal t =>
+    Tree T.Types (QVarInstances Pure) ->
+    Tree Pure t ->
+    Tree Pure t
+subst params (MkPure x) =
+    withDict (applyNominalRecursive (Proxy @t)) $
+    case x ^? quantifiedVar of
+    Nothing -> mapKWith (Proxy @ApplyNominal) (subst params) x
+    Just q ->
+        params ^?
+        getChild . _QVarInstances . Lens.ix q . _Pure
+        & fromMaybe (quantifiedVar # q)
+    & MkPure
 
 -- Will loop forever for bottoms like: newtype Void = Void Void
 unwrapTInsts :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Tree Pure T.Type

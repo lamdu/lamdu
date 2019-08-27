@@ -2,10 +2,9 @@ module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Infer.Blame (Blame(..), blame)
-import           AST.Term.Apply (applyArg)
 import qualified AST.Term.Row as Row
 import           AST.Unify.Generalize (GTerm(..))
 import           AST.Unify.New (newUnbound)
@@ -48,7 +47,7 @@ fixPriorities x@(Ann ((cat, priority), pl) b) =
         & res 1
     V.BRecExtend r -> V.BRecExtend r & res (-1)
     V.BCase c -> c & Row.eVal . score +~ (-1) & V.BCase & res (-1)
-    V.BApp a -> a & V.applyFunc . score +~ (-1) & V.BApp & res 0
+    V.BApp a -> a & V.appFunc . score +~ (-1) & V.BApp & res 0
     _ -> x
     where
         res diff = Ann ((cat, priority + diff), pl)
@@ -59,7 +58,7 @@ prepareInFragExpr ::
     Tree (Ann (ValP m)) Term ->
     Tree (Ann (Priority, EditAction (T m ()))) Term
 prepareInFragExpr (Ann a v) =
-    v & monoChildren %~ prepareInFragExpr
+    v & traverseK1 %~ prepareInFragExpr
     & Ann ((InFragment, 0), OnNoUnify (() <$ DataOps.applyHoleTo a))
     & fixPriorities
 
@@ -71,14 +70,14 @@ prepare ::
 prepare fragI (Ann a v) =
     if fragI == a ^. Property.pVal
     then
-        fragmented ^. val & monoChildren %~ prepareInFragExpr
+        fragmented ^. val & traverseK1 %~ prepareInFragExpr
         & Ann ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. ann . Property.pVal)))
     else
-        v & monoChildren %~ prepare fragI
+        v & traverseK1 %~ prepare fragI
         & Ann ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a))
     & fixPriorities
     where
-        fragmented = v ^?! V._BApp . applyArg
+        fragmented = v ^?! V._BApp . V.appArg
 
 healMismatch :: Monad m => ConvertM m (ValI m -> T m ())
 healMismatch =
@@ -102,7 +101,7 @@ healMismatch =
                             GMono topLevelType
                 addDeps <- Infer.loadDeps deps
                 prepare fragment topLevelExpr
-                    & blame (^. Lens._1) topLevelType
+                    & blame (^. Lens._1) (V.IResult V.emptyScope topLevelType)
                     & Reader.local (addRecursiveRef . addDeps)
             <&> (^.. annotations) <&> Lens.mapped %~ act
             & Infer.runPureInfer V.emptyScope

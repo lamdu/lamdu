@@ -5,7 +5,7 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           AST (Ann(..), monoChildren, Tree, Pure(..), _Pure)
+import           AST (Ann(..), traverseK1, Tree, Pure(..), _Pure)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
@@ -383,8 +383,8 @@ decodeVal =
 
 encodeValBody :: Tree V.Term (Ann UUID) -> AesonTypes.Object
 encodeValBody body =
-    case body & monoChildren %~ Lens.Const . encodeVal of
-    V.BApp (V.Apply func arg) ->
+    case body & traverseK1 %~ Lens.Const . encodeVal of
+    V.BApp (V.App func arg) ->
         HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
     V.BLam (V.Lam (V.Var varId) res) ->
         HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= c res]
@@ -406,7 +406,7 @@ encodeValBody body =
 decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (Tree V.Term (Ann UUID))
 decodeValBody obj =
     jsum
-    [ V.Apply
+    [ V.App
       <$> (obj .: "applyFunc" <&> c <&> Lens.Const)
       <*> (obj .: "applyArg" <&> c <&> Lens.Const)
       <&> V.BApp
@@ -437,7 +437,7 @@ decodeValBody obj =
       <*> (obj .: "toNomVal" <&> c <&> Lens.Const)
       <&> V.BToNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= monoChildren (decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
+    ] >>= traverseK1 (decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
     where
         c = Lens.Const
 

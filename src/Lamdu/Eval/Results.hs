@@ -15,7 +15,7 @@ module Lamdu.Eval.Results
     ) where
 
 import qualified AST
-import           AST (Ann(..), Tie, Tree)
+import           AST (Ann(..), Node, Tree)
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
@@ -44,16 +44,16 @@ topLevelScopeId = ScopeId 0
 
 data Body f
     = RRecExtend (RowExtend T.Tag Body Body f)
-    | RInject (V.Inject (Tie f Body))
+    | RInject (V.Inject (Node f Body))
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
-    | RArray [Tie f Body]
+    | RArray [Node f Body]
     | RError EvalTypeError
 
-AST.makeChildren ''Body
+AST.makeKTraversableAndBases ''Body
 
-deriving instance Show (Tie f Body) => Show (Body f)
+deriving instance Show (Node f Body) => Show (Body f)
 
 type Val pl = Tree (Ann pl) Body
 

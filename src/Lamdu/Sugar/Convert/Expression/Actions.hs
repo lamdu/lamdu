@@ -5,8 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , makeSetToLiteral
     ) where
 
-import           AST (Tree, Pure(..), _Pure, overChildren)
-import           AST.Infer (irType)
+import           AST (Tree, Pure(..), _Pure, mapKWith)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
@@ -69,7 +68,7 @@ mkExtractToDef exprPl =
     \(ctx, postProcess, infer) ->
     do
         let scheme =
-                generalize (exprPl ^. Input.inferResult . irType)
+                generalize (exprPl ^. Input.inferResult . V.iType)
                 >>= S.saveScheme
                 & runPureInfer V.emptyScope (ctx ^. ConvertM.scInferContext)
                 & Lens._Left %~ (\x -> x :: Tree Pure T.TypeError)
@@ -116,7 +115,7 @@ mkExtractToLet outerScope stored =
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValI
                     (stored ^. Property.pSet) getVarI
                     pure lamI
-        V.Apply lamI oldStored & V.BApp & ExprIRef.newValI
+        V.App lamI oldStored & V.BApp & ExprIRef.newValI
             >>= outerScope ^. Property.pSet
         EntityId.ofValI oldStored & pure
     where
@@ -244,8 +243,8 @@ setChildReplaceParentActions =
     in
     bod
     & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
-        overChildren p (ann %~ join setToExpr)
-    & overChildren p (fixReplaceParent setToExpr)
+        mapKWith p (ann %~ join setToExpr)
+    & mapKWith p (fixReplaceParent setToExpr)
     where
         p :: Proxy FixReplaceParent
         p = Proxy

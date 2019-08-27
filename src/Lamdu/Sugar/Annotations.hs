@@ -7,7 +7,7 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
-import           AST (Tree, Knot, overChildren)
+import           AST (Tree, Knot, mapKWith)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -68,7 +68,7 @@ instance MarkAnnotations (Binder name i o) where
         markBodyAnnotations body & _2 %~ BinderExpr
     markAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , overChildren (Proxy @MarkAnnotations)
+        , mapKWith (Proxy @MarkAnnotations)
             markNodeAnnotations let_
             & BinderLet
         )
@@ -89,7 +89,7 @@ instance MarkAnnotations (Else name i o) where
         ( neverShowAnnotations
         , elseIf
             & eiContent %~
-                overChildren (Proxy @MarkAnnotations)
+                mapKWith (Proxy @MarkAnnotations)
                 markNodeAnnotations
             & ElseIf
         )
@@ -134,7 +134,7 @@ markBodyAnnotations oldBody =
     BodySimpleApply app ->
         ( showAnnotationWhenVerbose
         , app
-            & applyFunc . nonHoleAnn .~ neverShowAnnotations
+            & appFunc . nonHoleAnn .~ neverShowAnnotations
             & BodySimpleApply
         )
     BodyLabeledApply _ -> set showAnnotationWhenVerbose
@@ -161,12 +161,12 @@ markBodyAnnotations oldBody =
         )
     where
         newBodyWith f =
-            newBody & overChildren (Proxy :: (Proxy SugarLens.SugarExpr))
+            newBody & mapKWith (Proxy :: (Proxy SugarLens.SugarExpr))
             (Lens.filtered (not . SugarLens.isUnfinished . (^. val)) . ann . _1 .~ f)
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)
         newBody =
-            overChildren (Proxy @MarkAnnotations)
+            mapKWith (Proxy @MarkAnnotations)
             markNodeAnnotations oldBody
         nonHoleAnn =
             Lens.filtered (Lens.nullOf (val . SugarLens.bodyUnfinished)) .

@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           AST (Tree, Pure(..), monoChildren)
+import           AST (Tree, Pure(..), traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Row (FlatRowExtends(..))
@@ -78,8 +78,8 @@ isVarAlwaysApplied (V.Lam var x) =
     go False x
     where
         go isApplied (Ann _ (V.BLeaf (V.LVar v))) | v == var = isApplied
-        go _ (Ann _ (V.BApp (V.Apply f a))) = go True f && go False a
-        go _ v = all (go False) (v ^.. val . monoChildren)
+        go _ (Ann _ (V.BApp (V.App f a))) = go True f && go False a
+        go _ v = all (go False) (v ^.. val . traverseK1)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValP m) -> T m (ValP m)

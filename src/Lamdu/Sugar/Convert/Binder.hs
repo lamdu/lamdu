@@ -4,11 +4,11 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
-import           AST (Knot, Tree, Children(..), overChildren, monoChildren)
-import           AST.Class.Recursive (Recursive(..), foldMapRecursive)
-import           AST.Infer (irScope)
+import           AST
+import           AST.Class.Recursive (foldMapRecursive)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
+import           Data.Constraint (Dict(..))
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
@@ -160,7 +160,7 @@ convertBinder expr@(Ann pl body) =
             & ann . pInput . Input.userData .~
                 mconcat
                 (subexprPayloads
-                (body ^.. monoChildren)
+                (body ^.. traverseK1)
                 (exprS ^.. val . SugarLens.childPayloads))
 
 
@@ -169,7 +169,7 @@ localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
     { _osiPos = x ^. Input.stored
-    , _osiScope = x ^. Input.inferResult . irScope
+    , _osiScope = x ^. Input.inferResult . V.iScope
     }
     & ConvertM.local
 
@@ -254,8 +254,7 @@ convertLam lam exprPl =
         BodyLam lambda
             & addActions (lam ^.. V.lamOut) exprPl
             <&> val %~
-                overChildren (Proxy @Children)
-                (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
+                mapK (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
 
 useNormalLambda ::
     Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
@@ -271,29 +270,38 @@ class GetParam (t :: Knot -> *) where
     getParam :: t f -> Maybe InternalName
     getParam _ = Nothing
 
+    getParamRecursive ::
+        Proxy t -> Dict (NodesConstraint t GetParam)
+    default getParamRecursive ::
+        NodesConstraint t GetParam =>
+        Proxy t -> Dict (NodesConstraint t GetParam)
+    getParamRecursive _ = Dict
+
+instance Recursive GetParam where
+    recurse =
+        getParamRecursive . p
+        where
+            p :: Proxy (GetParam k) -> Proxy k
+            p _ = Proxy
+
 instance GetParam (Const (BinderVarRef InternalName o)) where
 instance GetParam (Const (NullaryVal InternalName i o))
 
 instance GetParam (Else InternalName i o)
-instance Recursive GetParam (Else InternalName i o)
 
 instance GetParam (Function InternalName i o) where
-instance Recursive GetParam (Function InternalName i o)
 
 instance GetParam (Const (GetVar InternalName o)) where
     getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
 
 instance GetParam (Assignment InternalName i o) where
     getParam x = x ^? _BodyPlain . apBody >>= getParam
-instance Recursive GetParam (Assignment InternalName i o)
 
 instance GetParam (Binder InternalName i o) where
     getParam x = x ^? _BinderExpr >>= getParam
-instance Recursive GetParam (Binder InternalName i o)
 
 instance GetParam (Body InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
-instance Recursive GetParam (Body InternalName i o)
 
 allParamsUsed ::
     Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
@@ -308,15 +316,15 @@ class MarkLightParams (t :: Knot -> *) where
     markLightParams :: Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 
     default markLightParams ::
-        (Children t, ChildrenConstraint t MarkLightParams) =>
+        (KFunctor t, NodesConstraint t MarkLightParams) =>
         Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
     markLightParams = defaultMarkLightParams
 
 defaultMarkLightParams ::
-    (Children t, ChildrenConstraint t MarkLightParams) =>
+    (KFunctor t, NodesConstraint t MarkLightParams) =>
     Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 defaultMarkLightParams paramNames =
-    overChildren (Proxy @MarkLightParams)
+    mapKWith (Proxy @MarkLightParams)
     (markNodeLightParams paramNames)
 
 markNodeLightParams ::

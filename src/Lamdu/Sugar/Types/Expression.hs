@@ -38,7 +38,8 @@ module Lamdu.Sugar.Types.Expression
     , Case(..), cKind, cBody
     ) where
 
-import           AST (Tree, Tie, Ann, Children, Recursive, makeChildren)
+import           AST (Tree, Node, Ann, makeKTraversableAndBases)
+import           AST.Class.Recursive
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Property (Property)
@@ -65,15 +66,15 @@ data AnnotatedArg name expr = AnnotatedArg
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o f = LabeledApply
-    { _aFunc :: Tie f (Lens.Const (BinderVarRef name o))
-    , _aSpecialArgs :: Meta.SpecialArgs (Tie f (Body name i o))
-    , _aAnnotatedArgs :: [AnnotatedArg name (Tie f (Body name i o))]
-    , _aPunnedArgs :: [Tie f (Lens.Const (GetVar name o))]
+    { _aFunc :: Node f (Lens.Const (BinderVarRef name o))
+    , _aSpecialArgs :: Meta.SpecialArgs (Node f (Body name i o))
+    , _aAnnotatedArgs :: [AnnotatedArg name (Node f (Body name i o))]
+    , _aPunnedArgs :: [Node f (Lens.Const (GetVar name o))]
     } deriving Generic
 
 data InjectContent name i o f
-    = InjectNullary (Tie f (Lens.Const (NullaryVal name i o)))
-    | InjectVal (Tie f (Body name i o))
+    = InjectNullary (Node f (Lens.Const (NullaryVal name i o)))
+    | InjectVal (Node f (Body name i o))
     deriving Generic
 
 data Inject name i o f = Inject
@@ -90,7 +91,7 @@ data Lambda name i o f = Lambda
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment name i o f = Fragment
-    { _fExpr :: Tie f (Body name i o)
+    { _fExpr :: Node f (Body name i o)
     , _fHeal :: o EntityId
     , _fTypeMatch :: Bool
     , _fOptions :: i [HoleOption name i o]
@@ -132,50 +133,50 @@ data Else name i o f
     deriving Generic
 
 data IfElse name i o f = IfElse
-    { _iIf :: Tie f (Body name i o)
-    , _iThen :: Tie f (Body name i o)
-    , _iElse :: Tie f (Else name i o)
+    { _iIf :: Node f (Body name i o)
+    , _iThen :: Node f (Body name i o)
+    , _iElse :: Node f (Else name i o)
     } deriving Generic
 
 data Composite name i o f = Composite
-    { _cItems :: [CompositeItem name i o (Tie f (Body name i o))]
+    { _cItems :: [CompositeItem name i o (Node f (Body name i o))]
     , -- Punned items are like Haskell's NamedFieldPuns
-      _cPunnedItems :: [Tie f (Lens.Const (GetVar name o))]
-    , _cTail :: CompositeTail o (Tie f (Body name i o))
+      _cPunnedItems :: [Node f (Lens.Const (GetVar name o))]
+    , _cTail :: CompositeTail o (Node f (Body name i o))
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
 data Case name i o f = Case
-    { _cKind :: CaseKind o (Tie f (Body name i o))
+    { _cKind :: CaseKind o (Node f (Body name i o))
     , _cBody :: Composite name i o f
     } deriving Generic
 
 data Body name i o f
     = BodyLam (Lambda name i o f)
-    | BodySimpleApply (Apply (Body name i o) f)
+    | BodySimpleApply (App (Body name i o) f)
     | BodyLabeledApply (LabeledApply name i o f)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o f)
-    | BodyGetField (GetField name i o (Tie f (Body name i o)))
+    | BodyGetField (GetField name i o (Node f (Body name i o)))
     | BodyCase (Case name i o f)
     | BodyIfElse (IfElse name i o f)
     | BodyInject (Inject name i o f)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (Tie f (Binder name i o)))
+    | BodyToNom (Nominal name (Node f (Binder name i o)))
     | BodyFromNom (TId name)
     | BodyFragment (Fragment name i o f)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
 data Let name i o f = Let
-    { _lValue :: Tie f (Assignment name i o) -- "let foo = [[bar]] in x"
+    { _lValue :: Node f (Assignment name i o) -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
     , _lBodyScope :: ChildScopes
-    , _lBody :: Tie f (Binder name i o) -- "let foo = bar in [[x]]"
+    , _lBody :: Node f (Binder name i o) -- "let foo = bar in [[x]]"
     } deriving Generic
 
 -- An expression with 0 or more let items,
@@ -192,7 +193,7 @@ data Binder name i o f
 data Function name i o f = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: Tie f (Binder name i o)
+    , _fBody :: Node f (Binder name i o)
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope
@@ -229,34 +230,70 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
-makeChildren ''Assignment
-makeChildren ''AssignPlain
-makeChildren ''Body
-makeChildren ''Binder
-makeChildren ''Case
-makeChildren ''Composite
-makeChildren ''Else
-makeChildren ''ElseIfContent
-makeChildren ''Fragment
-makeChildren ''Function
-makeChildren ''IfElse
-makeChildren ''Inject
-makeChildren ''InjectContent
-makeChildren ''LabeledApply
-makeChildren ''Lambda
-makeChildren ''Let
+traverse makeKTraversableAndBases
+    [ ''Assignment, ''AssignPlain, ''Body, ''Binder, ''Case
+    , ''Composite, ''Else, ''ElseIfContent, ''Fragment, ''Function
+    , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Lambda, ''Let
+    ] <&> concat
 
-instance Recursive Children (Assignment name i o)
-instance Recursive Children (AssignPlain name i o)
-instance Recursive Children (Body name i o)
-instance Recursive Children (Binder name i o)
-instance Recursive Children (Else name i o)
-instance Recursive Children (ElseIfContent name i o)
-instance Recursive Children (Fragment name i o)
-instance Recursive Children (Function name i o)
-instance Recursive Children (IfElse name i o)
-instance Recursive Children (Inject name i o)
-instance Recursive Children (InjectContent name i o)
-instance Recursive Children (LabeledApply name i o)
-instance Recursive Children (Lambda name i o)
-instance Recursive Children (Let name i o)
+-- TODO: Replace boilerplate below with TH
+
+instance RNodes (Assignment name i o)
+instance RNodes (AssignPlain name i o)
+instance RNodes (Body name i o)
+instance RNodes (Binder name i o)
+instance RNodes (Else name i o)
+instance RNodes (ElseIfContent name i o)
+instance RNodes (Fragment name i o)
+instance RNodes (Function name i o)
+instance RNodes (IfElse name i o)
+instance RNodes (Inject name i o)
+instance RNodes (InjectContent name i o)
+instance RNodes (LabeledApply name i o)
+instance RNodes (Lambda name i o)
+instance RNodes (Let name i o)
+
+instance RFunctor (Assignment name i o)
+instance RFunctor (AssignPlain name i o)
+instance RFunctor (Body name i o)
+instance RFunctor (Binder name i o)
+instance RFunctor (Else name i o)
+instance RFunctor (ElseIfContent name i o)
+instance RFunctor (Fragment name i o)
+instance RFunctor (Function name i o)
+instance RFunctor (IfElse name i o)
+instance RFunctor (Inject name i o)
+instance RFunctor (InjectContent name i o)
+instance RFunctor (LabeledApply name i o)
+instance RFunctor (Lambda name i o)
+instance RFunctor (Let name i o)
+
+instance RFoldable (Assignment name i o)
+instance RFoldable (AssignPlain name i o)
+instance RFoldable (Body name i o)
+instance RFoldable (Binder name i o)
+instance RFoldable (Else name i o)
+instance RFoldable (ElseIfContent name i o)
+instance RFoldable (Fragment name i o)
+instance RFoldable (Function name i o)
+instance RFoldable (IfElse name i o)
+instance RFoldable (Inject name i o)
+instance RFoldable (InjectContent name i o)
+instance RFoldable (LabeledApply name i o)
+instance RFoldable (Lambda name i o)
+instance RFoldable (Let name i o)
+
+instance RTraversable (Assignment name i o)
+instance RTraversable (AssignPlain name i o)
+instance RTraversable (Body name i o)
+instance RTraversable (Binder name i o)
+instance RTraversable (Else name i o)
+instance RTraversable (ElseIfContent name i o)
+instance RTraversable (Fragment name i o)
+instance RTraversable (Function name i o)
+instance RTraversable (IfElse name i o)
+instance RTraversable (Inject name i o)
+instance RTraversable (InjectContent name i o)
+instance RTraversable (LabeledApply name i o)
+instance RTraversable (Lambda name i o)
+instance RTraversable (Let name i o)

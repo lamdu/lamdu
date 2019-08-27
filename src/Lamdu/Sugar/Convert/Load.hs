@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Load
     ) where
 
 import           AST (Tree, Pure(..), _Pure, annotations, Ann)
-import           AST.Infer (ITerm, iType, irType, infer, IResult)
+import           AST.Infer (ITerm, infer, iRes)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalDecl, nScheme)
 import           AST.Term.Scheme (sTyp)
@@ -66,7 +66,7 @@ propEntityId = EntityId.ofValI . Property.value
 preparePayloads ::
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Tree (Ann (ValP m, Tree Pure T.Type, IResult UVar V.Term)) V.Term ->
+    Tree (Ann (ValP m, Tree Pure T.Type, Tree V.IResult UVar)) V.Term ->
     Tree (Ann (Input.Payload m ())) V.Term
 preparePayloads nomsMap evalRes inferredVal =
     inferredVal
@@ -136,13 +136,16 @@ data InferResult m = InferResult
 Lens.makeLenses ''InferResult
 
 resolve ::
-    Val (ValP m, IResult UVar V.Term) ->
-    PureInfer (Tree (Ann (ValP m, Tree Pure T.Type, IResult UVar V.Term)) V.Term)
+    Val (ValP m, Tree V.IResult UVar) ->
+    PureInfer (Tree (Ann (ValP m, Tree Pure T.Type, Tree V.IResult UVar)) V.Term)
 resolve =
     annotations f
     where
+        f ::
+            (ValP m, Tree V.IResult UVar) ->
+            PureInfer (ValP m, Tree Pure T.Type, Tree V.IResult UVar)
         f (stored, inferred) =
-            inferred ^. irType & applyBindings
+            inferred ^. V.iType & applyBindings
             <&> \x -> (stored, x, inferred)
 
 runInferResult ::
@@ -189,7 +192,7 @@ inferDef inferFunc monitors results defExpr defVar =
         inferredVal <-
             inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ GMono defTv)
-        inferredVal <$ unify defTv (inferredVal ^. iType)
+        inferredVal <$ unify defTv (inferredVal ^. iRes . V.iType)
     & runInferResult monitors results
 
 inferDefExpr ::

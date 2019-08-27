@@ -30,7 +30,7 @@ convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. val of
-            BodySimpleApply (Apply (Ann _ (BodyFromNom nom)) x)
+            BodySimpleApply (App (Ann _ (BodyFromNom nom)) x)
                 | nom ^. tidTId == boolTid ->
                     -- In "case _»Nom of ..." the case expression doesn't absorb the FromNom
                     -- (and also in case of fragment)

@@ -10,7 +10,7 @@ module Lamdu.Sugar.Names.Walk
 
 import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), val)
-import           AST.Term.Apply (applyChildren)
+import           AST.Term.App (appChildren)
 import           AST.Term.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
@@ -437,7 +437,7 @@ toBody =
     BodyRecord       x -> x & toComposite <&> BodyRecord
     BodyCase         x -> x & toCase <&> BodyCase
     BodyIfElse       x -> x & toIfElse <&> BodyIfElse
-    BodySimpleApply  x -> x & applyChildren toExpression <&> BodySimpleApply
+    BodySimpleApply  x -> x & appChildren toExpression <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & toTId <&> BodyFromNom

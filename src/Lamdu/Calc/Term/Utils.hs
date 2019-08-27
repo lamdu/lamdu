@@ -7,7 +7,7 @@ module Lamdu.Calc.Term.Utils
     , culledSubexprPayloads
     ) where
 
-import           AST (Tree, Ann(..), monoChildren)
+import           AST (Tree, Ann(..), traverseK1)
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
@@ -20,7 +20,7 @@ import           Lamdu.Prelude
 culledSubexprPayloads :: (a -> Bool) -> Val a -> [a]
 culledSubexprPayloads cut (Ann pl body)
     | cut pl = []
-    | otherwise = pl : body ^. monoChildren . Lens.to (culledSubexprPayloads cut)
+    | otherwise = pl : body ^. traverseK1 . Lens.to (culledSubexprPayloads cut)
 
 data Composite a = Composite
     { _tags :: Map T.Tag a

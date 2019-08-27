@@ -5,13 +5,12 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
-- generic-data-0.7.0.0
 - github: lamdu/bindings-freetype-gl
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/syntax-tree
-  commit: 635dee2c3ebf96094778dc720a2b87f2813b7dce
+  commit: c54105134b5ec99db698b35f601d18996b50226a
 - github: lamdu/lamdu-calculus
-  commit: c02a2e211331bde2784f1dd2153ef5c46f3f8744
+  commit: b8521a5b65cf1a37c903ae4335586d5ef16095e1
 - github: lamdu/graphics-drawingcombinators
   commit: 6253576fdd9233df5c3f43002310f38b0928c2d5
 - github: lamdu/freetype2
@@ -23,6 +22,6 @@ extra-deps:
 - github: lamdu/nodejs-exec
   commit: 6a8b5c7897b822f523414fe2c0e666ecb8d4ab4b
 
-resolver: lts-13.15
+resolver: nightly-2019-07-24
 
 allow-newer: true

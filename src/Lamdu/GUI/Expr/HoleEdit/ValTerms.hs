@@ -8,7 +8,7 @@ module Lamdu.GUI.Expr.HoleEdit.ValTerms
     , definitePart
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, traverseK1)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -60,7 +60,7 @@ ofBody env =
         , "\\", "Λ", "λ", "->", "→"
         ]
     BodySimpleApply x ->
-        env ^. has . Texts.apply : x ^. monoChildren . Lens.to (expr env)
+        env ^. has . Texts.apply : x ^. traverseK1 . Lens.to (expr env)
     BodyLabeledApply x ->
         env ^. has . Texts.apply
         : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)

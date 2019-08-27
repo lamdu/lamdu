@@ -5,9 +5,9 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , termTransformsWithModify
     ) where
 
-import           AST (Tree, monoChildren)
+import           AST (Tree, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Infer (IResult(..), InferRes(..), irType, irScope, inferBody)
+import           AST.Infer (inferResVal, inferBody)
 import           AST.Term.FuncType
 import           AST.Term.Nominal
 import           AST.Term.Row (RowExtend(..))
@@ -33,7 +33,7 @@ type URow m = Tree (UVarOf m) T.Row
 -- | Term with unifiable type annotations
 type TypedTerm m = Tree (Ann (UType m)) V.Term
 
-type AnnotatedTerm a = Tree (Ann (a, IResult UVar V.Term)) V.Term
+type AnnotatedTerm a = Tree (Ann (a, Tree V.IResult UVar)) V.Term
 
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
@@ -41,7 +41,7 @@ termTransforms ::
     a -> AnnotatedTerm a ->
     StateT InferState [] (AnnotatedTerm a)
 termTransforms def src =
-    src ^. ann . _2 . irType & semiPruneLookup & liftInfer (src ^. ann . _2 . irScope)
+    src ^. ann . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
@@ -53,13 +53,13 @@ transformGetFields ::
     a -> AnnotatedTerm a -> Tree UVar T.Row ->
     StateT InferState [] (AnnotatedTerm a)
 transformGetFields def src row =
-    semiPruneLookup row & liftInfer (src ^. ann . _2 . irScope)
+    semiPruneLookup row & liftInfer V.emptyScope
     <&> (^? _2 . _UTerm . uBody . T._RExtend)
     >>=
     \case
     Nothing -> empty
     Just (RowExtend tag typ rest) ->
-        pure (Ann (def, IResult typ (src ^. ann . _2 . irScope)) (V.BGetField (V.GetField src tag)))
+        pure (Ann (def, V.IResult V.emptyScope typ) (V.BGetField (V.GetField src tag)))
         <|> transformGetFields def src rest
 
 liftInfer :: Tree V.Scope UVar -> PureInfer a -> StateT InferState [] a
@@ -76,19 +76,21 @@ termTransformsWithoutSplit def src =
     do
         -- Don't modify a redex from the outside.
         -- Such transform are more suitable in it!
-        Lens.nullOf (val . V._BApp . V.applyFunc . val . V._BLam) src & guard
+        Lens.nullOf (val . V._BApp . V.appFunc . val . V._BLam) src & guard
 
-        (s1, typ) <- src ^. ann . _2 . irType & semiPruneLookup & liftInfer srcScope
+        (s1, typ) <-
+            src ^. ann . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (val . V._BToNom) src ->
                     do
-                        InferRes _ fromNomTyp <- V.LFromNom name & V.BLeaf & inferBody
+                        fromNomRes <- V.LFromNom name & V.BLeaf & inferBody
+                        let fromNomTyp = fromNomRes ^. inferResVal . V.iType
                         resultType <- newUnbound
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
-                        V.Apply (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
+                        V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
                             & V.BApp & mkResult resultType & pure
-                    & liftInfer srcScope
+                    & liftInfer V.emptyScope
                     >>= termOptionalTransformsWithoutSplit def
             Just (T.TVariant row) | Lens.nullOf (val . V._BInject) src ->
                 do
@@ -96,22 +98,22 @@ termTransformsWithoutSplit def src =
                     caseType <- FuncType s1 dstType & T.TFun & newTerm
                     suggestCaseWith row dstType
                         <&> Ann caseType
-                        <&> annotations %~ (\t -> (def, IResult t srcScope))
-                        <&> (`V.Apply` src) <&> V.BApp <&> mkResult dstType
-                & liftInfer srcScope
+                        <&> annotations %~ (\t -> (def, V.IResult V.emptyScope t))
+                        <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
+                & liftInfer V.emptyScope
             _ | Lens.nullOf (val . V._BLam) src ->
                 -- Apply if compatible with a function
                 do
-                    argType <- liftInfer srcScope newUnbound
-                    resType <- liftInfer srcScope newUnbound
+                    argType <- liftInfer V.emptyScope newUnbound
+                    resType <- liftInfer V.emptyScope newUnbound
                     _ <-
                         FuncType argType resType & T.TFun & newTerm
                         >>= unify s1
-                        & liftInfer srcScope
+                        & liftInfer V.emptyScope
                     arg <-
-                        forTypeWithoutSplit argType & liftInfer srcScope
-                        <&> annotations %~ (\t -> (def, IResult t srcScope))
-                    let applied = V.Apply src arg & V.BApp & mkResult resType
+                        forTypeWithoutSplit argType & liftInfer V.emptyScope
+                        <&> annotations %~ (\t -> (def, V.IResult V.emptyScope t))
+                    let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
                         <|>
                         do
@@ -121,8 +123,7 @@ termTransformsWithoutSplit def src =
                             termTransformsWithoutSplit def applied
             _ -> empty
     where
-        mkResult t = Ann (def, IResult t srcScope)
-        srcScope = src ^. ann . _2 . irScope
+        mkResult t = Ann (def, V.IResult V.emptyScope t)
 
 termOptionalTransformsWithoutSplit ::
     a -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
@@ -225,15 +226,15 @@ autoLambdas typ =
 
 fillHoles :: a -> AnnotatedTerm a -> PureInfer (AnnotatedTerm a)
 fillHoles def (Ann pl (V.BLeaf V.LHole)) =
-    forTypeWithoutSplit (pl ^. _2 . irType)
-    <&> annotations %~ (\t -> (def, IResult t (pl ^. _2 . irScope)))
-fillHoles def (Ann pl (V.BApp (V.Apply func arg))) =
+    forTypeWithoutSplit (pl ^. _2 . V.iType)
+    <&> annotations %~ (\t -> (def, V.IResult V.emptyScope t))
+fillHoles def (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
-    fillHoles def arg <&> V.Apply func <&> V.BApp <&> Ann pl
+    fillHoles def arg <&> V.App func <&> V.BApp <&> Ann pl
 fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     pure v
-fillHoles def x = (val . monoChildren) (fillHoles def) x
+fillHoles def x = (val . traverseK1) (fillHoles def) x
 
 -- | Transform by wrapping OR modifying a term. Used by both holes and
 -- fragments to expand "seed" terms. Holes include these as results
@@ -248,7 +249,7 @@ termTransformsWithModify _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
 termTransformsWithModify def src =
-    src ^. ann . _2 . irType & semiPruneLookup & liftInfer srcScope
+    src ^. ann . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
     <&> (^? _2 . _UTerm . uBody)
     >>=
     \case
@@ -257,7 +258,5 @@ termTransformsWithModify def src =
         pure src
     _ ->
         do
-            t <- fillHoles def src & liftInfer srcScope
+            t <- fillHoles def src & liftInfer V.emptyScope
             pure t <|> termTransforms def t
-    where
-        srcScope = src ^. ann . _2 . irScope

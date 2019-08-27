@@ -8,8 +8,7 @@ module Lamdu.Sugar.Convert.Input
     , initLocalsInScope
     ) where
 
-import           AST (Tree, Pure, Ann(..), monoChildren)
-import           AST.Infer.Term (IResult)
+import           AST (Tree, Pure, Ann(..), traverseK1)
 import           AST.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -33,7 +32,7 @@ data Payload m a = Payload
     , _inferredType :: Tree Pure Type
     , -- The inference result before binding universal quantifiers,
       -- Useful for resuming inference in holes.
-      _inferResult :: IResult UVar V.Term
+      _inferResult :: Tree V.IResult UVar
     , _localsInScope :: [V.Var]
     , _stored :: ValP m
     , _evalResults :: CurAndPrev EvalResultsForExpr
@@ -59,7 +58,7 @@ preparePayloads =
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
                 V.BLam (V.Lam var _) -> Lens.at var .~ Nothing
                 _ -> id
-            , b & monoChildren %~ (^. Lens._Wrapped . _2)
+            , b & traverseK1 %~ (^. Lens._Wrapped . _2)
               & Ann
                 ( case body of
                   V.BLam (V.Lam var _) -> childrenVars ^. Lens.ix var
@@ -68,12 +67,12 @@ preparePayloads =
                 )
             )
             where
-                childrenVars = Map.unionsWith (++) (b ^.. monoChildren . Lens._Wrapped . _1)
-                b = body & monoChildren %~ Lens.Const . go
+                childrenVars = Map.unionsWith (++) (b ^.. traverseK1 . Lens._Wrapped . _1)
+                b = body & traverseK1 %~ Lens.Const . go
 
 initLocalsInScope :: [V.Var] -> Val (Payload m a) -> Val (Payload m a)
 initLocalsInScope locals (Ann pl body) =
     case body of
     V.BLam (V.Lam var b) -> initLocalsInScope (var : locals) b & V.Lam var & V.BLam
-    x -> x & monoChildren %~ initLocalsInScope locals
+    x -> x & traverseK1 %~ initLocalsInScope locals
     & Ann (pl & localsInScope <>~ locals)

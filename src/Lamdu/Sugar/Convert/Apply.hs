@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           AST (Tree, monoChildren, _Pure)
+import           AST (Tree, traverseK1, _Pure)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import           AST.Term.FuncType (funcIn)
 import           AST.Term.Row (freExtends, freRest)
@@ -38,9 +38,9 @@ import           Lamdu.Prelude
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
+    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
     Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert posInfo app@(V.Apply funcI argI) exprPl =
+convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
         (funcS, argS) <-
@@ -62,8 +62,8 @@ convert posInfo app@(V.Apply funcI argI) exprPl =
                     , argS
                     )
         convertAppliedCase app funcS argS exprPl & justToLeft
-        convertLabeled (app ^.. monoChildren) funcS argS exprPl & justToLeft
-        convertPrefix (app ^.. monoChildren) funcS argS exprPl & lift
+        convertLabeled (app ^.. traverseK1) funcS argS exprPl & justToLeft
+        convertPrefix (app ^.. traverseK1) funcS argS exprPl & lift
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
@@ -139,7 +139,7 @@ convertPrefix subexprs funcS argS applyPl =
                 protectedSetToVal (applyPl ^. Input.stored)
                 (funcS ^. ann . pInput . Input.stored & Property.value)
                 <&> EntityId.ofValI
-        BodySimpleApply Apply
-            { _applyFunc = funcS
-            , _applyArg = argS & val . _BodyHole . holeMDelete ?~ del
+        BodySimpleApply App
+            { _appFunc = funcS
+            , _appArg = argS & val . _BodyHole . holeMDelete ?~ del
             } & addActions subexprs applyPl

@@ -4,10 +4,10 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Tree, Ann(..), Children(..), Recursive(..), RecursiveConstraint)
+import           AST (Tree, Ann(..), traverseKWith)
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
-import           Data.Constraint (Dict, withDict)
+import           Data.Constraint (withDict)
 import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -131,10 +131,10 @@ make ctx resultId pick holeResultConverted =
 
 unfinishedPayloads ::
     forall t a.
-    Recursive SugarLens.SugarExpr t =>
+    SugarLens.SugarExpr t =>
     Traversal' (Tree (Ann a) t) a
 unfinishedPayloads f (Ann a x) =
-    withDict (recursive :: Dict (RecursiveConstraint t SugarLens.SugarExpr)) $
+    withDict (SugarLens.sugarExprRecursive (Proxy @t)) $
     flip Ann
-    <$> children (Proxy @(Recursive SugarLens.SugarExpr)) (unfinishedPayloads f) x
+    <$> traverseKWith (Proxy @SugarLens.SugarExpr) (unfinishedPayloads f) x
     <*> (if SugarLens.isUnfinished x then f a else pure a)

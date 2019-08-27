@@ -591,8 +591,8 @@ compileLambda (V.Lam v res) valId =
         compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
 
 compileApply ::
-    Monad m => ValId -> Tree (V.Apply V.Term) (Ann ValId) -> M m CodeGen
-compileApply valId (V.Apply func arg) =
+    Monad m => ValId -> Tree (V.App V.Term) (Ann ValId) -> M m CodeGen
+compileApply valId (V.App func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression
         compileAppliedFunc valId func arg'

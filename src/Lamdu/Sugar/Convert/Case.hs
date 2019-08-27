@@ -73,10 +73,10 @@ convert (RowExtend tag v rest) exprPl =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    Tree (V.Apply V.Term) (Ann (Input.Payload m a)) ->
+    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
+convertAppliedCase (V.App _ arg) funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithArgument) >>= guard
         caseB <- funcS ^? val . _BodyCase & maybeToMPlus
@@ -108,6 +108,6 @@ convertAppliedCase (V.Apply _ arg) funcS argS exprPl =
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
     case argS ^. val of
-    BodySimpleApply (Apply (Ann _ BodyFromNom{}) x)
+    BodySimpleApply (V.App (Ann _ BodyFromNom{}) x)
         | Lens.nullOf (val . SugarLens.bodyUnfinished) x -> x
     _ -> argS

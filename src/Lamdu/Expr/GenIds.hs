@@ -11,7 +11,7 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
-import           AST (Ann(..), monoChildren)
+import           AST (Ann(..), traverseK1)
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))
@@ -52,7 +52,7 @@ randomizeExpr gen (Ann pl body) =
     (`evalState` gen) $
     do
         r <- state random
-        newBody <- body & monoChildren %%~ randomizeSubexpr
+        newBody <- body & traverseK1 %%~ randomizeSubexpr
         Ann (pl r) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
@@ -112,13 +112,13 @@ randomizeParamIdsG preNG gen initMap convertPL =
                                 <&> V.BLam
                     V.BLeaf (V.LVar par) ->
                         pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
-                    x@V.BLeaf {}      -> monoChildren go x
-                    x@V.BApp {}       -> monoChildren go x
-                    x@V.BGetField {}  -> monoChildren go x
-                    x@V.BRecExtend {} -> monoChildren go x
-                    x@V.BCase {}      -> monoChildren go x
-                    x@V.BInject {}    -> monoChildren go x
-                    x@V.BToNom {}     -> monoChildren go x
+                    x@V.BLeaf {}      -> traverseK1 go x
+                    x@V.BApp {}       -> traverseK1 go x
+                    x@V.BGetField {}  -> traverseK1 go x
+                    x@V.BRecExtend {} -> traverseK1 go x
+                    x@V.BCase {}      -> traverseK1 go x
+                    x@V.BInject {}    -> traverseK1 go x
+                    x@V.BToNom {}     -> traverseK1 go x
                     <&> Ann (convertPL newGen parMap s)
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s

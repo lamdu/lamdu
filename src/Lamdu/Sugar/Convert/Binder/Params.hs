@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import           AST (Tree, Pure(..), _Pure, monoChildren)
+import           AST (Tree, Pure(..), _Pure, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.FuncType (FuncType(..), funcIn)
 import           AST.Term.Row (RowExtend(..), FlatRowExtends(..))
@@ -108,7 +108,7 @@ setParamList mPresMode paramListProp newParamList =
 isArgOfCallTo :: V.Var -> [Val ()] -> Bool
 isArgOfCallTo funcVar (cur : parent : _) =
     not (Lens.has varT cur) &&
-    Lens.has (ExprLens.valApply . V.applyFunc . varT) parent
+    Lens.has (ExprLens.valApply . V.appFunc . varT) parent
     where
         varT = ExprLens.valVar . Lens.only funcVar
 isArgOfCallTo _ _ = False
@@ -117,8 +117,8 @@ isUnappliedVar :: V.Var -> [Val ()] -> Bool
 isUnappliedVar var (cur : parent : _) =
     Lens.has varT cur
     -- Var could not be both the arg and the func (will be type error)
-    && not (Lens.has (ExprLens.valApply . V.applyFunc . varT) parent)
-    && not (Lens.has (ExprLens.valApply . V.applyFunc . ExprLens.valHole) parent)
+    && not (Lens.has (ExprLens.valApply . V.appFunc . varT) parent)
+    && not (Lens.has (ExprLens.valApply . V.appFunc . ExprLens.valHole) parent)
     where
         varT = ExprLens.valVar . Lens.only var
 isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
@@ -320,7 +320,7 @@ changeGetFieldTags param prevTag chosenTag x =
     b ->
         traverse_
         (changeGetFieldTags param prevTag chosenTag)
-        (b ^.. monoChildren)
+        (b ^.. traverseK1)
 
 setFieldParamTag ::
     Monad m =>
@@ -346,7 +346,7 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
                     )
             fixArg argI _ =
                 DataOps.newHole
-                <&> (`V.Apply` argI) <&> V.BApp
+                <&> (`V.App` argI) <&> V.BApp
                 >>= ExprIRef.newValI
             changeFieldToCall argI = ExprIRef.readValI argI >>= fixArg argI
         fixUsages changeFieldToCall binderKind storedLam
@@ -423,7 +423,7 @@ removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 removeCallsToVar funcVar x =
     do
         SubExprs.onMatchingSubexprs changeRecursion
-            ( val . V._BApp . V.applyFunc . ExprLens.valVar
+            ( val . V._BApp . V.appFunc . ExprLens.valVar
             . Lens.only funcVar
             ) x
         wrapUnappliedUsesOfVar funcVar x
@@ -431,7 +431,7 @@ removeCallsToVar funcVar x =
         changeRecursion prop =
             ExprIRef.readValI (Property.value prop)
             >>= \case
-            V.BApp (V.Apply f _) -> (prop ^. Property.pSet) f
+            V.BApp (V.App f _) -> (prop ^. Property.pSet) f
             _ -> error "assertion: expected BApp"
 
 makeDeleteLambda :: Monad m => BinderKind m -> StoredLam m -> ConvertM m (T m ())
@@ -627,7 +627,7 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
             case expr ^. val of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
-            x -> all (go False) (x ^.. monoChildren)
+            x -> all (go False) (x ^.. traverseK1)
 
 -- Post process param add and delete actions to detach lambda.
 -- This isn't done for all actions as some already perform this function.
@@ -715,7 +715,7 @@ convertVarToCalls ::
 convertVarToCalls mkArg var =
     SubExprs.onMatchingSubexprs (Property.modify_ ?? change) (ExprLens.valVar . Lens.only var)
     where
-        change x = mkArg >>= ExprIRef.newValI . V.BApp . V.Apply x
+        change x = mkArg >>= ExprIRef.newValI . V.BApp . V.App x
 
 convertBinderToFunction ::
     Monad m =>

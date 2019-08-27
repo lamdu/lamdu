@@ -167,11 +167,11 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Apply (Sugar.Body Name i o))
+    Tree (Sugar.App (Sugar.Body Name i o))
         (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
-makeSimple (Sugar.Apply func arg) pl =
+makeSimple (Sugar.App func arg) pl =
     stdWrapParentExpr pl
     <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> sequenceA

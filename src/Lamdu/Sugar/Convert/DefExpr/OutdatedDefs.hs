@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
-import           AST (Tree, Pure(..), _Pure, monoChildren)
+import           AST (Tree, Pure(..), _Pure, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import           AST.Term.FuncType (funcIn, funcOut)
 import           AST.Term.Row (RowExtend(..), freExtends, freRest)
@@ -44,8 +44,8 @@ data IsHoleArg = IsHoleArg | NotHoleArg deriving Eq
 argToHoleFunc :: Lens.Traversal' (Val a) (Val a)
 argToHoleFunc =
     ExprLens.valApply .
-    Lens.filteredBy (V.applyFunc . ExprLens.valHole) .
-    V.applyArg
+    Lens.filteredBy (V.appFunc . ExprLens.valHole) .
+    V.appArg
 
 recursivelyFixExpr ::
     Monad m =>
@@ -61,7 +61,7 @@ recursivelyFixExpr mFix =
         recurse x =
             case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . monoChildren)
+            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . traverseK1)
 
 changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =
@@ -70,7 +70,7 @@ changeFuncRes usedDefVar =
         mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix isHoleArg
-            (Ann pl (V.BApp (V.Apply (Ann _ (V.BLeaf (V.LVar v))) arg)))
+            (Ann pl (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar =
             Just $
             \go ->
@@ -111,7 +111,7 @@ fixArg (ArgRecordChange recChange) arg go =
         else
             do
                 go IsHoleArg arg
-                V.Apply
+                V.App
                     <$> DataOps.newHole
                     ?? arg ^. ann . Property.pVal
                     <&> V.BApp
@@ -156,7 +156,7 @@ changeFuncArg change usedDefVar =
     where
         mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
-        mFix _ (Ann _ (V.BApp (V.Apply (Ann _ (V.BLeaf (V.LVar v))) arg)))
+        mFix _ (Ann _ (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar = fixArg change arg & Just
         mFix _ _ = Nothing
 

@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
 
-import           AST (Tree, Pure, _Pure, monoChildren)
+import           AST (Tree, Pure, _Pure, traverseK1)
 import           AST.Knot.Ann (val, ann)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalInst(..))
@@ -40,7 +40,7 @@ score :: Val (Tree Pure Type) -> [Int]
 score x =
     (if Lens.has ExprLens.valBodyHole (x ^. val) then 1 else 0) :
     resultTypeScore (x ^. ann) ++
-    (x ^.. val . monoChildren >>= score)
+    (x ^.. val . traverseK1 >>= score)
 
 resultScore :: Val (Tree Pure Type) -> HoleResultScore
 resultScore x =
@@ -51,10 +51,10 @@ resultScore x =
 
 numFragments :: Val a -> Int
 numFragments x =
-    sum (x ^.. val . monoChildren <&> numFragments) +
+    sum (x ^.. val . traverseK1 <&> numFragments) +
     if Lens.has appliedHole x
     then 1
     else 0
 
 appliedHole :: Lens.Traversal' (Val a) ()
-appliedHole = val . V._BApp . V.applyFunc . val . V._BLeaf . V._LHole
+appliedHole = val . V._BApp . V.appFunc . val . V._BLeaf . V._LHole

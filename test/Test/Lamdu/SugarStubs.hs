@@ -87,7 +87,7 @@ hole =
 
 ($$) :: Expr -> Expr -> Expr
 func $$ arg =
-    V.Apply func arg
+    V.App func arg
     & Sugar.BodySimpleApply
     & expr
 

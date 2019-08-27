@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.ParamList
     ) where
 
 import           AST (Tree, Ann(..), annotations)
-import           AST.Infer (IResult, irType)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Row (RowExtend(..))
 import           AST.Unify (Unify, UVarOf, unify)
@@ -42,12 +41,17 @@ mkFuncType paramList =
     <&> T.TFun
     >>= newTerm
     where
+        step ::
+            (Unify m Type, Unify m T.Row) =>
+            T.Tag ->
+            m (Tree (UVarOf m) T.Row) ->
+            m (Tree (UVarOf m) T.Row)
         step tag rest =
             RowExtend tag <$> newUnbound <*> rest <&> T.RExtend >>= newTerm
 
 loadForLambdas ::
     Monad m =>
-    Val (ValP m, IResult UVar V.Term) -> T m (PureInfer ())
+    Val (ValP m, Tree V.IResult UVar) -> T m (PureInfer ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. annotations & sequence_
@@ -55,6 +59,10 @@ loadForLambdas x =
         loadLambdaParamList (Ann _ V.BLam {}) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = pure (pure ())
 
+        loadUnifyParamList ::
+            Monad m =>
+            (ValP m, Tree V.IResult UVar) ->
+            T m (PureInfer ())
         loadUnifyParamList (stored, ires) =
             loadStored stored
             <&> \case
@@ -62,4 +70,4 @@ loadForLambdas x =
             Just paramList ->
                 do
                     funcType <- mkFuncType paramList
-                    () <$ unify (ires ^. irType) funcType
+                    () <$ unify (ires ^. V.iType) funcType

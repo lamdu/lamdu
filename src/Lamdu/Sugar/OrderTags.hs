@@ -4,7 +4,7 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
-import           AST (Tree, Children(..), monoChildren)
+import           AST (Tree, KNodes(..), KTraversable(..), traverseKWith, traverseK1)
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
@@ -23,11 +23,11 @@ class Order m name o t where
     order :: OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
 
     default order ::
-        ( Monad m, Children t
-        , ChildrenConstraint t (Order m name o)
+        ( Monad m, KTraversable t
+        , NodesConstraint t (Order m name o)
         ) =>
         OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
-    order = children (Proxy @(Order m name o)) orderNode
+    order = traverseKWith (Proxy @(Order m name o)) orderNode
 
 orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
 orderByTag toTag =
@@ -48,7 +48,7 @@ orderTBody t =
     t
     & Sugar._TRecord %%~ orderComposite
     >>= Sugar._TVariant %%~ orderComposite
-    >>= monoChildren orderType
+    >>= traverseK1 orderType
 
 orderType :: Monad m => OrderT m (Tree (Ann a) (Sugar.Type name))
 orderType = val orderTBody
@@ -104,7 +104,7 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
     order (Sugar.BodyInject x) = (Sugar.iContent . Sugar._InjectVal) orderNode x <&> Sugar.BodyInject
     order (Sugar.BodyToNom x) = traverse orderNode x <&> Sugar.BodyToNom
-    order (Sugar.BodySimpleApply x) = monoChildren orderNode x <&> Sugar.BodySimpleApply
+    order (Sugar.BodySimpleApply x) = traverseK1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyGetField x) = traverse orderNode x <&> Sugar.BodyGetField
     order x@Sugar.BodyFromNom{} = pure x
     order x@Sugar.BodyLiteral{} = pure x

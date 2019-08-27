@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.PostProcess
     ) where
 
 import           AST (Tree, Pure, ann)
-import           AST.Infer (irType)
 import           AST.Term.Scheme (saveScheme)
 import           AST.Unify.Generalize (generalize)
 import qualified Control.Lens as Lens
@@ -34,7 +33,7 @@ makeScheme ::
     Load.InferResult m ->
     Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
 makeScheme (Load.InferResult inferredVal inferContext) =
-    generalize (inferredVal ^. ann . Input.inferResult . irType)
+    generalize (inferredVal ^. ann . Input.inferResult . V.iType)
     >>= saveScheme
     & runPureInfer V.emptyScope inferContext
     <&> (^. Lens._1)

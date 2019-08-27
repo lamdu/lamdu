@@ -80,6 +80,6 @@ test445 =
             & Parens.addToExprWith 0
         problemPos =
             expr ^?!
-            val . Sugar._BodySimpleApply . Sugar.applyArg .
+            val . Sugar._BodySimpleApply . Sugar.appArg .
             val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix . _1
         i = Stub.litNum

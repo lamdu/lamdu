@@ -7,7 +7,8 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
-import           AST (Tree, Pure(..), Ann(..), annotations, monoChildren, _ToKnot)
+import           AST (Tree, Pure(..), Ann(..), annotations, traverseK1)
+import           AST.Knot.Functor (_ToKnot)
 import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
@@ -203,7 +204,7 @@ export msg act exportPath =
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
 writeValAt (Ann valI body) =
-    valI <$ (monoChildren writeValAt body >>= ExprIRef.writeValI valI)
+    valI <$ (traverseK1 writeValAt body >>= ExprIRef.writeValI valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
 writeValAtUUID x = x & annotations %~ (_ToKnot #) . IRef.unsafeFromUUID & writeValAt

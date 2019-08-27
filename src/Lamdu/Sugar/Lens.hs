@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds, DefaultSignatures #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , childPayloads
@@ -12,26 +12,41 @@ module Lamdu.Sugar.Lens
     , getVarName
     ) where
 
-import           AST (Knot, Tree, Children(..), ChildrenWithConstraint)
+import           AST (Tree, KNodes(..), KTraversable(..))
 import qualified AST
-import           AST.Class.Recursive (Recursive(..))
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
+import           Data.Constraint (Dict(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-childPayloads :: ChildrenWithConstraint expr Children =>
+childPayloads ::
+    KTraversable expr =>
     Lens.Traversal' (Tree expr (Ann a)) a
 childPayloads f =
-    children (Proxy @Children) (ann f)
+    AST.traverseK (ann f)
 
-class SugarExpr (t :: Knot -> *) where
+class KTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
     isForbiddenInLightLam :: t f -> Bool
     isForbiddenInLightLam = isUnfinished
+
+    sugarExprRecursive ::
+        Proxy t -> Dict (NodesConstraint t SugarExpr)
+    default sugarExprRecursive ::
+        NodesConstraint t SugarExpr =>
+        Proxy t -> Dict (NodesConstraint t SugarExpr)
+    sugarExprRecursive _ = Dict
+
+instance AST.Recursive SugarExpr where
+    recurse =
+        sugarExprRecursive . p
+        where
+            p :: Proxy (SugarExpr k) -> Proxy k
+            p _ = Proxy
 
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (NullaryVal name i o))
@@ -42,23 +57,19 @@ instance SugarExpr (Const (BinderVarRef name o)) where
 instance SugarExpr (Assignment name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
-instance Recursive SugarExpr (Assignment name i o)
 
 instance SugarExpr (Else name i o) where
     isUnfinished (SimpleElse x) = isUnfinished x
     isUnfinished ElseIf{} = False
-instance Recursive SugarExpr (Else name i o)
 
 instance SugarExpr (Function name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
-instance Recursive SugarExpr (Function name i o)
 
 instance SugarExpr (Binder name i o) where
     isUnfinished (BinderExpr x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
     isForbiddenInLightLam (BinderExpr x) = isForbiddenInLightLam x
-instance Recursive SugarExpr (Binder name i o)
 
 instance SugarExpr (Body name i o) where
     isUnfinished BodyHole{} = True
@@ -67,7 +78,6 @@ instance SugarExpr (Body name i o) where
     isUnfinished _ = False
     isForbiddenInLightLam (BodyLam f) = isForbiddenInLightLam (f ^. lamFunc)
     isForbiddenInLightLam x = isUnfinished x
-instance Recursive SugarExpr (Body name i o)
 
 binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
@@ -103,8 +113,8 @@ binderResultExpr f (Ann pl x) =
     case x of
     BinderExpr e ->
         Lens.indexed f
-        (AST.overChildren (Proxy @(Recursive Children))
-            (AST.annotations .~ ()) e) pl
+        (AST.mapKWith (Proxy @AST.RTraversable) (AST.annotations .~ ()) e)
+        pl
         <&> (`Ann` x)
     BinderLet l ->
         lBody (binderResultExpr f) l

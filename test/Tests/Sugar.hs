@@ -109,8 +109,8 @@ testChangeParam =
         action workArea =
             "new" &
             workArea ^?!
-            replBody . _BodySimpleApply . V.applyFunc .
-            val . _BodySimpleApply . V.applyArg .
+            replBody . _BodySimpleApply . V.appFunc .
+            val . _BodySimpleApply . V.appArg .
             val . lamFirstParam . fpInfo . piTag . tagRefReplace . tsNewTag
 
 -- | Test for issue #373
@@ -258,7 +258,7 @@ testInsistFactorial =
     & testCase "insist-factorial"
     where
         openDef =
-            replBody . _BodySimpleApply . applyFunc .
+            replBody . _BodySimpleApply . appFunc .
             val . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         ifElse =
             waPanes . traverse . paneBody . _PaneDefinition .
@@ -275,7 +275,7 @@ testInsistFactorial =
         unexpected =
             Lens.cloneTraversal ifElse . iElse .
             val . _SimpleElse . _BodyLam . lamFunc . fBody .
-            val . _BinderExpr . _BodySimpleApply . applyFunc .
+            val . _BinderExpr . _BodySimpleApply . appFunc .
             val . _BodyFragment
 
 testInsistEq :: Test

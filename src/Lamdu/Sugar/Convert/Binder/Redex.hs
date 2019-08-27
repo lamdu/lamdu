@@ -36,7 +36,7 @@ instance Functor Redex where
 check :: Tree V.Term (Ann (Input.Payload m a)) -> Maybe (Redex (Input.Payload m a))
 check term =
     do
-        V.Apply func a <- term ^? V._BApp
+        V.App func a <- term ^? V._BApp
         l <- func ^? val . V._BLam
         Just Redex
             { _lam = l

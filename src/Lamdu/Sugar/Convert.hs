@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           AST (Tree, Pure, Children, Recursive)
+import           AST (Tree, Pure, RTraversable)
 import           AST.Knot.Ann (Ann, ann, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
@@ -171,7 +171,7 @@ convertDefBody env cp (Definition.Definition bod defType defI) =
         convertInferDefExpr env cp defType defExpr defI
 
 markAnnotations ::
-    (MarkAnnotations t, Recursive Children t) =>
+    (MarkAnnotations t, RTraversable t) =>
     Config ->
     Tree (Ann a) t ->
     Tree (Ann (ShowAnnotation, a)) t

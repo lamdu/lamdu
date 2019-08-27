@@ -14,8 +14,9 @@ module Lamdu.Expr.IRef
     , readValI, writeValI, newValI
     ) where
 
-import           AST (ToKnot, _ToKnot, Tree, Pure, monoChildren)
+import           AST (Tree, Pure, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val)
+import           AST.Knot.Functor (ToKnot(..), _ToKnot)
 import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
@@ -86,19 +87,19 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> readValI valI >>= monoChildren go <&> Ann valI
+            Just go -> readValI valI >>= traverseK1 go <&> Ann valI
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
     T m (Tree V.Term (Ann (ValI m, a)))
-expressionBodyFrom = monoChildren writeValWithStoredSubexpressions . (^. val)
+expressionBodyFrom = traverseK1 writeValWithStoredSubexpressions . (^. val)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & monoChildren %~ (^. ann . _1)
+        let bodyWithRefs = body & traverseK1 %~ (^. ann . _1)
         case mIRef of
             Just valI -> Ann (valI, pl) body <$ writeValI valI bodyWithRefs
             Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (exprI, pl) body
@@ -111,10 +112,10 @@ addProperties ::
     Val (ValI m, a) ->
     Val (ValP m, a)
 addProperties setValI (Ann (valI, a) body) =
-    Ann (Property valI setValI, a) (body & Lens.indexing monoChildren %@~ f)
+    Ann (Property valI setValI, a) (body & Lens.indexing traverseK1 %@~ f)
     where
         f index =
             addProperties $ \valINew ->
             readValI valI
-            <&> Lens.indexing monoChildren . Lens.index index .~ valINew
+            <&> Lens.indexing traverseK1 . Lens.index index .~ valINew
             >>= writeValI valI
