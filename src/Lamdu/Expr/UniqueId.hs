@@ -4,7 +4,7 @@ module Lamdu.Expr.UniqueId
     ) where
 
 import           AST (Knot(..), Node)
-import           AST.Knot.Functor (ToKnot(..), _ToKnot)
+import           AST.Knot.Functor (F(..), _F)
 import qualified Data.ByteString as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -38,8 +38,9 @@ instance ToUUID (Branch m)  where toUUID = Branch.uuid
 instance ToUUID (T.Var a) where
     toUUID (T.Var (Identifier x)) =
         x <> BS.replicate (16 - BS.length x) 0 & UUIDUtils.fromSBS16
-instance ToUUID (f (Node ('Knot k) (ToKnot f))) =>
-         ToUUID (ToKnot f ('Knot k)) where toUUID = toUUID . (^. _ToKnot)
+instance ToUUID (f (Node ('Knot k) (F f))) =>
+    ToUUID (F f ('Knot k)) where
+    toUUID = toUUID . (^. _F)
 
 -- TODO: Remove this when all code uses more descritive types than UUID
 instance ToUUID UUID  where toUUID = id

@@ -96,7 +96,7 @@ preparePayloads nomsMap evalRes inferredVal =
             { _eResults = r ^. erExprValues . Lens.ix pl <&> addTypes nomsMap typ
             , _eAppliesOfLam =
                 case typ of
-                MkPure (T.TFun (FuncType paramType _)) ->
+                Pure (T.TFun (FuncType paramType _)) ->
                     r ^. erAppliesOfLam . Lens.ix pl
                     <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
                 _ | r ^. erAppliesOfLam & Map.null -> Map.empty

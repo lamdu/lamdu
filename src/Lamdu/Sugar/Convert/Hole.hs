@@ -13,7 +13,7 @@ module Lamdu.Sugar.Convert.Hole
 
 import           AST (Tree, Pure(..), _Pure)
 import           AST.Knot.Ann (Ann(..), ann, annotations)
-import           AST.Knot.Functor (_ToKnot)
+import           AST.Knot.Functor (_F)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (ToNom(..), NominalDecl, nScheme)
 import           AST.Term.Row (freExtends)
@@ -185,7 +185,7 @@ getTags = getListing Anchors.tags
 mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [Val ()]
 mkNominalOptions nominals =
     do
-        (tid, MkPure nominal) <- nominals
+        (tid, Pure nominal) <- nominals
         mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
         mkDirectNoms tid =
@@ -288,7 +288,7 @@ prepareUnstoredPayloads v =
               , Input._entityId = eId
               , Input._stored =
                 Property.Property
-                (_ToKnot # IRef.unsafeFromUUID fakeStored)
+                (_F # IRef.unsafeFromUUID fakeStored)
                 (error "stored output of base expr used!")
               , Input._evalResults =
                 CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
@@ -587,7 +587,7 @@ randomizeNonStoredRefs uniqueIdent gen v =
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> (Lens._Just . _ToKnot #)
+            <&> IRef.unsafeFromUUID <&> (Lens._Just . _F #)
         f (Just x) = Just x & pure
 
 writeExprMStored ::
@@ -605,4 +605,3 @@ writeExprMStored exprIRef exprMStorePoint =
             )
             & SHA256.hashlazy
         (genParamIds, genRefs) = Random.genFromHashable uniqueIdent & Random.split
-

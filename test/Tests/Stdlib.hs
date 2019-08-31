@@ -132,19 +132,19 @@ verifySchemes =
                 def ^. Def.defType & verifyScheme
                 def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . traverse
                     & traverse_ verifyScheme
-        verifyScheme (MkPure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
+        verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
 
 class VerifyTypeInScheme t where
     verifyTypeInScheme :: Tree T.Types S.QVars -> Tree Pure t -> IO ()
 
 instance VerifyTypeInScheme T.Type where
-    verifyTypeInScheme s (MkPure (T.TVar v))
+    verifyTypeInScheme s (Pure (T.TVar v))
         | Lens.has (T.tType . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Type variable not declared " ++ show v)
-    verifyTypeInScheme s (MkPure t) = traverseKWith_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t
+    verifyTypeInScheme s (Pure t) = traverseKWith_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t
 
 instance VerifyTypeInScheme T.Row where
-    verifyTypeInScheme s (MkPure (T.RVar v))
+    verifyTypeInScheme s (Pure (T.RVar v))
         | Lens.has (T.tRow . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Row variable not declared " ++ show v)
-    verifyTypeInScheme s (MkPure t) = traverseKWith_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t
+    verifyTypeInScheme s (Pure t) = traverseKWith_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t

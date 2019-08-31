@@ -352,13 +352,13 @@ valFromLiteral =
             & literalExpr
             & ToNom Builtins.textTid
             & V.BToNom
-            & Ann (MkPure (T.TInst (NominalInst Builtins.textTid noParams)))
+            & Ann (_Pure # T.TInst (NominalInst Builtins.textTid noParams))
         , Property.pureModify frozenDeps (<> textDep)
         )
     where
         literalExpr v =
             V.LLiteral prim & V.BLeaf
-            & Ann (MkPure (T.TInst (NominalInst (prim ^. V.primType) noParams)))
+            & Ann (_Pure # T.TInst (NominalInst (prim ^. V.primType) noParams))
             where
                 prim = PrimVal.fromKnown v
         noParams = T.Types (S.QVarInstances mempty) (S.QVarInstances mempty)

@@ -1,15 +1,18 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
 
 import           AST (Tree, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Infer.Blame (Blame(..), blame)
+import           AST.Infer.Blame (blame, bTermToAnn)
 import qualified AST.Term.Row as Row
 import           AST.Unify.Generalize (GTerm(..))
 import           AST.Unify.New (newUnbound)
 import qualified Control.Lens.Extended as Lens
 import qualified Control.Monad.Reader as Reader
+import           Data.Constraint.List (NoConstraint)
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Infer as Infer
 import           Lamdu.Calc.Term (Term)
@@ -103,12 +106,15 @@ healMismatch =
                 prepare fragment topLevelExpr
                     & blame (^. Lens._1) (V.IResult V.emptyScope topLevelType)
                     & Reader.local (addRecursiveRef . addDeps)
-            <&> (^.. annotations) <&> Lens.mapped %~ act
             & Infer.runPureInfer V.emptyScope
                 (Infer.InferState Infer.emptyPureInferState Infer.varGen)
-            & either (error "bug in heal!") (sequence_ . (^. Lens._1))
+            & either (error "bug in heal!")
+                (Lens.sequenceOf_ annotations .
+                    bTermToAnn (Proxy @NoConstraint) act .
+                    fst
+                )
             >> postProcess
     where
-        act (Ok ,(_, OnUnify x)) = x
-        act (TypeMismatch, (_, OnNoUnify x)) = x
-        act _ = pure ()
+        act _ (_, OnUnify x) Right{} = x
+        act _ (_, OnNoUnify x) Left{} = x
+        act _ _ _ = pure ()

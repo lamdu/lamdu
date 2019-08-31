@@ -8,7 +8,7 @@ module Lamdu.Data.Export.JSON
     ) where
 
 import           AST (Tree, Pure(..), Ann(..), annotations, traverseK1)
-import           AST.Knot.Functor (_ToKnot)
+import           AST.Knot.Functor (_F)
 import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
@@ -207,7 +207,7 @@ writeValAt (Ann valI body) =
     valI <$ (traverseK1 writeValAt body >>= ExprIRef.writeValI valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
-writeValAtUUID x = x & annotations %~ (_ToKnot #) . IRef.unsafeFromUUID & writeValAt
+writeValAtUUID x = x & annotations %~ (_F #) . IRef.unsafeFromUUID & writeValAt
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>
@@ -247,7 +247,7 @@ importLamVar paramList tag lamUUID var =
         Property.setP (Anchors.assocFieldParamList lamI) paramList
         Property.setP (Anchors.assocTag var) tag
     where
-        lamI = _ToKnot # IRef.unsafeFromUUID lamUUID
+        lamI = _F # IRef.unsafeFromUUID lamUUID
 
 importNominal :: T.Tag -> T.NominalId -> Maybe (Tree Pure (NominalDecl T.Type)) -> T ViewM ()
 importNominal tag nomId nominal =

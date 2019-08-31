@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Type
     , convertScheme
     ) where
 
-import           AST (Tree, Pure(..), Ann(..))
+import           AST (Tree, Pure(..), Ann(..), _Pure)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
@@ -27,7 +27,7 @@ convertComposite ::
     MonadTransaction n m =>
     EntityId -> Tree Pure T.Row ->
     m (CompositeFields InternalName (Tree (Ann EntityId) (Type InternalName)))
-convertComposite entityId (MkPure (T.RExtend (RowExtend tag typ rest))) =
+convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
         convertComposite (EntityId.ofRestOfComposite entityId) rest
@@ -35,15 +35,15 @@ convertComposite entityId (MkPure (T.RExtend (RowExtend tag typ rest))) =
     where
         tagS = ConvertTag.withoutContext entityId tag
 
-convertComposite _ (MkPure (T.RVar v)) =
+convertComposite _ (Pure (T.RVar v)) =
     CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
-convertComposite _ (MkPure T.REmpty) = CompositeFields mempty Nothing & pure
+convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
     MonadTransaction n m =>
     EntityId -> Tree Pure T.Type -> m (Tree (Ann EntityId) (Type InternalName))
-convertType entityId (MkPure typ) =
-    case typ of
+convertType entityId typ =
+    case typ ^. _Pure of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure
     T.TFun (FuncType param res) ->
         FuncType
@@ -67,5 +67,5 @@ convertType entityId (MkPure typ) =
     <&> Ann entityId
 
 convertScheme :: MonadTransaction n m => EntityId -> Tree Pure T.Scheme -> m (Scheme InternalName)
-convertScheme entityId (MkPure (S.Scheme tvs typ)) =
+convertScheme entityId (Pure (S.Scheme tvs typ)) =
     Scheme tvs <$> convertType entityId typ

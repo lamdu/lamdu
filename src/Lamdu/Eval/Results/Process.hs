@@ -115,8 +115,7 @@ applyNominal ::
     Tree T.Types (QVarInstances Pure) ->
     Tree Pure (Scheme T.Types T.Type)
 applyNominal nom params =
-    nom ^. _Pure . N.nScheme & sTyp %~ subst params
-    & MkPure
+    _Pure # (nom ^. _Pure . N.nScheme & sTyp %~ subst params)
 
 subst ::
     forall t.
@@ -124,15 +123,15 @@ subst ::
     Tree T.Types (QVarInstances Pure) ->
     Tree Pure t ->
     Tree Pure t
-subst params (MkPure x) =
+subst params (Pure x) =
     withDict (applyNominalRecursive (Proxy @t)) $
+    _Pure #
     case x ^? quantifiedVar of
     Nothing -> mapKWith (Proxy @ApplyNominal) (subst params) x
     Just q ->
         params ^?
         getChild . _QVarInstances . Lens.ix q . _Pure
         & fromMaybe (quantifiedVar # q)
-    & MkPure
 
 -- Will loop forever for bottoms like: newtype Void = Void Void
 unwrapTInsts :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Tree Pure T.Type

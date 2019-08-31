@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
 
 import           AST (Tree, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Infer (inferResVal, inferBody)
+import           AST.Infer (inferBody)
 import           AST.Term.FuncType
 import           AST.Term.Nominal
 import           AST.Term.Row (RowExtend(..))
@@ -85,7 +85,7 @@ termTransformsWithoutSplit def src =
                 | Lens.nullOf (val . V._BToNom) src ->
                     do
                         fromNomRes <- V.LFromNom name & V.BLeaf & inferBody
-                        let fromNomTyp = fromNomRes ^. inferResVal . V.iType
+                        let fromNomTyp = fromNomRes ^. Lens._2 . V.iType
                         resultType <- newUnbound
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src

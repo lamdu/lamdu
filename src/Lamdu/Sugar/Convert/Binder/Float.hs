@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           AST (Tree, Pure(..), traverseK1)
+import           AST (Tree, Pure(..), _Pure, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Row (FlatRowExtends(..))
@@ -152,9 +152,9 @@ addLetParam ::
 addLetParam var redex =
     case storedRedex ^. Redex.arg . val of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.arg . ann . Input.inferredType of
-        MkPure (T.TFun (FuncType (MkPure (T.TRecord composite)) _))
-            | FlatRowExtends fieldsMap (MkPure T.REmpty) <- composite ^. T.flatRow
+        case redex ^. Redex.arg . ann . Input.inferredType . _Pure of
+        T.TFun (FuncType (Pure (T.TRecord composite)) _)
+            | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
             , let fields = Map.toList fieldsMap
             , Params.isParamAlwaysUsedWithGetField lam ->
             addFieldToLetParamsRecord

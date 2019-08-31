@@ -234,8 +234,8 @@ decodeComposite x =
                 f (key, val) acc = _Pure . T._RExtend # RowExtend key val acc
 
 encodeType :: Encoder (Tree Pure T.Type)
-encodeType (MkPure t) =
-    case t of
+encodeType t =
+    case t ^. _Pure of
     T.TFun (FuncType a b) -> ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
     T.TRecord composite   -> ["record" .= encodeComposite composite]
     T.TVariant composite  -> ["variant" .= encodeComposite composite]
@@ -309,7 +309,7 @@ decodeTypeVars obj =
         <&> QVars)
 
 encodeScheme :: Encoder (Tree Pure T.Scheme)
-encodeScheme (MkPure (Scheme tvs typ)) =
+encodeScheme (Pure (Scheme tvs typ)) =
     ("schemeType" .= encodeType typ) :
     encodeTypeVars tvs
     & Aeson.object
@@ -490,7 +490,7 @@ insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (Aeson.toJSON v)
 
 encodeNominal :: Tree Pure (NominalDecl T.Type) -> Aeson.Object
-encodeNominal (MkPure (NominalDecl params nominalType)) =
+encodeNominal (Pure (NominalDecl params nominalType)) =
     ("nomType" .= encodeScheme (_Pure # nominalType))
     : encodeTypeVars params
     & HashMap.fromList

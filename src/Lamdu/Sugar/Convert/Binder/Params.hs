@@ -580,8 +580,8 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
         nullParamSugar <-
             Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
         funcParam <-
-            case lamParamType lamExprPl of
-            MkPure (T.TRecord (MkPure T.REmpty))
+            case lamParamType lamExprPl ^. _Pure of
+            T.TRecord (Pure T.REmpty)
                 | nullParamSugar && null (lamExprPl ^. Input.varRefsOfLambda) ->
                     mkFuncParam (EntityId.ofBinder param) lamExprPl info <&> NullParam
                 where
@@ -674,9 +674,9 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             <&> Map.keysSet
         sugarParamsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
         case lambdaPl ^. Input.inferredType . _Pure of
-            T.TFun (FuncType (MkPure (T.TRecord composite)) _)
+            T.TFun (FuncType (Pure (T.TRecord composite)) _)
                 | sugarParamsRecord
-                , FlatRowExtends fieldsMap (MkPure T.REmpty) <- composite ^. T.flatRow
+                , FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
                 , let fields = Map.toList fieldsMap
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda

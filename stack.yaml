@@ -3,14 +3,15 @@ packages:
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
+- generic-constraints-1.1.1.1
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
 - github: lamdu/bindings-freetype-gl
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/syntax-tree
-  commit: c54105134b5ec99db698b35f601d18996b50226a
+  commit: d58c741395689125746fdac7eeef45493fd6f1d4
 - github: lamdu/lamdu-calculus
-  commit: b8521a5b65cf1a37c903ae4335586d5ef16095e1
+  commit: 07fc890bbe409f7a7e77b383cb38cb10fd9f15b7
 - github: lamdu/graphics-drawingcombinators
   commit: 6253576fdd9233df5c3f43002310f38b0928c2d5
 - github: lamdu/freetype2

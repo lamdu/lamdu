@@ -16,7 +16,7 @@ module Lamdu.Expr.IRef
 
 import           AST (Tree, Pure, traverseK1)
 import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Knot.Functor (ToKnot(..), _ToKnot)
+import           AST.Knot.Functor (F(..), _F)
 import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
@@ -63,22 +63,22 @@ readTagData tag =
     where
         iref = tagI tag
 
-type ValI m = Tree (ToKnot (IRef m)) V.Term
+type ValI m = Tree (F (IRef m)) V.Term
 
 type ValP m = Property (T m) (ValI m)
-type ValBody m = Tree V.Term (ToKnot (IRef m))
+type ValBody m = Tree V.Term (F (IRef m))
 
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
 
-readValI :: Monad m => ValI m -> T m (Tree V.Term (ToKnot (IRef m)))
-readValI = Transaction.readIRef . (^. _ToKnot)
+readValI :: Monad m => ValI m -> T m (Tree V.Term (F (IRef m)))
+readValI = Transaction.readIRef . (^. _F)
 
-writeValI :: Monad m => ValI m -> Tree V.Term (ToKnot (IRef m)) -> T m ()
-writeValI = Transaction.writeIRef . (^. _ToKnot)
+writeValI :: Monad m => ValI m -> Tree V.Term (F (IRef m)) -> T m ()
+writeValI = Transaction.writeIRef . (^. _F)
 
-newValI :: Monad m => Tree V.Term (ToKnot (IRef m)) -> T m (ValI m)
-newValI = fmap (_ToKnot #) . Transaction.newIRef
+newValI :: Monad m => Tree V.Term (F (IRef m)) -> T m (ValI m)
+newValI = fmap (_F #) . Transaction.newIRef
 
 readVal :: Monad m => ValI m -> T m (Val (ValI m))
 readVal =
