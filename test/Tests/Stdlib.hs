@@ -2,7 +2,7 @@
 
 module Tests.Stdlib (test) where
 
-import           AST (Pure(..), Tree, traverseKWith_)
+import           AST (Pure(..), Tree, traverseK_, (#>))
 import qualified AST.Term.Scheme as S
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
@@ -141,10 +141,10 @@ instance VerifyTypeInScheme T.Type where
     verifyTypeInScheme s (Pure (T.TVar v))
         | Lens.has (T.tType . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Type variable not declared " ++ show v)
-    verifyTypeInScheme s (Pure t) = traverseKWith_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t
+    verifyTypeInScheme s (Pure t) = traverseK_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t
 
 instance VerifyTypeInScheme T.Row where
     verifyTypeInScheme s (Pure (T.RVar v))
         | Lens.has (T.tRow . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Row variable not declared " ++ show v)
-    verifyTypeInScheme s (Pure t) = traverseKWith_ (Proxy @VerifyTypeInScheme) (verifyTypeInScheme s) t
+    verifyTypeInScheme s (Pure t) = traverseK_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t

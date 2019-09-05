@@ -4,7 +4,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Tree, Ann(..), traverseKWith)
+import           AST (Tree, Ann(..), traverseK, (#>))
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (withDict)
@@ -136,5 +136,5 @@ unfinishedPayloads ::
 unfinishedPayloads f (Ann a x) =
     withDict (SugarLens.sugarExprRecursive (Proxy @t)) $
     flip Ann
-    <$> traverseKWith (Proxy @SugarLens.SugarExpr) (unfinishedPayloads f) x
+    <$> traverseK (Proxy @SugarLens.SugarExpr #> unfinishedPayloads f) x
     <*> (if SugarLens.isUnfinished x then f a else pure a)

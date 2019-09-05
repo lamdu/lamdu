@@ -254,7 +254,7 @@ convertLam lam exprPl =
         BodyLam lambda
             & addActions (lam ^.. V.lamOut) exprPl
             <&> val %~
-                mapK (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>))
+                mapK (const (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 useNormalLambda ::
     Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
@@ -271,10 +271,10 @@ class GetParam (t :: Knot -> *) where
     getParam _ = Nothing
 
     getParamRecursive ::
-        Proxy t -> Dict (NodesConstraint t GetParam)
+        Proxy t -> Dict (KNodesConstraint t GetParam)
     default getParamRecursive ::
-        NodesConstraint t GetParam =>
-        Proxy t -> Dict (NodesConstraint t GetParam)
+        KNodesConstraint t GetParam =>
+        Proxy t -> Dict (KNodesConstraint t GetParam)
     getParamRecursive _ = Dict
 
 instance Recursive GetParam where
@@ -316,16 +316,15 @@ class MarkLightParams (t :: Knot -> *) where
     markLightParams :: Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 
     default markLightParams ::
-        (KFunctor t, NodesConstraint t MarkLightParams) =>
+        (KFunctor t, KNodesConstraint t MarkLightParams) =>
         Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
     markLightParams = defaultMarkLightParams
 
 defaultMarkLightParams ::
-    (KFunctor t, NodesConstraint t MarkLightParams) =>
+    (KFunctor t, KNodesConstraint t MarkLightParams) =>
     Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 defaultMarkLightParams paramNames =
-    mapKWith (Proxy @MarkLightParams)
-    (markNodeLightParams paramNames)
+    mapK (Proxy @MarkLightParams #> markNodeLightParams paramNames)
 
 markNodeLightParams ::
     MarkLightParams t =>

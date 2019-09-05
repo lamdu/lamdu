@@ -12,7 +12,6 @@ import           AST.Unify.Generalize (GTerm(..))
 import           AST.Unify.New (newUnbound)
 import qualified Control.Lens.Extended as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Constraint.List (NoConstraint)
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Infer as Infer
 import           Lamdu.Calc.Term (Term)
@@ -110,7 +109,7 @@ healMismatch =
                 (Infer.InferState Infer.emptyPureInferState Infer.varGen)
             & either (error "bug in heal!")
                 (Lens.sequenceOf_ annotations .
-                    bTermToAnn (Proxy @NoConstraint) act .
+                    bTermToAnn act .
                     fst
                 )
             >> postProcess

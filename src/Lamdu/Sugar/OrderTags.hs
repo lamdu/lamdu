@@ -4,7 +4,7 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
-import           AST (Tree, KNodes(..), KTraversable(..), traverseKWith, traverseK1)
+import           AST (Tree, KNodes(..), KTraversable(..), traverseK, traverseK1, (#>))
 import           AST.Knot.Ann (Ann(..), val)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
@@ -24,10 +24,10 @@ class Order m name o t where
 
     default order ::
         ( Monad m, KTraversable t
-        , NodesConstraint t (Order m name o)
+        , KNodesConstraint t (Order m name o)
         ) =>
         OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
-    order = traverseKWith (Proxy @(Order m name o)) orderNode
+    order = traverseK (Proxy @(Order m name o) #> orderNode)
 
 orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
 orderByTag toTag =

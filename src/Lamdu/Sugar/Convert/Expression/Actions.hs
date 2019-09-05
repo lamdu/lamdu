@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , makeSetToLiteral
     ) where
 
-import           AST (Tree, Pure(..), _Pure, mapKWith)
+import           AST (Tree, Pure(..), _Pure, mapK, (#>))
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           AST.Term.Row (RowExtend(..))
@@ -243,8 +243,8 @@ setChildReplaceParentActions =
     in
     bod
     & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
-        mapKWith p (ann %~ join setToExpr)
-    & mapKWith p (fixReplaceParent setToExpr)
+        mapK (p #> ann %~ join setToExpr)
+    & mapK (p #> fixReplaceParent setToExpr)
     where
         p :: Proxy FixReplaceParent
         p = Proxy

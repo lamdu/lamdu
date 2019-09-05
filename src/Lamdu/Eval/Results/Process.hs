@@ -105,8 +105,10 @@ addTypes nomsMap typ (Ann () b) =
     where
         r f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 
-class (KFunctor k, HasQuantifiedVar k, Ord (QVar k), HasChild T.Types k) => ApplyNominal k where
-    applyNominalRecursive :: Proxy k -> Dict (NodesConstraint k ApplyNominal)
+class
+    (KFunctor k, HasQuantifiedVar k, Ord (QVar k), HasChild T.Types k) =>
+    ApplyNominal k where
+    applyNominalRecursive :: Proxy k -> Dict (KNodesConstraint k ApplyNominal)
 instance ApplyNominal T.Type where applyNominalRecursive _ = Dict
 instance ApplyNominal T.Row where applyNominalRecursive _ = Dict
 
@@ -127,7 +129,7 @@ subst params (Pure x) =
     withDict (applyNominalRecursive (Proxy @t)) $
     _Pure #
     case x ^? quantifiedVar of
-    Nothing -> mapKWith (Proxy @ApplyNominal) (subst params) x
+    Nothing -> mapK (Proxy @ApplyNominal #> subst params) x
     Just q ->
         params ^?
         getChild . _QVarInstances . Lens.ix q . _Pure

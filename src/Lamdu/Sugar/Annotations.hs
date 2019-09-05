@@ -7,7 +7,7 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
-import           AST (Tree, Knot, mapKWith)
+import           AST (Tree, Knot, mapK, (#>))
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -68,8 +68,7 @@ instance MarkAnnotations (Binder name i o) where
         markBodyAnnotations body & _2 %~ BinderExpr
     markAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , mapKWith (Proxy @MarkAnnotations)
-            markNodeAnnotations let_
+        , mapK (Proxy @MarkAnnotations #> markNodeAnnotations) let_
             & BinderLet
         )
 
@@ -89,8 +88,7 @@ instance MarkAnnotations (Else name i o) where
         ( neverShowAnnotations
         , elseIf
             & eiContent %~
-                mapKWith (Proxy @MarkAnnotations)
-                markNodeAnnotations
+                mapK (Proxy @MarkAnnotations #> markNodeAnnotations)
             & ElseIf
         )
 
@@ -161,13 +159,14 @@ markBodyAnnotations oldBody =
         )
     where
         newBodyWith f =
-            newBody & mapKWith (Proxy :: (Proxy SugarLens.SugarExpr))
-            (Lens.filtered (not . SugarLens.isUnfinished . (^. val)) . ann . _1 .~ f)
+            mapK
+            ( Proxy @SugarLens.SugarExpr #>
+                Lens.filtered (not . SugarLens.isUnfinished . (^. val)) . ann . _1 .~ f
+            ) newBody
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)
         newBody =
-            mapKWith (Proxy @MarkAnnotations)
-            markNodeAnnotations oldBody
+            mapK (Proxy @MarkAnnotations #> markNodeAnnotations) oldBody
         nonHoleAnn =
             Lens.filtered (Lens.nullOf (val . SugarLens.bodyUnfinished)) .
             topLevelAnn

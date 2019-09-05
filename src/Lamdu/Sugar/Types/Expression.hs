@@ -1,4 +1,10 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds #-}
+-- TODO:
+-- The makeKTraversableAndBases calls below generate redundant constraints.
+-- syntax-tree's TH needs to support generating instances for a whole group,
+-- so that it knows which other instances it will create.
+{-# OPTIONS -Wno-redundant-constraints #-}
+
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
