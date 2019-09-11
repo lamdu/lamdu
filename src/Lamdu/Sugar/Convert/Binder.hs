@@ -261,10 +261,12 @@ useNormalLambda ::
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        (foldMapRecursive (Proxy @SugarLens.SugarExpr)
-            (Any . SugarLens.isForbiddenInLightLam) (func ^. fBody . val)
-            ^. Lens._Wrapped)
-        || not (allParamsUsed paramNames func)
+        ( foldMapRecursive
+            (Proxy @SugarLens.SugarExpr ##>>
+                Any . SugarLens.isForbiddenInLightLam
+            ) (func ^. fBody . val)
+            ^. Lens._Wrapped
+        ) || not (allParamsUsed paramNames func)
 
 class GetParam (t :: Knot -> *) where
     getParam :: t f -> Maybe InternalName
@@ -309,8 +311,10 @@ allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
         usedParams =
-            foldMapRecursive (Proxy @GetParam)
-            ((^. Lens._Just . Lens.to Set.singleton) . getParam) func
+            foldMapRecursive
+            ( Proxy @GetParam ##>>
+                (^. Lens._Just . Lens.to Set.singleton) . getParam
+            ) func
 
 class MarkLightParams (t :: Knot -> *) where
     markLightParams :: Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)

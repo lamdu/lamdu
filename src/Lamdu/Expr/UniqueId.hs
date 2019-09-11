@@ -1,9 +1,9 @@
-{-# LANGUAGE UndecidableInstances, DataKinds, FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances, DataKinds, FlexibleInstances, TypeOperators #-}
 module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
-import           AST (Knot(..), Node)
+import           AST (Knot(..), type (#))
 import           AST.Knot.Functor (F(..), _F)
 import qualified Data.ByteString as BS
 import           Data.UUID.Types (UUID)
@@ -38,7 +38,7 @@ instance ToUUID (Branch m)  where toUUID = Branch.uuid
 instance ToUUID (T.Var a) where
     toUUID (T.Var (Identifier x)) =
         x <> BS.replicate (16 - BS.length x) 0 & UUIDUtils.fromSBS16
-instance ToUUID (f (Node ('Knot k) (F f))) =>
+instance ToUUID (f ('Knot k # F f)) =>
     ToUUID (F f ('Knot k)) where
     toUUID = toUUID . (^. _F)
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables, TypeOperators #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
@@ -38,7 +38,7 @@ extractVariantTypeField tag typ =
     typ ^? _Pure . T._TVariant . T.flatRow
     >>= (^. Row.freExtends . Lens.at tag)
 
-type AddTypes val f = (Tree Pure T.Type -> val -> Node f Body) -> Tree Pure T.Type -> Body f
+type AddTypes val f = (Tree Pure T.Type -> val -> f # Body) -> Tree Pure T.Type -> Body f
 
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack

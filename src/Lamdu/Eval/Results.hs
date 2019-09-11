@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances, TypeFamilies, MultiParamTypeClasses, GADTs #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances, TypeFamilies, MultiParamTypeClasses, GADTs, TypeOperators #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
     , Val
@@ -15,7 +15,7 @@ module Lamdu.Eval.Results
     ) where
 
 import qualified AST
-import           AST (Ann(..), Node, Tree)
+import           AST (Ann(..), Tree, type (#))
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
@@ -42,18 +42,18 @@ newtype EvalTypeError = EvalTypeError Text
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
-data Body f
-    = RRecExtend (RowExtend T.Tag Body Body f)
-    | RInject (V.Inject (Node f Body))
+data Body k
+    = RRecExtend (RowExtend T.Tag Body Body k)
+    | RInject (V.Inject (k # Body))
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
-    | RArray [Node f Body]
+    | RArray [k # Body]
     | RError EvalTypeError
 
 AST.makeKTraversableAndBases ''Body
 
-deriving instance Show (Node f Body) => Show (Body f)
+deriving instance Show (k # Body) => Show (Body k)
 
 type Val pl = Tree (Ann pl) Body
 

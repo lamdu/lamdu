@@ -1,5 +1,5 @@
 -- | Sugaring of Lamdu.Calc.Type modules/ASTs
-{-# LANGUAGE TemplateHaskell, TypeFamilies, UndecidableInstances, GADTs #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, UndecidableInstances, GADTs, TypeOperators #-}
 module Lamdu.Sugar.Types.Type
     ( Scheme(..), schemeForAll, schemeType
     , T.NominalId
@@ -8,7 +8,7 @@ module Lamdu.Sugar.Types.Type
     , TId(..), tidName, tidTId
     ) where
 
-import           AST (Tree, Ann, Node, makeKTraversableAndBases)
+import           AST (Tree, Ann, type (#), makeKTraversableAndBases)
 import           AST.Term.FuncType (FuncType)
 import           AST.Term.Scheme (QVars)
 import qualified Control.Lens as Lens
@@ -34,12 +34,12 @@ data Type name k
       -- ^ A type variable
     | TFun (FuncType (Type name) k)
       -- ^ A (non-dependent) function of the given parameter and result types
-    | TInst (TId name) [(name, Node k (Type name))]
+    | TInst (TId name) [(name, k # Type name)]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
-    | TRecord (CompositeFields name (Node k (Type name)))
+    | TRecord (CompositeFields name (k # Type name))
       -- ^ Lifts a composite record type
-    | TVariant (CompositeFields name (Node k (Type name)))
+    | TVariant (CompositeFields name (k # Type name))
       -- ^ Lifts a composite variant type
     deriving Generic
 
