@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Binder
     ) where
 
 import           AST
-import           AST.Class.Recursive (foldMapRecursive)
+import           AST.Recurse (Recursive(..), foldMapRecursive, (##>>))
 import           AST.Knot.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict(..))

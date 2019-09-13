@@ -12,8 +12,8 @@ module Lamdu.Sugar.Lens
     , getVarName
     ) where
 
-import           AST (Tree, KNodes(..), KTraversable(..), (#>))
-import qualified AST
+import           AST (Tree, KNodes(..), KTraversable(..), (#>), traverseK, mapK, annotations)
+import           AST.Recurse (Recursive(..), RTraversable)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Constraint (Dict(..))
@@ -26,7 +26,7 @@ childPayloads ::
     KTraversable expr =>
     Lens.Traversal' (Tree expr (Ann a)) a
 childPayloads f =
-    AST.traverseK (const (ann f))
+    traverseK (const (ann f))
 
 class KTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool
@@ -42,7 +42,7 @@ class KTraversable t => SugarExpr t where
         Proxy t -> Dict (KNodesConstraint t SugarExpr)
     sugarExprRecursive _ = Dict
 
-instance AST.Recursive SugarExpr where
+instance Recursive SugarExpr where
     recurse =
         sugarExprRecursive . p
         where
@@ -114,7 +114,7 @@ binderResultExpr f (Ann pl x) =
     case x of
     BinderExpr e ->
         Lens.indexed f
-        (AST.mapK (Proxy @AST.RTraversable #> AST.annotations .~ ()) e)
+        (mapK (Proxy @RTraversable #> annotations .~ ()) e)
         pl
         <&> (`Ann` x)
     BinderLet l ->
