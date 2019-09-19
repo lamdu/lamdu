@@ -11,11 +11,11 @@ module Lamdu.Sugar.Convert.Hole
     , assertSuccessfulInfer
     ) where
 
-import           AST (Tree, Pure(..), _Pure)
-import           AST.Knot.Ann (Ann(..), ann, annotations)
+import           AST (Tree, KHasPlain(..), Pure(..), _Pure)
+import           AST.Knot.Ann (Ann(..), ann, annotations, addAnnotations)
 import           AST.Knot.Functor (_F)
 import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Nominal (ToNom(..), NominalDecl, nScheme)
+import           AST.Term.Nominal (NominalDecl, nScheme)
 import           AST.Term.Row (freExtends)
 import           AST.Term.Scheme (sTyp)
 import           AST.Unify (unify)
@@ -46,7 +46,6 @@ import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
-import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Term.Eq (couldEq)
@@ -182,24 +181,22 @@ getGlobals sugarContext =
 getTags :: Monad m => ConvertM.Context m -> T m [T.Tag]
 getTags = getListing Anchors.tags
 
-mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [Val ()]
+mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [KPlain V.Term]
 mkNominalOptions nominals =
     do
         (tid, Pure nominal) <- nominals
         mkDirectNoms tid ++ mkToNomInjections tid nominal
     where
         mkDirectNoms tid =
-            [ App (Ann () (V.BLeaf (V.LFromNom tid))) P.hole & V.BApp
-            , ToNom tid P.hole & V.BToNom
-            ] <&> Ann ()
+            [ V.BLeafP (V.LFromNom tid) `V.BAppP` V.BLeafP V.LHole
+            , V.BLeafP V.LHole & V.BToNomP tid
+            ]
         mkToNomInjections tid nominal =
-            do
-                tag <-
-                    nominal ^..
-                    nScheme . sTyp . _Pure . T._TVariant .
-                    T.flatRow . freExtends >>= Map.keys
-                let inject = V.Inject tag P.hole & V.BInject & Ann ()
-                [ inject & ToNom tid & V.BToNom & Ann () ]
+            nominal ^..
+            nScheme . sTyp . _Pure . T._TVariant .
+            T.flatRow . freExtends >>= Map.keys
+            <&> (`V.BInjectP` V.BLeafP V.LHole)
+            <&> V.BToNomP tid
 
 mkOptions ::
     Monad m =>
@@ -215,17 +212,18 @@ mkOptions posInfo resultProcessor holePl =
         tags <- getTags sugarContext
         concat
             [ holePl ^. Input.localsInScope >>= getLocalScopeGetVars sugarContext
-            , globals <&> P.var . ExprIRef.globalId
-            , tags <&> (`P.inject` P.hole)
+            , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
+            , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
             , nominalOptions
-            , [ P.abs "NewLambda" P.hole
-              , P.recEmpty
-              , P.absurd
+            , [ V.BLamP "NewLambda" (V.BLeafP V.LHole)
+              , V.BLeafP V.LRecEmpty
+              , V.BLeafP V.LAbsurd
               ]
-            , [ P.abs "NewLambda" P.hole P.$$ P.hole
+            , [ V.BLamP "NewLambda" (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
               | posInfo == ConvertM.BinderPos
               ]
             ]
+            <&> addAnnotations (\_ _ -> ()) . (^. kPlain)
             <&> mkOption sugarContext resultProcessor holePl
             & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
             & pure
@@ -363,12 +361,12 @@ sugar sugarContext holePl v =
             \typ entityId ->
             (inferPl, typ, entityId, x)
 
-getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [Val ()]
+getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [KPlain V.Term]
 getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = map mkFieldParam fieldTags ++ [var]
     where
-        var = V.LVar par & V.BLeaf & Ann ()
+        var = V.LVar par & V.BLeafP
         fieldTags =
             ( sugarContext ^@..
                 ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
@@ -376,7 +374,7 @@ getLocalScopeGetVars sugarContext par
                     ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
             ) <&> fst
-        mkFieldParam tag = V.GetField var tag & V.BGetField & Ann ()
+        mkFieldParam tag = V.BGetFieldP var tag
 
 -- | Runs inside a forked transaction
 writeResult ::

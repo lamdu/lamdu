@@ -27,7 +27,6 @@ import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
-import qualified Lamdu.Calc.Pure as P
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -75,10 +74,11 @@ mkOptions posInfo sugarContext argI argS exprPl =
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
-            [ P.app P.hole P.hole | Lens.nullOf (val . _BodyLam) argS ]
+            [ App hole hole & V.BApp & Ann () | Lens.nullOf (val . _BodyLam) argS ]
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
+        hole = V.BLeaf V.LHole & Ann ()
 
 mkAppliedHoleSuggesteds ::
     Monad m =>
@@ -315,5 +315,5 @@ mkOptionFromFragment sugarContext exprPl x =
         scope = exprPl ^. Input.inferResult . V.iScope
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
         baseExpr = pruneExpr x
-        pruneExpr (Ann (Just{}, _) _) = P.hole
+        pruneExpr (Ann (Just{}, _) _) = V.BLeaf V.LHole & Ann ()
         pruneExpr (Ann _ b) = b & traverseK1 %~ pruneExpr & Ann ()
