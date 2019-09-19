@@ -64,14 +64,14 @@ flattenRecord (Ann _ (ER.RRecExtend (RowExtend tag v rest))) =
 flattenRecord (Ann _ (ER.RError err)) = Left err
 flattenRecord _ = Left (EvalTypeError "Record extents non-record")
 
-convertNullaryInject :: EntityId -> V.Inject (ER.Val pl) -> Maybe (ResVal InternalName)
-convertNullaryInject entityId (V.Inject tag (Ann _ ER.RRecEmpty)) =
+convertNullaryInject :: EntityId -> Tree ER.Inject (Ann a) -> Maybe (ResVal InternalName)
+convertNullaryInject entityId (ER.Inject tag (Ann _ ER.RRecEmpty)) =
     RInject (ResInject (ConvertTag.withoutContext entityId tag) Nothing)
     & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
-convertList :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> Maybe (ResVal InternalName)
-convertList entityId typ (V.Inject _ x) =
+convertList :: EntityId -> Tree Pure T.Type -> Tree ER.Inject (Ann (Tree Pure T.Type)) -> Maybe (ResVal InternalName)
+convertList entityId typ (ER.Inject _ x) =
     do
         Pure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.listTid)
@@ -81,14 +81,14 @@ convertList entityId typ (V.Inject _ x) =
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
             & ResList & RList & ResVal entityId & Just
 
-simpleInject :: EntityId -> V.Inject ERV -> ResVal InternalName
-simpleInject entityId (V.Inject tag x) =
+simpleInject :: EntityId -> Tree ER.Inject (Ann (Tree Pure T.Type)) -> ResVal InternalName
+simpleInject entityId (ER.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
     & ResInject (ConvertTag.withoutContext entityId tag) & RInject
     & ResVal entityId
 
-convertInject :: EntityId -> Tree Pure T.Type -> V.Inject ERV -> ResVal InternalName
+convertInject :: EntityId -> Tree Pure T.Type -> Tree ER.Inject (Ann (Tree Pure T.Type)) -> ResVal InternalName
 convertInject entityId typ inj =
     convertNullaryInject entityId inj
     <|> convertList entityId typ inj

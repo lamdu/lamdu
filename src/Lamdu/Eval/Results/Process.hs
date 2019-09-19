@@ -16,7 +16,6 @@ import           Data.Constraint (Dict(..), withDict)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Eval.Results (Val, Body(..))
 import qualified Lamdu.Eval.Results as ER
@@ -69,16 +68,16 @@ addTypesRecExtend (RowExtend tag val rest) go typ =
         (go restType rest)
         & RRecExtend
 
-addTypesInject :: V.Inject val -> AddTypes val f
-addTypesInject (V.Inject tag val) go typ =
+addTypesInject :: Tree ER.Inject (Ann a) -> AddTypes (Tree (Ann a) Body) f
+addTypesInject (ER.Inject tag val) go typ =
     case extractVariantTypeField tag typ of
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
         case typ ^. _Pure of
-        T.TVar{} -> go typ val & V.Inject tag & RInject
+        T.TVar{} -> go typ val & ER.Inject tag & RInject
         _ -> "addTypesInject got " ++ show typ & typeError
-    Just valType -> go valType val & V.Inject tag & RInject
+    Just valType -> go valType val & ER.Inject tag & RInject
 
 addTypesArray :: [val] -> AddTypes val f
 addTypesArray items go typ =

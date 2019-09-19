@@ -2,11 +2,10 @@ module Lamdu.Sugar.Convert.GetField
     ( convert
     ) where
 
-import           AST (ann)
+import           AST (Tree, Ann, ann)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -22,7 +21,7 @@ import           Lamdu.Prelude
 
 convertGetFieldParam ::
     (Monad m, Monoid a) =>
-    V.GetField (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Tree V.GetField (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (Maybe (ExpressionU m a))
 convertGetFieldParam (V.GetField recExpr tag) exprPl =
     do
@@ -42,7 +41,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
 
 convertGetFieldNonParam ::
     (Monad m, Monoid a) =>
-    V.GetField (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Tree V.GetField (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
 convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     GetField
@@ -64,7 +63,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
 
 convert ::
     (Monad m, Monoid a) =>
-    V.GetField (Val (Input.Payload m a)) ->
+    Tree V.GetField (Ann (Input.Payload m a)) ->
     Input.Payload m a ->
     ConvertM m (ExpressionU m a)
 convert getField exprPl =

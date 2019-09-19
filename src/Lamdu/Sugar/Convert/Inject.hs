@@ -2,10 +2,10 @@ module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
+import           AST (Tree)
 import           AST.Knot.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
@@ -22,7 +22,7 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Inject (Val (Input.Payload m a)) -> Input.Payload m a ->
+    Tree V.Inject (Ann (Input.Payload m a)) -> Input.Payload m a ->
     ConvertM m (ExpressionU m a)
 convert (V.Inject tag injected) exprPl =
     do

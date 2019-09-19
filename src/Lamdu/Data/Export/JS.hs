@@ -20,7 +20,6 @@ import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -93,7 +92,7 @@ formatResult (Ann _ b) =
         case PrimVal.toKnown prim of
         PrimVal.Bytes x -> x
         PrimVal.Float x -> show x & fromString
-    EV.RInject inj -> inj ^. V.injectVal & formatResult
+    EV.RInject inj -> inj ^. EV.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
 readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))

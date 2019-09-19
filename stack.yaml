@@ -10,7 +10,7 @@ extra-deps:
 - github: lamdu/syntax-tree
   commit: 23775a87b4aa509cfe2dd02497a2205be0c701cd
 - github: lamdu/lamdu-calculus
-  commit: 59028df2bb266770652eafce1fec21656a889ec0
+  commit: f5da8fa2289ef69dae40f9673c8d01ec0fe8c422
 - github: lamdu/graphics-drawingcombinators
   commit: 6253576fdd9233df5c3f43002310f38b0928c2d5
 - github: lamdu/freetype2

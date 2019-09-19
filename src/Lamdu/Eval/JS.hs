@@ -154,9 +154,9 @@ parseInject tag mData =
     Nothing -> Ann () ER.RRecEmpty & pure
     Just v -> parseResult v
     <&> \iv ->
-    ER.RInject V.Inject
-    { V._injectTag = parseHexNameBs tag & Identifier & Tag
-    , V._injectVal = iv
+    ER.RInject ER.Inject
+    { ER._injectTag = parseHexNameBs tag & Identifier & Tag
+    , ER._injectVal = iv
     } & Ann ()
 
 (.:) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a

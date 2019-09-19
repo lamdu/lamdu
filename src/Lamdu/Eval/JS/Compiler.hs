@@ -496,7 +496,7 @@ compileRecExtend x =
                 ]
             & pure
 
-compileInject :: Monad m => V.Inject (Val ValId) -> M m CodeGen
+compileInject :: Monad m => Tree V.Inject (Ann ValId) -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> Text.unpack <&> JS.string
@@ -526,7 +526,7 @@ compileCaseOnVar valId x scrutineeVar =
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
-compileGetField :: Monad m => V.GetField (Val ValId) -> M m CodeGen
+compileGetField :: Monad m => Tree V.GetField (Ann ValId) -> M m CodeGen
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag

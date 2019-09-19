@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, StandaloneDeriving, UndecidableInstances, TypeFamilies, MultiParamTypeClasses, GADTs, TypeOperators #-}
 module Lamdu.Eval.Results
     ( Body(..), _RRecExtend, _RInject, _RFunc, _RRecEmpty, _RPrimVal, _RError, _RArray
+    , Inject(..), injectTag, injectVal
     , Val
     , ScopeId(..), topLevelScopeId
     , EvalTypeError(..)
@@ -42,18 +43,26 @@ newtype EvalTypeError = EvalTypeError Text
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
+-- Todo: make a shared inject type in syntax-tree?
+data Inject k = Inject
+    { _injectTag :: T.Tag
+    , _injectVal :: k # Body
+    }
+
 data Body k
     = RRecExtend (RowExtend T.Tag Body Body k)
-    | RInject (V.Inject (k # Body))
+    | RInject (Inject k)
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
     | RArray [k # Body]
     | RError EvalTypeError
 
+AST.makeKTraversableAndBases ''Inject
 AST.makeKTraversableAndBases ''Body
 
 deriving instance Show (k # Body) => Show (Body k)
+deriving instance Show (k # Body) => Show (Inject k)
 
 type Val pl = Tree (Ann pl) Body
 
@@ -134,4 +143,5 @@ empty =
     }
 
 Lens.makeLenses ''EvalResults
+Lens.makeLenses ''Inject
 Lens.makePrisms ''Body
