@@ -143,7 +143,7 @@ makeShortcutKeyView inputDocs =
         fmtSrcLoc srcLoc =
             Stack.srcLocFile srcLoc <> ":" <> show (Stack.srcLocStartLine srcLoc)
             & Text.pack
-        srcStr = fromMaybe "<no call stack>" . fmap fmtSrcLoc . topOf
+        srcStr = maybe "<no call stack>" fmtSrcLoc . topOf
         maybeAddSrcLoc callStack mkInputView =
             Lens.view (has . styleSrcLocColor)
             >>= \case

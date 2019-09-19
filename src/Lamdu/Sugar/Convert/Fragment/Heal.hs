@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where

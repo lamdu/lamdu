@@ -310,8 +310,7 @@ loadInfer sugarContext scope v =
     <&>
     \deps ->
     ( deps
-    , do
-        memoInfer (Definition.Expr v deps)
+    , memoInfer (Definition.Expr v deps)
         & runPureInfer scope (sugarContext ^. ConvertM.scInferContext)
         <&> _1 %~ (^. ExprLens.itermAnn)
     )
@@ -364,7 +363,7 @@ sugar sugarContext holePl v =
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [KPlain V.Term]
 getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
-    | otherwise = map mkFieldParam fieldTags ++ [var]
+    | otherwise = (fieldTags <&> V.BGetFieldP var) <> [var]
     where
         var = V.LVar par & V.BLeafP
         fieldTags =
@@ -374,7 +373,6 @@ getLocalScopeGetVars sugarContext par
                     ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
                     Lens.filtered (== par)
             ) <&> fst
-        mkFieldParam tag = V.BGetFieldP var tag
 
 -- | Runs inside a forked transaction
 writeResult ::
