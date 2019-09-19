@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           AST.Knot.Ann (ann, val)
+import           AST.Knot.Ann (Ann(..))
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -59,22 +59,22 @@ convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
-convert posInfo v =
-    v ^. ann
-    & case v ^. val of
-      V.BLam x -> ConvertBinder.convertLam x
-      V.BApp x -> ConvertApply.convert posInfo x
-      V.BRecExtend x -> ConvertRecord.convertExtend x
-      V.BGetField x -> ConvertGetField.convert x
-      V.BInject x -> ConvertInject.convert x
-      V.BToNom x -> ConvertNominal.convertToNom x
-      V.BCase x -> ConvertCase.convert x
-      V.BLeaf (V.LVar x) -> ConvertGetVar.convert x
-      V.BLeaf (V.LLiteral literal) ->
-          case PrimVal.toKnown literal of
-          PrimVal.Float x -> convertLiteralFloat x
-          PrimVal.Bytes x -> convertLiteralBytes x
-      V.BLeaf V.LHole -> ConvertHole.convert posInfo
-      V.BLeaf V.LRecEmpty -> ConvertRecord.convertEmpty
-      V.BLeaf V.LAbsurd -> ConvertCase.convertAbsurd
-      V.BLeaf (V.LFromNom x) -> ConvertNominal.convertFromNom x
+convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam (Ann pl x)
+convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend (Ann pl x)
+convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert (Ann pl x)
+convert _ (Ann pl (V.BInject x)) = ConvertInject.convert (Ann pl x)
+convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom (Ann pl x)
+convert _ (Ann pl (V.BCase x)) = ConvertCase.convert (Ann pl x)
+convert posInfo (Ann pl (V.BApp x)) = ConvertApply.convert posInfo (Ann pl x)
+convert posInfo (Ann pl (V.BLeaf l)) =
+    pl &
+    case l of
+    V.LVar x -> ConvertGetVar.convert x
+    V.LLiteral literal ->
+        case PrimVal.toKnown literal of
+        PrimVal.Float x -> convertLiteralFloat x
+        PrimVal.Bytes x -> convertLiteralBytes x
+    V.LHole -> ConvertHole.convert posInfo
+    V.LRecEmpty -> ConvertRecord.convertEmpty
+    V.LAbsurd -> ConvertCase.convertAbsurd
+    V.LFromNom x -> ConvertNominal.convertFromNom x

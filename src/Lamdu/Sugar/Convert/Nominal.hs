@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Nominal
     ( convertToNom, convertFromNom
     ) where
 
-import           AST (Tree, Ann)
+import           AST (Tree, Ann(..))
 import           AST.Term.Nominal (ToNom(..))
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import qualified Lamdu.Calc.Term as V
@@ -19,9 +19,9 @@ import           Lamdu.Prelude
 
 convertToNom ::
     (Monad m, Monoid a) =>
-    Tree (ToNom NominalId V.Term) (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (Ann (Input.Payload m a)) (ToNom NominalId V.Term) ->
     ConvertM m (ExpressionU m a)
-convertToNom nom@(ToNom tid x) pl =
+convertToNom (Ann pl nom@(ToNom tid x)) =
     do
         ConvertText.text nom pl & justToLeft
         Nominal

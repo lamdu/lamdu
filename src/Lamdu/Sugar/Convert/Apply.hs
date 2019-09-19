@@ -38,15 +38,15 @@ import           Lamdu.Prelude
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
-    Input.Payload m a -> ConvertM m (ExpressionU m a)
-convert posInfo app@(V.App funcI argI) exprPl =
+    Tree (Ann (Input.Payload m a)) (V.App V.Term) ->
+    ConvertM m (ExpressionU m a)
+convert posInfo x@(Ann exprPl app@(V.App funcI argI)) =
     runMatcherT $
     do
         (funcS, argS) <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift
-                convertAppliedHole posInfo app argS exprPl & justToLeft
+                convertAppliedHole posInfo x argS & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure

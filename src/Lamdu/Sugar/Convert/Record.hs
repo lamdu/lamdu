@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import           AST (Tree, Ann, ann)
+import           AST (Tree, Ann(..), ann)
 import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
@@ -32,10 +32,9 @@ convertEmpty pl =
 
 convertExtend ::
     (Monad m, Monoid a) =>
-    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
-    Input.Payload m a ->
+    Tree (Ann (Input.Payload m a)) (RowExtend T.Tag V.Term V.Term) ->
     ConvertM m (ExpressionU m a)
-convertExtend (RowExtend tag val rest) exprPl =
+convertExtend (Ann exprPl (RowExtend tag val rest)) =
     do
         valS <- ConvertM.convertSubexpression val
         restS <- ConvertM.convertSubexpression rest

@@ -231,9 +231,9 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
-    Input.Payload m a -> ConvertM m (ExpressionU m a)
-convertLam lam exprPl =
+    Tree (Ann (Input.Payload m a)) (V.Lam V.Var V.Term) ->
+    ConvertM m (ExpressionU m a)
+convertLam (Ann exprPl lam) =
     do
         convParams <- convertLamParams lam exprPl
         func <-

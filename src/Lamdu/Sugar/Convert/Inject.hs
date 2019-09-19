@@ -22,9 +22,9 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree V.Inject (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (Ann (Input.Payload m a)) V.Inject ->
     ConvertM m (ExpressionU m a)
-convert (V.Inject tag injected) exprPl =
+convert (Ann exprPl (V.Inject tag injected)) =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let typeProtect = protectedSetToVal (exprPl ^. Input.stored) valI

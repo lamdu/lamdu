@@ -111,11 +111,10 @@ checkTypeMatch x y =
 convertAppliedHole ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Ann (Input.Payload m a)) (V.App V.Term) ->
     ExpressionU m a ->
-    Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedHole posInfo (V.App funcI argI) argS exprPl =
+convertAppliedHole posInfo (Ann exprPl (V.App funcI argI)) argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
         guard (Lens.has ExprLens.valHole funcI)

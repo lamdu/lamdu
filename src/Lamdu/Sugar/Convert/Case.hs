@@ -51,10 +51,9 @@ _CaseThatIsLambdaCase =
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
-    Input.Payload m a ->
+    Tree (Ann (Input.Payload m a)) (RowExtend T.Tag V.Term V.Term) ->
     ConvertM m (ExpressionU m a)
-convert (RowExtend tag v rest) exprPl =
+convert (Ann exprPl (RowExtend tag v rest)) =
     do
         valS <-
             ConvertM.convertSubexpression v
