@@ -1,5 +1,5 @@
 -- | Import/Export JSON support
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications #-}
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll, verifyAll
@@ -7,8 +7,10 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
-import           AST (Tree, Pure(..), Ann(..), annotations, traverseK1)
+import           AST (Tree, Pure(..), traverseK1)
+import           AST.Knot.Ann (Ann(..), annotations, val)
 import           AST.Knot.Functor (_F)
+import           AST.Recurse (unwrapM, (##>>))
 import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
@@ -23,6 +25,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.List as List
 import qualified Data.Property as Property
+import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Lamdu.Calc.Identifier (Identifier)
@@ -117,16 +120,19 @@ exportNominal nomId =
         Codec.EntityNominal tag nomId nominal & tell
         & withVisited visitedNominals nomId
 
-exportSubexpr :: Monad m => Val (ValP m) -> Export m ()
-exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
-    do
-        tag <- readAssocTag lamVar & trans
-        exportTag tag
-        mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
-        Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
-    where
-        lamI = lamP ^. Property.pVal
-exportSubexpr _ = pure ()
+class ExportSubexpr k where
+    exportSubexpr :: Monad m => Tree (Ann (ValP m)) k -> Export m ()
+
+instance ExportSubexpr V.Term where
+    exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
+        do
+            tag <- readAssocTag lamVar & trans
+            exportTag tag
+            mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
+            Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
+        where
+            lamI = lamP ^. Property.pVal
+    exportSubexpr _ = pure ()
 
 exportVal :: Monad m => Val (ValP m) -> Export m ()
 exportVal x =
@@ -134,7 +140,7 @@ exportVal x =
         x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         x ^.. ExprLens.valTags & traverse_ exportTag
         x ^.. ExprLens.valNominals & traverse_ exportNominal
-        x ^.. ExprLens.subExprs & traverse_ exportSubexpr
+        () <$ unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. val <$ exportSubexpr n) x
 
 exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =
