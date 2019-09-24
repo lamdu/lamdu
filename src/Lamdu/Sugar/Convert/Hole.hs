@@ -12,7 +12,7 @@ module Lamdu.Sugar.Convert.Hole
     ) where
 
 import           AST (Tree, KHasPlain(..), Pure(..), _Pure)
-import           AST.Knot.Ann (Ann(..), ann, annotations, addAnnotations)
+import           AST.Knot.Ann (Ann(..), ann, annotations, addAnnotations, strip)
 import           AST.Knot.Functor (_F)
 import           AST.Term.FuncType (FuncType(..))
 import           AST.Term.Nominal (NominalDecl, nScheme)
@@ -151,7 +151,7 @@ addWithoutDups new old
     | otherwise = nonHoleNew ++ filter (not . equivalentToNew) old
     where
         equivalentToNew x =
-            any (couldEq (x ^. hoVal)) (nonHoleNew ^.. Lens.traverse . hoVal)
+            any (couldEq (strip (x ^. hoVal))) (nonHoleNew ^.. Lens.traverse . hoVal <&> strip)
         nonHoleNew = filter (Lens.nullOf (hoVal . ExprLens.valHole)) new
 
 isLiveGlobal :: Monad m => DefI m -> T m Bool

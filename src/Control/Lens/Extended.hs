@@ -2,7 +2,7 @@
 module Control.Lens.Extended
     ( module Control.Lens
     , singletonAt, tagged
-    , filteredBy, filteredByIndex
+    , filteredByIndex
     , OneOf
     ) where
 
@@ -19,12 +19,6 @@ tagged p =
       Left tag2 -> Left (a, tag2)
       Right () -> Right a
     )
-
-filteredBy :: Fold s i -> IndexedTraversal' i s s
-filteredBy fold f val =
-    case val ^? fold of
-    Nothing -> pure val
-    Just proof -> indexed f proof val
 
 filteredByIndex ::
     (Applicative f, Indexable j p) =>
