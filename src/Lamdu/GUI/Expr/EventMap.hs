@@ -217,9 +217,7 @@ transformEventMap =
             <&> (detach <&>)
     in  case exprInfoActions exprInfo ^. Sugar.detach of
         Sugar.DetachAction detach ->
-            case addOperatorSetHoleState options of
-            Just holeId -> pure holeId
-            Nothing -> detach
+            addOperatorSetHoleState options & maybe detach pure
         Sugar.FragmentAlready holeId -> pure holeId
         Sugar.FragmentExprAlready holeId -> pure holeId
         <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen

@@ -101,10 +101,7 @@ assignCursorPrefix ::
 assignCursorPrefix srcFolder dest =
     Reader.local (cursor %~ replace)
     where
-        replace c =
-            case Id.subId srcFolder c of
-            Nothing -> c
-            Just suffix -> dest suffix
+        replace c = Id.subId srcFolder c & maybe c dest
 
 -- TODO: Currently widget state is cleaned for widgets whose id isn't prefix of the cursor.
 -- Consider allowing all widgets to store state which are cleaned when not access while generating root widget.
