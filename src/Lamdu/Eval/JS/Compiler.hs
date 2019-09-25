@@ -51,6 +51,8 @@ import           Lamdu.Prelude
 
 newtype ValId = ValId UUID
 
+data IsTailCall = TailCall | NotTailCall
+
 data MemoDefs
     = MemoDefs -- Compatible with SlowLogging mode and used when running from Lamdu
     | ReleaseDontMemoDefs
@@ -179,6 +181,7 @@ jsReservedNamespace =
     , "Object", "console", "repl"
     , "log", "scopeCounter", "rts"
     , "tag", "data", "array", "bytes", "func", "cacheId", "number"
+    , "trampolineTo"
     ]
 
 jsAllReserved :: Set Text
@@ -349,7 +352,7 @@ withLocalVar v act =
 
 compileDefExpr :: Monad m => Definition.Expr (Val ValId) -> M m CodeGen
 compileDefExpr (Definition.Expr x frozenDeps) =
-    compileVal x & local (envExpectedTypes .~ frozenDeps ^. depsGlobalTypes)
+    compileVal NotTailCall x & local (envExpectedTypes .~ frozenDeps ^. depsGlobalTypes)
 
 compileGlobal :: Monad m => V.Var -> M m CodeGen
 compileGlobal globalId =
@@ -478,7 +481,8 @@ compileLiteral literal =
 compileRecExtend :: Monad m => Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
 compileRecExtend x =
     do
-        Flatten.Composite tags mRest <- Flatten.recExtend x & Lens.traverse compileVal
+        Flatten.Composite tags mRest <-
+            Flatten.recExtend x & Lens.traverse (compileVal NotTailCall)
         extends <-
             Map.toList tags
             <&> _2 %~ codeGenExpression
@@ -499,29 +503,33 @@ compileInject :: Monad m => Tree V.Inject (Ann ValId) -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> Text.unpack <&> JS.string
-        dat' <- compileVal dat
+        dat' <- compileVal NotTailCall dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
 
 compileCase :: Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
-compileCase valId = fmap codeGenFromExpr . lam "x" . compileCaseOnVar valId
+compileCase valId =
+    fmap codeGenFromExpr . lam "x" . compileCaseOnVar NotTailCall valId
 
 compileCaseOnVar ::
-    Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> JSS.Expression () -> M m [JSS.Statement ()]
-compileCaseOnVar valId x scrutineeVar =
+    Monad m =>
+    IsTailCall -> ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) ->
+    JSS.Expression () -> M m [JSS.Statement ()]
+compileCaseOnVar isTail valId x scrutineeVar =
     do
         tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
         cases <- traverse makeCase tagsStr
         defaultCase <-
             case mRestHandler of
             Nothing -> throwErr valId ER.UnhandledCase
-            Just restHandler -> compileAppliedFunc valId restHandler scrutineeVar
+            Just restHandler ->
+                compileAppliedFunc isTail valId restHandler scrutineeVar
             <&> codeGenLamStmts
             <&> JS.defaultc
         pure [JS.switch (scrutineeVar $. "tag") (cases ++ [defaultCase])]
     where
         Flatten.Composite tags mRestHandler = Flatten.case_ x
         makeCase (tagStr, handler) =
-            compileAppliedFunc valId handler (scrutineeVar $. "data")
+            compileAppliedFunc isTail valId handler (scrutineeVar $. "data")
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
@@ -529,7 +537,7 @@ compileGetField :: Monad m => Tree V.GetField (Ann ValId) -> M m CodeGen
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
-        compileVal record
+        compileVal NotTailCall record
             <&> codeGenExpression <&> (`JS.dot` tagId)
             <&> codeGenFromExpr
 
@@ -587,22 +595,14 @@ compileLambda (V.Lam v res) valId =
     <&> codeGenFromExpr
     where
         mkLambda (varId, lamStmts) = JS.lambda [varId] lamStmts
-        compileRes = compileVal res <&> codeGenLamStmts & withLocalVar v
+        compileRes = compileVal TailCall res <&> codeGenLamStmts & withLocalVar v
 
 compileApply ::
-    Monad m => ValId -> Tree (V.App V.Term) (Ann ValId) -> M m CodeGen
-compileApply valId (V.App func arg) =
+    Monad m => IsTailCall -> ValId -> Tree (V.App V.Term) (Ann ValId) -> M m CodeGen
+compileApply isTail valId (V.App func arg) =
     do
-        arg' <- compileVal arg <&> codeGenExpression
-        compileAppliedFunc valId func arg'
-        >>= maybeLogSubexprResult valId
-
-maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
-maybeLogSubexprResult valId codeGen =
-    Lens.view envMode
-    >>= \case
-    Fast{} -> pure codeGen
-    SlowLogging{} -> logSubexprResult valId codeGen
+        arg' <- compileVal NotTailCall arg <&> codeGenExpression
+        compileAppliedFunc isTail valId func arg'
 
 logSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 logSubexprResult valId codeGen =
@@ -610,35 +610,62 @@ logSubexprResult valId codeGen =
     (JS.var "log" `JS.call` [jsValId valId, codeGenExpression codeGen])
     <$ tell LogUsed
 
-compileAppliedFunc :: Monad m => ValId -> Val ValId -> JSS.Expression () -> M m CodeGen
-compileAppliedFunc valId func arg' =
+maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
+maybeLogSubexprResult valId codeGen =
+    Lens.view envMode
+    >>= \case
+    Fast{} -> pure codeGen
+    SlowLogging{} -> runTrampoline codeGen & logSubexprResult valId
+
+runTrampoline :: CodeGen -> CodeGen
+runTrampoline application =
+    rts "rerun" $$ codeGenExpression application & codeGenFromExpr
+
+compileAppliedFunc :: Monad m => IsTailCall -> ValId -> Val ValId -> JSS.Expression () -> M m CodeGen
+compileAppliedFunc isTail valId func arg' =
     do
         mode <- Lens.view envMode
-        case (func ^. val, mode) of
+        case (mode, func ^. val) of
             -- in slow mode - we want the results associated with the
             -- intermediate vars to be reported as is for simplicity
             -- on the gui side:
-            (V.BCase case_, Fast{}) ->
-                compileCaseOnVar valId case_ (JS.var "x")
+            (Fast {}, V.BCase case_) ->
+                compileCaseOnVar isTail valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
-            (V.BLam (V.Lam v res), Fast{}) ->
-                compileVal res <&> codeGenLamStmts & withLocalVar v
-                <&> \(vId, lamStmts) ->
-                CodeGen
-                { codeGenLamStmts = varinit vId arg' : lamStmts
-                , codeGenExpression =
-                    -- Can't really optimize a redex in expr
-                    -- context, as at least 1 redex must be paid
-                    JS.lambda [vId] lamStmts $$ arg'
-                }
-            (V.BLeaf V.LFromNom {}, _) -> codeGenFromExpr arg' & pure
+                >>= maybeLogSubexprResult valId
+            (Fast {}, V.BLam (V.Lam v res)) ->
+                do
+                    (vId, lamStmts) <-
+                        compileVal isTail res <&> codeGenLamStmts
+                        & withLocalVar v
+                    CodeGen
+                        { codeGenLamStmts = varinit vId arg' : lamStmts
+                        , codeGenExpression =
+                          -- Can't really optimize a redex in expr
+                          -- context, as at least 1 redex must be paid
+                          JS.lambda [vId] lamStmts $$ arg'
+                        }
+                        & maybeLogSubexprResult valId
+            (_, V.BLeaf V.LFromNom {}) -> codeGenFromExpr arg' & pure
             _ ->
-                compileVal func
+                compileVal NotTailCall func
                 <&> codeGenExpression
                 <&> ($$ arg')
                 >>= optimizeExpr
                 <&> codeGenFromExpr
+                >>= case isTail of
+                NotTailCall -> maybeLogSubexprResult valId . runTrampoline
+                TailCall -> fmap codeGenFromExpr . trampoline
+                where
+                    trampoline application =
+                        maybeLogSubexprResult valId application
+                        <&> \loggedApp ->
+                        JS.object
+                        [ ( JS.propId "trampolineTo"
+                          , codeGenLamStmts loggedApp & JS.lambda []
+                          )
+                        ]
 
 optimizeExpr :: Monad m => JSS.Expression () -> M m (JSS.Expression ())
 optimizeExpr x@(JSS.CallExpr () func [arg]) =
@@ -689,8 +716,8 @@ compileLeaf x valId =
 
 compileToNom ::
     Monad m =>
-    Tree (ToNom T.NominalId V.Term) (Ann ValId) -> M m CodeGen
-compileToNom (ToNom tId x) =
+    IsTailCall -> Tree (ToNom T.NominalId V.Term) (Ann ValId) -> M m CodeGen
+compileToNom isTail (ToNom tId x) =
     case x ^? ExprLens.valLiteral <&> PrimVal.toKnown of
     Just (PrimVal.Bytes bytes)
         | tId == Builtins.textTid
@@ -698,18 +725,18 @@ compileToNom (ToNom tId x) =
             -- The JS is more readable with string constants
             rts "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
             & codeGenFromExpr & pure
-    _ -> compileVal x
+    _ -> compileVal isTail x
 
-compileVal :: Monad m => Val ValId -> M m CodeGen
-compileVal (Ann valId body) =
+compileVal :: Monad m => IsTailCall -> Val ValId -> M m CodeGen
+compileVal isTail (Ann valId body) =
     case body of
     V.BLeaf x                   -> compileLeaf x valId
-    V.BApp x                    -> compileApply valId x
+    V.BApp x                    -> compileApply isTail valId x
     V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase valId x
-    V.BToNom x                  -> compileToNom x
+    V.BToNom x                  -> compileToNom isTail x
     where
         maybeLog = maybeLogSubexprResult valId

@@ -99,12 +99,21 @@ module.exports = {
         ReachedHole: curried_error("ReachedHole"),
         UnhandledCase: curried_error("UnhandledCase"),
     },
+    rerun: function (result) {
+        while(1) {
+            var trampoline = result.trampolineTo;
+            if (typeof trampoline === 'undefined') {
+                return result;
+            }
+            result = trampoline();
+        }
+    },
     memo: function (thunk) {
         var done = false;
         var memo;
         return function() {
             if(done) return memo;
-            memo = thunk();
+            memo = module.exports.rerun(thunk());
             done = true;
             return memo;
         };
