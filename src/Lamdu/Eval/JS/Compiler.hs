@@ -615,6 +615,9 @@ compileAppliedFunc valId func arg' =
     do
         mode <- Lens.view envMode
         case (func ^. val, mode) of
+            -- in slow mode - we want the results associated with the
+            -- intermediate vars to be reported as is for simplicity
+            -- on the gui side:
             (V.BCase case_, Fast{}) ->
                 compileCaseOnVar valId case_ (JS.var "x")
                 <&> (varinit "x" arg' :)
@@ -629,6 +632,7 @@ compileAppliedFunc valId func arg' =
                     -- context, as at least 1 redex must be paid
                     JS.lambda [vId] lamStmts $$ arg'
                 }
+            (V.BLeaf V.LFromNom {}, _) -> codeGenFromExpr arg' & pure
             _ ->
                 compileVal func
                 <&> codeGenExpression
@@ -668,6 +672,7 @@ optimizeExpr x@(JSS.CallExpr () func [arg]) =
     where
         key n = JSS.PropId () (JSS.Id () n)
 optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.CallExpr () func [JSS.VarRef () var]))])
+    -- eta reduce: \x -> f x ===> f
     | param == var = pure func
 optimizeExpr x = pure x
 
