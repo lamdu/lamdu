@@ -482,8 +482,7 @@ compileRecExtend x =
         extends <-
             Map.toList tags
             <&> _2 %~ codeGenExpression
-            & Lens.traversed . _1 %%~ tagString
-            <&> Lens.mapped . _1 %~ JS.propId . JS.ident . Text.unpack
+            & Lens.traversed . _1 %%~ fmap JS.propId . tagIdent
             <&> JS.object
         case mRest of
             Nothing -> codeGenFromExpr extends
