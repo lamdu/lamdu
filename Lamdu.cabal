@@ -147,7 +147,7 @@ Library
                   , lamdu-calculus >= 0.2
                   , language-ecmascript >= 0.18
                   , lattices
-                  , lens >= 4.1
+                  , lens >= 4.18
                   , lens-aeson
                   , leveldb-haskell >= 0.6
                   , List >= 0.5.1
