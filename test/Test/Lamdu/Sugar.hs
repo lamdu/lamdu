@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Test.Lamdu.Sugar where
 
-import           AST (annotations)
+import           Hyper (annotations)
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)

@@ -3,14 +3,14 @@ module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
-import           AST
-import           AST.Class.Has (HasChild(..))
-import qualified AST.Class.Has as HasChild
-import qualified AST.Term.Nominal as N
-import           AST.Term.Row (RowExtend(..))
-import qualified AST.Term.Row as Row
-import           AST.Term.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
-import           AST.Unify.QuantifiedVar (HasQuantifiedVar(..))
+import           Hyper
+import           Hyper.Class.Has (HasChild(..))
+import qualified Hyper.Class.Has as HasChild
+import qualified Hyper.Type.AST.Nominal as N
+import           Hyper.Type.AST.Row (RowExtend(..))
+import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Type.AST.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
+import           Hyper.Unify.QuantifiedVar (HasQuantifiedVar(..))
 import qualified Control.Lens as Lens
 import           Data.Constraint (Dict(..), withDict)
 import qualified Data.Map as Map
@@ -105,9 +105,9 @@ addTypes nomsMap typ (Ann () b) =
         r f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 
 class
-    (KFunctor k, HasQuantifiedVar k, Ord (QVar k), HasChild T.Types k) =>
+    (HFunctor k, HasQuantifiedVar k, Ord (QVar k), HasChild T.Types k) =>
     ApplyNominal k where
-    applyNominalRecursive :: Proxy k -> Dict (KNodesConstraint k ApplyNominal)
+    applyNominalRecursive :: Proxy k -> Dict (HNodesConstraint k ApplyNominal)
 instance ApplyNominal T.Type where applyNominalRecursive _ = Dict
 instance ApplyNominal T.Row where applyNominalRecursive _ = Dict
 

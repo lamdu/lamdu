@@ -2,8 +2,8 @@
 
 module Tests.Stdlib (test) where
 
-import           AST (Pure(..), Tree, traverseK_, (#>))
-import qualified AST.Term.Scheme as S
+import           Hyper (Pure(..), Tree, traverseK_, (#>))
+import qualified Hyper.Type.AST.Scheme as S
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
 import qualified Data.Char as Char

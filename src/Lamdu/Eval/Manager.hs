@@ -7,8 +7,8 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
-import           AST (annotations)
-import           AST.Knot.Functor (_F)
+import           Hyper (annotations)
+import           Hyper.Type.Functor (_F)
 import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens

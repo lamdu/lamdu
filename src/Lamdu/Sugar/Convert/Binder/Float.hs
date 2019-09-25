@@ -4,10 +4,10 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           AST (Tree, Pure(..), _Pure, traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Row (FlatRowExtends(..))
+import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Row (FlatRowExtends(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property

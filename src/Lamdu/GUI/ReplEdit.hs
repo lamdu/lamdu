@@ -4,8 +4,8 @@ module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make, isExecutableType
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann, val)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader

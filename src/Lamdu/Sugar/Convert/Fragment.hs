@@ -8,13 +8,13 @@ module Lamdu.Sugar.Convert.Fragment
     , fragmentVar
     ) where
 
-import           AST (Tree, Pure, traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Unify (unify)
-import           AST.Unify.Apply (applyBindings)
-import           AST.Unify.Binding (UVar)
-import           AST.Unify.New (newTerm)
+import           Hyper (Tree, Pure, traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Unify (unify)
+import           Hyper.Unify.Apply (applyBindings)
+import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.New (newTerm)
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)

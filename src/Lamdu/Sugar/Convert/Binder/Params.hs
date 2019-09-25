@@ -11,11 +11,11 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import           AST (Tree, Pure(..), _Pure, traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Term.FuncType (FuncType(..), funcIn)
-import           AST.Term.Row (RowExtend(..), FlatRowExtends(..))
-import qualified AST.Term.Row as Row
+import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
+import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
+import qualified Hyper.Type.AST.Row as Row
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List

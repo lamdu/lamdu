@@ -22,8 +22,8 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectedSetToVal, postProcessAssert, postProcessWith
     ) where
 
-import           AST (Tree, Pure)
-import           AST.Unify.Binding (UVar)
+import           Hyper (Tree, Pure)
+import           Hyper.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader

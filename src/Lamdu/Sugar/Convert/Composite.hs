@@ -5,8 +5,8 @@ module Lamdu.Sugar.Convert.Composite
     , ExtendVal(..), extendTag, extendValI, extendRest
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set

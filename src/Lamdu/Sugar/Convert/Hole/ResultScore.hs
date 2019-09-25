@@ -2,12 +2,12 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
 
-import           AST (Tree, Pure, _Pure, traverseK1)
-import           AST.Knot.Ann (val, ann)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Nominal (NominalInst(..))
-import           AST.Term.Row (RowExtend(..))
-import           AST.Term.Scheme (QVarInstances(..))
+import           Hyper (Tree, Pure, _Pure, traverseK1)
+import           Hyper.Type.Ann (val, ann)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Nominal (NominalInst(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.AST.Scheme (QVarInstances(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Lens as ExprLens

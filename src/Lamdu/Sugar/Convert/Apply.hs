@@ -2,11 +2,11 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           AST (Tree, traverseK1, _Pure)
-import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Term.FuncType (funcIn)
-import           AST.Term.Row (freExtends, freRest)
-import           AST.Term.Scheme (sTyp)
+import           Hyper (Tree, traverseK1, _Pure)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.AST.FuncType (funcIn)
+import           Hyper.Type.AST.Row (freExtends, freRest)
+import           Hyper.Type.AST.Scheme (sTyp)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)

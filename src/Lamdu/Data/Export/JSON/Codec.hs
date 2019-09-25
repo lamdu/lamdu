@@ -5,12 +5,12 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           AST (Ann(..), traverseK1, Tree, Pure(..), _Pure)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
-import           AST.Term.Row (RowExtend(..))
-import qualified AST.Term.Row as Row
-import           AST.Term.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
+import           Hyper (Ann(..), traverseK1, Tree, Pure(..), _Pure)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
 import qualified Control.Lens as Lens
 import           Data.Aeson ((.=), (.:))
 import qualified Data.Aeson as Aeson

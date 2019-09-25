@@ -2,8 +2,8 @@
 
 module Tests.Gui where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map

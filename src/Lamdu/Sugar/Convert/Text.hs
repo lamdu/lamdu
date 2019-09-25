@@ -3,8 +3,8 @@ module Lamdu.Sugar.Convert.Text
      ( text
      ) where
 
-import           AST (Tree, Ann(..))
-import           AST.Term.Nominal (ToNom(..))
+import           Hyper (Tree, Ann(..))
+import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))

@@ -2,7 +2,7 @@ module Lamdu.GUI.Expr.FragmentEdit
     ( make
     ) where
 
-import           AST (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Align (WithTextPos)

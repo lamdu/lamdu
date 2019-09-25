@@ -8,9 +8,9 @@ module Lamdu.Sugar.Types.Type
     , TId(..), tidName, tidTId
     ) where
 
-import           AST (Tree, Ann, type (#), makeKTraversableAndBases)
-import           AST.Term.FuncType (FuncType)
-import           AST.Term.Scheme (QVars)
+import           Hyper (Tree, Ann, type (#), makeHTraversableAndBases)
+import           Hyper.Type.AST.FuncType (FuncType)
+import           Hyper.Type.AST.Scheme (QVars)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.EntityId (EntityId)
@@ -52,4 +52,4 @@ Lens.makeLenses ''CompositeFields
 Lens.makeLenses ''Scheme
 Lens.makeLenses ''TId
 Lens.makePrisms ''Type
-makeKTraversableAndBases ''Type
+makeHTraversableAndBases ''Type

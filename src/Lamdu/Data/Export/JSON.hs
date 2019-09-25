@@ -7,11 +7,6 @@ module Lamdu.Data.Export.JSON
     , fileImportAll
     ) where
 
-import           AST (Tree, Pure(..), traverseK1)
-import           AST.Knot.Ann (Ann(..), annotations, val)
-import           AST.Knot.Functor (_F)
-import           AST.Recurse (unwrapM, (##>>))
-import           AST.Term.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
@@ -28,6 +23,11 @@ import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
+import           Hyper (Tree, Pure(..), traverseK1)
+import           Hyper.Recurse (unwrapM, (##>>))
+import           Hyper.Type.AST.Nominal (NominalDecl)
+import           Hyper.Type.Ann (Ann(..), val, annotations)
+import           Hyper.Type.Functor (_F)
 import           Lamdu.Calc.Identifier (Identifier)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)

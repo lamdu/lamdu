@@ -2,7 +2,7 @@ module Lamdu.GUI.Expr.GetFieldEdit
     ( make
     ) where
 
-import           AST (ann)
+import           Hyper (ann)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts

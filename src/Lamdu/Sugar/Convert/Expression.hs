@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
-import           AST.Knot.Ann (Ann(..))
+import           Hyper.Type.Ann (Ann(..))
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Lamdu.Builtins.PrimVal as PrimVal

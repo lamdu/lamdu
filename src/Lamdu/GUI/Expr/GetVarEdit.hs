@@ -4,7 +4,7 @@ module Lamdu.GUI.Expr.GetVarEdit
     , Role(..)
     ) where
 
-import           AST (Tree, Ann(..))
+import           Hyper (Tree, Ann(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8

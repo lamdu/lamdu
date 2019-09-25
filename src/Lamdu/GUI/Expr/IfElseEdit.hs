@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.IfElseEdit
     ( make
     ) where
 
-import           AST (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))

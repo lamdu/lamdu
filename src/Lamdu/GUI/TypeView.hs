@@ -3,9 +3,9 @@ module Lamdu.GUI.TypeView
     ( make, makeScheme
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), val)
-import           AST.Term.FuncType (FuncType(..))
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8

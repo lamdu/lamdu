@@ -3,8 +3,8 @@ module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)

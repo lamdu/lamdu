@@ -3,11 +3,11 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
-import           AST (Tree, Pure(..), _Pure, traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Term.FuncType (funcIn, funcOut)
-import           AST.Term.Row (RowExtend(..), freExtends, freRest)
-import           AST.Term.Scheme (sTyp)
+import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.AST.FuncType (funcIn, funcOut)
+import           Hyper.Type.AST.Row (RowExtend(..), freExtends, freRest)
+import           Hyper.Type.AST.Scheme (sTyp)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)

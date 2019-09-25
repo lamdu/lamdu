@@ -4,12 +4,12 @@ module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
     ) where
 
-import           AST (Tree, Ann(..), annotations)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Row (RowExtend(..))
-import           AST.Unify (Unify, UVarOf, unify)
-import           AST.Unify.Binding (UVar)
-import           AST.Unify.New (newUnbound, newTerm)
+import           Hyper (Tree, Ann(..), annotations)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Unify (Unify, UVarOf, unify)
+import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.New (newUnbound, newTerm)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Infer (PureInfer)

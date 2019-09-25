@@ -5,11 +5,11 @@ module Lamdu.Sugar.Convert.Type
     , convertScheme
     ) where
 
-import           AST (Tree, Pure(..), Ann(..), _Pure)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Nominal (NominalInst(..))
-import           AST.Term.Row (RowExtend(..))
-import qualified AST.Term.Scheme as S
+import           Hyper (Tree, Pure(..), Ann(..), _Pure)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Nominal (NominalInst(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import qualified Hyper.Type.AST.Scheme as S
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T

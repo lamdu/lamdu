@@ -12,9 +12,9 @@ module Lamdu.Sugar.Lens
     , getVarName
     ) where
 
-import           AST (Tree, KNodes(..), KTraversable(..), (#>), traverseK, mapK, annotations)
-import           AST.Recurse (Recursive(..), RTraversable)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree, HNodes(..), HTraversable(..), (#>), traverseK, mapK, annotations)
+import           Hyper.Recurse (Recursive(..), RTraversable)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Constraint (Dict(..))
 import           Data.Proxy (Proxy(..))
@@ -23,12 +23,12 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 childPayloads ::
-    KTraversable expr =>
+    HTraversable expr =>
     Lens.Traversal' (Tree expr (Ann a)) a
 childPayloads f =
     traverseK (const (ann f))
 
-class KTraversable t => SugarExpr t where
+class HTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool
     isUnfinished _ = False
 
@@ -36,10 +36,10 @@ class KTraversable t => SugarExpr t where
     isForbiddenInLightLam = isUnfinished
 
     sugarExprRecursive ::
-        Proxy t -> Dict (KNodesConstraint t SugarExpr)
+        Proxy t -> Dict (HNodesConstraint t SugarExpr)
     default sugarExprRecursive ::
-        KNodesConstraint t SugarExpr =>
-        Proxy t -> Dict (KNodesConstraint t SugarExpr)
+        HNodesConstraint t SugarExpr =>
+        Proxy t -> Dict (HNodesConstraint t SugarExpr)
     sugarExprRecursive _ = Dict
 
 instance Recursive SugarExpr where

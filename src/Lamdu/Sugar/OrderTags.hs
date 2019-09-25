@@ -4,8 +4,8 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
-import           AST (Tree, KNodes(..), KTraversable(..), traverseK, traverseK1, (#>))
-import           AST.Knot.Ann (Ann(..), val)
+import           Hyper (Tree, HNodes(..), HTraversable(..), traverseK, traverseK1, (#>))
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
 import           Lamdu.Data.Tag (tagOrder)
@@ -23,8 +23,8 @@ class Order m name o t where
     order :: OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
 
     default order ::
-        ( Monad m, KTraversable t
-        , KNodesConstraint t (Order m name o)
+        ( Monad m, HTraversable t
+        , HNodesConstraint t (Order m name o)
         ) =>
         OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
     order = traverseK (Proxy @(Order m name o) #> orderNode)

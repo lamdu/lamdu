@@ -2,12 +2,12 @@ module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
 
-import           AST (Tree, traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
-import           AST.Infer.Blame (blame, bTermToAnn)
-import qualified AST.Term.Row as Row
-import           AST.Unify.Generalize (GTerm(..))
-import           AST.Unify.New (newUnbound)
+import           Hyper (Tree, traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Infer.Blame (blame, bTermToAnn)
+import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Unify.Generalize (GTerm(..))
+import           Hyper.Unify.New (newUnbound)
 import qualified Control.Lens.Extended as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property

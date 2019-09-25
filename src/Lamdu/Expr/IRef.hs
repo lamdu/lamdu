@@ -14,10 +14,10 @@ module Lamdu.Expr.IRef
     , readValI, writeValI, newValI
     ) where
 
-import           AST (Tree, Pure, traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Knot.Functor (F(..), _F)
-import           AST.Term.Nominal (NominalDecl)
+import           Hyper (Tree, Pure, traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.Functor (F(..), _F)
+import           Hyper.Type.AST.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))

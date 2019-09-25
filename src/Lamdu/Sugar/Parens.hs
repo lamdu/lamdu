@@ -7,8 +7,8 @@ module Lamdu.Sugar.Parens
     , addToBinderWith
     ) where
 
-import           AST (Tree, mapK, (#>))
-import           AST.Knot.Ann (Ann(..), val)
+import           Hyper (Tree, mapK, (#>))
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)

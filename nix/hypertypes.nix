@@ -4,20 +4,20 @@
 , transformers, stdenv
 }:
 mkDerivation {
-  pname = "syntax-tree";
+  pname = "hypertypes";
   version = "0.1.0.0";
   src = fetchFromGitHub {
     owner = "lamdu";
-    repo = "syntax-tree";
-    sha256 = "1mnc8kx462vhgpm9729qgqi4wchnk32v2g2v6288774a526xkw0r";
-    rev = "f15bbb743808f17f2600eeafdca3cb9c088e2a36";
+    repo = "hypertypes";
+    sha256 = "19i45452nwwaqnw28r9p0rj80p05ysnby167h9ic2bh1mmjbhcyk";
+    rev = "810707e724a52802b0b26bed7033e5bdda43e931";
   };
   libraryHaskellDepends = [
     base base-compat binary constraints containers deepseq generic-data lattices lens
     monad-st mtl one-liner pretty QuickCheck show-combinators template-haskell
     th-abstraction transformers
   ];
-  homepage = "https://github.com/lamdu/syntax-tree.git#readme";
+  homepage = "https://github.com/lamdu/hypertypes.git#readme";
   description = "Library for typed ASTs";
   license = stdenv.lib.licenses.bsd3;
 }

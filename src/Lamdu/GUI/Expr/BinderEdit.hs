@@ -2,8 +2,8 @@ module Lamdu.GUI.Expr.BinderEdit
     ( make
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader

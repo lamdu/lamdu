@@ -3,9 +3,9 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
-import           AST (Tree, Pure, ann)
-import           AST.Term.Scheme (saveScheme)
-import           AST.Unify.Generalize (generalize)
+import           Hyper (Tree, Pure, ann)
+import           Hyper.Type.AST.Scheme (saveScheme)
+import           Hyper.Unify.Generalize (generalize)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Infer (alphaEq, runPureInfer)

@@ -2,9 +2,9 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
-import           AST (Tree, _Pure)
-import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Term.Nominal (nId)
+import           Hyper (Tree, _Pure)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.AST.Nominal (nId)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)

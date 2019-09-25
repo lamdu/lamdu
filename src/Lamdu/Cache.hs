@@ -6,9 +6,9 @@ module Lamdu.Cache
     , make, FencedCache.Cache, FencedCache.fence
     ) where
 
-import           AST (Tree, Pure, annotations)
-import           AST.Infer (ITerm, iAnnotations)
-import           AST.Unify.Binding (UVar)
+import           Hyper (Tree, Pure, annotations)
+import           Hyper.Infer (Inferred, iAnnotations)
+import           Hyper.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Control.Monad.RWS (RWST(..))
 import           Data.Cache.Fenced (Decl, function)
@@ -30,7 +30,7 @@ type MemoableInferFunc =
     , InferState
     ) ->
     Either (Tree Pure T.TypeError)
-    (Tree (ITerm () UVar) V.Term, InferState)
+    (Tree (Inferred () UVar) V.Term, InferState)
 
 newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc

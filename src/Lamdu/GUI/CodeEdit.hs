@@ -8,8 +8,8 @@ module Lamdu.GUI.CodeEdit
       makePaneBodyEdit
     ) where
 
-import           AST (_Pure)
-import           AST.Term.Scheme (Scheme(..), QVars(..))
+import           Hyper (_Pure)
+import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))

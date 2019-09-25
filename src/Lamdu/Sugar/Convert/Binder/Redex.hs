@@ -5,8 +5,8 @@ module Lamdu.Sugar.Convert.Binder.Redex
     , check
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

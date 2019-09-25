@@ -11,7 +11,7 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
-import           AST (Ann(..), traverseK1)
+import           Hyper (Ann(..), traverseK1)
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))

@@ -7,10 +7,10 @@ module Lamdu.Eval.JS.Compiler
     , compileRepl, Mode(..), MemoDefs(..), loggingEnabled
     ) where
 
-import           AST (Tree, Pure)
-import           AST.Knot.Ann (Ann(..), val)
-import           AST.Term.Nominal (ToNom(..))
-import           AST.Term.Row (RowExtend(..))
+import           Hyper (Tree, Pure)
+import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper.Type.AST.Nominal (ToNom(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState)

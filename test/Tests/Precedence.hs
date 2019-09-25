@@ -1,7 +1,7 @@
 -- | Test precedences
 module Tests.Precedence where
 
-import           AST.Knot.Ann (ann, val)
+import           Hyper.Type.Ann (ann, val)
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
 import qualified Lamdu.Sugar.Parens as Parens

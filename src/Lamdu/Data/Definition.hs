@@ -7,7 +7,7 @@ module Lamdu.Data.Definition
     , pruneDefExprDeps
     ) where
 
-import           AST (Tree, Pure)
+import           Hyper (Tree, Pure)
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)

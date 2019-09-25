@@ -11,17 +11,17 @@ module Lamdu.Sugar.Convert.Hole
     , assertSuccessfulInfer
     ) where
 
-import           AST (Tree, KHasPlain(..), Pure(..), _Pure)
-import           AST.Knot.Ann (Ann(..), ann, annotations, addAnnotations, strip)
-import           AST.Knot.Functor (_F)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Nominal (NominalDecl, nScheme)
-import           AST.Term.Row (freExtends)
-import           AST.Term.Scheme (sTyp)
-import           AST.Unify (unify)
-import           AST.Unify.Apply (applyBindings)
-import           AST.Unify.Binding (UVar)
-import           AST.Unify.New (newTerm)
+import           Hyper (Tree, HasHPlain(..), Pure(..), _Pure)
+import           Hyper.Type.Ann (Ann(..), ann, annotations, addAnnotations, strip)
+import           Hyper.Type.Functor (_F)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
+import           Hyper.Type.AST.Row (freExtends)
+import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Unify (unify)
+import           Hyper.Unify.Apply (applyBindings)
+import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.New (newTerm)
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
@@ -181,7 +181,7 @@ getGlobals sugarContext =
 getTags :: Monad m => ConvertM.Context m -> T m [T.Tag]
 getTags = getListing Anchors.tags
 
-mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [KPlain V.Term]
+mkNominalOptions :: [(T.NominalId, Tree Pure (NominalDecl T.Type))] -> [HPlain V.Term]
 mkNominalOptions nominals =
     do
         (tid, Pure nominal) <- nominals
@@ -360,7 +360,7 @@ sugar sugarContext holePl v =
             \typ entityId ->
             (inferPl, typ, entityId, x)
 
-getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [KPlain V.Term]
+getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [HPlain V.Term]
 getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
     | otherwise = (fieldTags <&> V.BGetFieldP var) <> [var]

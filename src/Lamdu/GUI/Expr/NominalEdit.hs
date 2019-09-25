@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom
     ) where
 
-import           AST (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader

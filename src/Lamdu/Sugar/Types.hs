@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types
     , DefinitionBuiltin(..), biType, biName, biSetName
     ) where
 
-import           AST (Tree, Ann, annotations)
+import           Hyper (Tree, Ann, annotations)
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified Lamdu.Calc.Term as V

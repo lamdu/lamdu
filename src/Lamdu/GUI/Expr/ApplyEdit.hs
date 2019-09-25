@@ -2,8 +2,8 @@ module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)

@@ -4,9 +4,9 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
-import           AST
-import           AST.Recurse (Recursive(..), foldMapRecursive, (##>>))
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           Hyper
+import           Hyper.Recurse (Recursive(..), foldMapRecursive, (##>>))
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict(..))
 import qualified Data.Map as Map
@@ -268,15 +268,15 @@ useNormalLambda paramNames func
             ^. Lens._Wrapped
         ) || not (allParamsUsed paramNames func)
 
-class GetParam (t :: Knot -> *) where
+class GetParam (t :: AHyperType -> *) where
     getParam :: t f -> Maybe InternalName
     getParam _ = Nothing
 
     getParamRecursive ::
-        Proxy t -> Dict (KNodesConstraint t GetParam)
+        Proxy t -> Dict (HNodesConstraint t GetParam)
     default getParamRecursive ::
-        KNodesConstraint t GetParam =>
-        Proxy t -> Dict (KNodesConstraint t GetParam)
+        HNodesConstraint t GetParam =>
+        Proxy t -> Dict (HNodesConstraint t GetParam)
     getParamRecursive _ = Dict
 
 instance Recursive GetParam where
@@ -316,16 +316,16 @@ allParamsUsed paramNames func =
                 (^. Lens._Just . Lens.to Set.singleton) . getParam
             ) func
 
-class MarkLightParams (t :: Knot -> *) where
+class MarkLightParams (t :: AHyperType -> *) where
     markLightParams :: Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 
     default markLightParams ::
-        (KFunctor t, KNodesConstraint t MarkLightParams) =>
+        (HFunctor t, HNodesConstraint t MarkLightParams) =>
         Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
     markLightParams = defaultMarkLightParams
 
 defaultMarkLightParams ::
-    (KFunctor t, KNodesConstraint t MarkLightParams) =>
+    (HFunctor t, HNodesConstraint t MarkLightParams) =>
     Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 defaultMarkLightParams paramNames =
     mapK (Proxy @MarkLightParams #> markNodeLightParams paramNames)

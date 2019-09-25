@@ -2,8 +2,8 @@ module Lamdu.Sugar.Convert.Nominal
     ( convertToNom, convertFromNom
     ) where
 
-import           AST (Tree, Ann(..))
-import           AST.Term.Nominal (ToNom(..))
+import           Hyper (Tree, Ann(..))
+import           Hyper.Type.AST.Nominal (ToNom(..))
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder

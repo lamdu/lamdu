@@ -1,6 +1,6 @@
 module Tests.AnimIdClash (test) where
 
-import           AST (Tree, Ann(..), ann, annotations)
+import           Hyper (Tree, Ann(..), ann, annotations)
 import           Control.Monad.Unit (Unit(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Responsive as Responsive

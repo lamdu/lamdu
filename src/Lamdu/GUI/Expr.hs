@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr
     ( make
     ) where
 
-import           AST (Tree, Ann(..))
+import           Hyper (Tree, Ann(..))
 import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)

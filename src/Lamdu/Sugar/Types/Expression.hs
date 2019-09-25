@@ -1,6 +1,6 @@
 -- TODO:
--- The makeKTraversableAndBases calls below generate redundant constraints.
--- syntax-tree's TH needs to support generating instances for a whole group,
+-- The makeHTraversableAndBases calls below generate redundant constraints.
+-- hypertypes's TH needs to support generating instances for a whole group,
 -- so that it knows which other instances it will create.
 {-# OPTIONS -Wno-redundant-constraints #-}
 
@@ -44,7 +44,7 @@ module Lamdu.Sugar.Types.Expression
     , Case(..), cKind, cBody
     ) where
 
-import           AST
+import           Hyper
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Kind (Constraint)
@@ -236,7 +236,7 @@ Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
-traverse makeKTraversableAndBases
+traverse makeHTraversableAndBases
     [ ''Assignment, ''AssignPlain, ''Body, ''Binder, ''Case
     , ''Composite, ''Else, ''ElseIfContent, ''Fragment, ''Function
     , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Lambda, ''Let

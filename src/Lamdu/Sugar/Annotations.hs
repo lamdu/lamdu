@@ -7,8 +7,8 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
-import           AST (Tree, Knot, mapK, (#>))
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree, AHyperType, mapK, (#>))
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -60,7 +60,7 @@ markNodeAnnotations (Ann pl x) =
     where
         (showAnn, newBody) = markAnnotations x
 
-class MarkAnnotations (t :: Knot -> *) where
+class MarkAnnotations (t :: AHyperType -> *) where
     markAnnotations :: Tree t (Ann a) -> (ShowAnnotation, Tree t (Ann (ShowAnnotation, a)))
 
 instance MarkAnnotations (Binder name i o) where

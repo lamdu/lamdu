@@ -21,7 +21,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , GuiM, run
     ) where
 
-import           AST (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader

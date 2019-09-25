@@ -9,7 +9,7 @@ module Lamdu.GUI.ExpressionGui.Annotation
     , maybeAddAnnotationPl
     ) where
 
-import           AST (Tree, Ann)
+import           Hyper (Tree, Ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)

@@ -13,7 +13,7 @@ module Lamdu.Data.Ops
     , setTagOrder
     ) where
 
-import           AST.Term.Row (RowExtend(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property

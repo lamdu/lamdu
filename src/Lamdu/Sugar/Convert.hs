@@ -2,8 +2,8 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           AST (Tree, Pure, RTraversable)
-import           AST.Knot.Ann (Ann, ann, annotations)
+import           Hyper (Tree, Pure, RTraversable)
+import           Hyper.Type.Ann (Ann, ann, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)

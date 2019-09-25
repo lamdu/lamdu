@@ -4,11 +4,11 @@ module Lamdu.Sugar.Convert.Eval
     ( results, param, completion
     ) where
 
-import           AST (Tree, Pure(..))
-import           AST.Knot.Ann (Ann(..), val)
-import           AST.Term.Nominal (NominalInst(..))
-import           AST.Term.Row (RowExtend(..))
-import           AST.Term.Scheme (QVarInstances(..))
+import           Hyper (Tree, Pure(..))
+import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper.Type.AST.Nominal (NominalInst(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.AST.Scheme (QVarInstances(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))

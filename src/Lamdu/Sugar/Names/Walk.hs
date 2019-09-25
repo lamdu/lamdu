@@ -8,10 +8,10 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), val)
-import           AST.Term.App (appChildren)
-import           AST.Term.FuncType (FuncType(..))
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper.Type.AST.App (appChildren)
+import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Type as T

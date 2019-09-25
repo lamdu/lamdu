@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.InjectEdit
     ( make
     ) where
 
-import           AST (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), ann)
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu.Align (WithTextPos)

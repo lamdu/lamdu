@@ -2,8 +2,8 @@ module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Term as V

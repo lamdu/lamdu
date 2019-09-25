@@ -80,7 +80,7 @@ sugared form are translated to edits on the underlying calculus.
 extention of the [Lambda Calculus](https://en.wikipedia.org/wiki/Lambda_calculus).
 
 The calculus is decribed below in a human readable "pseudo-syntax".
-Lamdu does not store code this way, but as an AST.
+Lamdu does not store code this way, but as an Hyper.
 
 These are the terms of the language
 (defined by [`Lamdu.Calc.Term`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Term.hs):

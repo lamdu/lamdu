@@ -4,9 +4,9 @@ module Lamdu.Sugar.Convert.Case
     , convertAppliedCase
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), ann, val)
-import           AST.Term.Row (RowExtend(..))
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)

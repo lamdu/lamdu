@@ -10,16 +10,16 @@ module Lamdu.Sugar.Convert.Load
     , InferFunc, unmemoizedInfer
     ) where
 
-import           AST (Tree, Pure(..), _Pure, annotations, Ann)
-import           AST.Infer (ITerm, infer, iRes)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Nominal (NominalDecl, nScheme)
-import           AST.Term.Scheme (sTyp)
-import           AST.Unify (unify)
-import           AST.Unify.Apply (applyBindings)
-import           AST.Unify.Binding (UVar)
-import           AST.Unify.Generalize (GTerm(..))
-import           AST.Unify.New (newUnbound)
+import           Hyper (Tree, Pure(..), _Pure, annotations, Ann)
+import           Hyper.Infer (Inferred, infer, iRes)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
+import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Unify (unify)
+import           Hyper.Unify.Apply (applyBindings)
+import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.Generalize (GTerm(..))
+import           Hyper.Unify.New (newUnbound)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
@@ -52,7 +52,7 @@ type T = Transaction
 
 type InferFunc a =
     Definition.Expr (Val a) ->
-    PureInfer (Tree (ITerm a UVar) V.Term)
+    PureInfer (Tree (Inferred a UVar) V.Term)
 
 unmemoizedInfer :: InferFunc a
 unmemoizedInfer defExpr =
@@ -151,7 +151,7 @@ resolve =
 runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    PureInfer (Tree (ITerm (ValP m) UVar) V.Term) ->
+    PureInfer (Tree (Inferred (ValP m) UVar) V.Term) ->
     T m (Either (Tree Pure T.TypeError) (InferResult m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors

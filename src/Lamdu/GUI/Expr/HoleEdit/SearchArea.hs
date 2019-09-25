@@ -7,7 +7,7 @@ module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
     ) where
 
-import           AST (Tree, Ann(..), annotations)
+import           Hyper (Tree, Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid

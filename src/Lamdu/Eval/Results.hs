@@ -15,9 +15,6 @@ module Lamdu.Eval.Results
     , extractField
     ) where
 
-import qualified AST
-import           AST (Ann(..), Tree, type (#))
-import           AST.Term.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
@@ -25,6 +22,9 @@ import qualified Data.IntMap as IntMap
 import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified Hyper
+import           Hyper (Ann(..), Tree, type (#))
+import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -43,7 +43,7 @@ newtype EvalTypeError = EvalTypeError Text
 topLevelScopeId :: ScopeId
 topLevelScopeId = ScopeId 0
 
--- Todo: make a shared inject type in syntax-tree?
+-- Todo: make a shared inject type in hypertypes?
 data Inject k = Inject
     { _injectTag :: T.Tag
     , _injectVal :: k # Body
@@ -58,8 +58,8 @@ data Body k
     | RArray [k # Body]
     | RError EvalTypeError
 
-AST.makeKTraversableAndBases ''Inject
-AST.makeKTraversableAndBases ''Body
+Hyper.makeHTraversableAndBases ''Inject
+Hyper.makeHTraversableAndBases ''Body
 
 deriving instance Show (k # Body) => Show (Body k)
 deriving instance Show (k # Body) => Show (Inject k)

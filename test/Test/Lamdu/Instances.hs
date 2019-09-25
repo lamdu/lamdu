@@ -3,7 +3,7 @@
 
 module Test.Lamdu.Instances () where
 
-import           AST (Tree, Ann(..))
+import           Hyper (Tree, Ann(..))
 import           Control.DeepSeq (NFData(..))
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.ByteString.Char8 as BS8

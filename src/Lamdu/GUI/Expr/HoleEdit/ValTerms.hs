@@ -8,8 +8,8 @@ module Lamdu.GUI.Expr.HoleEdit.ValTerms
     , definitePart
     ) where
 
-import           AST (Tree, traverseK1)
-import           AST.Knot.Ann (Ann(..), val)
+import           Hyper (Tree, traverseK1)
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text

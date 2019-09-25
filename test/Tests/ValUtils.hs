@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.ValUtils where
 
-import           AST (annotations)
+import           Hyper (annotations)
 import qualified Data.Set as Set
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Calc.Term.Arbitrary ()

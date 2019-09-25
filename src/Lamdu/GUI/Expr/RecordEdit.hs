@@ -2,8 +2,8 @@ module Lamdu.GUI.Expr.RecordEdit
     ( make
     ) where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann, val)
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text

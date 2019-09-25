@@ -4,7 +4,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           AST (Tree, Ann(..), traverseK, (#>))
+import           Hyper (Tree, Ann(..), traverseK, (#>))
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (withDict)

@@ -3,8 +3,8 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
-import           AST (traverseK1)
-import           AST.Knot.Ann (Ann(..), ann, val, annotations)
+import           Hyper (traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Lamdu.Calc.Term (Val)

@@ -5,7 +5,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultGroups
     , ResultGroup(..), rgPrefixId, rgMain, rgExtra
     ) where
 
-import           AST.Knot.Ann (val)
+import           Hyper.Type.Ann (val)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8

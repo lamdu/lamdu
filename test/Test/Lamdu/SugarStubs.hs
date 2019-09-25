@@ -2,10 +2,10 @@
 
 module Test.Lamdu.SugarStubs where
 
-import           AST (Tree)
-import           AST.Knot.Ann (Ann(..), val)
-import           AST.Term.FuncType (FuncType(..))
-import           AST.Term.Scheme (QVars(..))
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Scheme (QVars(..))
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Property (Property(..))

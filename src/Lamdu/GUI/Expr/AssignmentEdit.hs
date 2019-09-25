@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.AssignmentEdit
     , Parts(..), makeFunctionParts
     ) where
 
-import           AST (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), ann)
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader

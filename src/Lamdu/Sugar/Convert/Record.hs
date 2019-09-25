@@ -2,8 +2,8 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import           AST (Tree, Ann(..), ann)
-import           AST.Term.Row (RowExtend(..))
+import           Hyper (Tree, Ann(..), ann)
+import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Lamdu.Calc.Type as T
