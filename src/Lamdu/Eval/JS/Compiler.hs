@@ -372,31 +372,31 @@ throwErr valId err =
         ] & JS.throw
     ] & codeGenFromLamStmts
 
+useGlobal :: Mode -> JSS.Id () -> JSS.Expression ()
+useGlobal (Fast ReleaseDontMemoDefs) x = JS.var x
+useGlobal _ x = JS.var x `JS.call` []
+
+wrapGlobalDef :: Mode -> CodeGen -> JSS.Expression ()
+wrapGlobalDef (Fast ReleaseDontMemoDefs) = codeGenExpression
+wrapGlobalDef _ = (rts "memo" `JS.call`) . (: []) . JS.lambda [] . codeGenLamStmts
+
 compileGlobalVar :: Monad m => ValId -> V.Var -> M m CodeGen
 compileGlobalVar valId var =
     do
         mode <- Lens.view envMode
-        let useGlobal =
-                case mode of
-                Fast ReleaseDontMemoDefs -> JS.var
-                _ -> \x -> JS.var x `JS.call` []
-        let globalWrapper =
-                case mode of
-                Fast ReleaseDontMemoDefs -> codeGenExpression
-                _ -> (rts "memo" `JS.call`) . (: []) . JS.lambda [] . codeGenLamStmts
         let newGlobal =
                 do
                     varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
                     globalVarNames . Lens.at var ?= varName
                     compileGlobal var
-                        <&> globalWrapper
+                        <&> wrapGlobalDef mode
                         <&> varinit varName
                         >>= ppOut
                     pure varName
         let loadGlobal =
                 Lens.use (globalVarNames . Lens.at var)
                 >>= maybe newGlobal pure
-                <&> useGlobal
+                <&> useGlobal mode
                 <&> codeGenFromExpr
         let verifyType expectedType =
                 do
@@ -639,12 +639,7 @@ compileAppliedFunc valId func arg' =
 optimizeExpr :: Monad m => JSS.Expression () -> M m (JSS.Expression ())
 optimizeExpr x@(JSS.CallExpr () func [arg]) =
     do
-        def <-
-            Lens.view envMode
-            <&>
-            \case
-            Fast ReleaseDontMemoDefs -> JSS.VarRef () . JSS.Id ()
-            _ -> \g -> JSS.CallExpr () (JSS.VarRef () (JSS.Id () g)) []
+        def <- Lens.view envMode <&> useGlobal
         let arrayLit (JSS.CallExpr () cons [JSS.ObjectLit ()
                 [(k0, v0), (k1, JSS.FuncExpr () Nothing [_] [JSS.ReturnStmt () (Just v1)])]
                 ])
