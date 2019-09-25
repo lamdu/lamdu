@@ -595,6 +595,7 @@ compileApply valId (V.App func arg) =
     do
         arg' <- compileVal arg <&> codeGenExpression
         compileAppliedFunc valId func arg'
+        >>= maybeLogSubexprResult valId
 
 maybeLogSubexprResult :: Monad m => ValId -> CodeGen -> M m CodeGen
 maybeLogSubexprResult valId codeGen =
@@ -698,7 +699,7 @@ compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Ann valId body) =
     case body of
     V.BLeaf x                   -> compileLeaf x valId
-    V.BApp x                    -> compileApply valId x >>= maybeLog
+    V.BApp x                    -> compileApply valId x
     V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda x valId
     V.BInject x                 -> compileInject x >>= maybeLog
