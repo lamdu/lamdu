@@ -683,8 +683,8 @@ compileLeaf x valId =
 
 compileToNom ::
     Monad m =>
-    Tree (ToNom T.NominalId V.Term) (Ann ValId) -> ValId -> M m CodeGen
-compileToNom (ToNom tId x) valId =
+    Tree (ToNom T.NominalId V.Term) (Ann ValId) -> M m CodeGen
+compileToNom (ToNom tId x) =
     case x ^? ExprLens.valLiteral <&> PrimVal.toKnown of
     Just (PrimVal.Bytes bytes)
         | tId == Builtins.textTid
@@ -692,18 +692,18 @@ compileToNom (ToNom tId x) valId =
             -- The JS is more readable with string constants
             rts "bytesFromAscii" $$ JS.string (Text.unpack (decodeUtf8 bytes))
             & codeGenFromExpr & pure
-    _ -> compileVal x >>= maybeLogSubexprResult valId
+    _ -> compileVal x
 
 compileVal :: Monad m => Val ValId -> M m CodeGen
 compileVal (Ann valId body) =
     case body of
     V.BLeaf x                   -> compileLeaf x valId
-    V.BApp x                    -> compileApply valId x    >>= maybeLog
+    V.BApp x                    -> compileApply valId x >>= maybeLog
     V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda x valId
-    V.BInject x                 -> compileInject x   >>= maybeLog
+    V.BInject x                 -> compileInject x >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase valId x
-    V.BToNom x                  -> compileToNom x valId
+    V.BToNom x                  -> compileToNom x
     where
         maybeLog = maybeLogSubexprResult valId
