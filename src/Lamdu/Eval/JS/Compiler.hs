@@ -7,10 +7,6 @@ module Lamdu.Eval.JS.Compiler
     , compileRepl, Mode(..), MemoDefs(..), loggingEnabled
     ) where
 
-import           Hyper (Tree, Pure)
-import           Hyper.Type.Ann (Ann(..), val)
-import           Hyper.Type.AST.Nominal (ToNom(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState)
@@ -26,6 +22,10 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
+import           Hyper (Tree, Pure)
+import           Hyper.Type.AST.Nominal (ToNom(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Definition (depsGlobalTypes)

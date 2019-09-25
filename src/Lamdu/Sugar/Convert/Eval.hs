@@ -4,11 +4,6 @@ module Lamdu.Sugar.Convert.Eval
     ( results, param, completion
     ) where
 
-import           Hyper (Tree, Pure(..))
-import           Hyper.Type.Ann (Ann(..), val)
-import           Hyper.Type.AST.Nominal (NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
-import           Hyper.Type.AST.Scheme (QVarInstances(..))
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -17,6 +12,11 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
+import           Hyper (Tree, Pure(..))
+import           Hyper.Type.AST.Nominal (NominalInst(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.AST.Scheme (QVarInstances(..))
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V

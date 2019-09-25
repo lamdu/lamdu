@@ -2,10 +2,10 @@ module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config

@@ -1,9 +1,9 @@
 module Test.Lamdu.Gui (verifyLayers) where
 
 import           Data.List (group, sort)
+import           GHC.Stack (prettyCallStack, callStack)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
-import           GHC.Stack (prettyCallStack, callStack)
 
 import           Test.Lamdu.Prelude
 

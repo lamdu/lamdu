@@ -9,6 +9,7 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -21,7 +22,6 @@ import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
-import qualified GUI.Momentu.Glue as Glue
 
 import           Lamdu.Prelude
 

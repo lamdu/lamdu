@@ -2,23 +2,23 @@ module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
 
-import           Hyper (Tree, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
-import           Hyper.Infer.Blame (blame, bTermToAnn)
-import qualified Hyper.Type.AST.Row as Row
-import           Hyper.Unify.Generalize (GTerm(..))
-import           Hyper.Unify.New (newUnbound)
 import qualified Control.Lens.Extended as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
+import           Hyper (Tree, traverseK1)
+import           Hyper.Infer.Blame (blame, bTermToAnn)
+import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Unify.Generalize (GTerm(..))
+import           Hyper.Unify.New (newUnbound)
 import qualified Lamdu.Calc.Infer as Infer
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValI, ValP, globalId)
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.Input as Input
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude

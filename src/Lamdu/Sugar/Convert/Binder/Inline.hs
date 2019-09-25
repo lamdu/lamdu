@@ -3,10 +3,10 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
-import           Hyper (traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
+import           Hyper (traverseK1)
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (ValP, ValI)

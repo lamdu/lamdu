@@ -10,10 +10,10 @@ module GUI.Momentu.Widgets.Cursor
 
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import           GUI.Momentu.Rect (Rect)
 import qualified GUI.Momentu.Rect as Rect
 import qualified GUI.Momentu.State as State

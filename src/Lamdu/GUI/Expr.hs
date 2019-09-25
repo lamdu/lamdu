@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr
     ( make
     ) where
 
-import           Hyper (Tree, Ann(..))
 import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
@@ -14,6 +13,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Hyper (Tree, Ann(..))
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.Dotter as Dotter

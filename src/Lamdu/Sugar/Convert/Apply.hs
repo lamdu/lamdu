@@ -2,11 +2,6 @@ module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
 
-import           Hyper (Tree, traverseK1, _Pure)
-import           Hyper.Type.Ann (Ann(..), ann, val)
-import           Hyper.Type.AST.FuncType (funcIn)
-import           Hyper.Type.AST.Row (freExtends, freRest)
-import           Hyper.Type.AST.Scheme (sTyp)
 import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
@@ -15,6 +10,11 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Hyper (Tree, traverseK1, _Pure)
+import           Hyper.Type.AST.FuncType (funcIn)
+import           Hyper.Type.AST.Row (freExtends, freRest)
+import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Calc.Definition (Deps, depsGlobalTypes)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

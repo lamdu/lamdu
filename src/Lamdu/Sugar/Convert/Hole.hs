@@ -11,17 +11,6 @@ module Lamdu.Sugar.Convert.Hole
     , assertSuccessfulInfer
     ) where
 
-import           Hyper (Tree, HasHPlain(..), Pure(..), _Pure)
-import           Hyper.Type.Ann (Ann(..), ann, annotations, addAnnotations, strip)
-import           Hyper.Type.Functor (_F)
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
-import           Hyper.Type.AST.Row (freExtends)
-import           Hyper.Type.AST.Scheme (sTyp)
-import           Hyper.Unify (unify)
-import           Hyper.Unify.Apply (applyBindings)
-import           Hyper.Unify.Binding (UVar)
-import           Hyper.Unify.New (newTerm)
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>), filterM)
@@ -41,6 +30,17 @@ import qualified Data.Property as Property
 import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
+import           Hyper (Tree, HasHPlain(..), Pure(..), _Pure)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
+import           Hyper.Type.AST.Row (freExtends)
+import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Type.Ann (Ann(..), ann, annotations, addAnnotations, strip)
+import           Hyper.Type.Functor (_F)
+import           Hyper.Unify (unify)
+import           Hyper.Unify.Apply (applyBindings)
+import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.New (newTerm)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)

@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.GetVarEdit
     , Role(..)
     ) where
 
-import           Hyper (Tree, Ann(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
@@ -21,8 +20,8 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive)
@@ -33,6 +32,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree, Ann(..))
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -53,8 +53,8 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.I18N.Name as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar

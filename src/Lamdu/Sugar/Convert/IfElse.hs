@@ -2,11 +2,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
-import           Hyper (Tree, _Pure)
-import           Hyper.Type.Ann (Ann(..), ann, val)
-import           Hyper.Type.AST.Nominal (nId)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
+import           Hyper (Tree, _Pure)
+import           Hyper.Type.AST.Nominal (nId)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)

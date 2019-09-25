@@ -11,7 +11,6 @@ module Lamdu.Expr.GenIds
     , NameGen(..), randomNameGen
     ) where
 
-import           Hyper (Ann(..), traverseK1)
 import qualified Control.Lens as Lens
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))
@@ -19,6 +18,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
+import           Hyper (Ann(..), traverseK1)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

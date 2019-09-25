@@ -7,9 +7,9 @@ module Lamdu.Sugar.Annotations
     , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
+import qualified Control.Lens as Lens
 import           Hyper (Tree, AHyperType, mapK, (#>))
 import           Hyper.Type.Ann (Ann(..), ann, val)
-import qualified Control.Lens as Lens
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types

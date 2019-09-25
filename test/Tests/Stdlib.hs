@@ -2,8 +2,6 @@
 
 module Tests.Stdlib (test) where
 
-import           Hyper (Pure(..), Tree, traverseK_, (#>))
-import qualified Hyper.Type.AST.Scheme as S
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM_)
 import qualified Data.Char as Char
@@ -12,6 +10,8 @@ import           Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Hyper (Pure(..), Tree, traverseK_, (#>))
+import qualified Hyper.Type.AST.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import           Lamdu.Calc.Infer (alphaEq)

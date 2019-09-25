@@ -3,13 +3,13 @@ module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)

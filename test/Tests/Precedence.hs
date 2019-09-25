@@ -1,9 +1,9 @@
 -- | Test precedences
 module Tests.Precedence where
 
-import           Hyper.Type.Ann (ann, val)
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
+import           Hyper.Type.Ann (ann, val)
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.SugarStubs (($$), ($.))

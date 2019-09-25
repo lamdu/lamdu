@@ -32,8 +32,8 @@ module Lamdu.Sugar.Types.Parts
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
     ) where
 
-import           Hyper (Tree, Ann)
 import qualified Control.Lens as Lens
+import           Hyper (Tree, Ann)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval

@@ -4,10 +4,10 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
-import           Hyper (Tree, HNodes(..), HTraversable(..), traverseK, traverseK1, (#>))
-import           Hyper.Type.Ann (Ann(..), val)
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
+import           Hyper (Tree, HNodes(..), HTraversable(..), traverseK, traverseK1, (#>))
+import           Hyper.Type.Ann (Ann(..), val)
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens

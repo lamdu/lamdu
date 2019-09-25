@@ -7,9 +7,9 @@ module Lamdu.Calc.Term.Utils
     , culledSubexprPayloads
     ) where
 
+import qualified Control.Lens as Lens
 import           Hyper (Tree, Ann(..), traverseK1)
 import           Hyper.Type.AST.Row (RowExtend(..))
-import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

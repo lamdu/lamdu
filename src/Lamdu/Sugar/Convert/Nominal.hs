@@ -2,9 +2,9 @@ module Lamdu.Sugar.Convert.Nominal
     ( convertToNom, convertFromNom
     ) where
 
+import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Hyper (Tree, Ann(..))
 import           Hyper.Type.AST.Nominal (ToNom(..))
-import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)

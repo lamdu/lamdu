@@ -1,12 +1,12 @@
 module Tests.AnimIdClash (test) where
 
-import           Hyper (Tree, Ann(..), ann, annotations)
 import           Control.Monad.Unit (Unit(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import           Hyper (Tree, Ann(..), ann, annotations)
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
@@ -15,8 +15,8 @@ import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
-import           Test.Lamdu.Gui (verifyLayers)
 import qualified Test.Lamdu.Env as Env
+import           Test.Lamdu.Gui (verifyLayers)
 import           Test.Lamdu.Instances ()
 import qualified Test.Lamdu.SugarStubs as Stub
 

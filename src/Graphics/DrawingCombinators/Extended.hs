@@ -7,8 +7,8 @@ module Graphics.DrawingCombinators.Extended
     , openSprite
     ) where
 
-import           Control.Monad (void)
 import           Control.Exception (Exception, SomeException(..), catch, throwIO)
+import           Control.Monad (void)
 import           Data.Aeson.TH (deriveJSON)
 import           Data.Aeson.Types (defaultOptions)
 import           Data.Vector.Vector2 (Vector2(..))

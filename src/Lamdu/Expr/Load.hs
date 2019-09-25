@@ -3,10 +3,10 @@ module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
-import           Hyper (Tree, Pure, annotations)
-import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
+import           Hyper (Tree, Pure, annotations)
+import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition(..))

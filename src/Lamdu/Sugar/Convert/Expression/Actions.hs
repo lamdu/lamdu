@@ -5,17 +5,17 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , makeSetToLiteral
     ) where
 
-import           Hyper (Tree, Pure(..), _Pure, mapK, (#>))
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
-import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
-import qualified Hyper.Type.AST.Scheme as S
-import           Hyper.Unify.Generalize (generalize)
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
+import           Hyper (Tree, Pure(..), _Pure, mapK, (#>))
+import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
+import           Hyper.Type.AST.Row (RowExtend(..))
+import qualified Hyper.Type.AST.Scheme as S
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Unify.Generalize (generalize)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal

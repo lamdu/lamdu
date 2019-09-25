@@ -2,8 +2,6 @@ module Lamdu.GUI.Expr.RecordEdit
     ( make
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
@@ -30,14 +28,16 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann, val)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui

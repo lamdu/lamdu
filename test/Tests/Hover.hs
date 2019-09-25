@@ -5,8 +5,8 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
-import qualified GUI.Momentu.Main.Events as Events
 import qualified GUI.Momentu.Hover as H
+import qualified GUI.Momentu.Main.Events as Events
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.Rect as R
 import           GUI.Momentu.State (VirtualCursor(..))

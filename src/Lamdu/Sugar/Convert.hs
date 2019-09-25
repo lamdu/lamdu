@@ -2,8 +2,6 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           Hyper (Tree, Pure, RTraversable)
-import           Hyper.Type.Ann (Ann, ann, annotations)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
@@ -13,6 +11,8 @@ import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
+import           Hyper (Tree, Pure, RTraversable)
+import           Hyper.Type.Ann (Ann, ann, annotations)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens

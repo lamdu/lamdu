@@ -7,7 +7,6 @@ module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
     ) where
 
-import           Hyper (Tree, Ann(..), annotations)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
@@ -29,6 +28,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Hyper (Tree, Ann(..), annotations)
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config

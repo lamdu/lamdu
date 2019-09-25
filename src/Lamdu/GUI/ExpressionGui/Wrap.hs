@@ -13,8 +13,8 @@ import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.Dotter as Dotter

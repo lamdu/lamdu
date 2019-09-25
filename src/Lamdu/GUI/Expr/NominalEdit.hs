@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom
     ) where
 
-import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
@@ -19,6 +18,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree, Ann(..), ann)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors

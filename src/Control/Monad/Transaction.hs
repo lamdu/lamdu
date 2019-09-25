@@ -8,10 +8,10 @@ module Control.Monad.Transaction
     ) where
 
 import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.State (StateT)
-import           Control.Monad.Trans.Except (ExceptT)
 import           Data.Binary (Binary)
 import qualified Data.Property as Property
 import           Revision.Deltum.IRef (IRef)

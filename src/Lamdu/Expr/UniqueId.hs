@@ -3,11 +3,11 @@ module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where
 
-import           Hyper (AHyperType(..), type (#))
-import           Hyper.Type.Functor (F(..), _F)
 import qualified Data.ByteString as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
+import           Hyper (AHyperType(..), type (#))
+import           Hyper.Type.Functor (F(..), _F)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

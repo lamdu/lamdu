@@ -6,13 +6,13 @@ module Lamdu.Cache
     , make, FencedCache.Cache, FencedCache.fence
     ) where
 
-import           Hyper (Tree, Pure, annotations)
-import           Hyper.Infer (Inferred, iAnnotations)
-import           Hyper.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Control.Monad.RWS (RWST(..))
 import           Data.Cache.Fenced (Decl, function)
 import qualified Data.Cache.Fenced as FencedCache
+import           Hyper (Tree, Pure, annotations)
+import           Hyper.Infer (Inferred, iAnnotations)
+import           Hyper.Unify.Binding (UVar)
 import           Lamdu.Calc.Infer (InferState, PureInfer(..), runPureInfer)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

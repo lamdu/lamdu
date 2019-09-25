@@ -7,8 +7,6 @@ module Lamdu.Eval.Manager
     , runTransactionAndMaybeRestartEvaluator
     ) where
 
-import           Hyper (annotations)
-import           Hyper.Type.Functor (_F)
 import           Control.Concurrent.Extended (ThreadId, killThread, runAfter)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
@@ -18,6 +16,8 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
+import           Hyper (annotations)
+import           Hyper.Type.Functor (_F)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout

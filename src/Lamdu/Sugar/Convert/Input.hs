@@ -8,11 +8,11 @@ module Lamdu.Sugar.Convert.Input
     , initLocalsInScope
     ) where
 
-import           Hyper (Tree, Pure, Ann(..), traverseK1)
-import           Hyper.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
+import           Hyper (Tree, Pure, Ann(..), traverseK1)
+import           Hyper.Unify.Binding (UVar)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)

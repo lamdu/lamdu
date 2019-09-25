@@ -5,21 +5,21 @@ module Lamdu.Sugar.Convert.Hole.Suggest
     , termTransformsWithModify
     ) where
 
+import           Control.Applicative (Alternative(..))
+import qualified Control.Lens as Lens
+import           Control.Monad.State (StateT)
+import qualified Control.Monad.State as State
 import           Hyper (Tree, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Hyper.Infer (inferBody)
 import           Hyper.Type.AST.FuncType
 import           Hyper.Type.AST.Nominal
 import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Hyper.Unify
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Lookup (semiPruneLookup)
 import           Hyper.Unify.New (newUnbound, newTerm)
 import           Hyper.Unify.Term
-import           Control.Applicative (Alternative(..))
-import qualified Control.Lens as Lens
-import           Control.Monad.State (StateT)
-import qualified Control.Monad.State as State
 import           Lamdu.Calc.Infer (PureInfer, InferState, runPureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V

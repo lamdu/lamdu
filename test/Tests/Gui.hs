@@ -2,8 +2,6 @@
 
 module Tests.Gui where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
@@ -20,6 +18,8 @@ import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.CodeEdit as CodeEdit

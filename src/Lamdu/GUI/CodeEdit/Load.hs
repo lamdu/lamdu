@@ -10,8 +10,8 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Data.Tag as Tag
+import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef

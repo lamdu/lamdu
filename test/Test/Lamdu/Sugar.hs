@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Test.Lamdu.Sugar where
 
-import           Hyper (annotations)
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
@@ -9,6 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
+import           Hyper (annotations)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)

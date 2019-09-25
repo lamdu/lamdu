@@ -13,12 +13,12 @@ module Lamdu.Data.Ops
     , setTagOrder
     ) where
 
-import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
+import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.CharClassification as Chars

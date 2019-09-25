@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.HoleEdit.ResultGroups
     , ResultGroup(..), rgPrefixId, rgMain, rgExtra
     ) where
 
-import           Hyper.Type.Ann (val)
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
@@ -17,6 +16,7 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import           Hyper.Type.Ann (val)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

@@ -5,9 +5,9 @@ module Lamdu.Sugar.Convert.Binder.Redex
     , check
     ) where
 
+import qualified Control.Lens as Lens
 import           Hyper (Tree)
 import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
-import qualified Control.Lens as Lens
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Eval.Results (ScopeId)

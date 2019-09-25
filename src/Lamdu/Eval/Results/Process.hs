@@ -3,6 +3,10 @@ module Lamdu.Eval.Results.Process
     ( addTypes
     ) where
 
+import qualified Control.Lens as Lens
+import           Data.Constraint (Dict(..), withDict)
+import qualified Data.Map as Map
+import qualified Data.Text as Text
 import           Hyper
 import           Hyper.Class.Has (HasChild(..))
 import qualified Hyper.Class.Has as HasChild
@@ -11,10 +15,6 @@ import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Row as Row
 import           Hyper.Type.AST.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
 import           Hyper.Unify.QuantifiedVar (HasQuantifiedVar(..))
-import qualified Control.Lens as Lens
-import           Data.Constraint (Dict(..), withDict)
-import qualified Data.Map as Map
-import qualified Data.Text as Text
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Eval.Results (Val, Body(..))

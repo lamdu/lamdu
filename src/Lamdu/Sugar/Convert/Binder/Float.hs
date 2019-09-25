@@ -4,18 +4,18 @@ module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
     ) where
 
-import           Hyper (Tree, Pure(..), _Pure, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val)
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Row (FlatRowExtends(..))
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Row (FlatRowExtends(..))
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
+import qualified Lamdu.Calc.Definition as Def
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Calc.Definition as Def
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition

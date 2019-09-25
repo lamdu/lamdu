@@ -8,13 +8,6 @@ module Lamdu.Sugar.Convert.Fragment
     , fragmentVar
     ) where
 
-import           Hyper (Tree, Pure, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Unify (unify)
-import           Hyper.Unify.Apply (applyBindings)
-import           Hyper.Unify.Binding (UVar)
-import           Hyper.Unify.New (newTerm)
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
@@ -24,6 +17,13 @@ import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
+import           Hyper (Tree, Pure, traverseK1)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Unify (unify)
+import           Hyper.Unify.Apply (applyBindings)
+import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.New (newTerm)
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens

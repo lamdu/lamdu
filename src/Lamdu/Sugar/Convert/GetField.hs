@@ -2,9 +2,9 @@ module Lamdu.Sugar.Convert.GetField
     ( convert
     ) where
 
-import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
+import           Hyper (Tree, Ann(..), ann)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef

@@ -6,8 +6,8 @@ module Data.Text.Bidi
     ) where
 
 import           Data.Char.Properties.BidiCategory (BidiCategory(..), getBidiCategory)
-import qualified Data.Text as Text
 import           Data.Text (Text)
+import qualified Data.Text as Text
 
 import           Prelude
 

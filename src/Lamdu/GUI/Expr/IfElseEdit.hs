@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.IfElseEdit
     ( make
     ) where
 
-import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
@@ -24,6 +23,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           Hyper (Tree, Ann(..), ann)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)

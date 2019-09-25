@@ -3,11 +3,6 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where
 
-import           Hyper (Tree, Pure(..), _Pure, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val)
-import           Hyper.Type.AST.FuncType (funcIn, funcOut)
-import           Hyper.Type.AST.Row (RowExtend(..), freExtends, freRest)
-import           Hyper.Type.AST.Scheme (sTyp)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
@@ -15,6 +10,11 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper.Type.AST.FuncType (funcIn, funcOut)
+import           Hyper.Type.AST.Row (RowExtend(..), freExtends, freRest)
+import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens

@@ -21,7 +21,6 @@ module Lamdu.GUI.ExpressionGui.Monad
     , GuiM, run
     ) where
 
-import           Hyper (Tree, Ann(..), ann)
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
 import qualified Control.Monad.Reader as Reader
@@ -48,6 +47,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree, Ann(..), ann)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

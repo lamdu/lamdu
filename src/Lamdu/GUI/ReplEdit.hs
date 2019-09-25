@@ -4,8 +4,6 @@ module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make, isExecutableType
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann, val)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
@@ -31,6 +29,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann, val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config

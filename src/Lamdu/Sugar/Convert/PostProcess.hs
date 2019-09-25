@@ -3,12 +3,12 @@ module Lamdu.Sugar.Convert.PostProcess
     , makeScheme
     ) where
 
-import           Hyper (Tree, Pure, ann)
-import           Hyper.Type.AST.Scheme (saveScheme)
-import           Hyper.Unify.Generalize (generalize)
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
+import           Hyper (Tree, Pure, ann)
+import           Hyper.Type.AST.Scheme (saveScheme)
+import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (runPureInfer)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

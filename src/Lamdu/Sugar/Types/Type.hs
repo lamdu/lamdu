@@ -8,10 +8,10 @@ module Lamdu.Sugar.Types.Type
     , TId(..), tidName, tidTId
     ) where
 
+import qualified Control.Lens as Lens
 import           Hyper (Tree, Ann, type (#), makeHTraversableAndBases)
 import           Hyper.Type.AST.FuncType (FuncType)
 import           Hyper.Type.AST.Scheme (QVars)
-import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag (Tag)

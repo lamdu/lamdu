@@ -2,11 +2,11 @@
 
 module Tests.Sugar where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)

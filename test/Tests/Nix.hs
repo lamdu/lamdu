@@ -16,10 +16,10 @@ module Tests.Nix (test) where
 
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Aeson.Lens as LensAeson
-import qualified Data.Set as Set
-import qualified Data.Text as Text
 import           Data.List (isInfixOf, isPrefixOf)
 import           Data.List.Split (splitOn)
+import qualified Data.Set as Set
+import qualified Data.Text as Text
 import qualified Data.Yaml as Yaml
 import           System.Directory (listDirectory)
 

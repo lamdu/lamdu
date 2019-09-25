@@ -3,7 +3,6 @@
 
 module Test.Lamdu.Instances () where
 
-import           Hyper (Tree, Ann(..))
 import           Control.DeepSeq (NFData(..))
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.ByteString.Char8 as BS8
@@ -25,6 +24,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Generic.Random
+import           Hyper (Tree, Ann(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (Theme(..))

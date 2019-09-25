@@ -5,7 +5,7 @@ module Main where
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
-import Lamdu.Prelude
+import           Lamdu.Prelude
 
 main :: IO ()
 main =

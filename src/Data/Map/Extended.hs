@@ -4,10 +4,10 @@ module Data.Map.Extended
     , unionWithM
     ) where
 
-import           Data.Map
-import           Data.Set (Set)
+import Data.Map
+import Data.Set (Set)
 
-import           Prelude
+import Prelude
 
 setMapIntersection :: Ord k => Set k -> Map k a -> Map k a
 setMapIntersection s m = m `intersection` fromSet (const ()) s

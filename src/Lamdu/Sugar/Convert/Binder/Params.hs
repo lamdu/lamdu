@@ -11,11 +11,6 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import           Hyper (Tree, Pure(..), _Pure, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
-import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
-import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
-import qualified Hyper.Type.AST.Row as Row
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List
@@ -24,6 +19,11 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
+import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
+import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)

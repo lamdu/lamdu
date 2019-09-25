@@ -3,8 +3,8 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion9 (migrate) where
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object)
-import qualified Data.Map as Map
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map as Map
 import           Data.String
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 

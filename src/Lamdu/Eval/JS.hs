@@ -13,8 +13,6 @@ module Lamdu.Eval.JS
     , nodeRepl
     ) where
 
-import           Hyper (Ann(..), annotations)
-import           Hyper.Type.AST.Row (RowExtend(..))
 import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
@@ -38,6 +36,8 @@ import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import           Generic.Data (Generically(..))
+import           Hyper (Ann(..), annotations)
+import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (Identifier(..), identHex)
 import           Lamdu.Calc.Term (Val)

@@ -44,11 +44,11 @@ module Lamdu.Sugar.Types.Expression
     , Case(..), cKind, cBody
     ) where
 
-import           Hyper
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Kind (Constraint)
 import           Data.Property (Property)
+import           Hyper
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta

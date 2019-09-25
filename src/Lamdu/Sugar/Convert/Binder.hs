@@ -4,9 +4,6 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
-import           Hyper
-import           Hyper.Recurse (Recursive(..), foldMapRecursive, (##>>))
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (Dict(..))
 import qualified Data.Map as Map
@@ -14,6 +11,9 @@ import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Hyper
+import           Hyper.Recurse (Recursive(..), foldMapRecursive, (##>>))
+import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors

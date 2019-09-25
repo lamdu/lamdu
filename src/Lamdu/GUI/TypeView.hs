@@ -3,9 +3,6 @@ module Lamdu.GUI.TypeView
     ( make, makeScheme
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), val)
-import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
@@ -26,6 +23,9 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.Ann (Ann(..), val)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors

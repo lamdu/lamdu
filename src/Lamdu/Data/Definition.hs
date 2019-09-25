@@ -7,12 +7,12 @@ module Lamdu.Data.Definition
     , pruneDefExprDeps
     ) where
 
-import           Hyper (Tree, Pure)
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Hyper (Tree, Pure)
 import           Lamdu.Calc.Definition (Deps, depsGlobalTypes, depsNominals)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)

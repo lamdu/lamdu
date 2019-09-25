@@ -22,14 +22,14 @@ module Lamdu.Sugar.Convert.Monad
     , typeProtectedSetToVal, postProcessAssert, postProcessWith
     ) where
 
-import           Hyper (Tree, Pure)
-import           Hyper.Unify.Binding (UVar)
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
+import           Hyper (Tree, Pure)
+import           Hyper.Unify.Binding (UVar)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps)

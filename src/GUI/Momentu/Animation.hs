@@ -16,10 +16,10 @@ module GUI.Momentu.Animation
 import           Control.DeepSeq (NFData(..), deepseq)
 import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
-import           Generic.Data (Generically(..))
 import           GUI.Momentu.Animation.Id
 import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
+import           Generic.Data (Generically(..))
 import           Graphics.DrawingCombinators (R, (%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 

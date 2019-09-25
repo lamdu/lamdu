@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.AssignmentEdit
     , Parts(..), makeFunctionParts
     ) where
 
-import           Hyper (Tree, Ann(..), ann)
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -38,6 +37,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree, Ann(..), ann)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

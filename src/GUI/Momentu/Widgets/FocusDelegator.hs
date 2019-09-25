@@ -5,11 +5,11 @@ module GUI.Momentu.Widgets.FocusDelegator
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu.FocusDirection (FocusDirection)
-import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.FocusDirection (FocusDirection)
+import qualified GUI.Momentu.FocusDirection as Direction
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.State as State

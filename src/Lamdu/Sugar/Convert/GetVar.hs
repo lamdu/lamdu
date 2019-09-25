@@ -2,9 +2,6 @@ module Lamdu.Sugar.Convert.GetVar
     ( convert, globalNameRef
     ) where
 
-import           Hyper (_Pure)
-import           Hyper.Type.AST.Row (freExtends)
-import qualified Hyper.Type.AST.Scheme as S
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
@@ -14,6 +11,9 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Hyper (_Pure)
+import           Hyper.Type.AST.Row (freExtends)
+import qualified Hyper.Type.AST.Scheme as S
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

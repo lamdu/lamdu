@@ -9,7 +9,6 @@ module Lamdu.GUI.ExpressionGui.Annotation
     , maybeAddAnnotationPl
     ) where
 
-import           Hyper (Tree, Ann)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
@@ -28,6 +27,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (Tree, Ann)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)

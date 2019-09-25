@@ -9,6 +9,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Text (unpack)
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion1 as ToVersion1
+import qualified Lamdu.Data.Export.JSON.Migration.ToVersion10 as ToVersion10
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion2 as ToVersion2
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion3 as ToVersion3
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion4 as ToVersion4
@@ -17,7 +18,6 @@ import qualified Lamdu.Data.Export.JSON.Migration.ToVersion6 as ToVersion6
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion7 as ToVersion7
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion8 as ToVersion8
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion9 as ToVersion9
-import qualified Lamdu.Data.Export.JSON.Migration.ToVersion10 as ToVersion10
 
 import           Lamdu.Prelude
 

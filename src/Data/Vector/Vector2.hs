@@ -12,9 +12,9 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import qualified Data.Aeson.Types as Aeson
 import           Data.Binary (Binary(..))
-import           Generic.Data (Generically(..), Generically1(..))
 import qualified Data.Tuple as Tuple
 import           GHC.Generics (Generic, Generic1)
+import           Generic.Data (Generically(..), Generically1(..))
 
 import           Prelude hiding (curry, uncurry)
 

@@ -8,12 +8,12 @@ module Lamdu.GUI.Expr.HoleEdit.ValTerms
     , definitePart
     ) where
 
-import           Hyper (Tree, traverseK1)
-import           Hyper.Type.Ann (Ann(..), val)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import           Hyper (Tree, traverseK1)
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.I18N.Code as Texts

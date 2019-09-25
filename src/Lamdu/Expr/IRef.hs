@@ -14,14 +14,14 @@ module Lamdu.Expr.IRef
     , readValI, writeValI, newValI
     ) where
 
-import           Hyper (Tree, Pure, traverseK1)
-import           Hyper.Type.Ann (Ann(..), ann, val)
-import           Hyper.Type.Functor (F(..), _F)
-import           Hyper.Type.AST.Nominal (NominalDecl)
 import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
+import           Hyper (Tree, Pure, traverseK1)
+import           Hyper.Type.AST.Nominal (NominalDecl)
+import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper.Type.Functor (F(..), _F)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

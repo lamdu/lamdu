@@ -2,15 +2,15 @@
 
 module Test.Lamdu.SugarStubs where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), val)
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Scheme (QVars(..))
 import           Control.Monad.Unit (Unit(Unit))
 import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
+import           Hyper (Tree)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.AST.Scheme (QVars(..))
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (LangNames(..))

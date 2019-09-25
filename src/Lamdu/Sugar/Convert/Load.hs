@@ -10,6 +10,13 @@ module Lamdu.Sugar.Convert.Load
     , InferFunc, unmemoizedInfer
     ) where
 
+import qualified Control.Lens as Lens
+import qualified Control.Monad.Reader as Reader
+import qualified Control.Monad.State as State
+import           Data.CurAndPrev (CurAndPrev)
+import qualified Data.Map as Map
+import           Data.Property (Property)
+import qualified Data.Property as Property
 import           Hyper (Tree, Pure(..), _Pure, annotations, Ann)
 import           Hyper.Infer (Inferred, infer, iRes)
 import           Hyper.Type.AST.FuncType (FuncType(..))
@@ -20,13 +27,6 @@ import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
 import           Hyper.Unify.New (newUnbound)
-import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
-import qualified Control.Monad.State as State
-import           Data.CurAndPrev (CurAndPrev)
-import qualified Data.Map as Map
-import           Data.Property (Property)
-import qualified Data.Property as Property
 import           Lamdu.Calc.Infer (PureInfer, runPureInfer, InferState(..), loadDeps, emptyPureInferState, varGen)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)

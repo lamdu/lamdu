@@ -3,11 +3,11 @@ module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
+import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import           Hyper (Tree, Pure, ann)
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Generalize (generalize)
-import qualified Control.Lens as Lens
-import qualified Data.Property as Property
 import           Lamdu.Calc.Infer (alphaEq, runPureInfer)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

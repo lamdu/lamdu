@@ -2,8 +2,6 @@ module Lamdu.GUI.Expr.BinderEdit
     ( make
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
@@ -20,6 +18,8 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors

@@ -2,7 +2,6 @@ module Lamdu.GUI.Expr.FragmentEdit
     ( make
     ) where
 
-import           Hyper (Tree, Ann(..), ann)
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Align (WithTextPos)
@@ -21,6 +20,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Hyper (Tree, Ann(..), ann)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap

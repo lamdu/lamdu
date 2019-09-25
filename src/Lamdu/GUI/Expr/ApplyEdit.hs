@@ -2,8 +2,6 @@ module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
@@ -17,6 +15,8 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           Hyper (Tree)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)

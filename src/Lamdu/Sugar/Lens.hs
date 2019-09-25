@@ -12,12 +12,12 @@ module Lamdu.Sugar.Lens
     , getVarName
     ) where
 
-import           Hyper (Tree, HNodes(..), HTraversable(..), (#>), traverseK, mapK, annotations)
-import           Hyper.Recurse (Recursive(..), RTraversable)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Control.Lens as Lens
 import           Data.Constraint (Dict(..))
 import           Data.Proxy (Proxy(..))
+import           Hyper (Tree, HNodes(..), HTraversable(..), (#>), traverseK, mapK, annotations)
+import           Hyper.Recurse (Recursive(..), RTraversable)
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude

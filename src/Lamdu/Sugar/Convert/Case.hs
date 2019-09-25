@@ -4,13 +4,13 @@ module Lamdu.Sugar.Convert.Case
     , convertAppliedCase
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
-import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
+import           Hyper (Tree)
+import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps

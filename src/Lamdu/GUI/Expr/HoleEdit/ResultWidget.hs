@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
     ( make
     ) where
 
-import           Hyper (Tree, Ann(..), traverseK, (#>))
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (withDict)
@@ -24,6 +23,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           Hyper (Tree, Ann(..), traverseK, (#>))
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme

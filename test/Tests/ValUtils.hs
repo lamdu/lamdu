@@ -2,8 +2,8 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.ValUtils where
 
-import           Hyper (annotations)
 import qualified Data.Set as Set
+import           Hyper (annotations)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Calc.Term.Arbitrary ()
 import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)

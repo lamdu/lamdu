@@ -5,13 +5,13 @@ module Lamdu.Sugar.Convert.Type
     , convertScheme
     ) where
 
+import           Control.Monad.Transaction (MonadTransaction)
+import qualified Data.Map as Map
 import           Hyper (Tree, Pure(..), Ann(..), _Pure)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
-import           Control.Monad.Transaction (MonadTransaction)
-import qualified Data.Map as Map
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId

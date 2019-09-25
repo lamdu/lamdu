@@ -8,17 +8,17 @@ module Lamdu.Sugar.Names.Walk
     , toWorkArea, toDef, toExpression, toBody
     ) where
 
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), val)
-import           Hyper.Type.AST.App (appChildren)
-import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
+import           Hyper (Tree)
+import           Hyper.Type.AST.App (appChildren)
+import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
-import           Lamdu.Sugar.Types hiding (Tag(..))
 import qualified Lamdu.Sugar.Types as Sugar
+import           Lamdu.Sugar.Types hiding (Tag(..))
 
 import           Lamdu.Prelude
 

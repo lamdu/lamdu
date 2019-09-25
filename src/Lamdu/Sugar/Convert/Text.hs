@@ -3,8 +3,6 @@ module Lamdu.Sugar.Convert.Text
      ( text
      ) where
 
-import           Hyper (Tree, Ann(..))
-import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Control.Lens as Lens
 import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -12,6 +10,8 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
+import           Hyper (Tree, Ann(..))
+import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Lens as ExprLens

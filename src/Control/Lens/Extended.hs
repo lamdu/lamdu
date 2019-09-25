@@ -6,9 +6,9 @@ module Control.Lens.Extended
     , OneOf
     ) where
 
-import           Control.Lens
+import Control.Lens
 
-import           Prelude
+import Prelude
 
 {-# INLINE tagged #-}
 tagged :: Prism' tag () -> Prism' (a, tag) a
