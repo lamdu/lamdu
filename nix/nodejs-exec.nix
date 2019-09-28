@@ -1,12 +1,12 @@
 { mkDerivation, base, fetchFromGitHub, stdenv, nodejs-6_x, which }:
 mkDerivation {
   pname = "nodejs-exec";
-  version = "0.1.0.0";
+  version = "0.2.0.0";
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "nodejs-exec";
-    sha256 = "0zaf0z8845mvpk6dcvfickjx34mh4w92myrf5vnbkk6nsm727qhz";
-    rev = "6a8b5c7897b822f523414fe2c0e666ecb8d4ab4b";
+    sha256 = "1r3y7k06sg1nwc1fvbr5ps4q8ymg6iaq4gfmkvjaavjvazw5dqff";
+    rev = "44d5b7b58801481638520f52d23fb3c95c2428f0";
   };
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [ base ];

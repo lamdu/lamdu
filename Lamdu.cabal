@@ -152,7 +152,7 @@ Library
                   , leveldb-haskell >= 0.6
                   , List >= 0.5.1
                   , mtl >= 2.2
-                  , nodejs-exec
+                  , nodejs-exec >= 0.2
                   , OpenGL
                   , optparse-applicative >= 0.12
                   , pretty >=1.1.2 && <1.2

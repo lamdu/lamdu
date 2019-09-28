@@ -98,7 +98,7 @@ nodeRepl =
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
         nodeExePath <- getNodePath
         env <- getEnvironment
-        pure (Proc.proc nodeExePath ["--interactive", "--harmony-tailcalls"])
+        pure (Proc.proc nodeExePath ["--interactive"])
             { Proc.std_in = Proc.CreatePipe
             , Proc.std_out = Proc.CreatePipe
             , Proc.env = Just (("NODE_PATH", rtsPath):env)

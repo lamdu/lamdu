@@ -20,10 +20,7 @@ As such, it has no textual format, but Lamdu code can be exported and shared in 
   format. It can be drag-and-dropped into Lamdu to load the code.
 
 * `js/main.js`: The program compiled to JavaScript. One may run it to
-  obtain the program output value. Run it with `$ node
-  --harmony-tailcalls main.js`. It requires a recent version of
-  [nodejs](https://nodejs.org/en/) which supports the
-  `--harmony-tailcalls` flag (>= v6.2.0).
+  obtain the program output value. Run it with `$ node main.js`.
 
 * `js/rts.js`, `js/rtsConfig.js`: Support files for
   `js/main.js`. These modules implement the basic primitives of Lamdu

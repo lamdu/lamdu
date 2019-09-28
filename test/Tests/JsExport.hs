@@ -41,7 +41,7 @@ nodeRepl =
     do
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
         nodeExePath <- NodeJS.path
-        pure (Proc.proc nodeExePath ["--harmony-tailcalls"])
+        pure (Proc.proc nodeExePath [])
             { Proc.std_in = Proc.CreatePipe
             , Proc.std_out = Proc.CreatePipe
             , Proc.env =
