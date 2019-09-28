@@ -1,16 +1,16 @@
-{ mkDerivation, base, fetchFromGitHub, stdenv, nodejs-6_x, which }:
+{ mkDerivation, base, fetchFromGitHub, stdenv, nodejs, which }:
 mkDerivation {
   pname = "nodejs-exec";
   version = "0.2.0.0";
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "nodejs-exec";
-    sha256 = "1r3y7k06sg1nwc1fvbr5ps4q8ymg6iaq4gfmkvjaavjvazw5dqff";
-    rev = "44d5b7b58801481638520f52d23fb3c95c2428f0";
+    sha256 = "17x8gxs2phh1wgy6azl9w9paj81ca4fa3ci0kiml7a927rang7n9";
+    rev = "b42c7880973a6eed67dffcfb6641e84de07612f2";
   };
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [ base ];
-  extraLibraries = [ nodejs-6_x which ];
+  extraLibraries = [ nodejs ];
   homepage = "https://github.com/lamdu/nodejs-exec";
   description = "Package providing a nodejs installation";
   license = stdenv.lib.licenses.bsd3;

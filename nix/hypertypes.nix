@@ -1,7 +1,7 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
 , constraints, containers, deepseq, fetchFromGitHub, generic-data, lattices, lens, monad-st
 , mtl, one-liner, pretty, QuickCheck, show-combinators, template-haskell, th-abstraction
-, transformers, stdenv
+, transformers, stdenv, generic-constraints
 }:
 mkDerivation {
   pname = "hypertypes";
@@ -15,7 +15,7 @@ mkDerivation {
   libraryHaskellDepends = [
     base base-compat binary constraints containers deepseq generic-data lattices lens
     monad-st mtl one-liner pretty QuickCheck show-combinators template-haskell
-    th-abstraction transformers
+    th-abstraction transformers generic-constraints
   ];
   homepage = "https://github.com/lamdu/hypertypes.git#readme";
   description = "Library for typed ASTs";

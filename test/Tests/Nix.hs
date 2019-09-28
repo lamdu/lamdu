@@ -53,6 +53,7 @@ stackDepsTest =
     where
         extraNixFiles =
             [ "lamdu.nix" -- Top level nix file (implicit in stack)
+            , "lens.nix" -- hackage snapshot in nix too old for lens we need
             ]
 
 verifyStackDep :: Yaml.Value -> IO ()
