@@ -571,8 +571,8 @@ slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId argVal =
 listenNoTellLogUsed :: Monad m => M m a -> M m (a, LogUsed)
 listenNoTellLogUsed = censor (const LogUnused) . listen
 
-compileLambda :: Monad m => Tree (V.Lam V.Var V.Term) (Ann ValId) -> ValId -> M m CodeGen
-compileLambda (V.Lam v res) valId =
+compileLambda :: Monad m => ValId -> Tree (V.Lam V.Var V.Term) (Ann ValId) -> M m CodeGen
+compileLambda valId (V.Lam v res) =
     Lens.view envMode
     >>= \case
         Fast{} -> compileRes <&> mkLambda
@@ -703,8 +703,8 @@ optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.Call
     | param == var = pure func
 optimizeExpr x = pure x
 
-compileLeaf :: Monad m => V.Leaf -> ValId -> M m CodeGen
-compileLeaf x valId =
+compileLeaf :: Monad m => ValId -> V.Leaf -> M m CodeGen
+compileLeaf valId x =
     case x of
     V.LHole -> throwErr valId ER.ReachedHole
     V.LRecEmpty -> JS.object [] & codeGenFromExpr & pure
@@ -730,10 +730,10 @@ compileToNom isTail (ToNom tId x) =
 compileVal :: Monad m => IsTailCall -> Val ValId -> M m CodeGen
 compileVal isTail (Ann valId body) =
     case body of
-    V.BLeaf x                   -> compileLeaf x valId
+    V.BLeaf x                   -> compileLeaf valId x
     V.BApp x                    -> compileApply isTail valId x
     V.BGetField x               -> compileGetField x >>= maybeLog
-    V.BLam x                    -> compileLambda x valId
+    V.BLam x                    -> compileLambda valId x
     V.BInject x                 -> compileInject x >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase valId x
