@@ -508,7 +508,10 @@ compileInject (V.Inject tag dat) =
 
 compileCase :: Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
 compileCase valId =
-    fmap codeGenFromExpr . lam "x" . compileCaseOnVar NotTailCall valId
+    -- we're generating a lambda here, which will be called via
+    -- rts.rerun, so its body is as much a tail-call position as any
+    -- lambda
+    fmap codeGenFromExpr . lam "x" . compileCaseOnVar TailCall valId
 
 compileCaseOnVar ::
     Monad m =>
