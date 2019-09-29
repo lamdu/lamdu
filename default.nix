@@ -12,7 +12,11 @@ let config = {
                         hypertypes = self.callPackage ./nix/hypertypes.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
                         nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
-                        lens = haskell.lib.dontCheck (self.callPackage ./nix/lens.nix {});
+                        lens = self.callHackageDirect
+                            { pkg = "lens";
+                              ver = "4.18.1";
+                              sha256 = "01qbqs0hp3qw5lpqb75cirk75q6wz839dpbzcqaj9bld4ww1ahlz";
+                            } {};
                         testing-feat = self.callHackage "testing-feat" "1.1.0.0" {};
                         # aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
                         # language-ecmascript = pkgs.haskell.lib.doJailbreak (self.callHackage "language-ecmascript" "0.19" {});
