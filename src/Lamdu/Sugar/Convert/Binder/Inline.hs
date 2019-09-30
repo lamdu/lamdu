@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Inline
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (traverseK1)
+import           Hyper (htraverse1)
 import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -54,11 +54,11 @@ inlineLetH var arg bod =
                   & V.Lam param & V.BLam & Ann stored
                 )
             _ ->
-                ( r ^.. traverseK1 . Lens._Wrapped . _1 . traverse
-                , r & traverseK1 %~ (^. Lens._Wrapped . _2) & Ann stored
+                ( r ^.. htraverse1 . Lens._Wrapped . _1 . traverse
+                , r & htraverse1 %~ (^. Lens._Wrapped . _2) & Ann stored
                 )
                 where
-                    r = b & traverseK1 %~ Lens.Const . go
+                    r = b & htraverse1 %~ Lens.Const . go
 
 cursorDest :: Val a -> a
 cursorDest x =

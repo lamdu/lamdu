@@ -15,7 +15,7 @@ module Lamdu.Sugar.Lens
 import qualified Control.Lens as Lens
 import           Data.Constraint (Dict(..))
 import           Data.Proxy (Proxy(..))
-import           Hyper (Tree, HNodes(..), HTraversable(..), (#>), traverseK, mapK, annotations)
+import           Hyper (Tree, HNodes(..), HTraversable(..), (#>), htraverse, hmap, annotations)
 import           Hyper.Recurse (Recursive(..), RTraversable)
 import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Sugar.Types
@@ -26,7 +26,7 @@ childPayloads ::
     HTraversable expr =>
     Lens.Traversal' (Tree expr (Ann a)) a
 childPayloads f =
-    traverseK (const (ann f))
+    htraverse (const (ann f))
 
 class HTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool
@@ -114,7 +114,7 @@ binderResultExpr f (Ann pl x) =
     case x of
     BinderExpr e ->
         Lens.indexed f
-        (mapK (Proxy @RTraversable #> annotations .~ ()) e)
+        (hmap (Proxy @RTraversable #> annotations .~ ()) e)
         pl
         <&> (`Ann` x)
     BinderLet l ->

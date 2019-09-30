@@ -18,7 +18,7 @@ import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
-import           Hyper (Tree, Pure, traverseK1)
+import           Hyper (Tree, Pure, htraverse1)
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Hyper.Type.Functor (F(..), _F)
@@ -87,19 +87,19 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> readValI valI >>= traverseK1 go <&> Ann valI
+            Just go -> readValI valI >>= htraverse1 go <&> Ann valI
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
     T m (Tree V.Term (Ann (ValI m, a)))
-expressionBodyFrom = traverseK1 writeValWithStoredSubexpressions . (^. val)
+expressionBodyFrom = htraverse1 writeValWithStoredSubexpressions . (^. val)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & traverseK1 %~ (^. ann . _1)
+        let bodyWithRefs = body & htraverse1 %~ (^. ann . _1)
         case mIRef of
             Just valI -> Ann (valI, pl) body <$ writeValI valI bodyWithRefs
             Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (exprI, pl) body
@@ -112,10 +112,10 @@ addProperties ::
     Val (ValI m, a) ->
     Val (ValP m, a)
 addProperties setValI (Ann (valI, a) body) =
-    Ann (Property valI setValI, a) (body & Lens.indexing traverseK1 %@~ f)
+    Ann (Property valI setValI, a) (body & Lens.indexing htraverse1 %@~ f)
     where
         f index =
             addProperties $ \valINew ->
             readValI valI
-            <&> Lens.indexing traverseK1 . Lens.index index .~ valINew
+            <&> Lens.indexing htraverse1 . Lens.index index .~ valINew
             >>= writeValI valI

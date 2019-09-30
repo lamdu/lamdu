@@ -8,7 +8,7 @@ module Lamdu.Sugar.Parens
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, mapK, (#>))
+import           Hyper (Tree, hmap, (#>))
 import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
@@ -62,12 +62,12 @@ instance HasPrecedence name => AddParens (Else name i o) where
     addToBody (ElseIf elseIf) = elseIf & eiContent %~ addToBody & ElseIf
 
 instance HasPrecedence name => AddParens (IfElse name i o) where
-    addToBody = mapK (Proxy @AddParens #> addToNode)
+    addToBody = hmap (Proxy @AddParens #> addToNode)
 
 instance HasPrecedence name => AddParens (Binder name i o) where
     addToBody (BinderExpr x) = addToBody x & BinderExpr
     addToBody (BinderLet x) =
-        mapK (Proxy @AddParens #> addToNode) x & BinderLet
+        hmap (Proxy @AddParens #> addToNode) x & BinderLet
 
 instance HasPrecedence name => AddParens (Body name i o) where
     addToBody = loopExprBody unambiguous <&> (^. _2)
@@ -131,8 +131,8 @@ loopExprBody parentPrec body_ =
     BodyFromNom      x -> result False (BodyFromNom x)
     BodyHole         x -> result False (BodyHole x)
     BodyFragment     x -> x & fExpr %~ loopExpr 0 unambiguous & BodyFragment & result False
-    BodyRecord       x -> mapK (p #> addToNode) x & BodyRecord & result False
-    BodyCase         x -> mapK (p #> addToNode) x & BodyCase & result False
+    BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
+    BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result False
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
     BodyInject       x -> inject x
@@ -176,7 +176,7 @@ loopExprBody parentPrec body_ =
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
-                mapK (p #> addToNode) x
+                hmap (p #> addToNode) x
                 & BodyLabeledApply & result False
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =

@@ -223,7 +223,7 @@ mkOptions posInfo resultProcessor holePl =
               | posInfo == ConvertM.BinderPos
               ]
             ]
-            <&> addAnnotations (\_ _ -> ()) . (^. kPlain)
+            <&> addAnnotations (\_ _ -> ()) . (^. hPlain)
             <&> mkOption sugarContext resultProcessor holePl
             & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
             & pure

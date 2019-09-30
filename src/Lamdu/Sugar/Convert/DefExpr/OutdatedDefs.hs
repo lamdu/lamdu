@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper (Tree, Pure(..), _Pure, htraverse1)
 import           Hyper.Type.AST.FuncType (funcIn, funcOut)
 import           Hyper.Type.AST.Row (RowExtend(..), freExtends, freRest)
 import           Hyper.Type.AST.Scheme (sTyp)
@@ -61,7 +61,7 @@ recursivelyFixExpr mFix =
         recurse x =
             case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . traverseK1)
+            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . htraverse1)
 
 changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =

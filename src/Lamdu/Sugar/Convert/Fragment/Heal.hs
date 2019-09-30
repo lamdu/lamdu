@@ -5,10 +5,11 @@ module Lamdu.Sugar.Convert.Fragment.Heal
 import qualified Control.Lens.Extended as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
-import           Hyper (Tree, traverseK1)
+import           Hyper (Tree, htraverse1)
 import           Hyper.Infer.Blame (blame, bTermToAnn)
 import qualified Hyper.Type.AST.Row as Row
 import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper.Type.Combinator.Flip (Flip(..))
 import           Hyper.Unify.Generalize (GTerm(..))
 import           Hyper.Unify.New (newUnbound)
 import qualified Lamdu.Calc.Infer as Infer
@@ -58,7 +59,7 @@ prepareInFragExpr ::
     Tree (Ann (ValP m)) Term ->
     Tree (Ann (Priority, EditAction (T m ()))) Term
 prepareInFragExpr (Ann a v) =
-    v & traverseK1 %~ prepareInFragExpr
+    v & htraverse1 %~ prepareInFragExpr
     & Ann ((InFragment, 0), OnNoUnify (() <$ DataOps.applyHoleTo a))
     & fixPriorities
 
@@ -70,10 +71,10 @@ prepare ::
 prepare fragI (Ann a v) =
     if fragI == a ^. Property.pVal
     then
-        fragmented ^. val & traverseK1 %~ prepareInFragExpr
+        fragmented ^. val & htraverse1 %~ prepareInFragExpr
         & Ann ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. ann . Property.pVal)))
     else
-        v & traverseK1 %~ prepare fragI
+        v & htraverse1 %~ prepare fragI
         & Ann ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a))
     & fixPriorities
     where
@@ -98,7 +99,7 @@ healMismatch =
                         Just rr ->
                             V.scopeVarTypes .
                             Lens.at (globalId (rr ^. ConvertM.rrDefI)) ?~
-                            GMono topLevelType
+                            MkFlip (GMono topLevelType)
                 addDeps <- Infer.loadDeps deps
                 prepare fragment topLevelExpr
                     & blame (^. Lens._1) (V.IResult V.emptyScope topLevelType)

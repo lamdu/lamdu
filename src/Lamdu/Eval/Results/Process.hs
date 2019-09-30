@@ -128,7 +128,7 @@ subst params (Pure x) =
     withDict (applyNominalRecursive (Proxy @t)) $
     _Pure #
     case x ^? quantifiedVar of
-    Nothing -> mapK (Proxy @ApplyNominal #> subst params) x
+    Nothing -> hmap (Proxy @ApplyNominal #> subst params) x
     Just q ->
         params ^?
         getChild . _QVarInstances . Lens.ix q . _Pure

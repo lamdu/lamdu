@@ -18,7 +18,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Hyper (Ann(..), traverseK1)
+import           Hyper (Ann(..), htraverse1)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -52,7 +52,7 @@ randomizeExpr gen (Ann pl body) =
     (`evalState` gen) $
     do
         r <- state random
-        newBody <- body & traverseK1 %%~ randomizeSubexpr
+        newBody <- body & htraverse1 %%~ randomizeSubexpr
         Ann (pl r) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
@@ -112,13 +112,13 @@ randomizeParamIdsG preNG gen initMap convertPL =
                                 <&> V.BLam
                     V.BLeaf (V.LVar par) ->
                         pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
-                    x@V.BLeaf {}      -> traverseK1 go x
-                    x@V.BApp {}       -> traverseK1 go x
-                    x@V.BGetField {}  -> traverseK1 go x
-                    x@V.BRecExtend {} -> traverseK1 go x
-                    x@V.BCase {}      -> traverseK1 go x
-                    x@V.BInject {}    -> traverseK1 go x
-                    x@V.BToNom {}     -> traverseK1 go x
+                    x@V.BLeaf {}      -> htraverse1 go x
+                    x@V.BApp {}       -> htraverse1 go x
+                    x@V.BGetField {}  -> htraverse1 go x
+                    x@V.BRecExtend {} -> htraverse1 go x
+                    x@V.BCase {}      -> htraverse1 go x
+                    x@V.BInject {}    -> htraverse1 go x
+                    x@V.BToNom {}     -> htraverse1 go x
                     <&> Ann (convertPL newGen parMap s)
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s

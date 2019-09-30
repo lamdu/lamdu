@@ -160,7 +160,7 @@ convertBinder expr@(Ann pl body) =
             & ann . pInput . Input.userData .~
                 mconcat
                 (subexprPayloads
-                (body ^.. traverseK1)
+                (body ^.. htraverse1)
                 (exprS ^.. val . SugarLens.childPayloads))
 
 
@@ -254,7 +254,7 @@ convertLam (Ann exprPl lam) =
         BodyLam lambda
             & addActions (lam ^.. V.lamOut) exprPl
             <&> val %~
-                mapK (const (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
+                hmap (const (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 useNormalLambda ::
     Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
@@ -328,7 +328,7 @@ defaultMarkLightParams ::
     (HFunctor t, HNodesConstraint t MarkLightParams) =>
     Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
 defaultMarkLightParams paramNames =
-    mapK (Proxy @MarkLightParams #> markNodeLightParams paramNames)
+    hmap (Proxy @MarkLightParams #> markNodeLightParams paramNames)
 
 markNodeLightParams ::
     MarkLightParams t =>

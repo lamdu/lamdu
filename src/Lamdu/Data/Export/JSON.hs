@@ -23,7 +23,7 @@ import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
-import           Hyper (Tree, Pure(..), traverseK1)
+import           Hyper (Tree, Pure(..), htraverse1)
 import           Hyper.Recurse (unwrapM, (##>>))
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Hyper.Type.Ann (Ann(..), val, annotations)
@@ -210,7 +210,7 @@ export msg act exportPath =
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
 writeValAt (Ann valI body) =
-    valI <$ (traverseK1 writeValAt body >>= ExprIRef.writeValI valI)
+    valI <$ (htraverse1 writeValAt body >>= ExprIRef.writeValI valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
 writeValAtUUID x = x & annotations %~ (_F #) . IRef.unsafeFromUUID & writeValAt

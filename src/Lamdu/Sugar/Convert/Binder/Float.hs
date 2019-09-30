@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper (Tree, Pure(..), _Pure, htraverse1)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (FlatRowExtends(..))
 import           Hyper.Type.Ann (Ann(..), ann, val)
@@ -79,7 +79,7 @@ isVarAlwaysApplied (V.Lam var x) =
     where
         go isApplied (Ann _ (V.BLeaf (V.LVar v))) | v == var = isApplied
         go _ (Ann _ (V.BApp (V.App f a))) = go True f && go False a
-        go _ v = all (go False) (v ^.. val . traverseK1)
+        go _ v = all (go False) (v ^.. val . htraverse1)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValP m) -> T m (ValP m)

@@ -12,7 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import           Hyper (Tree, traverseK1)
+import           Hyper (Tree, htraverse1)
 import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
@@ -60,7 +60,7 @@ ofBody env =
         , "\\", "Λ", "λ", "->", "→"
         ]
     BodySimpleApply x ->
-        env ^. has . Texts.apply : x ^. traverseK1 . Lens.to (expr env)
+        env ^. has . Texts.apply : x ^. htraverse1 . Lens.to (expr env)
     BodyLabeledApply x ->
         env ^. has . Texts.apply
         : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)

@@ -6,7 +6,7 @@ module Lamdu.Sugar.OrderTags
 
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
-import           Hyper (Tree, HNodes(..), HTraversable(..), traverseK, traverseK1, (#>))
+import           Hyper (Tree, HNodes(..), HTraversable(..), htraverse, htraverse1, (#>))
 import           Hyper.Type.Ann (Ann(..), val)
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -27,7 +27,7 @@ class Order m name o t where
         , HNodesConstraint t (Order m name o)
         ) =>
         OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
-    order = traverseK (Proxy @(Order m name o) #> orderNode)
+    order = htraverse (Proxy @(Order m name o) #> orderNode)
 
 orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
 orderByTag toTag =
@@ -48,7 +48,7 @@ orderTBody t =
     t
     & Sugar._TRecord %%~ orderComposite
     >>= Sugar._TVariant %%~ orderComposite
-    >>= traverseK1 orderType
+    >>= htraverse1 orderType
 
 orderType :: Monad m => OrderT m (Tree (Ann a) (Sugar.Type name))
 orderType = val orderTBody
@@ -104,7 +104,7 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
     order (Sugar.BodyInject x) = (Sugar.iContent . Sugar._InjectVal) orderNode x <&> Sugar.BodyInject
     order (Sugar.BodyToNom x) = traverse orderNode x <&> Sugar.BodyToNom
-    order (Sugar.BodySimpleApply x) = traverseK1 orderNode x <&> Sugar.BodySimpleApply
+    order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyGetField x) = traverse orderNode x <&> Sugar.BodyGetField
     order x@Sugar.BodyFromNom{} = pure x
     order x@Sugar.BodyLiteral{} = pure x

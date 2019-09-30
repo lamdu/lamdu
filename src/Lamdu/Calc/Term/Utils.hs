@@ -8,7 +8,7 @@ module Lamdu.Calc.Term.Utils
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, Ann(..), traverseK1)
+import           Hyper (Tree, Ann(..), htraverse1)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -20,7 +20,7 @@ import           Lamdu.Prelude
 culledSubexprPayloads :: (a -> Bool) -> Val a -> [a]
 culledSubexprPayloads cut (Ann pl body)
     | cut pl = []
-    | otherwise = pl : body ^. traverseK1 . Lens.to (culledSubexprPayloads cut)
+    | otherwise = pl : body ^. htraverse1 . Lens.to (culledSubexprPayloads cut)
 
 data Composite a = Composite
     { _tags :: Map T.Tag a

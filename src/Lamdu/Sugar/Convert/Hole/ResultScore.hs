@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
 
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
-import           Hyper (Tree, Pure, _Pure, traverseK1)
+import           Hyper (Tree, Pure, _Pure, htraverse1)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -40,7 +40,7 @@ score :: Val (Tree Pure Type) -> [Int]
 score x =
     (if Lens.has ExprLens.valBodyHole (x ^. val) then 1 else 0) :
     resultTypeScore (x ^. ann) ++
-    (x ^.. val . traverseK1 >>= score)
+    (x ^.. val . htraverse1 >>= score)
 
 resultScore :: Val (Tree Pure Type) -> HoleResultScore
 resultScore x =
@@ -51,7 +51,7 @@ resultScore x =
 
 numFragments :: Val a -> Int
 numFragments x =
-    sum (x ^.. val . traverseK1 <&> numFragments) +
+    sum (x ^.. val . htraverse1 <&> numFragments) +
     if Lens.has appliedHole x
     then 1
     else 0

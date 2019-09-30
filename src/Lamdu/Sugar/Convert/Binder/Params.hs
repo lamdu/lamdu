@@ -19,7 +19,7 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, traverseK1)
+import           Hyper (Tree, Pure(..), _Pure, htraverse1)
 import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
 import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
@@ -320,7 +320,7 @@ changeGetFieldTags param prevTag chosenTag x =
     b ->
         traverse_
         (changeGetFieldTags param prevTag chosenTag)
-        (b ^.. traverseK1)
+        (b ^.. htraverse1)
 
 setFieldParamTag ::
     Monad m =>
@@ -627,7 +627,7 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
             case expr ^. val of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
-            x -> all (go False) (x ^.. traverseK1)
+            x -> all (go False) (x ^.. htraverse1)
 
 -- Post process param add and delete actions to detach lambda.
 -- This isn't done for all actions as some already perform this function.

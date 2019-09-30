@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
-import           Hyper (Tree, Pure(..), _Pure, mapK, (#>))
+import           Hyper (Tree, Pure(..), _Pure, hmap, (#>))
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
@@ -243,8 +243,8 @@ setChildReplaceParentActions =
     in
     bod
     & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
-        mapK (p #> ann %~ join setToExpr)
-    & mapK (p #> fixReplaceParent setToExpr)
+        hmap (p #> ann %~ join setToExpr)
+    & hmap (p #> fixReplaceParent setToExpr)
     where
         p :: Proxy FixReplaceParent
         p = Proxy

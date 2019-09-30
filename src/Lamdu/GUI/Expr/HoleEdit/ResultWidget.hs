@@ -23,7 +23,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree, Ann(..), traverseK, (#>))
+import           Hyper (Tree, Ann(..), htraverse, (#>))
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -136,5 +136,5 @@ unfinishedPayloads ::
 unfinishedPayloads f (Ann a x) =
     withDict (SugarLens.sugarExprRecursive (Proxy @t)) $
     flip Ann
-    <$> traverseK (Proxy @SugarLens.SugarExpr #> unfinishedPayloads f) x
+    <$> htraverse (Proxy @SugarLens.SugarExpr #> unfinishedPayloads f) x
     <*> (if SugarLens.isUnfinished x then f a else pure a)

@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
-import           Hyper (Ann(..), traverseK1, Tree, Pure(..), _Pure)
+import           Hyper (Ann(..), htraverse1, Tree, Pure(..), _Pure)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -383,7 +383,7 @@ decodeVal =
 
 encodeValBody :: Tree V.Term (Ann UUID) -> AesonTypes.Object
 encodeValBody body =
-    case body & traverseK1 %~ Lens.Const . encodeVal of
+    case body & htraverse1 %~ Lens.Const . encodeVal of
     V.BApp (V.App func arg) ->
         HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
     V.BLam (V.Lam (V.Var varId) res) ->
@@ -437,7 +437,7 @@ decodeValBody obj =
       <*> (obj .: "toNomVal" <&> c <&> Lens.Const)
       <&> V.BToNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= traverseK1 (decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
+    ] >>= htraverse1 (decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
     where
         c = Lens.Const
 

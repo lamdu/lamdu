@@ -9,7 +9,7 @@ import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad.State (StateT)
 import qualified Control.Monad.State as State
-import           Hyper (Tree, traverseK1)
+import           Hyper (Tree, htraverse1)
 import           Hyper.Infer (inferBody)
 import           Hyper.Type.AST.FuncType
 import           Hyper.Type.AST.Nominal
@@ -234,7 +234,7 @@ fillHoles def (Ann pl (V.BApp (V.App func arg))) =
 fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     pure v
-fillHoles def x = (val . traverseK1) (fillHoles def) x
+fillHoles def x = (val . htraverse1) (fillHoles def) x
 
 -- | Transform by wrapping OR modifying a term. Used by both holes and
 -- fragments to expand "seed" terms. Holes include these as results

@@ -10,7 +10,7 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, traverseK1, _Pure)
+import           Hyper (Tree, htraverse1, _Pure)
 import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.AST.Row (freExtends, freRest)
 import           Hyper.Type.AST.Scheme (sTyp)
@@ -62,8 +62,8 @@ convert posInfo x@(Ann exprPl app@(V.App funcI argI)) =
                     , argS
                     )
         convertAppliedCase app funcS argS exprPl & justToLeft
-        convertLabeled (app ^.. traverseK1) funcS argS exprPl & justToLeft
-        convertPrefix (app ^.. traverseK1) funcS argS exprPl & lift
+        convertLabeled (app ^.. htraverse1) funcS argS exprPl & justToLeft
+        convertPrefix (app ^.. htraverse1) funcS argS exprPl & lift
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>

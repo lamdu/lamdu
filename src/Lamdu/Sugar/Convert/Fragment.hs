@@ -17,7 +17,7 @@ import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, traverseK1)
+import           Hyper (Tree, Pure, htraverse1)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Hyper.Unify (unify)
@@ -231,7 +231,7 @@ replaceFragment parentEntityId idxInParent (Ann pl bod) =
         V.LVar fragmentVar & V.BLeaf
         & Ann (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId)
     NotFragment ->
-        bod & Lens.indexing traverseK1 %@~ replaceFragment (pl ^. Input.entityId)
+        bod & Lens.indexing htraverse1 %@~ replaceFragment (pl ^. Input.entityId)
         & Ann (void pl)
 
 emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
@@ -257,9 +257,9 @@ emplaceInHoles replaceHole =
                                 , pure (pure oldVal)
                                 ]
                         _ ->
-                            traverseK1 (fmap Lens.Const . go) bod
-                            <&> Lens.sequenceAOf (traverseK1 . Lens._Wrapped)
-                            <&> Lens.mapped . traverseK1 %~ (^. Lens._Wrapped)
+                            htraverse1 (fmap Lens.Const . go) bod
+                            <&> Lens.sequenceAOf (htraverse1 . Lens._Wrapped)
+                            <&> Lens.mapped . htraverse1 %~ (^. Lens._Wrapped)
                             <&> Lens.mapped %~ Ann x
         replace x = replaceHole x <$ State.put True
 
@@ -315,4 +315,4 @@ mkOptionFromFragment sugarContext exprPl x =
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
         baseExpr = pruneExpr x
         pruneExpr (Ann (Just{}, _) _) = V.BLeaf V.LHole & Ann ()
-        pruneExpr (Ann _ b) = b & traverseK1 %~ pruneExpr & Ann ()
+        pruneExpr (Ann _ b) = b & htraverse1 %~ pruneExpr & Ann ()

@@ -10,7 +10,7 @@ import           Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Hyper (Pure(..), Tree, traverseK_, (#>))
+import           Hyper (Pure(..), Tree, htraverse_, (#>))
 import qualified Hyper.Type.AST.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
@@ -141,10 +141,10 @@ instance VerifyTypeInScheme T.Type where
     verifyTypeInScheme s (Pure (T.TVar v))
         | Lens.has (T.tType . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Type variable not declared " ++ show v)
-    verifyTypeInScheme s (Pure t) = traverseK_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t
+    verifyTypeInScheme s (Pure t) = htraverse_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t
 
 instance VerifyTypeInScheme T.Row where
     verifyTypeInScheme s (Pure (T.RVar v))
         | Lens.has (T.tRow . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Row variable not declared " ++ show v)
-    verifyTypeInScheme s (Pure t) = traverseK_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t
+    verifyTypeInScheme s (Pure t) = htraverse_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t

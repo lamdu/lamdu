@@ -22,6 +22,7 @@ import           Hyper.Infer (Inferred, infer, iRes)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Type.Combinator.Flip (Flip(..))
 import           Hyper.Unify (unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
@@ -191,7 +192,7 @@ inferDef inferFunc monitors results defExpr defVar =
         defTv <- newUnbound
         inferredVal <-
             inferFunc defExpr
-            & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ GMono defTv)
+            & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ MkFlip (GMono defTv))
         inferredVal <$ unify defTv (inferredVal ^. iRes . V.iType)
     & runInferResult monitors results
 
