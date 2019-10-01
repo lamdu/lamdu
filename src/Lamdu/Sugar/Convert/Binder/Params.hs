@@ -19,7 +19,7 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, htraverse1)
+import           Hyper (Tree, Pure(..), _Pure, htraverse1, hfolded1)
 import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
 import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
@@ -105,36 +105,34 @@ setParamList mPresMode paramListProp newParamList =
                         Infix f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
                         _ -> pure ()
 
-isArgOfCallTo :: V.Var -> [Val ()] -> Bool
-isArgOfCallTo funcVar (cur : parent : _) =
-    not (Lens.has varT cur) &&
-    Lens.has (ExprLens.valApply . V.appFunc . varT) parent
+unappliedUsesOfVar :: V.Var -> Val a -> [a]
+unappliedUsesOfVar var (Ann pl (V.BLeaf (V.LVar v)))
+    | v == var = [pl]
+unappliedUsesOfVar var (Ann _ (V.BApp (App f x))) =
+    rf <> rx
     where
-        varT = ExprLens.valVar . Lens.only funcVar
-isArgOfCallTo _ _ = False
-
-isUnappliedVar :: V.Var -> [Val ()] -> Bool
-isUnappliedVar var (cur : parent : _) =
-    Lens.has varT cur
-    -- Var could not be both the arg and the func (will be type error)
-    && not (Lens.has (ExprLens.valApply . V.appFunc . varT) parent)
-    && not (Lens.has (ExprLens.valApply . V.appFunc . ExprLens.valHole) parent)
-    where
-        varT = ExprLens.valVar . Lens.only var
-isUnappliedVar var [cur] = Lens.has (ExprLens.valVar . Lens.only var) cur
-isUnappliedVar _ _ = False
+        rf  | Lens.has ExprLens.valVar f = []
+            | otherwise = unappliedUsesOfVar var f
+        rx  | Lens.has ExprLens.valHole f && Lens.has ExprLens.valVar x = []
+            | otherwise = unappliedUsesOfVar var x
+unappliedUsesOfVar var x =
+    (x ^.. val . hfolded1) >>= unappliedUsesOfVar var
 
 wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
-wrapUnappliedUsesOfVar var =
-    SubExprs.onMatchingSubexprsWithPath (DataOps.applyHoleTo <&> void) (isUnappliedVar var)
+wrapUnappliedUsesOfVar var = traverse_ DataOps.applyHoleTo . unappliedUsesOfVar var
+
+argsOfCallTo :: V.Var -> Val a -> [a]
+argsOfCallTo var (Ann _ (V.BApp (App (Ann _ (V.BLeaf (V.LVar v))) x)))
+    | v == var = [x ^. ann]
+argsOfCallTo var x =
+    (x ^.. val . hfolded1) >>= argsOfCallTo var
 
 changeCallArgs ::
     Monad m =>
     (ValI m -> T m (ValI m)) -> Val (ValP m) -> V.Var -> T m ()
-changeCallArgs change v var  =
+changeCallArgs change v var =
     do
-        SubExprs.onMatchingSubexprsWithPath (Property.modify_ ?? change)
-            (isArgOfCallTo var) v
+        argsOfCallTo var v & traverse_ (Property.modify_ ?? change)
         wrapUnappliedUsesOfVar var v
 
 -- | If the lam is bound to a variable, we can fix all uses of the
