@@ -93,8 +93,8 @@ bareInfix ::
 bareInfix =
     Lens.prism toLabeledApply fromLabeledApply
     where
-        toLabeledApply (l, f, r) = LabeledApply f (Infix l r) [] []
-        fromLabeledApply (LabeledApply f (Infix l r) [] []) = Right (l, f, r)
+        toLabeledApply (l, f, r) = LabeledApply f (Operator l r) [] []
+        fromLabeledApply (LabeledApply f (Operator l r) [] []) = Right (l, f, r)
         fromLabeledApply a = Left a
 
 type AnnotateAST a body =

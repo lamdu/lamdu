@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 11
+        "schemaVersion": 12
     },
     {
         "tagOrder": 0,
@@ -362,7 +362,7 @@
     {
         "tag": "f16474a9900a44186e87098f5fcb153a",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -396,7 +396,7 @@
     {
         "tag": "cfc0c0607a3380f7975346b30c14af82",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -905,7 +905,7 @@
     {
         "tag": "71546855d6279ef70d20909b292c42c2",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -1028,7 +1028,10 @@
     {
         "tag": "dfc3376b8266c66e8c24736645128a5f",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "382c73272703b194008142206698641e"
+            ]
         },
         "def": "d7dafdd0c4c14e81beb071e1181c6356",
         "typ": {

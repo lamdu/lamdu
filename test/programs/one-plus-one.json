@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 11
+        "schemaVersion": 12
     },
     {
         "tagOrder": 0,
@@ -35,7 +35,7 @@
     {
         "tag": "a318c24216defe206feeb73ef5be0003",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]

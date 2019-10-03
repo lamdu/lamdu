@@ -76,23 +76,21 @@ uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
 
 encodePresentationMode :: Encoder Meta.PresentationMode
 encodePresentationMode Meta.Verbose = Aeson.String "Verbose"
-encodePresentationMode (Meta.Object tag) = Aeson.object ["Object" .= encodeTagId tag]
-encodePresentationMode (Meta.Infix l r) =
-    Aeson.object ["Infix" .= Aeson.Array (Vector.fromList [encodeTagId l, encodeTagId r])]
+encodePresentationMode (Meta.Operator l r) =
+    Aeson.object ["Operator" .= Aeson.Array (Vector.fromList [encodeTagId l, encodeTagId r])]
 
 decodePresentationMode :: Decoder Meta.PresentationMode
 decodePresentationMode (Aeson.String "Verbose") = pure Meta.Verbose
 decodePresentationMode x =
     decodeVariant "Type"
-    [ ("Object", \o -> o .: "Object" >>= decodeTagId <&> Meta.Object)
-    , ("Infix", \o -> o .: "Infix" >>= decodeInfix)
+    [ ("Operator", \o -> o .: "Operator" >>= decodeOperator)
     ] x
     where
-        decodeInfix =
-            Aeson.withArray "array of Infix tags" $
+        decodeOperator =
+            Aeson.withArray "array of Operator tags" $
             \arr -> case Vector.toList arr of
-            [l, r] -> Meta.Infix <$>  decodeTagId l <*> decodeTagId r
-            _ -> fail "Expecting two infix tags"
+            [l, r] -> Meta.Operator <$>  decodeTagId l <*> decodeTagId r
+            _ -> fail "Expecting two operator tags"
 
 encodeFFIName :: Encoder Definition.FFIName
 encodeFFIName (Definition.FFIName modulePath name) = modulePath ++ [name] & Aeson.toJSON

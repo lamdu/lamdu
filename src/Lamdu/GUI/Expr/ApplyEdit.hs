@@ -79,19 +79,13 @@ makeFuncRow ::
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
     Sugar.Verbose -> makeFunc GetVarEdit.Normal func
-    Sugar.Object arg ->
-        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
-        <*> sequenceA
-        [ makeFunc GetVarEdit.Normal func
-        , GuiM.makeSubexpression arg
-        ]
-    Sugar.Infix l r ->
+    Sugar.Operator l r ->
         (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
         <*> sequenceA
         [ (Options.boxSpaced ?? Options.disambiguationNone)
             <*> sequenceA
             [ GuiM.makeSubexpression l
-            , makeFunc GetVarEdit.Infix func
+            , makeFunc GetVarEdit.Operator func
             ]
         , GuiM.makeSubexpression r
         ]

@@ -228,7 +228,7 @@ delInfixArg =
             workArea ^?! arg . annotation . plActions . mSetToHole . Lens._Just & void
         holeDel workArea =
             workArea ^?! arg . hVal . _BodyHole . holeMDelete . Lens._Just & void
-        arg = replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _2
+        arg = replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 1"
@@ -289,13 +289,13 @@ testInsistEq =
     & testCase "insist-eq"
     where
         insist =
-            replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _2 .
+            replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2 .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = fail "fragment not created at expected position"
         expected =
-            replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _1 .
+            replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _1 .
             hVal . _BodyFragment
 
 testInsistIf :: Test
@@ -334,14 +334,14 @@ testInsistSubsets =
             hVal . _BodyFunction . fBody .
             hVal . _BinderExpr . _BodyCase . cBody . cItems . Lens.ix 1 . ciExpr .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Infix
+            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Operator
         insist =
             Lens.cloneTraversal consArgs . Lens._2 .
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
+            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._2 .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Infix . Lens._1 .
+            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._1 .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()

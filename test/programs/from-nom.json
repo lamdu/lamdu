@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 11
+        "schemaVersion": 12
     },
     {
         "tagOrder": 0,
@@ -3716,7 +3716,10 @@
     {
         "tag": "60be9861750facbfad8758254a2f76c0",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "69b9a1d0263f75cb50e2a06aceaa0a20"
+            ]
         },
         "def": "03eb545fa78c48a7947fef4d3e496e99",
         "typ": {
@@ -4392,7 +4395,10 @@
     {
         "tag": "cfc197131bdd4f4694fb8cf5724222ff",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a64617461626173650000000000"
+            ]
         },
         "builtin": [
             "IO",
@@ -4474,7 +4480,7 @@
     {
         "tag": "beeb20fbd67695085c26c5dfa7b5ece4",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "1b6990743fcc77560fdb139d1ac01a2c",
                 "f5f4a4909a4091dbb5b3f9524b71fd18"
             ]
@@ -4979,7 +4985,7 @@
     {
         "tag": "f16474a9900a44186e87098f5fcb153a",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -5053,7 +5059,7 @@
     {
         "tag": "3973e022e93220f9212c18d0d0c543ae",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -5084,7 +5090,7 @@
     {
         "tag": "5ec1f7e700f37c3d0b2981d04855fc34",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a73746172740000000000000000",
                 "42493a73746f70000000000000000000"
             ]
@@ -5193,7 +5199,7 @@
     {
         "tag": "32110348a4b87b7844695e53fc00857e",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -5227,7 +5233,7 @@
     {
         "tag": "8a64ff09886cc35fe5f56cd45a1f8725",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "a386d980d96f732451f7b7b7ebab441c",
                 "3cb3e183ba35da7e0cf25510f81231dd"
             ]
@@ -5771,7 +5777,7 @@
     {
         "tag": "cfc0c0607a3380f7975346b30c14af82",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -6026,7 +6032,10 @@
     {
         "tag": "f48b553b08dc7fe171a25d3ba232fa58",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a696e6465780000000000000000"
+            ]
         },
         "builtin": [
             "Bytes",
@@ -6456,7 +6465,7 @@
     {
         "tag": "62b67e1f685b7fef51102005dddd2777",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -6490,7 +6499,10 @@
     {
         "tag": "58393216032be6257784ac0c6a73efb2",
         "defPresentationMode": {
-            "Object": "ae1eba0f0719f10b147cfcbb67fcb4d4"
+            "Operator": [
+                "ae1eba0f0719f10b147cfcbb67fcb4d4",
+                "0de9d30d481f7d98aab850e3020f37ed"
+            ]
         },
         "def": "54543ca89f854da58bd69e1bccd00fdc",
         "typ": {
@@ -6614,7 +6626,7 @@
     {
         "tag": "dabd3aff769f07eb2965401eb029974e",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -6648,7 +6660,10 @@
     {
         "tag": "f7fdd21f0781ad4e8652a5158a12b5d6",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "f5f4a4909a4091dbb5b3f9524b71fd18"
+            ]
         },
         "def": "579c35851cfc4b5aa7495fd3f68d64f9",
         "typ": {
@@ -6988,7 +7003,10 @@
     {
         "tag": "d90ee9ccf6bea1d2942a7b2131933819",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "422b088a94926fd6bc76ae0f4cef6181"
+            ]
         },
         "def": "589a2be4fad24d32b8895e517deef952",
         "typ": {
@@ -7274,7 +7292,7 @@
     {
         "tag": "684888c0ebb17f374298b65ee2807526",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -7355,7 +7373,7 @@
     {
         "tag": "a2c2339691fc48fbd14fb307292dff3e",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -7591,7 +7609,7 @@
     {
         "tag": "237d65fd5b8735fbd8587a1e83d1127e",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -7776,7 +7794,10 @@
     {
         "tag": "1bc435bda14ad9da614ff4b7c2beb200",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a73746f70000000000000000000"
+            ]
         },
         "builtin": [
             "Mut",
@@ -8399,7 +8420,7 @@
     {
         "tag": "cfc0c0607a3380f7975346b30c14af82",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "64077ff41e0a8ee59e103f93023ad302",
                 "fa4970527c82ac935af48b0693d96cd9"
             ]
@@ -11015,7 +11036,7 @@
     {
         "tag": "692e4e5decffcf5eac86471ba27ac56a",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "a386d980d96f732451f7b7b7ebab441c",
                 "3cb3e183ba35da7e0cf25510f81231dd"
             ]
@@ -11585,7 +11606,10 @@
     {
         "tag": "a7937b64b8caa58f03721bb6bacf5c78",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "07e14958cc08a53c76479f91a16cb291"
+            ]
         },
         "def": "8a1642b8d2ef4d669df333f01821017e",
         "typ": {
@@ -12090,7 +12114,10 @@
     {
         "tag": "7a29ccaa6cf29e9406a99074cd1f0840",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a76616c00000000000000000000"
+            ]
         },
         "builtin": [
             "Mut",
@@ -12784,7 +12811,7 @@
     {
         "tag": "5ec1f7e700f37c3d0b2981d04855fc34",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a73746172740000000000000000",
                 "42493a73746f70000000000000000000"
             ]
@@ -13482,7 +13509,7 @@
     {
         "tag": "d79629340b6fda9d491df489dfc57e04",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -13516,7 +13543,7 @@
     {
         "tag": "8a5edab282632443219e051e4ade2d1d",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -13866,7 +13893,10 @@
     {
         "tag": "d1905cf90af29a5ac3f99e105830eecc",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "ae2e4562b694edd7d1ee385204da452d"
+            ]
         },
         "def": "aaf1be5fa8584fe191bf0caa3a7ce75e",
         "typ": {
@@ -14260,7 +14290,7 @@
     {
         "tag": "a318c24216defe206feeb73ef5be0003",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -14504,7 +14534,10 @@
     {
         "tag": "fd00218b2ffa8e23f4cbac226d48f6bb",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a696e6465780000000000000000"
+            ]
         },
         "builtin": [
             "Mut",
@@ -15291,7 +15324,7 @@
     {
         "tag": "cfc0c0607a3380f7975346b30c14af82",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "64077ff41e0a8ee59e103f93023ad302",
                 "fa4970527c82ac935af48b0693d96cd9"
             ]
@@ -15405,7 +15438,7 @@
     {
         "tag": "74cd9ef9c7e15f57bdad73c511462ca6",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -15730,7 +15763,10 @@
     {
         "tag": "b4022b06a879cccd437423e1a78b3cc3",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a76616c00000000000000000000"
+            ]
         },
         "builtin": [
             "Mut",
@@ -16038,7 +16074,7 @@
     {
         "tag": "bbf3f11cb5b43e700273a78d12de55e4",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -16069,7 +16105,10 @@
     {
         "tag": "f5f4a4909a4091dbb5b3f9524b71fd18",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a696e6465780000000000000000"
+            ]
         },
         "builtin": [
             "Array",
@@ -16105,7 +16144,10 @@
     {
         "tag": "86afb2feda96bdf011a2374db293af38",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "cb48008a91a5c33154f5f1b82e05bf61"
+            ]
         },
         "def": "d44babde039046059782170790e3cdd1",
         "typ": {
@@ -16336,7 +16378,7 @@
     {
         "tag": "71546855d6279ef70d20909b292c42c2",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -16926,7 +16968,10 @@
     {
         "tag": "dfc3376b8266c66e8c24736645128a5f",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "382c73272703b194008142206698641e"
+            ]
         },
         "def": "d7dafdd0c4c14e81beb071e1181c6356",
         "typ": {
@@ -17310,7 +17355,7 @@
     {
         "tag": "41b805ea7ac014e23556e98bb374702a",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -17375,7 +17420,10 @@
     {
         "tag": "b2cd1c7142a495869046dfe3b4987333",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a696e6465780000000000000000"
+            ]
         },
         "builtin": [
             "Mut",
@@ -17584,7 +17632,7 @@
     {
         "tag": "565d240f5343e625ae579a4d45a770f1",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -19277,7 +19325,10 @@
     {
         "tag": "c8f0d9aeda119c2013f7c1bbef9e8763",
         "defPresentationMode": {
-            "Object": "42493a6f626a65637400000000000000"
+            "Operator": [
+                "42493a6f626a65637400000000000000",
+                "42493a73746172740000000000000000"
+            ]
         },
         "builtin": [
             "Bytes",
@@ -19308,7 +19359,7 @@
     {
         "tag": "73e7b6f86214bc78ee505fb5f7d4fb97",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -19416,7 +19467,7 @@
     {
         "tag": "944604880c12a9c1b69a38680bdef084",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
@@ -20285,7 +20336,10 @@
     {
         "tag": "d1905cf90af29a5ac3f99e105830eecc",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "422b088a94926fd6bc76ae0f4cef6181"
+            ]
         },
         "def": "ef15e9ece99a44fc9a41740a570f3fc9",
         "typ": {
@@ -20560,7 +20614,10 @@
     {
         "tag": "d90ee9ccf6bea1d2942a7b2131933819",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "ae2e4562b694edd7d1ee385204da452d"
+            ]
         },
         "def": "efdcd00625534eb5b480c13776995953",
         "typ": {
@@ -20928,7 +20985,7 @@
     {
         "tag": "6b23c96867fb2b3082359dda58202ca9",
         "defPresentationMode": {
-            "Infix": [
+            "Operator": [
                 "50fd18e5c459d85ad1e66236feb7f37b",
                 "69b9a1d0263f75cb50e2a06aceaa0a20"
             ]
@@ -21134,7 +21191,10 @@
     {
         "tag": "06e845068413862d60d1a9a07c3c1c29",
         "defPresentationMode": {
-            "Object": "1b6990743fcc77560fdb139d1ac01a2c"
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "cb48008a91a5c33154f5f1b82e05bf61"
+            ]
         },
         "def": "ffeef606bcec4865907d3c690decc36c",
         "typ": {

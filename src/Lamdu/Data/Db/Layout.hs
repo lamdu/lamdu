@@ -82,4 +82,4 @@ dbSchemaVersion :: IRef DbM Int
 dbSchemaVersion = IRef.anchor "dbSchemaVersion"
 
 curDbSchemaVersion :: Int
-curDbSchemaVersion = 11
+curDbSchemaVersion = 12

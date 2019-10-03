@@ -121,14 +121,14 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addInfixMarker :: Element a => Widget.Id -> a -> a
-addInfixMarker widgetId =
+addOperatorMarker :: Element a => Widget.Id -> a -> a
+addOperatorMarker widgetId =
     Element.bottomLayer %@~
     \size -> Anim.singletonFrame 1 frameId (infixMarker size) & flip mappend
     where
         frameId = Widget.toAnimId widgetId ++ ["infix"]
 
-data Role = Normal | Infix deriving Eq
+data Role = Normal | Operator deriving Eq
 
 navDoc ::
     ( Has (Texts.Navigation Text) env
@@ -162,8 +162,8 @@ makeNameRef role color myId nameRef =
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         nameText <- Name.visible name <&> (^. _1 . Name.ttText)
         let mAddMarker
-                | (role == Infix) == Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
-                | otherwise = addInfixMarker nameId
+                | (role == Operator) == Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
+                | otherwise = addOperatorMarker nameId
         makeSimpleView color name nameId
             <&> mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap

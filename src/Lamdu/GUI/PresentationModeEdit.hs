@@ -29,8 +29,7 @@ lens :: Sugar.SpecialArgs dummy -> Lens.Lens' (Texts.CodeUI a) a
 lens mode =
     case mode of
     Sugar.Verbose -> Texts.pModeVerbose
-    Sugar.Object{} -> Texts.pModeOO
-    Sugar.Infix{} -> Texts.pModeInfix
+    Sugar.Operator{} -> Texts.pModeOperator
 
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 make ::
@@ -49,7 +48,7 @@ make myId (Sugar.Params params) prop =
     do
         theme <- Lens.view has
         pairs <-
-            traverse mkPair [Sugar.Object (paramTags !! 0), Sugar.Verbose, Sugar.Infix (paramTags !! 0) (paramTags !! 1)]
+            traverse mkPair [Sugar.Verbose, Sugar.Operator (paramTags !! 0) (paramTags !! 1)]
             & Reader.local
                 (has . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
         defConfig <-

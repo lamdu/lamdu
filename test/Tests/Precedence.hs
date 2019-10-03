@@ -17,12 +17,12 @@ infixArgs ::
     ( Sugar.Expression name i o a
     , Sugar.Expression name i o a
     )
-infixArgs = hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
+infixArgs = hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator
 
 test :: Test
 test =
     testGroup "precedence"
-    [ testMinOpPrecInfix
+    [ testMinOpPrecOperator
     , testPunnedArgOp
     , testGetFieldOfApply
     , test445
@@ -58,8 +58,8 @@ testGetFieldOfApply =
     where
         expr = (Stub.identity $$ Stub.hole) $. "a" & Parens.addToExprWith 0
 
-testMinOpPrecInfix :: Test
-testMinOpPrecInfix =
+testMinOpPrecOperator :: Test
+testMinOpPrecOperator =
     do
         assertEqual "Plus in mul need no paren?!" Parens.NeedsParens needsParens
         assertEqual "minOpPrec is not 10?!" 10 minOpPrec
@@ -81,5 +81,5 @@ test445 =
         problemPos =
             expr ^?!
             hVal . Sugar._BodySimpleApply . Sugar.appArg .
-            hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix . _1
+            hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator . _1
         i = Stub.litNum

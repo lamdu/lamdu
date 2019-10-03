@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Meta
     ( DefinitionState(..)
-    , SpecialArgs(..), _Verbose, _Object, _Infix
+    , SpecialArgs(..), _Verbose, _Operator
     , PresentationMode
     , ParamList
     ) where
@@ -17,8 +17,7 @@ data DefinitionState = DeletedDefinition | LiveDefinition
 
 data SpecialArgs a
     = Verbose
-    | Object a
-    | Infix a a
+    | Operator a a
     deriving stock (Eq, Ord, Show, Generic, Functor, Foldable, Traversable)
     deriving anyclass Binary
 

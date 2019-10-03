@@ -1,11 +1,30 @@
 module Lamdu.Data.Export.JSON.Migration.Common
-    ( version, migrateToVer
+    ( collectTags, TagId, TagOrder, TagMap
+    , version, migrateToVer
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
+import qualified Data.Text as Text
 
 import           Lamdu.Prelude
+
+type TagId = Text
+type TagOrder = Int
+
+type TagMap = Map TagId TagOrder
+
+collectTags :: Aeson.Value -> Either Text TagMap
+collectTags (Aeson.Object obj) =
+    case obj ^. Lens.at "tagOrder" of
+    Just (Aeson.Number tagOrder) ->
+        case obj ^. Lens.at "tag" of
+        Nothing -> Left "Malformed 'tag' node"
+        Just  (Aeson.String tagId) -> mempty & Lens.at tagId ?~ round tagOrder & Right
+        Just _ -> Left "Malformed 'tagOrder'"
+    Just x -> Left $ "Malformed 'tag' id: " <> Text.pack (show x)
+    Nothing -> Right mempty
+collectTags _ = Right mempty
 
 version :: Integer -> Aeson.Value
 version x =

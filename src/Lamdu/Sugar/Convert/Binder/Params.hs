@@ -98,8 +98,7 @@ setParamList mPresMode paramListProp newParamList =
                 do
                     presMode <- getP presModeProp
                     case presMode of
-                        Object f | [f] /= take 1 newParamList -> setP presModeProp Verbose
-                        Infix f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
+                        Operator f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
                         _ -> pure ()
 
 unappliedUsesOfVar :: V.Var -> Ann a # V.Term -> [a # V.Term]
@@ -708,8 +707,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
         mPresModeToTags p =
             case p of
-            Just (Object t) -> [t]
-            Just (Infix t0 t1) -> [t0, t1]
+            Just (Operator t0 t1) -> [t0, t1]
             _ -> []
 
 convertVarToCalls ::

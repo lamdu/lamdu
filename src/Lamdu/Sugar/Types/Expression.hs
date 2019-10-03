@@ -22,7 +22,7 @@ module Lamdu.Sugar.Types.Expression
     , Let(..)
         , lValue, lName, lUsages
         , lDelete, lBodyScope, lBody, lVarInfo
-    , Meta.SpecialArgs(..), Meta._Verbose, Meta._Object, Meta._Infix
+    , Meta.SpecialArgs(..), Meta._Verbose, Meta._Operator
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..), _BinderLet, _BinderExpr

@@ -39,7 +39,7 @@ makeLabeledApply func args punnedArgs exprPl =
     do
         presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let mkInfixArg arg other =
+        let mkOperatorArg arg other =
                 arg
                 & hVal . Sugar._BodyHole . Sugar.holeMDelete ?~
                     (protectedSetToVal
@@ -49,13 +49,9 @@ makeLabeledApply func args punnedArgs exprPl =
                     )
         let (specialArgs, removedKeys) =
                 case traverse argExpr presentationMode of
-                Just (Sugar.Infix (l, la) (r, ra)) ->
-                    ( Sugar.Infix (mkInfixArg la ra) (mkInfixArg ra la)
+                Just (Sugar.Operator (l, la) (r, ra)) ->
+                    ( Sugar.Operator (mkOperatorArg la ra) (mkOperatorArg ra la)
                     , [l, r]
-                    )
-                Just (Sugar.Object (o, oa)) ->
-                    ( Sugar.Object oa
-                    , [o]
                     )
                 _ -> (Sugar.Verbose, [])
         pure Sugar.LabeledApply

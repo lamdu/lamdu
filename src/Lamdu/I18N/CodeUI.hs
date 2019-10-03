@@ -49,8 +49,7 @@ data CodeUI a = CodeUI
     , _moveUp :: a
     , _presentationMode :: a
     , _pModeVerbose :: a
-    , _pModeOO :: a
-    , _pModeInfix :: a
+    , _pModeOperator :: a
     , _jsException :: a
     , _jsReachedAHole :: a
     , _jsStaleDep :: a

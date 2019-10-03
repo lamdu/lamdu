@@ -13,14 +13,11 @@ import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.Class (sortOn)
 import qualified Data.Vector as Vector
-import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
+import qualified Lamdu.Data.Export.JSON.Migration.Common as Migration
 
 import           Lamdu.Prelude
 
-type TagId = Text
-type TagOrder = Int
-
-migrateEntity :: Map TagId TagOrder -> Aeson.Value -> Either Text Aeson.Value
+migrateEntity :: Migration.TagMap -> Aeson.Value -> Either Text Aeson.Value
 migrateEntity tagMap (Aeson.Object obj) =
     obj ^. Lens.at "defPresentationMode" >>= mkNewPresMode mTags
     & fromMaybe (Right obj)
@@ -57,22 +54,10 @@ migrateEntity tagMap (Aeson.Object obj) =
         mObject _ = Nothing
 migrateEntity _ _ = Left "Expecting object"
 
-collectTags :: Aeson.Value -> Either Text (Map TagId TagOrder)
-collectTags (Aeson.Object obj) =
-    case obj ^. Lens.at "tag" of
-    Just (Aeson.String tagId) ->
-        case obj ^. Lens.at "tagOrder" of
-        Nothing -> Left "Malformed 'tag' node"
-        Just (Aeson.Number tagOrder) -> mempty & Lens.at tagId ?~ round tagOrder & Right
-        Just _ -> Left "Malformed 'tagOrder'"
-    Just _ -> Left "Malformed 'tag' id"
-    Nothing -> Right mempty
-collectTags _ = Right mempty
-
 migrate :: Aeson.Value -> Either Text Aeson.Value
 migrate =
-    migrateToVer 3 $
+    Migration.migrateToVer 3 $
     \vals ->
     do
-        tagMap <- traverse collectTags vals <&> (^. traverse)
+        tagMap <- traverse Migration.collectTags vals <&> (^. traverse)
         traverse (migrateEntity tagMap) vals
