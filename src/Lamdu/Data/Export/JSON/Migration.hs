@@ -7,6 +7,7 @@ module Lamdu.Data.Export.JSON.Migration
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Text (unpack)
+import           Lamdu.Data.Db.Layout (curDbSchemaVersion)
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion1 as ToVersion1
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion10 as ToVersion10
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion11 as ToVersion11
@@ -49,7 +50,14 @@ versionMigrations =
     ]
 
 currentVersion :: Int
-currentVersion = length versionMigrations
+currentVersion
+    | length versionMigrations == curDbSchemaVersion = curDbSchemaVersion
+    | otherwise =
+        unwords
+        [ "curDbSchemaVersion is", show curDbSchemaVersion
+        , "but number of migrations implemented is"
+        , show (length versionMigrations)
+        ] & error
 
 toIO :: Either Text a -> IO a
 toIO = either (fail . unpack) pure
