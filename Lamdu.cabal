@@ -60,6 +60,12 @@ Flag dev
   description: Build a dev version (faster build, no version output support)
   default: False
 
+Executable migrate
+  main-is: tools/migrate.hs
+  build-depends: Lamdu, base, directory, aeson, filepath, aeson-pretty, bytestring
+  default-extensions: NoImplicitPrelude, OverloadedStrings, LambdaCase
+  default-language: Haskell2010
+
 Executable lamdu
   main-is: Lamdu/Main.hs
   hs-source-dirs: src/main
