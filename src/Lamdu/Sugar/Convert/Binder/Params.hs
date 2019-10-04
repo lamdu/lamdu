@@ -176,14 +176,14 @@ mkCpScopesOfLam lamPl =
     lamPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
     <&> (fmap . map) BinderParamScopeId
 
-getFieldOnVar :: Lens.Traversal' (Val t) (V.Var, T.Tag)
-getFieldOnVar = val . V._BGetField . inGetField
+getFieldOnVar :: Lens.Traversal' (Tree Pure V.Term) (V.Var, T.Tag)
+getFieldOnVar =
+    _Pure . V._BGetField . inGetField
     where
-        inGetField f (V.GetField (Ann pl (V.BLeaf (V.LVar v))) t) =
-            f (v, t) <&> pack pl
+        inGetField f (V.GetField (Pure (V.BLeaf (V.LVar v))) t) =
+            f (v, t) <&> pack
         inGetField _ other = pure other
-        pack pl (v, t) =
-            V.GetField (Ann pl (V.BLeaf (V.LVar v))) t
+        pack (v, t) = V.GetField (Pure (V.BLeaf (V.LVar v))) t
 
 getFieldParamsToHole ::
     Monad m =>
@@ -421,8 +421,8 @@ removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 removeCallsToVar funcVar x =
     do
         SubExprs.onMatchingSubexprs changeRecursion
-            ( val . V._BApp . V.appFunc . ExprLens.valVar
-            . Lens.only funcVar
+            ( _Pure . V._BApp . V.appFunc
+            . _Pure . V._BLeaf . V._LVar . Lens.only funcVar
             ) x
         wrapUnappliedUsesOfVar funcVar x
     where
@@ -711,7 +711,8 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Val (ValP m) -> T m ()
 convertVarToCalls mkArg var =
-    SubExprs.onMatchingSubexprs (Property.modify_ ?? change) (ExprLens.valVar . Lens.only var)
+    SubExprs.onMatchingSubexprs (Property.modify_ ?? change)
+    (_Pure . V._BLeaf . V._LVar . Lens.only var)
     where
         change x = mkArg >>= ExprIRef.newValI . V.BApp . V.App x
 
