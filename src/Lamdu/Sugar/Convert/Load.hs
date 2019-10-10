@@ -2,7 +2,7 @@
 -- (unify with stored ParamLists, recursion support)
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeApplications #-}
 module Lamdu.Sugar.Convert.Load
-    ( InferResult(..), irVal, irCtx
+    ( InferOut(..), irVal, irCtx
     , inferDef
     , inferDefExpr
     , makeNominalsMap
@@ -130,11 +130,11 @@ readValAndAddProperties prop =
     <&> ExprIRef.addProperties (prop ^. Property.pSet)
     <&> annotations %~ fst
 
-data InferResult m = InferResult
+data InferOut m = InferOut
     { _irVal :: Val (Input.Payload m [EntityId])
     , _irCtx :: InferState
     }
-Lens.makeLenses ''InferResult
+Lens.makeLenses ''InferOut
 
 resolve ::
     Val (ValP m, Tree V.IResult UVar) ->
@@ -153,7 +153,7 @@ runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     PureInfer (Tree (Inferred (ValP m) UVar) V.Term) ->
-    T m (Either (Tree Pure T.TypeError) (InferResult m))
+    T m (Either (Tree Pure T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors
     case runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act of
@@ -172,7 +172,7 @@ runInferResult _monitors evalRes act =
                 & makeNominalsMap
                 <&>
                 \nomsMap ->
-                InferResult
+                InferOut
                 (preparePayloads nomsMap evalRes resolvedTerm & annotations %~ setUserData)
                 inferState1
                 & Right
@@ -186,7 +186,7 @@ inferDef ::
     InferFunc (ValP m) -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) -> V.Var ->
-    T m (Either (Tree Pure T.TypeError) (InferResult m))
+    T m (Either (Tree Pure T.TypeError) (InferOut m))
 inferDef inferFunc monitors results defExpr defVar =
     do
         defTv <- newUnbound
@@ -200,6 +200,6 @@ inferDefExpr ::
     Monad m =>
     InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
     Definition.Expr (Val (ValP m)) ->
-    T m (Either (Tree Pure T.TypeError) (InferResult m))
+    T m (Either (Tree Pure T.TypeError) (InferOut m))
 inferDefExpr inferFunc monitors results defExpr =
     inferFunc defExpr & runInferResult monitors results

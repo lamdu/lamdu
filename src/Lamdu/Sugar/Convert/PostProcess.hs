@@ -30,9 +30,9 @@ type T = Transaction
 data Result = GoodExpr | BadExpr (Tree Pure T.TypeError)
 
 makeScheme ::
-    Load.InferResult m ->
+    Load.InferOut m ->
     Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
-makeScheme (Load.InferResult inferredVal inferContext) =
+makeScheme (Load.InferOut inferredVal inferContext) =
     generalize (inferredVal ^. ann . Input.inferResult . V.iType)
     >>= saveScheme
     & runPureInfer V.emptyScope inferContext

@@ -106,7 +106,7 @@ convertInferDefExpr ::
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
-        Load.InferResult valInferred newInferContext <-
+        Load.InferOut valInferred newInferContext <-
             Load.inferDef cachedInfer (env ^. has) (env ^. has) defExpr defVar
             <&> assertInferSuccess
         outdatedDefinitions <-
@@ -195,7 +195,7 @@ convertRepl env cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
-        Load.InferResult valInferred newInferContext <-
+        Load.InferOut valInferred newInferContext <-
             Load.inferDefExpr cachedInfer (env ^. has) (env ^. has) defExpr
             <&> assertInferSuccess
         outdatedDefinitions <-
