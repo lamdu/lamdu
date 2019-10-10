@@ -21,9 +21,9 @@ convertToNom ::
     (Monad m, Monoid a) =>
     Tree (Ann (Input.Payload m a)) (ToNom NominalId V.Term) ->
     ConvertM m (ExpressionU m a)
-convertToNom (Ann pl nom@(ToNom tid x)) =
+convertToNom a@(Ann pl (ToNom tid x)) =
     do
-        ConvertText.text nom pl & justToLeft
+        ConvertText.text a & justToLeft
         Nominal
             <$> ConvertTId.convert tid
             <*> ConvertBinder.convertBinder x
