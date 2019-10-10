@@ -18,9 +18,8 @@ import qualified Control.Lens as Lens
 import           Data.Function.Decycle (decycle)
 import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
-import           Hyper (Tree, Pure, htraverse1)
+import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Hyper.Type.Functor (F(..), _F)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
@@ -87,32 +86,32 @@ readVal =
         loop valI =
             \case
             Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> readValI valI >>= htraverse1 go <&> Ann valI
+            Just go -> readValI valI >>= htraverse1 go <&> Ann (Const valI)
 
 expressionBodyFrom ::
     Monad m =>
     Val (Maybe (ValI m), a) ->
-    T m (Tree V.Term (Ann (ValI m, a)))
-expressionBodyFrom = htraverse1 writeValWithStoredSubexpressions . (^. val)
+    T m (Tree V.Term (Ann (Const (ValI m, a))))
+expressionBodyFrom = htraverse1 writeValWithStoredSubexpressions . (^. hVal)
 
 writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & htraverse1 %~ (^. ann . _1)
+        let bodyWithRefs = body & htraverse1 %~ (^. hAnn . Lens._Wrapped . _1)
         case mIRef of
-            Just valI -> Ann (valI, pl) body <$ writeValI valI bodyWithRefs
-            Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (exprI, pl) body
+            Just valI -> Ann (Const (valI, pl)) body <$ writeValI valI bodyWithRefs
+            Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (Const (exprI, pl)) body
     where
-        (mIRef, pl) = expr ^. ann
+        (mIRef, pl) = expr ^. hAnn . Lens._Wrapped
 
 addProperties ::
     Monad m =>
     (ValI m -> T m ()) ->
     Val (ValI m, a) ->
     Val (ValP m, a)
-addProperties setValI (Ann (valI, a) body) =
-    Ann (Property valI setValI, a) (body & Lens.indexing htraverse1 %@~ f)
+addProperties setValI (Ann (Const (valI, a)) body) =
+    Ann (Const (Property valI setValI, a)) (body & Lens.indexing htraverse1 %@~ f)
     where
         f index =
             addProperties $ \valINew ->

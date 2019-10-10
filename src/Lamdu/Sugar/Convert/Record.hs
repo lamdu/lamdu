@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Record
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), hAnn)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -32,17 +32,17 @@ convertEmpty pl =
 
 convertExtend ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) (RowExtend T.Tag V.Term V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (RowExtend T.Tag V.Term V.Term) ->
     ConvertM m (ExpressionU m a)
-convertExtend (Ann exprPl (RowExtend tag val rest)) =
+convertExtend (Ann (Const exprPl) (RowExtend tag val rest)) =
     do
         valS <- ConvertM.convertSubexpression val
         restS <- ConvertM.convertSubexpression rest
         let recP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = val ^. ann . plValI
-                , Composite._extendRest = rest ^. ann
+                , Composite._extendValI = val ^. hAnn . Lens._Wrapped . plValI
+                , Composite._extendRest = rest ^. hAnn . Lens._Wrapped
                 }
         Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where

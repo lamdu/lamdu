@@ -19,9 +19,9 @@ import           Lamdu.Prelude
 
 convertToNom ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) (ToNom NominalId V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (ToNom NominalId V.Term) ->
     ConvertM m (ExpressionU m a)
-convertToNom a@(Ann pl (ToNom tid x)) =
+convertToNom a@(Ann (Const pl) (ToNom tid x)) =
     do
         ConvertText.text a & justToLeft
         Nominal

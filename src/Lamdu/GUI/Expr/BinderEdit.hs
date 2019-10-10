@@ -18,8 +18,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -56,7 +55,7 @@ makeLetEdit ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.Let Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     GuiM env i o (Responsive o)
 makeLetEdit item =
     do
@@ -70,7 +69,7 @@ makeLetEdit item =
                         , has . Definitions.extractToOuter
                         ])
                     . fmap ExprEventMap.extractCursor
-                ) (item ^? Sugar.lValue . ann . Sugar.plActions . Sugar.extract)
+                ) (item ^? Sugar.lValue . hAnn . Lens._Wrapped . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc env
@@ -95,7 +94,7 @@ makeLetEdit item =
                     <&> Widget.weakerEvents eventMap
                     <&> Element.padAround (env ^. has . Theme.letItemPadding))
     where
-        bodyId = item ^. Sugar.lBody . ann & WidgetIds.fromExprPayload
+        bodyId = item ^. Sugar.lBody . hAnn . Lens._Wrapped & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
 lookupMKey :: Ord k => Maybe k -> Map k a -> Maybe a
@@ -113,18 +112,18 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
         (Sugar.Binder Name i o) ->
     GuiM env i o (Responsive o)
-make (Ann pl (Sugar.BinderExpr assignmentBody)) =
-    Ann pl assignmentBody & GuiM.makeSubexpression
-make (Ann pl (Sugar.BinderLet l)) =
+make (Ann (Const pl) (Sugar.BinderExpr assignmentBody)) =
+    Ann (Const pl) assignmentBody & GuiM.makeSubexpression
+make (Ann (Const pl) (Sugar.BinderLet l)) =
     do
         env <- Lens.view id
         let moveToInnerEventMap =
                 body
-                ^? val . Sugar._BinderLet
-                . Sugar.lValue . ann . Sugar.plActions
+                ^? hVal . Sugar._BinderLet
+                . Sugar.lValue . hAnn . Lens._Wrapped . Sugar.plActions
                 . Sugar.extract
                 & foldMap
                 (E.keysEventMap (env ^. has . Config.moveLetInwardKeys)

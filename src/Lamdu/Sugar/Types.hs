@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, KindSignatures, DataKinds #-}
 module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
@@ -17,7 +17,7 @@ module Lamdu.Sugar.Types
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
-import           Hyper (Tree, Ann, annotations)
+import           Hyper
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
@@ -37,19 +37,19 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Tree (Ann a) (Assignment name i o)
+    , _deContent :: Tree (Ann (Const a)) (Assignment name i o)
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression
 
 instance Functor (DefinitionExpression name i o) where
-    fmap = (deContent . annotations %~)
+    fmap f = deContent . Lens.from _HFlip %~ hmap (\_ -> Lens._Wrapped %~ f)
 
 instance Foldable (DefinitionExpression name i o) where
-    foldMap f = (^. deContent . annotations . Lens.to f)
+    foldMap f = (^. deContent . Lens.from _HFlip . Lens.to (hfoldMap (\_ (Const x) -> f x)))
 
 instance Traversable (DefinitionExpression name i o) where
-    traverse = deContent . annotations
+    traverse f = (deContent . Lens.from _HFlip) (htraverse (\_ -> Lens._Wrapped f))
 
 data DefinitionBuiltin name o = DefinitionBuiltin
     { _biName :: Definition.FFIName
@@ -89,7 +89,7 @@ data Pane name i o a = Pane
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
-    { _replExpr :: Tree (Ann a) (Binder name i o)
+    { _replExpr :: Tree (Ann (Const a)) (Binder name i o)
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving Generic
@@ -97,13 +97,13 @@ data Repl name i o a = Repl
 Lens.makeLenses ''Repl
 
 instance Functor (Repl name i o) where
-    fmap = (replExpr . annotations %~)
+    fmap f = replExpr %~ Lens.from _HFlip %~ hmap (\_ -> Lens._Wrapped %~ f)
 
 instance Foldable (Repl name i o) where
-    foldMap f = (^. replExpr . annotations . Lens.to f)
+    foldMap f = (^. replExpr . Lens.from _HFlip . Lens.to (hfoldMap (\_ (Const x) -> f x)))
 
 instance Traversable (Repl name i o) where
-    traverse = replExpr . annotations
+    traverse f = (replExpr . Lens.from _HFlip) (htraverse (\_ -> Lens._Wrapped f))
 
 data WorkArea name i o a = WorkArea
     { _waPanes :: [Pane name i o a]

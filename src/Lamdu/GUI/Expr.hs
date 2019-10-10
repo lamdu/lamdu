@@ -52,7 +52,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
-make (Ann pl body) =
+make (Ann (Const pl) body) =
     makeEditor body pl & assignCursor
     where
         exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
@@ -82,7 +82,7 @@ makeEditor ::
     , SearchMenu.HasTexts env
     ) =>
     Tree (Sugar.Body Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeEditor body pl =

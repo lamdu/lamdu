@@ -11,8 +11,7 @@ import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (Tree, Pure, RTraversable)
-import           Hyper.Type.Ann (Ann, ann, annotations)
+import           Hyper
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -139,7 +138,8 @@ convertInferDefExpr env cp defType defExpr defI =
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             <&> _DefinitionBodyExpression . deContent %~ markAnnotations (env ^. has)
-            >>= (_DefinitionBodyExpression . deContent . annotations) convertPayload
+            >>= (_DefinitionBodyExpression . deContent . Lens.from _HFlip)
+                (htraverse (const (Lens._Wrapped convertPayload)))
             & ConvertM.run context
     where
         cachedInfer = Cache.infer (env ^. has)
@@ -173,10 +173,11 @@ convertDefBody env cp (Definition.Definition bod defType defI) =
 markAnnotations ::
     (MarkAnnotations t, RTraversable t) =>
     Config ->
-    Tree (Ann a) t ->
-    Tree (Ann (ShowAnnotation, a)) t
+    Tree (Ann (Const a)) t ->
+    Tree (Ann (Const (ShowAnnotation, a))) t
 markAnnotations config
-    | config ^. showAllAnnotations = annotations %~ (,) alwaysShowAnnotations
+    | config ^. showAllAnnotations =
+        Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) alwaysShowAnnotations))
     | otherwise = markNodeAnnotations
 
 convertRepl ::
@@ -218,9 +219,9 @@ convertRepl env cp =
                 , _scLanguageIdentifier = env ^. has
                 , _scLanguageDir = env ^. has
                 }
-        let typ = valInferred ^. ann . Input.inferredType
+        let typ = valInferred ^. hAnn . Lens._Wrapped . Input.inferredType
         nomsMap <-
-            valInferred ^.. annotations . Input.inferredType . ExprLens.tIds
+            valInferred ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . Input.inferredType . ExprLens.tIds
             & Load.makeNominalsMap
         let completion =
                 env ^. has
@@ -229,7 +230,7 @@ convertRepl env cp =
         expr <-
             convertBinder valInferred
             <&> markAnnotations (env ^. has)
-            >>= annotations convertPayload
+            >>= Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload)))
             & ConvertM.run context
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId

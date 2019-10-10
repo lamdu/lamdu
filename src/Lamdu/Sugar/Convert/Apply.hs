@@ -10,11 +10,10 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, htraverse1, _Pure)
+import           Hyper
 import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.AST.Row (freExtends, freRest)
 import           Hyper.Type.AST.Scheme (sTyp)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Calc.Definition (Deps, depsGlobalTypes)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -38,9 +37,9 @@ import           Lamdu.Prelude
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (Ann (Input.Payload m a)) (V.App V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (V.App V.Term) ->
     ConvertM m (ExpressionU m a)
-convert posInfo x@(Ann exprPl app@(V.App funcI argI)) =
+convert posInfo x@(Ann (Const exprPl) app@(V.App funcI argI)) =
     runMatcherT $
     do
         (funcS, argS) <-
@@ -50,14 +49,14 @@ convert posInfo x@(Ann exprPl app@(V.App funcI argI)) =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure
-                    ( if Lens.has (val . _BodyHole) argS
+                    ( if Lens.has (hVal . _BodyHole) argS
                       then
-                          let dst = argI ^. ann . Input.stored . Property.pVal
+                          let dst = argI ^. hAnn . Lens._Wrapped . Input.stored . Property.pVal
                               deleteAction =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & ann . pActions . mSetToHole ?~ deleteAction
+                              & hAnn . Lens._Wrapped . pActions . mSetToHole ?~ deleteAction
                       else funcS
                     , argS
                     )
@@ -82,7 +81,7 @@ validateDefParamsMatchArgs var record frozenDeps =
         defArgs ^? freRest . _Pure . T._REmpty & maybeToMPlus
         let sFields =
                 (record ^.. cItems . traverse . ciTag . tagRefTag . tagVal) <>
-                (record ^.. cPunnedItems . traverse . val . Lens._Wrapped . getVarName . inTag)
+                (record ^.. cPunnedItems . traverse . hVal . Lens._Wrapped . getVarName . inTag)
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
 
@@ -95,11 +94,11 @@ convertLabeled subexprs funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
         -- Make sure it's a not a param, get the var
-        sBinderVar <- funcS ^? val . _BodyGetVar . _GetBinder & maybeToMPlus
+        sBinderVar <- funcS ^? hVal . _BodyGetVar . _GetBinder & maybeToMPlus
         -- Make sure it is not a "let" but a "def" (recursive or external)
         _ <- sBinderVar ^? bvForm . _GetDefinition & maybeToMPlus
         -- Make sure the argument is a record
-        record <- argS ^? val . _BodyRecord & maybeToMPlus
+        record <- argS ^? hVal . _BodyRecord & maybeToMPlus
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
@@ -119,7 +118,7 @@ convertLabeled subexprs funcS argS exprPl =
                     }
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (funcS ^. ann) (Const sBinderVar))
+            (Ann (Const (funcS ^. hAnn . Lens._Wrapped)) (Const sBinderVar))
             (record ^. cItems <&> getArg) (record ^. cPunnedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
@@ -137,9 +136,9 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. ann . pInput . Input.stored & Property.value)
+                (funcS ^. hAnn . Lens._Wrapped . pInput . Input.stored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply App
             { _appFunc = funcS
-            , _appArg = argS & val . _BodyHole . holeMDelete ?~ del
+            , _appArg = argS & hVal . _BodyHole . holeMDelete ?~ del
             } & addActions subexprs applyPl

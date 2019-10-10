@@ -10,10 +10,9 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Hyper (Tree)
+import           Hyper (Tree, Ann(..))
 import           Hyper.Type.AST.App (appChildren)
 import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
@@ -74,8 +73,8 @@ binderVarType (GetDefinition _) = GlobalDef
 
 toCompositeFields ::
     MonadNaming m =>
-    CompositeFields (OldName m) (Tree (Ann a) (Type (OldName m))) ->
-    m (CompositeFields (NewName m) (Tree (Ann a) (Type (NewName m))))
+    CompositeFields (OldName m) (Tree (Ann (Const a)) (Type (OldName m))) ->
+    m (CompositeFields (NewName m) (Tree (Ann (Const a)) (Type (NewName m))))
 toCompositeFields (CompositeFields fields mExt) =
     CompositeFields
     <$> traverse toField fields
@@ -88,8 +87,8 @@ toTId = tidName %%~ opGetName Nothing TaggedNominal
 
 toTBody ::
     MonadNaming m =>
-    Tree (Type (OldName m)) (Ann a) ->
-    m (Tree (Type (NewName m)) (Ann a))
+    Tree (Type (OldName m)) (Ann (Const a)) ->
+    m (Tree (Type (NewName m)) (Ann (Const a)))
 toTBody (TVar tv) = opGetName Nothing TypeVar tv <&> TVar
 toTBody (TFun (FuncType a b)) = FuncType <$> toType a <*> toType b <&> TFun
 toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
@@ -101,9 +100,9 @@ toTBody (TInst tid params) =
 
 toType ::
     MonadNaming m =>
-    Tree (Ann a) (Type (OldName m)) ->
-    m (Tree (Ann a) (Type (NewName m)))
-toType = val toTBody
+    Tree (Ann (Const a)) (Type (OldName m)) ->
+    m (Tree (Ann (Const a)) (Type (NewName m)))
+toType (Ann (Const pl) x) = toTBody x <&> Ann (Const pl)
 
 toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
 toScheme (Scheme tvs typ) = Scheme tvs <$> toType typ
@@ -196,19 +195,19 @@ toPayload payload@Payload{_plAnnotation, _plActions} =
 
 toNode ::
     MonadNaming m =>
-    (Tree ka (Ann (Payload (OldName m) (IM m) o p)) ->
-     m (Tree kb (Ann (Payload (NewName m) (IM m) o p)))) ->
-    Tree (Ann (Payload (OldName m) (IM m) o p)) ka ->
-    m (Tree (Ann (Payload (NewName m) (IM m) o p)) kb)
-toNode toV (Ann pl v) =
+    (Tree ka (Ann (Const (Payload (OldName m) (IM m) o p))) ->
+     m (Tree kb (Ann (Const (Payload (NewName m) (IM m) o p))))) ->
+    Tree (Ann (Const (Payload (OldName m) (IM m) o p))) ka ->
+    m (Tree (Ann (Const (Payload (NewName m) (IM m) o p))) kb)
+toNode toV (Ann (Const pl) v) =
     Ann
-    <$> toPayload pl
+    <$> (toPayload pl <&> Const)
     <*> toV v
 
 toLet ::
     MonadNaming m =>
-    Tree (Let (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (Let (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (Let (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (Let (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
@@ -220,10 +219,10 @@ toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
 toBinder ::
     MonadNaming m =>
     Tree (Binder (OldName m) (IM m) o)
-        (Ann (Payload (OldName m) (IM m) o a)) ->
+        (Ann (Const (Payload (OldName m) (IM m) o a))) ->
     m
     (Tree (Binder (NewName m) (IM m) o)
-        (Ann (Payload (NewName m) (IM m) o a)))
+        (Ann (Const (Payload (NewName m) (IM m) o a))))
 toBinder (BinderLet l) = toLet l <&> BinderLet
 toBinder (BinderExpr e) = toBody e <&> BinderExpr
 
@@ -236,10 +235,10 @@ toAddFirstParam = _PrependParam toTagReplace
 toFunction ::
     MonadNaming m =>
     Tree (Function (OldName m) (IM m) o)
-        (Ann (Payload (OldName m) (IM m) o a)) ->
+        (Ann (Const (Payload (OldName m) (IM m) o a))) ->
     m
     (Tree (Function (NewName m) (IM m) o)
-        (Ann (Payload (NewName m) (IM m) o a)))
+        (Ann (Const (Payload (NewName m) (IM m) o a))))
 toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
     (\(_fParams, _fBody) _fAddFirstParam ->
          func{_fParams, _fBody, _fAddFirstParam})
@@ -249,10 +248,10 @@ toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
 toBinderPlain ::
     MonadNaming m =>
     Tree (AssignPlain (OldName m) (IM m) o)
-        (Ann (Payload (OldName m) (IM m) o a)) ->
+        (Ann (Const (Payload (OldName m) (IM m) o a))) ->
     m
     (Tree (AssignPlain (NewName m) (IM m) o)
-        (Ann (Payload (NewName m) (IM m) o a)))
+        (Ann (Const (Payload (NewName m) (IM m) o a))))
 toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
     (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
     <$> toBinder _apBody
@@ -260,10 +259,10 @@ toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
 
 toAssignment ::
     MonadNaming m =>
-    Tree (Ann (Payload (OldName m) (IM m) o a))
+    Tree (Ann (Const (Payload (OldName m) (IM m) o a)))
         (Assignment (OldName m) (IM m) o) ->
     m
-    (Tree (Ann (Payload (NewName m) (IM m) o a))
+    (Tree (Ann (Const (Payload (NewName m) (IM m) o a)))
         (Assignment (NewName m) (IM m) o))
 toAssignment =
     \case
@@ -273,8 +272,8 @@ toAssignment =
 
 toLam ::
     MonadNaming m =>
-    Tree (Lambda (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (Lambda (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (Lambda (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (Lambda (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toLam = lamFunc toFunction
 
 toTagOf ::
@@ -324,10 +323,10 @@ toAnnotatedArg expr (AnnotatedArg tag e) =
 toLabeledApply ::
     MonadNaming m =>
     Tree (LabeledApply (OldName m) (IM m) o)
-        (Ann (Payload (OldName m) (IM m) o a)) ->
+        (Ann (Const (Payload (OldName m) (IM m) o a))) ->
     m
     (Tree (LabeledApply (NewName m) (IM m) o)
-        (Ann (Payload (NewName m) (IM m) o a)))
+        (Ann (Const (Payload (NewName m) (IM m) o a))))
 toLabeledApply
     app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
     LabeledApply
@@ -349,10 +348,10 @@ toHole hole =
 toFragment ::
     MonadNaming m =>
     Tree (Fragment (OldName m) (IM m) o)
-        (Ann (Payload (OldName m) (IM m) o a)) ->
+        (Ann (Const (Payload (OldName m) (IM m) o a))) ->
     m
     (Tree (Fragment (NewName m) (IM m) o)
-        (Ann (Payload (NewName m) (IM m) o a)))
+        (Ann (Const (Payload (NewName m) (IM m) o a))))
 toFragment Fragment{_fExpr, _fHeal, _fTypeMatch, _fOptions} =
     do
         run <- opRun
@@ -379,8 +378,8 @@ toCompositeItem toExpr (CompositeItem del tag e) =
 
 toComposite ::
     MonadNaming m =>
-    Tree (Composite (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (Composite (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (Composite (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (Composite (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toComposite (Composite items punned tail_ addItem) =
     Composite
     <$> traverse (toCompositeItem toExpression) items
@@ -390,35 +389,35 @@ toComposite (Composite items punned tail_ addItem) =
 
 toCase ::
     MonadNaming m =>
-    Tree (Case (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (Case (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (Case (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (Case (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toCase (Case k c) = Case <$> traverse toExpression k <*> toComposite c
 
 toInjectVal ::
     MonadNaming m =>
-    Tree (InjectContent (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (InjectContent (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (InjectContent (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (InjectContent (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toInjectVal (InjectVal v) = toExpression v <&> InjectVal
 toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
 
 toInject ::
     MonadNaming m =>
-    Tree (Inject (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (Inject (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (Inject (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (Inject (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toInject (Inject t v) =
     Inject <$> toTagRefOf Tag t <*> toInjectVal v
 
 toElse ::
     MonadNaming m =>
-    Tree (Else (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (Else (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (Else (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (Else (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toElse (SimpleElse x) = toBody x <&> SimpleElse
 toElse (ElseIf x) = eiContent toIfElse x <&> ElseIf
 
 toIfElse ::
     MonadNaming m =>
-    Tree (IfElse (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
-    m (Tree (IfElse (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    Tree (IfElse (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
+    m (Tree (IfElse (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toIfElse (IfElse i t e) =
     IfElse
     <$> toExpression i
@@ -427,9 +426,9 @@ toIfElse (IfElse i t e) =
 
 toBody ::
     MonadNaming m =>
-    Tree (Body (OldName m) (IM m) o) (Ann (Payload (OldName m) (IM m) o a)) ->
+    Tree (Body (OldName m) (IM m) o) (Ann (Const (Payload (OldName m) (IM m) o a))) ->
     m
-    (Tree (Body (NewName m) (IM m) o) (Ann (Payload (NewName m) (IM m) o a)))
+    (Tree (Body (NewName m) (IM m) o) (Ann (Const (Payload (NewName m) (IM m) o a))))
 toBody =
     \case
     BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField

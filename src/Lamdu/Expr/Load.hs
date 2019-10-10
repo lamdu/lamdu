@@ -3,9 +3,10 @@ module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
+import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, annotations)
+import           Hyper (Tree, Pure, _HFlip, hmapped1)
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Type as T
@@ -23,9 +24,9 @@ type T = Transaction
 expr :: Monad m => ValP m -> T m (Val (ValP m))
 expr (Property valI writeRoot) =
     ExprIRef.readVal valI
-    <&> annotations %~ (, ())
+    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (, ())
     <&> ExprIRef.addProperties writeRoot
-    <&> annotations %~ fst
+    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst
 
 defExprH ::
     Monad m =>

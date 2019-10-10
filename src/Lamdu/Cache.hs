@@ -1,5 +1,7 @@
 -- | Functions memoized with Data.Cache.Fenced
 
+{-# LANGUAGE ScopedTypeVariables, TypeOperators #-}
+
 module Lamdu.Cache
     ( Functions(..)
     , infer
@@ -10,8 +12,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad.RWS (RWST(..))
 import           Data.Cache.Fenced (Decl, function)
 import qualified Data.Cache.Fenced as FencedCache
-import           Hyper (Tree, Pure, annotations)
-import           Hyper.Infer (Inferred, iAnnotations)
+import           Hyper
+import           Hyper.Infer (InferResult)
 import           Hyper.Unify.Binding (UVar)
 import           Lamdu.Calc.Infer (InferState, PureInfer(..), runPureInfer)
 import           Lamdu.Calc.Term (Val)
@@ -30,7 +32,7 @@ type MemoableInferFunc =
     , InferState
     ) ->
     Either (Tree Pure T.TypeError)
-    (Tree (Inferred () UVar) V.Term, InferState)
+    (Tree (Ann (InferResult UVar)) V.Term, InferState)
 
 newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc
@@ -38,20 +40,27 @@ newtype Functions = Functions
 
 -- | We know that inferMemoized retains the shape, so we strip the
 -- payload and cover it after
-infer :: Functions -> InferFunc a
+infer :: forall a. Functions -> InferFunc a
 infer funcs defExpr =
     fmap unvoid . PureInfer . RWST $
     \env s ->
-    inferMemoized funcs (defExpr <&> annotations .~ (), env, s)
+    inferMemoized funcs (defExpr <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped .~ (), env, s)
     <&> \(iterm, s') -> (iterm, s', ())
     where
         origExpr = defExpr ^. Definition.expr
+        unvoid ::
+            Tree (Ann (InferResult UVar)) V.Term ->
+            Tree (Ann (Const a :*: InferResult UVar)) V.Term
         unvoid resExpr =
             resExpr
-            & Lens.unsafePartsOf iAnnotations .~ origExpr ^.. annotations
+            & Lens.from _HFlip . hmapped1 %~ (Const () :*:)
+            & Lens.unsafePartsOf (Lens.from _HFlip . htraverse1 . Lens._1 . Lens._Wrapped) .~
+                origExpr ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped
 
 memoableInfer :: MemoableInferFunc
-memoableInfer (expr, env, state) = unmemoizedInfer expr & runPureInfer env state
+memoableInfer (expr, env, state) =
+    unmemoizedInfer expr & runPureInfer env state
+    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (^. Lens._2)
 
 decl :: Decl Functions
 decl =

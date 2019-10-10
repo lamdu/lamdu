@@ -29,8 +29,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann, val)
+import           Hyper (Tree, Ann, hVal)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
@@ -199,7 +198,7 @@ indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
 
 isExecutableType :: Tree (Ann a) (Sugar.Type name) -> Bool
 isExecutableType t =
-    case t ^. val of
+    case t ^. hVal of
     Sugar.TInst tid _ -> tid ^. Sugar.tidTId == Builtins.mutTid
     _ -> False
 

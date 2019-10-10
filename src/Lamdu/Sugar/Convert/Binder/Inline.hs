@@ -5,8 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Inline
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (htraverse1)
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
+import           Hyper
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (ValP, ValI)
@@ -32,16 +31,16 @@ wrapWithRedexes rs x =
     foldr wrapWithRedex x rs
     where
         wrapWithRedex (v, a) b =
-            V.App (Ann Nothing (V.BLam (V.Lam v b))) a
+            V.App (Ann (Const Nothing) (V.BLam (V.Lam v b))) a
             & V.BApp
-            & Ann Nothing
+            & Ann (Const Nothing)
 
 inlineLetH :: V.Var -> Val (Maybe a) -> Val (Maybe a) -> Val (Maybe a)
 inlineLetH var arg bod =
     go bod & uncurry wrapWithRedexes
     where
         go (Ann stored b) =
-            case (b, arg ^. val) of
+            case (b, arg ^. hVal) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
             (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) a)
               , V.BLam (V.Lam param lamBody))
@@ -62,25 +61,25 @@ inlineLetH var arg bod =
 
 cursorDest :: Val a -> a
 cursorDest x =
-    case x ^. val of
+    case x ^. hVal of
     V.BLam lam -> lam ^. V.lamOut
     _ -> x
     & redexes
-    & (^. _2 . ann)
+    & (^. _2 . hAnn . Lens._Wrapped)
 
 inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
-    <&> (^? val . V._BApp . V.appFunc . val . V._BLam . V.lamOut . ann)
+    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn . Lens._Wrapped)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readVal
-    <&> annotations %~ Just
+    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
-        (redex ^. Redex.arg & annotations %~ Just)
-    <&> annotations %~ (, ())
+        (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just)
+    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (, ())
     >>= ExprIRef.writeValWithStoredSubexpressions
-    <&> (^. ann . _1)
+    <&> (^. hAnn . Lens._Wrapped . _1)
     >>= Property.set topLevelProp
-    & (cursorDest (redex ^. Redex.arg & annotations %~ EntityId.ofValI) <$)
+    & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ EntityId.ofValI) <$)

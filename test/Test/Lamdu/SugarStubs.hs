@@ -7,10 +7,9 @@ import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
-import           Hyper (Tree)
+import           Hyper (Tree, Ann(..))
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Scheme (QVars(..))
-import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (LangNames(..))
@@ -26,10 +25,10 @@ import           Test.Lamdu.Prelude
 
 infixr 1 ~>
 (~>) ::
-    Tree (Ann Sugar.EntityId) (Sugar.Type name) ->
-    Tree (Ann Sugar.EntityId) (Sugar.Type name) ->
-    Tree (Ann Sugar.EntityId) (Sugar.Type name)
-param ~> res = FuncType param res & Sugar.TFun & Ann "dummy"
+    Tree (Ann (Const Sugar.EntityId)) (Sugar.Type name) ->
+    Tree (Ann (Const Sugar.EntityId)) (Sugar.Type name) ->
+    Tree (Ann (Const Sugar.EntityId)) (Sugar.Type name)
+param ~> res = FuncType param res & Sugar.TFun & Ann (Const "dummy")
 
 nameRef :: name -> Sugar.NameRef name Unit
 nameRef = (`Sugar.NameRef` Unit)
@@ -54,13 +53,13 @@ defRef var tag =
     }
 
 node ::
-    Tree knot (Ann (Sugar.Payload name Identity Unit ())) ->
-    Tree (Ann (Sugar.Payload name Identity Unit ())) knot
-node = Ann payload
+    Tree knot (Ann (Const (Sugar.Payload name Identity Unit ()))) ->
+    Tree (Ann (Const (Sugar.Payload name Identity Unit ()))) knot
+node = Const payload & Ann
 
 labeledApplyFunc ::
     Sugar.BinderVarRef name Unit ->
-    Tree (Ann (Sugar.Payload name Identity Unit ()))
+    Tree (Ann (Const (Sugar.Payload name Identity Unit ())))
     (Const (Sugar.BinderVarRef name Unit))
 labeledApplyFunc = node . Const
 
@@ -139,9 +138,9 @@ mkTag var tag =
     }
 
 def ::
-    Tree (Ann Sugar.EntityId) (Sugar.Type InternalName) ->
+    Tree (Ann (Const Sugar.EntityId)) (Sugar.Type InternalName) ->
     UUID -> T.Tag ->
-    Tree (Ann expr) (Sugar.Assignment InternalName Identity Unit) ->
+    Tree (Ann (Const expr)) (Sugar.Assignment InternalName Identity Unit) ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
@@ -164,9 +163,9 @@ def typ var tag body =
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
-repl (Ann pl x) =
+repl (Ann (Const pl) x) =
     Sugar.Repl
-    { Sugar._replExpr = Ann pl (Sugar.BinderExpr x)
+    { Sugar._replExpr = Ann (Const pl) (Sugar.BinderExpr x)
     , Sugar._replVarInfo = Sugar.VarGeneric
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
@@ -194,31 +193,31 @@ mkFuncParam (paramVar, paramTag) =
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
     Tree (Sugar.Function InternalName Identity Unit)
-    (Ann (Sugar.Payload InternalName Identity Unit ()))
-funcExpr params pn =
+    (Ann (Const (Sugar.Payload InternalName Identity Unit ())))
+funcExpr params (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
     , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
-    , Sugar._fBody = pn & val %~ Sugar.BinderExpr
+    , Sugar._fBody = Ann (Const ba) (Sugar.BinderExpr bx)
     }
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Tree (Ann (Sugar.Payload InternalName Identity Unit ()))
+    Tree (Ann (Const (Sugar.Payload InternalName Identity Unit ())))
     (Sugar.Assignment InternalName Identity Unit)
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Tree (Sugar.Body name Identity Unit) (Ann (Sugar.Payload name Identity Unit ())) ->
+    Tree (Sugar.Body name Identity Unit) (Ann (Const (Sugar.Payload name Identity Unit ()))) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr = node
 
-numType :: Tree (Ann Sugar.EntityId) (Sugar.Type InternalName)
+numType :: Tree (Ann (Const Sugar.EntityId)) (Sugar.Type InternalName)
 numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
-    & Ann "dummy"
+    & Ann (Const "dummy")
 
 payload :: Sugar.Payload name Identity Unit ()
 payload =

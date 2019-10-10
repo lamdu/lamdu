@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Expression
 
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           Hyper.Type.Ann (Ann(..))
+import           Hyper (Ann(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -59,14 +59,14 @@ convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
-convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam (Ann pl x)
-convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend (Ann pl x)
-convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert (Ann pl x)
-convert _ (Ann pl (V.BInject x)) = ConvertInject.convert (Ann pl x)
-convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom (Ann pl x)
-convert _ (Ann pl (V.BCase x)) = ConvertCase.convert (Ann pl x)
-convert posInfo (Ann pl (V.BApp x)) = ConvertApply.convert posInfo (Ann pl x)
-convert posInfo (Ann pl (V.BLeaf l)) =
+convert _ (Ann (Const pl) (V.BLam x)) = ConvertBinder.convertLam (Ann (Const pl) x)
+convert _ (Ann (Const pl) (V.BRecExtend x)) = ConvertRecord.convertExtend (Ann (Const pl) x)
+convert _ (Ann (Const pl) (V.BGetField x)) = ConvertGetField.convert (Ann (Const pl) x)
+convert _ (Ann (Const pl) (V.BInject x)) = ConvertInject.convert (Ann (Const pl) x)
+convert _ (Ann (Const pl) (V.BToNom x)) = ConvertNominal.convertToNom (Ann (Const pl) x)
+convert _ (Ann (Const pl) (V.BCase x)) = ConvertCase.convert (Ann (Const pl) x)
+convert posInfo (Ann (Const pl) (V.BApp x)) = ConvertApply.convert posInfo (Ann (Const pl) x)
+convert posInfo (Ann (Const pl) (V.BLeaf l)) =
     pl &
     case l of
     V.LVar x -> ConvertGetVar.convert x

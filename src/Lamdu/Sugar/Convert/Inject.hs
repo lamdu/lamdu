@@ -4,8 +4,7 @@ module Lamdu.Sugar.Convert.Inject
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
@@ -22,9 +21,9 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) V.Inject ->
+    Tree (Ann (Const (Input.Payload m a))) V.Inject ->
     ConvertM m (ExpressionU m a)
-convert (Ann exprPl (V.Inject tag injected)) =
+convert (Ann (Const exprPl) (V.Inject tag injected)) =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let typeProtect = protectedSetToVal (exprPl ^. Input.stored) valI
@@ -39,18 +38,18 @@ convert (Ann exprPl (V.Inject tag injected)) =
             Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryInject)
         let inj =
                 case injectedS of
-                Ann pl
+                Ann (Const pl)
                     (BodyRecord
                      (Composite [] []
                       (ClosedComposite closedCompositeActions) addItem))
                     | nullSugar->
                         NullaryVal closedCompositeActions addItem
                         & Const
-                        & Ann pl
+                        & Ann (Const pl)
                         & InjectNullary
                 _ ->
                     injectedS
-                    & val . _BodyHole . holeMDelete ?~ toNullary
+                    & hVal . _BodyHole . holeMDelete ?~ toNullary
                     & InjectVal
         let setTag newTag =
                 do
@@ -62,4 +61,4 @@ convert (Ann exprPl (V.Inject tag injected)) =
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . Property.pVal
-        injectedI = injected ^. ann . Input.stored . Property.pVal
+        injectedI = injected ^. hAnn . Lens._Wrapped . Input.stored . Property.pVal

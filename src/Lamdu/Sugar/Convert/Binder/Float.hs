@@ -8,10 +8,9 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, htraverse1)
+import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (FlatRowExtends(..))
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Definition as Def
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -79,7 +78,7 @@ isVarAlwaysApplied (V.Lam var x) =
     where
         go isApplied (Ann _ (V.BLeaf (V.LVar v))) | v == var = isApplied
         go _ (Ann _ (V.BApp (V.App f a))) = go True f && go False a
-        go _ v = all (go False) (v ^.. val . htraverse1)
+        go _ v = all (go False) (v ^.. hVal . htraverse1)
 
 convertLetToLam ::
     Monad m => V.Var -> Redex (ValP m) -> T m (ValP m)
@@ -98,7 +97,7 @@ convertLetToLam var redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> T m ()
+    V.Var -> T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
@@ -110,7 +109,7 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> Params.StoredLam m ->
+    V.Var -> Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> Params.StoredLam m ->
     ConvertM m (T m (ValP m))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
@@ -132,7 +131,7 @@ convertLetParamToRecord var letLam storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) ->
+    [T.Tag] -> V.Var -> Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) ->
     Params.StoredLam m -> ConvertM m (T m (ValP m))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
@@ -150,9 +149,9 @@ addLetParam ::
     Monad m =>
     V.Var -> Redex (Input.Payload m a) -> ConvertM m (T m (ValP m))
 addLetParam var redex =
-    case storedRedex ^. Redex.arg . val of
+    case storedRedex ^. Redex.arg . hVal of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.arg . ann . Input.inferredType . _Pure of
+        case redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.inferredType . _Pure of
         T.TFun (FuncType (Pure (T.TRecord composite)) _)
             | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
             , let fields = Map.toList fieldsMap
@@ -161,13 +160,13 @@ addLetParam var redex =
                 (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam
         _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
         where
-            storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . ann)
+            storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . hAnn . Lens._Wrapped)
     _ -> convertLetToLam var storedRedex & pure
     where
         storedRedex = redex <&> (^. Input.stored)
 
 sameLet :: Redex (ValP m) -> ValP m
-sameLet redex = redex ^. Redex.arg . ann
+sameLet redex = redex ^. Redex.arg . hAnn . Lens._Wrapped
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
@@ -193,7 +192,7 @@ processLet redex =
             _ -> error "multiple osiVarsUnderPos not expected!?"
     where
         innerScopeLocalVars =
-            redex ^. Redex.arg . ann . Input.localsInScope & Set.fromList
+            redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.localsInScope & Set.fromList
 
 makeFloatLetToOuterScope ::
     Monad m =>
@@ -209,7 +208,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     <&>
     \(makeNewLet, ctx, floatToGlobal, postProcess) ->
     do
-        redex ^. Redex.lam . V.lamOut . ann . Input.stored .
+        redex ^. Redex.lam . V.lamOut . hAnn . Lens._Wrapped . Input.stored .
             Property.pVal & setTopLevel
         newLetP <- makeNewLet
         r <-
@@ -230,7 +229,7 @@ makeFloatLetToOuterScope setTopLevel redex =
                         & addRecursiveRefAsDep
                         & Def.pruneDeps (redex ^. Redex.arg)
             Just outerScopeInfo ->
-                EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal) <$
+                EntityId.ofValI (redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.stored . Property.pVal) <$
                 DataOps.redexWrapWithGivenParam param
                 (Property.value newLetP) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
@@ -238,8 +237,8 @@ makeFloatLetToOuterScope setTopLevel redex =
     where
         param = redex ^. Redex.lam . V.lamIn
         fixUsages _ =
-            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.lamOut . ann . Input.stored)
+            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.lamOut . hAnn . Lens._Wrapped . Input.stored)
             >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamIn)
         newRedex =
             redex
-            & Redex.lam . V.lamOut . ann . Input.stored . Property.pSet .~ setTopLevel
+            & Redex.lam . V.lamOut . hAnn . Lens._Wrapped . Input.stored . Property.pSet .~ setTopLevel

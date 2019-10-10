@@ -8,9 +8,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
-import           Hyper (Tree)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import           Hyper.Type.AST.Row (RowExtend(..))
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
@@ -51,19 +50,19 @@ _CaseThatIsLambdaCase =
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) (RowExtend T.Tag V.Term V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (RowExtend T.Tag V.Term V.Term) ->
     ConvertM m (ExpressionU m a)
-convert (Ann exprPl (RowExtend tag v rest)) =
+convert (Ann (Const exprPl) (RowExtend tag v rest)) =
     do
         valS <-
             ConvertM.convertSubexpression v
-            <&> val . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+            <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
         restS <- ConvertM.convertSubexpression rest
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = v ^. ann . plValI
-                , Composite._extendRest = rest ^. ann
+                , Composite._extendValI = v ^. hAnn . Lens._Wrapped . plValI
+                , Composite._extendRest = rest ^. hAnn . Lens._Wrapped
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
@@ -72,13 +71,13 @@ convert (Ann exprPl (RowExtend tag v rest)) =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
+    Tree (V.App V.Term) (Ann (Const (Input.Payload m a))) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.App _ arg) funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithArgument) >>= guard
-        caseB <- funcS ^? val . _BodyCase & maybeToMPlus
+        caseB <- funcS ^? hVal . _BodyCase & maybeToMPlus
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setTo = protectedSetToVal (exprPl ^. Input.stored)
@@ -92,7 +91,7 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
                         then simplifyCaseArg argS
                         else argS
                     , _caToLambdaCase =
-                        setTo (funcS ^. ann . pInput . Input.stored . Property.pVal)
+                        setTo (funcS ^. hAnn . Lens._Wrapped . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     }
         ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
@@ -100,13 +99,13 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
-            <&> ann . pInput . Input.entityId .~ funcS ^. ann . pInput . Input.entityId
-            <&> ann . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> funcS ^. ann . pInput . Input.userData)
+            <&> hAnn . Lens._Wrapped . pInput . Input.entityId .~ funcS ^. hAnn . Lens._Wrapped . pInput . Input.entityId
+            <&> hAnn . Lens._Wrapped . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> funcS ^. hAnn . Lens._Wrapped . pInput . Input.userData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =
-    case argS ^. val of
+    case argS ^. hVal of
     BodySimpleApply (V.App (Ann _ BodyFromNom{}) x)
-        | Lens.nullOf (val . SugarLens.bodyUnfinished) x -> x
+        | Lens.nullOf (hVal . SugarLens.bodyUnfinished) x -> x
     _ -> argS

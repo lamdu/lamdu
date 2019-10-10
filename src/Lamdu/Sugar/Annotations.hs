@@ -8,8 +8,7 @@ module Lamdu.Sugar.Annotations
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, AHyperType, hmap, (#>))
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
@@ -49,19 +48,19 @@ forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
     ShowAnnotation
-topLevelAnn = ann . _1
+topLevelAnn = hAnn . Lens._Wrapped . _1
 
 markNodeAnnotations ::
     MarkAnnotations t =>
-    Tree (Ann a) t ->
-    Tree (Ann (ShowAnnotation, a)) t
-markNodeAnnotations (Ann pl x) =
-    Ann (showAnn, pl) newBody
+    Tree (Ann (Const a)) t ->
+    Tree (Ann (Const (ShowAnnotation, a))) t
+markNodeAnnotations (Ann (Const pl) x) =
+    Ann (Const (showAnn, pl)) newBody
     where
         (showAnn, newBody) = markAnnotations x
 
 class MarkAnnotations (t :: AHyperType -> *) where
-    markAnnotations :: Tree t (Ann a) -> (ShowAnnotation, Tree t (Ann (ShowAnnotation, a)))
+    markAnnotations :: Tree t (Ann (Const a)) -> (ShowAnnotation, Tree t (Ann (Const (ShowAnnotation, a))))
 
 instance MarkAnnotations (Binder name i o) where
     markAnnotations (BinderExpr body) =
@@ -99,8 +98,8 @@ instance MarkAnnotations (Body name i o) where
     markAnnotations = markBodyAnnotations
 
 markBodyAnnotations ::
-    Tree (Body name i o) (Ann a) ->
-    (ShowAnnotation, Tree (Body name i o) (Ann (ShowAnnotation, a)))
+    Tree (Body name i o) (Ann (Const a)) ->
+    (ShowAnnotation, Tree (Body name i o) (Ann (Const (ShowAnnotation, a))))
 markBodyAnnotations oldBody =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations
@@ -154,21 +153,21 @@ markBodyAnnotations oldBody =
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
             & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . Lens.mapped . val %~ onHandler
+            & cBody . cItems . Lens.mapped . Lens.mapped . hVal %~ onHandler
             & BodyCase
         )
     where
         newBodyWith f =
             hmap
             ( Proxy @SugarLens.SugarExpr #>
-                Lens.filtered (not . SugarLens.isUnfinished . (^. val)) . ann . _1 .~ f
+                Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) . hAnn . Lens._Wrapped . _1 .~ f
             ) newBody
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)
         newBody =
             hmap (Proxy @MarkAnnotations #> markNodeAnnotations) oldBody
         nonHoleAnn =
-            Lens.filtered (Lens.nullOf (val . SugarLens.bodyUnfinished)) .
+            Lens.filtered (Lens.nullOf (hVal . SugarLens.bodyUnfinished)) .
             topLevelAnn
         onHandler a =
             a
@@ -178,5 +177,5 @@ markBodyAnnotations oldBody =
         onElse (ElseIf elseIf) = elseIf & eiContent %~ onIfElse & ElseIf
         onIfElse x =
             x
-            & iThen . val %~ onHandler
-            & iElse . val %~ onElse
+            & iThen . hVal %~ onHandler
+            & iElse . hVal %~ onElse

@@ -91,7 +91,7 @@ addTypesArray items go typ =
     Just paramType -> items <&> go paramType & RArray
 
 addTypes :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Val () -> Val (Tree Pure T.Type)
-addTypes nomsMap typ (Ann () b) =
+addTypes nomsMap typ (Ann (Const ()) b) =
     case b of
     RRecExtend recExtend -> r (addTypesRecExtend recExtend)
     RInject inject -> r (addTypesInject inject)
@@ -100,7 +100,7 @@ addTypes nomsMap typ (Ann () b) =
     RRecEmpty -> RRecEmpty
     RPrimVal l -> RPrimVal l
     RError e -> RError e
-    & Ann typ
+    & Ann (Const typ)
     where
         r f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 

@@ -23,7 +23,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), hAnn)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -160,7 +160,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.Lambda Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make lam pl =
@@ -183,4 +183,4 @@ make lam pl =
         myId = WidgetIds.fromExprPayload pl
         params = func ^. Sugar.fParams
         func = lam ^. Sugar.lamFunc
-        bodyId = func ^. Sugar.fBody . ann . Sugar.plEntityId
+        bodyId = func ^. Sugar.fBody . hAnn . Lens._Wrapped . Sugar.plEntityId

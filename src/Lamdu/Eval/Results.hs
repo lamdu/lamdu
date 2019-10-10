@@ -64,7 +64,7 @@ Hyper.makeHTraversableAndBases ''Body
 deriving instance Show (k # Body) => Show (Body k)
 deriving instance Show (k # Body) => Show (Inject k)
 
-type Val pl = Tree (Ann pl) Body
+type Val pl = Tree (Ann (Const pl)) Body
 
 data CompiledErrorType
     = ReachedHole -- ^ Reached a hole
@@ -123,7 +123,7 @@ extractField errPl tag (Ann _ (RRecExtend (RowExtend vt vv vr)))
 extractField _ _ v@(Ann _ RError{}) = v
 extractField errPl tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
-    & Text.pack & EvalTypeError & RError & Ann errPl
+    & Text.pack & EvalTypeError & RError & Ann (Const errPl)
 
 data EvalResults srcId =
     EvalResults

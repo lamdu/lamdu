@@ -10,11 +10,10 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, htraverse1)
+import           Hyper
 import           Hyper.Type.AST.FuncType (funcIn, funcOut)
 import           Hyper.Type.AST.Row (RowExtend(..), freExtends, freRest)
 import           Hyper.Type.AST.Scheme (sTyp)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -61,16 +60,16 @@ recursivelyFixExpr mFix =
         recurse x =
             case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (x ^.. val . htraverse1)
+            Nothing -> traverse_ (go NotHoleArg) (x ^.. hVal . htraverse1)
 
 changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
 changeFuncRes usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
+        mFix NotHoleArg (Ann (Const pl) (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix isHoleArg
-            (Ann pl (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
+            (Ann (Const pl) (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar =
             Just $
             \go ->
@@ -84,7 +83,7 @@ applyHoleTo :: Monad m => Val (ValP m) -> T m ()
 applyHoleTo x
     | Lens.has argToHoleFunc x
     || Lens.has ExprLens.valHole x = pure ()
-    | otherwise = x ^. ann & DataOps.applyHoleTo & void
+    | otherwise = x ^. hAnn . Lens._Wrapped & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
     { fieldsAdded :: Set T.Tag
@@ -106,19 +105,19 @@ fixArg ArgChange arg go =
 fixArg (ArgRecordChange recChange) arg go =
     ( if Set.null (fieldsRemoved recChange)
         then
-            arg ^. ann . Property.pVal
+            arg ^. hAnn . Lens._Wrapped . Property.pVal
             <$ changeFields (fieldsChanged recChange) arg go
         else
             do
                 go IsHoleArg arg
                 V.App
                     <$> DataOps.newHole
-                    ?? arg ^. ann . Property.pVal
+                    ?? arg ^. hAnn . Lens._Wrapped . Property.pVal
                     <&> V.BApp
                     >>= ExprIRef.newValI
     )
     >>= addFields (fieldsAdded recChange)
-    >>= arg ^. ann . Property.pSet
+    >>= arg ^. hAnn . Lens._Wrapped . Property.pSet
 
 addFields :: Monad m => Set T.Tag -> ValI m -> Transaction m (ValI m)
 addFields fields src =
@@ -137,7 +136,7 @@ changeFields ::
 changeFields changes arg go
     | Map.null changes = go NotHoleArg arg
     | otherwise =
-        case arg ^. val of
+        case arg ^. hVal of
         V.BRecExtend (RowExtend tag fieldVal rest) ->
             case Map.lookup tag changes of
             Nothing ->
@@ -154,7 +153,7 @@ changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValP m) -> T m ()
 changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
+        mFix NotHoleArg (Ann (Const pl) (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix _ (Ann _ (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar = fixArg change arg & Just
@@ -225,7 +224,7 @@ updateDefType ::
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
         defExpr
-            <&> (^. ann . Property.pVal)
+            <&> (^. hAnn . Lens._Wrapped . Property.pVal)
             & Def.exprFrozenDeps . depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
         x <- typeCheck

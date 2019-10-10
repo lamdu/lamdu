@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections, TypeFamilies, DataKinds #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
@@ -19,11 +19,10 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Pure(..), _Pure, htraverse1, hfolded1)
+import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
 import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -71,7 +70,7 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: Tree (V.Lam V.Var V.Term) (Ann (ValP m))
+    { _slLam :: Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m)))
     , _slLambdaProp :: ValP m
     }
 Lens.makeLenses ''StoredLam
@@ -80,11 +79,11 @@ slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . Property.pVal)
 
 mkStoredLam ::
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamOut . annotations %~ (^. Input.stored))
+    (lam & V.lamOut . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -106,7 +105,7 @@ setParamList mPresMode paramListProp newParamList =
                         _ -> pure ()
 
 unappliedUsesOfVar :: V.Var -> Val a -> [a]
-unappliedUsesOfVar var (Ann pl (V.BLeaf (V.LVar v)))
+unappliedUsesOfVar var (Ann (Const pl) (V.BLeaf (V.LVar v)))
     | v == var = [pl]
 unappliedUsesOfVar var (Ann _ (V.BApp (App f x))) =
     rf <> rx
@@ -116,16 +115,16 @@ unappliedUsesOfVar var (Ann _ (V.BApp (App f x))) =
         rx  | Lens.has ExprLens.valHole f && Lens.has ExprLens.valVar x = []
             | otherwise = unappliedUsesOfVar var x
 unappliedUsesOfVar var x =
-    (x ^.. val . hfolded1) >>= unappliedUsesOfVar var
+    (x ^.. hVal . hfolded1) >>= unappliedUsesOfVar var
 
 wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 wrapUnappliedUsesOfVar var = traverse_ DataOps.applyHoleTo . unappliedUsesOfVar var
 
 argsOfCallTo :: V.Var -> Val a -> [a]
 argsOfCallTo var (Ann _ (V.BApp (App (Ann _ (V.BLeaf (V.LVar v))) x)))
-    | v == var = [x ^. ann]
+    | v == var = [x ^. hAnn . Lens._Wrapped]
 argsOfCallTo var x =
-    (x ^.. val . hfolded1) >>= argsOfCallTo var
+    (x ^.. hVal . hfolded1) >>= argsOfCallTo var
 
 changeCallArgs ::
     Monad m =>
@@ -187,13 +186,13 @@ getFieldOnVar =
 
 getFieldParamsToHole ::
     Monad m =>
-    T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> T m ()
+    T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
 getFieldParamsToParams ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (ValP m)) -> T.Tag -> T m ()
+    Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . Property.value)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
@@ -307,14 +306,14 @@ mkParamInfo param fp =
 changeGetFieldTags ::
     Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValP m) -> T m ()
 changeGetFieldTags param prevTag chosenTag x =
-    case x ^. val of
+    case x ^. hVal of
     V.BGetField (V.GetField (Ann a (V.BLeaf (V.LVar v))) t)
         | v == param && t == prevTag ->
-            V.GetField (a ^. Property.pVal) chosenTag & V.BGetField
-            & ExprIRef.writeValI (x ^. ann . Property.pVal)
+            V.GetField (a ^. Lens._Wrapped . Property.pVal) chosenTag & V.BGetField
+            & ExprIRef.writeValI (x ^. hAnn . Lens._Wrapped . Property.pVal)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
-        | v == param -> DataOps.applyHoleTo (x ^. ann) & void
+        | v == param -> DataOps.applyHoleTo (x ^. hAnn . Lens._Wrapped) & void
     b ->
         traverse_
         (changeGetFieldTags param prevTag chosenTag)
@@ -359,7 +358,7 @@ convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
@@ -446,7 +445,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 removeCallsToVar
                 (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
             BinderKindLambda -> pure ()
-        let lamBodyI = Property.value (lamBodyStored ^. ann)
+        let lamBodyI = Property.value (lamBodyStored ^. hAnn . Lens._Wrapped)
         protectedSetToVal lambdaProp lamBodyI & void
 
 convertVarToGetField ::
@@ -570,7 +569,7 @@ mkFuncParam entityId lamExprPl info =
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
@@ -622,7 +621,7 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
     go False bod
     where
         go isGetFieldChild expr =
-            case expr ^. val of
+            case expr ^. hVal of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
             x -> all (go False) (x ^.. htraverse1)
@@ -640,7 +639,7 @@ postProcessActions post x
 
 convertLamParams ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
     Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
@@ -655,14 +654,14 @@ makeFieldParam lambdaPl (tag, typeExpr) =
         <&> (^. Input.eAppliesOfLam)
         <&> Lens.mapped . Lens.mapped . _2 %~ ER.extractField typeExpr tag
         <&> Lens.mapped %~
-            filter (Lens.nullOf (_2 . val . ER._RError))
+            filter (Lens.nullOf (_2 . hVal . ER._RError))
     }
 
 convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m ->
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
     Input.Payload m a ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
@@ -722,7 +721,7 @@ convertBinderToFunction ::
     T m (V.Var, ValP m)
 convertBinderToFunction mkArg binderKind x =
     do
-        (newParam, newValP) <- DataOps.lambdaWrap (x ^. ann)
+        (newParam, newValP) <- DataOps.lambdaWrap (x ^. hAnn . Lens._Wrapped)
         case binderKind of
             BinderKindDef defI ->
                 convertVarToCalls mkArg (ExprIRef.globalId defI) x
@@ -746,7 +745,7 @@ convertEmptyParams binderKind x =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                x & annotations %~ (^. Input.stored)
+                x & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure
@@ -766,9 +765,9 @@ convertParams ::
 convertParams binderKind defVar expr =
     do
         postProcess <- ConvertM.postProcessAssert
-        case expr ^. val of
+        case expr ^. hVal of
             V.BLam lambda ->
-                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. ann)
+                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. hAnn . Lens._Wrapped)
                 <&> f
                 where
                     f convParams =

@@ -10,11 +10,10 @@ import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
-import           Hyper (Tree, Pure(..), _Pure, hmap, (#>))
+import           Hyper
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Hyper.Unify.Generalize (generalize)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -152,8 +151,8 @@ makeSetToLiteral exprPl =
     do
         update
         l <-
-            x & annotations .~ (Nothing, ()) & ExprIRef.writeValWithStoredSubexpressions
-            <&> (^. ann . _1)
+            x & Lens.from _HFlip . hmapped1 . Lens._Wrapped .~ (Nothing, ()) & ExprIRef.writeValWithStoredSubexpressions
+            <&> (^. hAnn . Lens._Wrapped . _1)
         _ <- setToVal (exprPl ^. Input.stored) l
         EntityId.ofValI l & pure
 
@@ -183,15 +182,15 @@ makeActions exprPl =
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
-    p a (f a) -> Lens.Indexed (Tree (Body name i o) (Ann j)) a (f a)
-fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . ann)
+    p a (f a) -> Lens.Indexed (Tree (Body name i o) (Ann (Const j))) a (f a)
+fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . hAnn . Lens._Wrapped)
 
 bodyIndex ::
     Lens.IndexedTraversal' (Tree k (Ann a)) (Tree (Ann a) k) (Tree (Ann a) k)
-bodyIndex = Lens.filteredBy val
+bodyIndex = Lens.filteredBy hVal
 
 class FixReplaceParent expr where
-    fixReplaceParent :: (a -> a -> a) -> Tree (Ann a) expr -> Tree (Ann a) expr
+    fixReplaceParent :: (a -> a -> a) -> Tree (Ann (Const a)) expr -> Tree (Ann (Const a)) expr
 
 instance FixReplaceParent (Const a) where
     fixReplaceParent _ = id
@@ -203,32 +202,32 @@ instance FixReplaceParent (Const a) where
 -- TODO: These instances have a repeating pattern
 instance FixReplaceParent (Binder name (T m) (T m)) where
     fixReplaceParent setToExpr =
-        (val . _BinderExpr . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. ann %@~ setToExpr)
+        (hVal . _BinderExpr . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. hAnn . Lens._Wrapped %@~ setToExpr)
 
 instance FixReplaceParent (Body name (T m) (T m)) where
     fixReplaceParent setToExpr =
-        (val . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . fragmentAnnIndex) <. ann %@~ setToExpr)
+        (hVal . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . fragmentAnnIndex) <. hAnn . Lens._Wrapped %@~ setToExpr)
 
 instance FixReplaceParent (Else name (T m) (T m)) where
     fixReplaceParent setToExpr =
-        (val . _SimpleElse . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. ann %@~ setToExpr)
+        (hVal . _SimpleElse . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. hAnn . Lens._Wrapped%@~ setToExpr)
 
 -- TODO: This is an indexed lens of some sort?
 typeMismatchPayloads ::
     (a -> Identity a) ->
-    Tree (Body name i o) (Ann a) -> Identity (Tree (Body name i o) (Ann a))
+    Tree (Body name i o) (Ann (Const a)) -> Identity (Tree (Body name i o) (Ann (Const a)))
 typeMismatchPayloads =
-    _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . ann
+    _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . hAnn . Lens._Wrapped
 
 setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.ValP m ->
-        Tree (Body name (T m) (T m)) (Ann (ConvertPayload m a)) ->
-        Tree (Body name (T m) (T m)) (Ann (ConvertPayload m a))
+        Tree (Body name (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
+        Tree (Body name (T m) (T m)) (Ann (Const (ConvertPayload m a)))
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -243,7 +242,7 @@ setChildReplaceParentActions =
     in
     bod
     & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
-        hmap (p #> ann %~ join setToExpr)
+        hmap (p #> hAnn . Lens._Wrapped %~ join setToExpr)
     & hmap (p #> fixReplaceParent setToExpr)
     where
         p :: Proxy FixReplaceParent
@@ -265,16 +264,16 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m b ->
-    Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)) ->
+    Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
         actions <- makeActions exprPl
         addReplaceParents <- setChildReplaceParentActions
         Ann
-            { _val = addReplaceParents (exprPl ^. Input.stored) bodyS
-            , _ann =
-                ConvertPayload
+            { _hVal = addReplaceParents (exprPl ^. Input.stored) bodyS
+            , _hAnn =
+                Const ConvertPayload
                 { _pInput = exprPl & Input.userData .~ userData
                 , _pActions = actions
                 }
@@ -283,14 +282,14 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
     f (Val (Input.Payload m a)) -> Input.Payload m a ->
-    Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)) ->
+    Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
     exprPl bodyS
 
 makeTypeAnnotation ::
-    Monad m => Input.Payload m a -> ConvertM m (Tree (Ann EntityId) (Type InternalName))
+    Monad m => Input.Payload m a -> ConvertM m (Tree (Ann (Const EntityId)) (Type InternalName))
 makeTypeAnnotation payload =
     convertType (EntityId.ofTypeOf entityId) typ
     where
@@ -352,13 +351,13 @@ valFromLiteral =
             & literalExpr
             & ToNom Builtins.textTid
             & V.BToNom
-            & Ann (_Pure # T.TInst (NominalInst Builtins.textTid noParams))
+            & Ann (Lens._Wrapped . _Pure # T.TInst (NominalInst Builtins.textTid noParams))
         , Property.pureModify frozenDeps (<> textDep)
         )
     where
         literalExpr v =
             V.LLiteral prim & V.BLeaf
-            & Ann (_Pure # T.TInst (NominalInst (prim ^. V.primType) noParams))
+            & Ann (Lens._Wrapped . _Pure # T.TInst (NominalInst (prim ^. V.primType) noParams))
             where
                 prim = PrimVal.fromKnown v
         noParams = T.Types (S.QVarInstances mempty) (S.QVarInstances mempty)

@@ -1,5 +1,5 @@
 -- | Sugaring of Lamdu.Calc.Type modules/ASTs
-{-# LANGUAGE TemplateHaskell, TypeFamilies, UndecidableInstances, GADTs, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, UndecidableInstances, GADTs, TypeOperators, DataKinds #-}
 module Lamdu.Sugar.Types.Type
     ( Scheme(..), schemeForAll, schemeType
     , T.NominalId
@@ -45,7 +45,7 @@ data Type name k
 
 data Scheme name = Scheme
     { _schemeForAll :: Tree T.Types QVars
-    , _schemeType :: Tree (Ann EntityId) (Type name)
+    , _schemeType :: Tree (Ann (Const EntityId)) (Type name)
     } deriving Generic
 
 Lens.makeLenses ''CompositeFields

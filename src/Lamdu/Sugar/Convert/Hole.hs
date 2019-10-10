@@ -19,7 +19,7 @@ import           Control.Monad.State (State, StateT(..), mapStateT, evalState, s
 import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)
 import qualified Crypto.Hash.SHA256 as SHA256
-import qualified Data.Binary as Binary
+import qualified Data.Binary.Extended as Binary
 import           Data.Bits (xor)
 import qualified Data.ByteString.Extended as BS
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -30,12 +30,13 @@ import qualified Data.Property as Property
 import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
-import           Hyper (Tree, HasHPlain(..), Pure(..), _Pure)
+import           Hyper
+import           Hyper.Infer (InferResult(..))
+import           Hyper.Recurse (wrap, unwrap)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
-import           Hyper.Type.Ann (Ann(..), ann, annotations, addAnnotations, strip)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Unify (unify)
 import           Hyper.Unify.Apply (applyBindings)
@@ -98,7 +99,7 @@ convert posInfo holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> ann . pActions . mSetToHole .~ Nothing
+    <&> hAnn . Lens._Wrapped . pActions . mSetToHole .~ Nothing
 
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
@@ -139,10 +140,13 @@ mkHoleSuggesteds sugarContext resultProcessor holePl =
     -- TODO: use a specific monad here that has no Either
     & assertSuccessfulInfer
     & fst
-    <&> annotations .~ () -- TODO: "Avoid re-inferring known type here"
+    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped .~ () -- TODO: "Avoid re-inferring known type here"
     <&> mkOption sugarContext resultProcessor holePl
     where
         inferContext = sugarContext ^. ConvertM.scInferContext
+
+strip :: Recursively HFunctor h => Tree (Ann a) h -> Tree Pure h
+strip = unwrap (const (^. hVal))
 
 addWithoutDups ::
     [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
@@ -223,7 +227,7 @@ mkOptions posInfo resultProcessor holePl =
               | posInfo == ConvertM.BinderPos
               ]
             ]
-            <&> addAnnotations (\_ _ -> ()) . (^. hPlain)
+            <&> wrap (const (Ann (Const ()))) . (^. hPlain)
             <&> mkOption sugarContext resultProcessor holePl
             & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
             & pure
@@ -272,7 +276,7 @@ prepareUnstoredPayloads ::
     Val (Tree V.IResult UVar, Tree Pure T.Type, EntityId, a) ->
     Val (Input.Payload m a)
 prepareUnstoredPayloads v =
-    v & annotations %~ mk & Input.preparePayloads
+    v & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ mk & Input.preparePayloads
     where
         mk (inferPl, typ, eId, x) =
             ( eId
@@ -312,7 +316,7 @@ loadInfer sugarContext scope v =
     ( deps
     , memoInfer (Definition.Expr v deps)
         & runPureInfer scope (sugarContext ^. ConvertM.scInferContext)
-        <&> _1 %~ (^. ExprLens.itermAnn)
+        <&> _1 . Lens.from _HFlip . hmapped1 %~ \(Const a :*: InferResult i) -> Const (a, i)
     )
     where
         memoInfer = Cache.infer (sugarContext ^. ConvertM.scCacheFunctions)
@@ -321,7 +325,7 @@ loadInfer sugarContext scope v =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy -> Val a ->
-    T m (Tree (Ann (Payload InternalName (T m) (T m) a)) (Binder InternalName (T m) (T m)))
+    T m (Tree (Ann (Const (Payload InternalName (T m) (T m) a))) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
     do
         (val, inferCtx) <-
@@ -335,8 +339,8 @@ sugar sugarContext holePl v =
             <&> _1 %~ Input.initLocalsInScope (holePl ^. Input.localsInScope)
             & transaction
         convertBinder val
-            <&> annotations %~ (,) neverShowAnnotations
-            >>= annotations convertPayload
+            <&> Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) neverShowAnnotations))
+            >>= Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload)))
             & ConvertM.run
                 (sugarContext
                     & ConvertM.scInferContext .~ inferCtx
@@ -345,7 +349,7 @@ sugar sugarContext holePl v =
     where
         scope = holePl ^. Input.inferResult . V.iScope
         makePayloads (term, inferCtx) =
-            ( annotations mkPayload term
+            ( (Lens.from _HFlip . htraverse1 . Lens._Wrapped) mkPayload term
                 & runPureInfer scope inferCtx
                 & assertSuccessfulInfer
                 & fst
@@ -383,15 +387,15 @@ writeResult preConversion inferContext holeStored inferredVal =
     do
         writtenExpr <-
             inferredVal
-            & annotations %~ intoStorePoint
+            & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ intoStorePoint
             & writeExprMStored (Property.value holeStored)
             <&> ExprIRef.addProperties (holeStored ^. Property.pSet)
             <&> addBindingsAll
-            <&> annotations %~ toPayload
+            <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ toPayload
             <&> Input.preparePayloads
-            <&> annotations %~ snd
-        (holeStored ^. Property.pSet) (writtenExpr ^. ann . _1 . Property.pVal)
-        writtenExpr & annotations %~ snd & preConversion & pure
+            <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd
+        (holeStored ^. Property.pSet) (writtenExpr ^. hAnn . Lens._Wrapped . _1 . Property.pVal)
+        writtenExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd & preConversion & pure
     where
         intoStorePoint ((mStorePoint, a), inferred) =
             (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
@@ -418,8 +422,8 @@ writeResult preConversion inferContext holeStored inferredVal =
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
         addBindingsAll x =
-            (annotations . Lens._2) addBindings x
-            & runPureInfer (x ^. ann . Lens._2 . Lens._1 . V.iScope) inferContext
+            (Lens.from _HFlip . htraverse1 . Lens._Wrapped . Lens._2) addBindings x
+            & runPureInfer (x ^. hAnn . Lens._Wrapped . Lens._2 . Lens._1 . V.iScope) inferContext
             & assertSuccessfulInfer
             & fst
         addBindings ::
@@ -442,14 +446,16 @@ detachValIfNeeded emptyPl holeIRes x =
                 -- Verify occurs checks.
                 -- TODO: share with applyBindings that happens for sugaring.
                 s <- State.get
-                _ <- annotations (applyBindings . (^. _2 . V.iType)) x
+                _ <-
+                    x ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . Lens._2 . V.iType
+                    & traverse_ applyBindings
                 r <$ State.put s
             & liftPureInfer
         let mkFragmentExpr =
                 FuncType xType holeType & T.TFun & newTerm
                 <&> \funcType ->
                 let withTyp typ =
-                        Ann (emptyPl, x ^. ann . _2 & V.iType .~ typ)
+                        Ann (Const (emptyPl, x ^. hAnn . Lens._Wrapped . _2 & V.iType .~ typ))
                     func = V.BLeaf V.LHole & withTyp funcType
                 in  func `V.App` x & V.BApp & withTyp holeType
         case unifyRes of
@@ -458,7 +464,7 @@ detachValIfNeeded emptyPl holeIRes x =
                 liftPureInfer mkFragmentExpr
                 <&> assertSuccessfulInfer
     where
-        xType = x ^. ann . _2 . V.iType
+        xType = x ^. hAnn . Lens._Wrapped . _2 . V.iType
         liftPureInfer ::
             PureInfer a -> State InferState (Either (Tree Pure T.TypeError) a)
         liftPureInfer act =
@@ -486,7 +492,7 @@ mkResultVals sugarContext scope seed =
             form <-
                 Suggest.termTransformsWithModify () inferResult
                 & mapStateT ListClass.fromList
-            pure (newDeps, form & annotations . _1 %~ (,) Nothing)
+            pure (newDeps, form & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 %~ (,) Nothing)
     where
         txn = lift . lift
 
@@ -501,7 +507,7 @@ mkResult preConversion sugarContext updateDeps holePl x =
         writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
             (holePl ^. Input.stored) x
         <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
-        <&> (convertBinder >=> annotations convertPayload . (annotations %~ (,) showAnn))
+        <&> (convertBinder >=> Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload))) . (Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
         >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->
@@ -538,7 +544,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scInferContext .~ inferContext
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( x & annotations %%~ applyBindings . (^. Lens._2 . V.iType)
+    in  ( x & Lens.from _HFlip . htraverse1 . Lens._Wrapped %%~ applyBindings . (^. Lens._2 . V.iType)
           & runPureInfer (holeInferRes ^. V.iScope) inferContext
           & assertSuccessfulInfer
           & fst
@@ -575,7 +581,7 @@ randomizeNonStoredParamIds gen =
 randomizeNonStoredRefs ::
     ByteString -> Random.StdGen -> Val (StorePoint m a) -> Val (StorePoint m a)
 randomizeNonStoredRefs uniqueIdent gen v =
-    evalState ((annotations . _1) f v) gen
+    evalState ((Lens.from _HFlip . htraverse1 . Lens._Wrapped . _1) f v) gen
     where
         f Nothing =
             state random
@@ -596,7 +602,7 @@ writeExprMStored exprIRef exprMStorePoint =
     where
         uniqueIdent =
             Binary.encode
-            ( exprMStorePoint & annotations %~ fst
+            ( exprMStorePoint & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst
             , exprIRef
             )
             & SHA256.hashlazy

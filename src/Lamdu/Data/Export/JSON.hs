@@ -23,10 +23,9 @@ import qualified Data.Property as Property
 import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
-import           Hyper (Tree, Pure(..), htraverse1)
+import           Hyper
 import           Hyper.Recurse (unwrapM, (##>>))
 import           Hyper.Type.AST.Nominal (NominalDecl)
-import           Hyper.Type.Ann (Ann(..), val, annotations)
 import           Hyper.Type.Functor (_F)
 import           Lamdu.Calc.Identifier (Identifier)
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -121,10 +120,10 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 class ExportSubexpr k where
-    exportSubexpr :: Monad m => Tree (Ann (ValP m)) k -> Export m ()
+    exportSubexpr :: Monad m => Tree (Ann (Const (ValP m))) k -> Export m ()
 
 instance ExportSubexpr V.Term where
-    exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
+    exportSubexpr (Ann (Const lamP) (V.BLam (V.Lam lamVar _))) =
         do
             tag <- readAssocTag lamVar & trans
             exportTag tag
@@ -140,7 +139,7 @@ exportVal x =
         x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         x ^.. ExprLens.valTags & traverse_ exportTag
         x ^.. ExprLens.valNominals & traverse_ exportNominal
-        () <$ unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. val <$ exportSubexpr n) x
+        () <$ unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x
 
 exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =
@@ -152,7 +151,7 @@ exportDef globalId =
         def ^. Definition.defBody & traverse_ exportVal
         let def' =
                 def
-                & Definition.defBody . Lens.mapped . annotations %~
+                & Definition.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
                     toUUID . Property.value
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
@@ -164,7 +163,7 @@ exportRepl =
     do
         repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
-        repl <&> annotations %~ toUUID . Property.value & Codec.EntityRepl & tell
+        repl <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ toUUID . Property.value & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -209,11 +208,11 @@ export msg act exportPath =
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
 
 writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
-writeValAt (Ann valI body) =
+writeValAt (Ann (Const valI) body) =
     valI <$ (htraverse1 writeValAt body >>= ExprIRef.writeValI valI)
 
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
-writeValAtUUID x = x & annotations %~ (_F #) . IRef.unsafeFromUUID & writeValAt
+writeValAtUUID x = x & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (_F #) . IRef.unsafeFromUUID & writeValAt
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>

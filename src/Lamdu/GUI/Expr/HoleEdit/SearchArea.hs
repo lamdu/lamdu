@@ -28,7 +28,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann(..), annotations)
+import           Hyper
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -95,11 +95,11 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Tree (Ann (Sugar.Payload Name i o ())) (Sugar.Binder Name i o) ->
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o)
+    Tree (Ann (Const (Sugar.Payload Name i o ()))) (Sugar.Binder Name i o) ->
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o)
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
-    & annotations %~ pl
+    & Lens.from _HFlip %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where
         pl (x, needParens, sugarPl) =
             ExprGui.Payload

@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.PostProcess
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, ann)
+import           Hyper
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (runPureInfer)
@@ -33,7 +33,7 @@ makeScheme ::
     Load.InferOut m ->
     Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
 makeScheme (Load.InferOut inferredVal inferContext) =
-    generalize (inferredVal ^. ann . Input.inferResult . V.iType)
+    generalize (inferredVal ^. hAnn . Lens._Wrapped . Input.inferResult . V.iType)
     >>= saveScheme
     & runPureInfer V.emptyScope inferContext
     <&> (^. Lens._1)
@@ -59,7 +59,7 @@ def infer monitors defI =
                         Definition.exprFrozenDeps .~
                         Definition.pruneDefExprDeps defExpr
                     & Definition.defBody . Lens.mapped %~
-                        (^. ann . Property.pVal)
+                        (^. hAnn . Lens._Wrapped . Property.pVal)
                     & Transaction.writeIRef defI
                     )
 

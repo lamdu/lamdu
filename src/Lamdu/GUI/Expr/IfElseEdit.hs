@@ -23,7 +23,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), hAnn)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -57,7 +57,7 @@ makeIfThen ::
     ) =>
     WithTextPos View -> AnimId ->
     Tree (Sugar.IfElse Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
@@ -77,7 +77,7 @@ makeIfThen prefixLabel animId ifElse =
                  ( E.toDoc env
                      [has . MomentuTexts.edit, has . MomentuTexts.delete]
                  ) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . ann .
+                (ifElse ^. Sugar.iElse . hAnn . Lens._Wrapped .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap ifGui)
@@ -91,16 +91,16 @@ makeElse ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     AnimId ->
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
         (Sugar.Else Name i o) ->
     GuiM env i o [Row (Responsive o)]
-makeElse parentAnimId (Ann pl (Sugar.SimpleElse expr)) =
+makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     ( Row elseAnimId
         <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
         <*> (grammar (label Texts.injectSymbol)
                 & Reader.local (Element.animIdPrefix .~ elseAnimId)
                 <&> Responsive.fromTextView)
-    ) <*> GuiM.makeSubexpression (Ann pl expr)
+    ) <*> GuiM.makeSubexpression (Ann (Const pl) expr)
     <&> pure
     where
         elseAnimId = parentAnimId <> ["else"]
@@ -111,7 +111,7 @@ makeElse _ (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- grammar (label Texts.elseShort)
         letEventMap <-
-            foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
+            foldMap ExprEventMap.addLetEventMap (pl ^. Lens._Wrapped . Sugar.plActions . Sugar.mNewLet)
         (:)
             <$> ( makeIfThen elseLabel animId content
                   <&> Lens.mapped %~ Widget.weakerEvents letEventMap
@@ -121,7 +121,7 @@ makeElse _ (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
             & GuiM.withLocalMScopeId mInnerScope
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
-        entityId = pl ^. Sugar.plEntityId
+        entityId = pl ^. Lens._Wrapped . Sugar.plEntityId
         -- TODO: cleaner way to write this?
         lookupMKey k m = k >>= (`Map.lookup` m)
 
@@ -182,7 +182,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.IfElse Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make ifElse pl =

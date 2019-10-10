@@ -52,7 +52,7 @@ preparePayloads =
     snd . go
     where
         go :: Val (EntityId, [EntityId] -> pl) -> (Map V.Var [EntityId], Val pl)
-        go (Ann (x, mkPayload) body) =
+        go (Ann (Const (x, mkPayload)) body) =
             ( childrenVars
               & case body of
                 V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [x]
@@ -64,6 +64,7 @@ preparePayloads =
                   V.BLam (V.Lam var _) -> childrenVars ^. Lens.ix var
                   _ -> []
                   & mkPayload
+                  & Const
                 )
             )
             where
@@ -71,8 +72,8 @@ preparePayloads =
                 b = body & htraverse1 %~ Lens.Const . go
 
 initLocalsInScope :: [V.Var] -> Val (Payload m a) -> Val (Payload m a)
-initLocalsInScope locals (Ann pl body) =
+initLocalsInScope locals (Ann (Const pl) body) =
     case body of
     V.BLam (V.Lam var b) -> initLocalsInScope (var : locals) b & V.Lam var & V.BLam
     x -> x & htraverse1 %~ initLocalsInScope locals
-    & Ann (pl & localsInScope <>~ locals)
+    & Ann (Const (pl & localsInScope <>~ locals))

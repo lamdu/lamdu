@@ -17,9 +17,8 @@ import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, htraverse1)
+import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Hyper.Unify (unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
@@ -74,11 +73,11 @@ mkOptions posInfo sugarContext argI argS exprPl =
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
-            [ App hole hole & V.BApp & Ann () | Lens.nullOf (val . _BodyLam) argS ]
+            [ App hole hole & V.BApp & Ann (Const ()) | Lens.nullOf (hVal . _BodyLam) argS ]
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
-        hole = V.BLeaf V.LHole & Ann ()
+        hole = V.BLeaf V.LHole & Ann (Const ())
 
 mkAppliedHoleSuggesteds ::
     Monad m =>
@@ -88,7 +87,7 @@ mkAppliedHoleSuggesteds ::
     [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
-    (Suggest.termTransforms Nothing (argI & annotations %~ onPl))
+    (Suggest.termTransforms Nothing (argI & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ onPl))
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
@@ -111,16 +110,16 @@ checkTypeMatch x y =
 convertAppliedHole ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (Ann (Input.Payload m a)) (V.App V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (V.App V.Term) ->
     ExpressionU m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedHole posInfo (Ann exprPl (V.App funcI argI)) argS =
+convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
         guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
-                checkTypeMatch (argI ^. ann . Input.inferResult . V.iType)
+                checkTypeMatch (argI ^. hAnn . Lens._Wrapped . Input.inferResult . V.iType)
                 (exprPl ^. Input.inferResult . V.iType)
             postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
@@ -129,16 +128,16 @@ convertAppliedHole posInfo (Ann exprPl (V.App funcI argI)) argS =
                     | otherwise = neverShowAnnotations
             options <-
                 argS
-                & annotations %~ (,) showAnn
-                & annotations convertPayload
+                & Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) showAnn))
+                & Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload)))
                 >>= (mkOptions posInfo sugarContext argI ?? exprPl)
                 & Reader.local (ConvertM.scAnnotationsMode .~ Annotations.None)
             healMis <- healMismatch
             BodyFragment Fragment
                 { _fExpr =
                     argS
-                    & ann . pActions . detach .~ FragmentExprAlready storedEntityId
-                    & ann . pActions . mSetToHole ?~
+                    & hAnn . Lens._Wrapped . pActions . detach .~ FragmentExprAlready storedEntityId
+                    & hAnn . Lens._Wrapped . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                     ( if isTypeMatch
@@ -151,9 +150,9 @@ convertAppliedHole posInfo (Ann exprPl (V.App funcI argI)) argS =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-    <&> ann . pActions . detach .~ FragmentAlready storedEntityId
+    <&> hAnn . Lens._Wrapped . pActions . detach .~ FragmentAlready storedEntityId
     where
-        argIRef = argI ^. ann . Input.stored . Property.pVal
+        argIRef = argI ^. hAnn . Lens._Wrapped . Input.stored . Property.pVal
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI
 
@@ -190,8 +189,8 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
-                _ <- annotations (applyBindings . (^. Input.inferResult . V.iType)) rawFragmentExpr
-                _ <- annotations (applyBindings . (^. _2 . V.iType)) x
+                _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Input.inferResult . V.iType)) rawFragmentExpr
+                _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2 . V.iType)) x
                 -- Roll back state after occurs checks
                 fragmentExpr <$ State.put t
                 & liftPureInfer (snd pl ^. V.iScope)
@@ -201,23 +200,23 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 <&>
                 \t ->
                 V.App
-                (Ann ((Nothing, NotFragment), snd pl & V.iType .~ t) (V.BLeaf V.LHole))
+                (Ann (Const ((Nothing, NotFragment), snd pl & V.iType .~ t)) (V.BLeaf V.LHole))
                 fragmentExpr
-                & V.BApp & Ann ((Nothing, NotFragment), snd pl)
+                & V.BApp & Ann (Const ((Nothing, NotFragment), snd pl))
             ]
             & lift
             & join
             & mapStateT (ListClass.take 1)
-        fragmentExpr = rawFragmentExpr & annotations %~ onFragmentPayload
+        fragmentExpr = rawFragmentExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ onFragmentPayload
         onFragmentPayload pl =
             ( (Just (pl ^. Input.stored . Property.pVal), IsFragment)
             , pl ^. Input.inferResult
             )
-        fragmentType = rawFragmentExpr ^. ann . Input.inferResult . V.iType
+        fragmentType = rawFragmentExpr ^. hAnn . Lens._Wrapped . Input.inferResult . V.iType
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment :: Hole.ResultVal n () -> Hole.ResultVal n IsFragment
-markNotFragment = annotations %~ _1 . _2 .~ NotFragment
+markNotFragment = Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ _1 . _2 .~ NotFragment
 
 -- TODO: Unify type according to IsFragment, avoid magic var
 fragmentVar :: V.Var
@@ -225,20 +224,20 @@ fragmentVar = "HOLE FRAGMENT EXPR"
 
 replaceFragment ::
     EntityId -> Int -> Val (Input.Payload m IsFragment) -> Val (Input.Payload m ())
-replaceFragment parentEntityId idxInParent (Ann pl bod) =
+replaceFragment parentEntityId idxInParent (Ann (Const pl) bod) =
     case pl ^. Input.userData of
     IsFragment ->
         V.LVar fragmentVar & V.BLeaf
-        & Ann (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId)
+        & Ann (Const (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId))
     NotFragment ->
         bod & Lens.indexing htraverse1 %@~ replaceFragment (pl ^. Input.entityId)
-        & Ann (void pl)
+        & Ann (Const (void pl))
 
 emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 emplaceInHoles replaceHole =
     map fst . filter snd . (`runStateT` False) . go
     where
-        go oldVal@(Ann x bod) =
+        go oldVal@(Ann (Const x) bod) =
             do
                 alreadyReplaced <- State.get
                 if alreadyReplaced
@@ -250,17 +249,17 @@ emplaceInHoles replaceHole =
                                 [ replace x
                                 , pure (pure oldVal)
                                 ]
-                        V.BApp (V.App (Ann f (V.BLeaf V.LHole)) arg@(Ann _ (V.BLeaf V.LHole))) ->
+                        V.BApp (V.App (Ann (Const f) (V.BLeaf V.LHole)) arg@(Ann _ (V.BLeaf V.LHole))) ->
                             join $ lift
                                 [ replace f
-                                    <&> fmap (Ann x . V.BApp . (`V.App` arg))
+                                    <&> fmap (Ann (Const x) . V.BApp . (`V.App` arg))
                                 , pure (pure oldVal)
                                 ]
                         _ ->
                             htraverse1 (fmap Lens.Const . go) bod
                             <&> Lens.sequenceAOf (htraverse1 . Lens._Wrapped)
                             <&> Lens.mapped . htraverse1 %~ (^. Lens._Wrapped)
-                            <&> Lens.mapped %~ Ann x
+                            <&> Lens.mapped %~ Ann (Const x)
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::
@@ -268,7 +267,7 @@ mkResultValFragment ::
     Val (Maybe (Input.Payload m a), Tree V.IResult UVar) ->
     State InferState (Hole.ResultVal m IsFragment)
 mkResultValFragment inferred x =
-    x & annotations . _1 %~ onPl
+    x & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 %~ onPl
     & Hole.detachValIfNeeded emptyPl inferred
     where
         emptyPl = (Nothing, NotFragment)
@@ -307,12 +306,12 @@ mkOptionFromFragment sugarContext exprPl x =
             (mkResultValFragment (exprPl ^. Input.inferResult) x)
             (sugarContext ^. ConvertM.scInferContext)
         resolved =
-            annotations (applyBindings . (^. Lens._2 . V.iType)) result
+            (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Lens._2 . V.iType)) result
             & runPureInfer scope inferContext
             & Hole.assertSuccessfulInfer
             & fst
         scope = exprPl ^. Input.inferResult . V.iScope
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
         baseExpr = pruneExpr x
-        pruneExpr (Ann (Just{}, _) _) = V.BLeaf V.LHole & Ann ()
-        pruneExpr (Ann _ b) = b & htraverse1 %~ pruneExpr & Ann ()
+        pruneExpr (Ann (Const (Just{}, _)) _) = V.BLeaf V.LHole & Ann (Const ())
+        pruneExpr (Ann _ b) = b & htraverse1 %~ pruneExpr & Ann (Const ())

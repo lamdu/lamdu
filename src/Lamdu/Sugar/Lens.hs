@@ -15,18 +15,17 @@ module Lamdu.Sugar.Lens
 import qualified Control.Lens as Lens
 import           Data.Constraint (Dict(..))
 import           Data.Proxy (Proxy(..))
-import           Hyper (Tree, HNodes(..), HTraversable(..), (#>), htraverse, hmap, annotations)
-import           Hyper.Recurse (Recursive(..), RTraversable)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper
+import           Hyper.Recurse (Recursive(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
 childPayloads ::
     HTraversable expr =>
-    Lens.Traversal' (Tree expr (Ann a)) a
+    Lens.Traversal' (Tree expr (Ann (Const a))) a
 childPayloads f =
-    htraverse (const (ann f))
+    htraverse (const ((hAnn . Lens._Wrapped) f))
 
 class HTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool
@@ -89,7 +88,7 @@ bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
     & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
-    & Lens.failing (_BodyLabeledApply . aFunc . val . Lens._Wrapped . binderVarRefUnfinished)
+    & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . binderVarRefUnfinished)
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody name i o expr) (Scheme name)
 defBodySchemes f (DefinitionBodyBuiltin b) =
@@ -108,24 +107,25 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
 binderResultExpr ::
-    Lens.IndexedLens' (Tree (Body name i o) (Ann ()))
-    (Tree (Ann a) (Binder name i o)) a
-binderResultExpr f (Ann pl x) =
+    Lens.IndexedLens' (Tree (Body name i o) (Ann (Const ())))
+    (Tree (Ann (Const a)) (Binder name i o)) a
+binderResultExpr f (Ann (Const pl) x) =
     case x of
     BinderExpr e ->
         Lens.indexed f
-        (hmap (Proxy @RTraversable #> annotations .~ ()) e)
+        (hmap (Proxy @(Recursively HFunctor) #> Lens.from _HFlip %~ hmap (\_ Const{} -> Const ())) e)
         pl
+        <&> Const
         <&> (`Ann` x)
     BinderLet l ->
         lBody (binderResultExpr f) l
         <&> BinderLet
-        <&> Ann pl
+        <&> Ann (Const pl)
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Tree (Ann (Payload n0 i o ())) (Binder n0 i o) ->
-        i (Tree (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
+    (Tree (Ann (Const (Payload n0 i o ()))) (Binder n0 i o) ->
+        i (Tree (Ann (Const (Payload n1 i o ()))) (Binder n1 i o))) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -135,8 +135,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Tree (Ann (Payload n0 i o ())) (Binder n0 i o) ->
-        i (Tree (Ann (Payload n1 i o ())) (Binder n1 i o))) ->
+    (Tree (Ann (Const (Payload n0 i o ()))) (Binder n0 i o) ->
+        i (Tree (Ann (Const (Payload n1 i o ()))) (Binder n1 i o))) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr
@@ -145,7 +145,7 @@ assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
 assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 
-annotationTypes :: Lens.Traversal' (Annotation name i) (Tree (Ann EntityId) (Type name))
+annotationTypes :: Lens.Traversal' (Annotation name i) (Tree (Ann (Const EntityId)) (Type name))
 annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal

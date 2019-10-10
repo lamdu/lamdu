@@ -28,8 +28,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann, val)
+import           Hyper (Tree, Ann, hVal)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -135,7 +134,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Composite Name i o) (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Tree (Sugar.Composite Name i o) (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
@@ -321,7 +320,7 @@ openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
         (doc env Texts.close)
     | otherwise = pure mempty
     where
-        isHole = Lens.has (val . Sugar._BodyHole)
+        isHole = Lens.has (hVal . Sugar._BodyHole)
 
 closedRecordEventMap ::
     ( MonadReader env m, Has Config env

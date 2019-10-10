@@ -27,7 +27,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann, ann)
+import           Hyper (Tree, Ann, hAnn)
 import           Lamdu.Calc.Type (Tag)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -79,7 +79,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.Case Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
@@ -106,7 +106,7 @@ make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
                         GuiM.makeSubexpression arg
                         <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
                     mTag <-
-                        Annotation.evaluationResult (arg ^. ann)
+                        Annotation.evaluationResult (arg ^. hAnn . Lens._Wrapped)
                         <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
                     Options.boxSpaced
                         ?? Options.disambiguationNone
@@ -180,7 +180,7 @@ makeAltsWidget ::
     ) =>
     Maybe Tag ->
     [Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o)] ->
-    [Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Const (Sugar.GetVar Name o))] ->
+    [Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Const (Sugar.GetVar Name o))] ->
     Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)

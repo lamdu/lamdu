@@ -26,7 +26,7 @@ import           Lamdu.Prelude
 convertComposite ::
     MonadTransaction n m =>
     EntityId -> Tree Pure T.Row ->
-    m (CompositeFields InternalName (Tree (Ann EntityId) (Type InternalName)))
+    m (CompositeFields InternalName (Tree (Ann (Const EntityId)) (Type InternalName)))
 convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
@@ -41,7 +41,7 @@ convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
     MonadTransaction n m =>
-    EntityId -> Tree Pure T.Type -> m (Tree (Ann EntityId) (Type InternalName))
+    EntityId -> Tree Pure T.Type -> m (Tree (Ann (Const EntityId)) (Type InternalName))
 convertType entityId typ =
     case typ ^. _Pure of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure
@@ -64,7 +64,7 @@ convertType entityId typ =
                 <*> convertType (EntityId.ofTInstParam tv entityId) val
     T.TRecord composite -> TRecord <$> convertComposite entityId composite
     T.TVariant composite -> TVariant <$> convertComposite entityId composite
-    <&> Ann entityId
+    <&> Ann (Const entityId)
 
 convertScheme :: MonadTransaction n m => EntityId -> Tree Pure T.Scheme -> m (Scheme InternalName)
 convertScheme entityId (Pure (S.Scheme tvs typ)) =

@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (annotations)
+import           Hyper
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Val)
@@ -78,7 +78,7 @@ data WorkAreaLowLevel = WorkAreaLowLevel
 
 workAreaLowLevelValProps :: WorkAreaLowLevel -> [ValP ViewM]
 workAreaLowLevelValProps (WorkAreaLowLevel r p) =
-    defExprs ^.. Lens.folded . Def.expr . annotations
+    defExprs ^.. Lens.folded . Def.expr . Lens.from _HFlip . hfolded1 . Lens._Wrapped
     where
         defExprs = r : p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
 

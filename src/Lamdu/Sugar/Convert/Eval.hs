@@ -12,11 +12,10 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
-import           Hyper (Tree, Pure(..))
+import           Hyper (Tree, Pure(..), Ann(..), hVal)
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Type.AST.Scheme (QVarInstances(..))
-import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
@@ -70,25 +69,25 @@ convertNullaryInject entityId (ER.Inject tag (Ann _ ER.RRecEmpty)) =
     & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
-convertList :: EntityId -> Tree Pure T.Type -> Tree ER.Inject (Ann (Tree Pure T.Type)) -> Maybe (ResVal InternalName)
+convertList :: EntityId -> Tree Pure T.Type -> Tree ER.Inject (Ann (Const (Tree Pure T.Type))) -> Maybe (ResVal InternalName)
 convertList entityId typ (ER.Inject _ x) =
     do
         Pure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.listTid)
         (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
-        ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . val & maybeToMPlus
+        ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . hVal & maybeToMPlus
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
             & ResList & RList & ResVal entityId & Just
 
-simpleInject :: EntityId -> Tree ER.Inject (Ann (Tree Pure T.Type)) -> ResVal InternalName
+simpleInject :: EntityId -> Tree ER.Inject (Ann (Const (Tree Pure T.Type))) -> ResVal InternalName
 simpleInject entityId (ER.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
     & ResInject (ConvertTag.withoutContext entityId tag) & RInject
     & ResVal entityId
 
-convertInject :: EntityId -> Tree Pure T.Type -> Tree ER.Inject (Ann (Tree Pure T.Type)) -> ResVal InternalName
+convertInject :: EntityId -> Tree Pure T.Type -> Tree ER.Inject (Ann (Const (Tree Pure T.Type))) -> ResVal InternalName
 convertInject entityId typ inj =
     convertNullaryInject entityId inj
     <|> convertList entityId typ inj
@@ -120,7 +119,7 @@ convertTree entityId typ fr =
         RTree ResTree
             { _rtRoot = convertVal (EntityId.ofEvalField Builtins.rootTag entityId) root
             , _rtSubtrees =
-                subtrees ^.. (val . ER._RArray) .> Lens.folded
+                subtrees ^.. (hVal . ER._RArray) .> Lens.folded
                 & Lens.imapped %@~ convertSubtree
             } & ResVal entityId & Just
     where
@@ -174,10 +173,10 @@ convertVal :: EntityId -> ERV -> ResVal InternalName
 convertVal entityId (Ann _ (ER.RError err)) = RError err & ResVal entityId
 convertVal entityId (Ann _ (ER.RFunc i)) = RFunc i & ResVal entityId
 convertVal entityId (Ann _ ER.RRecEmpty) = ResRecord [] & RRecord & ResVal entityId
-convertVal entityId v@(Ann typ ER.RRecExtend{}) = convertRecord entityId typ v
-convertVal entityId (Ann typ (ER.RPrimVal p)) = convertPrimVal typ p & ResVal entityId
-convertVal entityId (Ann typ (ER.RInject x)) = convertInject entityId typ x
-convertVal entityId (Ann typ (ER.RArray x)) = convertArray entityId typ x
+convertVal entityId v@(Ann (Const typ) ER.RRecExtend{}) = convertRecord entityId typ v
+convertVal entityId (Ann (Const typ) (ER.RPrimVal p)) = convertPrimVal typ p & ResVal entityId
+convertVal entityId (Ann (Const typ) (ER.RInject x)) = convertInject entityId typ x
+convertVal entityId (Ann (Const typ) (ER.RArray x)) = convertArray entityId typ x
 
 -- When we can scroll between eval view results we
 -- must encode the scope into the entityID for smooth
@@ -207,7 +206,7 @@ results = convertEvalResultsWith . entityIdForEvalResult
 
 -- | We flatten all the scopes the param received in ALL parent
 -- scopes. The navigation is done via the lambda's scope map, and then
--- this map is used to just figure out the val of the param in some
+-- this map is used to just figure out the hVal of the param in some
 -- (deeply) nested scope
 param ::
     Applicative i =>

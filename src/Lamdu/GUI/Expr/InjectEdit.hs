@@ -21,7 +21,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), hAnn)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -84,15 +84,15 @@ makeInject val tag pl =
                 <&> (: [arg])
             )
     where
-        mReplaceParent = val ^. ann . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. hAnn . Lens._Wrapped . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
-    Tree (Ann a) (Const (Sugar.NullaryVal name i o)) ->
+    Tree (Ann (Const a)) (Const (Sugar.NullaryVal name i o)) ->
     Sugar.Expression name i o a
-emptyRec (Ann pl (Const (Sugar.NullaryVal closedActions addItem))) =
+emptyRec (Ann (Const pl) (Const (Sugar.NullaryVal closedActions addItem))) =
     Sugar.Composite [] [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord
-    & Ann pl
+    & Ann (Const pl)
 
 makeNullaryInject ::
     ( Monad i, Monad o
@@ -105,7 +105,7 @@ makeNullaryInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
     (Const (Sugar.NullaryVal Name i o)) ->
     Sugar.TagRef Name i o ->
     Sugar.Payload Name i o ExprGui.Payload ->
@@ -133,7 +133,7 @@ makeNullaryInject nullary tag pl =
                 )
     where
         nullaryRecEntityId =
-            nullary ^. ann . Sugar.plEntityId
+            nullary ^. hAnn . Lens._Wrapped . Sugar.plEntityId
             & WidgetIds.fromEntityId
 
 make ::
@@ -148,7 +148,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.Inject Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Inject tag mVal) =

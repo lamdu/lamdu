@@ -12,8 +12,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import           Hyper (Tree, htraverse1)
-import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.I18N.Code as Texts
@@ -46,13 +45,13 @@ expr ::
     , Has (Texts.CodeUI Text) env
     ) =>
     env -> Expression Name i o a -> [Text]
-expr env = ofBody env . (^. val)
+expr env = ofBody env . (^. hVal)
 
 ofBody ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Tree (Body Name i o) (Ann a) -> [Text]
+    env -> Tree (Body Name i o) (Ann (Const a)) -> [Text]
 ofBody env =
     \case
     BodyLam {} ->
@@ -63,7 +62,7 @@ ofBody env =
         env ^. has . Texts.apply : x ^. htraverse1 . Lens.to (expr env)
     BodyLabeledApply x ->
         env ^. has . Texts.apply
-        : ofName (x ^. aFunc . val . Lens._Wrapped . bvNameRef . nrName)
+        : ofName (x ^. aFunc . hVal . Lens._Wrapped . bvNameRef . nrName)
         ++ (x ^.. aAnnotatedArgs . Lens.folded . aaTag . tagName >>= ofName)
     BodyRecord {} ->
         -- We don't allow completing a record by typing one of its
@@ -111,7 +110,7 @@ binder ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Tree (Binder Name i o) (Ann a) -> [Text]
+    env -> Tree (Binder Name i o) (Ann (Const a)) -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
 binder env (BinderExpr x) = ofBody env x
 
@@ -164,7 +163,7 @@ getSearchStringRemainder ctx holeResult
     where
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
         fragmentExpr = _BodyFragment . fExpr
-        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . val . x]
+        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . hVal . x]
 
 verifyInjectSuffix :: Text -> Body name i o f -> Bool
 verifyInjectSuffix searchTerm x =

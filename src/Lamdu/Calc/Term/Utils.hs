@@ -18,7 +18,7 @@ import           Lamdu.Prelude
 
 -- | Return all subexprs until the given cut-point
 culledSubexprPayloads :: (a -> Bool) -> Val a -> [a]
-culledSubexprPayloads cut (Ann pl body)
+culledSubexprPayloads cut (Ann (Const pl) body)
     | cut pl = []
     | otherwise = pl : body ^. htraverse1 . Lens.to (culledSubexprPayloads cut)
 
@@ -28,7 +28,7 @@ data Composite a = Composite
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Composite
 
-case_ :: Tree (RowExtend T.Tag V.Term V.Term) (Ann pl) -> Composite (Val pl)
+case_ :: Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const pl)) -> Composite (Val pl)
 case_ (RowExtend tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
@@ -39,7 +39,7 @@ case_ (RowExtend tag handler r) =
             V.BCase x -> case_ x
             _ -> Composite mempty (Just v)
 
-recExtend :: Tree (RowExtend T.Tag V.Term V.Term) (Ann pl) -> Composite (Val pl)
+recExtend :: Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const pl)) -> Composite (Val pl)
 recExtend (RowExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field

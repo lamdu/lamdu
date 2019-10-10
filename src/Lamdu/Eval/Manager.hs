@@ -16,7 +16,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
-import           Hyper (annotations)
+import           Hyper
 import           Hyper.Type.Functor (_F)
 import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
@@ -114,7 +114,7 @@ evalActions evaluator =
         loadGlobal globalId =
             ExprIRef.defI globalId
             & loadDef evaluator
-            <&> Def.defBody . Lens.mapped . annotations %~ Property.value
+            <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Property.value
             <&> Lens.mapped .~ ()
 
 replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
@@ -134,7 +134,7 @@ start evaluator =
         DbLayout.repl DbLayout.codeAnchors
         & Load.defExpr
         & runViewTransactionInIO (eDb evaluator)
-        <&> Lens.mapped . annotations %~ Property.value
+        <&> Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Property.value
         >>= startBG
             (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)

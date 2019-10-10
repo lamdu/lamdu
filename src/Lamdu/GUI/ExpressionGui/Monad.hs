@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
-{-# LANGUAGE DerivingVia  #-}
+{-# LANGUAGE DerivingVia, DataKinds #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --
@@ -47,7 +47,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), hAnn)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -77,7 +77,7 @@ data Askable env i o = Askable
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
     , _aMakeBinder ::
-        Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+        Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
         (Sugar.Binder Name i o) ->
         GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
@@ -165,8 +165,8 @@ instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Ann (Sugar.Payload name i o a) e -> GuiM env i o (Responsive.Responsive o)) ->
-    Ann (Sugar.Payload name i o a) e ->
+        (Ann (Const (Sugar.Payload name i o a)) e -> GuiM env i o (Responsive.Responsive o)) ->
+    Ann (Const (Sugar.Payload name i o a)) e ->
     GuiM env i o (Responsive.Responsive o)
 make sub expr =
     do
@@ -175,7 +175,7 @@ make sub expr =
     & advanceDepth (pure . Responsive.fromTextView)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
-        animId = expr ^. ann & WidgetIds.fromExprPayload & toAnimId
+        animId = expr ^. hAnn . Lens._Wrapped & WidgetIds.fromExprPayload & toAnimId
 
 makeSubexpression ::
     Monad i =>
@@ -185,7 +185,7 @@ makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o) ->
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o) ->
     GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -201,7 +201,7 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
-    (Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    (Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
         (Sugar.Binder Name i o)
         -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->

@@ -381,7 +381,7 @@ decodeVal =
     <$> (obj .: "id")
     <*> decodeValBody obj
 
-encodeValBody :: Tree V.Term (Ann UUID) -> AesonTypes.Object
+encodeValBody :: Tree V.Term (Ann (Const UUID)) -> AesonTypes.Object
 encodeValBody body =
     case body & htraverse1 %~ Lens.Const . encodeVal of
     V.BApp (V.App func arg) ->
@@ -403,7 +403,7 @@ encodeValBody body =
     where
         c x = x ^. Lens._Wrapped
 
-decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (Tree V.Term (Ann UUID))
+decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (Tree V.Term (Ann (Const UUID)))
 decodeValBody obj =
     jsum
     [ V.App

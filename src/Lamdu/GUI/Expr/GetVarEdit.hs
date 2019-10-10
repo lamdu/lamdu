@@ -370,11 +370,11 @@ makePunnedVars ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    [Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    [Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
         (Const (Sugar.GetVar Name o))] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =
     do
-        argEdits <- traverse (\(Ann a v) -> make (v ^. Lens._Wrapped) a) args
+        argEdits <- traverse (\(Ann a v) -> make (v ^. Lens._Wrapped) (a ^. Lens._Wrapped)) args
         collapsed <- grammar (label Texts.punnedFields) <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits

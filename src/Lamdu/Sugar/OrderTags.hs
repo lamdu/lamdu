@@ -6,8 +6,7 @@ module Lamdu.Sugar.OrderTags
 
 import qualified Control.Lens.Extended as Lens
 import           Data.List (sortOn)
-import           Hyper (Tree, HNodes(..), HTraversable(..), htraverse, htraverse1, (#>))
-import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -20,13 +19,13 @@ type T = Transaction
 type OrderT m x = x -> T m x
 
 class Order m name o t where
-    order :: OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
+    order :: OrderT m (Tree t (Ann (Const (Sugar.Payload name i o a))))
 
     default order ::
         ( Monad m, HTraversable t
         , HNodesConstraint t (Order m name o)
         ) =>
-        OrderT m (Tree t (Ann (Sugar.Payload name i o a)))
+        OrderT m (Tree t (Ann (Const (Sugar.Payload name i o a))))
     order = htraverse (Proxy @(Order m name o) #> orderNode)
 
 orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
@@ -51,11 +50,11 @@ orderTBody t =
     >>= htraverse1 orderType
 
 orderType :: Monad m => OrderT m (Tree (Ann a) (Sugar.Type name))
-orderType = val orderTBody
+orderType = hVal orderTBody
 
 orderRecord ::
     Monad m =>
-    OrderT m (Tree (Sugar.Composite name (T m) o) (Ann (Sugar.Payload name i o a)))
+    OrderT m (Tree (Sugar.Composite name (T m) o) (Ann (Const (Sugar.Payload name i o a))))
 orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
@@ -68,7 +67,7 @@ instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
 
 orderCase ::
     Monad m =>
-    OrderT m (Tree (Sugar.Case name (T m) o) (Ann (Sugar.Payload name i o a)))
+    OrderT m (Tree (Sugar.Case name (T m) o) (Ann (Const (Sugar.Payload name i o a))))
 orderCase = Sugar.cBody orderRecord
 
 instance Monad m => Order m name o (Sugar.Lambda name (T m) o)
@@ -113,10 +112,10 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
 
 orderNode ::
     (Monad m, Order m name o f) =>
-    OrderT m (Tree (Ann (Sugar.Payload name i o a)) f)
-orderNode (Ann a x) =
+    OrderT m (Tree (Ann (Const (Sugar.Payload name i o a))) f)
+orderNode (Ann (Const a) x) =
     Ann
-    <$> (Sugar.plAnnotation . SugarLens.annotationTypes) orderType a
+    <$> ((Sugar.plAnnotation . SugarLens.annotationTypes) orderType a <&> Const)
     <*> order x
 
 orderDef ::

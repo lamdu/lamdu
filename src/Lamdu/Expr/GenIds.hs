@@ -48,12 +48,12 @@ randomTag :: RandomGen g => g -> (T.Tag, g)
 randomTag g = randomIdentifier g & _1 %~ T.Tag
 
 randomizeExpr :: (RandomGen gen, Random r) => gen -> Val (r -> a) -> Val a
-randomizeExpr gen (Ann pl body) =
+randomizeExpr gen (Ann (Const pl) body) =
     (`evalState` gen) $
     do
         r <- state random
         newBody <- body & htraverse1 %%~ randomizeSubexpr
-        Ann (pl r) newBody & pure
+        Ann (Const (pl r)) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 
@@ -98,7 +98,7 @@ randomizeParamIdsG ::
 randomizeParamIdsG preNG gen initMap convertPL =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where
-        go (Ann s v) =
+        go (Ann (Const s) v) =
             do
                 parMap <- Reader.ask
                 newGen <- lift $ state ngSplit
@@ -119,7 +119,7 @@ randomizeParamIdsG preNG gen initMap convertPL =
                     x@V.BCase {}      -> htraverse1 go x
                     x@V.BInject {}    -> htraverse1 go x
                     x@V.BToNom {}     -> htraverse1 go x
-                    <&> Ann (convertPL newGen parMap s)
+                    <&> Ann (Const (convertPL newGen parMap s))
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 

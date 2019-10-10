@@ -18,8 +18,7 @@ import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
@@ -62,8 +61,8 @@ test =
 
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea name i o a)
-    (Tree (Sugar.Body name i o) (Ann a))
-replExpr = Sugar.waRepl . Sugar.replExpr . val . Sugar._BinderExpr
+    (Tree (Sugar.Body name i o) (Ann (Const a)))
+replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -180,7 +179,7 @@ testFragmentSize =
     do
         frag <-
             fromWorkArea baseEnv
-            (Sugar.waRepl . Sugar.replExpr . ann)
+            (Sugar.waRepl . Sugar.replExpr . hAnn . Lens._Wrapped)
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
@@ -202,7 +201,7 @@ testOpPrec =
         holeId <-
             fromWorkArea baseEnv
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . ann . Sugar.plEntityId)
+             Sugar.fBody . hAnn . Lens._Wrapped . Sugar.plEntityId)
             <&> HoleWidgetIds.make
             <&> HoleWidgetIds.hidClosed
         workArea <- convertWorkArea baseEnv

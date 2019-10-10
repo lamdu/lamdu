@@ -1,12 +1,13 @@
 module Tests.AnimIdClash (test) where
 
+import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import           Hyper (Tree, Ann(..), ann, annotations)
+import           Hyper
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
@@ -46,15 +47,15 @@ testTypeView =
         nullType entityId = recType entityId []
         recType ::
             Sugar.EntityId ->
-            [(Sugar.Tag Name.Name, Tree (Ann Sugar.EntityId) (Sugar.Type Name.Name))] ->
-            Tree (Ann Sugar.EntityId) (Sugar.Type Name.Name)
+            [(Sugar.Tag Name.Name, Tree (Ann (Const Sugar.EntityId)) (Sugar.Type Name.Name))] ->
+            Tree (Ann (Const Sugar.EntityId)) (Sugar.Type Name.Name)
         recType entityId fields =
             Sugar.CompositeFields
             { Sugar._compositeFields = fields
             , Sugar._compositeExtension = Nothing
             }
             & Sugar.TRecord
-            & Ann entityId
+            & Ann (Const entityId)
 
 adhocPayload :: ExprGui.Payload
 adhocPayload =
@@ -78,9 +79,9 @@ testFragment =
                     , Sugar._fOptions = pure []
                     } & Stub.expr
                 )
-                & ann . Sugar.plEntityId .~ fragEntityId
+                & hAnn . Lens._Wrapped . Sugar.plEntityId .~ fragEntityId
                 & Stub.addNamesToExpr (env ^. has)
-                & annotations . Sugar.plData .~ adhocPayload
+                & Lens.from _HFlip %~ hmap (const (Lens._Wrapped . Sugar.plData .~ adhocPayload))
         let gui =
                 ExpressionEdit.make expr
                 & GuiM.run ExpressionEdit.make BinderEdit.make

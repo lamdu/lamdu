@@ -3,7 +3,7 @@ module Tests.Precedence where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
-import           Hyper.Type.Ann (ann, val)
+import           Hyper (hAnn, hVal)
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.SugarStubs (($$), ($.))
@@ -17,7 +17,7 @@ infixArgs ::
     ( Sugar.Expression name i o a
     , Sugar.Expression name i o a
     )
-infixArgs = val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
+infixArgs = hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix
 
 test :: Test
 test =
@@ -33,7 +33,7 @@ test =
 testPunnedArgOp :: Test
 testPunnedArgOp =
     expr ^?!
-    val . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . ann . _1
+    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . hAnn . Lens._Wrapped . _1
     & assertEqual "punned arg precedence" 0
     & testCase "punned-arg-op"
     where
@@ -51,7 +51,7 @@ testPunnedArgOp =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    val . Sugar._BodyGetField . Sugar.gfRecord . ann . _2
+    hVal . Sugar._BodyGetField . Sugar.gfRecord . hAnn . Lens._Wrapped . _2
     & assertEqual "get field should disambiguate compound expression"
         Parens.NeedsParens
     & testCase "get-field-of-apply"
@@ -65,14 +65,14 @@ testMinOpPrecInfix =
         assertEqual "minOpPrec is not 10?!" 10 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . ann
+        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . hAnn . Lens._Wrapped
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExprWith 0
         i = Stub.litNum
 
 -- Test for https://trello.com/c/OuaLvwiJ/445-wrong-parenthesis
 test445 :: Test
 test445 =
-    assertEqual "Expected paren" Parens.NeedsParens (problemPos ^. ann . _2)
+    assertEqual "Expected paren" Parens.NeedsParens (problemPos ^. hAnn . Lens._Wrapped . _2)
     & testCase "445-wrong-parenthesis"
     where
         expr =
@@ -80,6 +80,6 @@ test445 =
             & Parens.addToExprWith 0
         problemPos =
             expr ^?!
-            val . Sugar._BodySimpleApply . Sugar.appArg .
-            val . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix . _1
+            hVal . Sugar._BodySimpleApply . Sugar.appArg .
+            hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Infix . _1
         i = Stub.litNum

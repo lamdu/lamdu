@@ -8,8 +8,7 @@ module Lamdu.Sugar.Convert.Composite
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
@@ -71,11 +70,11 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Tree (Ann b) (Body InternalName (T m) (T m)) ->
+    Tree (Ann (Const b)) (Body InternalName (T m) (T m)) ->
     Input.Payload m a ->
     ExtendVal m (Input.Payload m a) ->
-    Tree (Composite InternalName (T m) (T m)) (Ann b) ->
-    ConvertM m (Tree (Composite InternalName (T m) (T m)) (Ann b))
+    Tree (Composite InternalName (T m) (T m)) (Ann (Const b)) ->
+    ConvertM m (Tree (Composite InternalName (T m) (T m)) (Ann (Const b)))
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -86,10 +85,10 @@ convertExtend cons extendOp valS exprPl extendV restC =
         let addItem =
                 do
                     guard punSugar
-                    getVar <- itemS ^? ciExpr . val . _BodyGetVar
+                    getVar <- itemS ^? ciExpr . hVal . _BodyGetVar
                     name <- getVar ^? SugarLens.getVarName
                     _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
-                    let punned = Ann (itemS ^. ciExpr . ann) (Const getVar)
+                    let punned = Ann (Const (itemS ^. ciExpr . hAnn . Lens._Wrapped)) (Const getVar)
                     Just (cPunnedItems %~ (punned :))
                 & fromMaybe (cItems %~ (itemS :))
         addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
@@ -187,8 +186,8 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Tree (Body InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
-    (Tree (Composite InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
+    (Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
+    (Tree (Composite InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
 
 convert ::
     (Monad m, Monoid a) =>
@@ -203,7 +202,7 @@ convert op empty cons prism valS restS exprPl extendV =
     \case
     False -> convertOneItem
     True ->
-        case restS ^? val . prism of
+        case restS ^? hVal . prism of
         Nothing -> convertOneItem
         Just r ->
             convertExtend cons op valS exprPl extendV r
@@ -215,9 +214,9 @@ convert op empty cons prism valS restS exprPl extendV =
             -- subexprs given will add no hidden payloads. Then we add the
             -- extend only to pUserData as the hidden payload
             >>= addActions [] exprPl
-            <&> ann . pInput . Input.entityId .~ restS ^. ann . pInput . Input.entityId
-            <&> ann . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> restS ^. ann . pInput . Input.userData)
+            <&> hAnn . Lens._Wrapped . pInput . Input.entityId .~ restS ^. hAnn . Lens._Wrapped . pInput . Input.entityId
+            <&> hAnn . Lens._Wrapped . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> restS ^. hAnn . Lens._Wrapped . pInput . Input.userData)
     where
         convertOneItem =
             convertOneItemOpenComposite empty cons op valS restS exprPl extendV

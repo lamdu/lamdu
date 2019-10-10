@@ -8,8 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -26,24 +25,24 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Tree (Ann (ConvertPayload m a)) (Const (Sugar.BinderVarRef InternalName (T m))) ->
+    Tree (Ann (Const (ConvertPayload m a))) (Const (Sugar.BinderVarRef InternalName (T m))) ->
     [ Sugar.AnnotatedArg InternalName
         (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))
     ] ->
-    [Tree (Ann (ConvertPayload m a)) (Const (Sugar.GetVar InternalName (T m)))] ->
+    [Tree (Ann (Const (ConvertPayload m a))) (Const (Sugar.GetVar InternalName (T m)))] ->
     Input.Payload m a ->
     ConvertM m
-    (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
+    (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
 makeLabeledApply func args punnedArgs exprPl =
     do
-        presentationMode <- func ^. val . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
+        presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let mkInfixArg arg other =
                 arg
-                & val . Sugar._BodyHole . Sugar.holeMDelete ?~
+                & hVal . Sugar._BodyHole . Sugar.holeMDelete ?~
                     (protectedSetToVal
                         (exprPl ^. Input.stored)
-                        (other ^. ann . pInput . Input.stored . Property.pVal)
+                        (other ^. hAnn . Lens._Wrapped . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
         let (specialArgs, removedKeys) =
@@ -64,7 +63,7 @@ makeLabeledApply func args punnedArgs exprPl =
                 filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
             , Sugar._aPunnedArgs =
                 filter
-                ((`notElem` removedKeys) . (^?! val . Lens._Wrapped . SugarLens.getVarName . inTag))
+                ((`notElem` removedKeys) . (^?! hVal . Lens._Wrapped . SugarLens.getVarName . inTag))
                 punnedArgs
             }
     where

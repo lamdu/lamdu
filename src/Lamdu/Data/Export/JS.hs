@@ -17,7 +17,7 @@ import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (Ann(..), ann, annotations)
+import           Hyper
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -60,7 +60,7 @@ compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
 compile :: Monad m => Def.Expr (Val (ValP m)) -> T m String
 compile repl =
-    repl <&> annotations %~ valId
+    repl <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ valId
     & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
@@ -76,7 +76,7 @@ compile repl =
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def
-                <&> Def.defBody . Lens.mapped . annotations %~ valId
+                <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ valId
                 <&> void
                 & lift
             , Compiler.readGlobalType =
@@ -106,7 +106,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . ann . Property.pVal)
+                . Lens.ix (repl ^. Def.expr . hAnn . Lens._Wrapped . Property.pVal)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

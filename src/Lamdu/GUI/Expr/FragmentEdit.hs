@@ -20,7 +20,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann(..), ann)
+import           Hyper (Tree, Ann(..), hAnn)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -74,7 +74,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     Tree (Sugar.Fragment Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make fragment pl =
@@ -130,14 +130,14 @@ make fragment pl =
                 ((strollDest ^. Lens._Unwrapped, strollDest ^. Lens._Unwrapped)
                     <$ guard (not isInAHole))
     where
-        innerId = fragment ^. Sugar.fExpr . ann & WidgetIds.fromExprPayload
+        innerId = fragment ^. Sugar.fExpr . hAnn . Lens._Wrapped & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
         strollDest = pl ^. Sugar.plEntityId & HoleWidgetIds.make & HoleWidgetIds.hidOpen
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
     Tree (Sugar.Fragment Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     GuiM env i o (Responsive o)
 makeFragmentExprEdit fragment =
     do

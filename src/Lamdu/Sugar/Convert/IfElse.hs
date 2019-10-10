@@ -4,9 +4,8 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, _Pure)
+import           Hyper (Tree, Ann(..), _Pure, hAnn, hVal)
 import           Hyper.Type.AST.Nominal (nId)
-import           Hyper.Type.Ann (Ann(..), ann, val)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
@@ -24,18 +23,18 @@ type T = Transaction
 convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
-    Tree (Case InternalName (T m) (T m)) (Ann (ConvertPayload m a)) ->
-    Maybe (Tree (IfElse InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
+    Tree (Case InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
+    Maybe (Tree (IfElse InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
-        case arg ^. val of
+        case arg ^. hVal of
             BodySimpleApply (App (Ann _ (BodyFromNom nom)) x)
                 | nom ^. tidTId == boolTid ->
                     -- In "case _»Nom of ..." the case expression doesn't absorb the FromNom
                     -- (and also in case of fragment)
                     tryIfElse x
-            _ | arg ^? ann . pInput . Input.inferredType . _Pure . T._TInst . nId == Just boolTid ->
+            _ | arg ^? hAnn . Lens._Wrapped . pInput . Input.inferredType . _Pure . T._TInst . nId == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
     where
@@ -52,8 +51,8 @@ convertIfElse setToVal caseBody =
             , _iThen = altTrue ^. ciExpr
             , _iElse =
                 case altFalse ^@?
-                     ciExpr . val . _BodyLam . lamFunc . Lens.selfIndex
-                     <. (fBody . val . _BinderExpr . _BodyIfElse)
+                     ciExpr . hVal . _BodyLam . lamFunc . Lens.selfIndex
+                     <. (fBody . hVal . _BinderExpr . _BodyIfElse)
                 of
                 Just (binder, innerIfElse) ->
                     ElseIf ElseIfContent
@@ -67,17 +66,17 @@ convertIfElse setToVal caseBody =
                         getScope [x] = x ^. bParamScopeId
                         getScope _ = error "if-else evaluated more than once in same scope?"
                 Nothing ->
-                    altFalse ^. ciExpr . val
+                    altFalse ^. ciExpr . hVal
                     & _BodyHole . holeMDelete ?~ elseDel
-                    & _BodyLam . lamFunc . fBody . val . _BinderExpr .
+                    & _BodyLam . lamFunc . fBody . hVal . _BinderExpr .
                         _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
-                & Ann (altFalse ^. ciExpr . ann)
+                & Ann (Const (altFalse ^. ciExpr . hAnn . Lens._Wrapped))
             }
             where
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
-                    alt ^? ciExpr . val . _BodyLam . lamFunc . fBody
-                    . Lens.filteredBy (val . _BinderExpr) . ann
-                    & fromMaybe (alt ^. ciExpr . ann)
+                    alt ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
+                    . Lens.filteredBy (hVal . _BinderExpr) . hAnn . Lens._Wrapped
+                    & fromMaybe (alt ^. ciExpr . hAnn . Lens._Wrapped)
                     & (^. pInput . Input.stored . Property.pVal)

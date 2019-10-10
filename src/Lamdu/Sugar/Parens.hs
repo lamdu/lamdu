@@ -8,8 +8,7 @@ module Lamdu.Sugar.Parens
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, hmap, (#>))
-import           Hyper.Type.Ann (Ann(..), val)
+import           Hyper
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
 import           Lamdu.Sugar.Types
@@ -39,10 +38,10 @@ addToWorkArea w =
     }
 
 class AddParens expr where
-    addToBody :: Tree expr (Ann a) -> Tree expr (Ann (MinOpPrec, NeedsParens, a))
+    addToBody :: Tree expr (Ann (Const a)) -> Tree expr (Ann (Const (MinOpPrec, NeedsParens, a)))
 
-    addToNode :: Tree (Ann a) expr -> Tree (Ann (MinOpPrec, NeedsParens, a)) expr
-    addToNode (Ann pl x) = Ann (0, NoNeedForParens, pl) (addToBody x)
+    addToNode :: Tree (Ann (Const a)) expr -> Tree (Ann (Const (MinOpPrec, NeedsParens, a))) expr
+    addToNode (Ann (Const pl) x) = Ann (Const (0, NoNeedForParens, pl)) (addToBody x)
 
 instance HasPrecedence name => AddParens (Assignment name i o) where
     addToBody (BodyFunction x) = x & fBody %~ addToNode & BodyFunction
@@ -51,11 +50,11 @@ instance HasPrecedence name => AddParens (Assignment name i o) where
 addToBinderWith ::
     HasPrecedence name =>
     MinOpPrec ->
-    Tree (Ann a) (Binder name i o) ->
-    Tree (Ann (MinOpPrec, NeedsParens, a)) (Binder name i o)
-addToBinderWith minOpPrec (Ann pl x) =
+    Tree (Ann (Const a)) (Binder name i o) ->
+    Tree (Ann (Const (MinOpPrec, NeedsParens, a))) (Binder name i o)
+addToBinderWith minOpPrec (Ann (Const pl) x) =
     addToBody x
-    & Ann (minOpPrec, NoNeedForParens, pl)
+    & Ann (Const (minOpPrec, NoNeedForParens, pl))
 
 instance HasPrecedence name => AddParens (Else name i o) where
     addToBody (SimpleElse expr) = addToBody expr & SimpleElse
@@ -75,8 +74,8 @@ instance HasPrecedence name => AddParens (Body name i o) where
 
 instance AddParens (Const a) where
     addToBody (Const x) = Const x
-    addToNode (Ann pl (Const x)) =
-        Ann (0, NoNeedForParens, pl) (Const x)
+    addToNode (Ann (Const pl) (Const x)) =
+        Ann (Const (0, NoNeedForParens, pl)) (Const x)
 
 addToExprWith ::
     HasPrecedence name =>
@@ -86,9 +85,9 @@ addToExprWith ::
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
-    Lens.Prism' (Tree (LabeledApply name i o) (Ann a))
+    Lens.Prism' (Tree (LabeledApply name i o) (Ann (Const a)))
     ( Expression name i o a
-    , Tree (Ann a) (Lens.Const (BinderVarRef name o))
+    , Tree (Ann (Const a)) (Const (BinderVarRef name o))
     , Expression name i o a
     )
 bareInfix =
@@ -100,12 +99,12 @@ bareInfix =
 
 type AnnotateAST a body =
     MinOpPrec -> Precedence Prec ->
-    Tree (Ann a) body ->
-    Tree (Ann (MinOpPrec, NeedsParens, a)) body
+    Tree (Ann (Const a)) body ->
+    Tree (Ann (Const (MinOpPrec, NeedsParens, a))) body
 
 loopExpr ::  HasPrecedence name => AnnotateAST a (Body name i o)
-loopExpr minOpPrec parentPrec (Ann pl body_) =
-    Ann (minOpPrec, parens, pl) newBody
+loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
+    Ann (Const (minOpPrec, parens, pl)) newBody
     where
         (parens, newBody) = loopExprBody parentPrec body_
 
@@ -115,14 +114,14 @@ type SideSymbol =
     Lens.ASetter' (Precedence Prec) MinOpPrec ->
     Lens.Getting MinOpPrec (Precedence Prec) MinOpPrec ->
     Lens.ASetter s t
-    (Tree (Ann pl) body)
-    (Tree (Ann (MinOpPrec, NeedsParens, pl)) body) ->
+    (Tree (Ann (Const pl)) body)
+    (Tree (Ann (Const (MinOpPrec, NeedsParens, pl))) body) ->
     MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
 
 loopExprBody ::
     HasPrecedence name =>
-    Precedence Prec -> Tree (Body name i o) (Ann a) ->
-    (NeedsParens, Tree (Body name i o) (Ann (MinOpPrec, NeedsParens, a)))
+    Precedence Prec -> Tree (Body name i o) (Ann (Const a)) ->
+    (NeedsParens, Tree (Body name i o) (Ann (Const (MinOpPrec, NeedsParens, a))))
 loopExprBody parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
@@ -186,7 +185,7 @@ loopExprBody parentPrec body_ =
             , loopExpr (prec+1) (newParentPrec & before .~ prec) r
             ) & BodyLabeledApply & result needParens
             where
-                prec = func ^. val . Lens._Wrapped . bvNameRef . nrName & precedence
+                prec = func ^. hVal . Lens._Wrapped . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
                 newParentPrec

@@ -29,9 +29,9 @@ import           Lamdu.Prelude
 
 text ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) (ToNom NominalId V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (ToNom NominalId V.Term) ->
     MaybeT (ConvertM m) (ExpressionU m a)
-text (Ann toNomPl (ToNom tid c@(Ann litPl bod))) =
+text (Ann (Const toNomPl) (ToNom tid c@(Ann (Const litPl) bod))) =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.literalText) >>= guard
         guard $ tid == Builtins.textTid

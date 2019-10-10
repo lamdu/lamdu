@@ -36,7 +36,7 @@ import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import           Generic.Data (Generically(..))
-import           Hyper (Ann(..), annotations)
+import           Hyper (Ann(..), _HFlip, hmapped1, hfolded1)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (Identifier(..), identHex)
@@ -122,7 +122,7 @@ parseUUID = UUIDUtils.fromSBS16 . parseHexNameBs
 
 parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
 parseRecord obj =
-    HashMap.toList obj & foldM step (Ann () ER.RRecEmpty)
+    HashMap.toList obj & foldM step (Ann (Const ()) ER.RRecEmpty)
     where
         step r ("cacheId", _) = pure r -- TODO: Explain/fix this
         step r (k, v) =
@@ -132,7 +132,7 @@ parseRecord obj =
             { _eKey = parseHexNameBs k & Identifier & Tag
             , _eVal = pv
             , _eRest = r
-            } & Ann ()
+            } & Ann (Const ())
 
 parseWord8 :: Json.Value -> Word8
 parseWord8 (Json.Number x)
@@ -145,19 +145,19 @@ parseBytes :: Json.Value -> ER.Val ()
 parseBytes (Json.Array vals) =
     Vec.toList vals
     <&> parseWord8
-    & BS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & Ann ()
+    & BS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & Ann (Const ())
 parseBytes _ = error "Bytes with non-array data"
 
 parseInject :: Text -> Maybe Json.Value -> Parse (ER.Val ())
 parseInject tag mData =
     case mData of
-    Nothing -> Ann () ER.RRecEmpty & pure
+    Nothing -> Ann (Const ()) ER.RRecEmpty & pure
     Just v -> parseResult v
     <&> \iv ->
     ER.RInject ER.Inject
     { ER._injectTag = parseHexNameBs tag & Identifier & Tag
     , ER._injectVal = iv
-    } & Ann ()
+    } & Ann (Const ())
 
 (.:) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a
 obj .: tag = Json.parseEither (Json..: tag) obj & either fail pure
@@ -170,11 +170,11 @@ parseObj obj =
     msum
     [ obj .: "array"
       <&> \(Json.Array arr) ->
-            Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> Ann ()
+            Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> Ann (Const ())
     , obj .: "bytes" <&> parseBytes <&> pure
     , obj .: "number" <&> read <&> fromDouble <&> pure
     , obj .: "tag" <&> (`parseInject` (obj .: "data"))
-    , obj .: "func" <&> (\(Json.Number x) -> round x & ER.RFunc & Ann () & pure)
+    , obj .: "func" <&> (\(Json.Number x) -> round x & ER.RFunc & Ann (Const ()) & pure)
     ] & fromMaybe (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
@@ -192,7 +192,7 @@ parseResult (Json.Object obj) =
 parseResult x = "Unsupported encoded JS output: " ++ show x & fail
 
 fromDouble :: Double -> ER.Val ()
-fromDouble = Ann () . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
+fromDouble = Ann (Const ()) . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
 
 addVal ::
     Ord srcId =>
@@ -310,10 +310,10 @@ compilerActions toUUID depsMVar actions output =
         readGlobal $
         \def ->
         ( Dependencies
-          { subExprDeps = def ^.. Def.defBody . Lens.folded . annotations & Set.fromList
+          { subExprDeps = def ^.. Def.defBody . Lens.folded . Lens.from _HFlip . hfolded1 . Lens._Wrapped & Set.fromList
           , globalDeps = mempty
           }
-        , def & Def.defBody . Lens.mapped . annotations %~ Compiler.ValId . toUUID
+        , def & Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Compiler.ValId . toUUID
         )
     , Compiler.readGlobalType = readGlobal ((^. Def.defType) <&> (,) mempty)
     , Compiler.output = output
@@ -384,7 +384,7 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
                 let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
                 withForkedIO processOutput $
                     do
-                        replVal <&> annotations %~ Compiler.ValId . toUUID
+                        replVal <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Compiler.ValId . toUUID
                             & Compiler.compileRepl
                                 (compilerActions toUUID depsMVar actions outputJS)
                         flushJS
@@ -421,7 +421,7 @@ start toUUID fromUUID actions replExpr =
         depsMVar <-
             newMVar Dependencies
             { globalDeps = Set.empty
-            , subExprDeps = replExpr ^.. Lens.folded . annotations & Set.fromList
+            , subExprDeps = replExpr ^.. Lens.folded . Lens.from _HFlip . hfolded1 . Lens._Wrapped & Set.fromList
             }
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar

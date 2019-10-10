@@ -22,10 +22,9 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           Hyper (Tree, Pure)
+import           Hyper
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
-import           Hyper.Type.Ann (Ann(..), val)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Definition (depsGlobalTypes)
@@ -478,7 +477,7 @@ compileLiteral literal =
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     PrimVal.Float num -> JS.number num & codeGenFromExpr
 
-compileRecExtend :: Monad m => Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
+compileRecExtend :: Monad m => Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const ValId)) -> M m CodeGen
 compileRecExtend x =
     do
         Flatten.Composite tags mRest <-
@@ -499,14 +498,14 @@ compileRecExtend x =
                 ]
             & pure
 
-compileInject :: Monad m => Tree V.Inject (Ann ValId) -> M m CodeGen
+compileInject :: Monad m => Tree V.Inject (Ann (Const ValId)) -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> Text.unpack <&> JS.string
         dat' <- compileVal NotTailCall dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
 
-compileCase :: Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) -> M m CodeGen
+compileCase :: Monad m => ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const ValId)) -> M m CodeGen
 compileCase valId =
     -- we're generating a lambda here, which will be called via
     -- rts.rerun, so its body is as much a tail-call position as any
@@ -515,7 +514,7 @@ compileCase valId =
 
 compileCaseOnVar ::
     Monad m =>
-    IsTailCall -> ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann ValId) ->
+    IsTailCall -> ValId -> Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const ValId)) ->
     JSS.Expression () -> M m [JSS.Statement ()]
 compileCaseOnVar isTail valId x scrutineeVar =
     do
@@ -536,7 +535,7 @@ compileCaseOnVar isTail valId x scrutineeVar =
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
-compileGetField :: Monad m => Tree V.GetField (Ann ValId) -> M m CodeGen
+compileGetField :: Monad m => Tree V.GetField (Ann (Const ValId)) -> M m CodeGen
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
@@ -574,7 +573,7 @@ slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId argVal =
 listenNoTellLogUsed :: Monad m => M m a -> M m (a, LogUsed)
 listenNoTellLogUsed = censor (const LogUnused) . listen
 
-compileLambda :: Monad m => ValId -> Tree (V.Lam V.Var V.Term) (Ann ValId) -> M m CodeGen
+compileLambda :: Monad m => ValId -> Tree (V.Lam V.Var V.Term) (Ann (Const ValId)) -> M m CodeGen
 compileLambda valId (V.Lam v res) =
     Lens.view envMode
     >>= \case
@@ -601,7 +600,7 @@ compileLambda valId (V.Lam v res) =
         compileRes = compileVal TailCall res <&> codeGenLamStmts & withLocalVar v
 
 compileApply ::
-    Monad m => IsTailCall -> ValId -> Tree (V.App V.Term) (Ann ValId) -> M m CodeGen
+    Monad m => IsTailCall -> ValId -> Tree (V.App V.Term) (Ann (Const ValId)) -> M m CodeGen
 compileApply isTail valId (V.App func arg) =
     do
         arg' <- compileVal NotTailCall arg <&> codeGenExpression
@@ -628,7 +627,7 @@ compileAppliedFunc :: Monad m => IsTailCall -> ValId -> Val ValId -> JSS.Express
 compileAppliedFunc isTail valId func arg' =
     do
         mode <- Lens.view envMode
-        case (mode, func ^. val) of
+        case (mode, func ^. hVal) of
             -- in slow mode - we want the results associated with the
             -- intermediate vars to be reported as is for simplicity
             -- on the gui side:
@@ -719,7 +718,7 @@ compileLeaf valId x =
 
 compileToNom ::
     Monad m =>
-    IsTailCall -> Tree (ToNom T.NominalId V.Term) (Ann ValId) -> M m CodeGen
+    IsTailCall -> Tree (ToNom T.NominalId V.Term) (Ann (Const ValId)) -> M m CodeGen
 compileToNom isTail (ToNom tId x) =
     case x ^? ExprLens.valLiteral <&> PrimVal.toKnown of
     Just (PrimVal.Bytes bytes)
@@ -731,7 +730,7 @@ compileToNom isTail (ToNom tId x) =
     _ -> compileVal isTail x
 
 compileVal :: Monad m => IsTailCall -> Val ValId -> M m CodeGen
-compileVal isTail (Ann valId body) =
+compileVal isTail (Ann (Const valId) body) =
     case body of
     V.BLeaf x                   -> compileLeaf valId x
     V.BApp x                    -> compileApply isTail valId x

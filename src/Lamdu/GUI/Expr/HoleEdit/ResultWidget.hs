@@ -67,7 +67,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o) ->
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o) ->
     GuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
@@ -88,7 +88,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload)) (Sugar.Binder Name i o) ->
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o) ->
     GuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>
@@ -132,9 +132,9 @@ make ctx resultId pick holeResultConverted =
 unfinishedPayloads ::
     forall t a.
     SugarLens.SugarExpr t =>
-    Traversal' (Tree (Ann a) t) a
-unfinishedPayloads f (Ann a x) =
+    Traversal' (Tree (Ann (Const a)) t) a
+unfinishedPayloads f (Ann (Const a) x) =
     withDict (SugarLens.sugarExprRecursive (Proxy @t)) $
     flip Ann
     <$> htraverse (Proxy @SugarLens.SugarExpr #> unfinishedPayloads f) x
-    <*> (if SugarLens.isUnfinished x then f a else pure a)
+    <*> ((if SugarLens.isUnfinished x then f a else pure a) <&> Const)

@@ -1,3 +1,5 @@
+{-# LANGUAGE PolyKinds #-}
+
 module Lamdu.Sugar.Convert.GetVar
     ( convert, globalNameRef
     ) where
@@ -101,7 +103,7 @@ inlineableDefinition ctx var entityId =
             ctx ^.
             ConvertM.scScopeInfo . ConvertM.siRecursiveRef . Lens._Just . ConvertM.rrDefI .
             Lens.to (Set.singleton . ExprIRef.globalId)
-        f pl v = v == var && entityId `notElem` pl ^. Input.userData
+        f (Const pl) v = v == var && entityId `notElem` pl ^. Input.userData
 
 convertGlobal ::
     Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))

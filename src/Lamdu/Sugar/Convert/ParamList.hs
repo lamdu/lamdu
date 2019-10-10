@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.ParamList
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure(..), annotations)
+import           Hyper (Tree, Pure(..), _HFlip, hfolded1)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Unify (Unify, UVarOf, unify)
@@ -54,7 +54,7 @@ loadForLambdas ::
     Val (ValP m, Tree V.IResult UVar) -> T m (PureInfer ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
-    <&> \exprWithLoadActions -> exprWithLoadActions ^.. annotations & sequence_
+    <&> \exprWithLoadActions -> exprWithLoadActions ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped & sequence_
     where
         loadLambdaParamList (Pure V.BLam {}) pl = loadUnifyParamList pl
         loadLambdaParamList _ _ = pure (pure ())

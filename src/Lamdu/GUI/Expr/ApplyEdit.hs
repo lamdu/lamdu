@@ -15,8 +15,7 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree)
-import           Hyper.Type.Ann (Ann(..), ann, val)
+import           Hyper (Tree, Ann(..), hAnn, hVal)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -45,16 +44,16 @@ makeFunc ::
     , Has (Texts.Navigation Text) env
     ) =>
     GetVarEdit.Role ->
-    Tree (Ann (Sugar.Payload Name i o ExprGui.Payload))
+    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
         (Const (Sugar.BinderVarRef Name o)) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
     stdWrap pl <*>
-    ( GetVarEdit.makeGetBinder role (func ^. val . Lens._Wrapped) myId
+    ( GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId
         <&> Responsive.fromWithTextPos
     )
     where
-        pl = func ^. ann
+        pl = func ^. hAnn . Lens._Wrapped
         myId = WidgetIds.fromExprPayload pl
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool
@@ -73,7 +72,7 @@ makeFuncRow ::
     ) =>
     Maybe AnimId ->
     Tree (Sugar.LabeledApply Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     GuiM env i o (Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
@@ -107,7 +106,7 @@ makeLabeled ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.LabeledApply Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled apply pl =
@@ -143,7 +142,7 @@ mkBoxed ::
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
     Tree (Sugar.LabeledApply Name i o)
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Responsive o -> GuiM env i o (Responsive o)
 mkBoxed apply funcRow =
     do
@@ -168,7 +167,7 @@ makeSimple ::
     , Has (Texts.Navigation Text) env
     ) =>
     Tree (Sugar.App (Sugar.Body Name i o))
-        (Ann (Sugar.Payload Name i o ExprGui.Payload)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeSimple (Sugar.App func arg) pl =

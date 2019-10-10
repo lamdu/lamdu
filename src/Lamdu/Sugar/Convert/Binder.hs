@@ -13,7 +13,6 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Recurse (Recursive(..), foldMapRecursive, (##>>))
-import           Hyper.Type.Ann (Ann(..), ann, val, annotations)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
@@ -45,9 +44,9 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> T m ()
+    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> T m ()
 lamParamToHole (V.Lam param x) =
-    SubExprs.getVarsToHole param (x & annotations %~ (^. Input.stored))
+    SubExprs.getVarsToHole param (x & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored))
 
 makeInline ::
     Monad m =>
@@ -67,7 +66,7 @@ convertLet ::
     Input.Payload m a ->
     Redex (Input.Payload m a) ->
     ConvertM m
-    (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
+    (Tree (Ann (Const (ConvertPayload m a))) (Binder InternalName (T m) (T m)))
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
@@ -76,8 +75,8 @@ convertLet pl redex =
             do
                 (_pMode, value) <-
                     convertAssignment binderKind param (redex ^. Redex.arg)
-                    <&> _2 . ann . pInput . Input.entityId .~
-                        EntityId.ofValI (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
+                    <&> _2 . hAnn . Lens._Wrapped . pInput . Input.entityId .~
+                        EntityId.ofValI (redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.stored . Property.pVal)
                 letBody <-
                     convertBinder bod
                     & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -91,35 +90,35 @@ convertLet pl redex =
                 & extract .~ float
                 & mReplaceParent ?~
                     ( protectedSetToVal stored
-                        (redex ^. Redex.arg . ann . Input.stored . Property.pVal)
+                        (redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
         postProcess <- ConvertM.postProcessAssert
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamOut . ann . Input.stored
+                    redex ^. Redex.lam . V.lamOut . hAnn . Lens._Wrapped . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         typS <-
             convertType (EntityId.ofTypeOf (argAnn ^. Input.entityId))
             (argAnn ^. Input.inferredType)
         pure Ann
-            { _val =
+            { _hVal =
                 BinderLet Let
                 { _lVarInfo = mkVarInfo typS
-                , _lValue = value & ann . pActions %~ fixValueNodeActions
+                , _lValue = value & hAnn . Lens._Wrapped . pActions %~ fixValueNodeActions
                 , _lDelete = del
                 , _lName = tag
                 , _lBodyScope = redex ^. Redex.bodyScope
                 , _lBody =
                     letBody
-                    & ann . pActions . mReplaceParent ?~
-                        (letBody ^. ann . pInput . Input.entityId <$ del)
+                    & hAnn . Lens._Wrapped . pActions . mReplaceParent ?~
+                        (letBody ^. hAnn . Lens._Wrapped . pInput . Input.entityId <$ del)
                 , _lUsages = redex ^. Redex.paramRefs
                 }
-            , _ann =
-                ConvertPayload
+            , _hAnn =
+                Const ConvertPayload
                 { _pInput =
                     pl
                     & Input.userData .~ redex ^. Redex.lamPl . Input.userData
@@ -127,19 +126,19 @@ convertLet pl redex =
                 }
             }
     where
-        argAnn = redex ^. Redex.arg . ann
+        argAnn = redex ^. Redex.arg . hAnn . Lens._Wrapped
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            & V.lamOut . annotations %~ (^. Input.stored)
+            & V.lamOut . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
 convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (Tree (Ann (ConvertPayload m a)) (Binder InternalName (T m) (T m)))
-convertBinder expr@(Ann pl body) =
+    ConvertM m (Tree (Ann (Const (ConvertPayload m a))) (Binder InternalName (T m) (T m)))
+convertBinder expr@(Ann (Const pl) body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
     False -> convertExpr
@@ -153,16 +152,20 @@ convertBinder expr@(Ann pl body) =
                 convertSub <- Lens.view (Lens.to ConvertM.scConvertSubexpression)
                 convertSub ConvertM.BinderPos expr
             & localNewExtractDestPos pl
-            <&> \exprS ->
-            exprS
-            & val %~ BinderExpr
-            & ann . pInput .~ pl -- TODO: <-- why is this necessary?
-            & ann . pInput . Input.userData .~
-                mconcat
-                (subexprPayloads
-                (body ^.. htraverse1)
-                (exprS ^.. val . SugarLens.childPayloads))
-
+            <&>
+            \(Ann (Const a) x) ->
+            Ann
+            { _hAnn =
+                a & pInput .~
+                ( pl & Input.userData .~
+                    mconcat
+                    (subexprPayloads
+                    (body ^.. htraverse1)
+                    (x ^.. SugarLens.childPayloads))
+                )
+                & Const
+            , _hVal = BinderExpr x
+            }
 
 localNewExtractDestPos :: Input.Payload m a -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
@@ -178,7 +181,7 @@ makeFunction ::
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) ->
     ConvertM m
-    (Tree (Function InternalName (T m) (T m)) (Ann (ConvertPayload m a)))
+    (Tree (Function InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
@@ -207,33 +210,37 @@ makeAssignment ::
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m
-    (Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m)))
+    (Tree (Ann (Const (ConvertPayload m a))) (Assignment InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
     case params ^. cpParams of
     Nothing ->
         convertBinder funcBody
-        <&> val %~ BodyPlain . AssignPlain (params ^. cpAddFirstParam)
+        <&>
+        \(Ann (Const a) x) ->
+        AssignPlain (params ^. cpAddFirstParam) x
+        & BodyPlain
+        & Ann (Const a)
     Just{} ->
         do
             funcS <- makeFunction chosenScopeProp params funcBody
             nodeActions <- makeActions pl & localNewExtractDestPos pl
             pure Ann
-                { _ann =
-                    ConvertPayload
+                { _hAnn =
+                    Const ConvertPayload
                     { _pInput =
                         -- TODO: Why are redundant hidden entity ids
                         -- returned here?
                         pl & Input.userData .~ mempty
                     , _pActions = nodeActions
                     }
-                , _val = BodyFunction funcS
+                , _hVal = BodyFunction funcS
                 }
 
 convertLam ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) (V.Lam V.Var V.Term) ->
+    Tree (Ann (Const (Input.Payload m a))) (V.Lam V.Var V.Term) ->
     ConvertM m (ExpressionU m a)
-convertLam (Ann exprPl lam) =
+convertLam (Ann (Const exprPl) lam) =
     do
         convParams <- convertLamParams lam exprPl
         func <-
@@ -253,18 +260,18 @@ convertLam (Ann exprPl lam) =
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
             & addActions (lam ^.. V.lamOut) exprPl
-            <&> val %~
-                hmap (const (ann . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
+            <&> hVal %~
+                hmap (const (hAnn . Lens._Wrapped . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 useNormalLambda ::
-    Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
+    Set InternalName -> Tree (Function InternalName i o) (Ann (Const a)) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
         ( foldMapRecursive
             (Proxy @SugarLens.SugarExpr ##>>
                 Any . SugarLens.isForbiddenInLightLam
-            ) (func ^. fBody . val)
+            ) (func ^. fBody . hVal)
             ^. Lens._Wrapped
         ) || not (allParamsUsed paramNames func)
 
@@ -306,7 +313,7 @@ instance GetParam (Body InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 allParamsUsed ::
-    Set InternalName -> Tree (Function InternalName i o) (Ann a) -> Bool
+    Set InternalName -> Tree (Function InternalName i o) (Ann (Const a)) -> Bool
 allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
@@ -336,7 +343,7 @@ markNodeLightParams ::
     Tree (Ann a) t ->
     Tree (Ann a) t
 markNodeLightParams paramNames =
-    val %~ markLightParams paramNames
+    hVal %~ markLightParams paramNames
 
 instance MarkLightParams (Lens.Const a)
 instance MarkLightParams (Else InternalName i o)
@@ -365,7 +372,7 @@ convertAssignment ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
+    , Tree (Ann (Const (ConvertPayload m a))) (Assignment InternalName (T m) (T m))
     )
 convertAssignment binderKind defVar expr =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
@@ -373,16 +380,19 @@ convertAssignment binderKind defVar expr =
     \case
     False ->
         convertBinder expr
-        <&> val %~
-            BodyPlain .
-            AssignPlain (AddInitialParam (error "TODO: add param when assignment parameters not supported"))
-        <&> (,) Nothing
+        <&>
+        \(Ann (Const a) v) ->
+        ( Nothing
+        , AssignPlain (AddInitialParam (error "TODO: add param when assignment parameters not supported")) v
+            & BodyPlain
+            & Ann (Const a)
+        )
     True ->
         do
             (mPresentationModeProp, convParams, funcBody) <-
                 convertParams binderKind defVar expr
             makeAssignment (Anchors.assocScopeRef defVar) convParams
-                funcBody (expr ^. ann)
+                funcBody (expr ^. hAnn . Lens._Wrapped)
                 <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::
@@ -390,7 +400,7 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Tree (Ann (ConvertPayload m a)) (Assignment InternalName (T m) (T m))
+    , Tree (Ann (Const (ConvertPayload m a))) (Assignment InternalName (T m) (T m))
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)
