@@ -59,7 +59,7 @@ var mutFunc = function (inner) {
 var mutVoidWithError = function (inner) {
     return function(x) {
         return function(cont) {
-            inner(x)(err => {
+            rerun(inner(x))(err => {
                 if (err) throw err;
                 cont({});
             });
@@ -89,6 +89,16 @@ var curried_error = function(name) {
     };
 };
 
+var rerun = function (result) {
+    while(1) {
+        var trampoline = result.trampolineTo;
+        if (typeof trampoline === 'undefined') {
+            return result;
+        }
+        result = trampoline();
+    }
+};
+
 module.exports = {
     logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
@@ -99,15 +109,7 @@ module.exports = {
         ReachedHole: curried_error("ReachedHole"),
         UnhandledCase: curried_error("UnhandledCase"),
     },
-    rerun: function (result) {
-        while(1) {
-            var trampoline = result.trampolineTo;
-            if (typeof trampoline === 'undefined') {
-                return result;
-            }
-            result = trampoline();
-        }
-    },
+    rerun: rerun,
     memo: function (thunk) {
         var done = false;
         var memo;
@@ -199,7 +201,7 @@ module.exports = {
             return: mutFunc(x => x),
             bind: function(x) {
                 return function (cont) {
-                    return x[tags.infixl](res => x[tags.infixr](res)(cont));
+                    return x[tags.infixl](res => rerun(x[tags.infixr](res))(cont));
                 };
             },
             run: function(st) { return st(x => x); },
@@ -277,8 +279,9 @@ module.exports = {
                 openTcpServer: mutFunc(x => {
                     var server = require('net').Server(socket => {
                         makeOpaque(socket);
-                        x[tags.connectionHandler](socket)(dataHandler =>
-                            socket.on('data', data => { dataHandler(new Uint8Array(data))(x => null); } )
+                        rerun(x[tags.connectionHandler](socket))(
+                            dataHandler =>
+                            socket.on('data', data => { rerun(dataHandler(new Uint8Array(data)))(x => null); } )
                         );
                     });
                     server.listen({
@@ -304,7 +307,7 @@ module.exports = {
                         var socket = new require('net').Socket();
                         makeOpaque(socket);
                         var dataHandler = x[tags.dataHandler];
-                        socket.on('data', data => { dataHandler(new Uint8Array(data))(x => null); });
+                        socket.on('data', data => { rerun(dataHandler(new Uint8Array(data)))(x => null); });
                         socket.connect(x[tags.port], toString(x[tags.host]), function() {
                             cont(socket);
                         });
