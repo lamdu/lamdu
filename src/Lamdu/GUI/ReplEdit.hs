@@ -12,6 +12,7 @@ import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -232,6 +233,13 @@ resultWidget _ _ tag (Sugar.EvalError err) =
     errorIndicator indicatorId tag err
     <&> Align.tValue . Widget.updates %~ IOTrans.liftTrans
 
+noIndicator ::
+    ( MonadReader env m, GuiState.HasCursor env, Widget.HasWidget w
+    , Element (w a)
+    ) =>
+    m (w a)
+noIndicator = Widget.respondToCursorPrefix ?? indicatorId ?? Element.empty
+
 make ::
     ( Monad m
     , Glue.HasTexts env
@@ -252,7 +260,7 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
         result <-
             (resultWidget expRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
-            & sequenceA
+            & fromMaybe (noIndicator <&> Align.WithTextPos 0)
             & Reader.local (Element.animIdPrefix <>~ ["result widget"])
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         let centeredBelow down up =
@@ -265,7 +273,7 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
               <*> label Texts.repl
               <&> Lens.mapped %~ Widget.weakerEvents extractEvents
               <&> Lens.mapped . Widget.updates %~ IOTrans.liftTrans
-              <&> maybe id centeredBelow result
+              <&> centeredBelow result
               <&> Responsive.fromWithTextPos
             , makeBinder replExpr <&> Widget.updates %~ IOTrans.liftTrans
             ]
