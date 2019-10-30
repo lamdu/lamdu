@@ -268,11 +268,11 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
         , _tagInstance = EntityId.ofTagPane tagId
         , _tagVal = tagId
         }
-    , _tpTagLangs = tagData ^. Tag.tagNames
+    , _tpTagLangs = tagData ^. Tag.tagTexts
     , _tpSetName =
         \langId text ->
         tagData
-        & Tag.tagNames . Lens.at langId ?~ text
+        & Tag.tagTexts . Lens.at langId ?~ text
         & Transaction.writeIRef (ExprIRef.tagI tagId)
     }
 convertPaneBody env cp (Anchors.PaneDefinition defI) =

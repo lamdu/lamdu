@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Data.Tag
-    ( Tag(..), tagOrder, tagOpName, tagNames
+    ( Tag(..), tagOrder, tagOpName, tagTexts
     , OpName(..), _NotAnOp, _OpUni, _OpDir, DirOp(..), opLeftToRight, opRightToLeft
     , TextsInLang(..), name, abbreviation, disambiguationText
     , getTagName
@@ -71,7 +71,7 @@ instance Aeson.FromJSON TextsInLang where
 data Tag = Tag
     { _tagOrder :: Int
     , _tagOpName :: OpName
-    , _tagNames :: Map LangId TextsInLang
+    , _tagTexts :: Map LangId TextsInLang
     }
     deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
@@ -93,7 +93,7 @@ getTagName env tag =
             | x == mempty = n -- No op for this direction
             | otherwise = TextsInLang x Nothing Nothing
         n =
-            tag ^. tagNames . Lens.at (env ^. has)
+            tag ^. tagTexts . Lens.at (env ^. has)
             & fromMaybe fallback
         fallback =
-            tag ^? tagNames . Lens.ix (LangId "english") & fromMaybe (TextsInLang "" Nothing Nothing)
+            tag ^? tagTexts . Lens.ix (LangId "english") & fromMaybe (TextsInLang "" Nothing Nothing)
