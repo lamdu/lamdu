@@ -208,13 +208,13 @@ make tagPane =
         let currentLang =
                 case tagPane ^. Sugar.tpTagData . Tag.tagTexts . Lens.at lang of
                 Nothing ->
-                    makeMissingLangRow myId (tagPane ^. Sugar.tpSetName) lang
+                    makeMissingLangRow myId (tagPane ^. Sugar.tpSetTexts) lang
                 Just cur ->
-                    makeLangRow myId (tagPane ^. Sugar.tpSetName) lang cur
+                    makeLangRow myId (tagPane ^. Sugar.tpSetTexts) lang cur
         let editOtherLangs =
                 tagPane ^@.. Sugar.tpTagData . Tag.tagTexts . Lens.itraversed
                 & filter ((/= lang) . fst)
-                <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetName))
+                <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetTexts))
         Grid.make <*>
             sequence
             (heading : currentLang : editOtherLangs)

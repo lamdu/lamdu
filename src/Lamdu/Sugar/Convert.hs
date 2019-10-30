@@ -270,7 +270,7 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
         }
     , _tpTagData = tagData
     , _tpSetSymbol = \sym -> tagData & Tag.tagSymbol .~ sym & writeTag
-    , _tpSetName =
+    , _tpSetTexts =
             \langId text -> tagData & Tag.tagTexts . Lens.at langId ?~ text & writeTag
     }
     where
