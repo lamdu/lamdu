@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types
     , EntityId
     , PaneBody(..), _PaneDefinition
     , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp
-    , TagPane(..), tpTag, tpLocalizedNames, tpSetName
+    , TagPane(..), tpTag, tpTagLangs, tpSetName
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
@@ -21,7 +21,7 @@ import           Hyper
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
-import           Lamdu.Data.Tag (TextsInLang)
+import qualified Lamdu.Data.Tag as DataTag
 import           Lamdu.I18N.LangId (LangId(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval as Exported
@@ -72,8 +72,8 @@ data Definition name i o a = Definition
 
 data TagPane name o = TagPane
     { _tpTag :: Tag name
-    , _tpLocalizedNames :: Map LangId TextsInLang
-    , _tpSetName :: LangId -> TextsInLang -> o ()
+    , _tpTagLangs :: Map LangId DataTag.TextsInLang
+    , _tpSetName :: LangId -> DataTag.TextsInLang -> o ()
     } deriving Generic
 
 data PaneBody name i o a

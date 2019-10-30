@@ -197,10 +197,10 @@ make tagPane =
         lang <- Lens.view has
         let newForCurrentLang =
                 [ makeMissingLangRow myId (tagPane ^. Sugar.tpSetName) lang
-                | Lens.nullOf (Sugar.tpLocalizedNames . Lens.ix lang) tagPane
+                | Lens.nullOf (Sugar.tpTagLangs . Lens.ix lang) tagPane
                 ]
         let editExistingLangs =
-                tagPane ^@.. Sugar.tpLocalizedNames . Lens.itraversed
+                tagPane ^@.. Sugar.tpTagLangs . Lens.itraversed
                 & sortOn ((/= lang) . fst)
                 <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetName))
         Grid.make <*>
