@@ -269,12 +269,12 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
         , _tagVal = tagId
         }
     , _tpTagData = tagData
+    , _tpSetSymbol = \sym -> tagData & Tag.tagSymbol .~ sym & writeTag
     , _tpSetName =
-        \langId text ->
-        tagData
-        & Tag.tagTexts . Lens.at langId ?~ text
-        & Transaction.writeIRef (ExprIRef.tagI tagId)
+            \langId text -> tagData & Tag.tagTexts . Lens.at langId ?~ text & writeTag
     }
+    where
+        writeTag = Transaction.writeIRef (ExprIRef.tagI tagId)
 convertPaneBody env cp (Anchors.PaneDefinition defI) =
     do
         bodyS <-

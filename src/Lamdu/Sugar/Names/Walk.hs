@@ -520,7 +520,8 @@ toDef def@Definition{_drName, _drBody} =
         pure def{_drName, _drBody}
 
 toTagPane :: MonadNaming m => TagPane (OldName m) o -> m (TagPane (NewName m) o)
-toTagPane (TagPane tag i18n setName) = toTagOf Tag tag <&> \x -> TagPane x i18n setName
+toTagPane (TagPane tag i18n setSymbol setName) =
+    toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName
 
 toPaneBody ::
     MonadNaming m =>
