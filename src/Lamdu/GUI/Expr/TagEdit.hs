@@ -32,7 +32,6 @@ import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -174,7 +173,7 @@ makeOptions tagRefReplace mkPickResult ctx
                     & maybe False not
             env <- Lens.view id
             let maybeAddNewTagOption
-                    | nonFuzzyResults || not (allowedTagName searchTerm) = id
+                    | nonFuzzyResults || not (Name.isValidName searchTerm) = id
                     | otherwise =
                         maybe id (:) (addNewTag env tagRefReplace mkPickResult ctx)
             let makeOption opt =
@@ -219,13 +218,6 @@ makeOptions tagRefReplace mkPickResult ctx
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Name.isValidText
 
--- Allowed name for tag assuming it is already a valid search term
-allowedTagName :: Text -> Bool
-allowedTagName =
-    Lens.anyOf (Lens.ix 0) f
-    where
-        f x = Char.isAlpha x || elem x Chars.operator || x == '_'
-
 makeHoleSearchTerm ::
     ( MonadReader env m, Applicative o
     , Glue.HasTexts env, TextEdit.Deps env, SearchMenu.HasTexts env
@@ -239,7 +231,7 @@ makeHoleSearchTerm ::
 makeHoleSearchTerm tagRefReplace mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
-        let allowNewTag = allowedTagName searchTerm
+        let allowNewTag = Name.isValidName searchTerm
         newTagEventMap <-
             if allowNewTag
             then makeNewTag searchTerm tagRefReplace mkPickResult & makePickEventMap

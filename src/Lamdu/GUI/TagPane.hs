@@ -8,6 +8,8 @@ import           Data.Binary.Extended (encodeS)
 import qualified Data.Char as Char
 import           Data.Property (Property(..), pVal)
 import qualified Data.Property as Property
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
@@ -47,8 +49,8 @@ import           Lamdu.Prelude
 tagRenameId :: Widget.Id -> Widget.Id
 tagRenameId = (`Widget.joinId` ["rename"])
 
-disallowedNameChars :: String
-disallowedNameChars = ",[]\\`()"
+disallowedNameChars :: Set Char
+disallowedNameChars = Set.fromList ",[]\\`()."
 
 makeTagNameEdit ::
     ( MonadReader env m, Applicative f
@@ -61,7 +63,7 @@ makeTagNameEdit prop myId =
     ?? pure "  "
     ?? prop
     ?? tagRenameId myId
-    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`notElem` disallowedNameChars)
+    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`Set.notMember` disallowedNameChars)
 
 makeSymbolNameEdit ::
     ( MonadReader env m, Applicative f
@@ -75,7 +77,11 @@ makeSymbolNameEdit prop myId =
     <*> (Lens.view (has . Texts.typeOperatorHere) <&> pure)
     ?? prop
     ?? tagRenameId myId
-    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`elem` Chars.operator)
+    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars allowedSymbolChars
+    where
+        allowedSymbolChars =
+            Set.member
+            ?? Set.fromList Chars.operator `Set.difference` disallowedNameChars
 
 makeFocusableTagNameEdit ::
     ( MonadReader env m
