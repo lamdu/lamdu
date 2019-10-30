@@ -19,8 +19,8 @@ import           Lamdu.I18N.LangId (LangId(..))
 import           Lamdu.Prelude hiding ((.=))
 
 data DirOp = DirOp
-    { _opLeftToRight :: Text
-    , _opRightToLeft :: Text
+    { _opLeftToRight :: !Text
+    , _opRightToLeft :: !Text
     }
     deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
@@ -35,15 +35,15 @@ data OpName
 Lens.makePrisms '' OpName
 
 data TextsInLang = TextsInLang
-    { _name :: Text
-    , _abbreviation :: Maybe Text
+    { _name :: !Text
+    , _abbreviation :: !(Maybe Text)
     , -- When a word has several meanings,
       -- the different meanings should have separate tags,
       -- as the word's translations into other languages may vary.
       -- Disambiguation-text can then be used to help pick the right tag.
       -- Similar to Wikipedia's disambiguation pages,
       -- such as https://en.wikipedia.org/wiki/Bark
-      _disambiguationText :: Maybe Text
+      _disambiguationText :: !(Maybe Text)
     } deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
 Lens.makeLenses ''TextsInLang
@@ -69,9 +69,9 @@ instance Aeson.FromJSON TextsInLang where
                 <*> optional (o .: "disambiguationText")
 
 data Tag = Tag
-    { _tagOrder :: Int
-    , _tagOpName :: OpName
-    , _tagTexts :: Map LangId TextsInLang
+    { _tagOrder :: !Int
+    , _tagOpName :: !OpName
+    , _tagTexts :: !(Map LangId TextsInLang)
     }
     deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
