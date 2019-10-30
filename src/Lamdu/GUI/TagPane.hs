@@ -65,8 +65,8 @@ makeFocusableTagNameEdit ::
     , GuiState.HasCursor env
     , Has Config.Config env
     ) =>
-    Property o Text -> Widget.Id -> m (TextWidget o)
-makeFocusableTagNameEdit prop myId =
+    Widget.Id -> Property o Text -> m (TextWidget o)
+makeFocusableTagNameEdit myId prop =
     do
         env <- Lens.view id
         let fdConfig =
@@ -155,12 +155,11 @@ makeLangRow ::
 makeLangRow parentId setName lang langNames =
     row
     (makeLanguageTitle langId lang)
-    (makeFocusableTagNameEdit nameProp (nameId langId))
-    (makeFocusableTagNameEdit (mkProp Tag.abbreviation)
-        (langId `Widget.joinId` ["abbr"]))
-    (makeFocusableTagNameEdit (mkProp Tag.disambiguationText)
-        (langId `Widget.joinId` ["disamb"]))
+    (makeFocusableTagNameEdit (nameId langId) nameProp)
+    (mkProp Tag.abbreviation & makeFocusableTagNameEdit (mkId "abbr"))
+    (mkProp Tag.disambiguationText & makeFocusableTagNameEdit (mkId "disamb"))
     where
+        mkId suffix = langId `Widget.joinId` [suffix]
         langId = langWidgetId parentId lang
         nameProp =
             setName lang . (\x -> langNames & Tag.name .~ x)
@@ -181,7 +180,7 @@ makeMissingLangRow ::
 makeMissingLangRow parentId setName lang =
     row
     (makeLanguageTitle langId lang)
-    (makeFocusableTagNameEdit nameProp (nameId langId))
+    (makeFocusableTagNameEdit (nameId langId) nameProp)
     (pure Element.empty)
     (pure Element.empty)
     where
