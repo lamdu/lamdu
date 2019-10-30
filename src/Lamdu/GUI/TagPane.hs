@@ -6,7 +6,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Extended (encodeS)
 import qualified Data.Char as Char
-import           Data.List (sortOn)
 import           Data.Property (Property(..))
 import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
@@ -206,17 +205,19 @@ make tagPane =
     addValFrame <*>
     do
         lang <- Lens.view has
-        let newForCurrentLang =
-                [ makeMissingLangRow myId (tagPane ^. Sugar.tpSetName) lang
-                | Lens.nullOf (Sugar.tpTagData . Tag.tagTexts . Lens.ix lang) tagPane
-                ]
-        let editExistingLangs =
+        let currentLang =
+                case tagPane ^. Sugar.tpTagData . Tag.tagTexts . Lens.at lang of
+                Nothing ->
+                    makeMissingLangRow myId (tagPane ^. Sugar.tpSetName) lang
+                Just cur ->
+                    makeLangRow myId (tagPane ^. Sugar.tpSetName) lang cur
+        let editOtherLangs =
                 tagPane ^@.. Sugar.tpTagData . Tag.tagTexts . Lens.itraversed
-                & sortOn ((/= lang) . fst)
+                & filter ((/= lang) . fst)
                 <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetName))
         Grid.make <*>
             sequence
-            (heading : newForCurrentLang <> editExistingLangs)
+            (heading : currentLang : editOtherLangs)
             <&> snd
             & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
