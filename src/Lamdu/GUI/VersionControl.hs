@@ -144,11 +144,9 @@ makeBranchSelector rwtransaction rtransaction actions =
                             env ^. has . VersionControl.selectedBranchColor
                         else id
         branchNameEdits <- A.branches actions & traverse makeBranchNameEdit
-        defConfig <- Choice.defaultConfig
-        Choice.make ?? A.currentBranch actions
-            ?? branchNameEdits
-            ?? defConfig (txt ^. has . Texts.branches)
-            ?? WidgetIds.branchSelection
+        defConfig <- Choice.defaultConfig ?? txt ^. has . Texts.branches
+        Choice.make ?? A.currentBranch actions ?? branchNameEdits
+            ?? defConfig ?? WidgetIds.branchSelection
     where
         empty =
             TextEdit.Modes

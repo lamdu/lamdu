@@ -150,7 +150,14 @@
             "scope": "תחום",
             "name": "שם",
             "abbreviation": "קיצור",
-            "disambiguationText": "טקסט-להבדלה"
+            "disambiguationText": "טקסט-להבדלה",
+            "symbolType": "סוג סימן",
+            "noSymbol": "ללא סימן",
+            "symbol": "סימן",
+            "directionalSymbol": "סימן כיווני",
+            "leftToRightSymbol": "משמאל לימין",
+            "rightToLeftSymbol": "מימין לשמאל",
+            "typeOperatorHere": "הזן סימן כאן"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

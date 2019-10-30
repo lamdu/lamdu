@@ -88,6 +88,13 @@ data CodeUI a = CodeUI
     , _name :: a
     , _abbreviation :: a
     , _disambiguationText :: a
+    , _symbolType :: a
+    , _noSymbol :: a
+    , _symbol :: a
+    , _directionalSymbol :: a
+    , _leftToRightSymbol :: a
+    , _rightToLeftSymbol :: a
+    , _typeOperatorHere :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds

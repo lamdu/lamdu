@@ -147,7 +147,14 @@
             "scope": "Scope",
             "name": "Name",
             "abbreviation": "Abbreviation",
-            "disambiguationText": "Disambiguation-Text"
+            "disambiguationText": "Disambiguation-Text",
+            "symbolType": "Symbol Type",
+            "noSymbol": "No symbol",
+            "symbol": "Symbol",
+            "directionalSymbol": "Directional Symbol",
+            "leftToRightSymbol": "Left to Right",
+            "rightToLeftSymbol": "Right to left",
+            "typeOperatorHere": "Type operator here"
         },
         "name": {
             "unnamed": "Unnamed",
