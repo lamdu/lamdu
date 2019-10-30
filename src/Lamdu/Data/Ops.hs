@@ -25,7 +25,7 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
-import           Lamdu.Data.Tag (OpName(..), LangNames(..), tagOrder, tagNames, tagOpName, getTagName, name)
+import           Lamdu.Data.Tag (OpName(..), TextsInLang(..), tagOrder, tagNames, tagOpName, getTagName, name)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -141,7 +141,7 @@ assocTagName env tag =
                     | otherwise =
                         info
                         & tagOpName .~ NotAnOp
-                        & tagNames . Lens.at lang ?~ LangNames x Nothing Nothing
+                        & tagNames . Lens.at lang ?~ TextsInLang x Nothing Nothing
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
 
 newPane :: Monad m => Anchors.CodeAnchors m -> Anchors.Pane m -> T m ()

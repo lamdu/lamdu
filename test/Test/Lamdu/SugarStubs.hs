@@ -12,7 +12,7 @@ import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Scheme (QVars(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Data.Tag (LangNames(..))
+import           Lamdu.Data.Tag (TextsInLang(..))
 import           Lamdu.I18N.Language (Language)
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Internal (nameWithoutContext)
@@ -267,5 +267,5 @@ addNamesToExpr lang x =
     getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
     & runIdentity
 
-getName :: T.Tag -> Identity LangNames
-getName = Identity . (\x -> LangNames x Nothing Nothing) . fromString . show
+getName :: T.Tag -> Identity TextsInLang
+getName = Identity . (\x -> TextsInLang x Nothing Nothing) . fromString . show

@@ -96,13 +96,13 @@ pAOpGetName n = PAName n False & pure
 ---------- Pass 0 ------------
 ------------------------------
 data P0Name = P0Name
-    { _p0TagName :: Tag.LangNames
+    { _p0TagName :: Tag.TextsInLang
     , _p0InternalName :: InternalName
     , _p0IsAutoGen :: Bool
     }
 
 newtype P0Env i = P0Env
-    { _p0GetName :: T.Tag -> i Tag.LangNames
+    { _p0GetName :: T.Tag -> i Tag.TextsInLang
     }
 Lens.makeLenses ''P0Env
 
@@ -153,14 +153,14 @@ data P1Out = P1Out
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: OrderedSet UUID
         -- ^ Type vars met
-    , _p1Texts :: Map T.Tag Tag.LangNames
+    , _p1Texts :: Map T.Tag Tag.TextsInLang
     }
     deriving stock Generic
     deriving (Semigroup, Monoid) via Generically P1Out
 Lens.makeLenses ''P1Out
 
 data P1KindedName
-    = P1TagName Annotated.Name Tag.LangNames
+    = P1TagName Annotated.Name Tag.TextsInLang
     | P1AnonName UUID
 
 data P1Name = P1Name
@@ -257,7 +257,7 @@ makeTagTexts ::
     ( Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     ) =>
-    env -> Map T.Tag Tag.LangNames -> Map T.Tag TagText
+    env -> Map T.Tag Tag.TextsInLang -> Map T.Tag TagText
 makeTagTexts env p1texts =
     p1texts
     ^@.. Lens.itraversed
@@ -446,7 +446,7 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     opWithName _ _ = p2cpsNameConvertor
     opGetName _ = p2nameConvertor
 
-getTagText :: T.Tag -> Tag.LangNames -> Pass2MakeNames i o TagText
+getTagText :: T.Tag -> Tag.TextsInLang -> Pass2MakeNames i o TagText
 getTagText tag texts =
     Lens.view id
     <&>
@@ -460,7 +460,7 @@ getTagText tag texts =
     & fromMaybe (TagText displayText collision)
 
 p2tagName ::
-    MMap T.Tag Clash.Info -> Annotated.Name -> Tag.LangNames -> Bool ->
+    MMap T.Tag Clash.Info -> Annotated.Name -> Tag.TextsInLang -> Bool ->
     Pass2MakeNames i o Name
 p2tagName tagsBelow aName texts isAutoGen =
     TagName
@@ -516,7 +516,7 @@ runPasses ::
     , Functor i
     ) =>
     env ->
-    (T.Tag -> i Tag.LangNames) ->
+    (T.Tag -> i Tag.TextsInLang) ->
     (z -> PassAutoTags i a) ->
     (a -> Pass0LoadNames i b) ->
     (b -> Pass1PropagateUp i o c) ->
@@ -536,7 +536,7 @@ addToWorkArea ::
     , Monad i
     ) =>
     env ->
-    (T.Tag -> i Tag.LangNames) ->
+    (T.Tag -> i Tag.TextsInLang) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea Name i o (Payload Name i o a))
 addToWorkArea env getName =

@@ -21,7 +21,7 @@ import           Hyper
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
-import           Lamdu.Data.Tag (LangNames)
+import           Lamdu.Data.Tag (TextsInLang)
 import           Lamdu.I18N.LangId (LangId(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval as Exported
@@ -72,8 +72,8 @@ data Definition name i o a = Definition
 
 data TagPane name o = TagPane
     { _tpTag :: Tag name
-    , _tpLocalizedNames :: Map LangId LangNames
-    , _tpSetName :: LangId -> LangNames -> o ()
+    , _tpLocalizedNames :: Map LangId TextsInLang
+    , _tpSetName :: LangId -> TextsInLang -> o ()
     } deriving Generic
 
 data PaneBody name i o a

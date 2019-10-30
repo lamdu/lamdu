@@ -3,7 +3,7 @@
 module Lamdu.Data.Tag
     ( Tag(..), tagOrder, tagOpName, tagNames
     , OpName(..), _NotAnOp, _OpUni, _OpDir, DirOp(..), opLeftToRight, opRightToLeft
-    , LangNames(..), name, abbreviation, disambiguationText
+    , TextsInLang(..), name, abbreviation, disambiguationText
     , getTagName
     ) where
 
@@ -34,7 +34,7 @@ data OpName
     deriving anyclass Binary
 Lens.makePrisms '' OpName
 
-data LangNames = LangNames
+data TextsInLang = TextsInLang
     { _name :: Text
     , _abbreviation :: Maybe Text
     , -- When a word has several meanings,
@@ -46,24 +46,24 @@ data LangNames = LangNames
       _disambiguationText :: Maybe Text
     } deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
-Lens.makeLenses ''LangNames
+Lens.makeLenses ''TextsInLang
 
-instance Aeson.ToJSON LangNames where
-    toJSON (LangNames txt Nothing Nothing) = Aeson.toJSON txt
-    toJSON (LangNames txt mAbb mDis) =
+instance Aeson.ToJSON TextsInLang where
+    toJSON (TextsInLang txt Nothing Nothing) = Aeson.toJSON txt
+    toJSON (TextsInLang txt mAbb mDis) =
         concat
         [ ["name" .= txt]
         , ["abbreviation" .= abb | abb <- mAbb ^.. Lens._Just]
         , ["disambiguationText" .= dis | dis <- mDis ^.. Lens._Just]
         ] & Aeson.object
 
-instance Aeson.FromJSON LangNames where
-    parseJSON (Aeson.String txt) = pure (LangNames txt Nothing Nothing)
+instance Aeson.FromJSON TextsInLang where
+    parseJSON (Aeson.String txt) = pure (TextsInLang txt Nothing Nothing)
     parseJSON json =
-        Aeson.withObject "LangNames" f json
+        Aeson.withObject "TextsInLang" f json
         where
             f o =
-                LangNames
+                TextsInLang
                 <$> (o .: "name")
                 <*> optional (o .: "abbreviation")
                 <*> optional (o .: "disambiguationText")
@@ -71,7 +71,7 @@ instance Aeson.FromJSON LangNames where
 data Tag = Tag
     { _tagOrder :: Int
     , _tagOpName :: OpName
-    , _tagNames :: Map LangId LangNames
+    , _tagNames :: Map LangId TextsInLang
     }
     deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
@@ -79,11 +79,11 @@ Lens.makeLenses ''Tag
 
 getTagName ::
     (Has LangId env, Has Dir.Layout env) =>
-    env -> Tag -> LangNames
+    env -> Tag -> TextsInLang
 getTagName env tag =
     case tag ^. tagOpName of
     NotAnOp -> n
-    OpUni x -> LangNames x Nothing Nothing
+    OpUni x -> TextsInLang x Nothing Nothing
     OpDir (DirOp l r) ->
         case env ^. has of
         LeftToRight -> opOrName l
@@ -91,9 +91,9 @@ getTagName env tag =
     where
         opOrName x
             | x == mempty = n -- No op for this direction
-            | otherwise = LangNames x Nothing Nothing
+            | otherwise = TextsInLang x Nothing Nothing
         n =
             tag ^. tagNames . Lens.at (env ^. has)
             & fromMaybe fallback
         fallback =
-            tag ^? tagNames . Lens.ix (LangId "english") & fromMaybe (LangNames "" Nothing Nothing)
+            tag ^? tagNames . Lens.ix (LangId "english") & fromMaybe (TextsInLang "" Nothing Nothing)

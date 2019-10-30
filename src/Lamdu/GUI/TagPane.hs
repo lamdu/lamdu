@@ -28,7 +28,7 @@ import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
-import           Lamdu.Data.Tag (LangNames(..))
+import           Lamdu.Data.Tag (TextsInLang(..))
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -134,7 +134,7 @@ makeLangRow ::
     , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
     , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
     ) =>
-    Widget.Id -> (LangId -> LangNames -> o ()) -> LangId -> LangNames ->
+    Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId -> TextsInLang ->
     m (Row (Aligned (Widget o)))
 makeLangRow parentId setName lang langNames =
     Row
@@ -162,7 +162,7 @@ makeMissingLangRow ::
     , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
     , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
     ) =>
-    Widget.Id -> (LangId -> LangNames -> o ()) -> LangId ->
+    Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId ->
     m (Row (Aligned (Widget o)))
 makeMissingLangRow parentId setName lang =
     Row
@@ -177,7 +177,7 @@ makeMissingLangRow parentId setName lang =
     where
         langId = langWidgetId parentId lang
         nameProp =
-            setName lang . (\x -> LangNames x Nothing Nothing)
+            setName lang . (\x -> TextsInLang x Nothing Nothing)
             & Property ""
 
 make ::
