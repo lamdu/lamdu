@@ -190,6 +190,44 @@ makeMissingLangRow parentId setName lang =
             setName lang . (\x -> TextsInLang x Nothing Nothing)
             & Property ""
 
+makeLangsTable ::
+    ( MonadReader env m
+    , Applicative o
+    , Has (Texts.CodeUI Text) env, Has (Grid.Texts Text) env
+    , TextEdit.Deps env, Glue.HasTexts env
+    , GuiState.HasCursor env
+    , Element.HasAnimIdPrefix env, Has Config.Config env
+    , Spacer.HasStdSpacing env
+    , Has LangId env, Has (Map LangId Text) env
+    ) =>
+    Widget.Id -> Map LangId TextsInLang ->
+    (LangId -> TextsInLang -> o ()) -> m (Widget o)
+makeLangsTable myId tagTexts setName =
+    do
+        lang <- Lens.view has
+        let currentLang =
+                case tagTexts ^. Lens.at lang of
+                Nothing -> makeMissingLangRow myId setName lang
+                Just cur -> makeLangRow myId setName lang cur
+        let editOtherLangs =
+                tagTexts ^@.. Lens.itraversed
+                & filter ((/= lang) . fst)
+                <&> uncurry (makeLangRow myId setName)
+        Grid.make <*>
+            sequence
+            (heading : currentLang : editOtherLangs)
+            <&> snd
+    where
+        -- the type of Styled.label is RankN, so duplicate a bit of
+        -- code to avoid complicating too much here
+        toWidget = fmap Widget.fromView
+        heading =
+            row
+            (label MomentuTexts.language <&> toWidget)
+            (label Texts.name <&> toWidget)
+            (label Texts.abbreviation <&> toWidget)
+            (label Texts.disambiguationText <&> toWidget)
+
 make ::
     ( MonadReader env m
     , Applicative o
@@ -205,30 +243,8 @@ make tagPane =
     addValFrame <*>
     do
         lang <- Lens.view has
-        let currentLang =
-                case tagPane ^. Sugar.tpTagData . Tag.tagTexts . Lens.at lang of
-                Nothing ->
-                    makeMissingLangRow myId (tagPane ^. Sugar.tpSetTexts) lang
-                Just cur ->
-                    makeLangRow myId (tagPane ^. Sugar.tpSetTexts) lang cur
-        let editOtherLangs =
-                tagPane ^@.. Sugar.tpTagData . Tag.tagTexts . Lens.itraversed
-                & filter ((/= lang) . fst)
-                <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetTexts))
-        Grid.make <*>
-            sequence
-            (heading : currentLang : editOtherLangs)
-            <&> snd
+        makeLangsTable myId (tagPane ^. Sugar.tpTagData . Tag.tagTexts) (tagPane ^. Sugar.tpSetTexts)
             & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
-        -- the type of Styled.label is RankN, so duplicate a bit of
-        -- code to avoid complicating too much here
-        toWidget = fmap Widget.fromView
-        heading =
-            row
-            (label MomentuTexts.language <&> toWidget)
-            (label Texts.name <&> toWidget)
-            (label Texts.abbreviation <&> toWidget)
-            (label Texts.disambiguationText <&> toWidget)
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
