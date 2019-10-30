@@ -195,30 +195,31 @@ make tagPane =
     Styled.addValFrame <*>
     do
         lang <- Lens.view has
-        Grid.make <*>
-            sequence
-            ( ( Row
-                    (Styled.label MomentuTexts.language)
-                    (Spacer.stdHSpace <&> WithTextPos 0)
-                    (Styled.label Texts.name)
-                    (Spacer.stdHSpace <&> WithTextPos 0)
-                    (Styled.label Texts.abbreviation)
-                    (Spacer.stdHSpace <&> WithTextPos 0)
-                    (Styled.label Texts.disambiguationText)
-                    & sequenceA
-                    <&> Lens.mapped . Align.tValue %~ Widget.fromView
-                    <&> Lens.mapped %~ Align.fromWithTextPos 0
-                ) :
+        let newForCurrentLang =
                 [ makeMissingLangRow myId (tagPane ^. Sugar.tpSetName) lang
                 | Lens.nullOf (Sugar.tpLocalizedNames . Lens.ix lang) tagPane
-                ] <>
-                ( tagPane ^@.. Sugar.tpLocalizedNames . Lens.itraversed
-                    & sortOn ((/= lang) . fst)
-                    <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetName))
-                )
-            )
+                ]
+        let editExistingLangs =
+                tagPane ^@.. Sugar.tpLocalizedNames . Lens.itraversed
+                & sortOn ((/= lang) . fst)
+                <&> uncurry (makeLangRow myId (tagPane ^. Sugar.tpSetName))
+        Grid.make <*>
+            sequence
+            (heading : newForCurrentLang <> editExistingLangs)
             <&> snd
             & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
+        heading =
+            row
+            (Styled.label MomentuTexts.language)
+            (Styled.label Texts.name)
+            (Styled.label Texts.abbreviation)
+            (Styled.label Texts.disambiguationText)
+        hspace = Spacer.stdHSpace <&> WithTextPos 0
+        row lang name abbrev disambig =
+            Row lang hspace name hspace abbrev hspace disambig
+            & sequenceA
+            <&> Lens.mapped . Align.tValue %~ Widget.fromView
+            <&> Lens.mapped %~ Align.fromWithTextPos 0
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
