@@ -1,5 +1,6 @@
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeFamilies #-}
+
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint, helpSrcLocColor
@@ -13,7 +14,8 @@ module Lamdu.Config.Theme
     , Theme(..)
         , title, fonts, sprites, baseTextSize, animationTimePeriodSec
         , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
-        , textColors, topPadding, statusBar, deleted, maxEvalViewSize, versionControl
+        , textColors, textEditCursorColor, textEditCursorWidth
+        , topPadding, statusBar, deleted, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorOverlayColor
         , errorColor, successColor
         , typeIndicatorFrameWidth, letItemPadding, narrowUnderlineWidth
@@ -145,6 +147,8 @@ data Theme = Theme
     , _hover :: Hover.Style
     , _tooltip :: ToolTip
     , _textColors :: TextColors
+    , _textEditCursorColor :: Draw.Color
+    , _textEditCursorWidth :: Draw.R
     , _topPadding :: Draw.R
     , _statusBar :: StatusBar
     , _deleted :: Deleted

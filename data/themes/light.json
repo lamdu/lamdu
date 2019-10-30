@@ -28,6 +28,10 @@
         "infoTextColor"                 : [0.3, 0.3, 0.3, 1.0],
         "typeTextColor"                 : [0.25, 0.5, 0.5, 1.0],
         "baseColor"                     : [0.0, 0.0, 0.0, 1.0],
+        "emptyEditColors": {
+            "unfocused": [0.5, 0.5, 0.5, 1.0],
+            "focused": [0.5, 0.5, 0.5, 1.0]
+        },
         "grammarColor"                  : [0.1, 0.1, 0.2, 0.6],
         "literalColor"                  : [0.25, 0.5, 0.25, 1.0],
         "nomColor"                      : [0.0, 0.0, 0.0, 0.5],

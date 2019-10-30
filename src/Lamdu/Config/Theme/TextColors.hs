@@ -5,11 +5,13 @@ module Lamdu.Config.Theme.TextColors where
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Draw as Draw
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 
 import           Lamdu.Prelude
 
 data TextColors = TextColors
     { _baseColor :: Draw.Color
+    , _emptyEditColors :: TextEdit.Modes Draw.Color
     , _nomColor :: Draw.Color
     , _literalColor :: Draw.Color
     , _grammarColor :: Draw.Color

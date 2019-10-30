@@ -67,11 +67,17 @@ make fonts theme =
     }
     where
         textEdit color font =
-            TextEdit.defaultStyle
-            TextView.Style
-            { TextView._styleColor = theme ^. Theme.textColors . color
-            , TextView._styleFont = fonts ^. font
-            , TextView._styleUnderline = Nothing
+            TextEdit.Style
+            { TextEdit._sCursorColor = theme ^. Theme.textEditCursorColor
+            , TextEdit._sCursorWidth = theme ^. Theme.textEditCursorWidth
+            , TextEdit._sEmptyStringsColors =
+                theme ^. Theme.textColors . TextColors.emptyEditColors
+            , TextEdit._sTextViewStyle =
+                TextView.Style
+                { TextView._styleColor = theme ^. Theme.textColors . color
+                , TextView._styleFont = fonts ^. font
+                , TextView._styleUnderline = Nothing
+                }
             }
 
 data HelpEnv = HelpEnv
