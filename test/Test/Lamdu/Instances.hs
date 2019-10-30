@@ -283,7 +283,7 @@ instance NFData Name.TagText
 instance NFData LangId
 instance NFData Tag.TextsInLang
 instance NFData Tag.DirOp
-instance NFData Tag.OpName
+instance NFData Tag.Symbol
 instance NFData Tag.Tag
 instance NFData ShowAnnotation
 instance NFData Sugar.BinderBodyScope

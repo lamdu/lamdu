@@ -26,7 +26,7 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition)
-import           Lamdu.Data.Tag (Tag(..), OpName(..))
+import           Lamdu.Data.Tag (Tag(..), Symbol(..))
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -57,7 +57,7 @@ readTagData tag =
     Transaction.irefExists iref
     >>=
     \case
-    False -> pure (Tag 0 NotAnOp mempty)
+    False -> pure (Tag 0 NoSymbol mempty)
     True -> Transaction.readIRef iref
     where
         iref = tagI tag

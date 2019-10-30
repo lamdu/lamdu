@@ -542,28 +542,28 @@ decodeDef obj =
 encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = HashMap.fromList ["tagOrder" .= tagOrder]
 
-encodeOp :: Tag.OpName -> [AesonTypes.Pair]
-encodeOp Tag.NotAnOp = []
-encodeOp (Tag.OpUni x) = [("op", Aeson.String x)]
-encodeOp (Tag.OpDir (Tag.DirOp l r)) =
+encodeSymbol :: Tag.Symbol -> [AesonTypes.Pair]
+encodeSymbol Tag.NoSymbol = []
+encodeSymbol (Tag.UniversalSymbol x) = [("op", Aeson.String x)]
+encodeSymbol (Tag.DirectionalSymbol (Tag.DirOp l r)) =
     [("op", Aeson.Array (Vector.fromList [Aeson.String l, Aeson.String r]))]
 
 encodeNamedTag :: Encoder (T.Tag, Tag)
 encodeNamedTag (T.Tag ident, Tag order op names) =
     (encodeTagOrder order
     & insertField "tag" (encodeIdent ident))
-    <> HashMap.fromList (encodeSquash "names" id names <> encodeOp op)
+    <> HashMap.fromList (encodeSquash "names" id names <> encodeSymbol op)
     & Aeson.Object
 
-decodeOpName :: Maybe Aeson.Value -> AesonTypes.Parser Tag.OpName
-decodeOpName Nothing = pure Tag.NotAnOp
-decodeOpName (Just (Aeson.String x)) = Tag.OpUni x & pure
-decodeOpName (Just (Aeson.Array x)) =
+decodeSymbol :: Maybe Aeson.Value -> AesonTypes.Parser Tag.Symbol
+decodeSymbol Nothing = pure Tag.NoSymbol
+decodeSymbol (Just (Aeson.String x)) = Tag.UniversalSymbol x & pure
+decodeSymbol (Just (Aeson.Array x)) =
     case x ^.. traverse of
     [Aeson.String l, Aeson.String r] ->
-        Tag.DirOp l r & Tag.OpDir & pure
+        Tag.DirOp l r & Tag.DirectionalSymbol & pure
     _ -> fail ("unexpected op names:" <> show x)
-decodeOpName x = fail ("unexpected op name: " <> show x)
+decodeSymbol x = fail ("unexpected op name: " <> show x)
 
 decodeNamedTag :: Aeson.Object -> AesonTypes.Parser (T.Tag, Tag)
 decodeNamedTag obj =
@@ -572,7 +572,7 @@ decodeNamedTag obj =
     <*>
     ( Tag
         <$> (obj .: "tagOrder")
-        <*> decodeOpName (obj ^. Lens.at "op")
+        <*> decodeSymbol (obj ^. Lens.at "op")
         <*> decodeSquashed "names" Aeson.parseJSON obj
     )
 

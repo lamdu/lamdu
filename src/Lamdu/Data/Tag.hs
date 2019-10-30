@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Data.Tag
-    ( Tag(..), tagOrder, tagOpName, tagTexts
-    , OpName(..), _NotAnOp, _OpUni, _OpDir, DirOp(..), opLeftToRight, opRightToLeft
+    ( Tag(..), tagOrder, tagSymbol, tagTexts
+    , Symbol(..), _NoSymbol, _UniversalSymbol, _DirectionalSymbol, DirOp(..), opLeftToRight, opRightToLeft
     , TextsInLang(..), name, abbreviation, disambiguationText
     , getTagName
     ) where
@@ -26,13 +26,13 @@ data DirOp = DirOp
     deriving anyclass Binary
 Lens.makeLenses ''DirOp
 
-data OpName
-    = NotAnOp
-    | OpUni Text
-    | OpDir DirOp
+data Symbol
+    = NoSymbol
+    | UniversalSymbol Text
+    | DirectionalSymbol DirOp
     deriving stock (Generic, Eq, Ord, Show)
     deriving anyclass Binary
-Lens.makePrisms '' OpName
+Lens.makePrisms '' Symbol
 
 data TextsInLang = TextsInLang
     { _name :: !Text
@@ -70,7 +70,7 @@ instance Aeson.FromJSON TextsInLang where
 
 data Tag = Tag
     { _tagOrder :: !Int
-    , _tagOpName :: !OpName
+    , _tagSymbol :: !Symbol
     , _tagTexts :: !(Map LangId TextsInLang)
     }
     deriving stock (Generic, Eq, Ord, Show)
@@ -81,10 +81,10 @@ getTagName ::
     (Has LangId env, Has Dir.Layout env) =>
     env -> Tag -> TextsInLang
 getTagName env tag =
-    case tag ^. tagOpName of
-    NotAnOp -> n
-    OpUni x -> TextsInLang x Nothing Nothing
-    OpDir (DirOp l r) ->
+    case tag ^. tagSymbol of
+    NoSymbol -> n
+    UniversalSymbol x -> TextsInLang x Nothing Nothing
+    DirectionalSymbol (DirOp l r) ->
         case env ^. has of
         LeftToRight -> opOrName l
         RightToLeft -> opOrName r

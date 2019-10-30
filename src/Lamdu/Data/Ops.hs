@@ -25,7 +25,7 @@ import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
-import           Lamdu.Data.Tag (OpName(..), TextsInLang(..), tagOrder, tagTexts, tagOpName, getTagName, name)
+import           Lamdu.Data.Tag (Symbol(..), TextsInLang(..), tagOrder, tagTexts, tagSymbol, getTagName, name)
 import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, ValP, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -132,15 +132,15 @@ assocTagName env tag =
                 setName x
                     | x == mempty =
                         info
-                        & tagOpName .~ NotAnOp
+                        & tagSymbol .~ NoSymbol
                         & tagTexts . Lens.at lang .~ Nothing
                     | isOperator x =
                         info
-                        & tagOpName .~ OpUni x
+                        & tagSymbol .~ UniversalSymbol x
                         & tagTexts . Lens.at lang .~ Nothing
                     | otherwise =
                         info
-                        & tagOpName .~ NotAnOp
+                        & tagSymbol .~ NoSymbol
                         & tagTexts . Lens.at lang ?~ TextsInLang x Nothing Nothing
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
 

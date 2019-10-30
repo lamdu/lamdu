@@ -20,7 +20,7 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JSON.Codec as JsonCodec
-import           Lamdu.Data.Tag (tagTexts, tagOpName, name, OpName(..))
+import           Lamdu.Data.Tag (tagTexts, tagSymbol, name, Symbol(..))
 import           Lamdu.I18N.LangId (LangId(..))
 import           Test.Lamdu.FreshDb (readFreshDb)
 
@@ -43,7 +43,7 @@ verifyTagsTest =
     >>= verifyTagNames . fmap (^. name)
     where
         verifyHasName (tagId, tag)
-            | Map.null (tag ^. tagTexts) && tag ^. tagOpName == NotAnOp =
+            | Map.null (tag ^. tagTexts) && tag ^. tagSymbol == NoSymbol =
                 fail ("stdlib tag with no name:" <> show tagId)
             | "" `elem` tag ^.. tagTexts . traverse . name =
                 fail ("empty name for tag:" <> show tagId)
