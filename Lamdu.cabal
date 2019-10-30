@@ -196,7 +196,6 @@ Library
                   , Data.ByteString.Extended
                   , Data.Cache.Fenced
                   , Data.CurAndPrev
-                  , Data.Function.Decycle
                   , Data.Has
                   , Data.IORef.Extended
                   , Data.List.Extended

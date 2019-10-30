@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Calc.Term.Utils
     ( Composite(..), tags, rest
@@ -8,7 +8,8 @@ module Lamdu.Calc.Term.Utils
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, Ann(..), htraverse1)
+import           Data.Constraint (withDict)
+import           Hyper (Tree, Ann(..), Recursively(..), HFoldable(..), (#>))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -17,10 +18,15 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Prelude
 
 -- | Return all subexprs until the given cut-point
-culledSubexprPayloads :: (a -> Bool) -> Val a -> [a]
+culledSubexprPayloads ::
+    forall t a.
+    Recursively HFoldable t =>
+    (a -> Bool) -> Tree (Ann (Const a)) t -> [a]
 culledSubexprPayloads cut (Ann (Const pl) body)
     | cut pl = []
-    | otherwise = pl : body ^. htraverse1 . Lens.to (culledSubexprPayloads cut)
+    | otherwise =
+        withDict (recursively (Proxy @(HFoldable t))) $
+        pl : hfoldMap (Proxy @(Recursively HFoldable) #> culledSubexprPayloads cut) body
 
 data Composite a = Composite
     { _tags :: Map T.Tag a

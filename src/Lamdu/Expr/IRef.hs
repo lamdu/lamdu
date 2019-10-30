@@ -15,8 +15,10 @@ module Lamdu.Expr.IRef
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Function.Decycle (decycle)
+import           Data.Binary (Binary)
 import           Data.Property (Property(..))
+import qualified Data.Set as Set
+import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
@@ -70,23 +72,44 @@ type ValBody m = Tree V.Term (F (IRef m))
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
 
-readValI :: Monad m => ValI m -> T m (Tree V.Term (F (IRef m)))
+readValI ::
+    (Monad m, Binary (Tree t (F (IRef m)))) =>
+    Tree (F (IRef m)) t -> T m (Tree t (F (IRef m)))
 readValI = Transaction.readIRef . (^. _F)
 
-writeValI :: Monad m => ValI m -> Tree V.Term (F (IRef m)) -> T m ()
+writeValI ::
+    (Monad m, Binary (Tree t (F (IRef m)))) =>
+    Tree (F (IRef m)) t -> Tree t (F (IRef m)) -> T m ()
 writeValI = Transaction.writeIRef . (^. _F)
 
-newValI :: Monad m => Tree V.Term (F (IRef m)) -> T m (ValI m)
+newValI ::
+    (Monad m, Binary (Tree t (F (IRef m)))) =>
+    Tree t (F (IRef m)) -> T m (Tree (F (IRef m)) t)
 newValI = fmap (_F #) . Transaction.newIRef
 
-readVal :: Monad m => ValI m -> T m (Val (ValI m))
-readVal =
-    decycle loop
+readVal ::
+    Monad m =>
+    Tree (F (IRef m)) V.Term ->
+    T m (Tree (Ann (Const (Tree (F (IRef m)) V.Term))) V.Term)
+readVal = readValH Set.empty
+
+readValH ::
+    ( Monad m
+    , HNodesConstraint t ((~) t)
+    , Binary (Tree t (F (IRef m)))
+    , HTraversable t
+    ) =>
+    Set UUID ->
+    Tree (F (IRef m)) t ->
+    T m (Tree (Ann (Const (Tree (F (IRef m)) t))) t)
+readValH visited valI
+    | visited ^. Lens.contains k = error $ "Recursive reference: " ++ show valI
+    | otherwise =
+        readValI valI
+        >>= htraverse1 (readValH (visited & Lens.contains k .~ True))
+        <&> Ann (Const valI)
     where
-        loop valI =
-            \case
-            Nothing -> error $ "Recursive reference: " ++ show valI
-            Just go -> readValI valI >>= htraverse1 go <&> Ann (Const valI)
+        k = IRef.uuid (valI ^. _F)
 
 expressionBodyFrom ::
     Monad m =>
