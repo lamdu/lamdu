@@ -13,6 +13,7 @@ module Lamdu.GUI.Styled
     , withColor
     , nameAtBinder
     , unitSprite, sprite
+    , withDisabledColor
     ) where
 
 import qualified Control.Lens as Lens
@@ -192,6 +193,15 @@ withColor ::
 withColor textColor act =
     do
         color <- Lens.view (has . Theme.textColors . Lens.cloneLens textColor)
+        Reader.local (TextView.color .~ color) act
+
+withDisabledColor ::
+    ( Has Theme env, Has TextView.Style env, MonadReader env m
+    ) =>
+    m a -> m a
+withDisabledColor act =
+    do
+        color <- Lens.view (has . Theme.textColors . TextColors.actionTextColor)
         Reader.local (TextView.color .~ color) act
 
 actionable ::
