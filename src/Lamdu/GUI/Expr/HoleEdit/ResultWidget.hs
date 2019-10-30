@@ -7,7 +7,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
 import           Data.Constraint (withDict)
-import           GUI.Momentu (Widget, WithTextPos(..), TextWidget)
+import           GUI.Momentu (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -38,7 +38,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-setFocalAreaToFullSize :: WithTextPos (Widget a) -> WithTextPos (Widget a)
+setFocalAreaToFullSize :: TextWidget a -> TextWidget a
 setFocalAreaToFullSize =
     Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
     (:[]) . Rect 0
@@ -61,7 +61,7 @@ removeUnwanted =
     <&> E.KeyEvent MetaKey.KeyState'Pressed
     & E.deleteKeys
 
-applyResultLayout :: Responsive a -> WithTextPos (Widget a)
+applyResultLayout :: Responsive a -> TextWidget a
 applyResultLayout = (^. Responsive.rWide)
 
 makeWidget ::

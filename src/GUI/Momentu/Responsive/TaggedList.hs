@@ -9,20 +9,19 @@ import qualified Control.Lens.Extended as Lens
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos(..))
+import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
 import           Lamdu.Prelude
 
 data TaggedItem f = TaggedItem
-    { _tagPre :: Maybe (WithTextPos (Widget f))
+    { _tagPre :: Maybe (TextWidget f)
     , _taggedItem :: Responsive f
-    , _tagPost :: Maybe (WithTextPos (Widget f))
+    , _tagPost :: Maybe (TextWidget f)
     }
 
 Lens.makeLenses ''TaggedItem

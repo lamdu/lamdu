@@ -4,7 +4,7 @@ module Lamdu.GUI.Expr.FragmentEdit
 
 import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Align (WithTextPos)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
@@ -15,7 +15,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -43,9 +42,9 @@ import           Lamdu.Prelude
 
 -- TODO: Consider parameterizing `Responsive` such that this just becomes `liftA3`.
 -- Which means:
---   Responsive a ==> Responsive (WithTextPos (Widget a))
+--   Responsive a ==> Responsive (TextWidget a)
 responsiveLiftA3 ::
-    (WithTextPos (Widget a) -> WithTextPos (Widget a) -> WithTextPos (Widget a) -> WithTextPos (Widget a)) ->
+    (TextWidget a -> TextWidget a -> TextWidget a -> TextWidget a) ->
     Responsive a -> Responsive a -> Responsive a -> Responsive a
 responsiveLiftA3 f x y z =
     Responsive

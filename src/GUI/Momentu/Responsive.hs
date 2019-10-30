@@ -44,7 +44,7 @@ module GUI.Momentu.Responsive
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import           GUI.Momentu.Align (Aligned(..), WithTextPos(..), TextWidget)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.Direction (Orientation(..))
 import           GUI.Momentu.Element (Element, SizedElement)
@@ -65,9 +65,9 @@ data NarrowLayoutParams = NarrowLayoutParams
 Lens.makeLenses ''NarrowLayoutParams
 
 data Responsive f = Responsive
-    { _rWide :: WithTextPos (Widget f)
-    , _rWideDisambig :: WithTextPos (Widget f)
-    , _rNarrow :: NarrowLayoutParams -> WithTextPos (Widget f)
+    { _rWide :: TextWidget f
+    , _rWideDisambig :: TextWidget f
+    , _rNarrow :: NarrowLayoutParams -> TextWidget f
     }
 Lens.makeLenses ''Responsive
 
@@ -78,7 +78,7 @@ adjustNarrowLayoutParams Vertical _ = layoutNeedDisambiguation .~ True
 adjustNarrowLayoutParams Horizontal v = layoutWidth -~ v ^. Element.size . _1
 
 instance
-    ( GluesTo env (WithTextPos (Widget a)) (WithTextPos b) (WithTextPos (Widget a))
+    ( GluesTo env (TextWidget a) (WithTextPos b) (TextWidget a)
     , SizedElement b
     ) => Glue env (Responsive a) (WithTextPos b) where
     type Glued (Responsive a) (WithTextPos b) = Responsive a
@@ -98,7 +98,7 @@ instance
                 Vertical -> l ^. rWide
 
 instance
-    ( GluesTo env (WithTextPos a) (WithTextPos (Widget b)) (WithTextPos (Widget b))
+    ( GluesTo env (WithTextPos a) (TextWidget b) (TextWidget b)
     , SizedElement a
     ) => Glue env (WithTextPos a) (Responsive b) where
     type Glued (WithTextPos a) (Responsive b) = Responsive b
@@ -137,7 +137,7 @@ instance Widget.HasWidget Responsive where widget = alignedWidget . Align.tValue
 alignedWidget ::
     Lens.Setter
     (Responsive a) (Responsive b)
-    (WithTextPos (Widget a)) (WithTextPos (Widget b))
+    (TextWidget a) (TextWidget b)
 alignedWidget f (Responsive w wd n) =
     Responsive
     <$> f w
@@ -149,7 +149,7 @@ fromAlignedWidget :: Functor f => Aligned (Widget f) -> Responsive f
 fromAlignedWidget (Aligned a w) =
     WithTextPos (a ^. _2 * w ^. Element.height) w & fromWithTextPos
 
-fromWithTextPos :: WithTextPos (Widget a) -> Responsive a
+fromWithTextPos :: TextWidget a -> Responsive a
 fromWithTextPos x = Responsive x x (const x)
 
 -- | Lifts a Widget into a 'Responsive' with an alignment point at the top left
@@ -172,9 +172,9 @@ data VerticalLayout t a = VerticalLayout
     { _vContexts ::
         -- The width in the index is the width to remove from the child
         Lens.AnIndexedTraversal NarrowLayoutParams
-        (t (Responsive a)) (t (WithTextPos (Widget a)))
-        (Responsive a) (WithTextPos (Widget a))
-    , _vLayout :: t (WithTextPos (Widget a)) -> WithTextPos (Widget a)
+        (t (Responsive a)) (t (TextWidget a))
+        (Responsive a) (TextWidget a)
+    , _vLayout :: t (TextWidget a) -> TextWidget a
     }
 Lens.makeLenses ''VerticalLayout
 

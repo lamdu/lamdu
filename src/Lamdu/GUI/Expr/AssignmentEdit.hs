@@ -11,7 +11,7 @@ import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (WithTextPos, TextWidget)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
@@ -157,7 +157,7 @@ makeScopeNavArrow ::
     , Element.HasAnimIdPrefix env, Applicative o
     , Has Dir.Layout env
     ) =>
-    (w -> o GuiState.Update) -> Text -> Maybe w -> m (WithTextPos (Widget o))
+    (w -> o GuiState.Update) -> Text -> Maybe w -> m (TextWidget o)
 makeScopeNavArrow setScope arrowText mScopeId =
     do
         theme <- Lens.view has

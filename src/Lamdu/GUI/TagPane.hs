@@ -98,7 +98,7 @@ makeLanguageTitle ::
     , Has TextView.Style env, Has Dir.Layout env
     , Has (Map LangId Text) env
     ) =>
-    Widget.Id -> LangId -> m (Align.WithTextPos (Widget o))
+    Widget.Id -> LangId -> m (TextWidget o)
 makeLanguageTitle myId lang =
     TextView.make
     <*> (Lens.view has <&> getLang)
@@ -127,16 +127,16 @@ langWidgetId parentId lang =
 nameId :: Widget.Id -> Widget.Id
 nameId = (`Widget.joinId` ["name"])
 
-hspace :: (MonadReader env m, Spacer.HasStdSpacing env) => m (WithTextPos (Widget f))
+hspace :: (MonadReader env m, Spacer.HasStdSpacing env) => m (TextWidget f)
 hspace =
     Spacer.stdHSpace <&> WithTextPos 0 <&> Align.tValue %~ Widget.fromView
 
 row ::
     (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
-    m (WithTextPos (Widget f)) ->
-    m (WithTextPos (Widget f)) ->
-    m (WithTextPos (Widget f)) ->
-    m (WithTextPos (Widget f)) ->
+    m (TextWidget f) ->
+    m (TextWidget f) ->
+    m (TextWidget f) ->
+    m (TextWidget f) ->
     m (Row (Aligned (Widget f)))
 row lang name abbrev disambig =
     Row lang hspace name hspace abbrev hspace disambig

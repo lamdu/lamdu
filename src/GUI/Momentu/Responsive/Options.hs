@@ -23,7 +23,6 @@ import           GUI.Momentu.Responsive
     , rWide, rWideDisambig, rNarrow
     , layoutWidth, vbox, fromView, vertLayoutMaybeDisambiguate
     )
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -31,17 +30,17 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Prelude
 
 data WideLayouts f = WideLayouts
-    { _lWide :: WithTextPos (Widget f)
-    , _lWideDisambig :: WithTextPos (Widget f)
+    { _lWide :: TextWidget f
+    , _lWideDisambig :: TextWidget f
     }
 Lens.makeLenses ''WideLayouts
 
 data WideLayoutOption t f = WideLayoutOption
     { _wContexts ::
         Lens.ATraversal
-        (t (Responsive f)) (t (WithTextPos (Widget f)))
+        (t (Responsive f)) (t (TextWidget f))
         (Responsive f) (WideLayouts f)
-    , _wLayout :: t (WithTextPos (Widget f)) -> WideLayouts f
+    , _wLayout :: t (TextWidget f) -> WideLayouts f
     }
 Lens.makeLenses ''WideLayoutOption
 
@@ -67,9 +66,9 @@ tryWideLayout layoutOption elements fallback =
             , _lWideDisambig = element ^. rWideDisambig
             }
 
-type HorizDisambiguator f = WithTextPos (Widget f) -> WithTextPos (Widget f)
+type HorizDisambiguator f = TextWidget f -> TextWidget f
 
-makeWideLayouts :: HorizDisambiguator a -> WithTextPos (Widget a) -> WideLayouts a
+makeWideLayouts :: HorizDisambiguator a -> TextWidget a -> WideLayouts a
 makeWideLayouts disamb w =
     WideLayouts
     { _lWide = w
