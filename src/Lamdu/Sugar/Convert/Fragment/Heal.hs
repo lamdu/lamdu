@@ -64,7 +64,7 @@ prepareInFragExpr (Ann (Const a) v) =
 prepare ::
     Monad m =>
     ValI m ->
-    Tree (Ann (Const ((ValP m)))) Term ->
+    Tree (Ann (Const (ValP m))) Term ->
     Tree (Ann (Const (Priority, EditAction (T m ())))) Term
 prepare fragI (Ann (Const a) v) =
     if fragI == a ^. Property.pVal
