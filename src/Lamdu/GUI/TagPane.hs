@@ -30,7 +30,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import           Lamdu.Data.Tag (TextsInLang(..))
 import qualified Lamdu.Data.Tag as Tag
-import qualified Lamdu.GUI.Styled as Styled
+import           Lamdu.GUI.Styled (addValFrame, label)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.I18N.LangId (LangId(..), _LangId)
@@ -128,24 +128,39 @@ langWidgetId parentId lang =
 nameId :: Widget.Id -> Widget.Id
 nameId = (`Widget.joinId` ["name"])
 
+hspace :: (MonadReader env m, Spacer.HasStdSpacing env) => m (WithTextPos (Widget f))
+hspace =
+    Spacer.stdHSpace <&> WithTextPos 0 <&> Align.tValue %~ Widget.fromView
+
+row ::
+    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    m (WithTextPos (Widget f)) ->
+    m (WithTextPos (Widget f)) ->
+    m (WithTextPos (Widget f)) ->
+    m (WithTextPos (Widget f)) ->
+    m (Row (Aligned (Widget f)))
+row lang name abbrev disambig =
+    Row lang hspace name hspace abbrev hspace disambig
+    & sequenceA
+    <&> Lens.mapped %~ Align.fromWithTextPos 0
+
 makeLangRow ::
     ( Applicative o
     , MonadReader env m
+    , Spacer.HasStdSpacing env
     , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
     , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
     ) =>
     Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId -> TextsInLang ->
     m (Row (Aligned (Widget o)))
 makeLangRow parentId setName lang langNames =
-    Row
-    <$> makeLanguageTitle langId lang
-    <*> pure Element.empty
-    <*> makeFocusableTagNameEdit nameProp (nameId langId)
-    <*> pure Element.empty
-    <*> makeFocusableTagNameEdit (mkProp Tag.abbreviation) (langId `Widget.joinId` ["abbr"])
-    <*> pure Element.empty
-    <*> makeFocusableTagNameEdit (mkProp Tag.disambiguationText) (langId `Widget.joinId` ["disamb"])
-    <&> Lens.mapped %~ Align.fromWithTextPos 0
+    row
+    (makeLanguageTitle langId lang)
+    (makeFocusableTagNameEdit nameProp (nameId langId))
+    (makeFocusableTagNameEdit (mkProp Tag.abbreviation)
+        (langId `Widget.joinId` ["abbr"]))
+    (makeFocusableTagNameEdit (mkProp Tag.disambiguationText)
+        (langId `Widget.joinId` ["disamb"]))
     where
         langId = langWidgetId parentId lang
         nameProp =
@@ -158,22 +173,18 @@ makeLangRow parentId setName lang langNames =
 
 makeMissingLangRow ::
     ( Applicative o
-    , MonadReader env m
+    , MonadReader env m, Spacer.HasStdSpacing env
     , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
     , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
     ) =>
     Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId ->
     m (Row (Aligned (Widget o)))
 makeMissingLangRow parentId setName lang =
-    Row
-    <$> makeLanguageTitle langId lang
-    <*> pure Element.empty
-    <*> makeFocusableTagNameEdit nameProp (nameId langId)
-    <*> pure Element.empty
-    <*> pure Element.empty
-    <*> pure Element.empty
-    <*> pure Element.empty
-    <&> Lens.mapped %~ Align.fromWithTextPos 0
+    row
+    (makeLanguageTitle langId lang)
+    (makeFocusableTagNameEdit nameProp (nameId langId))
+    (pure Element.empty)
+    (pure Element.empty)
     where
         langId = langWidgetId parentId lang
         nameProp =
@@ -192,7 +203,7 @@ make ::
     ) =>
     Sugar.TagPane Name o -> m (Widget o)
 make tagPane =
-    Styled.addValFrame <*>
+    addValFrame <*>
     do
         lang <- Lens.view has
         let newForCurrentLang =
@@ -210,16 +221,13 @@ make tagPane =
             & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
+        -- the type of Styled.label is RankN, so duplicate a bit of
+        -- code to avoid complicating too much here
+        toWidget = fmap Widget.fromView
         heading =
             row
-            (Styled.label MomentuTexts.language)
-            (Styled.label Texts.name)
-            (Styled.label Texts.abbreviation)
-            (Styled.label Texts.disambiguationText)
-        hspace = Spacer.stdHSpace <&> WithTextPos 0
-        row lang name abbrev disambig =
-            Row lang hspace name hspace abbrev hspace disambig
-            & sequenceA
-            <&> Lens.mapped . Align.tValue %~ Widget.fromView
-            <&> Lens.mapped %~ Align.fromWithTextPos 0
+            (label MomentuTexts.language <&> toWidget)
+            (label Texts.name <&> toWidget)
+            (label Texts.abbreviation <&> toWidget)
+            (label Texts.disambiguationText <&> toWidget)
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
