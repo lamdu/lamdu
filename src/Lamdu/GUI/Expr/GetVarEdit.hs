@@ -7,6 +7,7 @@ module Lamdu.GUI.Expr.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -30,6 +31,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper (Ann(..))
@@ -121,8 +123,8 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-addOperatorMarker :: Element a => Widget.Id -> a -> a
-addOperatorMarker widgetId =
+unappliedOperatorMarker :: Element a => Widget.Id -> a -> a
+unappliedOperatorMarker widgetId =
     Element.bottomLayer %@~
     \size -> Anim.singletonFrame 1 frameId (infixMarker size) & flip mappend
     where
@@ -161,11 +163,17 @@ makeNameRef role color myId nameRef =
                     savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
         nameText <- Name.visible name <&> (^. _1 . Name.ttText)
-        let mAddMarker
-                | (role == Operator) == Lens.allOf Lens.each (`elem` Chars.operator) nameText = id
-                | otherwise = addOperatorMarker nameId
+        let isOperator = Text.all (`elem` Chars.operator) nameText
+        let mAddMarker =
+                case role of
+                Operator
+                    | isOperator -> id
+                    | otherwise -> (Label.make "." /|/)
+                Normal
+                    | isOperator -> fmap (unappliedOperatorMarker nameId)
+                    | otherwise -> id
         makeSimpleView color name nameId
-            <&> mAddMarker
+            & mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
     & Reader.local (Element.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
