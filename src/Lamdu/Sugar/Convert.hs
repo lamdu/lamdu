@@ -268,7 +268,7 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
         , _tagInstance = EntityId.ofTagPane tagId
         , _tagVal = tagId
         }
-    , _tpTagLangs = tagData ^. Tag.tagTexts
+    , _tpTagData = tagData
     , _tpSetName =
         \langId text ->
         tagData
