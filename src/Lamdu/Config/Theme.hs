@@ -18,7 +18,7 @@ module Lamdu.Config.Theme
         , topPadding, statusBar, deleted, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorOverlayColor
         , errorColor, successColor
-        , typeIndicatorFrameWidth, letItemPadding, narrowUnderlineWidth
+        , letItemPadding, narrowUnderlineWidth
         , wideUnderlineWidth, valFrameBGColor, valFramePadding
         , typeFrameBGColor, stdSpacing, cursorColor, cursorDecayExponent
         , disabledColor, presentationChoiceScaleFactor, evaluatedPathBGColor
@@ -160,7 +160,6 @@ data Theme = Theme
     , _invalidCursorOverlayColor :: Draw.Color
     , _errorColor :: Draw.Color
     , _successColor :: Draw.Color
-    , _typeIndicatorFrameWidth :: Vector2 Double
     , _letItemPadding :: Vector2 Double
     , _narrowUnderlineWidth :: Double
     , _wideUnderlineWidth :: Double

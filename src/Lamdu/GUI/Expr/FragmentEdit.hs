@@ -7,7 +7,6 @@ import           Control.Applicative (liftA3)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -22,7 +21,6 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Hyper (Ann(..), type (#), annotation)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
@@ -81,7 +79,7 @@ make fragment pl =
         isSelected <- GuiState.isSubCursor ?? myId
         env <- Lens.view id
         fragmentExprGui <-
-            makeFragmentExprEdit fragment & GuiState.assignCursor myId innerId
+            GuiM.makeSubexpression (fragment ^. Sugar.fExpr) & GuiState.assignCursor myId innerId
         hover <- Hover.hover
         searchAreaGui <- SearchArea.make (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm
         isHoleResult <- GuiM.isHoleResult
@@ -132,21 +130,3 @@ make fragment pl =
         innerId = fragment ^. Sugar.fExpr . annotation & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
         strollDest = pl ^. Sugar.plEntityId & HoleWidgetIds.make & HoleWidgetIds.hidOpen
-
-makeFragmentExprEdit ::
-    (Monad i, Functor o) =>
-    Sugar.Fragment Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
-    GuiM env i o (Responsive o)
-makeFragmentExprEdit fragment =
-    do
-        theme <- Lens.view has
-        let frameColor =
-                theme ^.
-                if fragment ^. Sugar.fTypeMatch
-                then Theme.successColor
-                else Theme.errorColor
-        let frameWidth = theme ^. Theme.typeIndicatorFrameWidth
-        fragmentExprGui <- GuiM.makeSubexpression (fragment ^. Sugar.fExpr)
-        MDraw.addInnerFrame
-            ?? frameColor ?? frameWidth
-            ?? Element.padAround (frameWidth & _2 .~ 0) fragmentExprGui
