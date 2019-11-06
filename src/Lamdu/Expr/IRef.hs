@@ -121,12 +121,12 @@ writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (V
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & htraverse1 %~ (^. hAnn . Lens._Wrapped . _1)
+        let bodyWithRefs = body & htraverse1 %~ (^. annotation . _1)
         case mIRef of
             Just valI -> Ann (Const (valI, pl)) body <$ writeValI valI bodyWithRefs
             Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (Const (exprI, pl)) body
     where
-        (mIRef, pl) = expr ^. hAnn . Lens._Wrapped
+        (mIRef, pl) = expr ^. annotation
 
 addProperties ::
     Monad m =>

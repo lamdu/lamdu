@@ -21,7 +21,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper (Tree, Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -85,7 +85,7 @@ makeInject val tag pl =
                 <&> (: [arg])
             )
     where
-        mReplaceParent = val ^. hAnn . Lens._Wrapped . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. annotation . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
     Annotated a (Const (Sugar.NullaryVal name i o)) ->
@@ -134,7 +134,7 @@ makeNullaryInject nullary tag pl =
                 )
     where
         nullaryRecEntityId =
-            nullary ^. hAnn . Lens._Wrapped . Sugar.plEntityId
+            nullary ^. annotation . Sugar.plEntityId
             & WidgetIds.fromEntityId
 
 make ::

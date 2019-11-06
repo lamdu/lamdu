@@ -38,7 +38,7 @@ compositeTypeScore x =
 score :: Val (Tree Pure Type) -> [Int]
 score x =
     (if Lens.has ExprLens.valBodyHole (x ^. hVal) then 1 else 0) :
-    resultTypeScore (x ^. hAnn . Lens._Wrapped) ++
+    resultTypeScore (x ^. annotation) ++
     (x ^.. hVal . htraverse1 >>= score)
 
 resultScore :: Val (Tree Pure Type) -> HoleResultScore

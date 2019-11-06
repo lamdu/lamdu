@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.GetField
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Ann(..), hAnn)
+import           Hyper (Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
@@ -59,7 +59,7 @@ convertGetFieldNonParam (Ann (Const exprPl) (V.GetField recExpr tag)) =
     >>= addActions [recExpr] exprPl
     where
         valI = exprPl ^. Input.stored . Property.pVal
-        recExprStored = recExpr ^. hAnn . Lens._Wrapped . Input.stored
+        recExprStored = recExpr ^. annotation . Input.stored
         recExprI = recExprStored ^. Property.pVal
 
 convert ::

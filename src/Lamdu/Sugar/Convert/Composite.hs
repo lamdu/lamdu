@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Composite
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -89,7 +89,7 @@ convertExtend cons extendOp valS exprPl extendV restC =
                     getVar <- itemS ^? ciExpr . hVal . _BodyGetVar
                     name <- getVar ^? SugarLens.getVarName
                     _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
-                    let punned = Ann (Const (itemS ^. ciExpr . hAnn . Lens._Wrapped)) (Const getVar)
+                    let punned = Ann (Const (itemS ^. ciExpr . annotation)) (Const getVar)
                     Just (cPunnedItems %~ (punned :))
                 & fromMaybe (cItems %~ (itemS :))
         addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
@@ -215,9 +215,9 @@ convert op empty cons prism valS restS exprPl extendV =
             -- subexprs given will add no hidden payloads. Then we add the
             -- extend only to pUserData as the hidden payload
             >>= addActions [] exprPl
-            <&> hAnn . Lens._Wrapped . pInput . Input.entityId .~ restS ^. hAnn . Lens._Wrapped . pInput . Input.entityId
-            <&> hAnn . Lens._Wrapped . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> restS ^. hAnn . Lens._Wrapped . pInput . Input.userData)
+            <&> annotation . pInput . Input.entityId .~ restS ^. annotation . pInput . Input.entityId
+            <&> annotation . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData)
     where
         convertOneItem =
             convertOneItemOpenComposite empty cons op valS restS exprPl extendV

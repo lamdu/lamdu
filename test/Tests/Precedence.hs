@@ -3,7 +3,7 @@ module Tests.Precedence where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
-import           Hyper (hAnn, hVal)
+import           Hyper (annotation, hVal)
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.SugarStubs (($$), ($.))
@@ -33,7 +33,7 @@ test =
 testPunnedArgOp :: Test
 testPunnedArgOp =
     expr ^?!
-    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . hAnn . Lens._Wrapped . _1
+    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . annotation . _1
     & assertEqual "punned arg precedence" 0
     & testCase "punned-arg-op"
     where
@@ -51,7 +51,7 @@ testPunnedArgOp =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    hVal . Sugar._BodyGetField . Sugar.gfRecord . hAnn . Lens._Wrapped . _2
+    hVal . Sugar._BodyGetField . Sugar.gfRecord . annotation . _2
     & assertEqual "get field should disambiguate compound expression"
         Parens.NeedsParens
     & testCase "get-field-of-apply"
@@ -65,14 +65,14 @@ testMinOpPrecInfix =
         assertEqual "minOpPrec is not 10?!" 10 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . hAnn . Lens._Wrapped
+        (minOpPrec, needsParens, _) = expr ^?! infixArgs . _2 . annotation
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExprWith 0
         i = Stub.litNum
 
 -- Test for https://trello.com/c/OuaLvwiJ/445-wrong-parenthesis
 test445 :: Test
 test445 =
-    assertEqual "Expected paren" Parens.NeedsParens (problemPos ^. hAnn . Lens._Wrapped . _2)
+    assertEqual "Expected paren" Parens.NeedsParens (problemPos ^. annotation . _2)
     & testCase "445-wrong-parenthesis"
     where
         expr =

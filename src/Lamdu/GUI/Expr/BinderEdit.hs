@@ -18,7 +18,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -70,7 +70,7 @@ makeLetEdit item =
                         , has . Definitions.extractToOuter
                         ])
                     . fmap ExprEventMap.extractCursor
-                ) (item ^? Sugar.lValue . hAnn . Lens._Wrapped . Sugar.plActions . Sugar.extract)
+                ) (item ^? Sugar.lValue . annotation . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc env
@@ -95,7 +95,7 @@ makeLetEdit item =
                     <&> Widget.weakerEvents eventMap
                     <&> Element.padAround (env ^. has . Theme.letItemPadding))
     where
-        bodyId = item ^. Sugar.lBody . hAnn . Lens._Wrapped & WidgetIds.fromExprPayload
+        bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
 lookupMKey :: Ord k => Maybe k -> Map k a -> Maybe a
@@ -124,7 +124,7 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
         let moveToInnerEventMap =
                 body
                 ^? hVal . Sugar._BinderLet
-                . Sugar.lValue . hAnn . Lens._Wrapped . Sugar.plActions
+                . Sugar.lValue . annotation . Sugar.plActions
                 . Sugar.extract
                 & foldMap
                 (E.keysEventMap (env ^. has . Config.moveLetInwardKeys)

@@ -15,7 +15,7 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -54,7 +54,7 @@ makeFunc role func =
         <&> Responsive.fromWithTextPos
     )
     where
-        pl = func ^. hAnn . Lens._Wrapped
+        pl = func ^. annotation
         myId = WidgetIds.fromExprPayload pl
 
 isBoxed :: Sugar.LabeledApply name i o a -> Bool

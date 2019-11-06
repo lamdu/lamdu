@@ -219,7 +219,7 @@ convertRepl env cp =
                 , _scLanguageIdentifier = env ^. has
                 , _scLanguageDir = env ^. has
                 }
-        let typ = valInferred ^. hAnn . Lens._Wrapped . Input.inferredType
+        let typ = valInferred ^. annotation . Input.inferredType
         nomsMap <-
             valInferred ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . Input.inferredType . ExprLens.tIds
             & Load.makeNominalsMap

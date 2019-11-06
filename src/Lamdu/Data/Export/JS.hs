@@ -106,7 +106,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . hAnn . Lens._Wrapped . Property.pVal)
+                . Lens.ix (repl ^. Def.expr . annotation . Property.pVal)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

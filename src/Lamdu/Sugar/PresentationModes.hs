@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -43,7 +43,7 @@ makeLabeledApply func args punnedArgs exprPl =
                 & hVal . Sugar._BodyHole . Sugar.holeMDelete ?~
                     (protectedSetToVal
                         (exprPl ^. Input.stored)
-                        (other ^. hAnn . Lens._Wrapped . pInput . Input.stored . Property.pVal)
+                        (other ^. annotation . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
         let (specialArgs, removedKeys) =

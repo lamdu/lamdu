@@ -65,13 +65,13 @@ cursorDest x =
     V.BLam lam -> lam ^. V.lamOut
     _ -> x
     & redexes
-    & (^. _2 . hAnn . Lens._Wrapped)
+    & (^. _2 . annotation)
 
 inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
-    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn . Lens._Wrapped)
+    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . annotation)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readVal
     <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just
@@ -80,6 +80,6 @@ inlineLet topLevelProp redex =
         (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just)
     <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (, ())
     >>= ExprIRef.writeValWithStoredSubexpressions
-    <&> (^. hAnn . Lens._Wrapped . _1)
+    <&> (^. annotation . _1)
     >>= Property.set topLevelProp
     & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ EntityId.ofValI) <$)

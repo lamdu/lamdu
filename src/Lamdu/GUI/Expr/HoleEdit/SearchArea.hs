@@ -187,7 +187,7 @@ make mkOptions pl allowedTerms =
         if isActive && not isAHoleInHole
             then
                 do
-                    annotation <-
+                    annotationGui <-
                         Annotation.annotationSpacer
                         /-/ makeInferredTypeAnnotation pl
                     options <- GuiM.im mkOptions
@@ -198,7 +198,7 @@ make mkOptions pl allowedTerms =
                     -- here
                     (fdWrap <&> (Lens.mapped %~))
                         <*> SearchMenu.make makeTerm
-                            (filteredOptions options) annotation searchMenuId
+                            (filteredOptions options) annotationGui searchMenuId
                         <&> Lens.mapped . Align.tValue %~ inPlaceOfClosed
                         <&> Lens.mapped %~ Responsive.fromWithTextPos
             else

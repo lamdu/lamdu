@@ -51,12 +51,12 @@ convert posInfo x@(Ann (Const exprPl) app@(V.App funcI argI)) =
                 pure
                     ( if Lens.has (hVal . _BodyHole) argS
                       then
-                          let dst = argI ^. hAnn . Lens._Wrapped . Input.stored . Property.pVal
+                          let dst = argI ^. annotation . Input.stored . Property.pVal
                               deleteAction =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & hAnn . Lens._Wrapped . pActions . mSetToHole ?~ deleteAction
+                              & annotation . pActions . mSetToHole ?~ deleteAction
                       else funcS
                     , argS
                     )
@@ -118,7 +118,7 @@ convertLabeled subexprs funcS argS exprPl =
                     }
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (Const (funcS ^. hAnn . Lens._Wrapped)) (Const sBinderVar))
+            (Ann (Const (funcS ^. annotation)) (Const sBinderVar))
             (record ^. cItems <&> getArg) (record ^. cPunnedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
@@ -136,7 +136,7 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. hAnn . Lens._Wrapped . pInput . Input.stored & Property.value)
+                (funcS ^. annotation . pInput . Input.stored & Property.value)
                 <&> EntityId.ofValI
         BodySimpleApply App
             { _appFunc = funcS

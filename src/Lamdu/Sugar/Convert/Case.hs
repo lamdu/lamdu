@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
@@ -62,8 +62,8 @@ convert (Ann (Const exprPl) (RowExtend tag v rest)) =
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = v ^. hAnn . Lens._Wrapped . plValI
-                , Composite._extendRest = rest ^. hAnn . Lens._Wrapped
+                , Composite._extendValI = v ^. annotation . plValI
+                , Composite._extendRest = rest ^. annotation
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
@@ -92,7 +92,7 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
                         then simplifyCaseArg argS
                         else argS
                     , _caToLambdaCase =
-                        setTo (funcS ^. hAnn . Lens._Wrapped . pInput . Input.stored . Property.pVal)
+                        setTo (funcS ^. annotation . pInput . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     }
         ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
@@ -100,9 +100,9 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions [arg] exprPl & lift
-            <&> hAnn . Lens._Wrapped . pInput . Input.entityId .~ funcS ^. hAnn . Lens._Wrapped . pInput . Input.entityId
-            <&> hAnn . Lens._Wrapped . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> funcS ^. hAnn . Lens._Wrapped . pInput . Input.userData)
+            <&> annotation . pInput . Input.entityId .~ funcS ^. annotation . pInput . Input.entityId
+            <&> annotation . pInput . Input.userData <>~
+                (exprPl ^. Input.userData <> funcS ^. annotation . pInput . Input.userData)
 
 simplifyCaseArg :: ExpressionU m a -> ExpressionU m a
 simplifyCaseArg argS =

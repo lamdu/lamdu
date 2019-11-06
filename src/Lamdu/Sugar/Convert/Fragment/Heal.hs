@@ -50,7 +50,7 @@ fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
     _ -> x
     where
         res diff = Ann (Const ((cat, priority + diff), pl))
-        score = hAnn . Lens._Wrapped . _1 . _2
+        score = annotation . _1 . _2
 
 prepareInFragExpr ::
     Monad m =>
@@ -70,7 +70,7 @@ prepare fragI (Ann (Const a) v) =
     if fragI == a ^. Property.pVal
     then
         fragmented ^. hVal & htraverse1 %~ prepareInFragExpr
-        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. hAnn . Lens._Wrapped . Property.pVal))))
+        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. annotation . Property.pVal))))
     else
         v & htraverse1 %~ prepare fragI
         & Ann (Const ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))

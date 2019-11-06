@@ -122,7 +122,7 @@ wrapUnappliedUsesOfVar var = traverse_ DataOps.applyHoleTo . unappliedUsesOfVar 
 
 argsOfCallTo :: V.Var -> Val a -> [a]
 argsOfCallTo var (Ann _ (V.BApp (App (Ann _ (V.BLeaf (V.LVar v))) x)))
-    | v == var = [x ^. hAnn . Lens._Wrapped]
+    | v == var = [x ^. annotation]
 argsOfCallTo var x =
     (x ^.. hVal . hfolded1) >>= argsOfCallTo var
 
@@ -310,10 +310,10 @@ changeGetFieldTags param prevTag chosenTag x =
     V.BGetField (V.GetField (Ann a (V.BLeaf (V.LVar v))) t)
         | v == param && t == prevTag ->
             V.GetField (a ^. Lens._Wrapped . Property.pVal) chosenTag & V.BGetField
-            & ExprIRef.writeValI (x ^. hAnn . Lens._Wrapped . Property.pVal)
+            & ExprIRef.writeValI (x ^. annotation . Property.pVal)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
-        | v == param -> DataOps.applyHoleTo (x ^. hAnn . Lens._Wrapped) & void
+        | v == param -> DataOps.applyHoleTo (x ^. annotation) & void
     b ->
         traverse_
         (changeGetFieldTags param prevTag chosenTag)
@@ -445,7 +445,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 removeCallsToVar
                 (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
             BinderKindLambda -> pure ()
-        let lamBodyI = Property.value (lamBodyStored ^. hAnn . Lens._Wrapped)
+        let lamBodyI = Property.value (lamBodyStored ^. annotation)
         protectedSetToVal lambdaProp lamBodyI & void
 
 convertVarToGetField ::
@@ -721,7 +721,7 @@ convertBinderToFunction ::
     T m (V.Var, ValP m)
 convertBinderToFunction mkArg binderKind x =
     do
-        (newParam, newValP) <- DataOps.lambdaWrap (x ^. hAnn . Lens._Wrapped)
+        (newParam, newValP) <- DataOps.lambdaWrap (x ^. annotation)
         case binderKind of
             BinderKindDef defI ->
                 convertVarToCalls mkArg (ExprIRef.globalId defI) x
@@ -767,7 +767,7 @@ convertParams binderKind defVar expr =
         postProcess <- ConvertM.postProcessAssert
         case expr ^. hVal of
             V.BLam lambda ->
-                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. hAnn . Lens._Wrapped)
+                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. annotation)
                 <&> f
                 where
                     f convParams =

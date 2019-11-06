@@ -75,8 +75,8 @@ convertLet pl redex =
             do
                 (_pMode, value) <-
                     convertAssignment binderKind param (redex ^. Redex.arg)
-                    <&> _2 . hAnn . Lens._Wrapped . pInput . Input.entityId .~
-                        EntityId.ofValI (redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.stored . Property.pVal)
+                    <&> _2 . annotation . pInput . Input.entityId .~
+                        EntityId.ofValI (redex ^. Redex.arg . annotation . Input.stored . Property.pVal)
                 letBody <-
                     convertBinder bod
                     & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -90,14 +90,14 @@ convertLet pl redex =
                 & extract .~ float
                 & mReplaceParent ?~
                     ( protectedSetToVal stored
-                        (redex ^. Redex.arg . hAnn . Lens._Wrapped . Input.stored . Property.pVal)
+                        (redex ^. Redex.arg . annotation . Input.stored . Property.pVal)
                         <&> EntityId.ofValI
                     )
         postProcess <- ConvertM.postProcessAssert
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamOut . hAnn . Lens._Wrapped . Input.stored
+                    redex ^. Redex.lam . V.lamOut . annotation . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         typS <-
@@ -107,14 +107,14 @@ convertLet pl redex =
             { _hVal =
                 BinderLet Let
                 { _lVarInfo = mkVarInfo typS
-                , _lValue = value & hAnn . Lens._Wrapped . pActions %~ fixValueNodeActions
+                , _lValue = value & annotation . pActions %~ fixValueNodeActions
                 , _lDelete = del
                 , _lName = tag
                 , _lBodyScope = redex ^. Redex.bodyScope
                 , _lBody =
                     letBody
-                    & hAnn . Lens._Wrapped . pActions . mReplaceParent ?~
-                        (letBody ^. hAnn . Lens._Wrapped . pInput . Input.entityId <$ del)
+                    & annotation . pActions . mReplaceParent ?~
+                        (letBody ^. annotation . pInput . Input.entityId <$ del)
                 , _lUsages = redex ^. Redex.paramRefs
                 }
             , _hAnn =
@@ -126,7 +126,7 @@ convertLet pl redex =
                 }
             }
     where
-        argAnn = redex ^. Redex.arg . hAnn . Lens._Wrapped
+        argAnn = redex ^. Redex.arg . annotation
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
@@ -261,7 +261,7 @@ convertLam (Ann (Const exprPl) lam) =
         BodyLam lambda
             & addActions (lam ^.. V.lamOut) exprPl
             <&> hVal %~
-                hmap (const (hAnn . Lens._Wrapped . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
+                hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 useNormalLambda ::
     Set InternalName -> Tree (Function InternalName i o) (Ann (Const a)) -> Bool
@@ -392,7 +392,7 @@ convertAssignment binderKind defVar expr =
             (mPresentationModeProp, convParams, funcBody) <-
                 convertParams binderKind defVar expr
             makeAssignment (Anchors.assocScopeRef defVar) convParams
-                funcBody (expr ^. hAnn . Lens._Wrapped)
+                funcBody (expr ^. annotation)
                 <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::

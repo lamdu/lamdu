@@ -40,7 +40,7 @@ termTransforms ::
     a -> AnnotatedTerm a ->
     StateT InferState [] (AnnotatedTerm a)
 termTransforms def src =
-    src ^. hAnn . Lens._Wrapped . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
+    src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
@@ -78,7 +78,7 @@ termTransformsWithoutSplit def src =
         Lens.nullOf (hVal . V._BApp . V.appFunc . hVal . V._BLam) src & guard
 
         (s1, typ) <-
-            src ^. hAnn . Lens._Wrapped . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
+            src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (hVal . V._BToNom) src ->
@@ -250,7 +250,7 @@ termTransformsWithModify _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
 termTransformsWithModify def src =
-    src ^. hAnn . Lens._Wrapped . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
+    src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
     <&> (^? _2 . _UTerm . uBody)
     >>=
     \case

@@ -47,8 +47,8 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Ann(..), hAnn)
-import           Hyper.Combinator.Ann (Annotated)
+import           Hyper (Ann(..))
+import           Hyper.Combinator.Ann (Annotated, annotation)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -176,7 +176,7 @@ make sub expr =
     & advanceDepth (pure . Responsive.fromTextView)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
-        animId = expr ^. hAnn . Lens._Wrapped & WidgetIds.fromExprPayload & toAnimId
+        animId = expr ^. annotation & WidgetIds.fromExprPayload & toAnimId
 
 makeSubexpression ::
     Monad i =>

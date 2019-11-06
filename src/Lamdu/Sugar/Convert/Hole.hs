@@ -99,7 +99,7 @@ convert posInfo holePl =
     <*> pure Nothing
     <&> BodyHole
     >>= addActions [] holePl
-    <&> hAnn . Lens._Wrapped . pActions . mSetToHole .~ Nothing
+    <&> annotation . pActions . mSetToHole .~ Nothing
 
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
@@ -394,7 +394,7 @@ writeResult preConversion inferContext holeStored inferredVal =
             <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ toPayload
             <&> Input.preparePayloads
             <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd
-        (holeStored ^. Property.pSet) (writtenExpr ^. hAnn . Lens._Wrapped . _1 . Property.pVal)
+        (holeStored ^. Property.pSet) (writtenExpr ^. annotation . _1 . Property.pVal)
         writtenExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd & preConversion & pure
     where
         intoStorePoint ((mStorePoint, a), inferred) =
@@ -423,7 +423,7 @@ writeResult preConversion inferContext holeStored inferredVal =
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
         addBindingsAll x =
             (Lens.from _HFlip . htraverse1 . Lens._Wrapped . Lens._2) addBindings x
-            & runPureInfer (x ^. hAnn . Lens._Wrapped . Lens._2 . Lens._1 . V.iScope) inferContext
+            & runPureInfer (x ^. annotation . Lens._2 . Lens._1 . V.iScope) inferContext
             & assertSuccessfulInfer
             & fst
         addBindings ::
@@ -455,7 +455,7 @@ detachValIfNeeded emptyPl holeIRes x =
                 FuncType xType holeType & T.TFun & newTerm
                 <&> \funcType ->
                 let withTyp typ =
-                        Ann (Const (emptyPl, x ^. hAnn . Lens._Wrapped . _2 & V.iType .~ typ))
+                        Ann (Const (emptyPl, x ^. annotation . _2 & V.iType .~ typ))
                     func = V.BLeaf V.LHole & withTyp funcType
                 in  func `V.App` x & V.BApp & withTyp holeType
         case unifyRes of
@@ -464,7 +464,7 @@ detachValIfNeeded emptyPl holeIRes x =
                 liftPureInfer mkFragmentExpr
                 <&> assertSuccessfulInfer
     where
-        xType = x ^. hAnn . Lens._Wrapped . _2 . V.iType
+        xType = x ^. annotation . _2 . V.iType
         liftPureInfer ::
             PureInfer a -> State InferState (Either (Tree Pure T.TypeError) a)
         liftPureInfer act =

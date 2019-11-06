@@ -83,7 +83,7 @@ applyHoleTo :: Monad m => Val (ValP m) -> T m ()
 applyHoleTo x
     | Lens.has argToHoleFunc x
     || Lens.has ExprLens.valHole x = pure ()
-    | otherwise = x ^. hAnn . Lens._Wrapped & DataOps.applyHoleTo & void
+    | otherwise = x ^. annotation & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
     { fieldsAdded :: Set T.Tag
@@ -105,19 +105,19 @@ fixArg ArgChange arg go =
 fixArg (ArgRecordChange recChange) arg go =
     ( if Set.null (fieldsRemoved recChange)
         then
-            arg ^. hAnn . Lens._Wrapped . Property.pVal
+            arg ^. annotation . Property.pVal
             <$ changeFields (fieldsChanged recChange) arg go
         else
             do
                 go IsHoleArg arg
                 V.App
                     <$> DataOps.newHole
-                    ?? arg ^. hAnn . Lens._Wrapped . Property.pVal
+                    ?? arg ^. annotation . Property.pVal
                     <&> V.BApp
                     >>= ExprIRef.newValI
     )
     >>= addFields (fieldsAdded recChange)
-    >>= arg ^. hAnn . Lens._Wrapped . Property.pSet
+    >>= arg ^. annotation . Property.pSet
 
 addFields :: Monad m => Set T.Tag -> ValI m -> Transaction m (ValI m)
 addFields fields src =
@@ -224,7 +224,7 @@ updateDefType ::
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
         defExpr
-            <&> (^. hAnn . Lens._Wrapped . Property.pVal)
+            <&> (^. annotation . Property.pVal)
             & Def.exprFrozenDeps . depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
         x <- typeCheck

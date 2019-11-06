@@ -119,7 +119,7 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
         guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
-                checkTypeMatch (argI ^. hAnn . Lens._Wrapped . Input.inferResult . V.iType)
+                checkTypeMatch (argI ^. annotation . Input.inferResult . V.iType)
                 (exprPl ^. Input.inferResult . V.iType)
             postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
@@ -136,8 +136,8 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
             BodyFragment Fragment
                 { _fExpr =
                     argS
-                    & hAnn . Lens._Wrapped . pActions . detach .~ FragmentExprAlready storedEntityId
-                    & hAnn . Lens._Wrapped . pActions . mSetToHole ?~
+                    & annotation . pActions . detach .~ FragmentExprAlready storedEntityId
+                    & annotation . pActions . mSetToHole ?~
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                     ( if isTypeMatch
@@ -150,9 +150,9 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
                 } & pure
             >>= addActions [funcI, argI] exprPl
             & lift
-    <&> hAnn . Lens._Wrapped . pActions . detach .~ FragmentAlready storedEntityId
+    <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
     where
-        argIRef = argI ^. hAnn . Lens._Wrapped . Input.stored . Property.pVal
+        argIRef = argI ^. annotation . Input.stored . Property.pVal
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI
 
@@ -212,7 +212,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
             ( (Just (pl ^. Input.stored . Property.pVal), IsFragment)
             , pl ^. Input.inferResult
             )
-        fragmentType = rawFragmentExpr ^. hAnn . Lens._Wrapped . Input.inferResult . V.iType
+        fragmentType = rawFragmentExpr ^. annotation . Input.inferResult . V.iType
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment :: Hole.ResultVal n () -> Hole.ResultVal n IsFragment

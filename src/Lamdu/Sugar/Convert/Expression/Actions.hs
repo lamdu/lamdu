@@ -152,7 +152,7 @@ makeSetToLiteral exprPl =
         update
         l <-
             x & Lens.from _HFlip . hmapped1 . Lens._Wrapped .~ (Nothing, ()) & ExprIRef.writeValWithStoredSubexpressions
-            <&> (^. hAnn . Lens._Wrapped . _1)
+            <&> (^. annotation . _1)
         _ <- setToVal (exprPl ^. Input.stored) l
         EntityId.ofValI l & pure
 
@@ -183,7 +183,7 @@ makeActions exprPl =
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
     p a (f a) -> Lens.Indexed (Tree (Body name i o) (Ann (Const j))) a (f a)
-fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . hAnn . Lens._Wrapped)
+fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . annotation)
 
 bodyIndex ::
     Lens.IndexedTraversal' (Tree k (Ann a)) (Tree (Ann a) k) (Tree (Ann a) k)
@@ -203,24 +203,24 @@ instance FixReplaceParent (Const a) where
 instance FixReplaceParent (Binder name (T m) (T m)) where
     fixReplaceParent setToExpr =
         (hVal . _BinderExpr . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. hAnn . Lens._Wrapped %@~ setToExpr)
+        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
 instance FixReplaceParent (Body name (T m) (T m)) where
     fixReplaceParent setToExpr =
         (hVal . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . fragmentAnnIndex) <. hAnn . Lens._Wrapped %@~ setToExpr)
+        ((bodyIndex . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
 instance FixReplaceParent (Else name (T m) (T m)) where
     fixReplaceParent setToExpr =
         (hVal . _SimpleElse . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. hAnn . Lens._Wrapped%@~ setToExpr)
+        ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. annotation%@~ setToExpr)
 
 -- TODO: This is an indexed lens of some sort?
 typeMismatchPayloads ::
     (a -> Identity a) ->
     Tree (Body name i o) (Ann (Const a)) -> Identity (Tree (Body name i o) (Ann (Const a)))
 typeMismatchPayloads =
-    _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . hAnn . Lens._Wrapped
+    _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . annotation
 
 setChildReplaceParentActions ::
     Monad m =>
@@ -242,7 +242,7 @@ setChildReplaceParentActions =
     in
     bod
     & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
-        hmap (p #> hAnn . Lens._Wrapped %~ join setToExpr)
+        hmap (p #> annotation %~ join setToExpr)
     & hmap (p #> fixReplaceParent setToExpr)
     where
         p :: Proxy FixReplaceParent

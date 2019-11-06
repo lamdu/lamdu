@@ -19,7 +19,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper (Tree, Ann(..), annotation)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -129,7 +129,7 @@ make fragment pl =
                 ((strollDest ^. Lens._Unwrapped, strollDest ^. Lens._Unwrapped)
                     <$ guard (not isInAHole))
     where
-        innerId = fragment ^. Sugar.fExpr . hAnn . Lens._Wrapped & WidgetIds.fromExprPayload
+        innerId = fragment ^. Sugar.fExpr . annotation & WidgetIds.fromExprPayload
         myId = WidgetIds.fromExprPayload pl
         strollDest = pl ^. Sugar.plEntityId & HoleWidgetIds.make & HoleWidgetIds.hidOpen
 

@@ -79,7 +79,7 @@ testFragment =
                     , Sugar._fOptions = pure []
                     } & Stub.expr
                 )
-                & hAnn . Lens._Wrapped . Sugar.plEntityId .~ fragEntityId
+                & annotation . Sugar.plEntityId .~ fragEntityId
                 & Stub.addNamesToExpr (env ^. has)
                 & Lens.from _HFlip %~ hmap (const (Lens._Wrapped . Sugar.plData .~ adhocPayload))
         let gui =

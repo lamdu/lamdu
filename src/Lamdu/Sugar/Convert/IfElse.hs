@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), _Pure, hAnn, hVal)
+import           Hyper (Tree, Ann(..), _Pure, annotation, hVal)
 import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
@@ -34,7 +34,7 @@ convertIfElse setToVal caseBody =
                     -- In "case _»Nom of ..." the case expression doesn't absorb the FromNom
                     -- (and also in case of fragment)
                     tryIfElse x
-            _ | arg ^? hAnn . Lens._Wrapped . pInput . Input.inferredType . _Pure . T._TInst . nId == Just boolTid ->
+            _ | arg ^? annotation . pInput . Input.inferredType . _Pure . T._TInst . nId == Just boolTid ->
                 tryIfElse arg
             _ -> Nothing
     where
@@ -71,12 +71,12 @@ convertIfElse setToVal caseBody =
                     & _BodyLam . lamFunc . fBody . hVal . _BinderExpr .
                         _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
-                & Ann (Const (altFalse ^. ciExpr . hAnn . Lens._Wrapped))
+                & Ann (Const (altFalse ^. ciExpr . annotation))
             }
             where
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
                     alt ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
-                    . Lens.filteredBy (hVal . _BinderExpr) . hAnn . Lens._Wrapped
-                    & fromMaybe (alt ^. ciExpr . hAnn . Lens._Wrapped)
+                    . Lens.filteredBy (hVal . _BinderExpr) . annotation
+                    & fromMaybe (alt ^. ciExpr . annotation)
                     & (^. pInput . Input.stored . Property.pVal)

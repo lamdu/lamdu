@@ -37,7 +37,7 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper (Tree, Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
@@ -429,7 +429,7 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
             Sugar.Params ps ->
                 ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
-        funcPl = func ^. Sugar.fBody . hAnn . Lens._Wrapped
+        funcPl = func ^. Sugar.fBody . annotation
         bodyId = WidgetIds.fromExprPayload funcPl
 
 makePlainParts ::

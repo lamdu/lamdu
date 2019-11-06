@@ -5,7 +5,7 @@ module Tests.Sugar where
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
@@ -130,7 +130,7 @@ testReorderLets =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
             hVal . _BinderLet . lValue .
-            hAnn . Lens._Wrapped . plActions . extract
+            annotation . plActions . extract
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
@@ -140,7 +140,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            replBody . _BodyLam . lamFunc . fBody . hAnn . Lens._Wrapped . plActions .
+            replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
             extract
 
 -- Test for issue #402
@@ -223,7 +223,7 @@ delInfixArg =
     & testCase "del-infix-arg"
     where
         argDel workArea =
-            workArea ^?! arg . hAnn . Lens._Wrapped . plActions . mSetToHole . Lens._Just & void
+            workArea ^?! arg . annotation . plActions . mSetToHole . Lens._Just & void
         holeDel workArea =
             workArea ^?! arg . hVal . _BodyHole . holeMDelete . Lens._Just & void
         arg = replBody . _BodyLabeledApply . aSpecialArgs . _Infix . _2
@@ -246,7 +246,7 @@ testExtractForRecursion =
         extractDef =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
-            hAnn . Lens._Wrapped . plActions . extract
+            annotation . plActions . extract
 
 testInsistFactorial :: Test
 testInsistFactorial =
@@ -401,12 +401,12 @@ testReplaceParent =
     where
         action =
             replBody . _BodyLam . lamFunc . fBody .
-            hAnn . Lens._Wrapped . plActions . mReplaceParent . Lens._Just
+            annotation . plActions . mReplaceParent . Lens._Just
 
 floatLetWithGlobalRef :: Test
 floatLetWithGlobalRef =
     testSugarActions "let-with-global-reference.json"
-    [ (^?! replLet . lBody . hVal . _BinderLet . lValue . hAnn . Lens._Wrapped . plActions . extract)
+    [ (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . plActions . extract)
     ]
     & testCase "float-let-with-global-ref"
 
@@ -424,7 +424,7 @@ setHoleToHole =
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .
-            hAnn . Lens._Wrapped . plActions . mSetToHole . Lens._Just
+            annotation . plActions . mSetToHole . Lens._Just
 
 assertEq :: (Monad m, Show a, Eq a) => String -> a -> a -> m ()
 assertEq msg expected got
@@ -444,7 +444,7 @@ testFloatToRepl =
             do
                 workArea <- convertWorkArea env
                 assertLetVals workArea 1 2
-                void $ workArea ^?! innerLet . hAnn . Lens._Wrapped . plActions . extract
+                void $ workArea ^?! innerLet . annotation . plActions . extract
                 newWorkArea <- convertWorkArea env
                 assertLetVals newWorkArea 2 1
     where
@@ -472,7 +472,7 @@ testCreateLetInLetVal =
                     workArea <- convertWorkArea env
                     _ <-
                         workArea ^?!
-                        theLet . lValue . hAnn . Lens._Wrapped . plActions . mNewLet .
+                        theLet . lValue . annotation . plActions . mNewLet .
                         Lens._Just
                     newWorkArea <- convertWorkArea env
                     Lens.has
@@ -497,10 +497,10 @@ testHoleTypeShown =
         env <- Env.make <&> has .~ Annotations.None
         workArea <- testProgram "to-nom.json" (convertWorkArea env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
-        putStrLn $ case x ^. hAnn . Lens._Wrapped . plAnnotation of
+        putStrLn $ case x ^. annotation . plAnnotation of
             AnnotationType {} -> "Type"
             AnnotationVal {} -> "Val"
             AnnotationNone {} -> "None"
-        x ^. hAnn . Lens._Wrapped . plAnnotation
+        x ^. annotation . plAnnotation
             & Lens.has _AnnotationType
             & assertBool "Expected to have type"

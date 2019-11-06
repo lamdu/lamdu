@@ -27,7 +27,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann, hAnn)
+import           Hyper (Tree, Ann, annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Calc.Type (Tag)
 import           Lamdu.Config (Config)
@@ -107,7 +107,7 @@ make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
                         GuiM.makeSubexpression arg
                         <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
                     mTag <-
-                        Annotation.evaluationResult (arg ^. hAnn . Lens._Wrapped)
+                        Annotation.evaluationResult (arg ^. annotation)
                         <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
                     Options.boxSpaced
                         ?? Options.disambiguationNone

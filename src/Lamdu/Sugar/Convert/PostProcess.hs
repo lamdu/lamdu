@@ -33,7 +33,7 @@ makeScheme ::
     Load.InferOut m ->
     Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
 makeScheme (Load.InferOut inferredVal inferContext) =
-    generalize (inferredVal ^. hAnn . Lens._Wrapped . Input.inferResult . V.iType)
+    generalize (inferredVal ^. annotation . Input.inferResult . V.iType)
     >>= saveScheme
     & runPureInfer V.emptyScope inferContext
     <&> (^. Lens._1)
@@ -59,7 +59,7 @@ def infer monitors defI =
                         Definition.exprFrozenDeps .~
                         Definition.pruneDefExprDeps defExpr
                     & Definition.defBody . Lens.mapped %~
-                        (^. hAnn . Lens._Wrapped . Property.pVal)
+                        (^. annotation . Property.pVal)
                     & Transaction.writeIRef defI
                     )
 

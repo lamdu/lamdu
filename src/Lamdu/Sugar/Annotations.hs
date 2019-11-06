@@ -48,7 +48,7 @@ forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
     ShowAnnotation
-topLevelAnn = hAnn . Lens._Wrapped . _1
+topLevelAnn = annotation . _1
 
 markNodeAnnotations ::
     MarkAnnotations t =>
@@ -160,7 +160,7 @@ markBodyAnnotations oldBody =
         newBodyWith f =
             hmap
             ( Proxy @SugarLens.SugarExpr #>
-                Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) . hAnn . Lens._Wrapped . _1 .~ f
+                Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) . annotation . _1 .~ f
             ) newBody
         nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)

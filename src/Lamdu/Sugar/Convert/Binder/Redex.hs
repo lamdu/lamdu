@@ -39,13 +39,13 @@ check term =
         l <- func ^? hVal . V._BLam
         Just Redex
             { _lam = l
-            , _lamPl = func ^. hAnn . Lens._Wrapped
+            , _lamPl = func ^. annotation
             , _bodyScope =
-                func ^. hAnn . Lens._Wrapped . Input.evalResults
+                func ^. annotation . Input.evalResults
                 <&> (^. Input.eAppliesOfLam)
                 <&> Lens.traversed %~ getRedexApplies
             , _arg = a
-            , _paramRefs = func ^. hAnn . Lens._Wrapped . Input.varRefsOfLambda
+            , _paramRefs = func ^. annotation . Input.varRefsOfLambda
             }
     where
         getRedexApplies [(scopeId, _)] = scopeId

@@ -25,7 +25,7 @@ childPayloads ::
     HTraversable expr =>
     Lens.Traversal' (Tree expr (Ann (Const a))) a
 childPayloads f =
-    htraverse (const ((hAnn . Lens._Wrapped) f))
+    htraverse (const ((annotation) f))
 
 class HTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool

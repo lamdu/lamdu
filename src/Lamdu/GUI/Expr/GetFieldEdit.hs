@@ -13,7 +13,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (hAnn)
+import           Hyper (annotation)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -56,7 +56,7 @@ make (Sugar.GetField recExpr tag) pl =
                 (E.toDoc env
                     [has . MomentuTexts.edit, has . MomentuTexts.delete])
         let delEventMap =
-                recExpr ^. hAnn . Lens._Wrapped . Sugar.plActions . Sugar.mReplaceParent
+                recExpr ^. annotation . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
         tagEdit <-
             TagEdit.makeRecordTag tag

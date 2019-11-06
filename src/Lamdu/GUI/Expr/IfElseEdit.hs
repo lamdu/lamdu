@@ -23,7 +23,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper (Tree, Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -78,7 +78,7 @@ makeIfThen prefixLabel animId ifElse =
                  ( E.toDoc env
                      [has . MomentuTexts.edit, has . MomentuTexts.delete]
                  ) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . hAnn . Lens._Wrapped .
+                (ifElse ^. Sugar.iElse . annotation .
                  Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap ifGui)

@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Record
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Ann(..), hAnn)
+import           Hyper (Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
@@ -42,8 +42,8 @@ convertExtend (Ann (Const exprPl) (RowExtend tag val rest)) =
         let recP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = val ^. hAnn . Lens._Wrapped . plValI
-                , Composite._extendRest = rest ^. hAnn . Lens._Wrapped
+                , Composite._extendValI = val ^. annotation . plValI
+                , Composite._extendRest = rest ^. annotation
                 }
         Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where
