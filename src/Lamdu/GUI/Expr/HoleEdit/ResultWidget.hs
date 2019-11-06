@@ -6,7 +6,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
 
 import           Control.Lens (Traversal')
 import qualified Control.Lens.Extended as Lens
-import           GUI.Momentu (TextWidget)
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)

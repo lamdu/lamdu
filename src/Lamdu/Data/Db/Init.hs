@@ -4,7 +4,7 @@ module Lamdu.Data.Db.Init
     ) where
 
 import qualified Data.Property as Property
-import qualified GUI.Momentu as M
+import qualified GUI.Momentu.State as M
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout

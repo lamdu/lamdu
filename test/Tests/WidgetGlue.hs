@@ -7,7 +7,7 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.Binary.Extended (encodeS)
 import           Data.Semigroup (First(..), Last(..))
-import           GUI.Momentu as X
+import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Direction (Orientation(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as EventMap

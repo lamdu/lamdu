@@ -11,17 +11,18 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
-import           GUI.Momentu (View, (/-/))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
+import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu

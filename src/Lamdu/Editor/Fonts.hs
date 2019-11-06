@@ -5,7 +5,9 @@ module Lamdu.Editor.Fonts
 import qualified Control.Lens.Extended as Lens
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import qualified GUI.Momentu as M
+import           GUI.Momentu.Font (Font)
+import           GUI.Momentu.Zoom (Zoom)
+import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Sampler (Sampler, Sample)
 import qualified Lamdu.Config.Sampler as Sampler
 import           Lamdu.Config.Theme (Theme(..))
@@ -54,7 +56,7 @@ defaultFontPath configPath =
 
 makeGetFonts ::
     Sampler -> Font.LCDSubPixelEnabled ->
-    IO (M.Zoom -> IO (Fonts M.Font))
+    IO (Zoom -> IO (Fonts Font))
 makeGetFonts configSampler subpixel =
     do
         timeTillGc <- newIORef gcEvery
@@ -76,7 +78,7 @@ makeGetFonts configSampler subpixel =
         gcEvery = 10
         f cachedLoadFonts zoom =
             do
-                sizeFactor <- M.getZoomFactor zoom
+                sizeFactor <- Zoom.getZoomFactor zoom
                 sample <- Sampler.getSample configSampler
                 cachedLoadFonts
                     ( defaultFontPath (sample ^. sampleConfigPath)

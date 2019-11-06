@@ -10,7 +10,7 @@ module Lamdu.Data.Db.Migration
     ) where
 
 import           Control.Exception (try, SomeException(..))
-import qualified GUI.Momentu as M
+import qualified GUI.Momentu.State as M
 import           Lamdu.Data.Db.Layout (DbM, runDbTransaction, dbSchemaVersion, curDbSchemaVersion, guiState)
 import           Lamdu.Data.Export.JSON (verifyAll)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
