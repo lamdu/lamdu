@@ -1,0 +1,1 @@
+cabal v1-configure --enable-tests --enable-bench --disable-library-profiling -fdev
