@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (Ann (Const (Input.Payload m a))) (V.App V.Term) ->
+    Annotated (Input.Payload m a) (V.App V.Term) ->
     ConvertM m (ExpressionU m a)
 convert posInfo x@(Ann (Const exprPl) app@(V.App funcI argI)) =
     runMatcherT $

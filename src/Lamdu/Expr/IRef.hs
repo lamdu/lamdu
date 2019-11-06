@@ -90,7 +90,7 @@ newValI = fmap (_F #) . Transaction.newIRef
 readVal ::
     Monad m =>
     Tree (F (IRef m)) V.Term ->
-    T m (Tree (Ann (Const (Tree (F (IRef m)) V.Term))) V.Term)
+    T m (Annotated (Tree (F (IRef m)) V.Term) V.Term)
 readVal = readValH Set.empty
 
 readValH ::
@@ -101,7 +101,7 @@ readValH ::
     ) =>
     Set UUID ->
     Tree (F (IRef m)) t ->
-    T m (Tree (Ann (Const (Tree (F (IRef m)) t))) t)
+    T m (Annotated (Tree (F (IRef m)) t) t)
 readValH visited valI
     | visited ^. Lens.contains k = error $ "Recursive reference: " ++ show valI
     | otherwise =

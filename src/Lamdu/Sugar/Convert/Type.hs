@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Type
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
 import           Hyper (Tree, Pure(..), Ann(..), _Pure)
+import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -26,7 +27,7 @@ import           Lamdu.Prelude
 convertComposite ::
     MonadTransaction n m =>
     EntityId -> Tree Pure T.Row ->
-    m (CompositeFields InternalName (Tree (Ann (Const EntityId)) (Type InternalName)))
+    m (CompositeFields InternalName (Annotated EntityId (Type InternalName)))
 convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
@@ -41,7 +42,7 @@ convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
     MonadTransaction n m =>
-    EntityId -> Tree Pure T.Type -> m (Tree (Ann (Const EntityId)) (Type InternalName))
+    EntityId -> Tree Pure T.Type -> m (Annotated EntityId (Type InternalName))
 convertType entityId typ =
     case typ ^. _Pure of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure

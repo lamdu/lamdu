@@ -120,7 +120,7 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 class ExportSubexpr k where
-    exportSubexpr :: Monad m => Tree (Ann (Const (ValP m))) k -> Export m ()
+    exportSubexpr :: Monad m => Annotated (ValP m) k -> Export m ()
 
 instance ExportSubexpr V.Term where
     exportSubexpr (Ann (Const lamP) (V.BLam (V.Lam lamVar _))) =

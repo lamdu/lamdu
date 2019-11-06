@@ -62,7 +62,7 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-type Expression name i o a = Tree (Ann (Const a)) (Body name i o)
+type Expression name i o a = Annotated a (Body name i o)
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: Tag name
@@ -104,13 +104,13 @@ data Fragment name i o k = Fragment
     } deriving Generic
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Tree (Ann (Const (Payload name i o ()))) (Binder name i o)
+    { _holeResultConverted :: Annotated (Payload name i o ()) (Binder name i o)
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoVal :: Val ()
-    , _hoSugaredBaseExpr :: i (Tree (Ann (Const (Payload name i o ()))) (Binder name i o))
+    , _hoSugaredBaseExpr :: i (Annotated (Payload name i o ()) (Binder name i o))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic

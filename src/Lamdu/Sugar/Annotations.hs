@@ -52,8 +52,8 @@ topLevelAnn = hAnn . Lens._Wrapped . _1
 
 markNodeAnnotations ::
     MarkAnnotations t =>
-    Tree (Ann (Const a)) t ->
-    Tree (Ann (Const (ShowAnnotation, a))) t
+    Annotated a t ->
+    Annotated (ShowAnnotation, a) t
 markNodeAnnotations (Ann (Const pl) x) =
     Ann (Const (showAnn, pl)) newBody
     where

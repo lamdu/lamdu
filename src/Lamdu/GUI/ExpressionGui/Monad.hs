@@ -47,7 +47,8 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper (Ann(..), hAnn)
+import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -77,7 +78,7 @@ data Askable env i o = Askable
     , _aTheme :: Theme
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
     , _aMakeBinder ::
-        Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+        Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Sugar.Binder Name i o) ->
         GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
@@ -185,7 +186,7 @@ makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o) ->
     GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -201,7 +202,7 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
-    (Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    (Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Sugar.Binder Name i o)
         -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->

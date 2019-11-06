@@ -95,8 +95,8 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Tree (Ann (Const (Sugar.Payload Name i o ()))) (Sugar.Binder Name i o) ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o)
+    Annotated (Sugar.Payload Name i o ()) (Sugar.Binder Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o)
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
     & Lens.from _HFlip %~ hmap (\_ -> Lens._Wrapped %~ pl)

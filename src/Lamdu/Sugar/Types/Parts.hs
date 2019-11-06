@@ -33,7 +33,7 @@ module Lamdu.Sugar.Types.Parts
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, Ann)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
@@ -50,11 +50,11 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
 data ValAnnotation name i =
     ValAnnotation
     { _annotationVal :: EvaluationScopes name i
-    , _annotationType :: Maybe (Tree (Ann (Const EntityId)) (Type name))
+    , _annotationType :: Maybe (Annotated EntityId (Type name))
     } deriving Generic
 
 data Annotation name i
-    = AnnotationType (Tree (Ann (Const EntityId)) (Type name))
+    = AnnotationType (Annotated EntityId (Type name))
     | AnnotationVal (ValAnnotation name i)
     | AnnotationNone
     deriving Generic

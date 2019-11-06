@@ -30,9 +30,9 @@ type UType m = Tree (UVarOf m) T.Type
 type URow m = Tree (UVarOf m) T.Row
 
 -- | Term with unifiable type annotations
-type TypedTerm m = Tree (Ann (Const (UType m))) V.Term
+type TypedTerm m = Annotated (UType m) V.Term
 
-type AnnotatedTerm a = Tree (Ann (Const (a, Tree V.IResult UVar))) V.Term
+type AnnotatedTerm a = Annotated (a, Tree V.IResult UVar) V.Term
 
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.

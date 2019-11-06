@@ -23,7 +23,8 @@ import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Hyper
-import           Hyper (Ann(..), Tree, type (#))
+import           Hyper (Ann(..), type (#))
+import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
@@ -64,7 +65,7 @@ Hyper.makeHTraversableAndBases ''Body
 deriving instance Show (k # Body) => Show (Body k)
 deriving instance Show (k # Body) => Show (Inject k)
 
-type Val pl = Tree (Ann (Const pl)) Body
+type Val pl = Annotated pl Body
 
 data CompiledErrorType
     = ReachedHole -- ^ Reached a hole

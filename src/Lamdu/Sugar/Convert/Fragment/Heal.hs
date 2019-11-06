@@ -37,8 +37,8 @@ data PriorityClass
 type Priority = (PriorityClass, Int)
 
 fixPriorities ::
-    Tree (Ann (Const ((a, Int), b))) Term ->
-    Tree (Ann (Const ((a, Int), b))) Term
+    Annotated ((a, Int), b) Term ->
+    Annotated ((a, Int), b) Term
 fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
     case b of
     V.BGetField g ->
@@ -54,8 +54,8 @@ fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
 
 prepareInFragExpr ::
     Monad m =>
-    Tree (Ann (Const (ValP m))) Term ->
-    Tree (Ann (Const (Priority, EditAction (T m ())))) Term
+    Annotated (ValP m) Term ->
+    Annotated (Priority, EditAction (T m ())) Term
 prepareInFragExpr (Ann (Const a) v) =
     v & htraverse1 %~ prepareInFragExpr
     & Ann (Const ((InFragment, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))
@@ -64,8 +64,8 @@ prepareInFragExpr (Ann (Const a) v) =
 prepare ::
     Monad m =>
     ValI m ->
-    Tree (Ann (Const (ValP m))) Term ->
-    Tree (Ann (Const (Priority, EditAction (T m ())))) Term
+    Annotated (ValP m) Term ->
+    Annotated (Priority, EditAction (T m ())) Term
 prepare fragI (Ann (Const a) v) =
     if fragI == a ^. Property.pVal
     then

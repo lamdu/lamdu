@@ -112,7 +112,7 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
 
 orderNode ::
     (Monad m, Order m name o f) =>
-    OrderT m (Tree (Ann (Const (Sugar.Payload name i o a))) f)
+    OrderT m (Annotated (Sugar.Payload name i o a) f)
 orderNode (Ann (Const a) x) =
     Ann
     <$> ((Sugar.plAnnotation . SugarLens.annotationTypes) orderType a <&> Const)

@@ -66,8 +66,8 @@ propEntityId = EntityId.ofValI . Property.value
 preparePayloads ::
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Tree (Ann (Const (ValP m, Tree Pure T.Type, Tree V.IResult UVar))) V.Term ->
-    Tree (Ann (Const (Input.Payload m ()))) V.Term
+    Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) V.Term ->
+    Annotated (Input.Payload m ()) V.Term
 preparePayloads nomsMap evalRes inferredVal =
     inferredVal
     & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ f
@@ -137,7 +137,7 @@ Lens.makeLenses ''InferOut
 
 resolve ::
     Val (ValP m, Tree V.IResult UVar) ->
-    PureInfer (Tree (Ann (Const (ValP m, Tree Pure T.Type, Tree V.IResult UVar))) V.Term)
+    PureInfer (Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) V.Term)
 resolve =
     (Lens.from _HFlip . htraverse1 . Lens._Wrapped) f
     where
@@ -151,7 +151,7 @@ resolve =
 runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    PureInfer (Tree (Ann (Const (ValP m, Tree V.IResult UVar))) V.Term) ->
+    PureInfer (Annotated (ValP m, Tree V.IResult UVar) V.Term) ->
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors

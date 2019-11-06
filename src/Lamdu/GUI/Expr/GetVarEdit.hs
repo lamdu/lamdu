@@ -32,7 +32,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..))
+import           Hyper (Ann(..))
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -370,7 +371,7 @@ makePunnedVars ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    [Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    [Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Const (Sugar.GetVar Name o))] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =

@@ -38,6 +38,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -470,7 +471,7 @@ makeParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Sugar.Assignment Name i o) ->
     Widget.Id ->
     GuiM env i o (Parts o)
@@ -494,7 +495,7 @@ make ::
     Maybe (i (Property o Meta.PresentationMode)) ->
     EventMap (o GuiState.Update) ->
     Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    Annotated (Sugar.Payload Name i o ExprGui.Payload)
     (Sugar.Assignment Name i o) ->
     GuiM env i o (Responsive o)
 make pMode defEventMap tag color assignment =

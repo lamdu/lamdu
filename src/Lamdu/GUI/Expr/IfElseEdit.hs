@@ -24,6 +24,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -91,7 +92,7 @@ makeElse ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     AnimId ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Sugar.Else Name i o) ->
     GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =

@@ -108,7 +108,7 @@ binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> 
 
 binderResultExpr ::
     Lens.IndexedLens' (Tree (Body name i o) (Ann (Const ())))
-    (Tree (Ann (Const a)) (Binder name i o)) a
+    (Annotated a (Binder name i o)) a
 binderResultExpr f (Ann (Const pl) x) =
     case x of
     BinderExpr e ->
@@ -124,8 +124,8 @@ binderResultExpr f (Ann (Const pl) x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Tree (Ann (Const (Payload n0 i o ()))) (Binder n0 i o) ->
-        i (Tree (Ann (Const (Payload n1 i o ()))) (Binder n1 i o))) ->
+    (Annotated (Payload n0 i o ()) (Binder n0 i o) ->
+        i (Annotated (Payload n1 i o ()) (Binder n1 i o))) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -135,8 +135,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Tree (Ann (Const (Payload n0 i o ()))) (Binder n0 i o) ->
-        i (Tree (Ann (Const (Payload n1 i o ()))) (Binder n1 i o))) ->
+    (Annotated (Payload n0 i o ()) (Binder n0 i o) ->
+        i (Annotated (Payload n1 i o ()) (Binder n1 i o))) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr
@@ -145,7 +145,7 @@ assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
 assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 
-annotationTypes :: Lens.Traversal' (Annotation name i) (Tree (Ann (Const EntityId)) (Type name))
+annotationTypes :: Lens.Traversal' (Annotation name i) (Annotated EntityId (Type name))
 annotationTypes _ AnnotationNone = pure AnnotationNone
 annotationTypes f (AnnotationType x) = f x <&> AnnotationType
 annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal

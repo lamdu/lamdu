@@ -9,7 +9,8 @@ module Lamdu.Sugar.Types.Type
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, Ann, type (#), makeHTraversableAndBases)
+import           Hyper (Tree, type (#), makeHTraversableAndBases)
+import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType)
 import           Hyper.Type.AST.Scheme (QVars)
 import qualified Lamdu.Calc.Type as T
@@ -45,7 +46,7 @@ data Type name k
 
 data Scheme name = Scheme
     { _schemeForAll :: Tree T.Types QVars
-    , _schemeType :: Tree (Ann (Const EntityId)) (Type name)
+    , _schemeType :: Annotated EntityId (Type name)
     } deriving Generic
 
 Lens.makeLenses ''CompositeFields

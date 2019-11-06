@@ -4,7 +4,8 @@ module Lamdu.Sugar.Convert.Inject
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper (Ann(..), hAnn, hVal)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
@@ -21,7 +22,7 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Const (Input.Payload m a))) V.Inject ->
+    Annotated (Input.Payload m a) V.Inject ->
     ConvertM m (ExpressionU m a)
 convert (Ann (Const exprPl) (V.Inject tag injected)) =
     do

@@ -22,6 +22,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -87,7 +88,7 @@ makeInject val tag pl =
         mReplaceParent = val ^. hAnn . Lens._Wrapped . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
-    Tree (Ann (Const a)) (Const (Sugar.NullaryVal name i o)) ->
+    Annotated a (Const (Sugar.NullaryVal name i o)) ->
     Sugar.Expression name i o a
 emptyRec (Ann (Const pl) (Const (Sugar.NullaryVal closedActions addItem))) =
     Sugar.Composite [] [] (Sugar.ClosedComposite closedActions) addItem
@@ -105,7 +106,7 @@ makeNullaryInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    Annotated (Sugar.Payload Name i o ExprGui.Payload)
     (Const (Sugar.NullaryVal Name i o)) ->
     Sugar.TagRef Name i o ->
     Sugar.Payload Name i o ExprGui.Payload ->

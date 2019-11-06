@@ -9,6 +9,7 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -25,11 +26,11 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Tree (Ann (Const (ConvertPayload m a))) (Const (Sugar.BinderVarRef InternalName (T m))) ->
+    Annotated (ConvertPayload m a) (Const (Sugar.BinderVarRef InternalName (T m))) ->
     [ Sugar.AnnotatedArg InternalName
         (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))
     ] ->
-    [Tree (Ann (Const (ConvertPayload m a))) (Const (Sugar.GetVar InternalName (T m)))] ->
+    [Annotated (ConvertPayload m a) (Const (Sugar.GetVar InternalName (T m)))] ->
     Input.Payload m a ->
     ConvertM m
     (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))

@@ -27,7 +27,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann)
+import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
@@ -228,7 +228,7 @@ addInferredType ::
     , Element.HasAnimIdPrefix env, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    Tree (Ann (Const Sugar.EntityId)) (Sugar.Type Name) -> WideAnnotationBehavior ->
+    Annotated Sugar.EntityId (Sugar.Type Name) -> WideAnnotationBehavior ->
     m (Widget f -> Widget f)
 addInferredType typ wideBehavior =
     addAnnotationH (TypeView.make typ) wideBehavior ?? const 0

@@ -10,7 +10,8 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import           Hyper (Tree, Ann(..))
+import           Hyper (Ann(..))
+import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -29,7 +30,7 @@ import           Lamdu.Prelude
 
 text ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Const (Input.Payload m a))) (ToNom NominalId V.Term) ->
+    Annotated (Input.Payload m a) (ToNom NominalId V.Term) ->
     MaybeT (ConvertM m) (ExpressionU m a)
 text (Ann (Const toNomPl) (ToNom tid c@(Ann (Const litPl) bod))) =
     do

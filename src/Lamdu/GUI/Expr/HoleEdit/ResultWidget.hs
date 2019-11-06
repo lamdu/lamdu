@@ -23,7 +23,8 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree, Ann(..), htraverse, (#>))
+import           Hyper (Ann(..), htraverse, (#>))
+import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -67,7 +68,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o) ->
     GuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
@@ -88,7 +89,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) (Sugar.Binder Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o) ->
     GuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>
@@ -132,7 +133,7 @@ make ctx resultId pick holeResultConverted =
 unfinishedPayloads ::
     forall t a.
     SugarLens.SugarExpr t =>
-    Traversal' (Tree (Ann (Const a)) t) a
+    Traversal' (Annotated a t) a
 unfinishedPayloads f (Ann (Const a) x) =
     withDict (SugarLens.sugarExprRecursive (Proxy @t)) $
     flip Ann

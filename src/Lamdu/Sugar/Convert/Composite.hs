@@ -9,6 +9,7 @@ import qualified Control.Lens.Extended as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
@@ -70,7 +71,7 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Tree (Ann (Const b)) (Body InternalName (T m) (T m)) ->
+    Annotated b (Body InternalName (T m) (T m)) ->
     Input.Payload m a ->
     ExtendVal m (Input.Payload m a) ->
     Tree (Composite InternalName (T m) (T m)) (Ann (Const b)) ->

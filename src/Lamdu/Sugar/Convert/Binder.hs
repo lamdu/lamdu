@@ -66,7 +66,7 @@ convertLet ::
     Input.Payload m a ->
     Redex (Input.Payload m a) ->
     ConvertM m
-    (Tree (Ann (Const (ConvertPayload m a))) (Binder InternalName (T m) (T m)))
+    (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
@@ -137,7 +137,7 @@ convertLet pl redex =
 convertBinder ::
     (Monad m, Monoid a) =>
     Val (Input.Payload m a) ->
-    ConvertM m (Tree (Ann (Const (ConvertPayload m a))) (Binder InternalName (T m) (T m)))
+    ConvertM m (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
 convertBinder expr@(Ann (Const pl) body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
@@ -210,7 +210,7 @@ makeAssignment ::
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
     ConvertM m
-    (Tree (Ann (Const (ConvertPayload m a))) (Assignment InternalName (T m) (T m)))
+    (Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
     case params ^. cpParams of
     Nothing ->
@@ -238,7 +238,7 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Const (Input.Payload m a))) (V.Lam V.Var V.Term) ->
+    Annotated (Input.Payload m a) (V.Lam V.Var V.Term) ->
     ConvertM m (ExpressionU m a)
 convertLam (Ann (Const exprPl) lam) =
     do
@@ -372,7 +372,7 @@ convertAssignment ::
     BinderKind m -> V.Var -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Tree (Ann (Const (ConvertPayload m a))) (Assignment InternalName (T m) (T m))
+    , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))
     )
 convertAssignment binderKind defVar expr =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
@@ -400,7 +400,7 @@ convertDefinitionBinder ::
     DefI m -> Val (Input.Payload m a) ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Tree (Ann (Const (ConvertPayload m a))) (Assignment InternalName (T m) (T m))
+    , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)

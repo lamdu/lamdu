@@ -110,7 +110,7 @@ checkTypeMatch x y =
 convertAppliedHole ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (Ann (Const (Input.Payload m a))) (V.App V.Term) ->
+    Annotated (Input.Payload m a) (V.App V.Term) ->
     ExpressionU m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =

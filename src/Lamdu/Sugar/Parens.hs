@@ -40,7 +40,7 @@ addToWorkArea w =
 class AddParens expr where
     addToBody :: Tree expr (Ann (Const a)) -> Tree expr (Ann (Const (MinOpPrec, NeedsParens, a)))
 
-    addToNode :: Tree (Ann (Const a)) expr -> Tree (Ann (Const (MinOpPrec, NeedsParens, a))) expr
+    addToNode :: Annotated a expr -> Annotated (MinOpPrec, NeedsParens, a) expr
     addToNode (Ann (Const pl) x) = Ann (Const (0, NoNeedForParens, pl)) (addToBody x)
 
 instance HasPrecedence name => AddParens (Assignment name i o) where
@@ -50,8 +50,8 @@ instance HasPrecedence name => AddParens (Assignment name i o) where
 addToBinderWith ::
     HasPrecedence name =>
     MinOpPrec ->
-    Tree (Ann (Const a)) (Binder name i o) ->
-    Tree (Ann (Const (MinOpPrec, NeedsParens, a))) (Binder name i o)
+    Annotated a (Binder name i o) ->
+    Annotated (MinOpPrec, NeedsParens, a) (Binder name i o)
 addToBinderWith minOpPrec (Ann (Const pl) x) =
     addToBody x
     & Ann (Const (minOpPrec, NoNeedForParens, pl))
@@ -87,7 +87,7 @@ addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 bareInfix ::
     Lens.Prism' (Tree (LabeledApply name i o) (Ann (Const a)))
     ( Expression name i o a
-    , Tree (Ann (Const a)) (Const (BinderVarRef name o))
+    , Annotated a (Const (BinderVarRef name o))
     , Expression name i o a
     )
 bareInfix =
@@ -99,8 +99,8 @@ bareInfix =
 
 type AnnotateAST a body =
     MinOpPrec -> Precedence Prec ->
-    Tree (Ann (Const a)) body ->
-    Tree (Ann (Const (MinOpPrec, NeedsParens, a))) body
+    Annotated a body ->
+    Annotated (MinOpPrec, NeedsParens, a) body
 
 loopExpr ::  HasPrecedence name => AnnotateAST a (Body name i o)
 loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
@@ -113,9 +113,7 @@ type SideSymbol =
     AnnotateAST pl body ->
     Lens.ASetter' (Precedence Prec) MinOpPrec ->
     Lens.Getting MinOpPrec (Precedence Prec) MinOpPrec ->
-    Lens.ASetter s t
-    (Tree (Ann (Const pl)) body)
-    (Tree (Ann (Const (MinOpPrec, NeedsParens, pl))) body) ->
+    Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
     MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
 
 loopExprBody ::

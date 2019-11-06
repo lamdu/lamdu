@@ -11,6 +11,7 @@ module Lamdu.Sugar.Names.Walk
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import           Hyper (Tree, Ann(..))
+import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.App (appChildren)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Lamdu.Calc.Type as T
@@ -73,8 +74,8 @@ binderVarType (GetDefinition _) = GlobalDef
 
 toCompositeFields ::
     MonadNaming m =>
-    CompositeFields (OldName m) (Tree (Ann (Const a)) (Type (OldName m))) ->
-    m (CompositeFields (NewName m) (Tree (Ann (Const a)) (Type (NewName m))))
+    CompositeFields (OldName m) (Annotated a (Type (OldName m))) ->
+    m (CompositeFields (NewName m) (Annotated a (Type (NewName m))))
 toCompositeFields (CompositeFields fields mExt) =
     CompositeFields
     <$> traverse toField fields
@@ -100,8 +101,8 @@ toTBody (TInst tid params) =
 
 toType ::
     MonadNaming m =>
-    Tree (Ann (Const a)) (Type (OldName m)) ->
-    m (Tree (Ann (Const a)) (Type (NewName m)))
+    Annotated a (Type (OldName m)) ->
+    m (Annotated a (Type (NewName m)))
 toType (Ann (Const pl) x) = toTBody x <&> Ann (Const pl)
 
 toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
@@ -197,8 +198,8 @@ toNode ::
     MonadNaming m =>
     (Tree ka (Ann (Const (Payload (OldName m) (IM m) o p))) ->
      m (Tree kb (Ann (Const (Payload (NewName m) (IM m) o p))))) ->
-    Tree (Ann (Const (Payload (OldName m) (IM m) o p))) ka ->
-    m (Tree (Ann (Const (Payload (NewName m) (IM m) o p))) kb)
+    Annotated (Payload (OldName m) (IM m) o p) ka ->
+    m (Annotated (Payload (NewName m) (IM m) o p) kb)
 toNode toV (Ann (Const pl) v) =
     Ann
     <$> (toPayload pl <&> Const)
@@ -259,11 +260,8 @@ toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
 
 toAssignment ::
     MonadNaming m =>
-    Tree (Ann (Const (Payload (OldName m) (IM m) o a)))
-        (Assignment (OldName m) (IM m) o) ->
-    m
-    (Tree (Ann (Const (Payload (NewName m) (IM m) o a)))
-        (Assignment (NewName m) (IM m) o))
+    Annotated (Payload (OldName m) (IM m) o a) (Assignment (OldName m) (IM m) o) ->
+    m (Annotated (Payload (NewName m) (IM m) o a) (Assignment (NewName m) (IM m) o))
 toAssignment =
     \case
     BodyPlain x -> toBinderPlain x <&> BodyPlain

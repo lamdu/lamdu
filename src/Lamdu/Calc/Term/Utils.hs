@@ -10,6 +10,7 @@ module Lamdu.Calc.Term.Utils
 import qualified Control.Lens as Lens
 import           Data.Constraint (withDict)
 import           Hyper (Tree, Ann(..), Recursively(..), HFoldable(..), (#>))
+import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -21,7 +22,7 @@ import           Lamdu.Prelude
 culledSubexprPayloads ::
     forall t a.
     Recursively HFoldable t =>
-    (a -> Bool) -> Tree (Ann (Const a)) t -> [a]
+    (a -> Bool) -> Annotated a t -> [a]
 culledSubexprPayloads cut (Ann (Const pl) body)
     | cut pl = []
     | otherwise =

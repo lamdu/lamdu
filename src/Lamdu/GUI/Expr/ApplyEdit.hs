@@ -16,6 +16,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -44,7 +45,7 @@ makeFunc ::
     , Has (Texts.Navigation Text) env
     ) =>
     GetVarEdit.Role ->
-    Tree (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
+    Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Const (Sugar.BinderVarRef Name o)) ->
     GuiM env i o (Responsive o)
 makeFunc role func =

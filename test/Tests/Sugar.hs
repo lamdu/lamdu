@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
 import           Hyper (Tree, Ann(..), hAnn, hVal)
+import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
@@ -456,7 +457,7 @@ testFloatToRepl =
 
         innerLet ::
             Lens.Traversal' (WorkArea name i o a)
-            (Tree (Ann (Const a)) (Assignment name i o))
+            (Annotated a (Assignment name i o))
         innerLet = replLet . lBody . hVal . _BinderLet . lValue
         literalVal = hVal . _BodyPlain . apBody . _BinderExpr . _BodyLiteral . _LiteralNum . Property.pVal
 
