@@ -17,7 +17,6 @@ module Lamdu.Expr.IRef
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
 import           Data.Property (Property(..))
-import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
@@ -91,7 +90,7 @@ readVal ::
     Monad m =>
     Tree (F (IRef m)) V.Term ->
     T m (Annotated (Tree (F (IRef m)) V.Term) V.Term)
-readVal = readValH Set.empty
+readVal = readValH mempty
 
 readValH ::
     ( Monad m
