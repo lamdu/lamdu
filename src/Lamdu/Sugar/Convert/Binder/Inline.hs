@@ -71,10 +71,10 @@ inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
     Property.value topLevelProp & ExprIRef.readVal
-    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . annotation)
+    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readVal
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just
+    <&> Lens.from _HFlip . hmapped1 %~ Const . Just
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
         (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just)

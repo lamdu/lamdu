@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables, TypeApplications #-}
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody
@@ -16,6 +16,7 @@ module Lamdu.Expr.IRef
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
+import           Data.Constraint (withDict)
 import           Data.Property (Property(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
@@ -86,27 +87,31 @@ newValI ::
     Tree t (F (IRef m)) -> T m (Tree (F (IRef m)) t)
 newValI = fmap (_F #) . Transaction.newIRef
 
+class (Binary (Tree t (F (IRef m))), HTraversable t) => ReadVal m t
+
+instance ReadVal m V.Term
+
 readVal ::
-    Monad m =>
-    Tree (F (IRef m)) V.Term ->
-    T m (Annotated (Tree (F (IRef m)) V.Term) V.Term)
+    (Monad m, Recursively (ReadVal m) t) =>
+    Tree (F (IRef m)) t ->
+    T m (Tree (Ann (F (IRef m))) t)
 readVal = readValH mempty
 
 readValH ::
+    forall m t.
     ( Monad m
-    , HNodesConstraint t ((~) t)
-    , Binary (Tree t (F (IRef m)))
-    , HTraversable t
+    , Recursively (ReadVal m) t
     ) =>
     Set UUID ->
     Tree (F (IRef m)) t ->
-    T m (Annotated (Tree (F (IRef m)) t) t)
+    T m (Tree (Ann (F (IRef m))) t)
 readValH visited valI
     | visited ^. Lens.contains k = error $ "Recursive reference: " ++ show valI
     | otherwise =
+        withDict (recursively (Proxy @(ReadVal m t))) $
         readValI valI
-        >>= htraverse1 (readValH (visited & Lens.contains k .~ True))
-        <&> Ann (Const valI)
+        >>= htraverse (Proxy @(Recursively (ReadVal m)) #> readValH (visited & Lens.contains k .~ True))
+        <&> Ann valI
     where
         k = IRef.uuid (valI ^. _F)
 

@@ -24,7 +24,7 @@ type T = Transaction
 expr :: Monad m => ValP m -> T m (Val (ValP m))
 expr (Property valI writeRoot) =
     ExprIRef.readVal valI
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (, ())
+    <&> Lens.from _HFlip . hmapped1 %~ Const . (, ())
     <&> ExprIRef.addProperties writeRoot
     <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst
 

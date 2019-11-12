@@ -13,7 +13,7 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Hyper (_Pure)
+import           Hyper
 import           Hyper.Type.AST.Row (freExtends)
 import qualified Hyper.Type.AST.Scheme as S
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -77,6 +77,7 @@ inlineDef globalId dest =
                 do
                     isRecursive <-
                         ExprIRef.readVal (defExpr ^. Def.expr)
+                        <&> Lens.from _HFlip . hmapped1 %~ Const
                         <&> Lens.has (ExprLens.valGlobals mempty . Lens.only globalId)
                     if isRecursive
                         then gotoDef
