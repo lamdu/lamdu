@@ -93,15 +93,13 @@ randomNameGen g = NameGen
 randomizeParamIdsG ::
     (a -> n) ->
     NameGen V.Var n -> Map V.Var V.Var ->
-    (NameGen V.Var n -> Map V.Var V.Var -> a -> b) ->
-    Val a -> Val b
-randomizeParamIdsG preNG gen initMap convertPL =
+    Val a -> Val a
+randomizeParamIdsG preNG gen initMap =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where
         go (Ann (Const s) v) =
             do
                 parMap <- Reader.ask
-                newGen <- lift $ state ngSplit
                 case v of
                     V.BLam (V.Lam oldParamId body) ->
                         do
@@ -119,12 +117,12 @@ randomizeParamIdsG preNG gen initMap convertPL =
                     x@V.BCase {}      -> htraverse1 go x
                     x@V.BInject {}    -> htraverse1 go x
                     x@V.BToNom {}     -> htraverse1 go x
-                    <&> Ann (Const (convertPL newGen parMap s))
+                    <&> Ann (Const s)
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 
 randomizeParamIds :: RandomGen g => g -> Val a -> Val a
-randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty $ \_ _ a -> a
+randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty
 
 randomizeExprAndParams ::
     (RandomGen gen, Random r) =>

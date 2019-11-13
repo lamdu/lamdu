@@ -571,7 +571,7 @@ xorBS x y = BS.pack $ BS.zipWith xor x y
 randomizeNonStoredParamIds ::
     Random.StdGen -> Val (Maybe (ValI m), a) -> Val (Maybe (ValI m), a)
 randomizeNonStoredParamIds gen =
-    GenIds.randomizeParamIdsG id nameGen Map.empty $ \_ _ pl -> pl
+    GenIds.randomizeParamIdsG id nameGen Map.empty
     where
         nameGen = GenIds.onNgMakeName f $ GenIds.randomNameGen gen
         f n _        prevEntityId (Just _, _) = (prevEntityId, n)
