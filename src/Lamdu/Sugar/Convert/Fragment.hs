@@ -30,6 +30,7 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Expr.IRef (ValI)
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
@@ -171,8 +172,8 @@ exceptToListT (Right x) = pure x
 holeResultsEmplaceFragment ::
     Monad m =>
     Val (Input.Payload n a) ->
-    Val (Hole.StorePoint n (), Tree V.IResult UVar) ->
-    Hole.ResultGen m (Val (Hole.StorePoint n IsFragment, Tree V.IResult UVar))
+    Val ((Maybe (ValI n), ()), Tree V.IResult UVar) ->
+    Hole.ResultGen m (Val ((Maybe (ValI n), IsFragment), Tree V.IResult UVar))
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
@@ -217,8 +218,8 @@ holeResultsEmplaceFragment rawFragmentExpr x =
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
-    Val (Hole.StorePoint n (), Tree V.IResult UVar) ->
-    Val (Hole.StorePoint n IsFragment, Tree V.IResult UVar)
+    Val ((Maybe (ValI n), ()), Tree V.IResult UVar) ->
+    Val ((Maybe (ValI n), IsFragment), Tree V.IResult UVar)
 markNotFragment = Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ _1 . _2 .~ NotFragment
 
 -- TODO: Unify type according to IsFragment, avoid magic var
@@ -268,7 +269,7 @@ emplaceInHoles replaceHole =
 mkResultValFragment ::
     Tree V.IResult UVar ->
     Val (Maybe (Input.Payload m a), Tree V.IResult UVar) ->
-    State InferState (Val (Hole.StorePoint m IsFragment, Tree V.IResult UVar))
+    State InferState (Val ((Maybe (ValI m), IsFragment), Tree V.IResult UVar))
 mkResultValFragment inferred x =
     x & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 %~ onPl
     & Hole.detachValIfNeeded emptyPl inferred
