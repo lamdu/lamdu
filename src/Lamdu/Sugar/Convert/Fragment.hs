@@ -170,8 +170,9 @@ exceptToListT (Right x) = pure x
 
 holeResultsEmplaceFragment ::
     Monad m =>
-    Val (Input.Payload n a) -> Hole.ResultVal n () ->
-    Hole.ResultGen m (Hole.ResultVal n IsFragment)
+    Val (Input.Payload n a) ->
+    Val (Hole.StorePoint n (), Tree V.IResult UVar) ->
+    Hole.ResultGen m (Val (Hole.StorePoint n IsFragment, Tree V.IResult UVar))
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
@@ -215,7 +216,9 @@ holeResultsEmplaceFragment rawFragmentExpr x =
         fragmentType = rawFragmentExpr ^. annotation . Input.inferResult . V.iType
 data IsFragment = IsFragment | NotFragment
 
-markNotFragment :: Hole.ResultVal n () -> Hole.ResultVal n IsFragment
+markNotFragment ::
+    Val (Hole.StorePoint n (), Tree V.IResult UVar) ->
+    Val (Hole.StorePoint n IsFragment, Tree V.IResult UVar)
 markNotFragment = Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ _1 . _2 .~ NotFragment
 
 -- TODO: Unify type according to IsFragment, avoid magic var
@@ -265,7 +268,7 @@ emplaceInHoles replaceHole =
 mkResultValFragment ::
     Tree V.IResult UVar ->
     Val (Maybe (Input.Payload m a), Tree V.IResult UVar) ->
-    State InferState (Hole.ResultVal m IsFragment)
+    State InferState (Val (Hole.StorePoint m IsFragment, Tree V.IResult UVar))
 mkResultValFragment inferred x =
     x & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 %~ onPl
     & Hole.detachValIfNeeded emptyPl inferred

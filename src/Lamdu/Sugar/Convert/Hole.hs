@@ -3,7 +3,7 @@
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
-    , StorePoint, ResultVal, Preconversion, ResultGen
+    , StorePoint, Preconversion, ResultGen
     , ResultProcessor(..)
     , mkOptions, detachValIfNeeded, sugar, loadNewDeps
     , mkResult
@@ -83,8 +83,6 @@ type T = Transaction
 
 type StorePoint m a = (Maybe (ValI m), a)
 
-type ResultVal m a = Val (StorePoint m a, Tree V.IResult UVar)
-
 type Preconversion m a = Val (Input.Payload m a) -> Val (Input.Payload m ())
 
 type ResultGen m = StateT InferState (ListT (T m))
@@ -103,7 +101,9 @@ convert posInfo holePl =
 
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
-    , rpPostProcess :: ResultVal m () -> ResultGen m (ResultVal m a)
+    , rpPostProcess ::
+        Val (StorePoint m (), Tree V.IResult UVar) ->
+        ResultGen m (Val (StorePoint m a, Tree V.IResult UVar))
     , rpPreConversion :: Preconversion m a
     }
 
@@ -381,7 +381,8 @@ getLocalScopeGetVars sugarContext par
 -- | Runs inside a forked transaction
 writeResult ::
     Monad m =>
-    Preconversion m a -> InferState -> ValP m -> ResultVal m a ->
+    Preconversion m a -> InferState -> ValP m ->
+    Val (StorePoint m a, Tree V.IResult UVar) ->
     T m (Val (Input.Payload m ()))
 writeResult preConversion inferContext holeStored inferredVal =
     do
@@ -478,7 +479,7 @@ detachValIfNeeded emptyPl holeIRes x =
 mkResultVals ::
     Monad m =>
     ConvertM.Context m -> Tree V.Scope UVar -> Val () ->
-    ResultGen m (Deps, ResultVal m ())
+    ResultGen m (Deps, Val (StorePoint m (), Tree V.IResult UVar))
 mkResultVals sugarContext scope seed =
     -- TODO: This uses state from context but we're in StateT.
     -- This is a mess..
@@ -499,7 +500,7 @@ mkResultVals sugarContext scope seed =
 mkResult ::
     Monad m =>
     Preconversion m a -> ConvertM.Context m -> T m () -> Input.Payload m b ->
-    ResultVal m a ->
+    Val (StorePoint m a, Tree V.IResult UVar) ->
     T m (HoleResult InternalName (T m) (T m))
 mkResult preConversion sugarContext updateDeps holePl x =
     do
@@ -530,7 +531,7 @@ toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 toScoredResults ::
     (Monad f, Monad m) =>
     a -> Preconversion m a -> ConvertM.Context m -> Input.Payload m dummy ->
-    StateT InferState f (Deps, ResultVal m a) ->
+    StateT InferState f (Deps, Val (StorePoint m a, Tree V.IResult UVar)) ->
     f ( HoleResultScore
       , T m (HoleResult InternalName (T m) (T m))
       )
