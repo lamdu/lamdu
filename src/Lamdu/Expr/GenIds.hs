@@ -18,7 +18,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Hyper (Ann(..), htraverse1)
+import           Hyper (Tree, Ann(..), htraverse1)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -91,13 +91,13 @@ randomNameGen g = NameGen
     }
 
 randomizeParamIdsG ::
-    (a -> n) ->
+    (Tree a V.Term -> n) ->
     NameGen V.Var n -> Map V.Var V.Var ->
-    Val a -> Val a
+    Tree (Ann a) V.Term -> Tree (Ann a) V.Term
 randomizeParamIdsG preNG gen initMap =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where
-        go (Ann (Const s) v) =
+        go (Ann s v) =
             do
                 parMap <- Reader.ask
                 case v of
@@ -117,7 +117,7 @@ randomizeParamIdsG preNG gen initMap =
                     x@V.BCase {}      -> htraverse1 go x
                     x@V.BInject {}    -> htraverse1 go x
                     x@V.BToNom {}     -> htraverse1 go x
-                    <&> Ann (Const s)
+                    <&> Ann s
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 

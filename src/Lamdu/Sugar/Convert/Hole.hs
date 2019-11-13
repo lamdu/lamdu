@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables, TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections, PolyKinds #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -574,8 +574,8 @@ randomizeNonStoredParamIds gen =
     GenIds.randomizeParamIdsG id nameGen Map.empty
     where
         nameGen = GenIds.onNgMakeName f $ GenIds.randomNameGen gen
-        f n _        prevEntityId (Just _, _) = (prevEntityId, n)
-        f _ prevFunc prevEntityId pl@(Nothing, _) = prevFunc prevEntityId pl
+        f n _        prevEntityId (Const (Just _, _)) = (prevEntityId, n)
+        f _ prevFunc prevEntityId (Const pl@(Nothing, _)) = prevFunc prevEntityId pl
 
 randomizeNonStoredRefs ::
     ByteString -> Random.StdGen -> Val (Maybe (ValI m), a) -> Val (Maybe (ValI m), a)
