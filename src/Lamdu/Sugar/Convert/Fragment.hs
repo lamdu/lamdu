@@ -1,6 +1,6 @@
 -- | Convert applied holes to Fragments
 
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TupleSections #-}
 
 module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole
@@ -172,7 +172,7 @@ exceptToListT (Right x) = pure x
 holeResultsEmplaceFragment ::
     Monad m =>
     Val (Input.Payload n a) ->
-    Val ((Maybe (ValI n), ()), Tree V.IResult UVar) ->
+    Val (Maybe (ValI n), Tree V.IResult UVar) ->
     Hole.ResultGen m (Val ((Maybe (ValI n), IsFragment), Tree V.IResult UVar))
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
@@ -218,9 +218,9 @@ holeResultsEmplaceFragment rawFragmentExpr x =
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
-    Val ((Maybe (ValI n), ()), Tree V.IResult UVar) ->
+    Val (Maybe (ValI n), Tree V.IResult UVar) ->
     Val ((Maybe (ValI n), IsFragment), Tree V.IResult UVar)
-markNotFragment = Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ _1 . _2 .~ NotFragment
+markNotFragment = Lens.from _HFlip . hmapped1 . Lens._Wrapped . Lens._1 %~ (, NotFragment)
 
 -- TODO: Unify type according to IsFragment, avoid magic var
 fragmentVar :: V.Var

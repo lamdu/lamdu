@@ -1,5 +1,5 @@
 {-# LANGUAGE ExistentialQuantification, TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -100,7 +100,7 @@ convert posInfo holePl =
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
     , rpPostProcess ::
-        Val ((Maybe (ValI m), ()), Tree V.IResult UVar) ->
+        Val (Maybe (ValI m), Tree V.IResult UVar) ->
         ResultGen m (Val ((Maybe (ValI m), a), Tree V.IResult UVar))
     , rpPreConversion :: Preconversion m a
     }
@@ -109,7 +109,7 @@ holeResultProcessor :: Monad m => ResultProcessor m
 holeResultProcessor =
     ResultProcessor
     { rpEmptyPl = ()
-    , rpPostProcess = pure
+    , rpPostProcess = pure . (Lens.from _HFlip . hmapped1 . Lens._Wrapped . Lens._1 %~ (, ()))
     , rpPreConversion = id
     }
 
@@ -477,7 +477,7 @@ detachValIfNeeded emptyPl holeIRes x =
 mkResultVals ::
     Monad m =>
     ConvertM.Context m -> Tree V.Scope UVar -> Val () ->
-    ResultGen m (Deps, Val ((Maybe (ValI m), ()), Tree V.IResult UVar))
+    ResultGen m (Deps, Val (Maybe (ValI m), Tree V.IResult UVar))
 mkResultVals sugarContext scope seed =
     -- TODO: This uses state from context but we're in StateT.
     -- This is a mess..
@@ -491,7 +491,7 @@ mkResultVals sugarContext scope seed =
             form <-
                 Suggest.termTransformsWithModify () inferResult
                 & mapStateT ListClass.fromList
-            pure (newDeps, form & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 %~ (,) Nothing)
+            pure (newDeps, form & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 .~ Nothing)
     where
         txn = lift . lift
 

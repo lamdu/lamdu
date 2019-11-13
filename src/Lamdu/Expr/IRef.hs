@@ -121,7 +121,10 @@ expressionBodyFrom ::
     T m (Tree V.Term (Ann (Const (ValI m, a))))
 expressionBodyFrom = htraverse1 writeValWithStoredSubexpressions . (^. hVal)
 
-writeValWithStoredSubexpressions :: Monad m => Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
+writeValWithStoredSubexpressions ::
+    Monad m =>
+    Tree (Ann (Const (Maybe (ValI m), a))) V.Term ->
+    T m (Tree (Ann (Const (ValI m, a))) V.Term)
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
