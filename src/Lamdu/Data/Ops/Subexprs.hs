@@ -22,12 +22,13 @@ type T = Transaction
 
 onMatchingSubexprs ::
     Applicative m =>
-    (a -> m ()) ->
-    Lens.Fold (Tree Pure V.Term) b -> Val a ->
+    (Tree a V.Term -> m ()) ->
+    Lens.Fold (Tree Pure V.Term) b ->
+    Tree (Ann a) V.Term ->
     m ()
 onMatchingSubexprs action predicate x =
     ( if Lens.has predicate (unwrap (const (^. hVal)) x)
-        then action (x ^. hAnn . Lens._Wrapped)
+        then action (x ^. hAnn)
         else pure ()
     ) *>
     htraverse_
@@ -38,10 +39,11 @@ toHole :: Monad m => ValP m -> T m ()
 toHole = void . DataOps.setToHole
 
 onGetVars ::
-    Monad m => (ValP m -> T m ()) -> V.Var ->
-    Val (ValP m) -> T m ()
+    Monad m =>
+    (ValP m -> T m ()) -> V.Var -> Val (ValP m) -> T m ()
 onGetVars f var =
-    onMatchingSubexprs f (_Pure . V._BLeaf . V._LVar . Lens.only var)
+    onMatchingSubexprs (f . getConst)
+    (_Pure . V._BLeaf . V._LVar . Lens.only var)
 
 getVarsToHole :: Monad m => V.Var -> Val (ValP m) -> T m ()
 getVarsToHole = onGetVars toHole

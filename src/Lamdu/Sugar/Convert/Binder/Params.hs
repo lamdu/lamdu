@@ -188,13 +188,13 @@ getFieldParamsToHole ::
     Monad m =>
     T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
-    SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
+    SubExprs.onMatchingSubexprs (SubExprs.toHole . getConst) (getFieldOnVar . Lens.only (param, tag)) lamBody
 
 getFieldParamsToParams ::
     Monad m =>
     Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
-    SubExprs.onMatchingSubexprs (toParam . Property.value)
+    SubExprs.onMatchingSubexprs (toParam . Property.value . getConst)
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
         toParam bodyI = ExprIRef.writeValI bodyI $ V.BLeaf $ V.LVar param
@@ -419,7 +419,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
 removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
 removeCallsToVar funcVar x =
     do
-        SubExprs.onMatchingSubexprs changeRecursion
+        SubExprs.onMatchingSubexprs (changeRecursion . getConst)
             ( _Pure . V._BApp . V.appFunc
             . _Pure . V._BLeaf . V._LVar . Lens.only funcVar
             ) x
@@ -710,7 +710,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Val (ValP m) -> T m ()
 convertVarToCalls mkArg var =
-    SubExprs.onMatchingSubexprs (Property.modify_ ?? change)
+    SubExprs.onMatchingSubexprs ((Property.modify_ ?? change) . getConst)
     (_Pure . V._BLeaf . V._LVar . Lens.only var)
     where
         change x = mkArg >>= ExprIRef.newValI . V.BApp . V.App x
