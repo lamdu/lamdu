@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, PolyKinds #-}
 module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
@@ -78,8 +78,11 @@ inlineLet topLevelProp redex =
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
         (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just)
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (, ())
+    <&> Lens.from _HFlip . hmapped1 %~ f
     >>= ExprIRef.writeValWithStoredSubexpressions
-    <&> (^. annotation . _1)
+    <&> (^. hAnn . _1)
     >>= Property.set topLevelProp
     & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ EntityId.ofValI) <$)
+    where
+        f (Const Nothing) = ExprIRef.WriteNew :*: Const ()
+        f (Const (Just x)) = ExprIRef.ExistingRef x :*: Const ()

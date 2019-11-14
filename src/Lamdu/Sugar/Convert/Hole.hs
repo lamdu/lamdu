@@ -1,5 +1,5 @@
-{-# LANGUAGE ExistentialQuantification, TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables, TupleSections, PolyKinds #-}
+{-# LANGUAGE ExistentialQuantification, TypeFamilies, PolyKinds #-}
+{-# LANGUAGE ScopedTypeVariables, TypeOperators, TupleSections #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
       -- Used by Convert.Fragment:
@@ -37,7 +37,7 @@ import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
-import           Hyper.Type.Functor (_F)
+import           Hyper.Type.Functor (F(..), _F)
 import           Hyper.Unify (unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
@@ -70,6 +70,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -386,8 +387,9 @@ writeResult preConversion inferContext holeStored inferredVal =
     do
         writtenExpr <-
             inferredVal
-            & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ intoStorePoint
+            & Lens.from _HFlip . hmapped1 %~ intoStorePoint
             & writeExprMStored (Property.value holeStored)
+            <&> Lens.from _HFlip . hmapped1 %~ (\(ref :*: Const pl) -> Const (ref, pl))
             <&> ExprIRef.addProperties (holeStored ^. Property.pSet)
             <&> addBindingsAll
             <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ toPayload
@@ -396,8 +398,9 @@ writeResult preConversion inferContext holeStored inferredVal =
         (holeStored ^. Property.pSet) (writtenExpr ^. annotation . _1 . Property.pVal)
         writtenExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd & preConversion & pure
     where
-        intoStorePoint ((mStorePoint, a), inferred) =
-            (mStorePoint, (inferred, Lens.has Lens._Just mStorePoint, a))
+        intoStorePoint (Const ((mStorePoint, a), inferred)) =
+            maybe ExprIRef.WriteNew ExprIRef.ExistingRef mStorePoint :*:
+            Const (inferred, Lens.has Lens._Just mStorePoint, a)
         toPayload (stored, (inferRes, resolved, wasStored, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
             ( eId
@@ -420,6 +423,9 @@ writeResult preConversion inferContext holeStored inferredVal =
             where
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
+        addBindingsAll ::
+            Tree (Ann (Const (ValP m, (Tree V.IResult UVar, Bool, a)))) V.Term ->
+            Tree (Ann (Const (ValP m, (Tree V.IResult UVar, Tree Pure T.Type, Bool, a)))) V.Term
         addBindingsAll x =
             (Lens.from _HFlip . htraverse1 . Lens._Wrapped . Lens._2) addBindings x
             & runPureInfer (x ^. annotation . Lens._2 . Lens._1 . V.iScope) inferContext
@@ -569,30 +575,38 @@ xorBS :: ByteString -> ByteString -> ByteString
 xorBS x y = BS.pack $ BS.zipWith xor x y
 
 randomizeNonStoredParamIds ::
-    Random.StdGen -> Val (Maybe (ValI m), a) -> Val (Maybe (ValI m), a)
+    Random.StdGen ->
+    Tree (Ann (ExprIRef.Write m :*: a)) V.Term ->
+    Tree (Ann (ExprIRef.Write m :*: a)) V.Term
 randomizeNonStoredParamIds gen =
     GenIds.randomizeParamIdsG id nameGen Map.empty
     where
         nameGen = GenIds.onNgMakeName f $ GenIds.randomNameGen gen
-        f n _        prevEntityId (Const (Just _, _)) = (prevEntityId, n)
-        f _ prevFunc prevEntityId (Const pl@(Nothing, _)) = prevFunc prevEntityId pl
+        f n _        prevEntityId (ExprIRef.ExistingRef{} :*: _) = (prevEntityId, n)
+        f _ prevFunc prevEntityId pl@(ExprIRef.WriteNew :*: _) = prevFunc prevEntityId pl
 
 randomizeNonStoredRefs ::
-    ByteString -> Random.StdGen -> Val (Maybe (ValI m), a) -> Val (Maybe (ValI m), a)
+    ByteString ->
+    Random.StdGen ->
+    Tree (Ann (ExprIRef.Write m :*: a)) V.Term ->
+    Tree (Ann (ExprIRef.Write m :*: a)) V.Term
 randomizeNonStoredRefs uniqueIdent gen v =
-    evalState ((Lens.from _HFlip . htraverse1 . Lens._Wrapped . _1) f v) gen
+    evalState ((Lens.from _HFlip . htraverse1 . _1) f v) gen
     where
-        f Nothing =
+        f ExprIRef.WriteNew =
             state random
             <&> UUID.toByteString <&> BS.strictify
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> (Lens._Just . _F #)
-        f (Just x) = Just x & pure
+            <&> IRef.unsafeFromUUID <&> F <&> ExprIRef.ExistingRef
+        f (ExprIRef.ExistingRef x) = ExprIRef.ExistingRef x & pure
 
 writeExprMStored ::
-    Monad m => ValI m -> Val (Maybe (ValI m), a) -> T m (Val (ValI m, a))
+    Monad m =>
+    ValI m ->
+    Tree (Ann (ExprIRef.Write m :*: a)) V.Term ->
+    T m (Tree (Ann (F (IRef m) :*: a)) V.Term)
 writeExprMStored exprIRef exprMStorePoint =
     exprMStorePoint
     & randomizeNonStoredParamIds genParamIds
@@ -601,7 +615,7 @@ writeExprMStored exprIRef exprMStorePoint =
     where
         uniqueIdent =
             Binary.encode
-            ( exprMStorePoint & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst
+            ( exprMStorePoint & Lens.from _HFlip . hmapped1 %~ Const . (^. _1)
             , exprIRef
             )
             & SHA256.hashlazy

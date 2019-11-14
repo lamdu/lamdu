@@ -151,8 +151,8 @@ makeSetToLiteral exprPl =
     do
         update
         l <-
-            x & Lens.from _HFlip . hmapped1 . Lens._Wrapped .~ (Nothing, ()) & ExprIRef.writeValWithStoredSubexpressions
-            <&> (^. annotation . _1)
+            x & Lens.from _HFlip . hmapped1 .~ ExprIRef.WriteNew :*: Const () & ExprIRef.writeValWithStoredSubexpressions
+            <&> (^. hAnn . _1)
         _ <- setToVal (exprPl ^. Input.stored) l
         EntityId.ofValI l & pure
 

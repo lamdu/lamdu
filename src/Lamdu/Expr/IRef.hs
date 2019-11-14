@@ -1,10 +1,12 @@
 {-# LANGUAGE TypeFamilies, MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody
     , ValP
     , newVar, readVal
-    , writeValWithStoredSubexpressions
+
+    , Write(..), writeValWithStoredSubexpressions
     , DefI
     , addProperties
 
@@ -115,25 +117,30 @@ readValH visited valI
     where
         k = IRef.uuid (valI ^. _F)
 
+data Write m h
+    = WriteNew
+    | ExistingRef (F (IRef m) h)
+    deriving (Generic, Binary)
+
 expressionBodyFrom ::
     Monad m =>
-    Val (Maybe (ValI m), a) ->
-    T m (Tree V.Term (Ann (Const (ValI m, a))))
+    Tree (Ann (Write m :*: a)) V.Term ->
+    T m (Tree V.Term (Ann (F (IRef m) :*: a)))
 expressionBodyFrom = htraverse1 writeValWithStoredSubexpressions . (^. hVal)
 
 writeValWithStoredSubexpressions ::
     Monad m =>
-    Tree (Ann (Const (Maybe (ValI m), a))) V.Term ->
-    T m (Tree (Ann (Const (ValI m, a))) V.Term)
+    Tree (Ann (Write m :*: a)) V.Term ->
+    T m (Tree (Ann (F (IRef m) :*: a)) V.Term)
 writeValWithStoredSubexpressions expr =
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & htraverse1 %~ (^. annotation . _1)
+        let bodyWithRefs = body & htraverse1 %~ (^. hAnn . _1)
         case mIRef of
-            Just valI -> Ann (Const (valI, pl)) body <$ writeValI valI bodyWithRefs
-            Nothing -> newValI bodyWithRefs <&> \exprI -> Ann (Const (exprI, pl)) body
+            ExistingRef valI -> Ann (valI :*: pl) body <$ writeValI valI bodyWithRefs
+            WriteNew -> newValI bodyWithRefs <&> \exprI -> Ann (exprI :*: pl) body
     where
-        (mIRef, pl) = expr ^. annotation
+        mIRef :*: pl = expr ^. hAnn
 
 addProperties ::
     Monad m =>
