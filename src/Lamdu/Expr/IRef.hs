@@ -123,19 +123,24 @@ data Write m h
     deriving (Generic, Binary)
 
 expressionBodyFrom ::
-    Monad m =>
-    Tree (Ann (Write m :*: a)) V.Term ->
-    T m (Tree V.Term (Ann (F (IRef m) :*: a)))
-expressionBodyFrom = htraverse1 writeValWithStoredSubexpressions . (^. hVal)
+    forall m t a.
+    (Monad m, Recursively (ReadVal m) t) =>
+    Tree (Ann (Write m :*: a)) t ->
+    T m (Tree t (Ann (F (IRef m) :*: a)))
+expressionBodyFrom =
+    withDict (recursively (Proxy @(ReadVal m t))) $
+    htraverse (Proxy @(Recursively (ReadVal m)) #> writeValWithStoredSubexpressions) . (^. hVal)
 
 writeValWithStoredSubexpressions ::
-    Monad m =>
-    Tree (Ann (Write m :*: a)) V.Term ->
-    T m (Tree (Ann (F (IRef m) :*: a)) V.Term)
+    forall m t a.
+    (Monad m, Recursively (ReadVal m) t) =>
+    Tree (Ann (Write m :*: a)) t ->
+    T m (Tree (Ann (F (IRef m) :*: a)) t)
 writeValWithStoredSubexpressions expr =
+    withDict (recursively (Proxy @(ReadVal m t))) $
     do
         body <- expressionBodyFrom expr
-        let bodyWithRefs = body & htraverse1 %~ (^. hAnn . _1)
+        let bodyWithRefs = hmap (const (^. hAnn . _1)) body
         case mIRef of
             ExistingRef valI -> Ann (valI :*: pl) body <$ writeValI valI bodyWithRefs
             WriteNew -> newValI bodyWithRefs <&> \exprI -> Ann (exprI :*: pl) body
