@@ -175,13 +175,14 @@ runInferResult _monitors evalRes act =
             case resolve inferredTerm & runPureInfer V.emptyScope inferState1 of
             Left x -> Left x & pure
             Right (resolvedTerm, _inferState2) ->
-                resolvedTerm ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . _2 . ExprLens.tIds
+                hfoldMap (const (^.. Lens._Wrapped . _2 . ExprLens.tIds)) (_HFlip # resolvedTerm)
                 & makeNominalsMap
                 <&>
                 \nomsMap ->
                 InferOut
-                (preparePayloads nomsMap evalRes resolvedTerm & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ setUserData)
-                inferState1
+                ( preparePayloads nomsMap evalRes resolvedTerm
+                    & Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ setUserData))
+                ) inferState1
                 & Right
     where
         setUserData pl = pl & Input.userData %~ \() -> [pl ^. Input.entityId]
