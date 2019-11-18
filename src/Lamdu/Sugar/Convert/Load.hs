@@ -84,24 +84,31 @@ preparePayloads nomsMap evalRes inferredVal =
               , Input._stored = valIProp
               , Input._inferredType = typ
               , Input._inferResult = inferRes
-              , Input._evalResults = evalRes <&> exprEvalRes typ execId
+              , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ execId
               , Input._userData = ()
               }
             )
             where
                 eId = propEntityId valIProp
                 execId = Property.value valIProp
-        exprEvalRes typ pl r =
-            EvalResultsForExpr
-            { _eResults = r ^. erExprValues . Lens.ix pl <&> addTypes nomsMap typ
-            , _eAppliesOfLam =
-                case typ of
-                Pure (T.TFun (FuncType paramType _)) ->
-                    r ^. erAppliesOfLam . Lens.ix pl
-                    <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
-                _ | r ^. erAppliesOfLam & Map.null -> Map.empty
-                  | otherwise -> error "Have non-empty erAppliesOfLam for non-function-type"
-            }
+
+exprEvalRes ::
+    Map NominalId (Tree Pure (NominalDecl T.Type)) ->
+    Tree Pure T.Type ->
+    ValI m ->
+    EvalResults (ValI m) ->
+    EvalResultsForExpr
+exprEvalRes nomsMap typ pl r =
+    EvalResultsForExpr
+    { _eResults = r ^. erExprValues . Lens.ix pl <&> addTypes nomsMap typ
+    , _eAppliesOfLam =
+        case typ of
+        Pure (T.TFun (FuncType paramType _)) ->
+            r ^. erAppliesOfLam . Lens.ix pl
+            <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
+        _ | r ^. erAppliesOfLam & Map.null -> Map.empty
+            | otherwise -> error "Have non-empty erAppliesOfLam for non-function-type"
+    }
 
 makeNominalsMap ::
     Monad m =>
