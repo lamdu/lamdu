@@ -143,10 +143,11 @@ data InferOut m = InferOut
 Lens.makeLenses ''InferOut
 
 resolve ::
-    Val (ValP m, Tree V.IResult UVar) ->
-    PureInfer (Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) V.Term)
+    RTraversable t =>
+    Annotated (ValP m, Tree V.IResult UVar) t ->
+    PureInfer (Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) t)
 resolve =
-    (Lens.from _HFlip . htraverse1 . Lens._Wrapped) f
+    Lens.from _HFlip (htraverse (const (Lens._Wrapped f)))
     where
         f ::
             (ValP m, Tree V.IResult UVar) ->
