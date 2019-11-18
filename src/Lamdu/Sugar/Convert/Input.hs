@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Input
         , varRefsOfLambda, entityId, inferredType, inferResult, stored, evalResults, userData, localsInScope
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , preparePayloads
-    , initLocalsInScope
+    , SugarInput(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -13,7 +13,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Unify.Binding (UVar)
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Eval.Results as ER
@@ -52,12 +51,16 @@ data PreparePayloadsRes pl t = PreparePayloadsRes
     , ppRes :: Ann (Const pl) t
     }
 
-class PreparePayloads t where
+class SugarInput t where
     preparePayloadsH ::
         Annotated (EntityId, [EntityId] -> pl) t ->
         Tree (PreparePayloadsRes pl) t
+    initLocalsInScope ::
+        [V.Var] ->
+        Annotated (Payload m a) t ->
+        Annotated (Payload m a) t
 
-instance PreparePayloads V.Term where
+instance SugarInput V.Term where
     preparePayloadsH (Ann (Const (x, mkPayload)) body) =
         PreparePayloadsRes
         { ppVarMap =
@@ -78,17 +81,15 @@ instance PreparePayloads V.Term where
         }
         where
             childrenVars = Map.unionsWith (++) (hfoldMap (const ((:[]) . ppVarMap)) b)
-            b = hmap (Proxy @PreparePayloads #> preparePayloadsH) body
+            b = hmap (Proxy @SugarInput #> preparePayloadsH) body
+    initLocalsInScope locals (Ann (Const pl) body) =
+        case body of
+        V.BLam (V.Lam var b) -> initLocalsInScope (var : locals) b & V.Lam var & V.BLam
+        x -> hmap (Proxy @SugarInput #> initLocalsInScope locals) x
+        & Ann (Const (pl & localsInScope <>~ locals))
 
 preparePayloads ::
-    PreparePayloads t =>
+    SugarInput t =>
     Annotated (EntityId, [EntityId] -> pl) t ->
     Annotated pl t
 preparePayloads = ppRes . preparePayloadsH
-
-initLocalsInScope :: [V.Var] -> Val (Payload m a) -> Val (Payload m a)
-initLocalsInScope locals (Ann (Const pl) body) =
-    case body of
-    V.BLam (V.Lam var b) -> initLocalsInScope (var : locals) b & V.Lam var & V.BLam
-    x -> x & htraverse1 %~ initLocalsInScope locals
-    & Ann (Const (pl & localsInScope <>~ locals))
