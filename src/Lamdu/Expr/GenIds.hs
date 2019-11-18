@@ -1,4 +1,6 @@
 -- TODO: Split/rename to more generic (non-sugar) modules
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams
     , randomizeParamIdsG
@@ -16,9 +18,12 @@ import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
+import           Data.Constraint (withDict)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Hyper (Tree, Ann(..), htraverse1)
+import           Data.Proxy (Proxy(..))
+import           Hyper
+import           Hyper.Recurse (recurse)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -47,12 +52,16 @@ randomVar g = randomIdentifier g & _1 %~ V.Var
 randomTag :: RandomGen g => g -> (T.Tag, g)
 randomTag g = randomIdentifier g & _1 %~ T.Tag
 
-randomizeExpr :: (RandomGen gen, Random r) => gen -> Val (r -> a) -> Val a
+randomizeExpr ::
+    forall gen r t a.
+    (RandomGen gen, Random r, RTraversable t) =>
+    gen -> Annotated (r -> a) t -> Annotated a t
 randomizeExpr gen (Ann (Const pl) body) =
+    withDict (recurse (Proxy @(RTraversable t))) $
     (`evalState` gen) $
     do
         r <- state random
-        newBody <- body & htraverse1 %%~ randomizeSubexpr
+        newBody <- htraverse (Proxy @RTraversable #> randomizeSubexpr) body
         Ann (Const (pl r)) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
