@@ -4,7 +4,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Responsive.Expression
     ( Style(..), indentBarWidth, indentBarGap, indentBarColor
-    , disambiguators, boxSpacedDisambiguated, boxSpacedMDisamb, indent
+    , disambiguators, boxSpacedMDisamb, indent
     , addParens
     ) where
 
@@ -101,13 +101,6 @@ indentBar =
                 gapWidth = stdSpace * s ^. indentBarGap
                 bgAnimId = myId ++ ["("]
             in  bar ||| Spacer.make (Vector2 gapWidth 0)
-
-boxSpacedDisambiguated ::
-    ( MonadReader env m, Applicative f, Has Style env, Spacer.HasStdSpacing env
-    , Glue.HasTexts env
-    ) =>
-    m (AnimId -> [Responsive f] -> Responsive f)
-boxSpacedDisambiguated = boxSpacedMDisamb <&> Lens.argument %~ Just
 
 boxSpacedMDisamb ::
     ( MonadReader env m, Applicative f, Has Style env, Spacer.HasStdSpacing env
