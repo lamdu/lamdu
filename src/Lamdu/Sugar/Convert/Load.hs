@@ -52,27 +52,31 @@ type T = Transaction
 
 type InferFunc a =
     Definition.Expr (Val a) ->
-    PureInfer (Tree V.Scope UVar) (Tree (Ann (Const a :*: InferResult UVar)) V.Term)
+    PureInfer (Tree V.Scope UVar) (Tree (Ann (Const a :*: InferResult UVar)) V.Term, Tree V.Scope UVar)
 
 unmemoizedInfer :: InferFunc a
 unmemoizedInfer defExpr =
     do
         addDeps <- loadDeps (defExpr ^. Definition.exprFrozenDeps)
-        infer (defExpr ^. Definition.expr) & Reader.local addDeps
+        scope <- Lens.view id <&> addDeps
+        infer (defExpr ^. Definition.expr) & Reader.local (const scope)
+            <&> (, scope)
 
 propEntityId :: Property f (ValI m) -> EntityId
 propEntityId = EntityId.ofValI . Property.value
 
 preparePayloads ::
+    InferState ->
+    Tree V.Scope UVar ->
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) V.Term ->
+    Annotated (ValP m, Tree Pure T.Type, Tree UVar T.Type) V.Term ->
     Annotated (Input.Payload m ()) V.Term
-preparePayloads nomsMap evalRes inferredVal =
+preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
     inferredVal
     & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ f
     & Input.preparePayloads
-    & Input.initLocalsInScope []
+    & Input.initScopes inferState topLevelScope []
     where
         f (valIProp, typ, inferRes) =
             ( eId
@@ -83,8 +87,8 @@ preparePayloads nomsMap evalRes inferredVal =
               , Input._localsInScope = []
               , Input._stored = valIProp
               , Input._inferredType = typ
-              , Input._inferResult = inferRes ^. V.iType
-              , Input._inferScope = inferRes ^. V.iScope
+              , Input._inferResult = inferRes
+              , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
               , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ execId
               , Input._userData = ()
               }
@@ -145,28 +149,28 @@ Lens.makeLenses ''InferOut
 
 resolve ::
     RTraversable t =>
-    Annotated (ValP m, Tree V.IResult UVar) t ->
-    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) t)
+    Annotated (ValP m, Tree UVar T.Type) t ->
+    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree Pure T.Type, Tree UVar T.Type) t)
 resolve =
     Lens.from _HFlip (htraverse (const (Lens._Wrapped f)))
     where
         f ::
-            (ValP m, Tree V.IResult UVar) ->
-            PureInfer (Tree V.Scope UVar) (ValP m, Tree Pure T.Type, Tree V.IResult UVar)
+            (ValP m, Tree UVar T.Type) ->
+            PureInfer (Tree V.Scope UVar) (ValP m, Tree Pure T.Type, Tree UVar T.Type)
         f (stored, inferred) =
-            inferred ^. V.iType & applyBindings
+            applyBindings inferred
             <&> \x -> (stored, x, inferred)
 
 runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree V.IResult UVar) V.Term) ->
+    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree UVar T.Type) V.Term, Tree V.Scope UVar) ->
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors
     case runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act of
     Left x -> Left x & pure
-    Right (inferredTerm, inferState0) ->
+    Right ((inferredTerm, topLevelScope), inferState0) ->
         ParamList.loadForLambdas inferredTerm
         >>=
         \doLoad ->
@@ -181,7 +185,7 @@ runInferResult _monitors evalRes act =
                 <&>
                 \nomsMap ->
                 InferOut
-                ( preparePayloads nomsMap evalRes resolvedTerm
+                ( preparePayloads inferState1 topLevelScope nomsMap evalRes resolvedTerm
                     & Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ setUserData))
                 ) inferState1
                 & Right
@@ -197,11 +201,11 @@ inferDef ::
 inferDef inferFunc monitors results defExpr defVar =
     do
         defTv <- newUnbound
-        inferredVal <-
+        (inferredVal, scope) <-
             inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
-        inferredVal <$ unify defTv (inferredVal ^. hAnn . Lens._2 . _InferResult . V.iType)
-    <&> Lens.from _HFlip . hmapped1 %~ (\(Const x :*: InferResult r) -> Const (x, r))
+        (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . Lens._2 . _InferResult . _ANode)
+    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (\(Const x :*: InferResult r) -> Const (x, r ^. _ANode))
     & runInferResult monitors results
 
 inferDefExpr ::
@@ -211,5 +215,5 @@ inferDefExpr ::
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 inferDefExpr inferFunc monitors results defExpr =
     inferFunc defExpr
-    <&> Lens.from _HFlip . hmapped1 %~ (\(Const x :*: InferResult r) -> Const (x, r))
+    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (\(Const x :*: InferResult r) -> Const (x, r ^. _ANode))
     & runInferResult monitors results

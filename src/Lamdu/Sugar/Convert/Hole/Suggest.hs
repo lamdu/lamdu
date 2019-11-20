@@ -84,7 +84,7 @@ termTransformsWithoutSplit def src =
                 | Lens.nullOf (hVal . V._BToNom) src ->
                     do
                         fromNomRes <- V.LFromNom name & V.BLeaf & inferBody
-                        let fromNomTyp = fromNomRes ^. Lens._2 . V.iType
+                        let fromNomTyp = fromNomRes ^. Lens._2 . _ANode
                         resultType <- newUnbound
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src

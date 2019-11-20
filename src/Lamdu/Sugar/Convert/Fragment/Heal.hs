@@ -100,7 +100,7 @@ healMismatch =
                             MkHFlip (GMono topLevelType)
                 addDeps <- Infer.loadDeps deps
                 prepare fragment topLevelExpr
-                    & blame (^. Lens._Wrapped . Lens._1) (V.IResult V.emptyScope topLevelType)
+                    & blame (^. Lens._Wrapped . Lens._1) (_ANode # topLevelType)
                     & Reader.local (addRecursiveRef . addDeps)
             & Infer.runPureInfer V.emptyScope
                 (Infer.InferState Infer.emptyPureInferState Infer.varGen)

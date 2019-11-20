@@ -32,7 +32,7 @@ type MemoableInferFunc =
     , InferState
     ) ->
     Either (Tree Pure T.TypeError)
-    (Tree (Ann (InferResult UVar)) V.Term, InferState)
+    (Tree (Ann (InferResult UVar)) V.Term, Tree V.Scope UVar, InferState)
 
 newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc
@@ -42,10 +42,10 @@ newtype Functions = Functions
 -- payload and cover it after
 infer :: forall a. Functions -> InferFunc a
 infer funcs defExpr =
-    fmap unvoid . PureInfer . RWST $
+    fmap (Lens._1 %~ unvoid) . PureInfer . RWST $
     \env s ->
     inferMemoized funcs (defExpr <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped .~ (), env, s)
-    <&> \(iterm, s') -> (iterm, s', ())
+    <&> \(iterm, topLevelScope, s') -> ((iterm, topLevelScope), s', ())
     where
         origExpr = defExpr ^. Definition.expr
         unvoid ::
@@ -60,7 +60,12 @@ infer funcs defExpr =
 memoableInfer :: MemoableInferFunc
 memoableInfer (expr, env, state) =
     unmemoizedInfer expr & runPureInfer env state
-    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (^. Lens._2)
+    <&>
+    \((resTerm, topLevelScope), newState) ->
+    ( resTerm & Lens.from _HFlip . hmapped1 %~ (^. Lens._2)
+    , topLevelScope
+    , newState
+    )
 
 decl :: Decl Functions
 decl =

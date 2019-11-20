@@ -272,7 +272,7 @@ loadNewDeps currentDeps scope x =
 -- Used for hole's base exprs, to perform sugaring and get names from sugared exprs.
 -- TODO: We shouldn't need to perform sugaring for base exprs, and this should be removed.
 prepareUnstoredPayloads ::
-    Val (Tree V.IResult UVar, Tree Pure T.Type, EntityId, a) ->
+    Val (Tree UVar T.Type, Tree Pure T.Type, EntityId, a) ->
     Val (Input.Payload m a)
 prepareUnstoredPayloads v =
     v & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ mk & Input.preparePayloads
@@ -285,7 +285,7 @@ prepareUnstoredPayloads v =
               , Input._userData = x
               , Input._localsInScope = []
               , Input._inferredType = typ
-              , Input._inferResult = inferPl ^. V.iType
+              , Input._inferResult = inferPl
               , Input._inferScope = V.emptyScope
               , Input._entityId = eId
               , Input._stored =
@@ -308,7 +308,7 @@ assertSuccessfulInfer = either (error . prettyShow) id
 loadInfer ::
     Monad m =>
     ConvertM.Context m -> Tree V.Scope UVar -> Val a ->
-    T m (Deps, Either (Tree Pure T.TypeError) (Val (a, Tree V.IResult UVar), InferState))
+    T m (Deps, Either (Tree Pure T.TypeError) ((Val (a, Tree UVar T.Type), Tree V.Scope UVar), InferState))
 loadInfer sugarContext scope v =
     loadNewDeps sugarDeps scope v
     <&>
@@ -316,7 +316,7 @@ loadInfer sugarContext scope v =
     ( deps
     , memoInfer (Definition.Expr v deps)
         & runPureInfer scope (sugarContext ^. ConvertM.scInferContext)
-        <&> _1 . Lens.from _HFlip . hmapped1 %~ \(Const a :*: InferResult i) -> Const (a, i)
+        <&> _1 . _1 . Lens.from _HFlip . hmapped1 %~ \(Const a :*: InferResult i) -> Const (a, i ^. _ANode)
     )
     where
         memoInfer = Cache.infer (sugarContext ^. ConvertM.scCacheFunctions)
@@ -332,12 +332,19 @@ sugar sugarContext holePl v =
             loadInfer sugarContext scope v
             <&> snd
             <&> assertSuccessfulInfer
-            <&> makePayloads
-            <&> _1 %~ (EntityId.randomizeExprAndParams . Random.genFromHashable)
-                (holePl ^. Input.entityId)
-            <&> _1 %~ prepareUnstoredPayloads
-            <&> _1 %~ Input.initLocalsInScope (holePl ^. Input.localsInScope)
-            & transaction
+            <&>
+            ( \((term, topLevelScope), inferCtx) ->
+                ( (Lens.from _HFlip . htraverse1 . Lens._Wrapped) mkPayload term
+                    & runPureInfer scope inferCtx
+                    & assertSuccessfulInfer
+                    & fst
+                    & EntityId.randomizeExprAndParams
+                        (Random.genFromHashable (holePl ^. Input.entityId))
+                    & prepareUnstoredPayloads
+                    & Input.initScopes inferCtx topLevelScope (holePl ^. Input.localsInScope)
+                , inferCtx
+                )
+            ) & transaction
         convertBinder val
             <&> Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) neverShowAnnotations))
             >>= Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload)))
@@ -348,18 +355,11 @@ sugar sugarContext holePl v =
                 )
     where
         scope = holePl ^. Input.inferScope
-        makePayloads (term, inferCtx) =
-            ( (Lens.from _HFlip . htraverse1 . Lens._Wrapped) mkPayload term
-                & runPureInfer scope inferCtx
-                & assertSuccessfulInfer
-                & fst
-            , inferCtx
-            )
         mkPayload ::
-            (a, Tree V.IResult UVar) ->
-            PureInfer (Tree V.Scope UVar) (EntityId -> (Tree V.IResult UVar, Tree Pure T.Type, EntityId, a))
+            (a, Tree UVar T.Type) ->
+            PureInfer (Tree V.Scope UVar) (EntityId -> (Tree UVar T.Type, Tree Pure T.Type, EntityId, a))
         mkPayload (x, inferPl) =
-            applyBindings (inferPl ^. V.iType)
+            applyBindings inferPl
             <&>
             \typ entityId ->
             (inferPl, typ, entityId, x)
@@ -491,13 +491,11 @@ mkResultVals sugarContext scope seed =
     >>=
     \case
     (_, Left{}) -> empty
-    (newDeps, Right (inferResult, newInferState)) ->
+    (newDeps, Right ((inferResult, _), newInferState)) ->
         do
             id .= newInferState
             form <-
-                inferResult
-                & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _2 %~ (^. V.iType)
-                & Suggest.termTransformsWithModify ()
+                Suggest.termTransformsWithModify () inferResult
                 & mapStateT ListClass.fromList
             pure (newDeps, form & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 .~ Nothing)
     where
@@ -513,7 +511,13 @@ mkResult preConversion sugarContext updateDeps holePl x =
         updateDeps
         writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
             (holePl ^. Input.stored) x
-        <&> Input.initLocalsInScope (holePl ^. Input.localsInScope)
+        <&> Input.initScopes (sugarContext ^. ConvertM.scInferContext)
+                (holePl ^. Input.inferScope)
+                    -- TODO: this is kind of wrong
+                    -- The scope for a proper term should be from after loading its infer deps
+                    -- But that's only necessary for suggesting hole results?
+                    -- And we are in a hole result here
+                (holePl ^. Input.localsInScope)
         <&> (convertBinder >=> Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload))) . (Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
         >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
         & Transaction.fork

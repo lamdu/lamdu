@@ -51,7 +51,7 @@ mkFuncType paramList =
 
 loadForLambdas ::
     Monad m =>
-    Val (ValP m, Tree V.IResult UVar) -> T m (PureInfer (Tree V.Scope UVar) ())
+    Val (ValP m, Tree UVar T.Type) -> T m (PureInfer (Tree V.Scope UVar) ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped & sequence_
@@ -61,7 +61,7 @@ loadForLambdas x =
 
         loadUnifyParamList ::
             Monad m =>
-            (ValP m, Tree V.IResult UVar) ->
+            (ValP m, Tree UVar T.Type) ->
             T m (PureInfer (Tree V.Scope UVar) ())
         loadUnifyParamList (stored, ires) =
             loadStored stored
@@ -70,4 +70,4 @@ loadForLambdas x =
             Just paramList ->
                 do
                     funcType <- mkFuncType paramList
-                    () <$ unify (ires ^. V.iType) funcType
+                    () <$ unify ires funcType

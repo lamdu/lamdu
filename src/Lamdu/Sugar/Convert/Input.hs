@@ -13,7 +13,12 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Hyper
+import           Hyper.Type.AST.FuncType (funcType, funcIn)
 import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify.Generalize (GTerm(..))
+import           Hyper.Unify.Lookup (semiPruneLookup)
+import           Hyper.Unify.Term (_UTerm, uBody)
+import           Lamdu.Calc.Infer (InferState, runPureInfer)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Eval.Results as ER
@@ -57,7 +62,12 @@ class SugarInput t where
     preparePayloadsH ::
         Annotated (EntityId, [EntityId] -> pl) t ->
         Tree (PreparePayloadsRes pl) t
-    initLocalsInScope ::
+    initScopes ::
+        -- InferState is passed temporarily to lookup lambda type bodies with UVars
+        -- (to get type of parameter).
+        -- This will be removed when switching to typed lambdas.
+        InferState ->
+        Tree V.Scope UVar ->
         [V.Var] ->
         Annotated (Payload m a) t ->
         Annotated (Payload m a) t
@@ -84,11 +94,18 @@ instance SugarInput V.Term where
         where
             childrenVars = Map.unionsWith (++) (hfoldMap (const ((:[]) . ppVarMap)) b)
             b = hmap (Proxy @SugarInput #> preparePayloadsH) body
-    initLocalsInScope locals (Ann (Const pl) body) =
+    initScopes inferState iScope locals (Ann (Const pl) body) =
         case body of
-        V.BLam (V.Lam var b) -> initLocalsInScope (var : locals) b & V.Lam var & V.BLam
-        x -> hmap (Proxy @SugarInput #> initLocalsInScope locals) x
-        & Ann (Const (pl & localsInScope <>~ locals))
+        V.BLam (V.Lam var b) ->
+            initScopes inferState innerScope (var : locals) b & V.Lam var & V.BLam
+            where
+                mArgType =
+                    runPureInfer () inferState (semiPruneLookup (pl ^. inferResult))
+                    ^? Lens._Right . Lens._1 . Lens._2 . _UTerm . uBody . funcType . funcIn
+                innerScope =
+                    maybe iScope (\x -> iScope & V.scopeVarTypes . Lens.at var ?~ _HFlip # GMono x) mArgType
+        x -> hmap (Proxy @SugarInput #> initScopes inferState iScope locals) x
+        & Ann (Const (pl & localsInScope <>~ locals & inferScope .~ iScope))
 
 preparePayloads ::
     SugarInput t =>
