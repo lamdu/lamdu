@@ -92,7 +92,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
-        onPl pl = (Just pl, pl ^. Input.inferResult . V.iType)
+        onPl pl = (Just pl, pl ^. Input.inferResult)
         onSuggestion (sugg, newInferCtx) =
             mkOptionFromFragment
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
@@ -120,8 +120,8 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
         guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
-                checkTypeMatch (argI ^. annotation . Input.inferResult . V.iType)
-                (exprPl ^. Input.inferResult . V.iType)
+                checkTypeMatch (argI ^. annotation . Input.inferResult)
+                (exprPl ^. Input.inferResult)
             postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
             let showAnn
@@ -191,7 +191,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
-                _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Input.inferResult . V.iType)) rawFragmentExpr
+                _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Input.inferResult)) rawFragmentExpr
                 _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2)) x
                 -- Roll back state after occurs checks
                 fragmentExpr <$ State.put t
@@ -214,9 +214,9 @@ holeResultsEmplaceFragment rawFragmentExpr x =
         fragmentExpr = rawFragmentExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ onFragmentPayload
         onFragmentPayload pl =
             ( (Just (pl ^. Input.stored . Property.pVal), IsFragment)
-            , pl ^. Input.inferResult . V.iType
+            , pl ^. Input.inferResult
             )
-        fragmentType = rawFragmentExpr ^. annotation . Input.inferResult . V.iType
+        fragmentType = rawFragmentExpr ^. annotation . Input.inferResult
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
@@ -309,7 +309,7 @@ mkOptionFromFragment sugarContext exprPl x =
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferContext) =
             runState
-            (mkResultValFragment (exprPl ^. Input.inferResult . V.iType) x)
+            (mkResultValFragment (exprPl ^. Input.inferResult) x)
             (sugarContext ^. ConvertM.scInferContext)
         resolved =
             (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Lens._2)) result

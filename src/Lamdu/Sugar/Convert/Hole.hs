@@ -130,7 +130,7 @@ mkHoleSuggesteds ::
     ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
     [HoleOption InternalName (T m) (T m)]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
-    holePl ^. Input.inferResult . V.iType
+    holePl ^. Input.inferResult
     & Suggest.forType
     & runPureInfer (holePl ^. Input.inferScope) inferContext
 
@@ -285,7 +285,7 @@ prepareUnstoredPayloads v =
               , Input._userData = x
               , Input._localsInScope = []
               , Input._inferredType = typ
-              , Input._inferResult = inferPl
+              , Input._inferResult = inferPl ^. V.iType
               , Input._inferScope = V.emptyScope
               , Input._entityId = eId
               , Input._stored =
@@ -412,7 +412,7 @@ writeResult preConversion inferContext holeStored inferredVal =
                   { Input._varRefsOfLambda = varRefs
                   , Input._userData = a
                   , Input._inferredType = resolved
-                  , Input._inferResult = V.IResult V.emptyScope inferRes -- TODO: HACK
+                  , Input._inferResult = inferRes
                   , Input._inferScope = V.emptyScope -- TODO: HACK
                   , Input._evalResults = CurAndPrev noEval noEval
                   , Input._stored = stored
@@ -543,7 +543,7 @@ toScoredResults ::
       )
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
-    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) (holePl ^. Input.inferResult . V.iType)
+    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) (holePl ^. Input.inferResult)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =

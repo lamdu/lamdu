@@ -32,7 +32,7 @@ data Payload m a = Payload
     , _inferredType :: Tree Pure Type
     , -- The inference result before binding universal quantifiers,
       -- Useful for resuming inference in holes.
-      _inferResult :: Tree V.IResult UVar
+      _inferResult :: Tree UVar Type
     , _inferScope :: Tree V.Scope UVar
     , _localsInScope :: [V.Var]
     , _stored :: ValP m

@@ -41,7 +41,7 @@ convert defType defExpr defI =
             convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
-                generalize (defExpr ^. Definition.expr . annotation . Input.inferResult . V.iType)
+                generalize (defExpr ^. Definition.expr . annotation . Input.inferResult)
                 >>= saveScheme
                 & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)

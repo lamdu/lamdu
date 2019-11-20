@@ -36,7 +36,7 @@ makeScheme ::
     Load.InferOut m ->
     Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
 makeScheme (Load.InferOut inferredVal inferContext) =
-    generalize (inferredVal ^. annotation . Input.inferResult . V.iType)
+    generalize (inferredVal ^. annotation . Input.inferResult)
     >>= saveScheme
     & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
     <&> (^. Lens._1)

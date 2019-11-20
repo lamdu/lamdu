@@ -68,7 +68,7 @@ mkExtractToDef exprPl =
     \(ctx, postProcess, infer) ->
     do
         let scheme =
-                generalize (exprPl ^. Input.inferResult . V.iType)
+                generalize (exprPl ^. Input.inferResult)
                 >>= S.saveScheme
                 & runPureInfer @(Tree V.Scope UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
                 & Lens._Left %~ (\x -> x :: Tree Pure T.TypeError)
