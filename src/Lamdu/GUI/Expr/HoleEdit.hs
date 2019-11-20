@@ -87,7 +87,7 @@ make hole pl =
                 | otherwise = (mempty, mempty)
         litEventMap <- mkLitEventMap
         (ExprEventMap.add options pl <&> (Align.tValue %~))
-            <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
+            <*> ( SearchArea.make SearchArea.WithAnnotation (hole ^. Sugar.holeOptions)
                     pl allowedHoleSearchTerm ?? Menu.AnyPlace
                     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
                 )

@@ -2,6 +2,7 @@
 module Lamdu.GUI.ExpressionGui.Wrap
     ( stdWrap
     , stdWrapParentExpr
+    , parentDelegator
     ) where
 
 import           Control.Applicative (liftA2)

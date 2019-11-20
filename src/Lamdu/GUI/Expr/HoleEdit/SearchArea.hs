@@ -5,6 +5,7 @@
 
 module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
+    , AnnotationMode(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -156,6 +157,8 @@ filterSearchTermEvents allowedTerms searchTerm
     | otherwise =
         E.filterChars (not . allowedTerms . (searchTerm <>) . Text.singleton)
 
+data AnnotationMode = WithAnnotation | WithoutAnnotation
+
 make ::
     ( Monad i, Monad o
     , Glue.HasTexts env
@@ -165,11 +168,12 @@ make ::
     , Has (TextEdit.Texts Text) env
     , SearchMenu.HasTexts env
     ) =>
+    AnnotationMode ->
     i [Sugar.HoleOption Name i o] ->
     Sugar.Payload Name i o ExprGui.Payload ->
     (Text -> Bool) ->
     GuiM env i o (Menu.Placement -> TextWidget o)
-make mkOptions pl allowedTerms =
+make annMode mkOptions pl allowedTerms =
     do
         env <- Lens.view id
         let fdWrap =
@@ -178,8 +182,7 @@ make mkOptions pl allowedTerms =
                 <&> (Align.tValue %~)
         term <- makeTerm Menu.NoPickFirstResult
         closedSearchTermGui <-
-            (maybeAddAnnotationPl pl <&> (Align.tValue %~)) <*>
-            (fdWrap ?? term ^. SearchMenu.termWidget)
+            maybeAddAnn <*> (fdWrap ?? term ^. SearchMenu.termWidget)
         isActive <- HoleWidgetIds.isActive widgetIds
         padToSize <- Element.padToSize
         let inPlaceOfClosed = padToSize (closedSearchTermGui ^. Element.size) 0
@@ -188,8 +191,11 @@ make mkOptions pl allowedTerms =
             then
                 do
                     annotationGui <-
-                        Annotation.annotationSpacer
-                        /-/ makeInferredTypeAnnotation pl
+                        case annMode of
+                        WithoutAnnotation -> pure Element.empty
+                        WithAnnotation ->
+                            Annotation.annotationSpacer
+                            /-/ makeInferredTypeAnnotation pl
                     options <- GuiM.im mkOptions
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
@@ -219,6 +225,10 @@ make mkOptions pl allowedTerms =
                   )
                 & const & pure
     where
+        maybeAddAnn =
+            case annMode of
+            WithoutAnnotation -> pure id
+            WithAnnotation -> maybeAddAnnotationPl pl <&> (Align.tValue %~)
         makeTerm mPickFirst =
             do
                 theme <- Lens.view (has . Theme.hole)
