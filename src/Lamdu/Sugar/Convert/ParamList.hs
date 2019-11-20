@@ -9,7 +9,7 @@ import qualified Data.Property as Property
 import           Hyper (Tree, Pure(..), _HFlip, hfolded1)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
-import           Hyper.Unify (Unify, UVarOf, unify)
+import           Hyper.Unify (UnifyGen, UVarOf, unify)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.New (newUnbound, newTerm)
 import           Lamdu.Calc.Infer (PureInfer)
@@ -32,7 +32,7 @@ loadStored :: Monad m => ExprIRef.ValP m -> T m (Maybe ParamList)
 loadStored = Property.getP . assocFieldParamList . Property.value
 
 mkFuncType ::
-    (Unify m Type, Unify m T.Row) =>
+    (UnifyGen m Type, UnifyGen m T.Row) =>
     ParamList -> m (Tree (UVarOf m) Type)
 mkFuncType paramList =
     FuncType
@@ -42,7 +42,7 @@ mkFuncType paramList =
     >>= newTerm
     where
         step ::
-            (Unify m Type, Unify m T.Row) =>
+            (UnifyGen m Type, UnifyGen m T.Row) =>
             T.Tag ->
             m (Tree (UVarOf m) T.Row) ->
             m (Tree (UVarOf m) T.Row)
@@ -51,7 +51,7 @@ mkFuncType paramList =
 
 loadForLambdas ::
     Monad m =>
-    Val (ValP m, Tree V.IResult UVar) -> T m (PureInfer ())
+    Val (ValP m, Tree V.IResult UVar) -> T m (PureInfer (Tree V.Scope UVar) ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped & sequence_
@@ -62,7 +62,7 @@ loadForLambdas x =
         loadUnifyParamList ::
             Monad m =>
             (ValP m, Tree V.IResult UVar) ->
-            T m (PureInfer ())
+            T m (PureInfer (Tree V.Scope UVar) ())
         loadUnifyParamList (stored, ires) =
             loadStored stored
             <&> \case

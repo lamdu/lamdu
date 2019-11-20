@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Lamdu.Sugar.Convert.PostProcess
     ( Result(..), def, expr
     , makeScheme
@@ -8,6 +10,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Type.AST.Scheme (saveScheme)
+import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (runPureInfer)
 import qualified Lamdu.Calc.Term as V
@@ -35,7 +38,7 @@ makeScheme ::
 makeScheme (Load.InferOut inferredVal inferContext) =
     generalize (inferredVal ^. annotation . Input.inferResult . V.iType)
     >>= saveScheme
-    & runPureInfer V.emptyScope inferContext
+    & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
     <&> (^. Lens._1)
 
 def :: Monad m => Load.InferFunc (ValP m) -> Debug.Monitors -> DefI m -> T m Result

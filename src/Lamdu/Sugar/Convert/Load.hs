@@ -52,7 +52,7 @@ type T = Transaction
 
 type InferFunc a =
     Definition.Expr (Val a) ->
-    PureInfer (Tree (Ann (Const a :*: InferResult UVar)) V.Term)
+    PureInfer (Tree V.Scope UVar) (Tree (Ann (Const a :*: InferResult UVar)) V.Term)
 
 unmemoizedInfer :: InferFunc a
 unmemoizedInfer defExpr =
@@ -145,13 +145,13 @@ Lens.makeLenses ''InferOut
 resolve ::
     RTraversable t =>
     Annotated (ValP m, Tree V.IResult UVar) t ->
-    PureInfer (Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) t)
+    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree Pure T.Type, Tree V.IResult UVar) t)
 resolve =
     Lens.from _HFlip (htraverse (const (Lens._Wrapped f)))
     where
         f ::
             (ValP m, Tree V.IResult UVar) ->
-            PureInfer (ValP m, Tree Pure T.Type, Tree V.IResult UVar)
+            PureInfer (Tree V.Scope UVar) (ValP m, Tree Pure T.Type, Tree V.IResult UVar)
         f (stored, inferred) =
             inferred ^. V.iType & applyBindings
             <&> \x -> (stored, x, inferred)
@@ -159,7 +159,7 @@ resolve =
 runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    PureInfer (Annotated (ValP m, Tree V.IResult UVar) V.Term) ->
+    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree V.IResult UVar) V.Term) ->
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors

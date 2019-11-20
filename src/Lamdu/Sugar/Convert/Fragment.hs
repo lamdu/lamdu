@@ -157,7 +157,7 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
         stored = exprPl ^. Input.stored
         storedEntityId = stored & Property.value & EntityId.ofValI
 
-liftPureInfer :: Tree V.Scope UVar -> PureInfer a -> StateT InferState (Either (Tree Pure T.TypeError)) a
+liftPureInfer :: env -> PureInfer env a -> StateT InferState (Either (Tree Pure T.TypeError)) a
 liftPureInfer scope act =
     do
         st <- Lens.use id

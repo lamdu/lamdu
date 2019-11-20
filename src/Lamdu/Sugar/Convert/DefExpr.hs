@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Hyper (Tree, Pure, annotation)
 import           Hyper.Type.AST.Scheme (saveScheme)
+import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (alphaEq, runPureInfer)
 import           Lamdu.Calc.Term (Val)
@@ -42,7 +43,7 @@ convert defType defExpr defI =
         let inferredType =
                 generalize (defExpr ^. Definition.expr . annotation . Input.inferResult . V.iType)
                 >>= saveScheme
-                & runPureInfer V.emptyScope inferContext
+                & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)
         unless (alphaEq defType inferredType) $
             fail $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))

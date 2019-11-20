@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE FlexibleInstances, TypeFamilies, TypeApplications #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
@@ -14,6 +14,7 @@ import           Hyper
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
+import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -69,7 +70,7 @@ mkExtractToDef exprPl =
         let scheme =
                 generalize (exprPl ^. Input.inferResult . V.iType)
                 >>= S.saveScheme
-                & runPureInfer V.emptyScope (ctx ^. ConvertM.scInferContext)
+                & runPureInfer @(Tree V.Scope UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
                 & Lens._Left %~ (\x -> x :: Tree Pure T.TypeError)
                 & (^?! Lens._Right . Lens._1)
         let deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal

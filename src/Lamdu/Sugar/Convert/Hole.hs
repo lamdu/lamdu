@@ -356,7 +356,7 @@ sugar sugarContext holePl v =
             )
         mkPayload ::
             (a, Tree V.IResult UVar) ->
-            PureInfer (EntityId -> (Tree V.IResult UVar, Tree Pure T.Type, EntityId, a))
+            PureInfer (Tree V.Scope UVar) (EntityId -> (Tree V.IResult UVar, Tree Pure T.Type, EntityId, a))
         mkPayload (x, inferPl) =
             applyBindings (inferPl ^. V.iType)
             <&>
@@ -433,7 +433,7 @@ writeResult preConversion inferContext holeStored inferredVal =
             & fst
         addBindings ::
             (Tree V.IResult UVar, Bool, a) ->
-            PureInfer (Tree V.IResult UVar, Tree Pure T.Type, Bool, a)
+            PureInfer (Tree V.Scope UVar) (Tree V.IResult UVar, Tree Pure T.Type, Bool, a)
         addBindings (inferRes, wasStored, a) =
             applyBindings (inferRes ^. V.iType)
             <&>
@@ -471,7 +471,7 @@ detachValIfNeeded emptyPl holeIRes x =
     where
         xType = x ^. annotation . _2 . V.iType
         liftPureInfer ::
-            PureInfer a -> State InferState (Either (Tree Pure T.TypeError) a)
+            PureInfer (Tree V.Scope UVar) a -> State InferState (Either (Tree Pure T.TypeError) a)
         liftPureInfer act =
             do
                 st <- Lens.use id

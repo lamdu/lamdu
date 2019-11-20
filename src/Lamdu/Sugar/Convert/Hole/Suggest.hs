@@ -61,7 +61,7 @@ transformGetFields def src row =
         pure (Ann (Const (def, V.IResult V.emptyScope typ)) (V.BGetField (V.GetField src tag)))
         <|> transformGetFields def src rest
 
-liftInfer :: Tree V.Scope UVar -> PureInfer a -> StateT InferState [] a
+liftInfer :: Tree V.Scope UVar -> PureInfer (Tree V.Scope UVar) a -> StateT InferState [] a
 liftInfer scope act =
     do
         s <- State.get
@@ -135,7 +135,8 @@ termOptionalTransformsWithoutSplit def src =
 -- | Suggest values that fit a type, may "split" once, to suggest many
 -- injects for a sum type. These are offerred in holes (not fragments).
 forType ::
-    (Unify m T.Type, Unify m T.Row) => UType m -> m [TypedTerm m]
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
+    UType m -> m [TypedTerm m]
 forType t =
     do
         -- TODO: DSL for matching/deref'ing UVar structure
@@ -145,7 +146,7 @@ forType t =
             Just r -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann (Const t)
 
 forVariant ::
-    (Unify m T.Type, Unify m T.Row) =>
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
     URow m ->
     [Tree V.Term (Ann (Const (UType m)))] ->
     m [Tree V.Term (Ann (Const (UType m)))]
@@ -156,7 +157,7 @@ forVariant r def =
     Just extend -> forVariantExtend extend
 
 forVariantExtend ::
-    (Unify m T.Type, Unify m T.Row) =>
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Tree (RowExtend T.Tag T.Type T.Row) (UVarOf m) ->
     m [Tree V.Term (Ann (Const (UType m)))]
 forVariantExtend (RowExtend tag typ rest) =
@@ -165,12 +166,12 @@ forVariantExtend (RowExtend tag typ rest) =
     <*> forVariant rest []
 
 forTypeWithoutSplit ::
-    (Unify m T.Type, Unify m T.Row) =>
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UType m -> m (TypedTerm m)
 forTypeWithoutSplit t = semiPruneLookup t <&> snd >>= forTypeUTermWithoutSplit <&> Ann (Const t)
 
 forTypeUTermWithoutSplit ::
-    (Unify m T.Type, Unify m T.Row) =>
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Tree (UTerm (UVarOf m)) T.Type -> m (Tree V.Term (Ann (Const (UType m))))
 forTypeUTermWithoutSplit t =
     case t ^? _UTerm . uBody of
@@ -183,7 +184,7 @@ forTypeUTermWithoutSplit t =
     _ -> V.BLeaf V.LHole & pure
 
 suggestRecord ::
-    (Unify m T.Type, Unify m T.Row) => URow m -> m (Tree V.Term (Ann (Const (UType m))))
+    (UnifyGen m T.Type, UnifyGen m T.Row) => URow m -> m (Tree V.Term (Ann (Const (UType m))))
 suggestRecord r =
     semiPruneLookup r <&> (^? _2 . _UTerm . uBody) >>=
     \case
@@ -196,7 +197,7 @@ suggestRecord r =
     _ -> V.BLeaf V.LHole & pure
 
 suggestCaseWith ::
-    (Unify m T.Type, Unify m T.Row) =>
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
     URow m -> UType m -> m (Tree V.Term (Ann (Const (UType m))))
 suggestCaseWith variantType resultType =
     semiPruneLookup variantType <&> (^? _2 . _UTerm . uBody) >>=
@@ -225,7 +226,7 @@ autoLambdas typ =
     Nothing -> V.BLeaf V.LHole & pure
     <&> Ann (Const typ)
 
-fillHoles :: a -> AnnotatedTerm a -> PureInfer (AnnotatedTerm a)
+fillHoles :: a -> AnnotatedTerm a -> PureInfer (Tree V.Scope UVar) (AnnotatedTerm a)
 fillHoles def (Ann pl (V.BLeaf V.LHole)) =
     forTypeWithoutSplit (pl ^. Lens._Wrapped . _2 . V.iType)
     <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (\t -> (def, V.IResult V.emptyScope t))
