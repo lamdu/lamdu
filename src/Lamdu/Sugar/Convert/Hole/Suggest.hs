@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( forType
     , termTransforms
@@ -40,7 +40,7 @@ termTransforms ::
     a -> AnnotatedTerm a ->
     StateT InferState [] (AnnotatedTerm a)
 termTransforms def src =
-    src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
+    src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
@@ -52,7 +52,7 @@ transformGetFields ::
     a -> AnnotatedTerm a -> Tree UVar T.Row ->
     StateT InferState [] (AnnotatedTerm a)
 transformGetFields def src row =
-    semiPruneLookup row & liftInfer V.emptyScope
+    semiPruneLookup row & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._RExtend)
     >>=
     \case
@@ -61,11 +61,11 @@ transformGetFields def src row =
         pure (Ann (Const (def, V.IResult V.emptyScope typ)) (V.BGetField (V.GetField src tag)))
         <|> transformGetFields def src rest
 
-liftInfer :: Tree V.Scope UVar -> PureInfer (Tree V.Scope UVar) a -> StateT InferState [] a
-liftInfer scope act =
+liftInfer :: env -> PureInfer env a -> StateT InferState [] a
+liftInfer e act =
     do
         s <- State.get
-        case runPureInfer scope s act of
+        case runPureInfer e s act of
             Left{} -> empty
             Right (r, newState) -> r <$ State.put newState
 
@@ -78,7 +78,7 @@ termTransformsWithoutSplit def src =
         Lens.nullOf (hVal . V._BApp . V.appFunc . hVal . V._BLam) src & guard
 
         (s1, typ) <-
-            src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
+            src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer ()
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (hVal . V._BToNom) src ->
@@ -89,7 +89,7 @@ termTransformsWithoutSplit def src =
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
                             & V.BApp & mkResult resultType & pure
-                    & liftInfer V.emptyScope
+                    & liftInfer (V.emptyScope @UVar)
                     >>= termOptionalTransformsWithoutSplit def
             Just (T.TVariant row) | Lens.nullOf (hVal . V._BInject) src ->
                 do
@@ -100,18 +100,18 @@ termTransformsWithoutSplit def src =
                         <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
                             (\t -> (def, V.IResult V.emptyScope t))
                         <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
-                & liftInfer V.emptyScope
+                & liftInfer (V.emptyScope @UVar)
             _ | Lens.nullOf (hVal . V._BLam) src ->
                 -- Apply if compatible with a function
                 do
-                    argType <- liftInfer V.emptyScope newUnbound
-                    resType <- liftInfer V.emptyScope newUnbound
+                    argType <- liftInfer (V.emptyScope @UVar) newUnbound
+                    resType <- liftInfer (V.emptyScope @UVar) newUnbound
                     _ <-
                         FuncType argType resType & T.TFun & newTerm
                         >>= unify s1
-                        & liftInfer V.emptyScope
+                        & liftInfer (V.emptyScope @UVar)
                     arg <-
-                        forTypeWithoutSplit argType & liftInfer V.emptyScope
+                        forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
                         <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
                             (\t -> (def, V.IResult V.emptyScope t))
                     let applied = V.App src arg & V.BApp & mkResult resType
