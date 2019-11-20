@@ -32,7 +32,7 @@ type URow m = Tree (UVarOf m) T.Row
 -- | Term with unifiable type annotations
 type TypedTerm m = Annotated (UType m) V.Term
 
-type AnnotatedTerm a = Annotated (a, Tree V.IResult UVar) V.Term
+type AnnotatedTerm a = Annotated (a, Tree UVar T.Type) V.Term
 
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
@@ -40,7 +40,7 @@ termTransforms ::
     a -> AnnotatedTerm a ->
     StateT InferState [] (AnnotatedTerm a)
 termTransforms def src =
-    src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer ()
+    src ^. annotation . _2 & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
@@ -58,7 +58,7 @@ transformGetFields def src row =
     \case
     Nothing -> empty
     Just (RowExtend tag typ rest) ->
-        pure (Ann (Const (def, V.IResult V.emptyScope typ)) (V.BGetField (V.GetField src tag)))
+        pure (Ann (Const (def, typ)) (V.BGetField (V.GetField src tag)))
         <|> transformGetFields def src rest
 
 liftInfer :: env -> PureInfer env a -> StateT InferState [] a
@@ -78,7 +78,7 @@ termTransformsWithoutSplit def src =
         Lens.nullOf (hVal . V._BApp . V.appFunc . hVal . V._BLam) src & guard
 
         (s1, typ) <-
-            src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer ()
+            src ^. annotation . _2 & semiPruneLookup & liftInfer ()
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (hVal . V._BToNom) src ->
@@ -98,7 +98,7 @@ termTransformsWithoutSplit def src =
                     suggestCaseWith row dstType
                         <&> Ann (Const caseType)
                         <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
-                            (\t -> (def, V.IResult V.emptyScope t))
+                            (\t -> (def, t))
                         <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
                 & liftInfer (V.emptyScope @UVar)
             _ | Lens.nullOf (hVal . V._BLam) src ->
@@ -113,7 +113,7 @@ termTransformsWithoutSplit def src =
                     arg <-
                         forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
                         <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
-                            (\t -> (def, V.IResult V.emptyScope t))
+                            (\t -> (def, t))
                     let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
                         <|>
@@ -124,7 +124,7 @@ termTransformsWithoutSplit def src =
                             termTransformsWithoutSplit def applied
             _ -> empty
     where
-        mkResult t = Ann (Const (def, V.IResult V.emptyScope t))
+        mkResult t = Ann (Const (def, t))
 
 termOptionalTransformsWithoutSplit ::
     a -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
@@ -228,8 +228,8 @@ autoLambdas typ =
 
 fillHoles :: a -> AnnotatedTerm a -> PureInfer (Tree V.Scope UVar) (AnnotatedTerm a)
 fillHoles def (Ann pl (V.BLeaf V.LHole)) =
-    forTypeWithoutSplit (pl ^. Lens._Wrapped . _2 . V.iType)
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (\t -> (def, V.IResult V.emptyScope t))
+    forTypeWithoutSplit (pl ^. Lens._Wrapped . _2)
+    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (\t -> (def, t))
 fillHoles def (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles def arg <&> V.App func <&> V.BApp <&> Ann pl
@@ -251,7 +251,7 @@ termTransformsWithModify _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
 termTransformsWithModify def src =
-    src ^. annotation . _2 . V.iType & semiPruneLookup & liftInfer V.emptyScope
+    src ^. annotation . _2 & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody)
     >>=
     \case

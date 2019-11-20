@@ -483,7 +483,7 @@ detachValIfNeeded emptyPl holeType x =
 mkResultVals ::
     Monad m =>
     ConvertM.Context m -> Tree V.Scope UVar -> Val () ->
-    ResultGen m (Deps, Val (Maybe (ValI m), Tree V.IResult UVar))
+    ResultGen m (Deps, Val (Maybe (ValI m), Tree UVar T.Type))
 mkResultVals sugarContext scope seed =
     -- TODO: This uses state from context but we're in StateT.
     -- This is a mess..
@@ -495,7 +495,9 @@ mkResultVals sugarContext scope seed =
         do
             id .= newInferState
             form <-
-                Suggest.termTransformsWithModify () inferResult
+                inferResult
+                & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _2 %~ (^. V.iType)
+                & Suggest.termTransformsWithModify ()
                 & mapStateT ListClass.fromList
             pure (newDeps, form & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 .~ Nothing)
     where
@@ -566,7 +568,6 @@ mkResults ::
     )
 mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
     mkResultVals sugarContext (holePl ^. Input.inferScope) base
-    <&> _2 . Lens.from _HFlip . hmapped1 . Lens._Wrapped . _2 %~ (^. V.iType)
     >>= _2 %%~ postProcess
     & toScoredResults emptyPl preConversion sugarContext holePl
 

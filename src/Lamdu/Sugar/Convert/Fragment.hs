@@ -92,13 +92,11 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
-        onPl pl = (Just pl, pl ^. Input.inferResult)
+        onPl pl = (Just pl, pl ^. Input.inferResult . V.iType)
         onSuggestion (sugg, newInferCtx) =
-            sugg
-            & Lens.from _HFlip . hmapped1 . Lens._Wrapped . Lens._2 %~ (^. V.iType)
-            & mkOptionFromFragment
-                (sugarContext & ConvertM.scInferContext .~ newInferCtx)
-                exprPl
+            mkOptionFromFragment
+            (sugarContext & ConvertM.scInferContext .~ newInferCtx)
+            exprPl sugg
 
 checkTypeMatch :: Monad m => Tree UVar T.Type -> Tree UVar T.Type -> ConvertM m Bool
 checkTypeMatch x y =
