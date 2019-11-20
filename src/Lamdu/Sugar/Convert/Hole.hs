@@ -38,10 +38,10 @@ import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (F(..), _F)
-import           Hyper.Unify (unify)
+import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
-import           Hyper.Unify.New (newTerm)
+import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)
@@ -101,8 +101,8 @@ convert posInfo holePl =
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
     , rpPostProcess ::
-        Val (Maybe (ValI m), Tree V.IResult UVar) ->
-        ResultGen m (Val ((Maybe (ValI m), a), Tree V.IResult UVar))
+        Val (Maybe (ValI m), Tree UVar T.Type) ->
+        ResultGen m (Val ((Maybe (ValI m), a), Tree UVar T.Type))
     , rpPreConversion :: Preconversion m a
     }
 
@@ -381,7 +381,7 @@ getLocalScopeGetVars sugarContext par
 writeResult ::
     Monad m =>
     Preconversion m a -> InferState -> ValP m ->
-    Val ((Maybe (ValI m), a), Tree V.IResult UVar) ->
+    Val ((Maybe (ValI m), a), Tree UVar T.Type) ->
     T m (Val (Input.Payload m ()))
 writeResult preConversion inferContext holeStored inferredVal =
     do
@@ -411,7 +411,7 @@ writeResult preConversion inferContext holeStored inferredVal =
                   { Input._varRefsOfLambda = varRefs
                   , Input._userData = a
                   , Input._inferredType = resolved
-                  , Input._inferResult = inferRes
+                  , Input._inferResult = V.IResult V.emptyScope inferRes -- TODO: HACK
                   , Input._evalResults = CurAndPrev noEval noEval
                   , Input._stored = stored
                   , Input._entityId = eId
@@ -424,43 +424,43 @@ writeResult preConversion inferContext holeStored inferredVal =
                 eId = Property.value stored & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
         addBindingsAll ::
-            Tree (Ann (Const (ValP m, (Tree V.IResult UVar, Bool, a)))) V.Term ->
-            Tree (Ann (Const (ValP m, (Tree V.IResult UVar, Tree Pure T.Type, Bool, a)))) V.Term
+            Tree (Ann (Const (ValP m, (Tree UVar T.Type, Bool, a)))) V.Term ->
+            Tree (Ann (Const (ValP m, (Tree UVar T.Type, Tree Pure T.Type, Bool, a)))) V.Term
         addBindingsAll x =
             (Lens.from _HFlip . htraverse1 . Lens._Wrapped . Lens._2) addBindings x
-            & runPureInfer (x ^. annotation . Lens._2 . Lens._1 . V.iScope) inferContext
+            & runPureInfer () inferContext
             & assertSuccessfulInfer
             & fst
         addBindings ::
-            (Tree V.IResult UVar, Bool, a) ->
-            PureInfer (Tree V.Scope UVar) (Tree V.IResult UVar, Tree Pure T.Type, Bool, a)
+            (Tree UVar T.Type, Bool, a) ->
+            PureInfer () (Tree UVar T.Type, Tree Pure T.Type, Bool, a)
         addBindings (inferRes, wasStored, a) =
-            applyBindings (inferRes ^. V.iType)
+            applyBindings inferRes
             <&>
             \resolved -> (inferRes, resolved, wasStored, a)
 
 detachValIfNeeded ::
-    a -> Tree V.IResult UVar -> Val (a, Tree V.IResult UVar) ->
+    a -> Tree UVar T.Type -> Val (a, Tree UVar T.Type) ->
     -- TODO: PureInfer?
-    State InferState (Val (a, Tree V.IResult UVar))
-detachValIfNeeded emptyPl holeIRes x =
+    State InferState (Val (a, Tree UVar T.Type))
+detachValIfNeeded emptyPl holeType x =
     do
         unifyRes <-
             do
-                r <- unify (holeIRes ^. V.iType) xType
+                r <- unify holeType xType
                 -- Verify occurs checks.
                 -- TODO: share with applyBindings that happens for sugaring.
                 s <- State.get
                 _ <-
-                    x ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . Lens._2 . V.iType
+                    x ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . Lens._2
                     & traverse_ applyBindings
                 r <$ State.put s
             & liftPureInfer
         let mkFragmentExpr =
-                FuncType xType holeType & T.TFun & newTerm
+                FuncType xType holeType & T.TFun
+                & UTermBody mempty & UTerm & newVar binding
                 <&> \funcType ->
-                let withTyp typ =
-                        Ann (Const (emptyPl, x ^. annotation . _2 & V.iType .~ typ))
+                let withTyp typ = Ann (Const (emptyPl, typ))
                     func = V.BLeaf V.LHole & withTyp funcType
                 in  func `V.App` x & V.BApp & withTyp holeType
         case unifyRes of
@@ -469,16 +469,14 @@ detachValIfNeeded emptyPl holeIRes x =
                 liftPureInfer mkFragmentExpr
                 <&> assertSuccessfulInfer
     where
-        xType = x ^. annotation . _2 . V.iType
+        xType = x ^. annotation . _2
         liftPureInfer ::
-            PureInfer (Tree V.Scope UVar) a -> State InferState (Either (Tree Pure T.TypeError) a)
+            PureInfer () a -> State InferState (Either (Tree Pure T.TypeError) a)
         liftPureInfer act =
             do
                 st <- Lens.use id
-                runPureInfer scope st act
+                runPureInfer () st act
                     & Lens._Right %%~ \(r, newSt) -> r <$ (id .= newSt)
-        holeType = holeIRes ^. V.iType
-        scope = holeIRes ^. V.iScope
 
 mkResultVals ::
     Monad m =>
@@ -504,7 +502,7 @@ mkResultVals sugarContext scope seed =
 mkResult ::
     Monad m =>
     Preconversion m a -> ConvertM.Context m -> T m () -> Input.Payload m b ->
-    Val ((Maybe (ValI m), a), Tree V.IResult UVar) ->
+    Val ((Maybe (ValI m), a), Tree UVar T.Type) ->
     T m (HoleResult InternalName (T m) (T m))
 mkResult preConversion sugarContext updateDeps holePl x =
     do
@@ -535,13 +533,13 @@ toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 toScoredResults ::
     (Monad f, Monad m) =>
     a -> Preconversion m a -> ConvertM.Context m -> Input.Payload m dummy ->
-    StateT InferState f (Deps, Val ((Maybe (ValI m), a), Tree V.IResult UVar)) ->
+    StateT InferState f (Deps, Val ((Maybe (ValI m), a), Tree UVar T.Type)) ->
     f ( HoleResultScore
       , T m (HoleResult InternalName (T m) (T m))
       )
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
-    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) holeInferRes
+    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) (holeInferRes ^. V.iType)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =
@@ -549,7 +547,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scInferContext .~ inferContext
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( x & Lens.from _HFlip . htraverse1 . Lens._Wrapped %%~ applyBindings . (^. Lens._2 . V.iType)
+    in  ( x & Lens.from _HFlip . htraverse1 . Lens._Wrapped %%~ applyBindings . (^. Lens._2)
           & runPureInfer (holeInferRes ^. V.iScope) inferContext
           & assertSuccessfulInfer
           & fst
@@ -568,6 +566,7 @@ mkResults ::
     )
 mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
     mkResultVals sugarContext (holePl ^. Input.inferResult . V.iScope) base
+    <&> _2 . Lens.from _HFlip . hmapped1 . Lens._Wrapped . _2 %~ (^. V.iType)
     >>= _2 %%~ postProcess
     & toScoredResults emptyPl preConversion sugarContext holePl
 
