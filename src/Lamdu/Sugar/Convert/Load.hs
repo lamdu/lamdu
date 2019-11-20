@@ -84,6 +84,7 @@ preparePayloads nomsMap evalRes inferredVal =
               , Input._stored = valIProp
               , Input._inferredType = typ
               , Input._inferResult = inferRes
+              , Input._inferScope = inferRes ^. V.iScope
               , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ execId
               , Input._userData = ()
               }

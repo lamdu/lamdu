@@ -2,7 +2,8 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
-        , varRefsOfLambda, entityId, inferredType, inferResult, stored, evalResults, userData, localsInScope
+        , varRefsOfLambda, entityId, inferredType, inferResult, stored
+        , evalResults, userData, localsInScope, inferScope
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , preparePayloads
     , SugarInput(..)
@@ -32,6 +33,7 @@ data Payload m a = Payload
     , -- The inference result before binding universal quantifiers,
       -- Useful for resuming inference in holes.
       _inferResult :: Tree V.IResult UVar
+    , _inferScope :: Tree V.Scope UVar
     , _localsInScope :: [V.Var]
     , _stored :: ValP m
     , _evalResults :: CurAndPrev EvalResultsForExpr

@@ -318,7 +318,7 @@ mkOptionFromFragment sugarContext exprPl x =
             & runPureInfer scope inferContext
             & Hole.assertSuccessfulInfer
             & fst
-        scope = exprPl ^. Input.inferResult . V.iScope
+        scope = exprPl ^. Input.inferScope
         topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
         baseExpr = pruneExpr x
         pruneExpr (Ann (Const (Just{}, _)) _) = V.BLeaf V.LHole & Ann (Const ())

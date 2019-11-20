@@ -172,7 +172,7 @@ localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
     { _osiPos = x ^. Input.stored
-    , _osiScope = x ^. Input.inferResult . V.iScope
+    , _osiScope = x ^. Input.inferScope
     }
     & ConvertM.local
 

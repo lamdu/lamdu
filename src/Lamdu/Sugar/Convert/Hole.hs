@@ -132,7 +132,7 @@ mkHoleSuggesteds ::
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferResult . V.iType
     & Suggest.forType
-    & runPureInfer (holePl ^. Input.inferResult . V.iScope) inferContext
+    & runPureInfer (holePl ^. Input.inferScope) inferContext
 
     -- TODO: Change ConvertM to be stateful rather than reader on the
     -- sugar context, to collect union-find updates.
@@ -286,6 +286,7 @@ prepareUnstoredPayloads v =
               , Input._localsInScope = []
               , Input._inferredType = typ
               , Input._inferResult = inferPl
+              , Input._inferScope = V.emptyScope
               , Input._entityId = eId
               , Input._stored =
                 Property.Property
@@ -346,7 +347,7 @@ sugar sugarContext holePl v =
                     & ConvertM.scAnnotationsMode .~ Annotations.None
                 )
     where
-        scope = holePl ^. Input.inferResult . V.iScope
+        scope = holePl ^. Input.inferScope
         makePayloads (term, inferCtx) =
             ( (Lens.from _HFlip . htraverse1 . Lens._Wrapped) mkPayload term
                 & runPureInfer scope inferCtx
@@ -412,6 +413,7 @@ writeResult preConversion inferContext holeStored inferredVal =
                   , Input._userData = a
                   , Input._inferredType = resolved
                   , Input._inferResult = V.IResult V.emptyScope inferRes -- TODO: HACK
+                  , Input._inferScope = V.emptyScope -- TODO: HACK
                   , Input._evalResults = CurAndPrev noEval noEval
                   , Input._stored = stored
                   , Input._entityId = eId
@@ -539,7 +541,7 @@ toScoredResults ::
       )
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
-    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) (holeInferRes ^. V.iType)
+    >>= _2 %%~ toStateT . detachValIfNeeded (Nothing, emptyPl) (holePl ^. Input.inferResult . V.iType)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =
@@ -548,14 +550,12 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
     in  ( x & Lens.from _HFlip . htraverse1 . Lens._Wrapped %%~ applyBindings . (^. Lens._2)
-          & runPureInfer (holeInferRes ^. V.iScope) inferContext
+          & runPureInfer (holePl ^. Input.inferScope) inferContext
           & assertSuccessfulInfer
           & fst
           & resultScore
         , mkResult preConversion newSugarContext updateDeps holePl x
         )
-    where
-        holeInferRes = holePl ^. Input.inferResult
 
 mkResults ::
     Monad m =>
@@ -565,7 +565,7 @@ mkResults ::
     , T m (HoleResult InternalName (T m) (T m))
     )
 mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
-    mkResultVals sugarContext (holePl ^. Input.inferResult . V.iScope) base
+    mkResultVals sugarContext (holePl ^. Input.inferScope) base
     <&> _2 . Lens.from _HFlip . hmapped1 . Lens._Wrapped . _2 %~ (^. V.iType)
     >>= _2 %%~ postProcess
     & toScoredResults emptyPl preConversion sugarContext holePl
