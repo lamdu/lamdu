@@ -41,7 +41,7 @@ import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Data.Tag (Tag(..))
-import           Lamdu.Expr.IRef (ValI, ValP)
+import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID(..))
@@ -120,23 +120,25 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 class ExportSubexpr k where
-    exportSubexpr :: Monad m => Annotated (ValP m) k -> Export m ()
+    exportSubexpr :: Monad m => Tree (Ann (HRef m)) k -> Export m ()
 
 instance ExportSubexpr V.Term where
-    exportSubexpr (Ann (Const lamP) (V.BLam (V.Lam lamVar _))) =
+    exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
         do
             tag <- readAssocTag lamVar & trans
             exportTag tag
             mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
             Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
         where
-            lamI = lamP ^. Property.pVal
+            lamI = lamP ^. ExprIRef.iref
     exportSubexpr _ = pure ()
 
-exportVal :: Monad m => Val (ValP m) -> Export m ()
+exportVal :: Monad m => Tree (Ann (HRef m)) V.Term -> Export m ()
 exportVal x =
     do
-        x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
+        (x & Lens.from _HFlip . hmapped1 .~ Const ())
+            ^.. ExprLens.valGlobals mempty
+            & traverse_ exportDef
         x ^.. ExprLens.valTags & traverse_ exportTag
         x ^.. ExprLens.valNominals & traverse_ exportNominal
         () <$ unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x
@@ -151,8 +153,8 @@ exportDef globalId =
         def ^. Definition.defBody & traverse_ exportVal
         let def' =
                 def
-                & Definition.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
-                    toUUID . Property.value
+                & Definition.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 %~
+                    Const . toUUID . (^. ExprIRef.iref)
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
@@ -163,7 +165,9 @@ exportRepl =
     do
         repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
-        repl <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ toUUID . Property.value & Codec.EntityRepl & tell
+        repl
+            <&> Lens.from _HFlip . hmapped1 %~ Const . toUUID . (^. ExprIRef.iref)
+            & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd

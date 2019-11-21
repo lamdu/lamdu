@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Property as Property
 import           Hyper (Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
@@ -61,5 +60,5 @@ convert (Ann (Const exprPl) (V.Inject tag injected)) =
             >>= addActions [] exprPl
     where
         entityId = exprPl ^. Input.entityId
-        valI = exprPl ^. Input.stored . Property.pVal
-        injectedI = injected ^. annotation . Input.stored . Property.pVal
+        valI = exprPl ^. Input.stored . ExprIRef.iref
+        injectedI = injected ^. annotation . Input.stored . ExprIRef.iref

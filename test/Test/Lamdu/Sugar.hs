@@ -5,20 +5,19 @@ import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
-import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (Code(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Debug as Debug
-import           Lamdu.Expr.IRef (DefI, ValP)
+import           Lamdu.Expr.IRef (DefI, HRef, iref)
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -66,26 +65,26 @@ validateHiddenEntityIds workArea
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
 data PaneLowLevel
-    = PaneDefLowLevel (Def.Definition (Val (ValP ViewM)) (DefI ViewM))
+    = PaneDefLowLevel (Def.Definition (Tree (Ann (HRef ViewM)) Term) (DefI ViewM))
     | PaneTagLowLevel T.Tag
 
 Lens.makePrisms ''PaneLowLevel
 
 data WorkAreaLowLevel = WorkAreaLowLevel
-    { wallRepl :: Def.Expr (Val (ValP ViewM))
+    { wallRepl :: Def.Expr (Tree (Ann (HRef ViewM)) Term)
     , wallPanes :: [PaneLowLevel]
     }
 
-workAreaLowLevelValProps :: WorkAreaLowLevel -> [ValP ViewM]
+workAreaLowLevelValProps :: WorkAreaLowLevel -> [Tree (HRef ViewM) Term]
 workAreaLowLevelValProps (WorkAreaLowLevel r p) =
-    defExprs ^.. Lens.folded . Def.expr . Lens.from _HFlip . hfolded1 . Lens._Wrapped
+    defExprs ^.. Lens.folded . Def.expr . Lens.from _HFlip . hfolded1
     where
         defExprs = r : p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
 
 workAreaLowLevelEntityIds :: WorkAreaLowLevel -> Set EntityId
 workAreaLowLevelEntityIds wall =
     workAreaLowLevelValProps wall
-    <&> EntityId.ofValI . Property.value
+    <&> EntityId.ofValI . (^. iref)
     & Set.fromList
 
 loadPane :: Anchors.Pane ViewM -> T ViewM PaneLowLevel

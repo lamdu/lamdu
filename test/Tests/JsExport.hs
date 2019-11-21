@@ -5,12 +5,13 @@
 module Tests.JsExport where
 
 import qualified Data.ByteString as BS
-import           Lamdu.Calc.Term (Val)
+import           Hyper (Tree, Ann)
+import           Lamdu.Calc.Term (Term)
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Export.JS as ExportJS
-import           Lamdu.Expr.IRef (ValP)
+import           Lamdu.Expr.IRef (HRef)
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Paths as Paths
 import           Lamdu.VersionControl (runAction)
@@ -33,7 +34,7 @@ test =
     , testFieldAndParamUseSameTag
     ]
 
-readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
+readRepl :: T ViewM (Def.Expr (Tree (Ann (HRef ViewM)) Term))
 readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
 nodeRepl :: IO Proc.CreateProcess

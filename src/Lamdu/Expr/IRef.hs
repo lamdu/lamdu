@@ -4,11 +4,9 @@
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody
-    , ValP
     , newVar
 
     , DefI
-    , addProperties
 
     , globalId, defI, nominalI, tagI
     , readTagData
@@ -18,15 +16,12 @@ module Lamdu.Expr.IRef
     , module Revision.Deltum.Hyper
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
-import           Data.Property (Property(..))
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Hyper.Type.Functor (F(..), _F)
 import           Lamdu.Calc.Identifier (Identifier(..))
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition)
@@ -59,17 +54,16 @@ nominalI (T.NominalId (Identifier bs)) =
 
 readTagData :: Monad m => T.Tag -> T m Tag
 readTagData tag =
-    Transaction.irefExists iref
+    Transaction.irefExists i
     >>=
     \case
     False -> pure (Tag 0 NoSymbol mempty)
-    True -> Transaction.readIRef iref
+    True -> Transaction.readIRef i
     where
-        iref = tagI tag
+        i = tagI tag
 
 type ValI m = Tree (F (IRef m)) V.Term
 
-type ValP m = Property (T m) (ValI m)
 type ValBody m = Tree V.Term (F (IRef m))
 
 newVar :: Monad m => T m V.Var
@@ -91,17 +85,3 @@ newValI ::
 newValI = fmap (_F #) . Transaction.newIRef
 
 instance Monad m => HStore m V.Term
-
-addProperties ::
-    Monad m =>
-    (ValI m -> T m ()) ->
-    Val (ValI m, a) ->
-    Val (ValP m, a)
-addProperties setValI (Ann (Const (valI, a)) body) =
-    Ann (Const (Property valI setValI, a)) (body & Lens.indexing htraverse1 %@~ f)
-    where
-        f index =
-            addProperties $ \valINew ->
-            readValI valI
-            <&> Lens.indexing htraverse1 . Lens.index index .~ valINew
-            >>= writeValI valI

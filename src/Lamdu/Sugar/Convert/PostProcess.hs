@@ -18,7 +18,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
-import           Lamdu.Expr.IRef (DefI, ValI, ValP)
+import           Lamdu.Expr.IRef (DefI, ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -41,7 +41,7 @@ makeScheme (Load.InferOut inferredVal inferContext) =
     & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
     <&> (^. Lens._1)
 
-def :: Monad m => Load.InferFunc (ValP m) -> Debug.Monitors -> DefI m -> T m Result
+def :: Monad m => Load.InferFunc (HRef m) -> Debug.Monitors -> DefI m -> T m Result
 def infer monitors defI =
     do
         loadedDef <- ExprLoad.def defI <&> void
@@ -62,13 +62,13 @@ def infer monitors defI =
                         Definition.exprFrozenDeps .~
                         Definition.pruneDefExprDeps defExpr
                     & Definition.defBody . Lens.mapped %~
-                        (^. annotation . Property.pVal)
+                        (^. hAnn . ExprIRef.iref)
                     & Transaction.writeIRef defI
                     )
 
 expr ::
     Monad m =>
-    Load.InferFunc (ValP m) -> Debug.Monitors ->
+    Load.InferFunc (HRef m) -> Debug.Monitors ->
     MkProperty' (T m) (Definition.Expr (ValI m)) ->
     T m Result
 expr infer monitors prop =

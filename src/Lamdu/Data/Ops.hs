@@ -18,6 +18,7 @@ import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
+import           Hyper (Tree)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -27,7 +28,7 @@ import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
 import           Lamdu.Data.Tag (Symbol(..), TextsInLang(..), tagOrder, tagTexts, tagSymbol, getTagName, name)
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (DefI, ValP, ValI)
+import           Lamdu.Expr.IRef (DefI, HRef, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.I18N.LangId (LangId)
 import           Revision.Deltum.Transaction (Transaction)
@@ -37,56 +38,56 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-setToAppliedHole :: Monad m => ValI m -> ValP m -> T m (ValI m)
+setToAppliedHole :: Monad m => ValI m -> Tree (HRef m) V.Term -> T m (ValI m)
 setToAppliedHole innerI destP =
     do
         newFuncI <- newHole
         resI <- ExprIRef.newValI . V.BApp $ V.App newFuncI innerI
-        (destP ^. Property.pSet) resI
+        (destP ^. ExprIRef.setIref) resI
         pure resI
 
-applyHoleTo :: Monad m => ValP m -> T m (ValI m)
-applyHoleTo exprP = setToAppliedHole (exprP ^. Property.pVal) exprP
+applyHoleTo :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
+applyHoleTo exprP = setToAppliedHole (exprP ^. ExprIRef.iref) exprP
 
 newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValI $ V.BLeaf V.LHole
 
-replace :: Monad m => ValP m -> ValI m -> T m (ValI m)
-replace exprP newExprI = newExprI <$ Property.set exprP newExprI
+replace :: Monad m => Tree (HRef m) V.Term -> ValI m -> T m (ValI m)
+replace exprP newExprI = newExprI <$ (exprP ^. ExprIRef.setIref) newExprI
 
-replaceWithHole :: Monad m => ValP m -> T m (ValI m)
+replaceWithHole :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: Monad m => ValP m -> T m (ValI m)
+setToHole :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
 setToHole exprP =
     exprI <$ ExprIRef.writeValI exprI hole
     where
         hole = V.BLeaf V.LHole
-        exprI = Property.value exprP
+        exprI = exprP ^. ExprIRef.iref
 
-lambdaWrap :: Monad m => ValP m -> T m (V.Var, ValP m)
+lambdaWrap :: Monad m => Tree (HRef m) V.Term -> T m (V.Var, Tree (HRef m) V.Term)
 lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
         newExprI <-
-            Property.value exprP & V.Lam newParam & V.BLam
+            exprP ^. ExprIRef.iref & V.Lam newParam & V.BLam
             & ExprIRef.newValI
-        Property.set exprP newExprI
-            <&> (,) newParam
+        (newParam, exprP & ExprIRef.iref .~ newExprI) <$
+            (exprP ^. ExprIRef.setIref) newExprI
 
-redexWrapWithGivenParam :: Monad m => V.Var -> ValI m -> ValP m -> T m (ValP m)
+redexWrapWithGivenParam ::
+    Monad m =>
+    V.Var -> ValI m -> Tree (HRef m) V.Term -> T m (Tree (HRef m) V.Term)
 redexWrapWithGivenParam param newValueI exprP =
     do
-        newLambdaI <- ExprIRef.newValI $ mkLam $ Property.value exprP
+        newLambdaI <- exprP ^. ExprIRef.iref & mkLam & ExprIRef.newValI
         newApplyI <- ExprIRef.newValI . V.BApp $ V.App newLambdaI newValueI
-        (exprP ^. Property.pSet) newApplyI
-        Property (Property.value exprP)
-            (ExprIRef.writeValI newLambdaI . mkLam)
-            & pure
+        (exprP & ExprIRef.setIref .~ (ExprIRef.writeValI newLambdaI . mkLam)) <$
+            (exprP ^. ExprIRef.setIref) newApplyI
     where
         mkLam = V.BLam . V.Lam param
 
-redexWrap :: Monad m => ValP m -> T m (ValI m)
+redexWrap :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
 redexWrap exprP =
     do
         newValueI <- newHole

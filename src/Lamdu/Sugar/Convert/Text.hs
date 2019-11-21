@@ -8,7 +8,6 @@ import           Control.Monad (mzero)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
-import qualified Data.Property as Property
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import           Hyper (Ann(..))
 import           Hyper.Combinator.Ann (Annotated)
@@ -52,4 +51,4 @@ text (Ann (Const toNomPl) (ToNom tid c@(Ann (Const litPl) bod))) =
             } & LiteralText & BodyLiteral & addActions [c] toNomPl
             & lift
     where
-        litIRef = litPl ^. Input.stored . Property.pVal
+        litIRef = litPl ^. Input.stored . ExprIRef.iref

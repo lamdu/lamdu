@@ -13,13 +13,12 @@ import           Control.Monad.Transaction (getP)
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Property as Property
 import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -29,7 +28,7 @@ import           Lamdu.Data.Tag (getTagName, name)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
-import           Lamdu.Expr.IRef (ValI, ValP)
+import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Expr.UniqueId (toUUID)
@@ -58,14 +57,14 @@ instance Has Dir.Layout CompileNameEnv where has = ceLayout
 compileNameEnv :: CompileNameEnv
 compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
-compile :: Monad m => Def.Expr (Val (ValP m)) -> T m String
+compile :: Monad m => Def.Expr (Tree (Ann (HRef m)) Term) -> T m String
 compile repl =
-    repl <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ valId
+    repl <&> Lens.from _HFlip . hmapped1 %~ Const . valId
     & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
     where
-        valId = Compiler.ValId . toUUID . (^. Property.pVal)
+        valId = Compiler.ValId . toUUID . (^. ExprIRef.iref)
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])
@@ -76,7 +75,7 @@ compile repl =
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def
-                <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ valId
+                <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 %~ Const . valId
                 <&> void
                 & lift
             , Compiler.readGlobalType =
@@ -95,7 +94,7 @@ formatResult (Ann _ b) =
     EV.RInject inj -> inj ^. EV.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
-readRepl :: T ViewM (Def.Expr (Val (ValP ViewM)))
+readRepl :: T ViewM (Def.Expr (Tree (Ann (HRef ViewM)) Term))
 readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
@@ -106,7 +105,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . annotation . Property.pVal)
+                . Lens.ix (repl ^. Def.expr . hAnn . ExprIRef.iref)
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

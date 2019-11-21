@@ -30,7 +30,7 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValI)
+import           Lamdu.Expr.IRef (ValI, iref)
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
@@ -77,7 +77,7 @@ mkOptions posInfo sugarContext argI argS exprPl =
             [ App hole hole & V.BApp & Ann (Const ()) | Lens.nullOf (hVal . _BodyLam) argS ]
             <&> Hole.mkOption sugarContext
                 (fragmentResultProcessor topEntityId argI) exprPl
-        topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
+        topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         hole = V.BLeaf V.LHole & Ann (Const ())
 
 mkAppliedHoleSuggesteds ::
@@ -143,7 +143,7 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
                 , _fHeal =
                     ( if isTypeMatch
                         then DataOps.replace stored argIRef <* postProcess
-                        else argIRef <$ healMis (stored ^. Property.pVal)
+                        else argIRef <$ healMis (stored ^. iref)
                     )
                     <&> EntityId.ofValI
                 , _fTypeMatch = isTypeMatch
@@ -153,9 +153,9 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
             & lift
     <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
     where
-        argIRef = argI ^. annotation . Input.stored . Property.pVal
+        argIRef = argI ^. annotation . Input.stored . iref
         stored = exprPl ^. Input.stored
-        storedEntityId = stored & Property.value & EntityId.ofValI
+        storedEntityId = stored ^. iref & EntityId.ofValI
 
 liftPureInfer :: env -> PureInfer env a -> StateT InferState (Either (Tree Pure T.TypeError)) a
 liftPureInfer scope act =
@@ -213,7 +213,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
             & mapStateT (ListClass.take 1)
         fragmentExpr = rawFragmentExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ onFragmentPayload
         onFragmentPayload pl =
-            ( (Just (pl ^. Input.stored . Property.pVal), IsFragment)
+            ( (Just (pl ^. Input.stored . iref), IsFragment)
             , pl ^. Input.inferResult
             )
         fragmentType = rawFragmentExpr ^. annotation . Input.inferResult
@@ -278,7 +278,7 @@ mkResultValFragment inferred x =
     where
         emptyPl = (Nothing, NotFragment)
         onPl Nothing = emptyPl
-        onPl (Just inputPl) = (inputPl ^. Input.stored & Property.value & Just, IsFragment)
+        onPl (Just inputPl) = (inputPl ^. Input.stored . iref & Just, IsFragment)
 
 mkOptionFromFragment ::
     Monad m =>
@@ -317,7 +317,7 @@ mkOptionFromFragment sugarContext exprPl x =
             & Hole.assertSuccessfulInfer
             & fst
         scope = exprPl ^. Input.inferScope
-        topEntityId = exprPl ^. Input.stored . Property.pVal & EntityId.ofValI
+        topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         baseExpr = pruneExpr x
         pruneExpr (Ann (Const (Just{}, _)) _) = V.BLeaf V.LHole & Ann (Const ())
         pruneExpr (Ann _ b) = b & htraverse1 %~ pruneExpr & Ann (Const ())

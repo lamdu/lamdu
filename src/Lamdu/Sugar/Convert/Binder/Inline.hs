@@ -4,16 +4,17 @@ module Lamdu.Sugar.Convert.Binder.Inline
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Property as Property
 import           Hyper
+import           Hyper.Type.Functor (F)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Expr.IRef (ValP, ValI)
+import           Lamdu.Expr.IRef (HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -68,21 +69,22 @@ cursorDest x =
     & (^. _2 . annotation)
 
 inlineLet ::
-    Monad m => ValP m -> Redex (ValI m) -> T m EntityId
+    Monad m =>
+    Tree (HRef m) V.Term -> Tree Redex (F (IRef m)) -> T m EntityId
 inlineLet topLevelProp redex =
-    Property.value topLevelProp & ExprIRef.readRecursively
+    topLevelProp ^. ExprIRef.iref & ExprIRef.readRecursively
     <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readRecursively
     <&> Lens.from _HFlip . hmapped1 %~ Const . Just
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
-        (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just)
+        (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 %~ Const . Just)
     <&> Lens.from _HFlip . hmapped1 %~ f
     >>= ExprIRef.writeRecursively
     <&> (^. hAnn . _1)
-    >>= Property.set topLevelProp
-    & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ EntityId.ofValI) <$)
+    >>= topLevelProp ^. ExprIRef.setIref
+    & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 %~ Const . EntityId.ofValI) <$)
     where
         f (Const Nothing) = ExprIRef.WriteNew :*: Const ()
         f (Const (Just x)) = ExprIRef.ExistingRef x :*: Const ()

@@ -51,7 +51,7 @@ convert posInfo x@(Ann (Const exprPl) app@(V.App funcI argI)) =
                 pure
                     ( if Lens.has (hVal . _BodyHole) argS
                       then
-                          let dst = argI ^. annotation . Input.stored . Property.pVal
+                          let dst = argI ^. annotation . Input.stored . ExprIRef.iref
                               deleteAction =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
@@ -136,7 +136,7 @@ convertPrefix subexprs funcS argS applyPl =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let del =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. annotation . pInput . Input.stored & Property.value)
+                (funcS ^. annotation . pInput . Input.stored . ExprIRef.iref)
                 <&> EntityId.ofValI
         BodySimpleApply App
             { _appFunc = funcS

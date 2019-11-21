@@ -16,8 +16,7 @@ import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (unsafeUnjust)
-import           Data.Property (Property, MkProperty')
-import qualified Data.Property as Property
+import           Data.Property (MkProperty')
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
@@ -32,7 +31,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.IRef (ValI, ValP)
+import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -70,20 +69,20 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m)))
-    , _slLambdaProp :: ValP m
+    { _slLam :: Tree (V.Lam V.Var V.Term) (Ann (HRef m))
+    , _slLambdaProp :: Tree (HRef m) V.Term
     }
 Lens.makeLenses ''StoredLam
 
 slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
-slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . Property.pVal)
+slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . ExprIRef.iref)
 
 mkStoredLam ::
     Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamOut . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored))
+    (lam & V.lamOut . Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -104,8 +103,8 @@ setParamList mPresMode paramListProp newParamList =
                         Infix f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
                         _ -> pure ()
 
-unappliedUsesOfVar :: V.Var -> Val a -> [a]
-unappliedUsesOfVar var (Ann (Const pl) (V.BLeaf (V.LVar v)))
+unappliedUsesOfVar :: V.Var -> Tree (Ann a) V.Term -> [Tree a V.Term]
+unappliedUsesOfVar var (Ann pl (V.BLeaf (V.LVar v)))
     | v == var = [pl]
 unappliedUsesOfVar var (Ann _ (V.BApp (App f x))) =
     rf <> rx
@@ -117,21 +116,21 @@ unappliedUsesOfVar var (Ann _ (V.BApp (App f x))) =
 unappliedUsesOfVar var x =
     (x ^.. hVal . hfolded1) >>= unappliedUsesOfVar var
 
-wrapUnappliedUsesOfVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
+wrapUnappliedUsesOfVar :: Monad m => V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 wrapUnappliedUsesOfVar var = traverse_ DataOps.applyHoleTo . unappliedUsesOfVar var
 
-argsOfCallTo :: V.Var -> Val a -> [a]
+argsOfCallTo :: V.Var -> Tree (Ann a) V.Term -> [Tree a V.Term]
 argsOfCallTo var (Ann _ (V.BApp (App (Ann _ (V.BLeaf (V.LVar v))) x)))
-    | v == var = [x ^. annotation]
+    | v == var = [x ^. hAnn]
 argsOfCallTo var x =
     (x ^.. hVal . hfolded1) >>= argsOfCallTo var
 
 changeCallArgs ::
     Monad m =>
-    (ValI m -> T m (ValI m)) -> Val (ValP m) -> V.Var -> T m ()
+    (ValI m -> T m (ValI m)) -> Tree (Ann (HRef m)) V.Term -> V.Var -> T m ()
 changeCallArgs change v var =
     do
-        argsOfCallTo var v & traverse_ (Property.modify_ ?? change)
+        argsOfCallTo var v & traverse_ (\x -> x ^. ExprIRef.iref & change >>= x ^. ExprIRef.setIref)
         wrapUnappliedUsesOfVar var v
 
 -- | If the lam is bound to a variable, we can fix all uses of the
@@ -149,7 +148,7 @@ fixLamUsages =
     BinderKindLet redexLam ->
         changeCallArgs fixOp (redexLam ^. V.lamOut) (redexLam ^. V.lamIn)
     BinderKindLambda ->
-        protectedSetToVal prop (prop ^. Property.pVal) & void
+        protectedSetToVal prop (prop ^. ExprIRef.iref) & void
         where
             prop = storedLam ^. slLambdaProp
 
@@ -186,15 +185,15 @@ getFieldOnVar =
 
 getFieldParamsToHole ::
     Monad m =>
-    T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T m ()
+    T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (HRef m)) -> T m ()
 getFieldParamsToHole tag (V.Lam param lamBody) =
-    SubExprs.onMatchingSubexprs (SubExprs.toHole . getConst) (getFieldOnVar . Lens.only (param, tag)) lamBody
+    SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
 getFieldParamsToParams ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (Const (ValP m))) -> T.Tag -> T m ()
+    Tree (V.Lam V.Var V.Term) (Ann (HRef m)) -> T.Tag -> T m ()
 getFieldParamsToParams (V.Lam param lamBody) tag =
-    SubExprs.onMatchingSubexprs (toParam . Property.value . getConst)
+    SubExprs.onMatchingSubexprs (toParam . (^. ExprIRef.iref))
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
         toParam bodyI = ExprIRef.writeValI bodyI $ V.BLeaf $ V.LVar param
@@ -304,16 +303,17 @@ mkParamInfo param fp =
     & Map.singleton (fpTag fp)
 
 changeGetFieldTags ::
-    Monad m => V.Var -> T.Tag -> T.Tag -> Val (ValP m) -> T m ()
+    Monad m =>
+    V.Var -> T.Tag -> T.Tag -> Tree (Ann (HRef m)) V.Term -> T m ()
 changeGetFieldTags param prevTag chosenTag x =
     case x ^. hVal of
     V.BGetField (V.GetField (Ann a (V.BLeaf (V.LVar v))) t)
         | v == param && t == prevTag ->
-            V.GetField (a ^. Lens._Wrapped . Property.pVal) chosenTag & V.BGetField
-            & ExprIRef.writeValI (x ^. annotation . Property.pVal)
+            V.GetField (a ^. ExprIRef.iref) chosenTag & V.BGetField
+            & ExprIRef.writeValI (x ^. hAnn . ExprIRef.iref)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
-        | v == param -> DataOps.applyHoleTo (x ^. annotation) & void
+        | v == param -> DataOps.applyHoleTo (x ^. hAnn) & void
     b ->
         traverse_
         (changeGetFieldTags param prevTag chosenTag)
@@ -416,19 +416,21 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                 tag = fpTag fp
                 tagList = fieldParams <&> fpTag
 
-removeCallsToVar :: Monad m => V.Var -> Val (ValP m) -> T m ()
+removeCallsToVar ::
+    Monad m =>
+    V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 removeCallsToVar funcVar x =
     do
-        SubExprs.onMatchingSubexprs (changeRecursion . getConst)
+        SubExprs.onMatchingSubexprs changeRecursion
             ( _Pure . V._BApp . V.appFunc
             . _Pure . V._BLeaf . V._LVar . Lens.only funcVar
             ) x
         wrapUnappliedUsesOfVar funcVar x
     where
         changeRecursion prop =
-            ExprIRef.readValI (Property.value prop)
+            ExprIRef.readValI (prop ^. ExprIRef.iref)
             >>= \case
-            V.BApp (V.App f _) -> (prop ^. Property.pSet) f
+            V.BApp (V.App f _) -> (prop ^. ExprIRef.setIref) f
             _ -> error "assertion: expected BApp"
 
 makeDeleteLambda :: Monad m => BinderKind m -> StoredLam m -> ConvertM m (T m ())
@@ -445,13 +447,14 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 removeCallsToVar
                 (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
             BinderKindLambda -> pure ()
-        let lamBodyI = Property.value (lamBodyStored ^. annotation)
+        let lamBodyI = lamBodyStored ^. hAnn . ExprIRef.iref
         protectedSetToVal lambdaProp lamBodyI & void
 
 convertVarToGetField ::
-    Monad m => T.Tag -> V.Var -> Val (Property (T m) (ValI m)) -> T m ()
+    Monad m =>
+    T.Tag -> V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 convertVarToGetField tagForVar paramVar =
-    SubExprs.onGetVars (convertVar . Property.value) paramVar
+    SubExprs.onGetVars (convertVar . (^. ExprIRef.iref)) paramVar
     where
         convertVar bodyI =
             ExprIRef.newValI (V.BLeaf (V.LVar paramVar))
@@ -685,7 +688,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                         do
                             presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
                             paramList <-
-                                getP (Anchors.assocFieldParamList (lambdaPl ^. Input.stored . Property.pVal))
+                                getP (Anchors.assocFieldParamList (lambdaPl ^. Input.stored . ExprIRef.iref))
                                 <&> (^.. Lens._Just . traverse)
                             let presModeOrder tag =
                                     ( takeWhile (/= tag) presModeTags & length
@@ -708,20 +711,20 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             _ -> []
 
 convertVarToCalls ::
-    Monad m => T m (ValI m) -> V.Var -> Val (ValP m) -> T m ()
+    Monad m => T m (ValI m) -> V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 convertVarToCalls mkArg var =
-    SubExprs.onMatchingSubexprs ((Property.modify_ ?? change) . getConst)
+    SubExprs.onMatchingSubexprs (\x -> x ^. ExprIRef.iref & change >>= x ^. ExprIRef.setIref)
     (_Pure . V._BLeaf . V._LVar . Lens.only var)
     where
         change x = mkArg >>= ExprIRef.newValI . V.BApp . V.App x
 
 convertBinderToFunction ::
     Monad m =>
-    T m (ValI m) -> BinderKind m -> Val (ValP m) ->
-    T m (V.Var, ValP m)
+    T m (ValI m) -> BinderKind m -> Tree (Ann (HRef m)) V.Term ->
+    T m (V.Var, Tree (HRef m) V.Term)
 convertBinderToFunction mkArg binderKind x =
     do
-        (newParam, newValP) <- DataOps.lambdaWrap (x ^. annotation)
+        (newParam, newValP) <- DataOps.lambdaWrap (x ^. hAnn)
         case binderKind of
             BinderKindDef defI ->
                 convertVarToCalls mkArg (ExprIRef.globalId defI) x
@@ -745,7 +748,7 @@ convertEmptyParams binderKind x =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                x & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
+                x & Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure

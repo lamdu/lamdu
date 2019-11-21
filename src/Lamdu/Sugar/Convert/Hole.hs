@@ -55,7 +55,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (ValP, ValI, DefI)
+import           Lamdu.Expr.IRef (HRef(..), ValI, DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
@@ -280,21 +280,21 @@ prepareUnstoredPayloads v =
         mk (inferPl, typ, eId, x) =
             ( eId
             , \varRefs ->
-              Input.Payload
-              { Input._varRefsOfLambda = varRefs
-              , Input._userData = x
-              , Input._localsInScope = []
-              , Input._inferredType = typ
-              , Input._inferResult = inferPl
-              , Input._inferScope = V.emptyScope
-              , Input._entityId = eId
-              , Input._stored =
-                Property.Property
-                (_F # IRef.unsafeFromUUID fakeStored)
-                (error "stored output of base expr used!")
-              , Input._evalResults =
-                CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
-              }
+                Input.Payload
+                { Input._varRefsOfLambda = varRefs
+                , Input._userData = x
+                , Input._localsInScope = []
+                , Input._inferredType = typ
+                , Input._inferResult = inferPl
+                , Input._inferScope = V.emptyScope
+                , Input._entityId = eId
+                , Input._stored =
+                    HRef
+                    (_F # IRef.unsafeFromUUID fakeStored)
+                    (error "stored output of base expr used!")
+                , Input._evalResults =
+                    CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
+                }
             )
             where
                 -- TODO: Which code reads this?
@@ -381,7 +381,7 @@ getLocalScopeGetVars sugarContext par
 -- | Runs inside a forked transaction
 writeResult ::
     Monad m =>
-    Preconversion m a -> InferState -> ValP m ->
+    Preconversion m a -> InferState -> Tree (HRef m) V.Term ->
     Val ((Maybe (ValI m), a), Tree UVar T.Type) ->
     T m (Val (Input.Payload m ()))
 writeResult preConversion inferContext holeStored inferredVal =
@@ -389,21 +389,21 @@ writeResult preConversion inferContext holeStored inferredVal =
         writtenExpr <-
             inferredVal
             & Lens.from _HFlip . hmapped1 %~ intoStorePoint
-            & writeExprMStored (Property.value holeStored)
-            <&> Lens.from _HFlip . hmapped1 %~ (\(ref :*: Const pl) -> Const (ref, pl))
-            <&> ExprIRef.addProperties (holeStored ^. Property.pSet)
+            & writeExprMStored (holeStored ^. ExprIRef.iref)
+            <&> ExprIRef.toHRefs (holeStored ^. ExprIRef.setIref)
             <&> addBindingsAll
-            <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ toPayload
+            <&> Lens.from _HFlip . hmapped1 %~ toPayload
             <&> Input.preparePayloads
             <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd
-        (holeStored ^. Property.pSet) (writtenExpr ^. annotation . _1 . Property.pVal)
+        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. annotation . _1 . ExprIRef.iref)
         writtenExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ snd & preConversion & pure
     where
         intoStorePoint (Const ((mStorePoint, a), inferred)) =
             maybe ExprIRef.WriteNew ExprIRef.ExistingRef mStorePoint :*:
             Const (inferred, Lens.has Lens._Just mStorePoint, a)
-        toPayload (stored, (inferRes, resolved, wasStored, a)) =
+        toPayload (stored :*: Const (inferRes, resolved, wasStored, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
+            Const
             ( eId
             , \varRefs ->
               ( wasStored
@@ -423,13 +423,13 @@ writeResult preConversion inferContext holeStored inferredVal =
               )
             )
             where
-                eId = Property.value stored & EntityId.ofValI
+                eId = stored ^. ExprIRef.iref & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
         addBindingsAll ::
-            Tree (Ann (Const (ValP m, (Tree UVar T.Type, Bool, a)))) V.Term ->
-            Tree (Ann (Const (ValP m, (Tree UVar T.Type, Tree Pure T.Type, Bool, a)))) V.Term
+            Tree (Ann (HRef m :*: Const (Tree UVar T.Type, Bool, a))) V.Term ->
+            Tree (Ann (HRef m :*: Const (Tree UVar T.Type, Tree Pure T.Type, Bool, a))) V.Term
         addBindingsAll x =
-            (Lens.from _HFlip . htraverse1 . Lens._Wrapped . Lens._2) addBindings x
+            (Lens.from _HFlip . htraverse1 . Lens._2 . Lens._Wrapped) addBindings x
             & runPureInfer () inferContext
             & assertSuccessfulInfer
             & fst

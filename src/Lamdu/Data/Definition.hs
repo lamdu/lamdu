@@ -12,10 +12,10 @@ import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Hyper (Tree, Pure)
+import           Hyper
 import           Lamdu.Calc.Definition (Deps, depsGlobalTypes, depsNominals)
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term (Term)
 import           Lamdu.Calc.Type (Scheme)
 
 import           Lamdu.Prelude
@@ -56,12 +56,15 @@ Lens.makeLenses ''Definition
 Lens.makeLenses ''Expr
 
 -- Prune dependencies of an Expr after edits.
-pruneDefExprDeps :: Expr (Val a) -> Deps
+pruneDefExprDeps :: Expr (Tree (Ann a) Term) -> Deps
 pruneDefExprDeps defExpr =
     defExpr ^. exprFrozenDeps
     & depsGlobalTypes %~ setMapIntersection valVars
     & depsNominals %~ setMapIntersection valNoms
     where
         val = defExpr ^. expr
-        valVars = val ^..  ExprLens.valGlobals mempty & Set.fromList
+        valVars =
+            (val & Lens.from _HFlip %~ hmap (\_ _ -> Const ()))
+            ^.. ExprLens.valGlobals mempty
+            & Set.fromList
         valNoms = val ^.. ExprLens.valNominals & Set.fromList

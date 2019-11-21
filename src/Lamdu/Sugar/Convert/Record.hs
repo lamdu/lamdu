@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Record
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Property as Property
 import           Hyper (Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -22,7 +21,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.stored . Property.pVal
+plValI = Input.stored . ExprIRef.iref
 
 convertEmpty ::
     (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)

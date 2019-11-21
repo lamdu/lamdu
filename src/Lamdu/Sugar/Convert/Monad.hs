@@ -67,7 +67,7 @@ data TagFieldParam
       CollidingFieldParam TagParamInfo
 
 data OuterScopeInfo m = OuterScopeInfo
-    { _osiPos :: ExprIRef.ValP m
+    { _osiPos :: Tree (ExprIRef.HRef m) V.Term
     , _osiScope :: Tree V.Scope UVar
     }
 Lens.makeLenses ''OuterScopeInfo
@@ -142,7 +142,7 @@ typeProtect checkOk act =
 typeProtectedSetToVal ::
     Monad m =>
     ConvertM m
-    (ExprIRef.ValP m -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
+    (Tree (ExprIRef.HRef m) V.Term -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
 typeProtectedSetToVal =
     Lens.view scPostProcessRoot
     <&> \checkOk dest valI ->

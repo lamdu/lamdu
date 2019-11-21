@@ -8,7 +8,6 @@ import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
-import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Type.AST.FuncType (funcIn, funcOut)
@@ -17,13 +16,12 @@ import           Hyper.Type.AST.Scheme (sTyp)
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (ValI, ValP)
+import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
@@ -40,7 +38,7 @@ type T = Transaction
 
 data IsHoleArg = IsHoleArg | NotHoleArg deriving Eq
 
-argToHoleFunc :: Lens.Traversal' (Val a) (Val a)
+argToHoleFunc :: Lens.Traversal' (Tree (Ann a) V.Term) (Tree (Ann a) V.Term)
 argToHoleFunc =
     ExprLens.valApply .
     Lens.filteredBy (V.appFunc . ExprLens.valHole) .
@@ -48,8 +46,8 @@ argToHoleFunc =
 
 recursivelyFixExpr ::
     Monad m =>
-    (IsHoleArg -> Val a -> Maybe ((IsHoleArg -> Val a -> m ()) -> m ())) ->
-    Val a -> m ()
+    (IsHoleArg -> Tree (Ann a) V.Term -> Maybe ((IsHoleArg -> Tree (Ann a) V.Term -> m ()) -> m ())) ->
+    Tree (Ann a) V.Term -> m ()
 recursivelyFixExpr mFix =
     go NotHoleArg
     where
@@ -62,14 +60,14 @@ recursivelyFixExpr mFix =
             Just arg -> go IsHoleArg arg
             Nothing -> traverse_ (go NotHoleArg) (x ^.. hVal . htraverse1)
 
-changeFuncRes :: Monad m => V.Var -> Val (ValP m) -> T m ()
+changeFuncRes :: Monad m => V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 changeFuncRes usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Ann (Const pl) (V.BLeaf (V.LVar v)))
+        mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix isHoleArg
-            (Ann (Const pl) (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
+            (Ann pl (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar =
             Just $
             \go ->
@@ -79,11 +77,11 @@ changeFuncRes usedDefVar =
         mFix _ _ = Nothing
 
 -- | Only if hole not already applied to it
-applyHoleTo :: Monad m => Val (ValP m) -> T m ()
+applyHoleTo :: Monad m => Tree (Ann (HRef m)) V.Term -> T m ()
 applyHoleTo x
     | Lens.has argToHoleFunc x
     || Lens.has ExprLens.valHole x = pure ()
-    | otherwise = x ^. annotation & DataOps.applyHoleTo & void
+    | otherwise = x ^. hAnn & DataOps.applyHoleTo & void
 
 data RecordChange = RecordChange
     { fieldsAdded :: Set T.Tag
@@ -95,8 +93,8 @@ data ArgChange = ArgChange | ArgRecordChange RecordChange
 
 fixArg ::
     Monad m =>
-    ArgChange -> Val (ValP m) ->
-    (IsHoleArg -> Val (ValP m) -> T m ()) ->
+    ArgChange -> Tree (Ann (HRef m)) V.Term ->
+    (IsHoleArg -> Tree (Ann (HRef m)) V.Term -> T m ()) ->
     T m ()
 fixArg ArgChange arg go =
     do
@@ -105,19 +103,19 @@ fixArg ArgChange arg go =
 fixArg (ArgRecordChange recChange) arg go =
     ( if Set.null (fieldsRemoved recChange)
         then
-            arg ^. annotation . Property.pVal
+            arg ^. hAnn . ExprIRef.iref
             <$ changeFields (fieldsChanged recChange) arg go
         else
             do
                 go IsHoleArg arg
                 V.App
                     <$> DataOps.newHole
-                    ?? arg ^. annotation . Property.pVal
+                    ?? arg ^. hAnn . ExprIRef.iref
                     <&> V.BApp
                     >>= ExprIRef.newValI
     )
     >>= addFields (fieldsAdded recChange)
-    >>= arg ^. annotation . Property.pSet
+    >>= arg ^. hAnn . ExprIRef.setIref
 
 addFields :: Monad m => Set T.Tag -> ValI m -> Transaction m (ValI m)
 addFields fields src =
@@ -130,8 +128,8 @@ addFields fields src =
 
 changeFields ::
     Monad m =>
-    Map T.Tag ArgChange -> Val (ValP m) ->
-    (IsHoleArg -> Val (ValP m) -> T m ()) ->
+    Map T.Tag ArgChange -> Tree (Ann (HRef m)) V.Term ->
+    (IsHoleArg -> Tree (Ann (HRef m)) V.Term -> T m ()) ->
     T m ()
 changeFields changes arg go
     | Map.null changes = go NotHoleArg arg
@@ -149,11 +147,11 @@ changeFields changes arg go
                     changeFields (Map.delete tag changes) rest go
         _ -> fixArg ArgChange arg go
 
-changeFuncArg :: Monad m => ArgChange -> V.Var -> Val (ValP m) -> T m ()
+changeFuncArg :: Monad m => ArgChange -> V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 changeFuncArg change usedDefVar =
     recursivelyFixExpr mFix
     where
-        mFix NotHoleArg (Ann (Const pl) (V.BLeaf (V.LVar v)))
+        mFix NotHoleArg (Ann pl (V.BLeaf (V.LVar v)))
             | v == usedDefVar = DataOps.applyHoleTo pl & void & const & Just
         mFix _ (Ann _ (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) arg)))
             | v == usedDefVar = fixArg change arg & Just
@@ -201,7 +199,7 @@ argChangeType prevArg newArg =
 fixDefExpr ::
     Monad m =>
     Tree Pure T.Scheme -> Tree Pure T.Scheme ->
-    V.Var -> Val (ValP m) -> T m ()
+    V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
 fixDefExpr prevType newType usedDefVar defExpr =
     ( -- Function result changed (arg is the same).
         changeFuncRes usedDefVar defExpr <$
@@ -218,13 +216,13 @@ fixDefExpr prevType newType usedDefVar defExpr =
 updateDefType ::
     Monad m =>
     Tree Pure T.Scheme -> Tree Pure T.Scheme -> V.Var ->
-    Def.Expr (Val (ValP m)) -> (Def.Expr (ValI m) -> T m ()) ->
+    Def.Expr (Tree (Ann (HRef m)) V.Term) -> (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcess.Result ->
     T m ()
 updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
     do
         defExpr
-            <&> (^. annotation . Property.pVal)
+            <&> (^. hAnn . ExprIRef.iref)
             & Def.exprFrozenDeps . depsGlobalTypes . Lens.at usedDefVar ?~ newType
             & setDefExpr
         x <- typeCheck
@@ -234,7 +232,7 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
 
 scan ::
     Monad m =>
-    EntityId -> Def.Expr (Val (ValP m)) ->
+    EntityId -> Def.Expr (Tree (Ann (HRef m)) V.Term) ->
     (Def.Expr (ValI m) -> T m ()) ->
     T m PostProcess.Result ->
     T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m) ()))

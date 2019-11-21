@@ -15,7 +15,6 @@ import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
-import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Infer (InferResult(..), _InferResult, infer)
 import           Hyper.Type.AST.FuncType (FuncType(..))
@@ -35,7 +34,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import           Lamdu.Eval.Results.Process (addTypes)
-import           Lamdu.Expr.IRef (ValI, ValP)
+import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Sugar.Convert.Input (EvalResultsForExpr(..))
@@ -50,8 +49,8 @@ import           Lamdu.Prelude
 type T = Transaction
 
 type InferFunc a =
-    Definition.Expr (Val a) ->
-    PureInfer (Tree V.Scope UVar) (Tree (Ann (Const a :*: InferResult UVar)) V.Term, Tree V.Scope UVar)
+    Definition.Expr (Tree (Ann a) V.Term) ->
+    PureInfer (Tree V.Scope UVar) (Tree (Ann (a :*: InferResult UVar)) V.Term, Tree V.Scope UVar)
 
 unmemoizedInfer :: InferFunc a
 unmemoizedInfer defExpr =
@@ -66,7 +65,7 @@ preparePayloads ::
     Tree V.Scope UVar ->
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Annotated (ValP m, Tree Pure T.Type, Tree UVar T.Type) V.Term ->
+    Annotated (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type) V.Term ->
     Annotated (Input.Payload m ()) V.Term
 preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
     inferredVal
@@ -85,12 +84,12 @@ preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
               , Input._inferredType = typ
               , Input._inferResult = inferRes
               , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
-              , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ (valIProp ^. Property.pVal)
+              , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ (valIProp ^. ExprIRef.iref)
               , Input._userData = ()
               }
             )
             where
-                eId = valIProp ^. Property.pVal & EntityId.ofValI
+                eId = valIProp ^. ExprIRef.iref & EntityId.ofValI
 
 exprEvalRes ::
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
@@ -129,12 +128,12 @@ makeNominalsMap tids =
                             & traverse_ loadForTid
 
 readValAndAddProperties ::
-    Monad m => ValP m -> T m (Val (ValP m))
+    Monad m => Tree (HRef m) V.Term -> T m (Tree (Ann (HRef m)) V.Term)
 readValAndAddProperties prop =
-    ExprIRef.readRecursively (prop ^. Property.pVal)
-    <&> Lens.from _HFlip . hmapped1 %~ Const . (, ())
-    <&> ExprIRef.addProperties (prop ^. Property.pSet)
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst
+    ExprIRef.readRecursively (prop ^. ExprIRef.iref)
+    <&> Lens.from _HFlip . hmapped1 %~ (:*: Const ())
+    <&> ExprIRef.toHRefs (prop ^. ExprIRef.setIref)
+    <&> Lens.from _HFlip . hmapped1 %~ (^. Lens._1)
 
 data InferOut m = InferOut
     { _irVal :: Val (Input.Payload m [EntityId])
@@ -144,14 +143,14 @@ Lens.makeLenses ''InferOut
 
 resolve ::
     RTraversable t =>
-    Annotated (ValP m, Tree UVar T.Type) t ->
-    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree Pure T.Type, Tree UVar T.Type) t)
+    Annotated (Tree (HRef m) V.Term, Tree UVar T.Type) t ->
+    PureInfer (Tree V.Scope UVar) (Annotated (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type) t)
 resolve =
     Lens.from _HFlip (htraverse (const (Lens._Wrapped f)))
     where
         f ::
-            (ValP m, Tree UVar T.Type) ->
-            PureInfer (Tree V.Scope UVar) (ValP m, Tree Pure T.Type, Tree UVar T.Type)
+            (Tree (HRef m) V.Term, Tree UVar T.Type) ->
+            PureInfer (Tree V.Scope UVar) (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type)
         f (stored, inferred) =
             applyBindings inferred
             <&> \x -> (stored, x, inferred)
@@ -159,7 +158,7 @@ resolve =
 runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    PureInfer (Tree V.Scope UVar) (Annotated (ValP m, Tree UVar T.Type) V.Term, Tree V.Scope UVar) ->
+    PureInfer (Tree V.Scope UVar) (Annotated (Tree (HRef m) V.Term, Tree UVar T.Type) V.Term, Tree V.Scope UVar) ->
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors
@@ -189,9 +188,9 @@ runInferResult _monitors evalRes act =
 
 inferDef ::
     Monad m =>
-    InferFunc (ValP m) -> Debug.Monitors ->
+    InferFunc (HRef m) -> Debug.Monitors ->
     CurAndPrev (EvalResults (ValI m)) ->
-    Definition.Expr (Val (ValP m)) -> V.Var ->
+    Definition.Expr (Tree (Ann (HRef m)) V.Term) -> V.Var ->
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 inferDef inferFunc monitors results defExpr defVar =
     do
@@ -200,15 +199,15 @@ inferDef inferFunc monitors results defExpr defVar =
             inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
         (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . Lens._2 . _InferResult . _ANode)
-    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (\(Const x :*: InferResult r) -> Const (x, r ^. _ANode))
+    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (\(x :*: InferResult r) -> Const (x, r ^. _ANode))
     & runInferResult monitors results
 
 inferDefExpr ::
     Monad m =>
-    InferFunc (ValP m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
-    Definition.Expr (Val (ValP m)) ->
+    InferFunc (HRef m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Definition.Expr (Tree (Ann (HRef m)) V.Term) ->
     T m (Either (Tree Pure T.TypeError) (InferOut m))
 inferDefExpr inferFunc monitors results defExpr =
     inferFunc defExpr
-    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (\(Const x :*: InferResult r) -> Const (x, r ^. _ANode))
+    <&> Lens._1 . Lens.from _HFlip . hmapped1 %~ (\(x :*: InferResult r) -> Const (x, r ^. _ANode))
     & runInferResult monitors results

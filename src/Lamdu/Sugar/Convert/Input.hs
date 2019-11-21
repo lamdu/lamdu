@@ -22,7 +22,7 @@ import           Lamdu.Calc.Infer (InferState, runPureInfer)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.IRef (ValP)
+import           Lamdu.Expr.IRef (HRef)
 import           Lamdu.Sugar.EntityId (EntityId)
 
 import           Lamdu.Prelude
@@ -40,7 +40,7 @@ data Payload m a = Payload
       _inferResult :: Tree UVar Type
     , _inferScope :: Tree V.Scope UVar
     , _localsInScope :: [V.Var]
-    , _stored :: ValP m
+    , _stored :: Tree (HRef m) V.Term
     , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]

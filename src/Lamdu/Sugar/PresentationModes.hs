@@ -7,7 +7,6 @@ import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
-import qualified Data.Property as Property
 import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -19,6 +18,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
+import           Revision.Deltum.Hyper (iref)
 
 import           Lamdu.Prelude
 
@@ -43,7 +43,7 @@ makeLabeledApply func args punnedArgs exprPl =
                 & hVal . Sugar._BodyHole . Sugar.holeMDelete ?~
                     (protectedSetToVal
                         (exprPl ^. Input.stored)
-                        (other ^. annotation . pInput . Input.stored . Property.pVal)
+                        (other ^. annotation . pInput . Input.stored . iref)
                         <&> EntityId.ofValI
                     )
         let (specialArgs, removedKeys) =

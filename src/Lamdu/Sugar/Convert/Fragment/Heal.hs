@@ -14,7 +14,7 @@ import qualified Lamdu.Calc.Infer as Infer
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValI, ValP, globalId)
+import           Lamdu.Expr.IRef (ValI, HRef, globalId, iref)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -54,7 +54,7 @@ fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
 
 prepareInFragExpr ::
     Monad m =>
-    Annotated (ValP m) Term ->
+    Annotated (Tree (HRef m) Term) Term ->
     Annotated (Priority, EditAction (T m ())) Term
 prepareInFragExpr (Ann (Const a) v) =
     v & htraverse1 %~ prepareInFragExpr
@@ -64,13 +64,13 @@ prepareInFragExpr (Ann (Const a) v) =
 prepare ::
     Monad m =>
     ValI m ->
-    Annotated (ValP m) Term ->
+    Annotated (Tree (HRef m) Term) Term ->
     Annotated (Priority, EditAction (T m ())) Term
 prepare fragI (Ann (Const a) v) =
-    if fragI == a ^. Property.pVal
+    if fragI == a ^. iref
     then
         fragmented ^. hVal & htraverse1 %~ prepareInFragExpr
-        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. annotation . Property.pVal))))
+        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. annotation . iref))))
     else
         v & htraverse1 %~ prepare fragI
         & Ann (Const ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))
@@ -105,7 +105,9 @@ healMismatch =
             & Infer.runPureInfer V.emptyScope
                 (Infer.InferState Infer.emptyPureInferState Infer.varGen)
             & either (error "bug in heal!")
-                (traverse_ act . (^.. Lens.from _HFlip . hfolded1) . fst)
+                -- Doing the inner changes first and then the outer ones so that
+                -- setting inner properties won't override outer iref values
+                (traverse_ act . reverse . (^.. Lens.from _HFlip . hfolded1) . fst)
             >> postProcess
     where
         act (Const (_, OnUnify x) :*: Good{}) = x

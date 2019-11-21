@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import           Data.Property (Property(..))
-import qualified Data.Property as Property
 import           Hyper (Ann(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Val)
@@ -44,7 +43,7 @@ convertLiteralCommon mkLit mkBody x exprPl =
       PrimVal.fromKnown . mkBody
     } & mkLit & BodyLiteral & addActions [] exprPl
     where
-        iref = exprPl ^. Input.stored . Property.pVal
+        iref = exprPl ^. Input.stored . ExprIRef.iref
 
 convertLiteralFloat ::
     (Monad m, Monoid a) =>

@@ -1,18 +1,17 @@
-{-# LANGUAGE TypeFamilies, TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, _HFlip, hmapped1)
+import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Expr.IRef (DefI, ValI, ValP)
+import           Lamdu.Expr.IRef (DefI, ValI, HRef(..))
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -21,23 +20,23 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-expr :: Monad m => ValP m -> T m (Val (ValP m))
-expr (Property valI writeRoot) =
+expr :: Monad m => Tree (HRef m) Term -> T m (Tree (Ann (HRef m)) Term)
+expr (HRef valI writeRoot) =
     ExprIRef.readRecursively valI
-    <&> Lens.from _HFlip . hmapped1 %~ Const . (, ())
-    <&> ExprIRef.addProperties writeRoot
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst
+    <&> Lens.from _HFlip . hmapped1 %~ (:*: Const ())
+    <&> ExprIRef.toHRefs writeRoot
+    <&> Lens.from _HFlip . hmapped1 %~ (^. Lens._1)
 
 defExprH ::
     Monad m =>
     (ValI m -> T m ()) -> Definition.Expr (ValI m) ->
-    T m (Definition.Expr (Val (ValP m)))
-defExprH setExpr loaded = loaded & Definition.expr %%~ expr . (`Property` setExpr)
+    T m (Definition.Expr (Tree (Ann (HRef m)) Term))
+defExprH setExpr loaded = loaded & Definition.expr %%~ expr . (`HRef` setExpr)
 
 defExpr ::
     Monad m =>
     Property.MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m (Definition.Expr (Val (ValP m)))
+    T m (Definition.Expr (Tree (Ann (HRef m)) Term))
 defExpr mkProp =
     do
         loaded <- mkProp ^. Property.mkProperty <&> Property.value
@@ -45,7 +44,7 @@ defExpr mkProp =
     where
         setExpr e val = val & Definition.expr .~ e
 
-def :: Monad m => DefI m -> T m (Definition (Val (ValP m)) (DefI m))
+def :: Monad m => DefI m -> T m (Definition (Tree (Ann (HRef m)) Term) (DefI m))
 def defI =
     Transaction.readIRef defI
     <&> Definition.defPayload .~ defI

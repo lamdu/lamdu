@@ -17,7 +17,7 @@ import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, ValP)
+import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
@@ -46,15 +46,15 @@ lamParamToHole ::
     Monad m =>
     Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> T m ()
 lamParamToHole (V.Lam param x) =
-    SubExprs.getVarsToHole param (x & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored))
+    SubExprs.getVarsToHole param (x & Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
 
 makeInline ::
     Monad m =>
-    ValP m -> Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
+    Tree (HRef m) V.Term -> Tree Redex (Const (Input.Payload m a)) -> EntityId -> BinderVarInline (T m)
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after ++ before)
     | otherwise =
-        inlineLet stored (redex <&> (^. Input.stored) <&> Property.value)
+        inlineLet stored (redex & hmapped1 %~ (^. Lens._Wrapped . Input.stored . ExprIRef.iref))
         & InlineVar
     where
         otherUses = filter (/= useId) uses
@@ -64,19 +64,19 @@ makeInline stored redex useId
 convertLet ::
     (Monad m, Monoid a) =>
     Input.Payload m a ->
-    Redex (Input.Payload m a) ->
+    Tree Redex (Const (Input.Payload m a)) ->
     ConvertM m
     (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
 convertLet pl redex =
     do
-        float <- makeFloatLetToOuterScope (pl ^. Input.stored . Property.pSet) redex
+        float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
         tag <- ConvertTag.taggedEntity param
         (value, letBody, actions) <-
             do
                 (_pMode, value) <-
                     convertAssignment binderKind param (redex ^. Redex.arg)
                     <&> _2 . annotation . pInput . Input.entityId .~
-                        EntityId.ofValI (redex ^. Redex.arg . annotation . Input.stored . Property.pVal)
+                        EntityId.ofValI (redex ^. Redex.arg . annotation . Input.stored . ExprIRef.iref)
                 letBody <-
                     convertBinder bod
                     & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -90,7 +90,7 @@ convertLet pl redex =
                 & extract .~ float
                 & mReplaceParent ?~
                     ( protectedSetToVal stored
-                        (redex ^. Redex.arg . annotation . Input.stored . Property.pVal)
+                        (redex ^. Redex.arg . annotation . Input.stored . ExprIRef.iref)
                         <&> EntityId.ofValI
                     )
         postProcess <- ConvertM.postProcessAssert
@@ -121,7 +121,7 @@ convertLet pl redex =
                 Const ConvertPayload
                 { _pInput =
                     pl
-                    & Input.userData .~ redex ^. Redex.lamPl . Input.userData
+                    & Input.userData .~ redex ^. Redex.lamPl . Lens._Wrapped . Input.userData
                 , _pActions = actions
                 }
             }
@@ -130,7 +130,7 @@ convertLet pl redex =
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            & V.lamOut . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
+            & V.lamOut . Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 

@@ -3,13 +3,12 @@
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens.Extended as Lens
-import qualified Data.Property as Property
 import           Hyper (Tree, Ann(..), _Pure, annotation, hVal)
 import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (bParamScopeId)
-import           Lamdu.Expr.IRef (ValI)
+import           Lamdu.Expr.IRef (ValI, iref)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -79,4 +78,4 @@ convertIfElse setToVal caseBody =
                     alt ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
                     . Lens.filteredBy (hVal . _BinderExpr) . annotation
                     & fromMaybe (alt ^. ciExpr . annotation)
-                    & (^. pInput . Input.stored . Property.pVal)
+                    & (^. pInput . Input.stored . iref)

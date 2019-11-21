@@ -15,7 +15,7 @@ import           Hyper
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -24,7 +24,7 @@ import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Results.Process (addTypes)
-import           Lamdu.Expr.IRef (DefI, ValI, ValP)
+import           Lamdu.Expr.IRef (DefI, ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.I18N.LangId (LangId)
@@ -101,7 +101,7 @@ convertInferDefExpr ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    Tree Pure T.Scheme -> Definition.Expr (Val (ValP m)) -> DefI m ->
+    Tree Pure T.Scheme -> Definition.Expr (Tree (Ann (HRef m)) Term) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
@@ -161,7 +161,7 @@ convertDefBody ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    Definition.Definition (Val (ValP m)) (DefI m) ->
+    Definition.Definition (Tree (Ann (HRef m)) Term) (DefI m) ->
     T m
     (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =

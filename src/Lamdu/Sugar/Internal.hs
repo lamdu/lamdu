@@ -11,10 +11,12 @@ module Lamdu.Sugar.Internal
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP)
-import qualified Data.Property as Property
 import           Data.UUID.Types (UUID)
+import           Hyper
+import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Expr.IRef (HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -81,12 +83,13 @@ taggedName x = Anchors.assocTag x & getP <&> nameWithContext x
 type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
 
 replaceWith ::
-    Monad m => ExprIRef.ValP m -> ExprIRef.ValP m ->
+    Monad m =>
+    Tree (HRef m) Term -> Tree (HRef m) Term ->
     T m EntityId
 replaceWith parentP replacerP =
-    EntityId.ofValI replacerI <$ Property.set parentP replacerI
+    EntityId.ofValI replacerI <$ (parentP ^. ExprIRef.setIref) replacerI
     where
-        replacerI = Property.value replacerP
+        replacerI = replacerP ^. ExprIRef.iref
 
 Lens.makeLenses ''ConvertPayload
 Lens.makeLenses ''InternalName

@@ -13,12 +13,11 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.IORef.Extended
 import qualified Data.Monoid as Monoid
-import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Type.Functor (_F)
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Term (Val, Term)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -95,13 +94,18 @@ eDb = dbMVar . eParams
 
 loadDef ::
     Evaluator -> DefI ViewM ->
-    IO (Def.Definition (Val (ExprIRef.ValP ViewM)) (DefI ViewM))
+    IO (Def.Definition (Tree (Ann (ExprIRef.HRef ViewM)) Term) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
 evalActions :: Evaluator -> Eval.Actions (ValI ViewM)
 evalActions evaluator =
     Eval.Actions
-    { Eval._aLoadGlobal = loadGlobal
+    { Eval._aLoadGlobal =
+        \globalId ->
+        ExprIRef.defI globalId
+        & loadDef evaluator
+        <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 %~ Const . (^. ExprIRef.iref)
+        <&> Lens.mapped .~ ()
     , Eval._aReportUpdatesAvailable =
       do
           res <- getLatestResults evaluator
@@ -110,12 +114,6 @@ evalActions evaluator =
           resultsUpdated (eParams evaluator)
     , Eval._aJSDebugPaths = jsDebugPaths (eParams evaluator)
     }
-    where
-        loadGlobal globalId =
-            ExprIRef.defI globalId
-            & loadDef evaluator
-            <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Property.value
-            <&> Lens.mapped .~ ()
 
 replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
 replIRef = DbLayout.repl DbLayout.codeIRefs
@@ -134,7 +132,7 @@ start evaluator =
         DbLayout.repl DbLayout.codeAnchors
         & Load.defExpr
         & runViewTransactionInIO (eDb evaluator)
-        <&> Lens.mapped . Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Property.value
+        <&> Lens.mapped . Lens.from _HFlip . hmapped1 %~ Const . (^. ExprIRef.iref)
         >>= startBG
             (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)

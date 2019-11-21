@@ -6,14 +6,13 @@ module Lamdu.Sugar.Convert.Composite
     ) where
 
 import qualified Control.Lens.Extended as Lens
-import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValBody, ValI, ValP)
+import           Lamdu.Expr.IRef (ValBody, ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -33,7 +32,7 @@ type T = Transaction
 
 deleteItem ::
     Monad m =>
-    ValP m -> ValI m ->
+    Tree (HRef m) V.Term -> ValI m ->
     ConvertM m (T m EntityId)
 deleteItem stored restI =
     ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
@@ -51,7 +50,7 @@ convertAddItem extendOp existingTags pl =
             <&>
             \protectedSetToVal tag ->
             do
-                DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. Property.pVal)
+                DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. ExprIRef.iref)
                 _ <- protectedSetToVal stored resultI
                 DataOps.setTagOrder tag (Set.size existingTags)
                 EntityId.ofValI newValI & pure
@@ -81,7 +80,7 @@ convertExtend cons extendOp valS exprPl extendV restC =
         itemS <-
             convertItem cons (exprPl ^. Input.stored)
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
-            (extendV & extendRest %~ (^. Input.stored . Property.pVal))
+            (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
         let addItem =
                 do
@@ -113,7 +112,7 @@ convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
             (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
-            (extendV & extendRest %~ (^. Input.stored . Property.pVal))
+            (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
             <&> (:[])
         )
     <*> pure []
@@ -121,7 +120,8 @@ convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     <*> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
 
 convertOpenCompositeActions ::
-    Monad m => V.Leaf -> ValP m -> ConvertM m (OpenCompositeActions (T m))
+    Monad m =>
+    V.Leaf -> Tree (HRef m) V.Term -> ConvertM m (OpenCompositeActions (T m))
 convertOpenCompositeActions leaf stored =
     ConvertM.typeProtectedSetToVal
     <&>
@@ -161,7 +161,7 @@ convertEmpty extendOp exprPl =
 convertItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
-    ValP m ->
+    Tree (HRef m) V.Term ->
     EntityId -> Set T.Tag -> expr ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
@@ -175,7 +175,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
                     cons newTag exprI restI & ExprIRef.writeValI valI
                     protectedSetToVal stored valI & void
                 where
-                    valI = stored ^. Property.pVal
+                    valI = stored ^. ExprIRef.iref
         tagS <- ConvertTag.ref tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
         pure CompositeItem
             { _ciTag = tagS

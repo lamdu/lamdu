@@ -85,20 +85,21 @@ mkExtractToDef exprPl =
             _ -> error "Bug!"
         let param = ExprIRef.globalId newDefI
         getVarI <- V.LVar param & V.BLeaf & ExprIRef.newValI
-        (exprPl ^. Input.stored . Property.pSet) getVarI
+        (exprPl ^. Input.stored . ExprIRef.setIref) getVarI
         depsGlobalTypes . Lens.at param ?~ scheme
             & Property.pureModify (ctx ^. ConvertM.scFrozenDeps)
         postProcess
         EntityId.ofIRef newDefI & pure
     where
-        valI = exprPl ^. Input.stored . Property.pVal
+        valI = exprPl ^. Input.stored . ExprIRef.iref
 
 mkExtractToLet ::
-    Monad m => ExprIRef.ValP m -> ExprIRef.ValP m -> T m EntityId
+    Monad m =>
+    Tree (ExprIRef.HRef m) V.Term -> Tree (ExprIRef.HRef m) V.Term -> T m EntityId
 mkExtractToLet outerScope stored =
     do
         lamI <-
-            if Property.value stored == extractPosI
+            if stored ^. ExprIRef.iref == extractPosI
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
@@ -113,14 +114,14 @@ mkExtractToLet outerScope stored =
                         V.Lam newParam extractPosI & V.BLam
                         & ExprIRef.newValI
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValI
-                    (stored ^. Property.pSet) getVarI
+                    (stored ^. ExprIRef.setIref) getVarI
                     pure lamI
         V.App lamI oldStored & V.BApp & ExprIRef.newValI
-            >>= outerScope ^. Property.pSet
+            >>= outerScope ^. ExprIRef.setIref
         EntityId.ofValI oldStored & pure
     where
-        extractPosI = Property.value outerScope
-        oldStored = Property.value stored
+        extractPosI = outerScope ^. ExprIRef.iref
+        oldStored = stored ^. ExprIRef.iref
 
 mkWrapInRecord ::
     Monad m =>
@@ -130,7 +131,7 @@ mkWrapInRecord exprPl =
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
         let recWrap tag =
                 V.BLeaf V.LRecEmpty & ExprIRef.newValI
-                >>= ExprIRef.newValI . V.BRecExtend . RowExtend tag (stored ^. Property.pVal)
+                >>= ExprIRef.newValI . V.BRecExtend . RowExtend tag (stored ^. ExprIRef.iref)
                 >>= typeProtectedSetToVal stored
                 & void
         ConvertTag.replace nameWithoutContext mempty ConvertTag.RequireTag
@@ -138,7 +139,7 @@ mkWrapInRecord exprPl =
     where
         stored = exprPl ^. Input.stored
         -- TODO: The entity-ids created here don't match the resulting entity ids of the record.
-        tempMkEntityId = EntityId.ofTaggedEntity (stored ^. Property.pVal)
+        tempMkEntityId = EntityId.ofTaggedEntity (stored ^. ExprIRef.iref)
 
 makeSetToLiteral ::
     Monad m =>
@@ -226,7 +227,7 @@ typeMismatchPayloads =
 setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
-        ExprIRef.ValP m ->
+        Tree (ExprIRef.HRef m) V.Term ->
         Tree (Body name (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
         Tree (Body name (T m) (T m)) (Ann (Const (ConvertPayload m a)))
     )
@@ -238,7 +239,7 @@ setChildReplaceParentActions =
             pActions . mReplaceParent ?~
             (protectedSetToVal
                 stored
-                (srcPl ^. pInput . Input.stored . Property.pVal)
+                (srcPl ^. pInput . Input.stored . ExprIRef.iref)
                 <&> EntityId.ofValI)
     in
     bod
@@ -257,7 +258,7 @@ subexprPayloads subexprs cullPoints =
     where
         -- | The direct child exprs of the sugar expr
         cullSet =
-            cullPoints ^.. Lens.folded . pInput . Input.stored . Property.pVal
+            cullPoints ^.. Lens.folded . pInput . Input.stored . ExprIRef.iref
             <&> EntityId.ofValI
             & Set.fromList
         toCull pl = cullSet ^. Lens.contains (pl ^. Input.entityId)

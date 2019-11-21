@@ -20,7 +20,7 @@ import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (assocFieldParamList)
 import           Lamdu.Data.Meta (ParamList)
-import           Lamdu.Expr.IRef (ValP)
+import           Lamdu.Expr.IRef (HRef, iref)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -47,7 +47,7 @@ mkFuncType paramList =
 
 loadForLambdas ::
     Monad m =>
-    Val (ValP m, Tree UVar T.Type) -> T m (PureInfer (Tree V.Scope UVar) ())
+    Val (Tree (HRef m) V.Term, Tree UVar T.Type) -> T m (PureInfer (Tree V.Scope UVar) ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped & sequence_
@@ -57,10 +57,10 @@ loadForLambdas x =
 
         loadUnifyParamList ::
             Monad m =>
-            (ValP m, Tree UVar T.Type) ->
+            (Tree (HRef m) V.Term, Tree UVar T.Type) ->
             T m (PureInfer (Tree V.Scope UVar) ())
         loadUnifyParamList (stored, ires) =
-            stored ^. Property.pVal & assocFieldParamList & Property.getP
+            stored ^. iref & assocFieldParamList & Property.getP
             <&> \case
             Nothing -> pure ()
             Just paramList ->

@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.GetField
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Property as Property
 import           Hyper (Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -58,9 +57,9 @@ convertGetFieldNonParam (Ann (Const exprPl) (V.GetField recExpr tag)) =
     <&> BodyGetField
     >>= addActions [recExpr] exprPl
     where
-        valI = exprPl ^. Input.stored . Property.pVal
+        valI = exprPl ^. Input.stored . ExprIRef.iref
         recExprStored = recExpr ^. annotation . Input.stored
-        recExprI = recExprStored ^. Property.pVal
+        recExprI = recExprStored ^. ExprIRef.iref
 
 convert ::
     (Monad m, Monoid a) =>

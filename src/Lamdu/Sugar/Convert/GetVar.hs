@@ -22,7 +22,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI, ValP)
+import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Fragment as ConvertFragment
@@ -43,7 +43,7 @@ jumpToDefI ::
 jumpToDefI cp defI =
     EntityId.ofIRef defI <$ DataOps.newPane cp (Anchors.PaneDefinition defI)
 
-inlineDef :: Monad m => V.Var -> ValP m -> ConvertM m (T m EntityId)
+inlineDef :: Monad m => V.Var -> Tree (HRef m) V.Term -> ConvertM m (T m EntityId)
 inlineDef globalId dest =
     (,)
     <$> Lens.view id
@@ -54,7 +54,7 @@ inlineDef globalId dest =
         let gotoDef = jumpToDefI (ctx ^. Anchors.codeAnchors) defI
         let doInline def defExpr =
                 do
-                    (dest ^. Property.pSet) (defExpr ^. Def.expr)
+                    (dest ^. ExprIRef.setIref) (defExpr ^. Def.expr)
                     Property.pureModify (ctx ^. ConvertM.scFrozenDeps) (<> defExpr ^. Def.exprFrozenDeps)
                     newDefExpr <- DataOps.newHole
                     def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)

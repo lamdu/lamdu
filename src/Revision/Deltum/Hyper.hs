@@ -1,9 +1,10 @@
 {-# LANGUAGE TypeApplications, ScopedTypeVariables, DefaultSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses, TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses, TypeOperators, TemplateHaskell #-}
 
 module Revision.Deltum.Hyper
     ( HStore(..), readRecursively
-    , HRef(..), toHRefs
+    , HRef(..), iref, setIref
+    , toHRefs
     , Write(..), writeRecursively
     ) where
 
@@ -44,6 +45,7 @@ data HRef m h = HRef
     { _iref :: F (IRef m) h
     , _setIref :: F (IRef m) h -> T m ()
     }
+Lens.makeLenses ''HRef
 
 data Write m h
     = WriteNew

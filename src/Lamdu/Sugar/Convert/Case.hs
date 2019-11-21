@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
-import qualified Data.Property as Property
 import           Hyper (Tree, Ann(..), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -33,7 +32,7 @@ import           Lamdu.Prelude
 -- with some abstraction?
 
 plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.stored . Property.pVal
+plValI = Input.stored . ExprIRef.iref
 
 convertAbsurd :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd pl =
@@ -92,7 +91,7 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
                         then simplifyCaseArg argS
                         else argS
                     , _caToLambdaCase =
-                        setTo (funcS ^. annotation . pInput . Input.stored . Property.pVal)
+                        setTo (funcS ^. annotation . pInput . Input.stored . ExprIRef.iref)
                         <&> EntityId.ofValI
                     }
         ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
