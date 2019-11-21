@@ -15,7 +15,6 @@ import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
-import           Data.Property (Property)
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Infer (InferResult(..), _InferResult, infer)
@@ -62,9 +61,6 @@ unmemoizedInfer defExpr =
         infer (defExpr ^. Definition.expr) & Reader.local (const scope)
             <&> (, scope)
 
-propEntityId :: Property f (ValI m) -> EntityId
-propEntityId = EntityId.ofValI . Property.value
-
 preparePayloads ::
     InferState ->
     Tree V.Scope UVar ->
@@ -89,13 +85,12 @@ preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
               , Input._inferredType = typ
               , Input._inferResult = inferRes
               , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
-              , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ execId
+              , Input._evalResults = evalRes <&> exprEvalRes nomsMap typ (valIProp ^. Property.pVal)
               , Input._userData = ()
               }
             )
             where
-                eId = propEntityId valIProp
-                execId = Property.value valIProp
+                eId = valIProp ^. Property.pVal & EntityId.ofValI
 
 exprEvalRes ::
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
