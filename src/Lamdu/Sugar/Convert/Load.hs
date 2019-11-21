@@ -136,7 +136,7 @@ makeNominalsMap tids =
 readValAndAddProperties ::
     Monad m => ValP m -> T m (Val (ValP m))
 readValAndAddProperties prop =
-    ExprIRef.readVal (prop ^. Property.pVal)
+    ExprIRef.readRecursively (prop ^. Property.pVal)
     <&> Lens.from _HFlip . hmapped1 %~ Const . (, ())
     <&> ExprIRef.addProperties (prop ^. Property.pSet)
     <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ fst

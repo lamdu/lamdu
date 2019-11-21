@@ -615,7 +615,7 @@ writeExprMStored exprIRef exprMStorePoint =
     exprMStorePoint
     & randomizeNonStoredParamIds genParamIds
     & randomizeNonStoredRefs uniqueIdent genRefs
-    & ExprIRef.writeValWithStoredSubexpressions
+    & ExprIRef.writeRecursively
     where
         uniqueIdent =
             Binary.encode

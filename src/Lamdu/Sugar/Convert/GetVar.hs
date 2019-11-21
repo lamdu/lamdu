@@ -76,7 +76,7 @@ inlineDef globalId dest =
             Def.BodyExpr defExpr ->
                 do
                     isRecursive <-
-                        ExprIRef.readVal (defExpr ^. Def.expr)
+                        ExprIRef.readRecursively (defExpr ^. Def.expr)
                         <&> Lens.from _HFlip . hmapped1 %~ Const
                         <&> Lens.has (ExprLens.valGlobals mempty . Lens.only globalId)
                     if isRecursive

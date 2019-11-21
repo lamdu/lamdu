@@ -456,6 +456,7 @@ Library
                   , Lamdu.VersionControl.Actions
                   , Numeric.Extended
                   , Revision.Deltum.Db
+                  , Revision.Deltum.Hyper
                   , Revision.Deltum.IRef
                   , Revision.Deltum.Rev.Branch
                   , Revision.Deltum.Rev.Change

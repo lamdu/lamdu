@@ -70,16 +70,16 @@ cursorDest x =
 inlineLet ::
     Monad m => ValP m -> Redex (ValI m) -> T m EntityId
 inlineLet topLevelProp redex =
-    Property.value topLevelProp & ExprIRef.readVal
+    Property.value topLevelProp & ExprIRef.readRecursively
     <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)
     <&> fromMaybe (error "malformed redex")
-    >>= ExprIRef.readVal
+    >>= ExprIRef.readRecursively
     <&> Lens.from _HFlip . hmapped1 %~ Const . Just
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
         (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ Just)
     <&> Lens.from _HFlip . hmapped1 %~ f
-    >>= ExprIRef.writeValWithStoredSubexpressions
+    >>= ExprIRef.writeRecursively
     <&> (^. hAnn . _1)
     >>= Property.set topLevelProp
     & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ EntityId.ofValI) <$)

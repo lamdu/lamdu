@@ -1,12 +1,12 @@
-{-# LANGUAGE TypeFamilies, MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables, TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# OPTIONS -fno-warn-orphans #-}
+
 module Lamdu.Expr.IRef
     ( ValI
     , ValBody
     , ValP
-    , newVar, readVal
+    , newVar
 
-    , Write(..), writeValWithStoredSubexpressions
     , DefI
     , addProperties
 
@@ -14,13 +14,13 @@ module Lamdu.Expr.IRef
     , readTagData
 
     , readValI, writeValI, newValI
+
+    , module Revision.Deltum.Hyper
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
-import           Data.Constraint (withDict)
 import           Data.Property (Property(..))
-import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
@@ -31,6 +31,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition)
 import           Lamdu.Data.Tag (Tag(..), Symbol(..))
+import           Revision.Deltum.Hyper
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -89,63 +90,7 @@ newValI ::
     Tree t (F (IRef m)) -> T m (Tree (F (IRef m)) t)
 newValI = fmap (_F #) . Transaction.newIRef
 
-class (Binary (Tree t (F (IRef m))), HTraversable t) => ReadVal m t
-
-instance ReadVal m V.Term
-
-readVal ::
-    (Monad m, Recursively (ReadVal m) t) =>
-    Tree (F (IRef m)) t ->
-    T m (Tree (Ann (F (IRef m))) t)
-readVal = readValH mempty
-
-readValH ::
-    forall m t.
-    ( Monad m
-    , Recursively (ReadVal m) t
-    ) =>
-    Set UUID ->
-    Tree (F (IRef m)) t ->
-    T m (Tree (Ann (F (IRef m))) t)
-readValH visited valI
-    | visited ^. Lens.contains k = error $ "Recursive reference: " ++ show valI
-    | otherwise =
-        withDict (recursively (Proxy @(ReadVal m t))) $
-        readValI valI
-        >>= htraverse (Proxy @(Recursively (ReadVal m)) #> readValH (visited & Lens.contains k .~ True))
-        <&> Ann valI
-    where
-        k = IRef.uuid (valI ^. _F)
-
-data Write m h
-    = WriteNew
-    | ExistingRef (F (IRef m) h)
-    deriving (Generic, Binary)
-
-expressionBodyFrom ::
-    forall m t a.
-    (Monad m, Recursively (ReadVal m) t) =>
-    Tree (Ann (Write m :*: a)) t ->
-    T m (Tree t (Ann (F (IRef m) :*: a)))
-expressionBodyFrom =
-    withDict (recursively (Proxy @(ReadVal m t))) $
-    htraverse (Proxy @(Recursively (ReadVal m)) #> writeValWithStoredSubexpressions) . (^. hVal)
-
-writeValWithStoredSubexpressions ::
-    forall m t a.
-    (Monad m, Recursively (ReadVal m) t) =>
-    Tree (Ann (Write m :*: a)) t ->
-    T m (Tree (Ann (F (IRef m) :*: a)) t)
-writeValWithStoredSubexpressions expr =
-    withDict (recursively (Proxy @(ReadVal m t))) $
-    do
-        body <- expressionBodyFrom expr
-        let bodyWithRefs = hmap (const (^. hAnn . _1)) body
-        case mIRef of
-            ExistingRef valI -> Ann (valI :*: pl) body <$ writeValI valI bodyWithRefs
-            WriteNew -> newValI bodyWithRefs <&> \exprI -> Ann (exprI :*: pl) body
-    where
-        mIRef :*: pl = expr ^. hAnn
+instance Monad m => HStore m V.Term
 
 addProperties ::
     Monad m =>
