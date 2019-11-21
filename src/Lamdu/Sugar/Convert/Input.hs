@@ -45,7 +45,7 @@ data Payload m a = Payload
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]
     , _userData :: a
-    } deriving (Functor, Foldable, Traversable)
+    }
 
 Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload

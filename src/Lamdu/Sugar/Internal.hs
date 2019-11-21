@@ -32,7 +32,7 @@ data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
       _pInput :: Input.Payload m a
     , _pActions :: NodeActions InternalName (T m) (T m)
-    } deriving (Functor, Foldable, Traversable)
+    }
 
 -- | Tags have internal names.
 --

@@ -234,10 +234,10 @@ replaceFragment parentEntityId idxInParent (Ann (Const pl) bod) =
     case pl ^. Input.userData of
     IsFragment ->
         V.LVar fragmentVar & V.BLeaf
-        & Ann (Const (void pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId))
+        & Ann (Const (pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId & Input.userData .~ ()))
     NotFragment ->
         bod & Lens.indexing htraverse1 %@~ replaceFragment (pl ^. Input.entityId)
-        & Ann (Const (void pl))
+        & Ann (Const (pl & Input.userData .~ ()))
 
 emplaceInHoles :: Applicative f => (a -> f (Val a)) -> Val a -> [f (Val a)]
 emplaceInHoles replaceHole =
