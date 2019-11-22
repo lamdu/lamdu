@@ -82,7 +82,7 @@ mkStoredLam ::
     Input.Payload m a -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamOut . Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
+    (lam & V.lamOut . hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -748,7 +748,7 @@ convertEmptyParams binderKind x =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                x & Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
+                x & hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure

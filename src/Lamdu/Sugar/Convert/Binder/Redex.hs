@@ -30,8 +30,8 @@ instance HFunctor Redex where
     hmap f r =
         r
         { _lamPl = f (HWitness W_Redex_Term) (r ^. lamPl)
-        , _lam = r ^. lam & hmapped1 . Lens.from _HFlip . hmapped1 %~ f (HWitness W_Redex_Term)
-        , _arg = r ^. arg & Lens.from _HFlip . hmapped1 %~ f (HWitness W_Redex_Term)
+        , _lam = r ^. lam & hmapped1 . hflipped . hmapped1 %~ f (HWitness W_Redex_Term)
+        , _arg = r ^. arg & hflipped . hmapped1 %~ f (HWitness W_Redex_Term)
         }
 
 check ::

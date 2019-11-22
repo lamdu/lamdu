@@ -46,7 +46,7 @@ lamParamToHole ::
     Monad m =>
     Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> T m ()
 lamParamToHole (V.Lam param x) =
-    SubExprs.getVarsToHole param (x & Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
+    SubExprs.getVarsToHole param (x & hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
 
 makeInline ::
     Monad m =>
@@ -130,7 +130,7 @@ convertLet pl redex =
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            & V.lamOut . Lens.from _HFlip . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
+            & V.lamOut . hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 

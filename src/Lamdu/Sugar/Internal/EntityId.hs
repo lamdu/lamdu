@@ -20,7 +20,7 @@ import qualified Data.ByteString as BS
 import           Data.Hashable (Hashable)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           Hyper (_HFlip, hmapped1)
+import           Hyper (hflipped, hmapped1)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -43,7 +43,7 @@ bs (EntityId uuid) = UUIDUtils.toSBS16 uuid
 randomizeExprAndParams ::
     RandomGen gen => gen -> Val (EntityId -> a) -> Val a
 randomizeExprAndParams gen =
-    GenIds.randomizeExprAndParams gen . (Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (. EntityId))
+    GenIds.randomizeExprAndParams gen . (hflipped . hmapped1 . Lens._Wrapped %~ (. EntityId))
 
 augment :: ByteString -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ UUIDUtils.augment str x

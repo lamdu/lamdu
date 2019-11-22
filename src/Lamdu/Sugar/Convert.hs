@@ -138,7 +138,7 @@ convertInferDefExpr env cp defType defExpr defI =
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             <&> _DefinitionBodyExpression . deContent %~ markAnnotations (env ^. has)
-            >>= (_DefinitionBodyExpression . deContent . Lens.from _HFlip)
+            >>= (_DefinitionBodyExpression . deContent . hflipped)
                 (htraverse (const (Lens._Wrapped convertPayload)))
             & ConvertM.run context
     where
@@ -177,7 +177,7 @@ markAnnotations ::
     Annotated (ShowAnnotation, a) t
 markAnnotations config
     | config ^. showAllAnnotations =
-        Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) alwaysShowAnnotations))
+        hflipped %~ hmap (const (Lens._Wrapped %~ (,) alwaysShowAnnotations))
     | otherwise = markNodeAnnotations
 
 convertRepl ::
@@ -221,7 +221,7 @@ convertRepl env cp =
                 }
         let typ = valInferred ^. annotation . Input.inferredType
         nomsMap <-
-            valInferred ^.. Lens.from _HFlip . hfolded1 . Lens._Wrapped . Input.inferredType . ExprLens.tIds
+            valInferred ^.. hflipped . hfolded1 . Lens._Wrapped . Input.inferredType . ExprLens.tIds
             & Load.makeNominalsMap
         let completion =
                 env ^. has
@@ -230,7 +230,7 @@ convertRepl env cp =
         expr <-
             convertBinder valInferred
             <&> markAnnotations (env ^. has)
-            >>= Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload)))
+            >>= hflipped (htraverse (const (Lens._Wrapped convertPayload)))
             & ConvertM.run context
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId

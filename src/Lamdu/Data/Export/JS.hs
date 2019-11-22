@@ -59,7 +59,7 @@ compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
 compile :: Monad m => Def.Expr (Tree (Ann (HRef m)) Term) -> T m String
 compile repl =
-    repl <&> Lens.from _HFlip . hmapped1 %~ Const . valId
+    repl <&> hflipped . hmapped1 %~ Const . valId
     & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
@@ -75,7 +75,7 @@ compile repl =
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def
-                <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 %~ Const . valId
+                <&> Def.defBody . Lens.mapped . hflipped . hmapped1 %~ Const . valId
                 <&> void
                 & lift
             , Compiler.readGlobalType =

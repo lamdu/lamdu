@@ -99,7 +99,7 @@ postProcessSugar ::
     Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o)
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
-    & Lens.from _HFlip %~ hmap (\_ -> Lens._Wrapped %~ pl)
+    & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where
         pl (x, needParens, sugarPl) =
             ExprGui.Payload

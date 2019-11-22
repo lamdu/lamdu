@@ -104,7 +104,7 @@ evalActions evaluator =
         \globalId ->
         ExprIRef.defI globalId
         & loadDef evaluator
-        <&> Def.defBody . Lens.mapped . Lens.from _HFlip . hmapped1 %~ Const . (^. ExprIRef.iref)
+        <&> Def.defBody . Lens.mapped . hflipped . hmapped1 %~ Const . (^. ExprIRef.iref)
         <&> Lens.mapped .~ ()
     , Eval._aReportUpdatesAvailable =
       do
@@ -132,7 +132,7 @@ start evaluator =
         DbLayout.repl DbLayout.codeAnchors
         & Load.defExpr
         & runViewTransactionInIO (eDb evaluator)
-        <&> Lens.mapped . Lens.from _HFlip . hmapped1 %~ Const . (^. ExprIRef.iref)
+        <&> Lens.mapped . hflipped . hmapped1 %~ Const . (^. ExprIRef.iref)
         >>= startBG
             (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)

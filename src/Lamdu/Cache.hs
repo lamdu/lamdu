@@ -44,7 +44,7 @@ infer :: forall a. Functions -> InferFunc a
 infer funcs defExpr =
     fmap (Lens._1 %~ unvoid) . PureInfer . RWST $
     \env s ->
-    inferMemoized funcs (defExpr <&> Lens.from _HFlip . hmapped1 .~ Const (), env, s)
+    inferMemoized funcs (defExpr <&> hflipped . hmapped1 .~ Const (), env, s)
     <&> \(iterm, topLevelScope, s') -> ((iterm, topLevelScope), s', ())
     where
         origExpr = defExpr ^. Definition.expr
@@ -53,16 +53,16 @@ infer funcs defExpr =
             Tree (Ann (a :*: InferResult UVar)) V.Term
         unvoid resExpr =
             resExpr
-            & Lens.from _HFlip . hmapped1 %~ (Const () :*:)
-            & Lens.unsafePartsOf (Lens.from _HFlip . htraverse1 . Lens._1) .~
-                origExpr ^.. Lens.from _HFlip . hfolded1
+            & hflipped . hmapped1 %~ (Const () :*:)
+            & Lens.unsafePartsOf (hflipped . htraverse1 . Lens._1) .~
+                origExpr ^.. hflipped . hfolded1
 
 memoableInfer :: MemoableInferFunc
 memoableInfer (expr, env, state) =
     unmemoizedInfer expr & runPureInfer env state
     <&>
     \((resTerm, topLevelScope), newState) ->
-    ( resTerm & Lens.from _HFlip . hmapped1 %~ (^. Lens._2)
+    ( resTerm & hflipped . hmapped1 %~ (^. Lens._2)
     , topLevelScope
     , newState
     )

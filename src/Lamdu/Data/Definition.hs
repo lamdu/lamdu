@@ -64,7 +64,7 @@ pruneDefExprDeps defExpr =
     where
         val = defExpr ^. expr
         valVars =
-            (val & Lens.from _HFlip %~ hmap (\_ _ -> Const ()))
+            (val & hflipped %~ hmap (\_ _ -> Const ()))
             ^.. ExprLens.valGlobals mempty
             & Set.fromList
         valNoms = val ^.. ExprLens.valNominals & Set.fromList

@@ -97,7 +97,7 @@ termTransformsWithoutSplit def src =
                     caseType <- FuncType s1 dstType & T.TFun & newTerm
                     suggestCaseWith row dstType
                         <&> Ann (Const caseType)
-                        <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
+                        <&> hflipped . hmapped1 . Lens._Wrapped %~
                             (\t -> (def, t))
                         <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
                 & liftInfer (V.emptyScope @UVar)
@@ -112,7 +112,7 @@ termTransformsWithoutSplit def src =
                         & liftInfer (V.emptyScope @UVar)
                     arg <-
                         forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
-                        <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~
+                        <&> hflipped . hmapped1 . Lens._Wrapped %~
                             (\t -> (def, t))
                     let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
@@ -229,7 +229,7 @@ autoLambdas typ =
 fillHoles :: a -> AnnotatedTerm a -> PureInfer (Tree V.Scope UVar) (AnnotatedTerm a)
 fillHoles def (Ann pl (V.BLeaf V.LHole)) =
     forTypeWithoutSplit (pl ^. Lens._Wrapped . _2)
-    <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (\t -> (def, t))
+    <&> hflipped . hmapped1 . Lens._Wrapped %~ (\t -> (def, t))
 fillHoles def (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles def arg <&> V.App func <&> V.BApp <&> Ann pl

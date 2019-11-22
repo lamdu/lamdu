@@ -77,7 +77,7 @@ data WorkAreaLowLevel = WorkAreaLowLevel
 
 workAreaLowLevelValProps :: WorkAreaLowLevel -> [Tree (HRef ViewM) Term]
 workAreaLowLevelValProps (WorkAreaLowLevel r p) =
-    defExprs ^.. Lens.folded . Def.expr . Lens.from _HFlip . hfolded1
+    defExprs ^.. Lens.folded . Def.expr . hflipped . hfolded1
     where
         defExprs = r : p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
 

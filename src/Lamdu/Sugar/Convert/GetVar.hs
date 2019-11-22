@@ -77,7 +77,7 @@ inlineDef globalId dest =
                 do
                     isRecursive <-
                         ExprIRef.readRecursively (defExpr ^. Def.expr)
-                        <&> Lens.from _HFlip . hmapped1 %~ Const
+                        <&> hflipped . hmapped1 %~ Const
                         <&> Lens.has (ExprLens.valGlobals mempty . Lens.only globalId)
                     if isRecursive
                         then gotoDef

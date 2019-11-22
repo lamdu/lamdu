@@ -113,7 +113,7 @@ binderResultExpr f (Ann (Const pl) x) =
     case x of
     BinderExpr e ->
         Lens.indexed f
-        (hmap (Proxy @(Recursively HFunctor) #> Lens.from _HFlip %~ hmap (\_ Const{} -> Const ())) e)
+        (hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (\_ Const{} -> Const ())) e)
         pl
         <&> Const
         <&> (`Ann` x)

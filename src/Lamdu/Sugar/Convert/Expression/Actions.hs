@@ -153,7 +153,7 @@ makeSetToLiteral exprPl =
     do
         update
         l <-
-            x & Lens.from _HFlip . hmapped1 .~ ExprIRef.WriteNew :*: Const () & ExprIRef.writeRecursively
+            x & hflipped . hmapped1 .~ ExprIRef.WriteNew :*: Const () & ExprIRef.writeRecursively
             <&> (^. hAnn . _1)
         _ <- setToVal (exprPl ^. Input.stored) l
         EntityId.ofValI l & pure

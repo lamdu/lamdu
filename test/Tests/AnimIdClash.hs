@@ -81,7 +81,7 @@ testFragment =
                 )
                 & annotation . Sugar.plEntityId .~ fragEntityId
                 & Stub.addNamesToExpr (env ^. has)
-                & Lens.from _HFlip %~ hmap (const (Lens._Wrapped . Sugar.plData .~ adhocPayload))
+                & hflipped %~ hmap (const (Lens._Wrapped . Sugar.plData .~ adhocPayload))
         let gui =
                 ExpressionEdit.make expr
                 & GuiM.run ExpressionEdit.make BinderEdit.make

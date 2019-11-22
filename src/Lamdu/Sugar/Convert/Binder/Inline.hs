@@ -76,15 +76,15 @@ inlineLet topLevelProp redex =
     <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readRecursively
-    <&> Lens.from _HFlip . hmapped1 %~ Const . Just
+    <&> hflipped . hmapped1 %~ Const . Just
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
-        (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 %~ Const . Just)
-    <&> Lens.from _HFlip . hmapped1 %~ f
+        (redex ^. Redex.arg & hflipped . hmapped1 %~ Const . Just)
+    <&> hflipped . hmapped1 %~ f
     >>= ExprIRef.writeRecursively
     <&> (^. hAnn . _1)
     >>= topLevelProp ^. ExprIRef.setIref
-    & (cursorDest (redex ^. Redex.arg & Lens.from _HFlip . hmapped1 %~ Const . EntityId.ofValI) <$)
+    & (cursorDest (redex ^. Redex.arg & hflipped . hmapped1 %~ Const . EntityId.ofValI) <$)
     where
         f (Const Nothing) = ExprIRef.WriteNew :*: Const ()
         f (Const (Just x)) = ExprIRef.ExistingRef x :*: Const ()

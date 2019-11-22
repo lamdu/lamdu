@@ -88,7 +88,7 @@ mkAppliedHoleSuggesteds ::
     [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
-    (Suggest.termTransforms Nothing (argI & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ onPl))
+    (Suggest.termTransforms Nothing (argI & hflipped . hmapped1 . Lens._Wrapped %~ onPl))
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
@@ -129,8 +129,8 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
                     | otherwise = neverShowAnnotations
             options <-
                 argS
-                & Lens.from _HFlip %~ hmap (const (Lens._Wrapped %~ (,) showAnn))
-                & Lens.from _HFlip (htraverse (const (Lens._Wrapped convertPayload)))
+                & hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))
+                & hflipped (htraverse (const (Lens._Wrapped convertPayload)))
                 >>= (mkOptions posInfo sugarContext argI ?? exprPl)
                 & Reader.local (ConvertM.scAnnotationsMode .~ Annotations.None)
             healMis <- healMismatch
@@ -191,8 +191,8 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
-                _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Input.inferResult)) rawFragmentExpr
-                _ <- (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2)) x
+                _ <- (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. Input.inferResult)) rawFragmentExpr
+                _ <- (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2)) x
                 -- Roll back state after occurs checks
                 fragmentExpr <$ State.put t
                 & liftPureInfer ()
@@ -211,7 +211,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
             & lift
             & join
             & mapStateT (ListClass.take 1)
-        fragmentExpr = rawFragmentExpr & Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ onFragmentPayload
+        fragmentExpr = rawFragmentExpr & hflipped . hmapped1 . Lens._Wrapped %~ onFragmentPayload
         onFragmentPayload pl =
             ( (Just (pl ^. Input.stored . iref), IsFragment)
             , pl ^. Input.inferResult
@@ -222,7 +222,7 @@ data IsFragment = IsFragment | NotFragment
 markNotFragment ::
     Val (Maybe (ValI n), Tree UVar T.Type) ->
     Val ((Maybe (ValI n), IsFragment), Tree UVar T.Type)
-markNotFragment = Lens.from _HFlip . hmapped1 . Lens._Wrapped . Lens._1 %~ (, NotFragment)
+markNotFragment = hflipped . hmapped1 . Lens._Wrapped . Lens._1 %~ (, NotFragment)
 
 -- TODO: Unify type according to IsFragment, avoid magic var
 fragmentVar :: V.Var
@@ -273,7 +273,7 @@ mkResultValFragment ::
     Val (Maybe (Input.Payload m a), Tree UVar T.Type) ->
     State InferState (Val ((Maybe (ValI m), IsFragment), Tree UVar T.Type))
 mkResultValFragment inferred x =
-    x & Lens.from _HFlip . hmapped1 . Lens._Wrapped . _1 %~ onPl
+    x & hflipped . hmapped1 . Lens._Wrapped . _1 %~ onPl
     & Hole.detachValIfNeeded emptyPl inferred
     where
         emptyPl = (Nothing, NotFragment)
@@ -312,7 +312,7 @@ mkOptionFromFragment sugarContext exprPl x =
             (mkResultValFragment (exprPl ^. Input.inferResult) x)
             (sugarContext ^. ConvertM.scInferContext)
         resolved =
-            (Lens.from _HFlip . htraverse1 . Lens._Wrapped) (applyBindings . (^. Lens._2)) result
+            (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. Lens._2)) result
             & runPureInfer scope inferContext
             & Hole.assertSuccessfulInfer
             & fst

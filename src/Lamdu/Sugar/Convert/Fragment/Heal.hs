@@ -84,7 +84,7 @@ healMismatch =
         postProcess <- ConvertM.postProcessAssert
         topLevelExpr <-
             Lens.view ConvertM.scTopLevelExpr
-            <&> Lens.from _HFlip . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
+            <&> hflipped . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
         deps <- Lens.view (ConvertM.scFrozenDeps . Property.pVal)
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
         pure $
@@ -107,7 +107,7 @@ healMismatch =
             & either (error "bug in heal!")
                 -- Doing the inner changes first and then the outer ones so that
                 -- setting inner properties won't override outer iref values
-                (traverse_ act . reverse . (^.. Lens.from _HFlip . hfolded1) . fst)
+                (traverse_ act . reverse . (^.. hflipped . hfolded1) . fst)
             >> postProcess
     where
         act (Const (_, OnUnify x) :*: Good{}) = x
