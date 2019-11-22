@@ -26,11 +26,8 @@ import qualified Lamdu.Calc.Type as T
 
 import           Lamdu.Prelude
 
-type UType m = Tree (UVarOf m) T.Type
-type URow m = Tree (UVarOf m) T.Row
-
 -- | Term with unifiable type annotations
-type TypedTerm m = Annotated (UType m) V.Term
+type TypedTerm m = Annotated (Tree (UVarOf m) T.Type) V.Term
 
 type AnnotatedTerm a = Annotated (a, Tree UVar T.Type) V.Term
 
@@ -136,7 +133,7 @@ termOptionalTransformsWithoutSplit def src =
 -- injects for a sum type. These are offerred in holes (not fragments).
 forType ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    UType m -> m [TypedTerm m]
+    Tree (UVarOf m) T.Type -> m [TypedTerm m]
 forType t =
     do
         -- TODO: DSL for matching/deref'ing UVar structure
@@ -147,9 +144,9 @@ forType t =
 
 forVariant ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    URow m ->
-    [Tree V.Term (Ann (Const (UType m)))] ->
-    m [Tree V.Term (Ann (Const (UType m)))]
+    Tree (UVarOf m) T.Row ->
+    [Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type)))] ->
+    m [Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type)))]
 forVariant r def =
     semiPruneLookup r <&> (^? _2 . _UTerm . uBody . T._RExtend) >>=
     \case
@@ -159,7 +156,7 @@ forVariant r def =
 forVariantExtend ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Tree (RowExtend T.Tag T.Type T.Row) (UVarOf m) ->
-    m [Tree V.Term (Ann (Const (UType m)))]
+    m [Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type)))]
 forVariantExtend (RowExtend tag typ rest) =
     (:)
     <$> (forTypeWithoutSplit typ <&> V.Inject tag <&> V.BInject)
@@ -167,12 +164,12 @@ forVariantExtend (RowExtend tag typ rest) =
 
 forTypeWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    UType m -> m (TypedTerm m)
+    Tree (UVarOf m) T.Type -> m (TypedTerm m)
 forTypeWithoutSplit t = semiPruneLookup t <&> snd >>= forTypeUTermWithoutSplit <&> Ann (Const t)
 
 forTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    Tree (UTerm (UVarOf m)) T.Type -> m (Tree V.Term (Ann (Const (UType m))))
+    Tree (UTerm (UVarOf m)) T.Type -> m (Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type))))
 forTypeUTermWithoutSplit t =
     case t ^? _UTerm . uBody of
     Just (T.TRecord row) -> suggestRecord row
@@ -184,7 +181,7 @@ forTypeUTermWithoutSplit t =
     _ -> V.BLeaf V.LHole & pure
 
 suggestRecord ::
-    (UnifyGen m T.Type, UnifyGen m T.Row) => URow m -> m (Tree V.Term (Ann (Const (UType m))))
+    (UnifyGen m T.Type, UnifyGen m T.Row) => Tree (UVarOf m) T.Row -> m (Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type))))
 suggestRecord r =
     semiPruneLookup r <&> (^? _2 . _UTerm . uBody) >>=
     \case
@@ -198,7 +195,7 @@ suggestRecord r =
 
 suggestCaseWith ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    URow m -> UType m -> m (Tree V.Term (Ann (Const (UType m))))
+    Tree (UVarOf m) T.Row -> Tree (UVarOf m) T.Type -> m (Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type))))
 suggestCaseWith variantType resultType =
     semiPruneLookup variantType <&> (^? _2 . _UTerm . uBody) >>=
     \case
@@ -218,7 +215,7 @@ suggestCaseWith variantType resultType =
         -- TODO: Maybe this should be a lambda, like a TFun from non-variant
         V.BLeaf V.LHole & pure
 
-autoLambdas :: Unify m T.Type => UType m -> m (TypedTerm m)
+autoLambdas :: Unify m T.Type => Tree (UVarOf m) T.Type -> m (TypedTerm m)
 autoLambdas typ =
     semiPruneLookup typ <&> (^? _2 . _UTerm . uBody . T._TFun . funcOut) >>=
     \case
