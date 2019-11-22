@@ -144,13 +144,13 @@ Lens.makeLenses ''InferOut
 resolve ::
     RTraversable t =>
     Annotated (Tree (HRef m) V.Term, Tree UVar T.Type) t ->
-    PureInfer (Tree V.Scope UVar) (Annotated (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type) t)
+    PureInfer a (Annotated (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type) t)
 resolve =
     hflipped (htraverse (const (Lens._Wrapped f)))
     where
         f ::
             (Tree (HRef m) V.Term, Tree UVar T.Type) ->
-            PureInfer (Tree V.Scope UVar) (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type)
+            PureInfer a (Tree (HRef m) V.Term, Tree Pure T.Type, Tree UVar T.Type)
         f (stored, inferred) =
             applyBindings inferred
             <&> \x -> (stored, x, inferred)
