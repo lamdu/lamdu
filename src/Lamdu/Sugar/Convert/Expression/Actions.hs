@@ -255,14 +255,17 @@ subexprPayloads ::
     Foldable f =>
     f (Val (Input.Payload m a)) -> [ConvertPayload m a] -> [a]
 subexprPayloads subexprs cullPoints =
-    subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded . Input.userData
+    subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded
     where
         -- | The direct child exprs of the sugar expr
         cullSet =
             cullPoints ^.. Lens.folded . pInput . Input.stored . ExprIRef.iref
             <&> EntityId.ofValI
             & Set.fromList
-        toCull pl = cullSet ^. Lens.contains (pl ^. Input.entityId)
+        toCull :: Tree (Const (Input.Payload m a)) n -> Maybe a
+        toCull pl =
+            pl ^. Lens._Wrapped . Input.userData <$
+            guard (not (cullSet ^. Lens.contains (pl ^. Lens._Wrapped . Input.entityId)))
 
 addActionsWith ::
     Monad m =>
