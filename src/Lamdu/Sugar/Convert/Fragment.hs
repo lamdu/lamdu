@@ -20,6 +20,7 @@ import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Type.Functor (F)
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
@@ -45,6 +46,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -93,7 +95,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
-        onPl pl = (Just pl, pl ^. Input.inferRes & hflipped %~ hmap (const (^. Lens._2)))
+        onPl pl = (Just (pl ^. Input.stored . iref), pl ^. Input.inferRes & hflipped %~ hmap (const (^. Lens._2)))
         onSuggestion (sugg, newInferCtx) =
             mkOptionFromFragment
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
@@ -270,7 +272,7 @@ emplaceInHoles replaceHole =
 
 mkResultValFragment ::
     Tree UVar T.Type ->
-    Val (Maybe (Input.Payload m a), Tree (InferResult UVar) V.Term) ->
+    Val (Maybe (Tree (F (IRef m)) V.Term), Tree (InferResult UVar) V.Term) ->
     State InferState (Val ((Maybe (ValI m), IsFragment), Tree (InferResult UVar) V.Term))
 mkResultValFragment inferred x =
     x & hflipped . hmapped1 . Lens._Wrapped . _1 %~ onPl
@@ -278,13 +280,13 @@ mkResultValFragment inferred x =
     where
         emptyPl = (Nothing, NotFragment)
         onPl Nothing = emptyPl
-        onPl (Just inputPl) = (inputPl ^. Input.stored . iref & Just, IsFragment)
+        onPl (Just inputPl) = (Just inputPl, IsFragment)
 
 mkOptionFromFragment ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a ->
-    Val (Maybe (Input.Payload m a), Tree (InferResult UVar) V.Term) ->
+    Val (Maybe (Tree (F (IRef m)) V.Term), Tree (InferResult UVar) V.Term) ->
     HoleOption InternalName (T m) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
