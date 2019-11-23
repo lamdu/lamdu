@@ -50,7 +50,8 @@ import           Lamdu.Prelude
 type T = Transaction
 
 mkExtract ::
-    Monad m => Input.Payload m a -> ConvertM m (T m ExtractDestination)
+    Monad m =>
+    Tree (Input.Payload m a) V.Term -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
     Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
     >>= \case
@@ -59,7 +60,7 @@ mkExtract exprPl =
         mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
         <&> ExtractToLet & pure
 
-mkExtractToDef :: Monad m => Input.Payload m a -> ConvertM m (T m EntityId)
+mkExtractToDef :: Monad m => Tree (Input.Payload m a) V.Term -> ConvertM m (T m EntityId)
 mkExtractToDef exprPl =
     (,,)
     <$> Lens.view id
@@ -126,7 +127,7 @@ mkExtractToLet outerScope stored =
 
 mkWrapInRecord ::
     Monad m =>
-    Input.Payload m a -> ConvertM m (TagReplace InternalName (T m) (T m) ())
+    Tree (Input.Payload m a) V.Term -> ConvertM m (TagReplace InternalName (T m) (T m) ())
 mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -144,7 +145,7 @@ mkWrapInRecord exprPl =
 
 makeSetToLiteral ::
     Monad m =>
-    Input.Payload m a -> ConvertM m (Literal Identity -> T m EntityId)
+    Tree (Input.Payload m a) V.Term -> ConvertM m (Literal Identity -> T m EntityId)
 makeSetToLiteral exprPl =
     (,) <$> ConvertM.typeProtectedSetToVal <*> valFromLiteral
     <&>
@@ -161,7 +162,7 @@ makeSetToLiteral exprPl =
 
 makeActions ::
     Monad m =>
-    Input.Payload m a -> ConvertM m (NodeActions InternalName (T m) (T m))
+    Tree (Input.Payload m a) V.Term -> ConvertM m (NodeActions InternalName (T m) (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
@@ -253,7 +254,7 @@ setChildReplaceParentActions =
 
 subexprPayloads ::
     Foldable f =>
-    f (Val (Input.Payload m a)) -> [ConvertPayload m a] -> [a]
+    f (Tree (Ann (Input.Payload m a)) V.Term) -> [ConvertPayload m a] -> [a]
 subexprPayloads subexprs cullPoints =
     subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded
     where
@@ -262,14 +263,14 @@ subexprPayloads subexprs cullPoints =
             cullPoints ^.. Lens.folded . pInput . Input.stored . ExprIRef.iref
             <&> EntityId.ofValI
             & Set.fromList
-        toCull :: Tree (Const (Input.Payload m a)) n -> Maybe a
+        toCull :: Tree (Input.Payload m a) n -> Maybe a
         toCull pl =
-            pl ^. Lens._Wrapped . Input.userData <$
-            guard (not (cullSet ^. Lens.contains (pl ^. Lens._Wrapped . Input.entityId)))
+            pl ^. Input.userData <$
+            guard (not (cullSet ^. Lens.contains (pl ^. Input.entityId)))
 
 addActionsWith ::
     Monad m =>
-    a -> Input.Payload m b ->
+    a -> Tree (Input.Payload m b) V.Term ->
     Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
@@ -287,7 +288,7 @@ addActionsWith userData exprPl bodyS =
 
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
-    f (Val (Input.Payload m a)) -> Input.Payload m a ->
+    f (Tree (Ann (Input.Payload m a)) V.Term) -> Tree (Input.Payload m a) V.Term ->
     Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
@@ -295,7 +296,8 @@ addActions subexprs exprPl bodyS =
     exprPl bodyS
 
 makeTypeAnnotation ::
-    Monad m => Input.Payload m a -> ConvertM m (Annotated EntityId (Type InternalName))
+    Monad m =>
+    Tree (Input.Payload m a) V.Term -> ConvertM m (Annotated EntityId (Type InternalName))
 makeTypeAnnotation payload =
     convertType (EntityId.ofTypeOf entityId) typ
     where
@@ -304,7 +306,7 @@ makeTypeAnnotation payload =
 
 makeAnnotation ::
     Monad m =>
-    Ann.ShowAnnotation -> Input.Payload m a ->
+    Ann.ShowAnnotation -> Tree (Input.Payload m a) V.Term ->
     ConvertM m (Annotation InternalName (T m))
 makeAnnotation showAnn pl =
     Lens.view ConvertM.scAnnotationsMode >>=

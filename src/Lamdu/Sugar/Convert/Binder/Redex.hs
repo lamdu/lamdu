@@ -35,8 +35,8 @@ instance HFunctor Redex where
         }
 
 check ::
-    Tree V.Term (Ann (Const (Input.Payload m a))) ->
-    Maybe (Tree Redex (Const (Input.Payload m a)))
+    Tree V.Term (Ann (Input.Payload m a)) ->
+    Maybe (Tree Redex (Input.Payload m a))
 check term =
     do
         V.App func a <- term ^? V._BApp
@@ -45,11 +45,11 @@ check term =
             { _lam = l
             , _lamPl = func ^. hAnn
             , _bodyScope =
-                func ^. annotation . Input.evalResults
+                func ^. hAnn . Input.evalResults
                 <&> (^. Input.eAppliesOfLam)
                 <&> Lens.traversed %~ getRedexApplies
             , _arg = a
-            , _paramRefs = func ^. annotation . Input.varRefsOfLambda
+            , _paramRefs = func ^. hAnn . Input.varRefsOfLambda
             }
     where
         getRedexApplies [(scopeId, _)] = scopeId

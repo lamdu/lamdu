@@ -82,13 +82,16 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-type Preconversion m a = Val (Input.Payload m a) -> Val (Input.Payload m ())
+type Preconversion m a =
+    Tree (Ann (Input.Payload m a)) V.Term ->
+    Tree (Ann (Input.Payload m ())) V.Term
 
 type ResultGen m = StateT InferState (ListT (T m))
 
 convert ::
     (Monad m, Monoid a) =>
-    ConvertM.PositionInfo -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    ConvertM.PositionInfo -> Tree (Input.Payload m a) V.Term ->
+    ConvertM m (ExpressionU m a)
 convert posInfo holePl =
     Hole
     <$> mkOptions posInfo holeResultProcessor holePl
@@ -116,7 +119,8 @@ holeResultProcessor =
 
 mkOption ::
     Monad m =>
-    ConvertM.Context m -> ResultProcessor m -> Input.Payload m a -> Val () ->
+    ConvertM.Context m -> ResultProcessor m ->
+    Tree (Input.Payload m a) V.Term -> Val () ->
     HoleOption InternalName (T m) (T m)
 mkOption sugarContext resultProcessor holePl x =
     HoleOption
@@ -127,7 +131,8 @@ mkOption sugarContext resultProcessor holePl x =
 
 mkHoleSuggesteds ::
     Monad m =>
-    ConvertM.Context m -> ResultProcessor m -> Input.Payload m a ->
+    ConvertM.Context m -> ResultProcessor m ->
+    Tree (Input.Payload m a) V.Term ->
     [HoleOption InternalName (T m) (T m)]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferRes . inferResult . Lens._2
@@ -203,7 +208,8 @@ mkNominalOptions nominals =
 
 mkOptions ::
     Monad m =>
-    ConvertM.PositionInfo -> ResultProcessor m -> Input.Payload m a ->
+    ConvertM.PositionInfo -> ResultProcessor m ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions posInfo resultProcessor holePl =
     Lens.view id
@@ -273,13 +279,15 @@ loadNewDeps currentDeps scope x =
 -- TODO: We shouldn't need to perform sugaring for base exprs, and this should be removed.
 prepareUnstoredPayloads ::
     Val (Tree (InferResult (Pure :*: UVar)) V.Term, EntityId, a) ->
-    Val (Input.Payload m a)
+    Tree (Ann (Input.Payload m a)) V.Term
 prepareUnstoredPayloads v =
-    v & hflipped . hmapped1 . Lens._Wrapped %~ mk & Input.preparePayloads
+    v & hflipped . hmapped1 %~ mk . getConst & Input.preparePayloads
     where
         mk (inferPl, eId, x) =
-            ( eId
-            , \varRefs ->
+            Input.PreparePayloadInput
+            { Input.ppEntityId = eId
+            , Input.ppMakePl =
+                \varRefs ->
                 Input.Payload
                 { Input._varRefsOfLambda = varRefs
                 , Input._userData = x
@@ -294,7 +302,7 @@ prepareUnstoredPayloads v =
                 , Input._evalResults =
                     CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
                 }
-            )
+            }
             where
                 -- TODO: Which code reads this?
                 EntityId.EntityId fakeStored = eId
@@ -323,7 +331,7 @@ loadInfer sugarContext scope v =
 
 sugar ::
     (Monad m, Monoid a) =>
-    ConvertM.Context m -> Input.Payload m dummy -> Val a ->
+    ConvertM.Context m -> Tree (Input.Payload m dummy) V.Term -> Val a ->
     T m (Annotated (Payload InternalName (T m) (T m) a) (Binder InternalName (T m) (T m)))
 sugar sugarContext holePl v =
     do
@@ -384,7 +392,7 @@ writeResult ::
     Monad m =>
     Preconversion m a -> InferState -> Tree (HRef m) V.Term ->
     Val ((Maybe (ValI m), a), Tree (InferResult UVar) V.Term) ->
-    T m (Val (Input.Payload m ()))
+    T m (Tree (Ann (Input.Payload m ())) V.Term)
 writeResult preConversion inferContext holeStored inferredVal =
     do
         writtenExpr <-
@@ -395,7 +403,7 @@ writeResult preConversion inferContext holeStored inferredVal =
             <&> addBindingsAll
             <&> hflipped . hmapped1 %~ toPayload
             <&> Input.preparePayloads
-        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. annotation . Input.stored . ExprIRef.iref)
+        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. hAnn . Input.stored . ExprIRef.iref)
         preConversion writtenExpr & pure
     where
         intoStorePoint (Const ((mStorePoint, a), inferred)) =
@@ -403,9 +411,10 @@ writeResult preConversion inferContext holeStored inferredVal =
             Const (inferred, a)
         toPayload (stored :*: Const (inferRes, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
-            Const
-            ( eId
-            , \varRefs ->
+            Input.PreparePayloadInput
+            { Input.ppEntityId = eId
+            , Input.ppMakePl =
+                \varRefs ->
                 Input.Payload
                 { Input._varRefsOfLambda = varRefs
                 , Input._userData = a
@@ -416,7 +425,7 @@ writeResult preConversion inferContext holeStored inferredVal =
                 , Input._entityId = eId
                 , Input._localsInScope = []
                 }
-            )
+            }
             where
                 eId = stored ^. ExprIRef.iref & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
@@ -499,7 +508,8 @@ mkResultVals sugarContext scope seed =
 
 mkResult ::
     Monad m =>
-    Preconversion m a -> ConvertM.Context m -> T m () -> Input.Payload m b ->
+    Preconversion m a -> ConvertM.Context m -> T m () ->
+    Tree (Input.Payload m b) V.Term ->
     Val ((Maybe (ValI m), a), Tree (InferResult UVar) V.Term) ->
     T m (HoleResult InternalName (T m) (T m))
 mkResult preConversion sugarContext updateDeps holePl x =
@@ -536,7 +546,8 @@ toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 
 toScoredResults ::
     (Monad f, Monad m) =>
-    a -> Preconversion m a -> ConvertM.Context m -> Input.Payload m dummy ->
+    a -> Preconversion m a -> ConvertM.Context m ->
+    Tree (Input.Payload m dummy) V.Term ->
     StateT InferState f (Deps, Val ((Maybe (ValI m), a), Tree (InferResult UVar) V.Term)) ->
     f ( HoleResultScore
       , T m (HoleResult InternalName (T m) (T m))
@@ -563,7 +574,8 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
 
 mkResults ::
     Monad m =>
-    ResultProcessor m -> ConvertM.Context m -> Input.Payload m dummy -> Val () ->
+    ResultProcessor m -> ConvertM.Context m ->
+    Tree (Input.Payload m dummy) V.Term -> Val () ->
     ListT (T m)
     ( HoleResultScore
     , T m (HoleResult InternalName (T m) (T m))

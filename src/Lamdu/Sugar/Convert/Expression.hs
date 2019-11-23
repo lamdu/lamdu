@@ -4,9 +4,8 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import           Data.Property (Property(..))
-import           Hyper (Ann(..))
+import           Hyper (Tree, Ann(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Apply as ConvertApply
@@ -34,7 +33,7 @@ convertLiteralCommon ::
     (Monad m, Monoid b) =>
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
-    Input.Payload m b -> ConvertM m (ExpressionU m b)
+    Tree (Input.Payload m b) V.Term -> ConvertM m (ExpressionU m b)
 convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
@@ -47,25 +46,25 @@ convertLiteralCommon mkLit mkBody x exprPl =
 
 convertLiteralFloat ::
     (Monad m, Monoid a) =>
-    Double -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    Double -> Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
     (Monad m, Monoid a) =>
-    ByteString -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    ByteString -> Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert ::
     (Monad m, Monoid a) =>
-    ConvertM.PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
-convert _ (Ann (Const pl) (V.BLam x)) = ConvertBinder.convertLam (Ann (Const pl) x)
-convert _ (Ann (Const pl) (V.BRecExtend x)) = ConvertRecord.convertExtend (Ann (Const pl) x)
-convert _ (Ann (Const pl) (V.BGetField x)) = ConvertGetField.convert (Ann (Const pl) x)
-convert _ (Ann (Const pl) (V.BInject x)) = ConvertInject.convert (Ann (Const pl) x)
-convert _ (Ann (Const pl) (V.BToNom x)) = ConvertNominal.convertToNom (Ann (Const pl) x)
-convert _ (Ann (Const pl) (V.BCase x)) = ConvertCase.convert (Ann (Const pl) x)
-convert posInfo (Ann (Const pl) (V.BApp x)) = ConvertApply.convert posInfo (Ann (Const pl) x)
-convert posInfo (Ann (Const pl) (V.BLeaf l)) =
+    ConvertM.PositionInfo -> Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ExpressionU m a)
+convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
+convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
+convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert x pl
+convert _ (Ann pl (V.BInject x)) = ConvertInject.convert x pl
+convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl
+convert _ (Ann pl (V.BCase x)) = ConvertCase.convert x pl
+convert posInfo (Ann pl (V.BApp x)) = ConvertApply.convert posInfo x pl
+convert posInfo (Ann pl (V.BLeaf l)) =
     pl &
     case l of
     V.LVar x -> ConvertGetVar.convert x

@@ -98,16 +98,19 @@ globalNameRef cp defI =
 
 inlineableDefinition :: ConvertM.Context m -> V.Var -> EntityId -> Bool
 inlineableDefinition ctx var entityId =
-    Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f) (ctx ^. ConvertM.scTopLevelExpr)
+    ctx ^. ConvertM.scTopLevelExpr
+    & hflipped . hmapped1 %~ Const . (^. Input.entityId)
+    & Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f)
     where
         recursiveVars =
             ctx ^.
             ConvertM.scScopeInfo . ConvertM.siRecursiveRef . Lens._Just . ConvertM.rrDefI .
             Lens.to (Set.singleton . ExprIRef.globalId)
-        f (Const pl) v = v == var && entityId `notElem` pl ^. Input.userData
+        f (Const i) v = v == var && entityId /= i
 
 convertGlobal ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    Monad m =>
+    V.Var -> Tree (Input.Payload m a) V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGlobal var exprPl =
     do
         ctx <- Lens.view id
@@ -137,7 +140,8 @@ convertGlobal var exprPl =
         defI = ExprIRef.defI var
 
 convertGetLet ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    Monad m =>
+    V.Var -> Tree (Input.Payload m a) V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
     do
         inline <-
@@ -152,7 +156,8 @@ convertGetLet param exprPl =
             } & pure
 
 convertParamsRecord ::
-    Monad m => V.Var -> Input.Payload m a -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    Monad m =>
+    V.Var -> Tree (Input.Payload m a) V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertParamsRecord param exprPl =
     GetParamsRecord ParamsRecordVarRef
     { _prvFieldNames =
@@ -193,7 +198,7 @@ convertParam param =
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Var -> Input.Payload m a -> ConvertM m (ExpressionU m a)
+    V.Var -> Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
 convert param exprPl
     | param == ConvertFragment.fragmentVar =
         addActions [] exprPl BodyPlaceHolder

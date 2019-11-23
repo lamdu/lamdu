@@ -3,8 +3,7 @@ module Lamdu.Sugar.Convert.Nominal
     ) where
 
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
-import           Hyper (Ann(..))
-import           Hyper.Combinator.Ann (Annotated)
+import           Hyper (Tree, Ann(..))
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
@@ -20,11 +19,12 @@ import           Lamdu.Prelude
 
 convertToNom ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) (ToNom NominalId V.Term) ->
+    Tree (ToNom NominalId V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convertToNom a@(Ann (Const pl) (ToNom tid x)) =
+convertToNom t@(ToNom tid x) pl =
     do
-        ConvertText.text a & justToLeft
+        ConvertText.text t pl & justToLeft
         Nominal
             <$> ConvertTId.convert tid
             <*> ConvertBinder.convertBinder x
@@ -35,7 +35,7 @@ convertToNom a@(Ann (Const pl) (ToNom tid x)) =
 
 convertFromNom ::
     (Monad m, Monoid a) =>
-    NominalId -> Input.Payload m a ->
+    NominalId -> Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
 convertFromNom tid pl =
     ConvertTId.convert tid <&> BodyFromNom >>= addActions [] pl

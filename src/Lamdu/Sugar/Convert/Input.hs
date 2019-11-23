@@ -1,12 +1,13 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators, KindSignatures #-}
+{-# LANGUAGE DataKinds, UndecidableInstances, GADTs, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferRes, stored
         , evalResults, userData, localsInScope, inferScope
         , inferredType
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
-    , preparePayloads
+    , PreparePayloadInput(..), preparePayloads
     , SugarInput(..)
     ) where
 
@@ -34,12 +35,12 @@ data EvalResultsForExpr = EvalResultsForExpr
     , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val (Tree Pure Type))]
     }
 
-data Payload m a = Payload
+data Payload m a h = Payload
     { _entityId :: EntityId
-    , _inferRes :: Tree (InferResult (Pure :*: UVar)) V.Term
+    , _inferRes :: InferResult (Pure :*: UVar) h
     , _inferScope :: Tree V.Scope UVar
     , _localsInScope :: [V.Var]
-    , _stored :: Tree (HRef m) V.Term
+    , _stored :: HRef m h
     , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]
@@ -48,21 +49,27 @@ data Payload m a = Payload
 
 Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload
+makeHTraversableAndBases ''Payload
 
-inferredType :: Lens' (Payload m a) (Tree Pure Type)
+inferredType :: Lens' (Tree (Payload m a) V.Term) (Tree Pure Type)
 inferredType = inferRes . inferResult . Lens._1
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
 
-data PreparePayloadsRes pl t = PreparePayloadsRes
+data PreparePayloadInput (pl :: HyperType) t = PreparePayloadInput
+    { ppEntityId :: EntityId
+    , ppMakePl :: [EntityId] -> pl t
+    }
+
+data PreparePayloadsRes (pl :: HyperType) t = PreparePayloadsRes
     { ppVarMap :: Map V.Var [EntityId]
-    , ppRes :: Ann (Const pl) t
+    , ppRes :: Ann pl t
     }
 
 class SugarInput t where
     preparePayloadsH ::
-        Annotated (EntityId, [EntityId] -> pl) t ->
+        Tree (Ann (PreparePayloadInput pl)) t ->
         Tree (PreparePayloadsRes pl) t
     initScopes ::
         -- InferState is passed temporarily to lookup lambda type bodies with UVars
@@ -71,11 +78,11 @@ class SugarInput t where
         InferState ->
         Tree V.Scope UVar ->
         [V.Var] ->
-        Annotated (Payload m a) t ->
-        Annotated (Payload m a) t
+        Tree (Ann (Payload m a)) t ->
+        Tree (Ann (Payload m a)) t
 
 instance SugarInput V.Term where
-    preparePayloadsH (Ann (Const (x, mkPayload)) body) =
+    preparePayloadsH (Ann (PreparePayloadInput x mkPayload) body) =
         PreparePayloadsRes
         { ppVarMap =
             childrenVars
@@ -90,13 +97,12 @@ instance SugarInput V.Term where
                 V.BLam (V.Lam var _) -> childrenVars ^. Lens.ix var
                 _ -> []
                 & mkPayload
-                & Const
             )
         }
         where
             childrenVars = Map.unionsWith (++) (hfoldMap (const ((:[]) . ppVarMap)) b)
             b = hmap (Proxy @SugarInput #> preparePayloadsH) body
-    initScopes inferState iScope locals (Ann (Const pl) body) =
+    initScopes inferState iScope locals (Ann pl body) =
         case body of
         V.BLam (V.Lam var b) ->
             initScopes inferState innerScope (var : locals) b & V.Lam var & V.BLam
@@ -107,10 +113,10 @@ instance SugarInput V.Term where
                 innerScope =
                     maybe iScope (\x -> iScope & V.scopeVarTypes . Lens.at var ?~ _HFlip # GMono x) mArgType
         x -> hmap (Proxy @SugarInput #> initScopes inferState iScope locals) x
-        & Ann (Const (pl & localsInScope <>~ locals & inferScope .~ iScope))
+        & Ann (pl & localsInScope <>~ locals & inferScope .~ iScope)
 
 preparePayloads ::
     SugarInput t =>
-    Annotated (EntityId, [EntityId] -> pl) t ->
-    Annotated pl t
+    Tree (Ann (PreparePayloadInput pl)) t ->
+    Tree (Ann pl) t
 preparePayloads = ppRes . preparePayloadsH

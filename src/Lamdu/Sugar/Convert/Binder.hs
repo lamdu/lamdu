@@ -13,7 +13,6 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Recurse (Recursive(..), foldMapRecursive, (##>>))
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -44,17 +43,17 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> T m ()
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> T m ()
 lamParamToHole (V.Lam param x) =
-    SubExprs.getVarsToHole param (x & hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
+    SubExprs.getVarsToHole param (x & hflipped . hmapped1 %~ (^. Input.stored))
 
 makeInline ::
     Monad m =>
-    Tree (HRef m) V.Term -> Tree Redex (Const (Input.Payload m a)) -> EntityId -> BinderVarInline (T m)
+    Tree (HRef m) V.Term -> Tree Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after ++ before)
     | otherwise =
-        inlineLet stored (redex & hmapped1 %~ (^. Lens._Wrapped . Input.stored . ExprIRef.iref))
+        inlineLet stored (redex & hmapped1 %~ (^. Input.stored . ExprIRef.iref))
         & InlineVar
     where
         otherUses = filter (/= useId) uses
@@ -63,8 +62,8 @@ makeInline stored redex useId
 
 convertLet ::
     (Monad m, Monoid a) =>
-    Input.Payload m a ->
-    Tree Redex (Const (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
+    Tree Redex (Input.Payload m a) ->
     ConvertM m
     (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
 convertLet pl redex =
@@ -76,7 +75,7 @@ convertLet pl redex =
                 (_pMode, value) <-
                     convertAssignment binderKind param (redex ^. Redex.arg)
                     <&> _2 . annotation . pInput . Input.entityId .~
-                        EntityId.ofValI (redex ^. Redex.arg . annotation . Input.stored . ExprIRef.iref)
+                        EntityId.ofValI (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref)
                 letBody <-
                     convertBinder bod
                     & ConvertM.local (scScopeInfo . siLetItems <>~
@@ -90,14 +89,14 @@ convertLet pl redex =
                 & extract .~ float
                 & mReplaceParent ?~
                     ( protectedSetToVal stored
-                        (redex ^. Redex.arg . annotation . Input.stored . ExprIRef.iref)
+                        (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref)
                         <&> EntityId.ofValI
                     )
         postProcess <- ConvertM.postProcessAssert
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamOut . annotation . Input.stored
+                    redex ^. Redex.lam . V.lamOut . hAnn . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         typS <-
@@ -121,24 +120,24 @@ convertLet pl redex =
                 Const ConvertPayload
                 { _pInput =
                     pl
-                    & Input.userData .~ redex ^. Redex.lamPl . Lens._Wrapped . Input.userData
+                    & Input.userData .~ redex ^. Redex.lamPl . Input.userData
                 , _pActions = actions
                 }
             }
     where
-        argAnn = redex ^. Redex.arg . annotation
+        argAnn = redex ^. Redex.arg . hAnn
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            & V.lamOut . hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
+            & V.lamOut . hflipped . hmapped1 %~ (^. Input.stored)
             & BinderKindLet
         V.Lam param bod = redex ^. Redex.lam
 
 convertBinder ::
     (Monad m, Monoid a) =>
-    Val (Input.Payload m a) ->
+    Tree (Ann (Input.Payload m a)) V.Term ->
     ConvertM m (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
-convertBinder expr@(Ann (Const pl) body) =
+convertBinder expr@(Ann pl body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
     False -> convertExpr
@@ -167,7 +166,8 @@ convertBinder expr@(Ann (Const pl) body) =
             , _hVal = BinderExpr x
             }
 
-localNewExtractDestPos :: Input.Payload m a -> ConvertM m b -> ConvertM m b
+localNewExtractDestPos ::
+    Tree (Input.Payload m a) V.Term -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
@@ -179,7 +179,7 @@ localNewExtractDestPos x =
 makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Val (Input.Payload m a) ->
+    ConventionalParams m -> Tree (Ann (Input.Payload m a)) V.Term ->
     ConvertM m
     (Tree (Function InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
 makeFunction chosenScopeProp params funcBody =
@@ -208,7 +208,9 @@ makeFunction chosenScopeProp params funcBody =
 makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Val (Input.Payload m a) -> Input.Payload m a ->
+    ConventionalParams m ->
+    Tree (Ann (Input.Payload m a)) V.Term ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m
     (Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
@@ -238,9 +240,10 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) (V.Lam V.Var V.Term) ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convertLam (Ann (Const exprPl) lam) =
+convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
         func <-
@@ -369,7 +372,8 @@ instance MarkLightParams (Body InternalName i o) where
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::
     (Monad m, Monoid a) =>
-    BinderKind m -> V.Var -> Val (Input.Payload m a) ->
+    BinderKind m -> V.Var ->
+    Tree (Ann (Input.Payload m a)) V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))
@@ -392,12 +396,12 @@ convertAssignment binderKind defVar expr =
             (mPresentationModeProp, convParams, funcBody) <-
                 convertParams binderKind defVar expr
             makeAssignment (Anchors.assocScopeRef defVar) convParams
-                funcBody (expr ^. annotation)
+                funcBody (expr ^. hAnn)
                 <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
-    DefI m -> Val (Input.Payload m a) ->
+    DefI m -> Tree (Ann (Input.Payload m a)) V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))

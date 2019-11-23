@@ -24,7 +24,6 @@ import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -78,11 +77,11 @@ slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
 slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . ExprIRef.iref)
 
 mkStoredLam ::
-    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
-    Input.Payload m a -> StoredLam m
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamOut . hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored))
+    (lam & V.lamOut . hflipped . hmapped1 %~ (^. Input.stored))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -169,7 +168,7 @@ addFieldParam =
         setParamList mPresMode (slParamList storedLam) (mkNewTags tag)
         fixUsages addFieldToCall binderKind storedLam
 
-mkCpScopesOfLam :: Input.Payload m a -> EvalScopes  [BinderParamScopeId]
+mkCpScopesOfLam :: Tree (Input.Payload m a) V.Term -> EvalScopes  [BinderParamScopeId]
 mkCpScopesOfLam lamPl =
     lamPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
     <&> (fmap . map) BinderParamScopeId
@@ -358,7 +357,8 @@ convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
     do
@@ -502,7 +502,7 @@ convertToRecordParams =
         fixUsages (wrapArgWithRecord mkNewArg oldParam newParam)
             binderKind storedLam
 
-lamParamType :: Input.Payload m a -> Tree Pure T.Type
+lamParamType :: Tree (Input.Payload m a) V.Term -> Tree Pure T.Type
 lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
     lamExprPl ^? Input.inferredType . _Pure . T._TFun . funcIn
@@ -545,7 +545,7 @@ mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal tid (name ^. inTag)
 
 mkFuncParam ::
     Monad m =>
-    EntityId -> Input.Payload m a -> info ->
+    EntityId -> Tree (Input.Payload m a) V.Term -> info ->
     ConvertM m (FuncParam InternalName (T m) info)
 mkFuncParam entityId lamExprPl info =
     (,)
@@ -572,7 +572,8 @@ mkFuncParam entityId lamExprPl info =
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->
-    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) -> Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     do
@@ -642,12 +643,13 @@ postProcessActions post x
 
 convertLamParams ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
-    Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
-makeFieldParam :: Input.Payload m a -> (T.Tag, Tree Pure T.Type) -> FieldParam
+makeFieldParam ::
+    Tree (Input.Payload m a) V.Term -> (T.Tag, Tree Pure T.Type) -> FieldParam
 makeFieldParam lambdaPl (tag, typeExpr) =
     FieldParam
     { fpTag = tag
@@ -664,8 +666,8 @@ convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m ->
-    Tree (V.Lam V.Var V.Term) (Ann (Const (Input.Payload m a))) ->
-    Input.Payload m a ->
+    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
@@ -736,7 +738,7 @@ convertBinderToFunction mkArg binderKind x =
 
 convertEmptyParams ::
     Monad m =>
-    BinderKind m -> Val (Input.Payload m a) -> ConvertM m (ConventionalParams m)
+    BinderKind m -> Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ConventionalParams m)
 convertEmptyParams binderKind x =
     ConvertM.postProcessAssert
     <&>
@@ -748,7 +750,7 @@ convertEmptyParams binderKind x =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                x & hflipped . hmapped1 %~ (^. Lens._Wrapped . Input.stored)
+                x & hflipped . hmapped1 %~ (^. Input.stored)
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure
@@ -759,18 +761,18 @@ convertEmptyParams binderKind x =
 
 convertParams ::
     Monad m =>
-    BinderKind m -> V.Var -> Val (Input.Payload m a) ->
+    BinderKind m -> V.Var -> Tree (Ann (Input.Payload m a)) V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , ConventionalParams m
-    , Val (Input.Payload m a)
+    , Tree (Ann (Input.Payload m a)) V.Term
     )
 convertParams binderKind defVar expr =
     do
         postProcess <- ConvertM.postProcessAssert
         case expr ^. hVal of
             V.BLam lambda ->
-                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. annotation)
+                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. hAnn)
                 <&> f
                 where
                     f convParams =

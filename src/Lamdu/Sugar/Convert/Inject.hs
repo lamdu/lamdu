@@ -3,8 +3,7 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Ann(..), annotation, hVal)
-import           Hyper.Combinator.Ann (Annotated)
+import           Hyper (Tree, Ann(..), hVal, hAnn)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
@@ -21,9 +20,10 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) V.Inject ->
+    Tree V.Inject (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convert (Ann (Const exprPl) (V.Inject tag injected)) =
+convert (V.Inject tag injected) exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let typeProtect = protectedSetToVal (exprPl ^. Input.stored) valI
@@ -61,4 +61,4 @@ convert (Ann (Const exprPl) (V.Inject tag injected)) =
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . ExprIRef.iref
-        injectedI = injected ^. annotation . Input.stored . ExprIRef.iref
+        injectedI = injected ^. hAnn . Input.stored . ExprIRef.iref

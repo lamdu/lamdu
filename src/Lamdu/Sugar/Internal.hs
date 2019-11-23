@@ -30,7 +30,7 @@ type T = Transaction
 
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
-      _pInput :: Input.Payload m a
+      _pInput :: Tree (Input.Payload m a) Term
     , _pActions :: NodeActions InternalName (T m) (T m)
     }
 

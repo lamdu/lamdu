@@ -2,8 +2,7 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import           Hyper (Ann(..), annotation)
-import           Hyper.Combinator.Ann (Annotated)
+import           Hyper (Tree, Ann(..), hAnn)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -20,7 +19,8 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertEmpty ::
-    (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
+    (Monad m, Monoid a) =>
+    Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
 convertEmpty pl =
     Composite.convertEmpty DataOps.recExtend pl
     <&> BodyRecord
@@ -28,17 +28,18 @@ convertEmpty pl =
 
 convertExtend ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) (RowExtend T.Tag V.Term V.Term) ->
+    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convertExtend (Ann (Const exprPl) (RowExtend tag val rest)) =
+convertExtend (RowExtend tag val rest) exprPl =
     do
         valS <- ConvertM.convertSubexpression val
         restS <- ConvertM.convertSubexpression rest
         let recP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = val ^. annotation . Input.stored . ExprIRef.iref
-                , Composite._extendRest = rest ^. annotation
+                , Composite._extendValI = val ^. hAnn . Input.stored . ExprIRef.iref
+                , Composite._extendRest = rest ^. hAnn
                 }
         Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
     where

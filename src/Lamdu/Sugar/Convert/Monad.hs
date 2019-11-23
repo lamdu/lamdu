@@ -28,13 +28,12 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (Tree, Pure)
+import           Hyper (Tree, Pure, Ann)
 import           Hyper.Unify.Binding (UVar)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps)
 import           Lamdu.Calc.Infer (InferState)
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -104,7 +103,7 @@ data Context m = Context
     { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
-    , _scTopLevelExpr :: Val (Input.Payload m [Sugar.EntityId])
+    , _scTopLevelExpr :: Tree (Ann (Input.Payload m [Sugar.EntityId])) V.Term
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcess.Result
@@ -116,7 +115,8 @@ data Context m = Context
     , _scConfig :: Config
     , _scAnnotationsMode :: Annotations.Mode
     , scConvertSubexpression ::
-        forall a. Monoid a => PositionInfo -> Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+        forall a. Monoid a =>
+        PositionInfo -> Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ExpressionU m a)
     , _scLanguageIdentifier :: LangId
     , _scLanguageDir :: Dir.Layout
     }
@@ -186,7 +186,7 @@ local f (ConvertM act) = ConvertM $ Reader.local f act
 
 convertSubexpression ::
     (Monad m, Monoid a) =>
-    Val (Input.Payload m a) -> ConvertM m (ExpressionU m a)
+    Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =
     do
         convertSub <- Lens.view (Lens.to scConvertSubexpression)

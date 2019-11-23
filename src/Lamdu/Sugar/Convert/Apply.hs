@@ -15,7 +15,6 @@ import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.AST.Row (freExtends, freRest)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Lamdu.Calc.Definition (Deps, depsGlobalTypes)
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -37,21 +36,22 @@ import           Lamdu.Prelude
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Annotated (Input.Payload m a) (V.App V.Term) ->
+    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convert posInfo x@(Ann (Const exprPl) app@(V.App funcI argI)) =
+convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
         (funcS, argS) <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift
-                convertAppliedHole posInfo x argS & justToLeft
+                convertAppliedHole posInfo app exprPl argS & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure
                     ( if Lens.has (hVal . _BodyHole) argS
                       then
-                          let dst = argI ^. annotation . Input.stored . ExprIRef.iref
+                          let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
                               deleteAction =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
@@ -87,8 +87,8 @@ validateDefParamsMatchArgs var record frozenDeps =
 
 convertLabeled ::
     (Monad m, Foldable f, Monoid a) =>
-    f (Val (Input.Payload m a)) ->
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
+    f (Tree (Ann (Input.Payload m a)) V.Term) ->
+    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled subexprs funcS argS exprPl =
     do
@@ -128,8 +128,8 @@ convertLabeled subexprs funcS argS exprPl =
 
 convertPrefix ::
     (Monad m, Foldable f, Monoid a) =>
-    f (Val (Input.Payload m a)) ->
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
+    f (Tree (Ann (Input.Payload m a)) V.Term) ->
+    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
 convertPrefix subexprs funcS argS applyPl =
     do

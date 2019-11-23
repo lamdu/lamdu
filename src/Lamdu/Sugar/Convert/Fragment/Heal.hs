@@ -84,7 +84,7 @@ healMismatch =
         postProcess <- ConvertM.postProcessAssert
         topLevelExpr <-
             Lens.view ConvertM.scTopLevelExpr
-            <&> hflipped . hmapped1 . Lens._Wrapped %~ (^. Input.stored)
+            <&> hflipped . hmapped1 %~ Const . (^. Input.stored)
         deps <- Lens.view (ConvertM.scFrozenDeps . Property.pVal)
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
         pure $

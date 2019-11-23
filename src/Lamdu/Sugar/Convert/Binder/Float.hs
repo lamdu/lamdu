@@ -147,11 +147,11 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
 
 addLetParam ::
     Monad m =>
-    V.Var -> Tree Redex (Const (Input.Payload m a)) -> ConvertM m (T m (Tree (HRef m) V.Term))
+    V.Var -> Tree Redex (Input.Payload m a) -> ConvertM m (T m (Tree (HRef m) V.Term))
 addLetParam var redex =
     case storedRedex ^. Redex.arg . hVal of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.arg . annotation . Input.inferredType . _Pure of
+        case redex ^. Redex.arg . hAnn . Input.inferredType . _Pure of
         T.TFun (FuncType (Pure (T.TRecord composite)) _)
             | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
             , let fields = Map.toList fieldsMap
@@ -163,7 +163,7 @@ addLetParam var redex =
             storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . hAnn)
     _ -> convertLetToLam var storedRedex & pure
     where
-        storedRedex = redex & hmapped1 %~ (^. Lens._Wrapped . Input.stored)
+        storedRedex = redex & hmapped1 %~ (^. Input.stored)
 
 sameLet :: Tree Redex (HRef m) -> Tree (HRef m) V.Term
 sameLet redex = redex ^. Redex.arg . hAnn
@@ -173,7 +173,7 @@ ordNub = Set.toList . Set.fromList
 
 processLet ::
     Monad m =>
-    Tree Redex (Const (Input.Payload m a)) ->
+    Tree Redex (Input.Payload m a) ->
     ConvertM m (T m (Tree (HRef m) V.Term))
 processLet redex =
     do
@@ -190,17 +190,17 @@ processLet redex =
                     where
                         outerScope = outerScopeInfo ^. ConvertM.osiScope . V.scopeVarTypes
         case varsExitingScope of
-            [] -> sameLet (redex & hmapped1 %~ (^. Lens._Wrapped . Input.stored)) & pure & pure
+            [] -> sameLet (redex & hmapped1 %~ (^. Input.stored)) & pure & pure
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
     where
         innerScopeLocalVars =
-            redex ^. Redex.arg . annotation . Input.localsInScope & Set.fromList
+            redex ^. Redex.arg . hAnn . Input.localsInScope & Set.fromList
 
 makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
-    Tree Redex (Const (Input.Payload m a)) ->
+    Tree Redex (Input.Payload m a) ->
     ConvertM m (T m ExtractDestination)
 makeFloatLetToOuterScope setTopLevel redex =
     (,,,)
@@ -211,7 +211,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     <&>
     \(makeNewLet, ctx, floatToGlobal, postProcess) ->
     do
-        redex ^. Redex.lam . V.lamOut . annotation . Input.stored .
+        redex ^. Redex.lam . V.lamOut . hAnn . Input.stored .
             ExprIRef.iref & setTopLevel
         newLetP <- makeNewLet
         r <-
@@ -232,7 +232,7 @@ makeFloatLetToOuterScope setTopLevel redex =
                         & addRecursiveRefAsDep
                         & Def.pruneDeps (redex ^. Redex.arg)
             Just outerScopeInfo ->
-                EntityId.ofValI (redex ^. Redex.arg . annotation . Input.stored . ExprIRef.iref) <$
+                EntityId.ofValI (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref) <$
                 DataOps.redexWrapWithGivenParam param
                 (newLetP ^. ExprIRef.iref) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
@@ -240,8 +240,8 @@ makeFloatLetToOuterScope setTopLevel redex =
     where
         param = redex ^. Redex.lam . V.lamIn
         fixUsages _ =
-            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.lamOut . annotation . Input.stored)
+            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.lamOut . hAnn . Input.stored)
             >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamIn)
         newRedex =
             redex
-            & Redex.lam . V.lamOut . annotation . Input.stored . ExprIRef.setIref .~ setTopLevel
+            & Redex.lam . V.lamOut . hAnn . Input.stored . ExprIRef.setIref .~ setTopLevel

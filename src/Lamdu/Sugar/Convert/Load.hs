@@ -29,7 +29,6 @@ import           Hyper.Unify.Generalize (GTerm(..))
 import           Hyper.Unify.New (newUnbound)
 import           Lamdu.Calc.Infer (PureInfer, runPureInfer, InferState(..), loadDeps, emptyPureInferState, varGen)
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
@@ -68,16 +67,18 @@ preparePayloads ::
     Map NominalId (Tree Pure (NominalDecl T.Type)) ->
     CurAndPrev (EvalResults (ValI m)) ->
     Annotated (Tree (HRef m) V.Term, Tree (InferResult (Pure :*: UVar)) V.Term) V.Term ->
-    Annotated (Input.Payload m ()) V.Term
+    Tree (Ann (Input.Payload m ())) V.Term
 preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
     inferredVal
-    & hflipped . hmapped1 . Lens._Wrapped %~ f
+    & hflipped . hmapped1 %~ f . getConst
     & Input.preparePayloads
     & Input.initScopes inferState topLevelScope []
     where
         f (valIProp, inferRes) =
-            ( eId
-            , \varRefs ->
+            Input.PreparePayloadInput
+            { Input.ppEntityId = eId
+            , Input.ppMakePl =
+                \varRefs ->
                 Input.Payload
                 { Input._varRefsOfLambda = varRefs
                 , Input._entityId = eId
@@ -91,7 +92,7 @@ preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
                         (valIProp ^. ExprIRef.iref)
                 , Input._userData = ()
                 }
-            )
+            }
             where
                 eId = valIProp ^. ExprIRef.iref & EntityId.ofValI
 
@@ -140,7 +141,7 @@ readValAndAddProperties prop =
     <&> hflipped . hmapped1 %~ (^. Lens._1)
 
 data InferOut m = InferOut
-    { _irVal :: Val (Input.Payload m [EntityId])
+    { _irVal :: Tree (Ann (Input.Payload m [EntityId])) V.Term
     , _irCtx :: InferState
     }
 Lens.makeLenses ''InferOut
@@ -186,7 +187,7 @@ runInferResult _monitors evalRes act =
                 \nomsMap ->
                 InferOut
                 ( preparePayloads inferState1 topLevelScope nomsMap evalRes resolvedTerm
-                    & hflipped %~ hmap (const (Lens._Wrapped %~ setUserData))
+                    & hflipped %~ hmap (const setUserData)
                 ) inferState1
                 & Right
     where

@@ -5,13 +5,12 @@ module Lamdu.Sugar.Convert.DefExpr
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, annotation)
+import           Hyper (Tree, Pure, Ann, hAnn)
 import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (alphaEq, runPureInfer)
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
@@ -34,7 +33,9 @@ type T = Transaction
 
 convert ::
     (Monoid a, Monad m) =>
-    Tree Pure T.Scheme -> Definition.Expr (Val (Input.Payload m a)) -> DefI m ->
+    Tree Pure T.Scheme ->
+    Definition.Expr (Tree (Ann (Input.Payload m a)) V.Term) ->
+    DefI m ->
     ConvertM m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m a))
 convert defType defExpr defI =
     do
@@ -42,7 +43,7 @@ convert defType defExpr defI =
             convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
-                generalize (defExpr ^. Definition.expr . annotation . Input.inferRes . inferResult . _2)
+                generalize (defExpr ^. Definition.expr . hAnn . Input.inferRes . inferResult . _2)
                 >>= saveScheme
                 & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)

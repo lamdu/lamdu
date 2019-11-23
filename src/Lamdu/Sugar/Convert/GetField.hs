@@ -3,8 +3,7 @@ module Lamdu.Sugar.Convert.GetField
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Ann(..), annotation)
-import           Hyper.Combinator.Ann (Annotated)
+import           Hyper (Tree, Ann(..), hAnn)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -21,9 +20,10 @@ import           Lamdu.Prelude
 
 convertGetFieldParam ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) V.GetField ->
+    Tree V.GetField (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (Maybe (ExpressionU m a))
-convertGetFieldParam (Ann (Const exprPl) (V.GetField recExpr tag)) =
+convertGetFieldParam (V.GetField recExpr tag) exprPl =
     do
         tagParamInfos <- Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
         do
@@ -41,9 +41,10 @@ convertGetFieldParam (Ann (Const exprPl) (V.GetField recExpr tag)) =
 
 convertGetFieldNonParam ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) V.GetField ->
+    Tree V.GetField (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convertGetFieldNonParam (Ann (Const exprPl) (V.GetField recExpr tag)) =
+convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     GetField
     <$> ConvertM.convertSubexpression recExpr
     <*> do
@@ -58,13 +59,14 @@ convertGetFieldNonParam (Ann (Const exprPl) (V.GetField recExpr tag)) =
     >>= addActions [recExpr] exprPl
     where
         valI = exprPl ^. Input.stored . ExprIRef.iref
-        recExprStored = recExpr ^. annotation . Input.stored
+        recExprStored = recExpr ^. hAnn . Input.stored
         recExprI = recExprStored ^. ExprIRef.iref
 
 convert ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) V.GetField ->
+    Tree V.GetField (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convert x =
-    convertGetFieldParam x
-    >>= maybe (convertGetFieldNonParam x) pure
+convert gf pl =
+    convertGetFieldParam gf pl
+    >>= maybe (convertGetFieldNonParam gf pl) pure

@@ -7,8 +7,7 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
-import           Hyper (Tree, Ann(..), annotation, hVal)
-import           Hyper.Combinator.Ann (Annotated)
+import           Hyper (Tree, Ann(..), annotation, hVal, hAnn)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -31,7 +30,9 @@ import           Lamdu.Prelude
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?
 
-convertAbsurd :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
+convertAbsurd ::
+    (Monad m, Monoid a) =>
+    Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
 convertAbsurd pl =
     Composite.convertEmpty DataOps.case_ pl
     <&> Case LambdaCase
@@ -47,9 +48,10 @@ _CaseThatIsLambdaCase =
 
 convert ::
     (Monad m, Monoid a) =>
-    Annotated (Input.Payload m a) (RowExtend T.Tag V.Term V.Term) ->
+    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
+    Tree (Input.Payload m a) V.Term ->
     ConvertM m (ExpressionU m a)
-convert (Ann (Const exprPl) (RowExtend tag v rest)) =
+convert (RowExtend tag v rest) exprPl =
     do
         valS <-
             ConvertM.convertSubexpression v
@@ -58,8 +60,8 @@ convert (Ann (Const exprPl) (RowExtend tag v rest)) =
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = v ^. annotation . Input.stored . ExprIRef.iref
-                , Composite._extendRest = rest ^. annotation
+                , Composite._extendValI = v ^. hAnn . Input.stored . ExprIRef.iref
+                , Composite._extendRest = rest ^. hAnn
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
             exprPl caseP
@@ -68,8 +70,8 @@ convert (Ann (Const exprPl) (RowExtend tag v rest)) =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    Tree (V.App V.Term) (Ann (Const (Input.Payload m a))) ->
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a ->
+    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
+    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.App _ arg) funcS argS exprPl =
     do
