@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferRes, stored
         , evalResults, userData, localsInScope, inferScope
-        , inferredType, inferredTypeUVar
+        , inferredType
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , preparePayloads
     , SugarInput(..)
@@ -51,9 +51,6 @@ Lens.makeLenses ''Payload
 
 inferredType :: Lens' (Payload m a) (Tree Pure Type)
 inferredType = inferRes . inferResult . Lens._1
-
-inferredTypeUVar :: Lens' (Payload m a) (Tree UVar Type)
-inferredTypeUVar = inferRes . inferResult . Lens._2
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
@@ -105,7 +102,7 @@ instance SugarInput V.Term where
             initScopes inferState innerScope (var : locals) b & V.Lam var & V.BLam
             where
                 mArgType =
-                    runPureInfer () inferState (semiPruneLookup (pl ^. inferredTypeUVar))
+                    runPureInfer () inferState (semiPruneLookup (pl ^. inferRes . inferResult . Lens._2))
                     ^? Lens._Right . Lens._1 . Lens._2 . _UTerm . uBody . funcType . funcIn
                 innerScope =
                     maybe iScope (\x -> iScope & V.scopeVarTypes . Lens.at var ?~ _HFlip # GMono x) mArgType
