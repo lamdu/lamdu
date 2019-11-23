@@ -395,8 +395,7 @@ writeResult preConversion inferContext holeStored inferredVal =
             <&> addBindingsAll
             <&> hflipped . hmapped1 %~ toPayload
             <&> Input.preparePayloads
-            <&> hflipped . hmapped1 . Lens._Wrapped %~ snd
-        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. annotation . _1 . ExprIRef.iref)
+        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. annotation . _2 . Input.stored . ExprIRef.iref)
         writtenExpr & hflipped . hmapped1 . Lens._Wrapped %~ snd & preConversion & pure
     where
         intoStorePoint (Const ((mStorePoint, a), inferred)) =
@@ -408,8 +407,7 @@ writeResult preConversion inferContext holeStored inferredVal =
             ( eId
             , \varRefs ->
               ( wasStored
-              , ( stored
-                , Input.Payload
+              , Input.Payload
                   { Input._varRefsOfLambda = varRefs
                   , Input._userData = a
                   , Input._inferRes = inferRes
@@ -419,7 +417,6 @@ writeResult preConversion inferContext holeStored inferredVal =
                   , Input._entityId = eId
                   , Input._localsInScope = []
                   }
-                )
               )
             )
             where
