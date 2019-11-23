@@ -10,7 +10,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.State (StateT)
 import qualified Control.Monad.State as State
 import           Hyper
-import           Hyper.Infer (inferBody)
+import           Hyper.Infer (InferResult, inferResult, inferBody)
 import           Hyper.Type.AST.FuncType
 import           Hyper.Type.AST.Nominal
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -27,9 +27,9 @@ import qualified Lamdu.Calc.Type as T
 import           Lamdu.Prelude
 
 -- | Term with unifiable type annotations
-type TypedTerm m = Annotated (Tree (UVarOf m) T.Type) V.Term
+type TypedTerm m = Annotated (Tree (InferResult (UVarOf m)) V.Term) V.Term
 
-type AnnotatedTerm a = Annotated (a, Tree UVar T.Type) V.Term
+type AnnotatedTerm a = Annotated (a, Tree (InferResult UVar) V.Term) V.Term
 
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
@@ -37,7 +37,7 @@ termTransforms ::
     a -> AnnotatedTerm a ->
     StateT InferState [] (AnnotatedTerm a)
 termTransforms def src =
-    src ^. annotation . _2 & semiPruneLookup & liftInfer ()
+    src ^. annotation . _2 . inferResult & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
@@ -55,7 +55,7 @@ transformGetFields def src row =
     \case
     Nothing -> empty
     Just (RowExtend tag typ rest) ->
-        pure (Ann (Const (def, typ)) (V.BGetField (V.GetField src tag)))
+        pure (Ann (Const (def, inferResult # typ)) (V.BGetField (V.GetField src tag)))
         <|> transformGetFields def src rest
 
 liftInfer :: env -> PureInfer env a -> StateT InferState [] a
@@ -75,7 +75,7 @@ termTransformsWithoutSplit def src =
         Lens.nullOf (hVal . V._BApp . V.appFunc . hVal . V._BLam) src & guard
 
         (s1, typ) <-
-            src ^. annotation . _2 & semiPruneLookup & liftInfer ()
+            src ^. annotation . _2 . inferResult & semiPruneLookup & liftInfer ()
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (hVal . V._BToNom) src ->
@@ -93,7 +93,7 @@ termTransformsWithoutSplit def src =
                     dstType <- newUnbound
                     caseType <- FuncType s1 dstType & T.TFun & newTerm
                     suggestCaseWith row dstType
-                        <&> Ann (Const caseType)
+                        <&> Ann (Const (inferResult # caseType))
                         <&> hflipped . hmapped1 . Lens._Wrapped %~
                             (\t -> (def, t))
                         <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
@@ -121,7 +121,7 @@ termTransformsWithoutSplit def src =
                             termTransformsWithoutSplit def applied
             _ -> empty
     where
-        mkResult t = Ann (Const (def, t))
+        mkResult t = Ann (Const (def, inferResult # t))
 
 termOptionalTransformsWithoutSplit ::
     a -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
@@ -139,14 +139,14 @@ forType t =
         -- TODO: DSL for matching/deref'ing UVar structure
         (_, typ) <- semiPruneLookup t
         case typ ^? _UTerm . uBody . T._TVariant of
-            Nothing -> forTypeUTermWithoutSplit typ <&> Ann (Const t) <&> (:[])
-            Just r -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann (Const t)
+            Nothing -> forTypeUTermWithoutSplit typ <&> Ann (Const (inferResult # t)) <&> (:[])
+            Just r -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann (Const (inferResult # t))
 
 forVariant ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Tree (UVarOf m) T.Row ->
-    [Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type)))] ->
-    m [Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type)))]
+    [Tree V.Term (Ann (Const (Tree (InferResult (UVarOf m)) V.Term)))] ->
+    m [Tree V.Term (Ann (Const (Tree (InferResult (UVarOf m)) V.Term)))]
 forVariant r def =
     semiPruneLookup r <&> (^? _2 . _UTerm . uBody . T._RExtend) >>=
     \case
@@ -156,7 +156,7 @@ forVariant r def =
 forVariantExtend ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Tree (RowExtend T.Tag T.Type T.Row) (UVarOf m) ->
-    m [Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type)))]
+    m [Tree V.Term (Ann (Const (Tree (InferResult (UVarOf m)) V.Term)))]
 forVariantExtend (RowExtend tag typ rest) =
     (:)
     <$> (forTypeWithoutSplit typ <&> V.Inject tag <&> V.BInject)
@@ -165,11 +165,12 @@ forVariantExtend (RowExtend tag typ rest) =
 forTypeWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Tree (UVarOf m) T.Type -> m (TypedTerm m)
-forTypeWithoutSplit t = semiPruneLookup t <&> snd >>= forTypeUTermWithoutSplit <&> Ann (Const t)
+forTypeWithoutSplit t =
+    semiPruneLookup t <&> snd >>= forTypeUTermWithoutSplit <&> Ann (Const (inferResult # t))
 
 forTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    Tree (UTerm (UVarOf m)) T.Type -> m (Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type))))
+    Tree (UTerm (UVarOf m)) T.Type -> m (Tree V.Term (Ann (Const (Tree (InferResult (UVarOf m)) V.Term))))
 forTypeUTermWithoutSplit t =
     case t ^? _UTerm . uBody of
     Just (T.TRecord row) -> suggestRecord row
@@ -181,7 +182,9 @@ forTypeUTermWithoutSplit t =
     _ -> V.BLeaf V.LHole & pure
 
 suggestRecord ::
-    (UnifyGen m T.Type, UnifyGen m T.Row) => Tree (UVarOf m) T.Row -> m (Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type))))
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
+    Tree (UVarOf m) T.Row ->
+    m (Tree V.Term (Ann (Const (Tree (InferResult (UVarOf m)) V.Term))))
 suggestRecord r =
     semiPruneLookup r <&> (^? _2 . _UTerm . uBody) >>=
     \case
@@ -189,13 +192,14 @@ suggestRecord r =
     Just (T.RExtend (RowExtend tag typ rest)) ->
         RowExtend tag
         <$> autoLambdas typ
-        <*> (Ann <$> (newTerm (T.TRecord rest) <&> Const) <*> suggestRecord rest)
+        <*> (Ann <$> (newTerm (T.TRecord rest) <&> (inferResult #) <&> Const) <*> suggestRecord rest)
         <&> V.BRecExtend
     _ -> V.BLeaf V.LHole & pure
 
 suggestCaseWith ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    Tree (UVarOf m) T.Row -> Tree (UVarOf m) T.Type -> m (Tree V.Term (Ann (Const (Tree (UVarOf m) T.Type))))
+    Tree (UVarOf m) T.Row -> Tree (UVarOf m) T.Type ->
+    m (Tree V.Term (Ann (Const (Tree (InferResult (UVarOf m)) V.Term))))
 suggestCaseWith variantType resultType =
     semiPruneLookup variantType <&> (^? _2 . _UTerm . uBody) >>=
     \case
@@ -203,10 +207,10 @@ suggestCaseWith variantType resultType =
     Just (T.RExtend (RowExtend tag fieldType rest)) ->
         RowExtend tag
         <$> (Ann
-                <$> (mkCaseType fieldType <&> Const)
+                <$> (mkCaseType fieldType <&> (inferResult #) <&> Const)
                 <*> (autoLambdas resultType <&> V.Lam "var" <&> V.BLam))
         <*> (Ann
-                <$> (T.TVariant rest & newTerm >>= mkCaseType <&> Const)
+                <$> (T.TVariant rest & newTerm >>= mkCaseType <&> (inferResult #) <&> Const)
                 <*> suggestCaseWith rest resultType)
         <&> V.BCase
         where
@@ -221,11 +225,11 @@ autoLambdas typ =
     \case
     Just result -> autoLambdas result <&> V.Lam "var" <&> V.BLam
     Nothing -> V.BLeaf V.LHole & pure
-    <&> Ann (Const typ)
+    <&> Ann (Const (inferResult # typ))
 
 fillHoles :: a -> AnnotatedTerm a -> PureInfer (Tree V.Scope UVar) (AnnotatedTerm a)
 fillHoles def (Ann pl (V.BLeaf V.LHole)) =
-    forTypeWithoutSplit (pl ^. Lens._Wrapped . _2)
+    forTypeWithoutSplit (pl ^. Lens._Wrapped . _2 . inferResult)
     <&> hflipped . hmapped1 . Lens._Wrapped %~ (\t -> (def, t))
 fillHoles def (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
@@ -248,7 +252,7 @@ termTransformsWithModify _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
 termTransformsWithModify def src =
-    src ^. annotation . _2 & semiPruneLookup & liftInfer ()
+    src ^. annotation . _2 . inferResult & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody)
     >>=
     \case

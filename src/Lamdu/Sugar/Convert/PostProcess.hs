@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Hyper
+import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
@@ -36,7 +37,7 @@ makeScheme ::
     Load.InferOut m ->
     Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
 makeScheme (Load.InferOut inferredVal inferContext) =
-    generalize (inferredVal ^. annotation . Input.inferResult)
+    generalize (inferredVal ^. annotation . Input.inferRes . inferResult . Lens._2)
     >>= saveScheme
     & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
     <&> (^. Lens._1)

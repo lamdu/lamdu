@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.DefExpr
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Hyper (Tree, Pure, annotation)
+import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
@@ -41,7 +42,7 @@ convert defType defExpr defI =
             convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
-                generalize (defExpr ^. Definition.expr . annotation . Input.inferResult)
+                generalize (defExpr ^. Definition.expr . annotation . Input.inferRes . inferResult . _2)
                 >>= saveScheme
                 & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)

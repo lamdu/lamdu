@@ -11,6 +11,7 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import           Hyper
+import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
@@ -68,7 +69,7 @@ mkExtractToDef exprPl =
     \(ctx, postProcess, infer) ->
     do
         let scheme =
-                generalize (exprPl ^. Input.inferResult)
+                generalize (exprPl ^. Input.inferRes . inferResult . Lens._2)
                 >>= S.saveScheme
                 & runPureInfer @(Tree V.Scope UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
                 & Lens._Left %~ (\x -> x :: Tree Pure T.TypeError)

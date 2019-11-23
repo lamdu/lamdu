@@ -18,6 +18,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import           Hyper
+import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Apply (applyBindings)
@@ -92,7 +93,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
-        onPl pl = (Just pl, pl ^. Input.inferResult)
+        onPl pl = (Just pl, pl ^. Input.inferRes & hflipped %~ hmap (const (^. Lens._2)))
         onSuggestion (sugg, newInferCtx) =
             mkOptionFromFragment
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
@@ -120,8 +121,8 @@ convertAppliedHole posInfo (Ann (Const exprPl) (V.App funcI argI)) argS =
         guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
-                checkTypeMatch (argI ^. annotation . Input.inferResult)
-                (exprPl ^. Input.inferResult)
+                checkTypeMatch (argI ^. annotation . Input.inferRes . inferResult . Lens._2)
+                (exprPl ^. Input.inferRes . inferResult . Lens._2)
             postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
             let showAnn
@@ -172,8 +173,8 @@ exceptToListT (Right x) = pure x
 holeResultsEmplaceFragment ::
     Monad m =>
     Val (Input.Payload n a) ->
-    Val (Maybe (ValI n), Tree UVar T.Type) ->
-    Hole.ResultGen m (Val ((Maybe (ValI n), IsFragment), Tree UVar T.Type))
+    Val (Maybe (ValI n), Tree (InferResult UVar) V.Term) ->
+    Hole.ResultGen m (Val ((Maybe (ValI n), IsFragment), Tree (InferResult UVar) V.Term))
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
@@ -187,23 +188,23 @@ holeResultsEmplaceFragment rawFragmentExpr x =
             -- emplacing another fragment wrapping the fragmentExpr:
             ListClass.fromList
             [ do
-                _ <- unify fragmentType (snd pl)
+                _ <- unify fragmentType (pl ^. _2 . inferResult)
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
-                _ <- (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2)) x
+                _ <- (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2 . inferResult)) x
                 -- Roll back state after occurs checks
                 fragmentExpr <$ State.put t
                 & liftPureInfer ()
                 & mapStateT exceptToListT
-            , FuncType (snd pl) fragmentType
+            , FuncType (pl ^. _2 . inferResult) fragmentType
                 & T.TFun
                 & UTermBody mempty & UTerm & newVar binding
                 & liftPureInfer () & mapStateT exceptToListT
                 <&>
                 \t ->
                 V.App
-                (Ann (Const ((Nothing, NotFragment), t)) (V.BLeaf V.LHole))
+                (Ann (Const ((Nothing, NotFragment), inferResult # t)) (V.BLeaf V.LHole))
                 fragmentExpr
                 & V.BApp & Ann (Const ((Nothing, NotFragment), snd pl))
             ]
@@ -213,14 +214,14 @@ holeResultsEmplaceFragment rawFragmentExpr x =
         fragmentExpr = rawFragmentExpr & hflipped . hmapped1 . Lens._Wrapped %~ onFragmentPayload
         onFragmentPayload pl =
             ( (Just (pl ^. Input.stored . iref), IsFragment)
-            , pl ^. Input.inferResult
+            , pl ^. Input.inferRes & inferResult %~ (^. _2)
             )
-        fragmentType = rawFragmentExpr ^. annotation . Input.inferResult
+        fragmentType = rawFragmentExpr ^. annotation . Input.inferRes . inferResult . _2
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
-    Val (Maybe (ValI n), Tree UVar T.Type) ->
-    Val ((Maybe (ValI n), IsFragment), Tree UVar T.Type)
+    Val (Maybe (ValI n), Tree (InferResult UVar) V.Term) ->
+    Val ((Maybe (ValI n), IsFragment), Tree (InferResult UVar) V.Term)
 markNotFragment = hflipped . hmapped1 . Lens._Wrapped . Lens._1 %~ (, NotFragment)
 
 -- TODO: Unify type according to IsFragment, avoid magic var
@@ -269,8 +270,8 @@ emplaceInHoles replaceHole =
 
 mkResultValFragment ::
     Tree UVar T.Type ->
-    Val (Maybe (Input.Payload m a), Tree UVar T.Type) ->
-    State InferState (Val ((Maybe (ValI m), IsFragment), Tree UVar T.Type))
+    Val (Maybe (Input.Payload m a), Tree (InferResult UVar) V.Term) ->
+    State InferState (Val ((Maybe (ValI m), IsFragment), Tree (InferResult UVar) V.Term))
 mkResultValFragment inferred x =
     x & hflipped . hmapped1 . Lens._Wrapped . _1 %~ onPl
     & Hole.detachValIfNeeded emptyPl inferred
@@ -283,7 +284,7 @@ mkOptionFromFragment ::
     Monad m =>
     ConvertM.Context m ->
     Input.Payload m a ->
-    Val (Maybe (Input.Payload m a), Tree UVar T.Type) ->
+    Val (Maybe (Input.Payload m a), Tree (InferResult UVar) V.Term) ->
     HoleOption InternalName (T m) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
@@ -308,10 +309,10 @@ mkOptionFromFragment sugarContext exprPl x =
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferContext) =
             runState
-            (mkResultValFragment (exprPl ^. Input.inferResult) x)
+            (mkResultValFragment (exprPl ^. Input.inferRes . inferResult . _2) x)
             (sugarContext ^. ConvertM.scInferContext)
         resolved =
-            (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. Lens._2)) result
+            (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2 . inferResult)) result
             & runPureInfer scope inferContext
             & Hole.assertSuccessfulInfer
             & fst

@@ -1,9 +1,10 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE TemplateHaskell, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
-        , varRefsOfLambda, entityId, inferredType, inferResult, stored
+        , varRefsOfLambda, entityId, inferRes, stored
         , evalResults, userData, localsInScope, inferScope
+        , inferredType, inferredTypeUVar
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , preparePayloads
     , SugarInput(..)
@@ -13,6 +14,7 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Hyper
+import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (funcType, funcIn)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
@@ -34,10 +36,7 @@ data EvalResultsForExpr = EvalResultsForExpr
 
 data Payload m a = Payload
     { _entityId :: EntityId
-    , _inferredType :: Tree Pure Type
-    , -- The inference result before binding universal quantifiers,
-      -- Useful for resuming inference in holes.
-      _inferResult :: Tree UVar Type
+    , _inferRes :: Tree (InferResult (Pure :*: UVar)) V.Term
     , _inferScope :: Tree V.Scope UVar
     , _localsInScope :: [V.Var]
     , _stored :: Tree (HRef m) V.Term
@@ -49,6 +48,12 @@ data Payload m a = Payload
 
 Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload
+
+inferredType :: Lens' (Payload m a) (Tree Pure Type)
+inferredType = inferRes . inferResult . Lens._1
+
+inferredTypeUVar :: Lens' (Payload m a) (Tree UVar Type)
+inferredTypeUVar = inferRes . inferResult . Lens._2
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
@@ -100,7 +105,7 @@ instance SugarInput V.Term where
             initScopes inferState innerScope (var : locals) b & V.Lam var & V.BLam
             where
                 mArgType =
-                    runPureInfer () inferState (semiPruneLookup (pl ^. inferResult))
+                    runPureInfer () inferState (semiPruneLookup (pl ^. inferredTypeUVar))
                     ^? Lens._Right . Lens._1 . Lens._2 . _UTerm . uBody . funcType . funcIn
                 innerScope =
                     maybe iScope (\x -> iScope & V.scopeVarTypes . Lens.at var ?~ _HFlip # GMono x) mArgType

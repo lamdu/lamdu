@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.ParamList
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Hyper (Tree, Pure(..), hflipped, hfolded1)
+import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Unify (UnifyGen, UVarOf, unify)
@@ -47,7 +48,8 @@ mkFuncType paramList =
 
 loadForLambdas ::
     Monad m =>
-    Val (Tree (HRef m) V.Term, Tree UVar T.Type) -> T m (PureInfer (Tree V.Scope UVar) ())
+    Val (Tree (HRef m) V.Term, Tree (InferResult UVar) V.Term) ->
+    T m (PureInfer (Tree V.Scope UVar) ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. hflipped . hfolded1 . Lens._Wrapped & sequence_
@@ -57,7 +59,7 @@ loadForLambdas x =
 
         loadUnifyParamList ::
             Monad m =>
-            (Tree (HRef m) V.Term, Tree UVar T.Type) ->
+            (Tree (HRef m) V.Term, Tree (InferResult UVar) V.Term) ->
             T m (PureInfer (Tree V.Scope UVar) ())
         loadUnifyParamList (stored, ires) =
             stored ^. iref & assocFieldParamList & Property.getP
@@ -66,4 +68,4 @@ loadForLambdas x =
             Just paramList ->
                 do
                     funcType <- mkFuncType paramList
-                    () <$ unify ires funcType
+                    () <$ unify (ires ^. inferResult) funcType

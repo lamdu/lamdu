@@ -9,8 +9,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "hypertypes";
-    sha256 = "0398qq29vc79plpb31zif5hm9rn93c29pahbfqyg5f142sk8dnj2";
-    rev = "7a96f630b50e926f3a63e749980232a06055846e";
+    sha256 = "1myy9n8hcy0yn5hdij33zrs5ll7mfb3j2hcyp526xfr0zlq04g1w";
+    rev = "f4a1d10a6a8db39ffa6413b47f42cda87ade8a16";
   };
   libraryHaskellDepends = [
     base base-compat binary constraints containers deepseq generic-data lattices lens
