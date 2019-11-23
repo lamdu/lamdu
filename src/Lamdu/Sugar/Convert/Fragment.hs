@@ -191,7 +191,6 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
-                _ <- (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. Input.inferResult)) rawFragmentExpr
                 _ <- (hflipped . htraverse1 . Lens._Wrapped) (applyBindings . (^. _2)) x
                 -- Roll back state after occurs checks
                 fragmentExpr <$ State.put t
