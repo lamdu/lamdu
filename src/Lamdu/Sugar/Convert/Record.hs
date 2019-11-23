@@ -2,7 +2,6 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import qualified Control.Lens as Lens
 import           Hyper (Ann(..), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -19,9 +18,6 @@ import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
-
-plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.stored . ExprIRef.iref
 
 convertEmpty ::
     (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
@@ -41,7 +37,7 @@ convertExtend (Ann (Const exprPl) (RowExtend tag val rest)) =
         let recP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = val ^. annotation . plValI
+                , Composite._extendValI = val ^. annotation . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. annotation
                 }
         Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP

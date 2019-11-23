@@ -31,9 +31,6 @@ import           Lamdu.Prelude
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?
 
-plValI :: Lens.Lens' (Input.Payload m a) (ExprIRef.ValI m)
-plValI = Input.stored . ExprIRef.iref
-
 convertAbsurd :: (Monad m, Monoid a) => Input.Payload m a -> ConvertM m (ExpressionU m a)
 convertAbsurd pl =
     Composite.convertEmpty DataOps.case_ pl
@@ -61,7 +58,7 @@ convert (Ann (Const exprPl) (RowExtend tag v rest)) =
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
-                , Composite._extendValI = v ^. annotation . plValI
+                , Composite._extendValI = v ^. annotation . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. annotation
                 }
         Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyCase . _CaseThatIsLambdaCase) valS restS
