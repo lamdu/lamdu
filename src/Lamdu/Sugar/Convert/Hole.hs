@@ -395,49 +395,47 @@ writeResult preConversion inferContext holeStored inferredVal =
             <&> addBindingsAll
             <&> hflipped . hmapped1 %~ toPayload
             <&> Input.preparePayloads
-        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. annotation . _2 . Input.stored . ExprIRef.iref)
-        writtenExpr & hflipped . hmapped1 . Lens._Wrapped %~ snd & preConversion & pure
+        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. annotation . Input.stored . ExprIRef.iref)
+        preConversion writtenExpr & pure
     where
         intoStorePoint (Const ((mStorePoint, a), inferred)) =
             maybe ExprIRef.WriteNew ExprIRef.ExistingRef mStorePoint :*:
-            Const (inferred, Lens.has Lens._Just mStorePoint, a)
-        toPayload (stored :*: Const (inferRes, wasStored, a)) =
+            Const (inferred, a)
+        toPayload (stored :*: Const (inferRes, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
             Const
             ( eId
             , \varRefs ->
-              ( wasStored
-              , Input.Payload
-                  { Input._varRefsOfLambda = varRefs
-                  , Input._userData = a
-                  , Input._inferRes = inferRes
-                  , Input._inferScope = V.emptyScope -- TODO: HACK
-                  , Input._evalResults = CurAndPrev noEval noEval
-                  , Input._stored = stored
-                  , Input._entityId = eId
-                  , Input._localsInScope = []
-                  }
-              )
+                Input.Payload
+                { Input._varRefsOfLambda = varRefs
+                , Input._userData = a
+                , Input._inferRes = inferRes
+                , Input._inferScope = V.emptyScope -- TODO: HACK
+                , Input._evalResults = CurAndPrev noEval noEval
+                , Input._stored = stored
+                , Input._entityId = eId
+                , Input._localsInScope = []
+                }
             )
             where
                 eId = stored ^. ExprIRef.iref & EntityId.ofValI
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
         addBindingsAll ::
-            Tree (Ann (HRef m :*: Const (Tree (InferResult UVar) V.Term, Bool, a))) V.Term ->
-            Tree (Ann (HRef m :*: Const (Tree (InferResult (Pure :*: UVar)) V.Term, Bool, a))) V.Term
+            Tree (Ann (HRef m :*: Const (Tree (InferResult UVar) V.Term, a))) V.Term ->
+            Tree (Ann (HRef m :*: Const (Tree (InferResult (Pure :*: UVar)) V.Term, a))) V.Term
         addBindingsAll x =
             (hflipped . htraverse1 . Lens._2 . Lens._Wrapped) addBindings x
             & runPureInfer () inferContext
             & assertSuccessfulInfer
             & fst
         addBindings ::
-            (Tree (InferResult UVar) V.Term, Bool, a) ->
-            PureInfer () (Tree (InferResult (Pure :*: UVar)) V.Term, Bool, a)
-        addBindings (inferRes, wasStored, a) =
+            (Tree (InferResult UVar) V.Term, a) ->
+            PureInfer () (Tree (InferResult (Pure :*: UVar)) V.Term, a)
+        addBindings (inferRes, a) =
             hflipped
             (htraverse (Proxy @(Unify (PureInfer ())) #> \i -> applyBindings i <&> (:*: i)))
             inferRes
-            <&> \resolved -> (resolved, wasStored, a)
+            <&> (, a)
 
 detachValIfNeeded ::
     a -> Tree UVar T.Type -> Val (a, Tree (InferResult UVar) V.Term) ->
