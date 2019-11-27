@@ -835,8 +835,11 @@
     },
     {
         "tagOrder": 0,
-        "op": "..",
-        "tag": "5ec1f7e700f37c3d0b2981d04855fc34"
+        "tag": "5ec1f7e700f37c3d0b2981d04855fc34",
+        "names": {
+            "hebrew": "עד",
+            "english": "to"
+        }
     },
     {
         "tagOrder": 0,
