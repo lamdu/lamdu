@@ -90,7 +90,7 @@ mkAppliedHoleSuggesteds ::
     [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
-    (Suggest.termTransforms WriteNew (argI & hflipped . hmapped1 %~ onPl))
+    (Suggest.termTransforms (WriteNew :*:) (^. _2) (argI & hflipped . hmapped1 %~ onPl))
     (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where

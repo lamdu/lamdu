@@ -29,34 +29,35 @@ import           Lamdu.Prelude
 -- | Term with unifiable type annotations
 type TypedTerm m = Ann (InferResult (UVarOf m)) # V.Term
 
-type AnnotatedTerm a = Ann (a :*: InferResult UVar) # V.Term
-
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
-    a # V.Term -> AnnotatedTerm a ->
-    StateT InferState [] (AnnotatedTerm a)
-termTransforms def src =
-    src ^. hAnn . _2 . inferResult & semiPruneLookup & liftInfer ()
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    (a # V.Term -> InferResult UVar # V.Term) ->
+    Ann a # V.Term ->
+    StateT InferState [] (Ann a # V.Term)
+termTransforms mkPl getInferred src =
+    getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
     Just row | Lens.nullOf (hVal . V._BRecExtend) src ->
-        transformGetFields def src row
-    _ -> termTransformsWithoutSplit def src
+        transformGetFields mkPl src row
+    _ -> termTransformsWithoutSplit mkPl getInferred src
 
 transformGetFields ::
-    a # V.Term -> AnnotatedTerm a -> UVar # T.Row ->
-    StateT InferState [] (AnnotatedTerm a)
-transformGetFields def src row =
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    Ann a # V.Term -> UVar # T.Row ->
+    StateT InferState [] (Ann a # V.Term)
+transformGetFields mkPl src row =
     semiPruneLookup row & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._RExtend)
     >>=
     \case
     Nothing -> empty
     Just (RowExtend tag typ rest) ->
-        pure (Ann (def :*: inferResult # typ) (V.BGetField (V.GetField src tag)))
-        <|> transformGetFields def src rest
+        pure (Ann (mkPl (inferResult # typ)) (V.BGetField (V.GetField src tag)))
+        <|> transformGetFields mkPl src rest
 
 liftInfer :: env -> PureInfer env a -> StateT InferState [] a
 liftInfer e act =
@@ -67,15 +68,18 @@ liftInfer e act =
             Right (r, newState) -> r <$ State.put newState
 
 termTransformsWithoutSplit ::
-    a # V.Term -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
-termTransformsWithoutSplit def src =
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    (a # V.Term -> InferResult UVar # V.Term) ->
+    Ann a # V.Term ->
+    StateT InferState [] (Ann a # V.Term)
+termTransformsWithoutSplit mkPl getInferred src =
     do
         -- Don't modify a redex from the outside.
         -- Such transform are more suitable in it!
         Lens.nullOf (hVal . V._BApp . V.appFunc . hVal . V._BLam) src & guard
 
         (s1, typ) <-
-            src ^. hAnn . _2 . inferResult & semiPruneLookup & liftInfer ()
+            getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
         case typ ^? _UTerm . uBody of
             Just (T.TInst (NominalInst name _params))
                 | Lens.nullOf (hVal . V._BToNom) src ->
@@ -87,14 +91,14 @@ termTransformsWithoutSplit def src =
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
                             & V.BApp & mkResult resultType & pure
                     & liftInfer (V.emptyScope @UVar)
-                    >>= termOptionalTransformsWithoutSplit def
+                    >>= termOptionalTransformsWithoutSplit mkPl getInferred
             Just (T.TVariant row) | Lens.nullOf (hVal . V._BInject) src ->
                 do
                     dstType <- newUnbound
                     caseType <- FuncType s1 dstType & T.TFun & newTerm
                     suggestCaseWith row dstType
                         <&> Ann (inferResult # caseType)
-                        <&> hflipped . hmapped1 %~ (def :*:)
+                        <&> hflipped . hmapped1 %~ mkPl
                         <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
                 & liftInfer (V.emptyScope @UVar)
             _ | Lens.nullOf (hVal . V._BLam) src ->
@@ -108,7 +112,7 @@ termTransformsWithoutSplit def src =
                         & liftInfer (V.emptyScope @UVar)
                     arg <-
                         forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
-                        <&> hflipped . hmapped1 %~ (def :*:)
+                        <&> hflipped . hmapped1 %~ mkPl
                     let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
                         <|>
@@ -116,16 +120,19 @@ termTransformsWithoutSplit def src =
                             -- If the suggested argument has holes in it
                             -- then stop suggesting there to avoid "overwhelming"..
                             Lens.nullOf (ExprLens.valLeafs . V._LHole) arg & guard
-                            termTransformsWithoutSplit def applied
+                            termTransformsWithoutSplit mkPl getInferred applied
             _ -> empty
     where
-        mkResult t = Ann (def :*: inferResult # t)
+        mkResult t = Ann (mkPl (inferResult # t))
 
 termOptionalTransformsWithoutSplit ::
-    a # V.Term -> AnnotatedTerm a -> StateT InferState [] (AnnotatedTerm a)
-termOptionalTransformsWithoutSplit def src =
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    (a # V.Term -> InferResult UVar # V.Term) ->
+    Ann a # V.Term ->
+    StateT InferState [] (Ann a # V.Term)
+termOptionalTransformsWithoutSplit mkPl getInferred src =
     pure src <|>
-    termTransformsWithoutSplit def src
+    termTransformsWithoutSplit mkPl getInferred src
 
 -- | Suggest values that fit a type, may "split" once, to suggest many
 -- injects for a sum type. These are offerred in holes (not fragments).
@@ -225,32 +232,38 @@ autoLambdas typ =
     Nothing -> V.BLeaf V.LHole & pure
     <&> Ann (inferResult # typ)
 
-fillHoles :: a # V.Term -> AnnotatedTerm a -> PureInfer (V.Scope # UVar) (AnnotatedTerm a)
-fillHoles def (Ann pl (V.BLeaf V.LHole)) =
-    forTypeWithoutSplit (pl ^. _2 . inferResult)
-    <&> hflipped . hmapped1 %~ (def :*:)
-fillHoles def (Ann pl (V.BApp (V.App func arg))) =
+fillHoles ::
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    (a # V.Term -> InferResult UVar # V.Term) ->
+    Ann a # V.Term ->
+    PureInfer (V.Scope # UVar) (Ann a # V.Term)
+fillHoles mkPl getInferred (Ann pl (V.BLeaf V.LHole)) =
+    forTypeWithoutSplit (getInferred pl ^. inferResult)
+    <&> hflipped . hmapped1 %~ mkPl
+fillHoles mkPl getInferred (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
-    fillHoles def arg <&> V.App func <&> V.BApp <&> Ann pl
-fillHoles _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
+    fillHoles mkPl getInferred arg <&> V.App func <&> V.BApp <&> Ann pl
+fillHoles _ _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     pure v
-fillHoles def x = (hVal . htraverse1) (fillHoles def) x
+fillHoles mkPl getInferred x = (hVal . htraverse1) (fillHoles mkPl getInferred) x
 
 -- | Transform by wrapping OR modifying a term. Used by both holes and
 -- fragments to expand "seed" terms. Holes include these as results
 -- whereas fragments emplace their content inside holes of these
 -- results.
 termTransformsWithModify ::
-    a # V.Term -> AnnotatedTerm a ->
-    StateT InferState [] (AnnotatedTerm a)
-termTransformsWithModify _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
-termTransformsWithModify _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    (a # V.Term -> InferResult UVar # V.Term) ->
+    Ann a # V.Term ->
+    StateT InferState [] (Ann a # V.Term)
+termTransformsWithModify _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
+termTransformsWithModify _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
     -- Variant:<hole> ==> Variant.
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
-termTransformsWithModify def src =
-    src ^. hAnn . _2 . inferResult & semiPruneLookup & liftInfer ()
+termTransformsWithModify mkPl getInferred src =
+    getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody)
     >>=
     \case
@@ -259,5 +272,5 @@ termTransformsWithModify def src =
         pure src
     _ ->
         do
-            t <- fillHoles def src & liftInfer V.emptyScope
-            pure t <|> termTransforms def t
+            t <- fillHoles mkPl getInferred src & liftInfer V.emptyScope
+            pure t <|> termTransforms mkPl getInferred t
