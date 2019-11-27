@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications, TypeOperators #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, TypeOperators, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( forType
     , termTransforms
@@ -32,7 +32,7 @@ type TypedTerm m = Ann (InferResult (UVarOf m)) # V.Term
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
-    (InferResult UVar # V.Term -> a # V.Term) ->
+    (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
@@ -68,7 +68,7 @@ liftInfer e act =
             Right (r, newState) -> r <$ State.put newState
 
 termTransformsWithoutSplit ::
-    (InferResult UVar # V.Term -> a # V.Term) ->
+    (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
@@ -98,7 +98,7 @@ termTransformsWithoutSplit mkPl getInferred src =
                     caseType <- FuncType s1 dstType & T.TFun & newTerm
                     suggestCaseWith row dstType
                         <&> Ann (inferResult # caseType)
-                        <&> hflipped . hmapped1 %~ mkPl
+                        <&> hflipped %~ hmap (const mkPl)
                         <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
                 & liftInfer (V.emptyScope @UVar)
             _ | Lens.nullOf (hVal . V._BLam) src ->
@@ -112,7 +112,7 @@ termTransformsWithoutSplit mkPl getInferred src =
                         & liftInfer (V.emptyScope @UVar)
                     arg <-
                         forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
-                        <&> hflipped . hmapped1 %~ mkPl
+                        <&> hflipped %~ hmap (const mkPl)
                     let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
                         <|>
@@ -126,7 +126,7 @@ termTransformsWithoutSplit mkPl getInferred src =
         mkResult t = Ann (mkPl (inferResult # t))
 
 termOptionalTransformsWithoutSplit ::
-    (InferResult UVar # V.Term -> a # V.Term) ->
+    (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
@@ -233,27 +233,32 @@ autoLambdas typ =
     <&> Ann (inferResult # typ)
 
 fillHoles ::
-    (InferResult UVar # V.Term -> a # V.Term) ->
+    (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     PureInfer (V.Scope # UVar) (Ann a # V.Term)
 fillHoles mkPl getInferred (Ann pl (V.BLeaf V.LHole)) =
     forTypeWithoutSplit (getInferred pl ^. inferResult)
-    <&> hflipped . hmapped1 %~ mkPl
+    <&> hflipped %~ hmap (const mkPl)
 fillHoles mkPl getInferred (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
     fillHoles mkPl getInferred arg <&> V.App func <&> V.BApp <&> Ann pl
 fillHoles _ _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     pure v
-fillHoles mkPl getInferred x = (hVal . htraverse1) (fillHoles mkPl getInferred) x
+fillHoles mkPl getInferred x =
+    hVal
+    ( htraverse $
+        \case
+        HWitness V.W_Term_Term -> fillHoles mkPl getInferred
+    ) x
 
 -- | Transform by wrapping OR modifying a term. Used by both holes and
 -- fragments to expand "seed" terms. Holes include these as results
 -- whereas fragments emplace their content inside holes of these
 -- results.
 termTransformsWithModify ::
-    (InferResult UVar # V.Term -> a # V.Term) ->
+    (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
