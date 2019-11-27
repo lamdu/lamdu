@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
-    , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
+    , WideAnnotationBehavior, wideAnnotationBehaviorFromSelected
     , evaluationResult
     , addAnnotationBackground -- used for open holes
     , maybeAddAnnotationPl
@@ -64,31 +64,39 @@ addAnnotationHoverBackground ::
     (MonadReader env m, Has Theme env, Element a, Element.HasAnimIdPrefix env) => m (a -> a)
 addAnnotationHoverBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationHoverBGColor
 
-data WideAnnotationBehavior
-    = ShrinkWideAnnotation
-    | HoverWideAnnotation
-    | KeepWideTypeAnnotation
+data WhichAnnotation = TypeAnnotation | ValAnnotation
 
-wideAnnotationBehaviorFromSelected :: Bool -> WideAnnotationBehavior
-wideAnnotationBehaviorFromSelected False = ShrinkWideAnnotation
-wideAnnotationBehaviorFromSelected True = HoverWideAnnotation
+type ShrinkRatio = Vector2 Widget.R
 
--- NOTE: Also adds the background color, because it differs based on
--- whether we're hovering
-applyWideAnnotationBehavior ::
+type WideAnnotationBehavior m = WhichAnnotation -> m (ShrinkRatio -> View -> View)
+
+wideAnnotationBehaviorFromSelected ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
-    WideAnnotationBehavior ->
-    m (Vector2 Widget.R -> View -> View)
-applyWideAnnotationBehavior KeepWideTypeAnnotation =
-    addAnnotationBackground <&> const
-applyWideAnnotationBehavior ShrinkWideAnnotation =
+    Bool -> WideAnnotationBehavior m
+wideAnnotationBehaviorFromSelected False = shrinkWideAnnotation
+wideAnnotationBehaviorFromSelected True = hoverWideAnnotation
+
+keepWideTypeAnnotation ::
+    (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
+    WideAnnotationBehavior m
+keepWideTypeAnnotation TypeAnnotation = addAnnotationBackground <&> const
+keepWideTypeAnnotation ValAnnotation = shrinkWideAnnotation ValAnnotation
+
+shrinkWideAnnotation ::
+    (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
+    WideAnnotationBehavior m
+shrinkWideAnnotation _ =
     addAnnotationBackground
     <&>
     \addBg shrinkRatio view ->
     Element.scale shrinkRatio view & addBg
-applyWideAnnotationBehavior HoverWideAnnotation =
+
+hoverWideAnnotation ::
+    (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
+    WideAnnotationBehavior m
+hoverWideAnnotation which =
     do
-        shrinker <- applyWideAnnotationBehavior ShrinkWideAnnotation
+        shrinker <- shrinkWideAnnotation which
         addBg <- addAnnotationHoverBackground
         pure $
             \shrinkRatio wideView ->
@@ -104,19 +112,18 @@ processAnnotationGui ::
     ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
     , Element.HasAnimIdPrefix env
     ) =>
-    WideAnnotationBehavior ->
-    m (Widget.R -> View -> View)
+    m (ShrinkRatio -> View -> View) -> m (Widget.R -> View -> View)
 processAnnotationGui wideAnnotationBehavior =
     f
     <$> Lens.view (has . Theme.valAnnotation)
     <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
-    <*> applyWideAnnotationBehavior wideAnnotationBehavior
+    <*> wideAnnotationBehavior
     where
-        f th addBg stdSpacing applyWide minWidth annotation
+        f th addBg stdSpacing wideAnnBehavior minWidth annotation
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
-                applyWide shrinkRatio annotation
+                wideAnnBehavior shrinkRatio annotation
             | otherwise =
                 maybeTooNarrow annotation & addBg
             where
@@ -204,11 +211,8 @@ addAnnotationH ::
     , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
     ) =>
     m (WithTextPos View) ->
-    WideAnnotationBehavior ->
-    m
-    ((Widget.R -> Widget.R) ->
-     Widget f ->
-     Widget f)
+    m (ShrinkRatio -> View -> View) ->
+    m ((Widget.R -> Widget.R) -> Widget f -> Widget f)
 addAnnotationH f wideBehavior =
     do
         vspace <- annotationSpacer
@@ -230,15 +234,15 @@ addInferredType ::
     , Element.HasAnimIdPrefix env, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    Annotated Sugar.EntityId (Sugar.Type Name) -> WideAnnotationBehavior ->
+    Annotated Sugar.EntityId (Sugar.Type Name) -> WideAnnotationBehavior m ->
     m (Widget f -> Widget f)
 addInferredType typ wideBehavior =
-    addAnnotationH (TypeView.make typ) wideBehavior ?? const 0
+    addAnnotationH (TypeView.make typ) (wideBehavior TypeAnnotation) ?? const 0
 
 addEvaluationResult ::
     (Monad i, Functor f, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
-    EvalResDisplay Name -> WideAnnotationBehavior ->
+    EvalResDisplay Name -> WideAnnotationBehavior (GuiM env i o) ->
     GuiM env i o
     ((Widget.R -> Widget.R) ->
      Widget f ->
@@ -248,11 +252,7 @@ addEvaluationResult mNeigh resDisp wideBehavior =
     Sugar.RRecord (Sugar.ResRecord []) ->
         Styled.addBgColor Theme.evaluatedPathBGColor <&> const
     Sugar.RFunc _ -> pure (flip const)
-    _ ->
-        case wideBehavior of
-        KeepWideTypeAnnotation -> ShrinkWideAnnotation
-        _ -> wideBehavior
-        & addAnnotationH (makeEvalView mNeigh resDisp)
+    _ -> addAnnotationH (makeEvalView mNeigh resDisp) (wideBehavior ValAnnotation)
 
 maybeAddAnnotationPl ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
@@ -264,7 +264,7 @@ maybeAddAnnotationPl pl =
     do
         wideAnnotationBehavior <-
             if pl ^. Sugar.plNeverShrinkAnnotation
-            then pure KeepWideTypeAnnotation
+            then pure keepWideTypeAnnotation
             else isExprSelected <&> wideAnnotationBehaviorFromSelected
         maybeAddAnnotation wideAnnotationBehavior
             (pl ^. Sugar.plAnnotation)
@@ -317,7 +317,7 @@ maybeAddAnnotationWith ::
     ( Monad i, Monad o, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    EvalAnnotationOptions -> WideAnnotationBehavior ->
+    EvalAnnotationOptions -> WideAnnotationBehavior (GuiM env i o) ->
     Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
@@ -331,7 +331,7 @@ maybeAddValAnnotationWith ::
     , Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    EvalAnnotationOptions -> WideAnnotationBehavior ->
+    EvalAnnotationOptions -> WideAnnotationBehavior (GuiM env i o) ->
     Sugar.ValAnnotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
@@ -345,7 +345,7 @@ maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
                 case ann ^. Sugar.annotationType of
                 Just typ -> TypeView.make typ <&> (^. Align.tValue)
                 Nothing -> pure Element.empty
-            process <- processAnnotationGui wideAnnotationBehavior
+            process <- processAnnotationGui (wideAnnotationBehavior ValAnnotation)
             addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior
                 <&> \add -> add $ \width -> process width typeView ^. Element.width
 
@@ -353,7 +353,7 @@ maybeAddAnnotation ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    WideAnnotationBehavior -> Sugar.Annotation Name i ->
+    WideAnnotationBehavior (GuiM env i o) -> Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
