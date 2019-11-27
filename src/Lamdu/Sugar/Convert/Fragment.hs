@@ -180,7 +180,7 @@ holeResultsEmplaceFragment ::
     Monad m =>
     Ann (Input.Payload n a) # V.Term ->
     Ann (Const (Maybe (ValI n)) :*: InferResult UVar) # V.Term ->
-    Hole.ResultGen m (Ann (Const ((Maybe (ValI n), IsFragment)) :*: InferResult UVar) # V.Term)
+    Hole.ResultGen m (Ann (Const (Maybe (ValI n), IsFragment) :*: InferResult UVar) # V.Term)
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
@@ -226,7 +226,7 @@ data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
     Ann (Const (Maybe (ValI n)) :*: InferResult UVar) # V.Term ->
-    Ann (Const ((Maybe (ValI n), IsFragment)) :*: InferResult UVar) # V.Term
+    Ann (Const (Maybe (ValI n), IsFragment) :*: InferResult UVar) # V.Term
 markNotFragment = hflipped . hmapped1 . Lens._1 . Lens._Wrapped %~ (, NotFragment)
 
 -- TODO: Unify type according to IsFragment, avoid magic var
