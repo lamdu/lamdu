@@ -448,10 +448,13 @@ writeResult preConversion inferContext holeStored inferredVal =
             <&> (, a)
 
 detachValIfNeeded ::
-    a # V.Term -> UVar # T.Type -> Ann (a :*: InferResult UVar) # V.Term ->
+    (InferResult UVar # V.Term -> a # V.Term) ->
+    (a # V.Term -> InferResult UVar # V.Term) ->
+    UVar # T.Type ->
+    Ann a # V.Term ->
     -- TODO: PureInfer?
-    State InferState (Ann (a :*: InferResult UVar) # V.Term)
-detachValIfNeeded emptyPl holeType x =
+    State InferState (Ann a # V.Term)
+detachValIfNeeded mkPl getPlInfer holeType x =
     do
         unifyRes <-
             do
@@ -460,24 +463,24 @@ detachValIfNeeded emptyPl holeType x =
                 -- TODO: share with applyBindings that happens for sugaring.
                 s <- State.get
                 _ <-
-                    x ^.. hflipped . hfolded1 . Lens._2 . inferResult
-                    & traverse_ applyBindings
+                    x ^.. hflipped . hfolded1 . Lens.to getPlInfer
+                    & traverse_
+                        (hflipped (htraverse (Proxy @(Unify (PureInfer ())) #> applyBindings)))
                 r <$ State.put s
             & liftPureInfer
         let mkFragmentExpr =
                 FuncType xType holeType & T.TFun
                 & UTermBody mempty & UTerm & newVar binding
                 <&> \funcType ->
-                let withTyp typ = Ann (emptyPl :*: inferResult # typ)
-                    func = V.BLeaf V.LHole & withTyp funcType
-                in  func `V.App` x & V.BApp & withTyp holeType
+                let func = V.BLeaf V.LHole & Ann (mkPl (inferResult # funcType))
+                in  func `V.App` x & V.BApp & Ann (mkPl (inferResult # holeType))
         case unifyRes of
             Right{} -> pure x
             Left{} ->
                 liftPureInfer mkFragmentExpr
                 <&> assertSuccessfulInfer
     where
-        xType = x ^. hAnn . _2 . inferResult
+        xType = getPlInfer (x ^. hAnn) ^. inferResult
         liftPureInfer ::
             PureInfer () a -> State InferState (Either (Pure # T.TypeError) a)
         liftPureInfer act =
@@ -557,7 +560,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~
         toStateT .
-        detachValIfNeeded (Const (Nothing, emptyPl)) (holePl ^. Input.inferRes. inferResult . Lens._2)
+        detachValIfNeeded (Const (Nothing, emptyPl) :*:) (^. _2) (holePl ^. Input.inferRes. inferResult . Lens._2)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =
