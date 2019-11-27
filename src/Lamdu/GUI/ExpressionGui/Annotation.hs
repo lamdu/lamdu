@@ -109,23 +109,20 @@ hoverWideAnnotation which =
                 & Element.hoverLayers
 
 processAnnotationGui ::
-    ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
-    ) =>
+    (MonadReader env m, Has Theme env, Spacer.HasStdSpacing env) =>
     m (ShrinkRatio -> View -> View) -> m (Widget.R -> View -> View)
 processAnnotationGui postProcessAnnotation =
     f
     <$> Lens.view (has . Theme.valAnnotation)
-    <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
     <*> postProcessAnnotation
     where
-        f th addBg stdSpacing postProcess minWidth annotation
+        f th stdSpacing postProcess minWidth annotation
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
                 postProcess shrinkRatio annotation
             | otherwise =
-                maybeTooNarrow annotation & addBg
+                maybeTooNarrow annotation & postProcess 1.0
             where
                 annotationWidth = annotation ^. Element.width
                 expansionLimit = th ^. ValAnnotation.valAnnotationWidthExpansionLimit
@@ -208,7 +205,7 @@ annotationSpacer =
 
 addAnnotationH ::
     ( Functor f, MonadReader env m, Has Theme env, Has Dir.Layout env
-    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
+    , Spacer.HasStdSpacing env
     ) =>
     m (WithTextPos View) ->
     m (ShrinkRatio -> View -> View) ->
