@@ -150,12 +150,12 @@ make annotationOpts prevId nextId param =
                 , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (iMOrderBefore info)
                 , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (iMOrderAfter info)
                 ]
-        wideAnnotationBehavior <-
+        postProcessAnnotation <-
             GuiState.isSubCursor ?? myId
-            <&> Annotation.wideAnnotationBehaviorFromSelected
+            <&> Annotation.postProcessAnnotationFromSelected
         paramEdit <-
             Annotation.maybeAddAnnotationWith annotationOpts
-            wideAnnotationBehavior
+            postProcessAnnotation
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos (iNameEdit info)

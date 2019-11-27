@@ -3,7 +3,7 @@ module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
-    , WideAnnotationBehavior, wideAnnotationBehaviorFromSelected
+    , PostProcessAnnotation, postProcessAnnotationFromSelected
     , evaluationResult
     , addAnnotationBackground -- used for open holes
     , maybeAddAnnotationPl
@@ -68,23 +68,23 @@ data WhichAnnotation = TypeAnnotation | ValAnnotation
 
 type ShrinkRatio = Vector2 Widget.R
 
-type WideAnnotationBehavior m = WhichAnnotation -> m (ShrinkRatio -> View -> View)
+type PostProcessAnnotation m = WhichAnnotation -> m (ShrinkRatio -> View -> View)
 
-wideAnnotationBehaviorFromSelected ::
+postProcessAnnotationFromSelected ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
-    Bool -> WideAnnotationBehavior m
-wideAnnotationBehaviorFromSelected False = shrinkWideAnnotation
-wideAnnotationBehaviorFromSelected True = hoverWideAnnotation
+    Bool -> PostProcessAnnotation m
+postProcessAnnotationFromSelected False = shrinkWideAnnotation
+postProcessAnnotationFromSelected True = hoverWideAnnotation
 
 keepWideTypeAnnotation ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
-    WideAnnotationBehavior m
+    PostProcessAnnotation m
 keepWideTypeAnnotation TypeAnnotation = addAnnotationBackground <&> const
 keepWideTypeAnnotation ValAnnotation = shrinkWideAnnotation ValAnnotation
 
 shrinkWideAnnotation ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
-    WideAnnotationBehavior m
+    PostProcessAnnotation m
 shrinkWideAnnotation _ =
     addAnnotationBackground
     <&>
@@ -93,7 +93,7 @@ shrinkWideAnnotation _ =
 
 hoverWideAnnotation ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
-    WideAnnotationBehavior m
+    PostProcessAnnotation m
 hoverWideAnnotation which =
     do
         shrinker <- shrinkWideAnnotation which
@@ -113,17 +113,17 @@ processAnnotationGui ::
     , Element.HasAnimIdPrefix env
     ) =>
     m (ShrinkRatio -> View -> View) -> m (Widget.R -> View -> View)
-processAnnotationGui wideAnnotationBehavior =
+processAnnotationGui postProcessAnnotation =
     f
     <$> Lens.view (has . Theme.valAnnotation)
     <*> addAnnotationBackground
     <*> Spacer.getSpaceSize
-    <*> wideAnnotationBehavior
+    <*> postProcessAnnotation
     where
-        f th addBg stdSpacing wideAnnBehavior minWidth annotation
+        f th addBg stdSpacing postProcess minWidth annotation
             | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
-                wideAnnBehavior shrinkRatio annotation
+                postProcess shrinkRatio annotation
             | otherwise =
                 maybeTooNarrow annotation & addBg
             where
@@ -213,11 +213,11 @@ addAnnotationH ::
     m (WithTextPos View) ->
     m (ShrinkRatio -> View -> View) ->
     m ((Widget.R -> Widget.R) -> Widget f -> Widget f)
-addAnnotationH f wideBehavior =
+addAnnotationH f postProcess =
     do
         vspace <- annotationSpacer
         annotationLayout <- f <&> (^. Align.tValue)
-        processAnn <- processAnnotationGui wideBehavior
+        processAnn <- processAnnotationGui postProcess
         padToSize <- Element.padToSize
         let annotation minWidth w =
                 processAnn (w ^. Element.width) annotationLayout
@@ -234,25 +234,25 @@ addInferredType ::
     , Element.HasAnimIdPrefix env, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    Annotated Sugar.EntityId (Sugar.Type Name) -> WideAnnotationBehavior m ->
+    Annotated Sugar.EntityId (Sugar.Type Name) -> PostProcessAnnotation m ->
     m (Widget f -> Widget f)
-addInferredType typ wideBehavior =
-    addAnnotationH (TypeView.make typ) (wideBehavior TypeAnnotation) ?? const 0
+addInferredType typ postProcess =
+    addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation) ?? const 0
 
 addEvaluationResult ::
     (Monad i, Functor f, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
-    EvalResDisplay Name -> WideAnnotationBehavior (GuiM env i o) ->
+    EvalResDisplay Name -> PostProcessAnnotation (GuiM env i o) ->
     GuiM env i o
     ((Widget.R -> Widget.R) ->
      Widget f ->
      Widget f)
-addEvaluationResult mNeigh resDisp wideBehavior =
+addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. Sugar.resBody of
     Sugar.RRecord (Sugar.ResRecord []) ->
         Styled.addBgColor Theme.evaluatedPathBGColor <&> const
     Sugar.RFunc _ -> pure (flip const)
-    _ -> addAnnotationH (makeEvalView mNeigh resDisp) (wideBehavior ValAnnotation)
+    _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
 maybeAddAnnotationPl ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
@@ -262,11 +262,11 @@ maybeAddAnnotationPl ::
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotationPl pl =
     do
-        wideAnnotationBehavior <-
+        postProcessAnnotation <-
             if pl ^. Sugar.plNeverShrinkAnnotation
             then pure keepWideTypeAnnotation
-            else isExprSelected <&> wideAnnotationBehaviorFromSelected
-        maybeAddAnnotation wideAnnotationBehavior
+            else isExprSelected <&> postProcessAnnotationFromSelected
+        maybeAddAnnotation postProcessAnnotation
             (pl ^. Sugar.plAnnotation)
             & Reader.local (Element.animIdPrefix .~ animId)
     where
@@ -317,43 +317,43 @@ maybeAddAnnotationWith ::
     ( Monad i, Monad o, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    EvalAnnotationOptions -> WideAnnotationBehavior (GuiM env i o) ->
+    EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
     Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
-maybeAddAnnotationWith opt wideAnnotationBehavior annotation =
+maybeAddAnnotationWith opt postProcessAnnotation annotation =
     case annotation of
     Sugar.AnnotationNone -> pure id
-    Sugar.AnnotationType typ -> addInferredType typ wideAnnotationBehavior
-    Sugar.AnnotationVal ann -> maybeAddValAnnotationWith opt wideAnnotationBehavior ann
+    Sugar.AnnotationType typ -> addInferredType typ postProcessAnnotation
+    Sugar.AnnotationVal ann -> maybeAddValAnnotationWith opt postProcessAnnotation ann
 
 maybeAddValAnnotationWith ::
     ( Monad i, Monad o, Glue.HasTexts env
     , Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    EvalAnnotationOptions -> WideAnnotationBehavior (GuiM env i o) ->
+    EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
     Sugar.ValAnnotation Name i ->
     GuiM env i o (Widget o -> Widget o)
-maybeAddValAnnotationWith opt wideAnnotationBehavior ann =
+maybeAddValAnnotationWith opt postProcessAnnotation ann =
     getAnnotationMode opt (ann ^. Sugar.annotationVal)
     >>=
     \case
-    Nothing -> maybe (pure id) (addInferredType ?? wideAnnotationBehavior) (ann ^. Sugar.annotationType)
+    Nothing -> maybe (pure id) (addInferredType ?? postProcessAnnotation) (ann ^. Sugar.annotationType)
     Just (scopeAndVal, mNeighborVals) ->
         do
             typeView <-
                 case ann ^. Sugar.annotationType of
                 Just typ -> TypeView.make typ <&> (^. Align.tValue)
                 Nothing -> pure Element.empty
-            process <- processAnnotationGui (wideAnnotationBehavior ValAnnotation)
-            addEvaluationResult mNeighborVals scopeAndVal wideAnnotationBehavior
+            process <- processAnnotationGui (postProcessAnnotation ValAnnotation)
+            addEvaluationResult mNeighborVals scopeAndVal postProcessAnnotation
                 <&> \add -> add $ \width -> process width typeView ^. Element.width
 
 maybeAddAnnotation ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    WideAnnotationBehavior (GuiM env i o) -> Sugar.Annotation Name i ->
+    PostProcessAnnotation (GuiM env i o) -> Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 
