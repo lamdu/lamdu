@@ -448,9 +448,9 @@ writeResult preConversion inferContext holeStored inferredVal =
             <&> (, a)
 
 detachValIfNeeded ::
-    a -> UVar # T.Type -> Ann (Const a :*: InferResult UVar) # V.Term ->
+    a # V.Term -> UVar # T.Type -> Ann (a :*: InferResult UVar) # V.Term ->
     -- TODO: PureInfer?
-    State InferState (Ann (Const a :*: InferResult UVar) # V.Term)
+    State InferState (Ann (a :*: InferResult UVar) # V.Term)
 detachValIfNeeded emptyPl holeType x =
     do
         unifyRes <-
@@ -468,7 +468,7 @@ detachValIfNeeded emptyPl holeType x =
                 FuncType xType holeType & T.TFun
                 & UTermBody mempty & UTerm & newVar binding
                 <&> \funcType ->
-                let withTyp typ = Ann (Const emptyPl :*: inferResult # typ)
+                let withTyp typ = Ann (emptyPl :*: inferResult # typ)
                     func = V.BLeaf V.LHole & withTyp funcType
                 in  func `V.App` x & V.BApp & withTyp holeType
         case unifyRes of
@@ -557,7 +557,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~
         toStateT .
-        detachValIfNeeded (Nothing, emptyPl) (holePl ^. Input.inferRes. inferResult . Lens._2)
+        detachValIfNeeded (Const (Nothing, emptyPl)) (holePl ^. Input.inferRes. inferResult . Lens._2)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =

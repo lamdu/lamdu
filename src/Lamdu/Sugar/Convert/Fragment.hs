@@ -284,7 +284,7 @@ mkResultValFragment ::
     State InferState (Ann (Const (Maybe (ValI m), IsFragment) :*: InferResult UVar) # V.Term)
 mkResultValFragment inferred x =
     x & hflipped . hmapped1 . _1 . Lens._Wrapped %~ onPl
-    & Hole.detachValIfNeeded emptyPl inferred
+    & Hole.detachValIfNeeded (Const emptyPl) inferred
     where
         emptyPl = (Nothing, NotFragment)
         onPl Nothing = emptyPl
