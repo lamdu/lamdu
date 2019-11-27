@@ -2,7 +2,7 @@
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
-    , EvalAnnotationOptions(..), maybeAddAnnotationWith, maybeAddValAnnotationWith
+    , EvalAnnotationOptions(..), maybeAddAnnotationWith
     , WideAnnotationBehavior(..), wideAnnotationBehaviorFromSelected
     , evaluationResult
     , addAnnotationBackground -- used for open holes
@@ -84,18 +84,20 @@ applyWideAnnotationBehavior KeepWideTypeAnnotation =
 applyWideAnnotationBehavior ShrinkWideAnnotation =
     addAnnotationBackground
     <&>
-    \addBg shrinkRatio layout ->
-    Element.scale shrinkRatio layout & addBg
+    \addBg shrinkRatio view ->
+    Element.scale shrinkRatio view & addBg
 applyWideAnnotationBehavior HoverWideAnnotation =
     do
         shrinker <- applyWideAnnotationBehavior ShrinkWideAnnotation
         addBg <- addAnnotationHoverBackground
         pure $
-            \shrinkRatio layout ->
+            \shrinkRatio wideView ->
+                let shrunkView = shrinker shrinkRatio wideView
                 -- TODO: This is a buggy hover that ignores
                 -- Surrounding (and exits screen).
-                shrinker shrinkRatio layout
-                & Element.setLayers . Element.layers .~ addBg layout ^. View.vAnimLayers . Element.layers
+                in
+                addBg wideView
+                & View.vSize .~ shrunkView ^. View.vSize
                 & Element.hoverLayers
 
 processAnnotationGui ::
