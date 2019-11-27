@@ -90,7 +90,7 @@ makeLetEdit item =
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
         grammar (label Texts.let_)
             /|/ Spacer.stdHSpace
-            /|/ (AssignmentEdit.make Nothing mempty (item ^. Sugar.lName)
+            /|/ (AssignmentEdit.make Nothing (item ^. Sugar.lName)
                     TextColors.letColor binder
                     <&> Widget.weakerEvents eventMap
                     <&> Element.padAround (env ^. has . Theme.letItemPadding))

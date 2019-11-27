@@ -492,12 +492,11 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
-    EventMap (o GuiState.Update) ->
     Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
     Annotated (Sugar.Payload Name i o ExprGui.Payload)
     (Sugar.Assignment Name i o) ->
     GuiM env i o (Responsive o)
-make pMode defEventMap tag color assignment =
+make pMode tag color assignment =
     do
         Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-
             makeParts Sugar.UnlimitedFuncApply assignment delParamDest
@@ -544,7 +543,7 @@ make pMode defEventMap tag color assignment =
             , bodyEdit
             ]
             & wrap
-            & Widget.weakerEvents (defEventMap <> eventMap)
+            & Widget.weakerEvents eventMap
             & pure
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where

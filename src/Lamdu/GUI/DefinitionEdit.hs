@@ -74,13 +74,12 @@ makeExprDefinition ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    EventMap (o GuiState.Update) ->
     Sugar.Definition Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.DefinitionExpression Name i o
     (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive o)
-makeExprDefinition defEventMap def bodyExpr =
-    AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) defEventMap
+makeExprDefinition def bodyExpr =
+    AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode)
     (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent)
     & GuiState.assignCursor myId
@@ -143,10 +142,10 @@ make defEventMap def =
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
-                makeExprDefinition defEventMap def bodyExpr
+                makeExprDefinition def bodyExpr
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
-                <&> Widget.weakerEvents defEventMap
+            <&> Widget.weakerEvents defEventMap
         case defStateProp ^. Property.pVal of
             Sugar.LiveDefinition -> pure defGui
             Sugar.DeletedDefinition ->
