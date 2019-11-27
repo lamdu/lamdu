@@ -70,6 +70,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Hyper (Write(..))
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -104,8 +105,8 @@ convert posInfo holePl =
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
     , rpPostProcess ::
-        Ann (Const (Maybe (ValI m)) :*: InferResult UVar) # V.Term ->
-        ResultGen m (Ann (Const (Maybe (ValI m), a) :*: InferResult UVar) # V.Term)
+        Ann (Write m :*: InferResult UVar) # V.Term ->
+        ResultGen m (Ann (Const a :*: Write m :*: InferResult UVar) # V.Term)
     , rpPreConversion :: Preconversion m a
     }
 
@@ -113,7 +114,7 @@ holeResultProcessor :: Monad m => ResultProcessor m
 holeResultProcessor =
     ResultProcessor
     { rpEmptyPl = ()
-    , rpPostProcess = pure . (hflipped . hmapped1 . Lens._1 . Lens._Wrapped %~ (, ()))
+    , rpPostProcess = pure . (hflipped . hmapped1 %~ (Const () :*:))
     , rpPreConversion = id
     }
 
@@ -392,7 +393,7 @@ getLocalScopeGetVars sugarContext par
 writeResult ::
     Monad m =>
     Preconversion m a -> InferState -> HRef m # V.Term ->
-    Ann (Const (Maybe (ValI m), a) :*: InferResult UVar) # V.Term ->
+    Ann (Const a :*: Write m :*: InferResult UVar) # V.Term ->
     T m (Ann (Input.Payload m ()) # V.Term)
 writeResult preConversion inferContext holeStored inferredVal =
     do
@@ -407,9 +408,8 @@ writeResult preConversion inferContext holeStored inferredVal =
         (holeStored ^. ExprIRef.setIref) (writtenExpr ^. hAnn . Input.stored . ExprIRef.iref)
         preConversion writtenExpr & pure
     where
-        intoStorePoint (Const (mStorePoint, a) :*: inferred) =
-            maybe ExprIRef.WriteNew ExprIRef.ExistingRef mStorePoint :*:
-            Const (inferred, a)
+        intoStorePoint (Const a :*: mStorePoint :*: inferred) =
+            mStorePoint :*: Const (inferred, a)
         toPayload (stored :*: Const (inferRes, a)) =
             -- TODO: Evaluate hole results instead of Map.empty's?
             Input.PreparePayloadInput
@@ -492,7 +492,7 @@ detachValIfNeeded mkPl getPlInfer holeType x =
 mkResultVals ::
     Monad m =>
     ConvertM.Context m -> V.Scope # UVar -> Val () ->
-    ResultGen m (Deps, Ann (Const (Maybe (ValI m)) :*: InferResult UVar) # V.Term)
+    ResultGen m (Deps, Ann (Write m :*: InferResult UVar) # V.Term)
 mkResultVals sugarContext scope seed =
     -- TODO: This uses state from context but we're in StateT.
     -- This is a mess..
@@ -506,7 +506,7 @@ mkResultVals sugarContext scope seed =
             form <-
                 Suggest.termTransformsWithModify (Const ()) i
                 & mapStateT ListClass.fromList
-            pure (newDeps, form & hflipped . hmapped1 . _1 .~ Const Nothing)
+            pure (newDeps, form & hflipped . hmapped1 . _1 .~ WriteNew)
     where
         txn = lift . lift
 
@@ -514,7 +514,7 @@ mkResult ::
     Monad m =>
     Preconversion m a -> ConvertM.Context m -> T m () ->
     Input.Payload m b # V.Term ->
-    Ann (Const (Maybe (ValI m), a) :*: InferResult UVar) # V.Term ->
+    Ann (Const a :*: Write m :*: InferResult UVar) # V.Term ->
     T m (HoleResult InternalName (T m) (T m))
 mkResult preConversion sugarContext updateDeps holePl x =
     do
@@ -552,7 +552,7 @@ toScoredResults ::
     (Monad f, Monad m) =>
     a -> Preconversion m a -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term ->
-    StateT InferState f (Deps, Ann (Const (Maybe (ValI m), a) :*: InferResult UVar) # V.Term) ->
+    StateT InferState f (Deps, Ann (Const a :*: Write m :*: InferResult UVar) # V.Term) ->
     f ( HoleResultScore
       , T m (HoleResult InternalName (T m) (T m))
       )
@@ -560,7 +560,9 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~
         toStateT .
-        detachValIfNeeded (Const (Nothing, emptyPl) :*:) (^. _2) (holePl ^. Input.inferRes. inferResult . Lens._2)
+        detachValIfNeeded
+            (\x -> Const emptyPl :*: WriteNew :*: x)
+            (^. _2 . _2) (holePl ^. Input.inferRes. inferResult . Lens._2)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferContext) ->
     let newSugarContext =
@@ -568,7 +570,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & ConvertM.scInferContext .~ inferContext
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( x & hflipped . htraverse1 %%~ fmap Const . applyBindings . (^. Lens._2 . inferResult)
+    in  ( x & hflipped . htraverse1 %%~ fmap Const . applyBindings . (^. _2 . _2 . inferResult)
           & runPureInfer (holePl ^. Input.inferScope) inferContext
           & assertSuccessfulInfer
           & fst
