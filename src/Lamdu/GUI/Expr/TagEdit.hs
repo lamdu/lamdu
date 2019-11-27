@@ -173,7 +173,7 @@ makeOptions tagRefReplace mkPickResult ctx
                     & maybe False not
             env <- Lens.view id
             let maybeAddNewTagOption
-                    | nonFuzzyResults || not (Name.isValidName searchTerm) = id
+                    | nonFuzzyResults || not (Name.isValidText searchTerm) = id
                     | otherwise =
                         maybe id (:) (addNewTag env tagRefReplace mkPickResult ctx)
             let makeOption opt =
@@ -231,7 +231,7 @@ makeHoleSearchTerm ::
 makeHoleSearchTerm tagRefReplace mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
-        let allowNewTag = Name.isValidName searchTerm
+        let allowNewTag = Name.isValidText searchTerm
         newTagEventMap <-
             if allowNewTag
             then makeNewTag searchTerm tagRefReplace mkPickResult & makePickEventMap
