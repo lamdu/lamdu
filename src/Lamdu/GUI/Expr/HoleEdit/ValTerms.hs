@@ -91,7 +91,9 @@ ofBody env =
     BodyLiteral {} -> []
     BodyGetVar GetParamsRecord {} -> [env ^. has . Texts.paramsRecordOpener]
     BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
-    BodyGetVar (GetBinder x) -> ofName (x ^. bvNameRef . nrName)
+    BodyGetVar (GetBinder x) ->
+        ofName (x ^. bvNameRef . nrName)
+        & maybePrefixDot x
     BodyToNom (Nominal tid b) ->
         ofName (tid ^. tidName)
         ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to (ofBody env)
@@ -106,6 +108,12 @@ ofBody env =
     BodyHole {} -> []
     BodyFragment {} -> []
     BodyPlaceHolder {} -> []
+    where
+        maybePrefixDot bv =
+            case bv ^. bvForm of
+            GetDefinition _
+                | bv ^. bvNameRef . nrName & Name.isOperator & not -> (>>= \x -> [x, "." <> x])
+            _ -> id
 
 binder ::
     ( Has (Texts.Code Text) env

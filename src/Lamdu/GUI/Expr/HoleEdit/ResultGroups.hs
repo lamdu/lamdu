@@ -197,8 +197,7 @@ mkGroup env option =
     <&>
     \sugaredBaseExpr ->
     Group
-    { _groupSearchTerms =
-        sugaredBaseExpr ^. hVal & ValTerms.binder env
+    { _groupSearchTerms = sugaredBaseExpr ^. hVal & ValTerms.binder env
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = mkGroupId (option ^. Sugar.hoVal)
     }
@@ -242,4 +241,5 @@ holeMatches searchTerm groups =
             [] -> [""]
             terms -> terms >>= unicodeAlts
         isHoleResultOK =
-            ValTerms.verifyInjectSuffix searchTerm . (^. Sugar.holeResultConverted . SugarLens.binderResultExpr . Lens.asIndex)
+            ValTerms.verifyInjectSuffix searchTerm .
+            (^. Sugar.holeResultConverted . SugarLens.binderResultExpr . Lens.asIndex)
