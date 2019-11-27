@@ -129,7 +129,7 @@ allowedSearchTermCommon :: [Suffix] -> Text -> Bool
 allowedSearchTermCommon suffixes searchTerm =
     any (searchTerm &)
     [ Text.all (`elem` Chars.operator)
-    , Text.all Char.isAlphaNum
+    , isAlphaNumericName
     , (`Text.isPrefixOf` "{}")
     , (== "\\")
     , Lens.has (Lens.reversed . Lens._Cons . Lens.filtered inj)
@@ -143,6 +143,18 @@ allowedSearchTermCommon suffixes searchTerm =
     where
         inj (lastChar, revInit) =
             lastChar `elem` suffixes && Text.all Char.isAlphaNum revInit
+
+isAlphaNumericName :: Text -> Bool
+isAlphaNumericName t =
+    case Text.uncons t of
+    Nothing -> True
+    Just ('.', xs) -> isAlphaNumericSuffix xs
+    Just _ -> isAlphaNumericSuffix t
+    where
+        isAlphaNumericSuffix suffix =
+            case Text.uncons suffix of
+            Nothing -> True
+            Just (x, xs) -> Char.isAlpha x && Text.all Char.isAlphaNum xs
 
 allowedFragmentSearchTerm :: Text -> Bool
 allowedFragmentSearchTerm searchTerm =
