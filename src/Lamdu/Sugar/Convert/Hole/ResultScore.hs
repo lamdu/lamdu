@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
@@ -17,7 +18,7 @@ import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
 
 import           Lamdu.Prelude
 
-resultTypeScore :: Tree Pure Type -> [Int]
+resultTypeScore :: Pure # Type -> [Int]
 resultTypeScore x =
     case x ^. _Pure of
     TVar{} -> [0]
@@ -27,7 +28,7 @@ resultTypeScore x =
     TInst (NominalInst _ (Types (QVarInstances t) (QVarInstances r))) ->
         1 : maximum ([] : map resultTypeScore (Map.elems t) <> map compositeTypeScore (Map.elems r))
 
-compositeTypeScore :: Tree Pure Row -> [Int]
+compositeTypeScore :: Pure # Row -> [Int]
 compositeTypeScore x =
     case x ^. _Pure of
     REmpty -> []
@@ -35,13 +36,13 @@ compositeTypeScore x =
     RExtend (RowExtend _ t r) ->
         max (resultTypeScore t) (compositeTypeScore r)
 
-score :: Val (Tree Pure Type) -> [Int]
+score :: Val (Pure # Type) -> [Int]
 score x =
     (if Lens.has ExprLens.valBodyHole (x ^. hVal) then 1 else 0) :
     resultTypeScore (x ^. annotation) ++
     (x ^.. hVal . htraverse1 >>= score)
 
-resultScore :: Val (Tree Pure Type) -> HoleResultScore
+resultScore :: Val (Pure # Type) -> HoleResultScore
 resultScore x =
     HoleResultScore
     { _hrsNumFragments = numFragments x

@@ -1,10 +1,10 @@
-{-# LANGUAGE TypeFamilies, Rank2Types #-}
+{-# LANGUAGE TypeFamilies, Rank2Types, TypeOperators #-}
 module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
 import           Data.Property (Property(..))
-import           Hyper (Tree, Ann(..))
+import           Hyper (Ann(..), type (#))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -33,7 +33,7 @@ convertLiteralCommon ::
     (Monad m, Monoid b) =>
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
-    Tree (Input.Payload m b) V.Term -> ConvertM m (ExpressionU m b)
+    Input.Payload m b # V.Term -> ConvertM m (ExpressionU m b)
 convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
@@ -46,17 +46,17 @@ convertLiteralCommon mkLit mkBody x exprPl =
 
 convertLiteralFloat ::
     (Monad m, Monoid a) =>
-    Double -> Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
+    Double -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
     (Monad m, Monoid a) =>
-    ByteString -> Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
+    ByteString -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert ::
     (Monad m, Monoid a) =>
-    ConvertM.PositionInfo -> Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ExpressionU m a)
+    ConvertM.PositionInfo -> Ann (Input.Payload m a) # V.Term -> ConvertM m (ExpressionU m a)
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
 convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert x pl

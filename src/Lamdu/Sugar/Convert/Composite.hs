@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, TypeOperators #-}
 
 module Lamdu.Sugar.Convert.Composite
     ( convertEmpty, BodyPrism, convert
@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Composite
 
 import qualified Control.Lens.Extended as Lens
 import qualified Data.Set as Set
-import           Hyper (Tree, Ann(..), annotation, hVal)
+import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -32,7 +32,7 @@ type T = Transaction
 
 deleteItem ::
     Monad m =>
-    Tree (HRef m) V.Term -> ValI m ->
+    HRef m # V.Term -> ValI m ->
     ConvertM m (T m EntityId)
 deleteItem stored restI =
     ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
@@ -41,7 +41,7 @@ convertAddItem ::
     Monad m =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Set T.Tag ->
-    Tree (Input.Payload m a) V.Term ->
+    Input.Payload m a # V.Term ->
     ConvertM m (TagReplace InternalName (T m) (T m) EntityId)
 convertAddItem extendOp existingTags pl =
     do
@@ -71,10 +71,10 @@ convertExtend ::
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Annotated b (Body InternalName (T m) (T m)) ->
-    Tree (Input.Payload m a) V.Term ->
-    ExtendVal m (Tree (Input.Payload m a) V.Term) ->
-    Tree (Composite InternalName (T m) (T m)) (Ann (Const b)) ->
-    ConvertM m (Tree (Composite InternalName (T m) (T m)) (Ann (Const b)))
+    Input.Payload m a # V.Term ->
+    ExtendVal m (Input.Payload m a # V.Term) ->
+    Composite InternalName (T m) (T m) # Ann (Const b) ->
+    ConvertM m (Composite InternalName (T m) (T m) # Ann (Const b))
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -103,11 +103,11 @@ convertOneItemOpenComposite ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Tree k (Body InternalName (T m) (T m)) ->
-    Tree k (Body InternalName (T m) (T m)) ->
-    Tree (Input.Payload m a) V.Term ->
-    ExtendVal m (Tree (Input.Payload m a) V.Term) ->
-    ConvertM m (Tree (Composite InternalName (T m) (T m)) k)
+    k # Body InternalName (T m) (T m) ->
+    k # Body InternalName (T m) (T m) ->
+    Input.Payload m a # V.Term ->
+    ExtendVal m (Input.Payload m a # V.Term) ->
+    ConvertM m (Composite InternalName (T m) (T m) # k)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
@@ -121,7 +121,7 @@ convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
 
 convertOpenCompositeActions ::
     Monad m =>
-    V.Leaf -> Tree (HRef m) V.Term -> ConvertM m (OpenCompositeActions (T m))
+    V.Leaf -> HRef m # V.Term -> ConvertM m (OpenCompositeActions (T m))
 convertOpenCompositeActions leaf stored =
     ConvertM.typeProtectedSetToVal
     <&>
@@ -136,7 +136,7 @@ convertOpenCompositeActions leaf stored =
 convertEmpty ::
     Monad m =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Tree (Input.Payload m a) V.Term ->
+    Input.Payload m a # V.Term ->
     ConvertM m (Composite InternalName (T m) (T m) expr)
 convertEmpty extendOp exprPl =
     do
@@ -161,7 +161,7 @@ convertEmpty extendOp exprPl =
 convertItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
-    Tree (HRef m) V.Term ->
+    HRef m # V.Term ->
     EntityId -> Set T.Tag -> expr ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
@@ -187,16 +187,16 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
-    (Tree (Composite InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
+    (Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
+    (Composite InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
 
 convert ::
     (Monad m, Monoid a) =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m a ->
-    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
-    ExtendVal m (Tree (Input.Payload m a) V.Term) ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
+    ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (ExpressionU m a)
 convert op empty cons prism valS restS exprPl extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=

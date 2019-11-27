@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications, TypeOperators #-}
 
 module Lamdu.Sugar.Convert.PostProcess
     ( Result(..), def, expr
@@ -31,15 +31,15 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data Result = GoodExpr | BadExpr (Tree Pure T.TypeError)
+data Result = GoodExpr | BadExpr (Pure # T.TypeError)
 
 makeScheme ::
     Load.InferOut m ->
-    Either (Tree Pure T.TypeError) (Tree Pure T.Scheme)
+    Either (Pure # T.TypeError) (Pure # T.Scheme)
 makeScheme (Load.InferOut inferredVal inferContext) =
     generalize (inferredVal ^. hAnn . Input.inferRes . inferResult . Lens._2)
     >>= saveScheme
-    & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
+    & runPureInfer @(V.Scope # UVar) V.emptyScope inferContext
     <&> (^. Lens._1)
 
 def :: Monad m => Load.InferFunc (HRef m) -> Debug.Monitors -> DefI m -> T m Result

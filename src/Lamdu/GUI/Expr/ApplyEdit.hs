@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeOperators #-}
+
 module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
@@ -15,7 +17,7 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (Tree, Ann(..), annotation, hVal)
+import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -72,8 +74,7 @@ makeFuncRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe AnimId ->
-    Tree (Sugar.LabeledApply Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Responsive o)
 makeFuncRow mParensId apply =
     case apply ^. Sugar.aSpecialArgs of
@@ -106,8 +107,7 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.LabeledApply Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled apply pl =
@@ -142,8 +142,7 @@ mkBoxed ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Tree (Sugar.LabeledApply Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Responsive o -> GuiM env i o (Responsive o)
 mkBoxed apply funcRow =
     do
@@ -167,8 +166,7 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.App (Sugar.Body Name i o))
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.App (Sugar.Body Name i o) # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeSimple (Sugar.App func arg) pl =

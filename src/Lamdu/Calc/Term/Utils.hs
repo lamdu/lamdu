@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, RankNTypes, TypeOperators #-}
 
 module Lamdu.Calc.Term.Utils
     ( Composite(..), tags, rest
@@ -8,8 +8,7 @@ module Lamdu.Calc.Term.Utils
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Constraint (withDict)
-import           Hyper (Tree, Ann(..), Recursively(..), HFoldable(..), (#>))
+import           Hyper (Ann(..), Recursively(..), HFoldable(..), type (#), (#>), withDict)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
@@ -21,7 +20,7 @@ import           Lamdu.Prelude
 culledSubexprPayloads ::
     forall t a r.
     Recursively HFoldable t =>
-    (forall n. Tree a n -> Maybe r) -> Tree (Ann a) t -> [r]
+    (forall n. a # n -> Maybe r) -> Ann a # t -> [r]
 culledSubexprPayloads f (Ann pl body) =
     case f pl of
     Nothing -> []
@@ -35,7 +34,7 @@ data Composite a = Composite
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Composite
 
-case_ :: Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const pl)) -> Composite (Val pl)
+case_ :: RowExtend T.Tag V.Term V.Term # Ann (Const pl) -> Composite (Val pl)
 case_ (RowExtend tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
@@ -46,7 +45,7 @@ case_ (RowExtend tag handler r) =
             V.BCase x -> case_ x
             _ -> Composite mempty (Just v)
 
-recExtend :: Tree (RowExtend T.Tag V.Term V.Term) (Ann (Const pl)) -> Composite (Val pl)
+recExtend :: RowExtend T.Tag V.Term V.Term # Ann (Const pl) -> Composite (Val pl)
 recExtend (RowExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field

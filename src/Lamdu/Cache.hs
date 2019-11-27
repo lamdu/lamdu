@@ -28,11 +28,11 @@ import           Lamdu.Prelude
 -- inside "a" and *entire* output is inside "b"
 type MemoableInferFunc =
     ( Definition.Expr (Val ())
-    , Tree V.Scope UVar
+    , V.Scope # UVar
     , InferState
     ) ->
-    Either (Tree Pure T.TypeError)
-    (Tree (Ann (InferResult UVar)) V.Term, Tree V.Scope UVar, InferState)
+    Either (Pure # T.TypeError)
+    (Ann (InferResult UVar) # V.Term, V.Scope # UVar, InferState)
 
 newtype Functions = Functions
     { inferMemoized :: MemoableInferFunc
@@ -49,8 +49,8 @@ infer funcs defExpr =
     where
         origExpr = defExpr ^. Definition.expr
         unvoid ::
-            Tree (Ann (InferResult UVar)) V.Term ->
-            Tree (Ann (a :*: InferResult UVar)) V.Term
+            Ann (InferResult UVar) # V.Term ->
+            Ann (a :*: InferResult UVar) # V.Term
         unvoid resExpr =
             resExpr
             & hflipped . hmapped1 %~ (Const () :*:)

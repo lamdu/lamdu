@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, KindSignatures, MultiParamTypeClasses, DataKinds, DefaultSignatures #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, KindSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators, DataKinds, DefaultSignatures #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , childPayloads
@@ -13,8 +14,6 @@ module Lamdu.Sugar.Lens
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Constraint (Dict(..))
-import           Data.Proxy (Proxy(..))
 import           Hyper
 import           Hyper.Recurse (Recursive(..))
 import           Lamdu.Sugar.Types
@@ -23,7 +22,7 @@ import           Lamdu.Prelude
 
 childPayloads ::
     HTraversable expr =>
-    Lens.Traversal' (Tree expr (Ann (Const a))) a
+    Lens.Traversal' (expr # Ann (Const a)) a
 childPayloads f =
     htraverse (const (annotation f))
 
@@ -83,7 +82,7 @@ binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
-bodyUnfinished :: Lens.Traversal' (Tree (Body name i o) (Ann a)) ()
+bodyUnfinished :: Lens.Traversal' (Body name i o # Ann a) ()
 bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
@@ -107,7 +106,7 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
 
 binderResultExpr ::
-    Lens.IndexedLens' (Tree (Body name i o) (Ann (Const ())))
+    Lens.IndexedLens' (Body name i o # Ann (Const ()))
     (Annotated a (Binder name i o)) a
 binderResultExpr f (Ann (Const pl) x) =
     case x of

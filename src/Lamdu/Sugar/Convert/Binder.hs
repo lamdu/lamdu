@@ -1,11 +1,10 @@
-{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses, DataKinds #-}
+{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses, DataKinds, TypeOperators #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
     ) where
 
 import qualified Control.Lens.Extended as Lens
-import           Data.Constraint (Dict(..))
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
@@ -43,13 +42,13 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) -> T m ()
+    V.Lam V.Var V.Term # Ann (Input.Payload m a) -> T m ()
 lamParamToHole (V.Lam param x) =
     SubExprs.getVarsToHole param (x & hflipped . hmapped1 %~ (^. Input.stored))
 
 makeInline ::
     Monad m =>
-    Tree (HRef m) V.Term -> Tree Redex (Input.Payload m a) -> EntityId -> BinderVarInline (T m)
+    HRef m # V.Term -> Redex # Input.Payload m a -> EntityId -> BinderVarInline (T m)
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after ++ before)
     | otherwise =
@@ -62,8 +61,8 @@ makeInline stored redex useId
 
 convertLet ::
     (Monad m, Monoid a) =>
-    Tree (Input.Payload m a) V.Term ->
-    Tree Redex (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
+    Redex # Input.Payload m a ->
     ConvertM m
     (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
 convertLet pl redex =
@@ -135,7 +134,7 @@ convertLet pl redex =
 
 convertBinder ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) V.Term ->
+    Ann (Input.Payload m a) # V.Term ->
     ConvertM m (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
 convertBinder expr@(Ann pl body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
@@ -167,7 +166,7 @@ convertBinder expr@(Ann pl body) =
             }
 
 localNewExtractDestPos ::
-    Tree (Input.Payload m a) V.Term -> ConvertM m b -> ConvertM m b
+    Input.Payload m a # V.Term -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
@@ -179,9 +178,9 @@ localNewExtractDestPos x =
 makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Tree (Ann (Input.Payload m a)) V.Term ->
+    ConventionalParams m -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
-    (Tree (Function InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
+    (Function InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
@@ -209,8 +208,8 @@ makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m ->
-    Tree (Ann (Input.Payload m a)) V.Term ->
-    Tree (Input.Payload m a) V.Term ->
+    Ann (Input.Payload m a) # V.Term ->
+    Input.Payload m a # V.Term ->
     ConvertM m
     (Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m)))
 makeAssignment chosenScopeProp params funcBody pl =
@@ -240,8 +239,8 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    Tree (V.Lam V.Var V.Term) (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convertLam lam exprPl =
     do
@@ -267,7 +266,7 @@ convertLam lam exprPl =
                 hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 useNormalLambda ::
-    Set InternalName -> Tree (Function InternalName i o) (Ann (Const a)) -> Bool
+    Set InternalName -> Function InternalName i o # Ann (Const a) -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
@@ -316,7 +315,7 @@ instance GetParam (Body InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 allParamsUsed ::
-    Set InternalName -> Tree (Function InternalName i o) (Ann (Const a)) -> Bool
+    Set InternalName -> Function InternalName i o # Ann (Const a) -> Bool
 allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
@@ -327,24 +326,24 @@ allParamsUsed paramNames func =
             ) func
 
 class MarkLightParams (t :: AHyperType -> *) where
-    markLightParams :: Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
+    markLightParams :: Set InternalName -> t # Ann a -> t # Ann a
 
     default markLightParams ::
         (HFunctor t, HNodesConstraint t MarkLightParams) =>
-        Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
+        Set InternalName -> t # Ann a -> t # Ann a
     markLightParams = defaultMarkLightParams
 
 defaultMarkLightParams ::
     (HFunctor t, HNodesConstraint t MarkLightParams) =>
-    Set InternalName -> Tree t (Ann a) -> Tree t (Ann a)
+    Set InternalName -> t # Ann a -> t # Ann a
 defaultMarkLightParams paramNames =
     hmap (Proxy @MarkLightParams #> markNodeLightParams paramNames)
 
 markNodeLightParams ::
     MarkLightParams t =>
     Set InternalName ->
-    Tree (Ann a) t ->
-    Tree (Ann a) t
+    Ann a # t ->
+    Ann a # t
 markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
@@ -373,7 +372,7 @@ instance MarkLightParams (Body InternalName i o) where
 convertAssignment ::
     (Monad m, Monoid a) =>
     BinderKind m -> V.Var ->
-    Tree (Ann (Input.Payload m a)) V.Term ->
+    Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))
@@ -401,7 +400,7 @@ convertAssignment binderKind defVar expr =
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
-    DefI m -> Tree (Ann (Input.Payload m a)) V.Term ->
+    DefI m -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))

@@ -1,5 +1,7 @@
 -- | Build sugar expressions easily
 
+{-# LANGUAGE TypeOperators #-}
+
 module Test.Lamdu.SugarStubs where
 
 import           Control.Monad.Unit (Unit(Unit))
@@ -7,7 +9,7 @@ import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
-import           Hyper (Tree, Ann(..))
+import           Hyper (Ann(..), type (#))
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Scheme (QVars(..))
@@ -54,8 +56,8 @@ defRef var tag =
     }
 
 node ::
-    Tree knot (Ann (Const (Sugar.Payload name Identity Unit ()))) ->
-    Annotated (Sugar.Payload name Identity Unit ()) knot
+    h # Ann (Const (Sugar.Payload name Identity Unit ())) ->
+    Annotated (Sugar.Payload name Identity Unit ()) h
 node = Const payload & Ann
 
 labeledApplyFunc ::
@@ -193,8 +195,8 @@ mkFuncParam (paramVar, paramTag) =
 
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Tree (Sugar.Function InternalName Identity Unit)
-    (Ann (Const (Sugar.Payload InternalName Identity Unit ())))
+    Sugar.Function InternalName Identity Unit #
+    Ann (Const (Sugar.Payload InternalName Identity Unit ()))
 funcExpr params (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
@@ -211,7 +213,7 @@ binderExpr ::
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Tree (Sugar.Body name Identity Unit) (Ann (Const (Sugar.Payload name Identity Unit ()))) ->
+    Sugar.Body name Identity Unit # Ann (Const (Sugar.Payload name Identity Unit ())) ->
     Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
 expr = node
 

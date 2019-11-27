@@ -6,7 +6,7 @@ module Lamdu.Expr.UniqueId
 import qualified Data.ByteString as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           Hyper (AHyperType(..), type (#))
+import           Hyper (AHyperType(..), type (:#))
 import           Hyper.Type.Functor (F(..), _F)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
@@ -38,7 +38,7 @@ instance ToUUID (Branch m)  where toUUID = Branch.uuid
 instance ToUUID (T.Var a) where
     toUUID (T.Var (Identifier x)) =
         x <> BS.replicate (16 - BS.length x) 0 & UUIDUtils.fromSBS16
-instance ToUUID (f ('AHyperType k # F f)) =>
+instance ToUUID (f ('AHyperType k :# F f)) =>
     ToUUID (F f ('AHyperType k)) where
     toUUID = toUUID . (^. _F)
 

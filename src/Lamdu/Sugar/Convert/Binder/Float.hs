@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, TypeOperators #-}
 
 module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
@@ -43,7 +43,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 moveToGlobalScope ::
-    Monad m => ConvertM m (V.Var -> Definition.Expr (Tree (HRef m) V.Term) -> T m ())
+    Monad m => ConvertM m (V.Var -> Definition.Expr (HRef m # V.Term) -> T m ())
 moveToGlobalScope =
     (,,)
     <$> Lens.view id
@@ -72,7 +72,7 @@ moveToGlobalScope =
         -- extraction/generalization of the inner type
         postProcess
 
-isVarAlwaysApplied :: Tree (V.Lam V.Var V.Term) (Ann a) -> Bool
+isVarAlwaysApplied :: V.Lam V.Var V.Term # Ann a -> Bool
 isVarAlwaysApplied (V.Lam var x) =
     go False x
     where
@@ -81,7 +81,7 @@ isVarAlwaysApplied (V.Lam var x) =
         go _ v = all (go False) (v ^.. hVal . htraverse1)
 
 convertLetToLam ::
-    Monad m => V.Var -> Tree Redex (HRef m) -> T m (Tree (HRef m) V.Term)
+    Monad m => V.Var -> Redex # HRef m -> T m (HRef m # V.Term)
 convertLetToLam var redex =
     do
         (newParam, newHRef) <-
@@ -97,7 +97,7 @@ convertLetToLam var redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> Tree (V.Lam V.Var V.Term) (Ann (HRef m)) -> T m ()
+    V.Var -> T.Tag -> V.Lam V.Var V.Term # Ann (HRef m) -> T m ()
 convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
@@ -109,8 +109,8 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> Tree (V.Lam V.Var V.Term) (Ann (HRef m)) -> Params.StoredLam m ->
-    ConvertM m (T m (Tree (HRef m) V.Term))
+    V.Var -> V.Lam V.Var V.Term # Ann (HRef m) -> Params.StoredLam m ->
+    ConvertM m (T m (HRef m # V.Term))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
     do
@@ -131,8 +131,8 @@ convertLetParamToRecord var letLam storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> Tree (V.Lam V.Var V.Term) (Ann (HRef m)) ->
-    Params.StoredLam m -> ConvertM m (T m (Tree (HRef m) V.Term))
+    [T.Tag] -> V.Var -> V.Lam V.Var V.Term # Ann (HRef m) ->
+    Params.StoredLam m -> ConvertM m (T m (HRef m # V.Term))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
     \addParam ->
@@ -147,7 +147,7 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
 
 addLetParam ::
     Monad m =>
-    V.Var -> Tree Redex (Input.Payload m a) -> ConvertM m (T m (Tree (HRef m) V.Term))
+    V.Var -> Redex # Input.Payload m a -> ConvertM m (T m (HRef m # V.Term))
 addLetParam var redex =
     case storedRedex ^. Redex.arg . hVal of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
@@ -165,7 +165,7 @@ addLetParam var redex =
     where
         storedRedex = redex & hmapped1 %~ (^. Input.stored)
 
-sameLet :: Tree Redex (HRef m) -> Tree (HRef m) V.Term
+sameLet :: Redex # HRef m -> HRef m # V.Term
 sameLet redex = redex ^. Redex.arg . hAnn
 
 ordNub :: Ord a => [a] -> [a]
@@ -173,8 +173,8 @@ ordNub = Set.toList . Set.fromList
 
 processLet ::
     Monad m =>
-    Tree Redex (Input.Payload m a) ->
-    ConvertM m (T m (Tree (HRef m) V.Term))
+    Redex # Input.Payload m a ->
+    ConvertM m (T m (HRef m # V.Term))
 processLet redex =
     do
         scopeInfo <- Lens.view ConvertM.scScopeInfo
@@ -200,7 +200,7 @@ processLet redex =
 makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
-    Tree Redex (Input.Payload m a) ->
+    Redex # Input.Payload m a ->
     ConvertM m (T m ExtractDestination)
 makeFloatLetToOuterScope setTopLevel redex =
     (,,,)

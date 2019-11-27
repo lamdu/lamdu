@@ -1,4 +1,5 @@
 -- | Convert Text ToNoms to their own sugar construct
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Text
      ( text
      ) where
@@ -9,7 +10,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import           Hyper (Tree, Ann(..))
+import           Hyper (Ann(..), type (#))
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -28,8 +29,8 @@ import           Lamdu.Prelude
 
 text ::
     (Monad m, Monoid a) =>
-    Tree (ToNom NominalId V.Term) (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    ToNom NominalId V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU m a)
 text (ToNom tid c@(Ann litPl bod)) toNomPl =
     do

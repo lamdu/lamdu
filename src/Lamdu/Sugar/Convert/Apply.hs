@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where
@@ -36,8 +37,8 @@ import           Lamdu.Prelude
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    V.App V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
@@ -67,7 +68,7 @@ convert posInfo app@(V.App funcI argI) exprPl =
 validateDefParamsMatchArgs ::
     MonadPlus m =>
     V.Var ->
-    Tree (Composite InternalName i o) (Ann a) ->
+    Composite InternalName i o # Ann a ->
     Deps ->
     m ()
 validateDefParamsMatchArgs var record frozenDeps =
@@ -87,8 +88,8 @@ validateDefParamsMatchArgs var record frozenDeps =
 
 convertLabeled ::
     (Monad m, Foldable f, Monoid a) =>
-    f (Tree (Ann (Input.Payload m a)) V.Term) ->
-    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
+    f (Ann (Input.Payload m a) # V.Term) ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled subexprs funcS argS exprPl =
     do
@@ -128,8 +129,8 @@ convertLabeled subexprs funcS argS exprPl =
 
 convertPrefix ::
     (Monad m, Foldable f, Monoid a) =>
-    f (Tree (Ann (Input.Payload m a)) V.Term) ->
-    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
+    f (Ann (Input.Payload m a) # V.Term) ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convertPrefix subexprs funcS argS applyPl =
     do

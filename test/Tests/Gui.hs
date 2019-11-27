@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeOperators #-}
 
 module Tests.Gui where
 
@@ -18,7 +18,7 @@ import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import           Hyper (Tree, Ann(..), annotation, hVal)
+import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
@@ -61,7 +61,7 @@ test =
 
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea name i o a)
-    (Tree (Sugar.Body name i o) (Ann (Const a)))
+    (Sugar.Body name i o # Ann (Const a))
 replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))

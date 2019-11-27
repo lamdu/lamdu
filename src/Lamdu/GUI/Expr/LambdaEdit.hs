@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeOperators #-}
+
 module Lamdu.GUI.Expr.LambdaEdit
     ( make
     ) where
@@ -23,7 +25,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), annotation)
+import           Hyper (Ann(..), type (#), annotation)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -159,8 +161,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Lambda Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.Lambda Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make lam pl =

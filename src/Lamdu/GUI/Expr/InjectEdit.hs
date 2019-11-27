@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, TypeOperators #-}
 module Lamdu.GUI.Expr.InjectEdit
     ( make
     ) where
@@ -21,7 +21,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), annotation)
+import           Hyper (Ann(..), type (#), annotation)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -148,8 +148,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Inject Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.Inject Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Sugar.Inject tag mVal) =

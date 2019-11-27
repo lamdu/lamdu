@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.GUI.Expr.FragmentEdit
     ( make
     ) where
@@ -19,7 +20,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann(..), annotation)
+import           Hyper (Ann(..), type (#), annotation)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -72,8 +73,7 @@ make ::
     , Has (Texts.Definitions Text) env
     , SearchMenu.HasTexts env
     ) =>
-    Tree (Sugar.Fragment Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.Fragment Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make fragment pl =
@@ -135,8 +135,7 @@ make fragment pl =
 
 makeFragmentExprEdit ::
     (Monad i, Functor o) =>
-    Tree (Sugar.Fragment Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.Fragment Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Responsive o)
 makeFragmentExprEdit fragment =
     do

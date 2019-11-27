@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, DataKinds, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, DataKinds, TypeFamilies, TypeOperators #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
@@ -60,7 +60,7 @@ markNodeAnnotations (Ann (Const pl) x) =
         (showAnn, newBody) = markAnnotations x
 
 class MarkAnnotations (t :: AHyperType -> *) where
-    markAnnotations :: Tree t (Ann (Const a)) -> (ShowAnnotation, Tree t (Ann (Const (ShowAnnotation, a))))
+    markAnnotations :: t # Ann (Const a) -> (ShowAnnotation, t # Ann (Const (ShowAnnotation, a)))
 
 instance MarkAnnotations (Binder name i o) where
     markAnnotations (BinderExpr body) =
@@ -98,8 +98,8 @@ instance MarkAnnotations (Body name i o) where
     markAnnotations = markBodyAnnotations
 
 markBodyAnnotations ::
-    Tree (Body name i o) (Ann (Const a)) ->
-    (ShowAnnotation, Tree (Body name i o) (Ann (Const (ShowAnnotation, a))))
+    Body name i o # Ann (Const a) ->
+    (ShowAnnotation, Body name i o # Ann (Const (ShowAnnotation, a)))
 markBodyAnnotations oldBody =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations

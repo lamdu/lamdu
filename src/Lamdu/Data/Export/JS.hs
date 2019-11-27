@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeOperators #-}
 
 module Lamdu.Data.Export.JS
     ( exportFancy
@@ -57,7 +57,7 @@ instance Has Dir.Layout CompileNameEnv where has = ceLayout
 compileNameEnv :: CompileNameEnv
 compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
-compile :: Monad m => Def.Expr (Tree (Ann (HRef m)) Term) -> T m String
+compile :: Monad m => Def.Expr (Ann (HRef m) # Term) -> T m String
 compile repl =
     repl <&> hflipped . hmapped1 %~ Const . valId
     & Compiler.compileRepl actions
@@ -94,7 +94,7 @@ formatResult (Ann _ b) =
     EV.RInject inj -> inj ^. EV.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
-readRepl :: T ViewM (Def.Expr (Tree (Ann (HRef ViewM)) Term))
+readRepl :: T ViewM (Def.Expr (Ann (HRef ViewM) # Term))
 readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
 exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())

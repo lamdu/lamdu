@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.GUI.Expr.BinderEdit
     ( make
     ) where
@@ -18,7 +19,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper (Tree, Ann(..), annotation, hVal)
+import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -55,8 +56,7 @@ makeLetEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Tree (Sugar.Let Name i o)
-        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload))) ->
+    Sugar.Let Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     GuiM env i o (Responsive o)
 makeLetEdit item =
     do

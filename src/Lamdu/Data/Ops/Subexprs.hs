@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, GADTs #-}
+{-# LANGUAGE RankNTypes, GADTs, TypeOperators #-}
 module Lamdu.Data.Ops.Subexprs
     ( onMatchingSubexprs
     , toHole
@@ -21,9 +21,9 @@ type T = Transaction
 
 onMatchingSubexprs ::
     Applicative m =>
-    (Tree a V.Term -> m ()) ->
-    Lens.Fold (Tree Pure V.Term) b ->
-    Tree (Ann a) V.Term ->
+    (a # V.Term -> m ()) ->
+    Lens.Fold (Pure # V.Term) b ->
+    Ann a # V.Term ->
     m ()
 onMatchingSubexprs action predicate x =
     ( if Lens.has predicate (unwrap (const (^. hVal)) x)
@@ -34,13 +34,13 @@ onMatchingSubexprs action predicate x =
     ( \(HWitness V.W_Term_Term) -> onMatchingSubexprs action predicate
     ) (x ^. hVal)
 
-toHole :: Monad m => Tree (HRef m) V.Term -> T m ()
+toHole :: Monad m => HRef m # V.Term -> T m ()
 toHole = void . DataOps.setToHole
 
 onGetVars ::
     Monad m =>
-    (Tree (HRef m) V.Term -> T m ()) -> V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
+    (HRef m # V.Term -> T m ()) -> V.Var -> Ann (HRef m) # V.Term -> T m ()
 onGetVars f var = onMatchingSubexprs f (_Pure . V._BLeaf . V._LVar . Lens.only var)
 
-getVarsToHole :: Monad m => V.Var -> Tree (Ann (HRef m)) V.Term -> T m ()
+getVarsToHole :: Monad m => V.Var -> Ann (HRef m) # V.Term -> T m ()
 getVarsToHole = onGetVars toHole

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, PolyKinds #-}
+{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators #-}
 module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
@@ -70,7 +70,7 @@ cursorDest x =
 
 inlineLet ::
     Monad m =>
-    Tree (HRef m) V.Term -> Tree Redex (F (IRef m)) -> T m EntityId
+    HRef m # V.Term -> Redex # F (IRef m) -> T m EntityId
 inlineLet topLevelProp redex =
     topLevelProp ^. ExprIRef.iref & ExprIRef.readRecursively
     <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)

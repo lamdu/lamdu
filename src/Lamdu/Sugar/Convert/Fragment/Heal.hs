@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
@@ -54,7 +55,7 @@ fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
 
 prepareInFragExpr ::
     Monad m =>
-    Annotated (Tree (HRef m) Term) Term ->
+    Annotated (HRef m # Term) Term ->
     Annotated (Priority, EditAction (T m ())) Term
 prepareInFragExpr (Ann (Const a) v) =
     v & htraverse1 %~ prepareInFragExpr
@@ -64,7 +65,7 @@ prepareInFragExpr (Ann (Const a) v) =
 prepare ::
     Monad m =>
     ValI m ->
-    Annotated (Tree (HRef m) Term) Term ->
+    Annotated (HRef m # Term) Term ->
     Annotated (Priority, EditAction (T m ())) Term
 prepare fragI (Ann (Const a) v) =
     if fragI == a ^. iref

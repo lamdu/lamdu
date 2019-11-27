@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
@@ -60,7 +61,7 @@ type T = Transaction
 
 convertDefIBuiltin ::
     (MonadTransaction n m, Monad f) =>
-    Tree Pure T.Scheme -> Definition.FFIName -> DefI f ->
+    Pure # T.Scheme -> Definition.FFIName -> DefI f ->
     m (DefinitionBody InternalName i (T f) a)
 convertDefIBuiltin scheme name defI =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
@@ -90,7 +91,7 @@ emptyScopeInfo recursiveRef =
     , _siRecursiveRef = recursiveRef
     }
 
-assertInferSuccess :: HasCallStack => Either (Tree Pure T.TypeError) a -> a
+assertInferSuccess :: HasCallStack => Either (Pure # T.TypeError) a -> a
 assertInferSuccess =
     either (error . ("Type inference failed: " ++) . show . pPrint) id
 
@@ -101,7 +102,7 @@ convertInferDefExpr ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    Tree Pure T.Scheme -> Definition.Expr (Tree (Ann (HRef m)) Term) -> DefI m ->
+    Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # Term) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
@@ -161,7 +162,7 @@ convertDefBody ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    Definition.Definition (Tree (Ann (HRef m)) Term) (DefI m) ->
+    Definition.Definition (Ann (HRef m) # Term) (DefI m) ->
     T m
     (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =

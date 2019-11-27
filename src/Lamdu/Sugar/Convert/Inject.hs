@@ -1,9 +1,10 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Inject
     ( convert
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, Ann(..), hVal, hAnn)
+import           Hyper (Ann(..), type (#), hVal, hAnn)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
@@ -20,8 +21,8 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree V.Inject (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    V.Inject # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convert (V.Inject tag injected) exprPl =
     do

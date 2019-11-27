@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.GUI.Expr.HoleEdit.ValTerms
     ( expr
     , binder
@@ -51,7 +52,7 @@ ofBody ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Tree (Body Name i o) (Ann (Const a)) -> [Text]
+    env -> Body Name i o # Ann (Const a) -> [Text]
 ofBody env =
     \case
     BodyLam {} ->
@@ -110,7 +111,7 @@ binder ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Tree (Binder Name i o) (Ann (Const a)) -> [Text]
+    env -> Binder Name i o # Ann (Const a) -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
 binder env (BinderExpr x) = ofBody env x
 
@@ -148,7 +149,7 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Tree (Body name i o) (Ann a) -> Text
+    SearchMenu.ResultsContext -> Body name i o # Ann a -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which

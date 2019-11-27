@@ -72,15 +72,15 @@ data AnnotatedArg name expr = AnnotatedArg
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o k = LabeledApply
-    { _aFunc :: k # Lens.Const (BinderVarRef name o)
-    , _aSpecialArgs :: Meta.SpecialArgs (k # Body name i o)
-    , _aAnnotatedArgs :: [AnnotatedArg name (k # Body name i o)]
-    , _aPunnedArgs :: [k # Lens.Const (GetVar name o)]
+    { _aFunc :: k :# Lens.Const (BinderVarRef name o)
+    , _aSpecialArgs :: Meta.SpecialArgs (k :# Body name i o)
+    , _aAnnotatedArgs :: [AnnotatedArg name (k :# Body name i o)]
+    , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 
 data InjectContent name i o k
-    = InjectNullary (k # Lens.Const (NullaryVal name i o))
-    | InjectVal (k # Body name i o)
+    = InjectNullary (k :# Lens.Const (NullaryVal name i o))
+    | InjectVal (k :# Body name i o)
     deriving Generic
 
 data Inject name i o f = Inject
@@ -97,7 +97,7 @@ data Lambda name i o f = Lambda
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment name i o k = Fragment
-    { _fExpr :: k # Body name i o
+    { _fExpr :: k :# Body name i o
     , _fHeal :: o EntityId
     , _fTypeMatch :: Bool
     , _fOptions :: i [HoleOption name i o]
@@ -139,21 +139,21 @@ data Else name i o f
     deriving Generic
 
 data IfElse name i o k = IfElse
-    { _iIf :: k # Body name i o
-    , _iThen :: k # Body name i o
-    , _iElse :: k # Else name i o
+    { _iIf :: k :# Body name i o
+    , _iThen :: k :# Body name i o
+    , _iElse :: k :# Else name i o
     } deriving Generic
 
 data Composite name i o k = Composite
-    { _cItems :: [CompositeItem name i o (k # Body name i o)]
+    { _cItems :: [CompositeItem name i o (k :# Body name i o)]
     , -- Punned items are like Haskell's NamedFieldPuns
-      _cPunnedItems :: [k # Lens.Const (GetVar name o)]
-    , _cTail :: CompositeTail o (k # Body name i o)
+      _cPunnedItems :: [k :# Lens.Const (GetVar name o)]
+    , _cTail :: CompositeTail o (k :# Body name i o)
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
 data Case name i o k = Case
-    { _cKind :: CaseKind o (k # Body name i o)
+    { _cKind :: CaseKind o (k :# Body name i o)
     , _cBody :: Composite name i o k
     } deriving Generic
 
@@ -164,25 +164,25 @@ data Body name i o k
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o k)
-    | BodyGetField (GetField name i o (k # Body name i o))
+    | BodyGetField (GetField name i o (k :# Body name i o))
     | BodyCase (Case name i o k)
     | BodyIfElse (IfElse name i o k)
     | BodyInject (Inject name i o k)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (k # Binder name i o))
+    | BodyToNom (Nominal name (k :# Binder name i o))
     | BodyFromNom (TId name)
     | BodyFragment (Fragment name i o k)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
 data Let name i o k = Let
-    { _lValue :: k # Assignment name i o -- "let foo = [[bar]] in x"
+    { _lValue :: k :# Assignment name i o -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
     , _lBodyScope :: ChildScopes
-    , _lBody :: k # Binder name i o -- "let foo = bar in [[x]]"
+    , _lBody :: k :# Binder name i o -- "let foo = bar in [[x]]"
     } deriving Generic
 
 -- An expression with 0 or more let items,
@@ -199,7 +199,7 @@ data Binder name i o f
 data Function name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams name i o
-    , _fBody :: k # Binder name i o
+    , _fBody :: k :# Binder name i o
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: BinderBodyScope

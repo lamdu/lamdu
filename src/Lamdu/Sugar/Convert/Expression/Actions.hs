@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeFamilies, TypeApplications #-}
+{-# LANGUAGE FlexibleInstances, TypeFamilies, TypeApplications, TypeOperators #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
@@ -51,7 +51,7 @@ type T = Transaction
 
 mkExtract ::
     Monad m =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (T m ExtractDestination)
+    Input.Payload m a # V.Term -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
     Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
     >>= \case
@@ -60,7 +60,7 @@ mkExtract exprPl =
         mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
         <&> ExtractToLet & pure
 
-mkExtractToDef :: Monad m => Tree (Input.Payload m a) V.Term -> ConvertM m (T m EntityId)
+mkExtractToDef :: Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
 mkExtractToDef exprPl =
     (,,)
     <$> Lens.view id
@@ -72,8 +72,8 @@ mkExtractToDef exprPl =
         let scheme =
                 generalize (exprPl ^. Input.inferRes . inferResult . Lens._2)
                 >>= S.saveScheme
-                & runPureInfer @(Tree V.Scope UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
-                & Lens._Left %~ (\x -> x :: Tree Pure T.TypeError)
+                & runPureInfer @(V.Scope # UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
+                & Lens._Left %~ (\x -> x :: Pure # T.TypeError)
                 & (^?! Lens._Right . Lens._1)
         let deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
         newDefI <-
@@ -97,7 +97,7 @@ mkExtractToDef exprPl =
 
 mkExtractToLet ::
     Monad m =>
-    Tree (ExprIRef.HRef m) V.Term -> Tree (ExprIRef.HRef m) V.Term -> T m EntityId
+    ExprIRef.HRef m # V.Term -> ExprIRef.HRef m # V.Term -> T m EntityId
 mkExtractToLet outerScope stored =
     do
         lamI <-
@@ -127,7 +127,7 @@ mkExtractToLet outerScope stored =
 
 mkWrapInRecord ::
     Monad m =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (TagReplace InternalName (T m) (T m) ())
+    Input.Payload m a # V.Term -> ConvertM m (TagReplace InternalName (T m) (T m) ())
 mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -145,7 +145,7 @@ mkWrapInRecord exprPl =
 
 makeSetToLiteral ::
     Monad m =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (Literal Identity -> T m EntityId)
+    Input.Payload m a # V.Term -> ConvertM m (Literal Identity -> T m EntityId)
 makeSetToLiteral exprPl =
     (,) <$> ConvertM.typeProtectedSetToVal <*> valFromLiteral
     <&>
@@ -162,7 +162,7 @@ makeSetToLiteral exprPl =
 
 makeActions ::
     Monad m =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (NodeActions InternalName (T m) (T m))
+    Input.Payload m a # V.Term -> ConvertM m (NodeActions InternalName (T m) (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
@@ -186,11 +186,11 @@ makeActions exprPl =
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
-    p a (f a) -> Lens.Indexed (Tree (Body name i o) (Ann (Const j))) a (f a)
+    p a (f a) -> Lens.Indexed (Body name i o # Ann (Const j)) a (f a)
 fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . annotation)
 
 bodyIndex ::
-    Lens.IndexedTraversal' (Tree k (Ann a)) (Tree (Ann a) k) (Tree (Ann a) k)
+    Lens.IndexedTraversal' (k # Ann a) (Ann a # k) (Ann a # k)
 bodyIndex = Lens.filteredBy hVal
 
 class FixReplaceParent expr where
@@ -222,16 +222,16 @@ instance FixReplaceParent (Else name (T m) (T m)) where
 -- TODO: This is an indexed lens of some sort?
 typeMismatchPayloads ::
     (a -> Identity a) ->
-    Tree (Body name i o) (Ann (Const a)) -> Identity (Tree (Body name i o) (Ann (Const a)))
+    Body name i o # Ann (Const a) -> Identity (Body name i o # Ann (Const a))
 typeMismatchPayloads =
     _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . annotation
 
 setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
-        Tree (ExprIRef.HRef m) V.Term ->
-        Tree (Body name (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
-        Tree (Body name (T m) (T m)) (Ann (Const (ConvertPayload m a)))
+        ExprIRef.HRef m # V.Term ->
+        Body name (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
+        Body name (T m) (T m) # Ann (Const (ConvertPayload m a))
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -254,7 +254,7 @@ setChildReplaceParentActions =
 
 subexprPayloads ::
     Foldable f =>
-    f (Tree (Ann (Input.Payload m a)) V.Term) -> [ConvertPayload m a] -> [a]
+    f (Ann (Input.Payload m a) # V.Term) -> [ConvertPayload m a] -> [a]
 subexprPayloads subexprs cullPoints =
     subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded
     where
@@ -263,15 +263,15 @@ subexprPayloads subexprs cullPoints =
             cullPoints ^.. Lens.folded . pInput . Input.stored . ExprIRef.iref
             <&> EntityId.ofValI
             & Set.fromList
-        toCull :: Tree (Input.Payload m a) n -> Maybe a
+        toCull :: Input.Payload m a # n -> Maybe a
         toCull pl =
             pl ^. Input.userData <$
             guard (not (cullSet ^. Lens.contains (pl ^. Input.entityId)))
 
 addActionsWith ::
     Monad m =>
-    a -> Tree (Input.Payload m b) V.Term ->
-    Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
+    a -> Input.Payload m b # V.Term ->
+    Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -288,8 +288,8 @@ addActionsWith userData exprPl bodyS =
 
 addActions ::
     (Monad m, Monoid a, Foldable f) =>
-    f (Tree (Ann (Input.Payload m a)) V.Term) -> Tree (Input.Payload m a) V.Term ->
-    Tree (Body InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
+    f (Ann (Input.Payload m a) # V.Term) -> Input.Payload m a # V.Term ->
+    Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
@@ -297,7 +297,7 @@ addActions subexprs exprPl bodyS =
 
 makeTypeAnnotation ::
     Monad m =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (Annotated EntityId (Type InternalName))
+    Input.Payload m a # V.Term -> ConvertM m (Annotated EntityId (Type InternalName))
 makeTypeAnnotation payload =
     convertType (EntityId.ofTypeOf entityId) typ
     where
@@ -306,7 +306,7 @@ makeTypeAnnotation payload =
 
 makeAnnotation ::
     Monad m =>
-    Ann.ShowAnnotation -> Tree (Input.Payload m a) V.Term ->
+    Ann.ShowAnnotation -> Input.Payload m a # V.Term ->
     ConvertM m (Annotation InternalName (T m))
 makeAnnotation showAnn pl =
     Lens.view ConvertM.scAnnotationsMode >>=
@@ -345,7 +345,7 @@ convertPayload (showAnn, pl) =
 
 valFromLiteral ::
     Monad m =>
-    ConvertM m (Literal Identity -> (Val (Tree Pure T.Type), T m ()))
+    ConvertM m (Literal Identity -> (Val (Pure # T.Type), T m ()))
 valFromLiteral =
     Lens.view ConvertM.scFrozenDeps
     <&>

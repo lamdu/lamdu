@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, TypeOperators #-}
 module Test.Lamdu.Sugar where
 
 import           Control.DeepSeq (NFData, deepseq)
@@ -65,17 +65,17 @@ validateHiddenEntityIds workArea
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
 data PaneLowLevel
-    = PaneDefLowLevel (Def.Definition (Tree (Ann (HRef ViewM)) Term) (DefI ViewM))
+    = PaneDefLowLevel (Def.Definition (Ann (HRef ViewM) # Term) (DefI ViewM))
     | PaneTagLowLevel T.Tag
 
 Lens.makePrisms ''PaneLowLevel
 
 data WorkAreaLowLevel = WorkAreaLowLevel
-    { wallRepl :: Def.Expr (Tree (Ann (HRef ViewM)) Term)
+    { wallRepl :: Def.Expr (Ann (HRef ViewM) # Term)
     , wallPanes :: [PaneLowLevel]
     }
 
-workAreaLowLevelValProps :: WorkAreaLowLevel -> [Tree (HRef ViewM) Term]
+workAreaLowLevelValProps :: WorkAreaLowLevel -> [HRef ViewM # Term]
 workAreaLowLevelValProps (WorkAreaLowLevel r p) =
     defExprs ^.. Lens.folded . Def.expr . hflipped . hfolded1
     where

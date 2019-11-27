@@ -17,10 +17,10 @@ import           Lamdu.Prelude
 
 data Redex a = Redex
     { _bodyScope :: EvalScopes ScopeId
-    , _lam :: Tree (V.Lam V.Var V.Term) (Ann (GetHyperType a))
-    , _lamPl :: a # V.Term
+    , _lam :: V.Lam V.Var V.Term # Ann (GetHyperType a)
+    , _lamPl :: a :# V.Term
     , _paramRefs :: [EntityId]
-    , _arg :: Tree (Ann (GetHyperType a)) V.Term
+    , _arg :: Ann (GetHyperType a) # V.Term
     }
 Lens.makeLenses ''Redex
 
@@ -35,8 +35,8 @@ instance HFunctor Redex where
         }
 
 check ::
-    Tree V.Term (Ann (Input.Payload m a)) ->
-    Maybe (Tree Redex (Input.Payload m a))
+    V.Term # Ann (Input.Payload m a) ->
+    Maybe (Redex # Input.Payload m a)
 check term =
     do
         V.App func a <- term ^? V._BApp

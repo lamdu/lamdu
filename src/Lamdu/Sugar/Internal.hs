@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TypeOperators #-}
 
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pInput, pActions
@@ -30,7 +30,7 @@ type T = Transaction
 
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
-      _pInput :: Tree (Input.Payload m a) Term
+      _pInput :: Input.Payload m a # Term
     , _pActions :: NodeActions InternalName (T m) (T m)
     }
 
@@ -84,7 +84,7 @@ type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
 
 replaceWith ::
     Monad m =>
-    Tree (HRef m) Term -> Tree (HRef m) Term ->
+    HRef m # Term -> HRef m # Term ->
     T m EntityId
 replaceWith parentP replacerP =
     EntityId.ofValI replacerI <$ (parentP ^. ExprIRef.setIref) replacerI

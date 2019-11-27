@@ -1,5 +1,5 @@
 -- | REPL Edit
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, TypeOperators #-}
 module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make, isExecutableType
     ) where
@@ -30,7 +30,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann, hVal)
+import           Hyper (Ann, type (#), hVal)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
@@ -197,7 +197,7 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
 indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
 
-isExecutableType :: Tree (Ann a) (Sugar.Type name) -> Bool
+isExecutableType :: Ann a # Sugar.Type name -> Bool
 isExecutableType t =
     case t ^. hVal of
     Sugar.TInst tid _ -> tid ^. Sugar.tidTId == Builtins.mutTid

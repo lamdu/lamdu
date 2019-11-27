@@ -10,7 +10,6 @@ module Revision.Deltum.Hyper
 
 import qualified Control.Lens as Lens
 import           Data.Binary (Binary)
-import           Data.Constraint (Dict(..), withDict)
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Class.Context (HContext(..))
@@ -25,7 +24,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-class (Monad m, HTraversable h, HContext h, Binary (Tree h (F (IRef m)))) => HStore m h where
+class (Monad m, HTraversable h, HContext h, Binary (h # F (IRef m))) => HStore m h where
     hstoreRecursive :: Proxy m -> Proxy h -> Dict (HNodesConstraint h (HStore m))
     {-# INLINE hstoreRecursive #-}
     default hstoreRecursive ::
@@ -54,16 +53,16 @@ data Write m h
 
 readRecursively ::
     HStore m t =>
-    Tree (F (IRef m)) t ->
-    T m (Tree (Ann (F (IRef m))) t)
+    F (IRef m) # t ->
+    T m (Ann (F (IRef m)) # t)
 readRecursively = readRecursivelyH mempty
 
 readRecursivelyH ::
     forall m t.
     HStore m t =>
     Set UUID ->
-    Tree (F (IRef m)) t ->
-    T m (Tree (Ann (F (IRef m))) t)
+    F (IRef m) # t ->
+    T m (Ann (F (IRef m)) # t)
 readRecursivelyH visited x
     | visited ^. Lens.contains k = error $ "Recursive reference: " ++ show x
     | otherwise =
@@ -77,9 +76,9 @@ readRecursivelyH visited x
 toHRefs ::
     forall h m p.
     HStore m h =>
-    (Tree (F (IRef m)) h -> T m ()) ->
-    Tree (Ann (F (IRef m) :*: p)) h ->
-    Tree (Ann (HRef m :*: p)) h
+    (F (IRef m) # h -> T m ()) ->
+    Ann (F (IRef m) :*: p) # h ->
+    Ann (HRef m :*: p) # h
 toHRefs setValI (Ann (i :*: a) body) =
     withDict (recurse (Proxy @(HStore m h))) $
     hcontext body
@@ -99,8 +98,8 @@ toHRefs setValI (Ann (i :*: a) body) =
 writeRecursively ::
     forall m t a.
     HStore m t =>
-    Tree (Ann (Write m :*: a)) t ->
-    T m (Tree (Ann (F (IRef m) :*: a)) t)
+    Ann (Write m :*: a) # t ->
+    T m (Ann (F (IRef m) :*: a) # t)
 writeRecursively expr =
     withDict (recurse (Proxy @(HStore m t))) $
     do
@@ -119,8 +118,8 @@ writeRecursively expr =
 expressionBodyFrom ::
     forall m t a.
     HStore m t =>
-    Tree (Ann (Write m :*: a)) t ->
-    T m (Tree t (Ann (F (IRef m) :*: a)))
+    Ann (Write m :*: a) # t ->
+    T m (t # Ann (F (IRef m) :*: a))
 expressionBodyFrom =
     withDict (recurse (Proxy @(HStore m t))) $
     htraverse (Proxy @(HStore m) #> writeRecursively) . (^. hVal)

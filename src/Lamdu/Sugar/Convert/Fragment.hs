@@ -1,6 +1,6 @@
 -- | Convert applied holes to Fragments
 
-{-# LANGUAGE TypeFamilies, TupleSections, PolyKinds #-}
+{-# LANGUAGE TypeFamilies, TupleSections, PolyKinds, TypeOperators #-}
 
 module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole
@@ -55,7 +55,7 @@ type T = Transaction
 
 fragmentResultProcessor ::
     Monad m =>
-    EntityId -> Tree (Ann (Input.Payload m a)) V.Term -> Hole.ResultProcessor m
+    EntityId -> Ann (Input.Payload m a) # V.Term -> Hole.ResultProcessor m
 fragmentResultProcessor topEntityId fragment =
     Hole.ResultProcessor
     { Hole.rpEmptyPl = NotFragment
@@ -67,9 +67,9 @@ mkOptions ::
     Monad m =>
     ConvertM.PositionInfo ->
     ConvertM.Context m ->
-    Tree (Ann (Input.Payload m a)) V.Term ->
+    Ann (Input.Payload m a) # V.Term ->
     Expression name i o (Payload name i o a) ->
-    Tree (Input.Payload m a) V.Term ->
+    Input.Payload m a # V.Term ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
@@ -87,8 +87,8 @@ mkOptions posInfo sugarContext argI argS exprPl =
 mkAppliedHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m ->
-    Tree (Ann (Input.Payload m a)) V.Term ->
-    Tree (Input.Payload m a) V.Term ->
+    Ann (Input.Payload m a) # V.Term ->
+    Input.Payload m a # V.Term ->
     [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
@@ -103,7 +103,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
             (sugarContext & ConvertM.scInferContext .~ newInferCtx)
             exprPl sugg
 
-checkTypeMatch :: Monad m => Tree UVar T.Type -> Tree UVar T.Type -> ConvertM m Bool
+checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m Bool
 checkTypeMatch x y =
     Lens.view ConvertM.scInferContext
     <&> check
@@ -116,8 +116,8 @@ checkTypeMatch x y =
 convertAppliedHole ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
-    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    V.App V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     ExpressionU m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedHole posInfo (V.App funcI argI) exprPl argS =
@@ -163,7 +163,7 @@ convertAppliedHole posInfo (V.App funcI argI) exprPl argS =
         stored = exprPl ^. Input.stored
         storedEntityId = stored ^. iref & EntityId.ofValI
 
-liftPureInfer :: env -> PureInfer env a -> StateT InferState (Either (Tree Pure T.TypeError)) a
+liftPureInfer :: env -> PureInfer env a -> StateT InferState (Either (Pure # T.TypeError)) a
 liftPureInfer scope act =
     do
         st <- Lens.use id
@@ -177,9 +177,9 @@ exceptToListT (Right x) = pure x
 
 holeResultsEmplaceFragment ::
     Monad m =>
-    Tree (Ann (Input.Payload n a)) V.Term ->
-    Val (Maybe (ValI n), Tree (InferResult UVar) V.Term) ->
-    Hole.ResultGen m (Val ((Maybe (ValI n), IsFragment), Tree (InferResult UVar) V.Term))
+    Ann (Input.Payload n a) # V.Term ->
+    Val (Maybe (ValI n), InferResult UVar # V.Term) ->
+    Hole.ResultGen m (Val ((Maybe (ValI n), IsFragment), InferResult UVar # V.Term))
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
@@ -226,8 +226,8 @@ holeResultsEmplaceFragment rawFragmentExpr x =
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
-    Val (Maybe (ValI n), Tree (InferResult UVar) V.Term) ->
-    Val ((Maybe (ValI n), IsFragment), Tree (InferResult UVar) V.Term)
+    Val (Maybe (ValI n), InferResult UVar # V.Term) ->
+    Val ((Maybe (ValI n), IsFragment), InferResult UVar # V.Term)
 markNotFragment = hflipped . hmapped1 . Lens._Wrapped . Lens._1 %~ (, NotFragment)
 
 -- TODO: Unify type according to IsFragment, avoid magic var
@@ -236,8 +236,8 @@ fragmentVar = "HOLE FRAGMENT EXPR"
 
 replaceFragment ::
     EntityId -> Int ->
-    Tree (Ann (Input.Payload m IsFragment)) V.Term ->
-    Tree (Ann (Input.Payload m ())) V.Term
+    Ann (Input.Payload m IsFragment) # V.Term ->
+    Ann (Input.Payload m ()) # V.Term
 replaceFragment parentEntityId idxInParent (Ann pl bod) =
     case pl ^. Input.userData of
     IsFragment ->
@@ -277,9 +277,9 @@ emplaceInHoles replaceHole =
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::
-    Tree UVar T.Type ->
-    Val (Maybe (Tree (F (IRef m)) V.Term), Tree (InferResult UVar) V.Term) ->
-    State InferState (Val ((Maybe (ValI m), IsFragment), Tree (InferResult UVar) V.Term))
+    UVar # T.Type ->
+    Val (Maybe (F (IRef m) # V.Term), InferResult UVar # V.Term) ->
+    State InferState (Val ((Maybe (ValI m), IsFragment), InferResult UVar # V.Term))
 mkResultValFragment inferred x =
     x & hflipped . hmapped1 . Lens._Wrapped . _1 %~ onPl
     & Hole.detachValIfNeeded emptyPl inferred
@@ -291,8 +291,8 @@ mkResultValFragment inferred x =
 mkOptionFromFragment ::
     Monad m =>
     ConvertM.Context m ->
-    Tree (Input.Payload m a) V.Term ->
-    Val (Maybe (Tree (F (IRef m)) V.Term), Tree (InferResult UVar) V.Term) ->
+    Input.Payload m a # V.Term ->
+    Val (Maybe (F (IRef m) # V.Term), InferResult UVar # V.Term) ->
     HoleOption InternalName (T m) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption

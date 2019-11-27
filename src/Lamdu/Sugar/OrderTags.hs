@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables, TypeOperators #-}
 
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
@@ -19,13 +19,13 @@ type T = Transaction
 type OrderT m x = x -> T m x
 
 class Order m name o t where
-    order :: OrderT m (Tree t (Ann (Const (Sugar.Payload name i o a))))
+    order :: OrderT m (t # Ann (Const (Sugar.Payload name i o a)))
 
     default order ::
         ( Monad m, HTraversable t
         , HNodesConstraint t (Order m name o)
         ) =>
-        OrderT m (Tree t (Ann (Const (Sugar.Payload name i o a))))
+        OrderT m (t # Ann (Const (Sugar.Payload name i o a)))
     order = htraverse (Proxy @(Order m name o) #> orderNode)
 
 orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
@@ -37,24 +37,24 @@ orderByTag toTag =
             & ExprIRef.readTagData
             <&> (,) x . (^. tagOrder)
 
-orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Tree (Ann a) (Sugar.Type name)))
+orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Ann a # Sugar.Type name))
 orderComposite =
     Sugar.compositeFields $
     \fields -> fields & orderByTag (^. _1) >>= traverse . _2 %%~ orderType
 
-orderTBody :: Monad m => OrderT m (Tree (Sugar.Type name) (Ann a))
+orderTBody :: Monad m => OrderT m (Sugar.Type name # Ann a)
 orderTBody t =
     t
     & Sugar._TRecord %%~ orderComposite
     >>= Sugar._TVariant %%~ orderComposite
     >>= htraverse1 orderType
 
-orderType :: Monad m => OrderT m (Tree (Ann a) (Sugar.Type name))
+orderType :: Monad m => OrderT m (Ann a # Sugar.Type name)
 orderType = hVal orderTBody
 
 orderRecord ::
     Monad m =>
-    OrderT m (Tree (Sugar.Composite name (T m) o) (Ann (Const (Sugar.Payload name i o a))))
+    OrderT m (Sugar.Composite name (T m) o # Ann (Const (Sugar.Payload name i o a)))
 orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
@@ -67,7 +67,7 @@ instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
 
 orderCase ::
     Monad m =>
-    OrderT m (Tree (Sugar.Case name (T m) o) (Ann (Const (Sugar.Payload name i o a))))
+    OrderT m (Sugar.Case name (T m) o # Ann (Const (Sugar.Payload name i o a)))
 orderCase = Sugar.cBody orderRecord
 
 instance Monad m => Order m name o (Sugar.Lambda name (T m) o)

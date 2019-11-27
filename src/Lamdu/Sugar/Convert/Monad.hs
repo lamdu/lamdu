@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
 {-# LANGUAGE ConstraintKinds, FlexibleInstances, MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeOperators #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
@@ -28,7 +28,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (Tree, Pure, Ann)
+import           Hyper (Pure, Ann, type (#))
 import           Hyper.Unify.Binding (UVar)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
@@ -66,14 +66,14 @@ data TagFieldParam
       CollidingFieldParam TagParamInfo
 
 data OuterScopeInfo m = OuterScopeInfo
-    { _osiPos :: Tree (ExprIRef.HRef m) V.Term
-    , _osiScope :: Tree V.Scope UVar
+    { _osiPos :: ExprIRef.HRef m # V.Term
+    , _osiScope :: V.Scope # UVar
     }
 Lens.makeLenses ''OuterScopeInfo
 
 data RecursiveRef m = RecursiveRef
     { _rrDefI :: ExprIRef.DefI m
-    , _rrDefType :: Tree Pure T.Scheme
+    , _rrDefType :: Pure # T.Scheme
     }
 Lens.makeLenses ''RecursiveRef
 
@@ -103,7 +103,7 @@ data Context m = Context
     { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
-    , _scTopLevelExpr :: Tree (Ann (Input.Payload m [Sugar.EntityId])) V.Term
+    , _scTopLevelExpr :: Ann (Input.Payload m [Sugar.EntityId]) # V.Term
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcess.Result
@@ -116,7 +116,7 @@ data Context m = Context
     , _scAnnotationsMode :: Annotations.Mode
     , scConvertSubexpression ::
         forall a. Monoid a =>
-        PositionInfo -> Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ExpressionU m a)
+        PositionInfo -> Ann (Input.Payload m a) # V.Term -> ConvertM m (ExpressionU m a)
     , _scLanguageIdentifier :: LangId
     , _scLanguageDir :: Dir.Layout
     }
@@ -142,7 +142,7 @@ typeProtect checkOk act =
 typeProtectedSetToVal ::
     Monad m =>
     ConvertM m
-    (Tree (ExprIRef.HRef m) V.Term -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
+    (ExprIRef.HRef m # V.Term -> ExprIRef.ValI m -> T m (ExprIRef.ValI m))
 typeProtectedSetToVal =
     Lens.view scPostProcessRoot
     <&> \checkOk dest valI ->
@@ -156,7 +156,7 @@ typeProtectedSetToVal =
                     _ <- checkOk
                     pure res
 
-postProcessWith :: Monad m => ConvertM m ((Tree Pure T.TypeError -> T m ()) -> T m ())
+postProcessWith :: Monad m => ConvertM m ((Pure # T.TypeError -> T m ()) -> T m ())
 postProcessWith =
     Lens.view scPostProcessRoot
     <&> \postProcess onError ->
@@ -186,7 +186,7 @@ local f (ConvertM act) = ConvertM $ Reader.local f act
 
 convertSubexpression ::
     (Monad m, Monoid a) =>
-    Tree (Ann (Input.Payload m a)) V.Term -> ConvertM m (ExpressionU m a)
+    Ann (Input.Payload m a) # V.Term -> ConvertM m (ExpressionU m a)
 convertSubexpression exprI =
     do
         convertSub <- Lens.view (Lens.to scConvertSubexpression)

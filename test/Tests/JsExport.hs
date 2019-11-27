@@ -1,11 +1,12 @@
 -- | Test export of JS programs
 
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Tests.JsExport where
 
 import qualified Data.ByteString as BS
-import           Hyper (Tree, Ann)
+import           Hyper (Ann, type (#))
 import           Lamdu.Calc.Term (Term)
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -34,7 +35,7 @@ test =
     , testFieldAndParamUseSameTag
     ]
 
-readRepl :: T ViewM (Def.Expr (Tree (Ann (HRef ViewM)) Term))
+readRepl :: T ViewM (Def.Expr (Ann (HRef ViewM) # Term))
 readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
 nodeRepl :: IO Proc.CreateProcess

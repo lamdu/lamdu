@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction, RankNTypes #-}
+{-# LANGUAGE NoMonomorphismRestriction, RankNTypes, TypeOperators #-}
 module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom
     ) where
@@ -18,7 +18,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Tree, Ann(..), annotation)
+import           Hyper (Ann(..), type (#), annotation)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -48,9 +48,8 @@ makeToNom ::
     , Has (Texts.Definitions Text) env
     ) =>
     Sugar.Nominal Name
-        (Tree
-            (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)))
-            (Sugar.Binder Name i o)) ->
+        (Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) #
+            Sugar.Binder Name i o) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeToNom (Sugar.Nominal tid binder) pl =

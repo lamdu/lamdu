@@ -1,5 +1,5 @@
 -- | Import/Export JSON support
-{-# LANGUAGE TemplateHaskell, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators #-}
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll, verifyAll
@@ -20,7 +20,6 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.List as List
 import qualified Data.Property as Property
-import           Data.Proxy (Proxy(..))
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
@@ -120,7 +119,7 @@ exportNominal nomId =
         & withVisited visitedNominals nomId
 
 class ExportSubexpr k where
-    exportSubexpr :: Monad m => Tree (Ann (HRef m)) k -> Export m ()
+    exportSubexpr :: Monad m => Ann (HRef m) # k -> Export m ()
 
 instance ExportSubexpr V.Term where
     exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
@@ -133,7 +132,7 @@ instance ExportSubexpr V.Term where
             lamI = lamP ^. ExprIRef.iref
     exportSubexpr _ = pure ()
 
-exportVal :: Monad m => Tree (Ann (HRef m)) V.Term -> Export m ()
+exportVal :: Monad m => Ann (HRef m) # V.Term -> Export m ()
 exportVal x =
     do
         (x & hflipped . hmapped1 .~ Const ())
@@ -258,7 +257,7 @@ importLamVar paramList tag lamUUID var =
     where
         lamI = _F # IRef.unsafeFromUUID lamUUID
 
-importNominal :: T.Tag -> T.NominalId -> Maybe (Tree Pure (NominalDecl T.Type)) -> T ViewM ()
+importNominal :: T.Tag -> T.NominalId -> Maybe (Pure # NominalDecl T.Type) -> T ViewM ()
 importNominal tag nomId nominal =
     do
         Property.setP (Anchors.assocTag nomId) tag

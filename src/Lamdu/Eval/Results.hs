@@ -23,7 +23,7 @@ import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Hyper
-import           Hyper (Ann(..), type (#))
+import           Hyper (Ann(..), type (:#))
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)
@@ -47,7 +47,7 @@ topLevelScopeId = ScopeId 0
 -- Todo: make a shared inject type in hypertypes?
 data Inject k = Inject
     { _injectTag :: T.Tag
-    , _injectVal :: k # Body
+    , _injectVal :: k :# Body
     }
 
 data Body k
@@ -56,14 +56,14 @@ data Body k
     | RFunc Int -- Identifier for function instance
     | RRecEmpty
     | RPrimVal V.PrimVal
-    | RArray [k # Body]
+    | RArray [k :# Body]
     | RError EvalTypeError
 
 Hyper.makeHTraversableAndBases ''Inject
 Hyper.makeHTraversableAndBases ''Body
 
-deriving instance Show (k # Body) => Show (Body k)
-deriving instance Show (k # Body) => Show (Inject k)
+deriving instance Show (k :# Body) => Show (Body k)
+deriving instance Show (k :# Body) => Show (Inject k)
 
 type Val pl = Annotated pl Body
 

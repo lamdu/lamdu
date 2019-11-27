@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
-{-# LANGUAGE DerivingVia, DataKinds #-}
+{-# LANGUAGE DerivingVia, DataKinds, TypeOperators #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --
@@ -47,7 +47,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Ann(..))
+import           Hyper (Ann(..), type (#))
 import           Hyper.Combinator.Ann (Annotated, annotation)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
@@ -166,8 +166,8 @@ instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Ann (Const (Sugar.Payload name i o a)) e -> GuiM env i o (Responsive.Responsive o)) ->
-    Ann (Const (Sugar.Payload name i o a)) e ->
+        (Ann (Const (Sugar.Payload name i o a)) # e -> GuiM env i o (Responsive.Responsive o)) ->
+    Ann (Const (Sugar.Payload name i o a)) # e ->
     GuiM env i o (Responsive.Responsive o)
 make sub expr =
     do

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, TypeOperators #-}
 
 module Tests.Stdlib (test) where
 
@@ -10,7 +10,7 @@ import           Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Hyper (Pure(..), Tree, htraverse_, (#>))
+import           Hyper (Pure(..), type (#), htraverse_, (#>))
 import qualified Hyper.Type.AST.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
@@ -135,7 +135,7 @@ verifySchemes =
         verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
 
 class VerifyTypeInScheme t where
-    verifyTypeInScheme :: Tree T.Types S.QVars -> Tree Pure t -> IO ()
+    verifyTypeInScheme :: T.Types # S.QVars -> Pure # t -> IO ()
 
 instance VerifyTypeInScheme T.Type where
     verifyTypeInScheme s (Pure (T.TVar v))

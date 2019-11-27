@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeOperators #-}
 module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
@@ -7,7 +7,7 @@ import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
-import           Hyper (Tree, Ann(..), annotation, hVal)
+import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -32,9 +32,9 @@ makeLabeledApply ::
         (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))
     ] ->
     [Annotated (ConvertPayload m a) (Const (Sugar.GetVar InternalName (T m)))] ->
-    Tree (Input.Payload m a) Term ->
+    Input.Payload m a # Term ->
     ConvertM m
-    (Tree (Sugar.LabeledApply InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
+    (Sugar.LabeledApply InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
 makeLabeledApply func args punnedArgs exprPl =
     do
         presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP

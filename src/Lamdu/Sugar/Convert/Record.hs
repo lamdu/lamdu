@@ -1,8 +1,9 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import           Hyper (Tree, Ann(..), hAnn)
+import           Hyper (Ann(..), type (#), hAnn)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -20,7 +21,7 @@ import           Lamdu.Prelude
 
 convertEmpty ::
     (Monad m, Monoid a) =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
+    Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
 convertEmpty pl =
     Composite.convertEmpty DataOps.recExtend pl
     <&> BodyRecord
@@ -28,8 +29,8 @@ convertEmpty pl =
 
 convertExtend ::
     (Monad m, Monoid a) =>
-    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convertExtend (RowExtend tag val rest) exprPl =
     do

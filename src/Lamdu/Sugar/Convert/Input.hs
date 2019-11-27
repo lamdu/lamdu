@@ -31,14 +31,14 @@ import           Lamdu.Sugar.EntityId (EntityId)
 import           Lamdu.Prelude
 
 data EvalResultsForExpr = EvalResultsForExpr
-    { _eResults :: Map ER.ScopeId (ER.Val (Tree Pure Type))
-    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val (Tree Pure Type))]
+    { _eResults :: Map ER.ScopeId (ER.Val (Pure # Type))
+    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val (Pure # Type))]
     }
 
 data Payload m a h = Payload
     { _entityId :: EntityId
     , _inferRes :: InferResult (Pure :*: UVar) h
-    , _inferScope :: Tree V.Scope UVar
+    , _inferScope :: V.Scope # UVar
     , _localsInScope :: [V.Var]
     , _stored :: HRef m h
     , _evalResults :: CurAndPrev EvalResultsForExpr
@@ -51,7 +51,7 @@ Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload
 makeHTraversableAndBases ''Payload
 
-inferredType :: Lens' (Tree (Payload m a) V.Term) (Tree Pure Type)
+inferredType :: Lens' (Payload m a # V.Term) (Pure # Type)
 inferredType = inferRes . inferResult . Lens._1
 
 emptyEvalResults :: EvalResultsForExpr
@@ -69,17 +69,17 @@ data PreparePayloadsRes (pl :: HyperType) t = PreparePayloadsRes
 
 class SugarInput t where
     preparePayloadsH ::
-        Tree (Ann (PreparePayloadInput pl)) t ->
-        Tree (PreparePayloadsRes pl) t
+        Ann (PreparePayloadInput pl) # t ->
+        PreparePayloadsRes pl # t
     initScopes ::
         -- InferState is passed temporarily to lookup lambda type bodies with UVars
         -- (to get type of parameter).
         -- This will be removed when switching to typed lambdas.
         InferState ->
-        Tree V.Scope UVar ->
+        V.Scope # UVar ->
         [V.Var] ->
-        Tree (Ann (Payload m a)) t ->
-        Tree (Ann (Payload m a)) t
+        Ann (Payload m a) # t ->
+        Ann (Payload m a) # t
 
 instance SugarInput V.Term where
     preparePayloadsH (Ann (PreparePayloadInput x mkPayload) body) =
@@ -117,6 +117,6 @@ instance SugarInput V.Term where
 
 preparePayloads ::
     SugarInput t =>
-    Tree (Ann (PreparePayloadInput pl)) t ->
-    Tree (Ann pl) t
+    Ann (PreparePayloadInput pl) # t ->
+    Ann pl # t
 preparePayloads = ppRes . preparePayloadsH

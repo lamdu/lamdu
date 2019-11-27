@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeOperators #-}
 -- | Manage, read, write lambda-associated param lists
 module Lamdu.Sugar.Convert.ParamList
     ( ParamList, loadForLambdas
@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.ParamList
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure(..), hflipped, hfolded1)
+import           Hyper (Pure(..), type (#), hflipped, hfolded1)
 import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -30,7 +30,7 @@ type T = Transaction
 
 mkFuncType ::
     (UnifyGen m Type, UnifyGen m T.Row) =>
-    ParamList -> m (Tree (UVarOf m) Type)
+    ParamList -> m (UVarOf m # Type)
 mkFuncType paramList =
     FuncType
     <$> (foldr step (newTerm T.REmpty) paramList <&> T.TRecord >>= newTerm)
@@ -41,15 +41,15 @@ mkFuncType paramList =
         step ::
             (UnifyGen m Type, UnifyGen m T.Row) =>
             T.Tag ->
-            m (Tree (UVarOf m) T.Row) ->
-            m (Tree (UVarOf m) T.Row)
+            m (UVarOf m # T.Row) ->
+            m (UVarOf m # T.Row)
         step tag rest =
             RowExtend tag <$> newUnbound <*> rest <&> T.RExtend >>= newTerm
 
 loadForLambdas ::
     Monad m =>
-    Val (Tree (HRef m) V.Term, Tree (InferResult UVar) V.Term) ->
-    T m (PureInfer (Tree V.Scope UVar) ())
+    Val (HRef m # V.Term, InferResult UVar # V.Term) ->
+    T m (PureInfer (V.Scope # UVar) ())
 loadForLambdas x =
     Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. hflipped . hfolded1 . Lens._Wrapped & sequence_
@@ -59,8 +59,8 @@ loadForLambdas x =
 
         loadUnifyParamList ::
             Monad m =>
-            (Tree (HRef m) V.Term, Tree (InferResult UVar) V.Term) ->
-            T m (PureInfer (Tree V.Scope UVar) ())
+            (HRef m # V.Term, InferResult UVar # V.Term) ->
+            T m (PureInfer (V.Scope # UVar) ())
         loadUnifyParamList (stored, ires) =
             stored ^. iref & assocFieldParamList & Property.getP
             <&> \case

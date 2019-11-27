@@ -4,7 +4,6 @@ module Lamdu.Eval.Results.Process
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Constraint (Dict(..), withDict)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Hyper
@@ -22,7 +21,7 @@ import qualified Lamdu.Eval.Results as ER
 
 import           Lamdu.Prelude
 
-extractRecordTypeField :: T.Tag -> Tree Pure T.Type -> Maybe (Tree Pure T.Type, Tree Pure T.Type)
+extractRecordTypeField :: T.Tag -> Pure # T.Type -> Maybe (Pure # T.Type, Pure # T.Type)
 extractRecordTypeField tag typ =
     do
         flat <- typ ^? _Pure . T._TRecord . T.flatRow
@@ -32,21 +31,21 @@ extractRecordTypeField tag typ =
             , _Pure . T._TRecord . T.flatRow # (flat & Row.freExtends . Lens.at tag .~ Nothing)
             )
 
-extractVariantTypeField :: T.Tag -> Tree Pure T.Type -> Maybe (Tree Pure T.Type)
+extractVariantTypeField :: T.Tag -> Pure # T.Type -> Maybe (Pure # T.Type)
 extractVariantTypeField tag typ =
     typ ^? _Pure . T._TVariant . T.flatRow
     >>= (^. Row.freExtends . Lens.at tag)
 
-type AddTypes val f = (Tree Pure T.Type -> val -> f # Body) -> Tree Pure T.Type -> Body f
+type AddTypes val f = (Pure # T.Type -> val -> f :# Body) -> Pure # T.Type -> Body f
 
 typeError :: String -> Body val
 typeError = RError . ER.EvalTypeError . Text.pack
 
 addTypesRecExtend ::
-    Tree (RowExtend T.Tag val val) k ->
-    (Tree Pure T.Type -> Tree k val -> Tree f Body) ->
-    Tree Pure T.Type ->
-    Tree Body f
+    RowExtend T.Tag val val # k ->
+    (Pure # T.Type -> k # val -> f # Body) ->
+    Pure # T.Type ->
+    Body # f
 addTypesRecExtend (RowExtend tag val rest) go typ =
     case extractRecordTypeField tag typ of
     Nothing ->
@@ -68,7 +67,7 @@ addTypesRecExtend (RowExtend tag val rest) go typ =
         (go restType rest)
         & RRecExtend
 
-addTypesInject :: Tree ER.Inject (Ann a) -> AddTypes (Tree (Ann a) Body) f
+addTypesInject :: ER.Inject # Ann a -> AddTypes (Ann a # Body) f
 addTypesInject (ER.Inject tag val) go typ =
     case extractVariantTypeField tag typ of
     Nothing ->
@@ -90,7 +89,7 @@ addTypesArray items go typ =
         _ -> "addTypesArray got " ++ show typ & typeError
     Just paramType -> items <&> go paramType & RArray
 
-addTypes :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Val () -> Val (Tree Pure T.Type)
+addTypes :: Map T.NominalId (Pure # N.NominalDecl T.Type) -> Pure # T.Type -> Val () -> Val (Pure # T.Type)
 addTypes nomsMap typ (Ann (Const ()) b) =
     case b of
     RRecExtend recExtend -> r (addTypesRecExtend recExtend)
@@ -112,18 +111,18 @@ instance ApplyNominal T.Type where applyNominalRecursive _ = Dict
 instance ApplyNominal T.Row where applyNominalRecursive _ = Dict
 
 applyNominal ::
-    Tree Pure (N.NominalDecl T.Type) ->
-    Tree T.Types (QVarInstances Pure) ->
-    Tree Pure (Scheme T.Types T.Type)
+    Pure # N.NominalDecl T.Type ->
+    T.Types # QVarInstances Pure ->
+    Pure # Scheme T.Types T.Type
 applyNominal nom params =
     _Pure # (nom ^. _Pure . N.nScheme & sTyp %~ subst params)
 
 subst ::
     forall t.
     ApplyNominal t =>
-    Tree T.Types (QVarInstances Pure) ->
-    Tree Pure t ->
-    Tree Pure t
+    T.Types # QVarInstances Pure ->
+    Pure # t ->
+    Pure # t
 subst params (Pure x) =
     withDict (applyNominalRecursive (Proxy @t)) $
     _Pure #
@@ -135,7 +134,7 @@ subst params (Pure x) =
         & fromMaybe (quantifiedVar # q)
 
 -- Will loop forever for bottoms like: newtype Void = Void Void
-unwrapTInsts :: Map T.NominalId (Tree Pure (N.NominalDecl T.Type)) -> Tree Pure T.Type -> Tree Pure T.Type
+unwrapTInsts :: Map T.NominalId (Pure # N.NominalDecl T.Type) -> Pure # T.Type -> Pure # T.Type
 unwrapTInsts nomsMap typ =
     case typ ^. _Pure of
     T.TInst (N.NominalInst tid params) ->

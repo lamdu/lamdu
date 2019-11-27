@@ -1,11 +1,13 @@
 -- | Test sugar convert results (including its actions)
 
+{-# LANGUAGE TypeOperators #-}
+
 module Tests.Sugar where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
-import           Hyper (Tree, Ann(..), annotation, hVal)
+import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
@@ -76,13 +78,13 @@ testSugarActions ::
 testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
 
-replBinder :: Lens.Traversal' (WorkArea name i o a) (Tree (Binder name i o) (Ann (Const a)))
+replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o # Ann (Const a))
 replBinder = waRepl . replExpr . hVal
 
-replBody :: Lens.Traversal' (WorkArea name i o a) (Tree (Body name i o) (Ann (Const a)))
+replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o # Ann (Const a))
 replBody = replBinder . _BinderExpr
 
-replLet :: Lens.Traversal' (WorkArea name i o a) (Tree (Let name i o) (Ann (Const a)))
+replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Ann (Const a))
 replLet = replBinder . _BinderLet
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
@@ -487,7 +489,7 @@ testCreateLetInLetVal =
         theLet ::
             Lens.Traversal'
             (WorkArea name i o a)
-            (Tree (Let name i o) (Ann (Const a)))
+            (Let name i o # Ann (Const a))
         theLet = replBody . _BodyLam . lamFunc . fBody . hVal . _BinderLet
 
 testHoleTypeShown :: Test

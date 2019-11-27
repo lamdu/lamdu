@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Case
     ( convert
     , convertAbsurd
@@ -7,7 +8,7 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
-import           Hyper (Tree, Ann(..), annotation, hVal, hAnn)
+import           Hyper (Ann(..), type (#), annotation, hVal, hAnn)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -32,7 +33,7 @@ import           Lamdu.Prelude
 
 convertAbsurd ::
     (Monad m, Monoid a) =>
-    Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
+    Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
 convertAbsurd pl =
     Composite.convertEmpty DataOps.case_ pl
     <&> Case LambdaCase
@@ -40,7 +41,7 @@ convertAbsurd pl =
     >>= addActions [] pl
 
 _CaseThatIsLambdaCase ::
-    Lens.Prism' (Tree (Case name i o) k) (Tree (Composite name i o) k)
+    Lens.Prism' (Case name i o # k) (Composite name i o # k)
 _CaseThatIsLambdaCase =
     Lens.prism' (Case LambdaCase) $ \case
     Case LambdaCase x -> Just x
@@ -48,8 +49,8 @@ _CaseThatIsLambdaCase =
 
 convert ::
     (Monad m, Monoid a) =>
-    Tree (RowExtend T.Tag V.Term V.Term) (Ann (Input.Payload m a)) ->
-    Tree (Input.Payload m a) V.Term ->
+    RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convert (RowExtend tag v rest) exprPl =
     do
@@ -70,8 +71,8 @@ convert (RowExtend tag v rest) exprPl =
 
 convertAppliedCase ::
     (Monad m, Monoid a) =>
-    Tree (V.App V.Term) (Ann (Input.Payload m a)) ->
-    ExpressionU m a -> ExpressionU m a -> Tree (Input.Payload m a) V.Term ->
+    V.App V.Term # Ann (Input.Payload m a) ->
+    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertAppliedCase (V.App _ arg) funcS argS exprPl =
     do

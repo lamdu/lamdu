@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
@@ -18,7 +19,7 @@ import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (Tree)
+import           Hyper (type (#))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -38,7 +39,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-setToAppliedHole :: Monad m => ValI m -> Tree (HRef m) V.Term -> T m (ValI m)
+setToAppliedHole :: Monad m => ValI m -> HRef m # V.Term -> T m (ValI m)
 setToAppliedHole innerI destP =
     do
         newFuncI <- newHole
@@ -46,26 +47,26 @@ setToAppliedHole innerI destP =
         (destP ^. ExprIRef.setIref) resI
         pure resI
 
-applyHoleTo :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
+applyHoleTo :: Monad m => HRef m # V.Term -> T m (ValI m)
 applyHoleTo exprP = setToAppliedHole (exprP ^. ExprIRef.iref) exprP
 
 newHole :: Monad m => T m (ValI m)
 newHole = ExprIRef.newValI $ V.BLeaf V.LHole
 
-replace :: Monad m => Tree (HRef m) V.Term -> ValI m -> T m (ValI m)
+replace :: Monad m => HRef m # V.Term -> ValI m -> T m (ValI m)
 replace exprP newExprI = newExprI <$ (exprP ^. ExprIRef.setIref) newExprI
 
-replaceWithHole :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
+replaceWithHole :: Monad m => HRef m # V.Term -> T m (ValI m)
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
+setToHole :: Monad m => HRef m # V.Term -> T m (ValI m)
 setToHole exprP =
     exprI <$ ExprIRef.writeValI exprI hole
     where
         hole = V.BLeaf V.LHole
         exprI = exprP ^. ExprIRef.iref
 
-lambdaWrap :: Monad m => Tree (HRef m) V.Term -> T m (V.Var, Tree (HRef m) V.Term)
+lambdaWrap :: Monad m => HRef m # V.Term -> T m (V.Var, HRef m # V.Term)
 lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
@@ -77,7 +78,7 @@ lambdaWrap exprP =
 
 redexWrapWithGivenParam ::
     Monad m =>
-    V.Var -> ValI m -> Tree (HRef m) V.Term -> T m (Tree (HRef m) V.Term)
+    V.Var -> ValI m -> HRef m # V.Term -> T m (HRef m # V.Term)
 redexWrapWithGivenParam param newValueI exprP =
     do
         newLambdaI <- exprP ^. ExprIRef.iref & mkLam & ExprIRef.newValI
@@ -87,7 +88,7 @@ redexWrapWithGivenParam param newValueI exprP =
     where
         mkLam = V.BLam . V.Lam param
 
-redexWrap :: Monad m => Tree (HRef m) V.Term -> T m (ValI m)
+redexWrap :: Monad m => HRef m # V.Term -> T m (ValI m)
 redexWrap exprP =
     do
         newValueI <- newHole

@@ -1,11 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, TypeOperators #-}
 module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Tree, Pure, Ann, hAnn)
+import           Hyper (Pure, Ann, type (#), hAnn)
 import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Binding (UVar)
@@ -33,8 +33,8 @@ type T = Transaction
 
 convert ::
     (Monoid a, Monad m) =>
-    Tree Pure T.Scheme ->
-    Definition.Expr (Tree (Ann (Input.Payload m a)) V.Term) ->
+    Pure # T.Scheme ->
+    Definition.Expr (Ann (Input.Payload m a) # V.Term) ->
     DefI m ->
     ConvertM m (DefinitionBody InternalName (T m) (T m) (ConvertPayload m a))
 convert defType defExpr defI =
@@ -45,7 +45,7 @@ convert defType defExpr defI =
         let inferredType =
                 generalize (defExpr ^. Definition.expr . hAnn . Input.inferRes . inferResult . _2)
                 >>= saveScheme
-                & runPureInfer @(Tree V.Scope UVar) V.emptyScope inferContext
+                & runPureInfer @(V.Scope # UVar) V.emptyScope inferContext
                 & (^?! Lens._Right . Lens._1)
         unless (alphaEq defType inferredType) $
             fail $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))

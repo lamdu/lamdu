@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, TypeOperators #-}
 module Lamdu.Data.Definition
     ( FFIName(..)
     , Expr(..), expr, exprFrozenDeps
@@ -46,7 +46,7 @@ data Body valExpr
 
 data Definition valExpr a = Definition
     { _defBody :: Body valExpr
-    , _defType :: Tree Pure Scheme
+    , _defType :: Pure # Scheme
     , _defPayload :: a
     } deriving (Generic, Functor, Foldable, Traversable, Eq)
     deriving anyclass Binary
@@ -56,7 +56,7 @@ Lens.makeLenses ''Definition
 Lens.makeLenses ''Expr
 
 -- Prune dependencies of an Expr after edits.
-pruneDefExprDeps :: Expr (Tree (Ann a) Term) -> Deps
+pruneDefExprDeps :: Expr (Ann a # Term) -> Deps
 pruneDefExprDeps defExpr =
     defExpr ^. exprFrozenDeps
     & depsGlobalTypes %~ setMapIntersection valVars

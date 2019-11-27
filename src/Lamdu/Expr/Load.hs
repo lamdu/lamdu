@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeOperators #-}
 module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
@@ -20,7 +20,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-expr :: Monad m => Tree (HRef m) Term -> T m (Tree (Ann (HRef m)) Term)
+expr :: Monad m => HRef m # Term -> T m (Ann (HRef m) # Term)
 expr (HRef valI writeRoot) =
     ExprIRef.readRecursively valI
     <&> hflipped . hmapped1 %~ (:*: Const ())
@@ -30,13 +30,13 @@ expr (HRef valI writeRoot) =
 defExprH ::
     Monad m =>
     (ValI m -> T m ()) -> Definition.Expr (ValI m) ->
-    T m (Definition.Expr (Tree (Ann (HRef m)) Term))
+    T m (Definition.Expr (Ann (HRef m) # Term))
 defExprH setExpr loaded = loaded & Definition.expr %%~ expr . (`HRef` setExpr)
 
 defExpr ::
     Monad m =>
     Property.MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m (Definition.Expr (Tree (Ann (HRef m)) Term))
+    T m (Definition.Expr (Ann (HRef m) # Term))
 defExpr mkProp =
     do
         loaded <- mkProp ^. Property.mkProperty <&> Property.value
@@ -44,7 +44,7 @@ defExpr mkProp =
     where
         setExpr e val = val & Definition.expr .~ e
 
-def :: Monad m => DefI m -> T m (Definition (Tree (Ann (HRef m)) Term) (DefI m))
+def :: Monad m => DefI m -> T m (Definition (Ann (HRef m) # Term) (DefI m))
 def defI =
     Transaction.readIRef defI
     <&> Definition.defPayload .~ defI
@@ -57,7 +57,7 @@ def defI =
 
 nominal ::
     Monad m =>
-    T.NominalId -> T m (Maybe (Tree Pure (NominalDecl T.Type)))
+    T.NominalId -> T m (Maybe (Pure # NominalDecl T.Type))
 nominal tid =
     Transaction.irefExists iref
     >>=

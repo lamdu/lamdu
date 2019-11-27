@@ -1,5 +1,5 @@
 -- TODO: Split/rename to more generic (non-sugar) modules
-{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, TypeOperators #-}
 
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams
@@ -18,10 +18,8 @@ import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT(..))
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (evalState, state, runState)
-import           Data.Constraint (withDict)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
-import           Data.Proxy (Proxy(..))
 import           Hyper
 import           Hyper.Recurse (recurse)
 import           Lamdu.Calc.Identifier (Identifier(..))
@@ -100,9 +98,9 @@ randomNameGen g = NameGen
     }
 
 randomizeParamIdsG ::
-    (Tree a V.Term -> n) ->
+    (a # V.Term -> n) ->
     NameGen V.Var n -> Map V.Var V.Var ->
-    Tree (Ann a) V.Term -> Tree (Ann a) V.Term
+    Ann a # V.Term -> Ann a # V.Term
 randomizeParamIdsG preNG gen initMap =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where

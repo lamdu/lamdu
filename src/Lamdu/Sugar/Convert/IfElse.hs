@@ -1,9 +1,9 @@
 -- | "if" sugar/guards conversion
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeOperators #-}
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens.Extended as Lens
-import           Hyper (Tree, Ann(..), _Pure, annotation, hVal)
+import           Hyper (Ann(..), type (#), _Pure, annotation, hVal)
 import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
@@ -22,8 +22,8 @@ type T = Transaction
 convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
-    Tree (Case InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))) ->
-    Maybe (Tree (IfElse InternalName (T m) (T m)) (Ann (Const (ConvertPayload m a))))
+    Case InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
+    Maybe (IfElse InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal

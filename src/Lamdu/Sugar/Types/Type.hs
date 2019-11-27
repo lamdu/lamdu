@@ -9,7 +9,7 @@ module Lamdu.Sugar.Types.Type
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Tree, type (#), makeHTraversableAndBases)
+import           Hyper (type (#), type (:#), makeHTraversableAndBases)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType)
 import           Hyper.Type.AST.Scheme (QVars)
@@ -35,17 +35,17 @@ data Type name k
       -- ^ A type variable
     | TFun (FuncType (Type name) k)
       -- ^ A (non-dependent) function of the given parameter and result types
-    | TInst (TId name) [(name, k # Type name)]
+    | TInst (TId name) [(name, k :# Type name)]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
-    | TRecord (CompositeFields name (k # Type name))
+    | TRecord (CompositeFields name (k :# Type name))
       -- ^ Lifts a composite record type
-    | TVariant (CompositeFields name (k # Type name))
+    | TVariant (CompositeFields name (k :# Type name))
       -- ^ Lifts a composite variant type
     deriving Generic
 
 data Scheme name = Scheme
-    { _schemeForAll :: Tree T.Types QVars
+    { _schemeForAll :: T.Types # QVars
     , _schemeType :: Annotated EntityId (Type name)
     } deriving Generic
 

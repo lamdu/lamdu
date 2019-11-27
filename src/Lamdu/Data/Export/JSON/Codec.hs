@@ -1,5 +1,5 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE TemplateHaskell, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
-import           Hyper (Ann(..), htraverse1, Tree, Pure(..), _Pure)
+import           Hyper (Ann(..), type (#), htraverse1, Pure(..), _Pure)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -48,7 +48,7 @@ data Entity
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag T.Tag Tag
-    | EntityNominal T.Tag T.NominalId (Maybe (Tree Pure (NominalDecl T.Type)))
+    | EntityNominal T.Tag T.NominalId (Maybe (Pure # NominalDecl T.Type))
     | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
 Lens.makePrisms ''Entity
 
@@ -185,7 +185,7 @@ decodeTagId :: Decoder T.Tag
 decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
-encodeFlatComposite :: Encoder (Tree (Row.FlatRowExtends T.Tag T.Type T.Row) Pure)
+encodeFlatComposite :: Encoder (Row.FlatRowExtends T.Tag T.Type T.Row # Pure)
 encodeFlatComposite (Row.FlatRowExtends fields rest) =
     case rest ^. _Pure of
     T.REmpty -> encodedFields fields
@@ -203,7 +203,7 @@ jsum parsers =
         swapEither (Left x) = Right x
         swapEither (Right x) = Left x
 
-decodeFlatComposite :: Decoder (Tree (Row.FlatRowExtends T.Tag T.Type T.Row) Pure)
+decodeFlatComposite :: Decoder (Row.FlatRowExtends T.Tag T.Type T.Row # Pure)
 decodeFlatComposite json =
     jsum
     [ do
@@ -219,10 +219,10 @@ decodeFlatComposite json =
     where
         decodeFields = decodeIdentMap T.Tag decodeType
 
-encodeComposite :: Encoder (Tree Pure T.Row)
+encodeComposite :: Encoder (Pure # T.Row)
 encodeComposite x = encodeFlatComposite (x ^. T.flatRow)
 
-decodeComposite :: Decoder (Tree Pure T.Row)
+decodeComposite :: Decoder (Pure # T.Row)
 decodeComposite x =
     decodeFlatComposite x <&> unflatten
     where
@@ -233,7 +233,7 @@ decodeComposite x =
             where
                 f (key, val) acc = _Pure . T._RExtend # RowExtend key val acc
 
-encodeType :: Encoder (Tree Pure T.Type)
+encodeType :: Encoder (Pure # T.Type)
 encodeType t =
     case t ^. _Pure of
     T.TFun (FuncType a b) -> ["funcParam" .= encodeType a, "funcResult" .= encodeType b]
@@ -246,7 +246,7 @@ encodeType t =
         encodeSquash "nomRowArgs" (encodeIdentMap T.tvName encodeComposite) (params ^. T.tRow . _QVarInstances)
     & Aeson.object
 
-decodeType :: Decoder (Tree Pure T.Type)
+decodeType :: Decoder (Pure # T.Type)
 decodeType json =
     Aeson.withObject "Type" ?? json $ \o ->
     jsum
@@ -283,7 +283,7 @@ decodeCompositeConstraints json =
     traverse decodeIdent json <&> map T.Tag <&> Set.fromList
     <&> (`T.RowConstraints` mempty)
 
-encodeTypeVars :: Tree T.Types QVars -> [AesonTypes.Pair]
+encodeTypeVars :: T.Types # QVars -> [AesonTypes.Pair]
 encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
     encodeSquash "typeVars"
     (Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList)
@@ -293,7 +293,7 @@ encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
     (encodeIdentMap T.tvName encodeCompositeVarConstraints)
     rvs
 
-decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (Tree T.Types QVars)
+decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (T.Types # QVars)
 decodeTypeVars obj =
     T.Types
     <$> ( decodeSquashed "typeVars"
@@ -308,13 +308,13 @@ decodeTypeVars obj =
     <*> (decodeSquashed "rowVars" (decodeIdentMap T.Var decodeCompositeConstraints) obj
         <&> QVars)
 
-encodeScheme :: Encoder (Tree Pure T.Scheme)
+encodeScheme :: Encoder (Pure # T.Scheme)
 encodeScheme (Pure (Scheme tvs typ)) =
     ("schemeType" .= encodeType typ) :
     encodeTypeVars tvs
     & Aeson.object
 
-decodeScheme :: Decoder (Tree Pure T.Scheme)
+decodeScheme :: Decoder (Pure # T.Scheme)
 decodeScheme =
     Aeson.withObject "scheme" $ \obj ->
     do
@@ -381,7 +381,7 @@ decodeVal =
     <$> (obj .: "id")
     <*> decodeValBody obj
 
-encodeValBody :: Tree V.Term (Ann (Const UUID)) -> AesonTypes.Object
+encodeValBody :: V.Term # Ann (Const UUID) -> AesonTypes.Object
 encodeValBody body =
     case body & htraverse1 %~ Lens.Const . encodeVal of
     V.BApp (V.App func arg) ->
@@ -403,7 +403,7 @@ encodeValBody body =
     where
         c x = x ^. Lens._Wrapped
 
-decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (Tree V.Term (Ann (Const UUID)))
+decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (V.Term # Ann (Const UUID))
 decodeValBody obj =
     jsum
     [ V.App
@@ -489,13 +489,13 @@ decodeRepl obj =
 insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (Aeson.toJSON v)
 
-encodeNominal :: Tree Pure (NominalDecl T.Type) -> Aeson.Object
+encodeNominal :: Pure # NominalDecl T.Type -> Aeson.Object
 encodeNominal (Pure (NominalDecl params nominalType)) =
     ("nomType" .= encodeScheme (_Pure # nominalType))
     : encodeTypeVars params
     & HashMap.fromList
 
-decodeNominal :: Aeson.Object -> AesonTypes.Parser (Tree Pure (NominalDecl T.Type))
+decodeNominal :: Aeson.Object -> AesonTypes.Parser (Pure # NominalDecl T.Type)
 decodeNominal obj =
     NominalDecl
     <$> decodeTypeVars obj
@@ -613,14 +613,14 @@ decodeTaggedLamVar json =
     <&> \((tag, ident), (lamI, mParamList)) ->
     (mParamList, tag, lamI, V.Var ident)
 
-encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe (Tree Pure (NominalDecl T.Type)))
+encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe (Pure # NominalDecl T.Type))
 encodeTaggedNominal ((tag, T.NominalId nomId), mNom) =
     foldMap encodeNominal mNom
     & Lens.at "nom" ?~ encodeIdent nomId
     & Lens.at "tag" ?~ encodeTagId tag
     & Aeson.Object
 
-decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser ((T.Tag, T.NominalId), Maybe (Tree Pure (NominalDecl T.Type)))
+decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser ((T.Tag, T.NominalId), Maybe (Pure # NominalDecl T.Type))
 decodeTaggedNominal json =
     decodeTagged "nom" decodeMNom json <&> _1 . _2 %~ T.NominalId
     where

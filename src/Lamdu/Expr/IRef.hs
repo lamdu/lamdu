@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeOperators #-}
 {-# OPTIONS -fno-warn-orphans #-}
 
 module Lamdu.Expr.IRef
@@ -48,7 +48,7 @@ defI (V.Var (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 tagI :: T.Tag -> IRef m Tag
 tagI (T.Tag (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
-nominalI :: T.NominalId -> IRef m (Tree Pure (NominalDecl T.Type))
+nominalI :: T.NominalId -> IRef m (Pure # NominalDecl T.Type)
 nominalI (T.NominalId (Identifier bs)) =
     UUIDUtils.fromSBS16 bs & IRef.unsafeFromUUID
 
@@ -62,26 +62,26 @@ readTagData tag =
     where
         i = tagI tag
 
-type ValI m = Tree (F (IRef m)) V.Term
+type ValI m = F (IRef m) # V.Term
 
-type ValBody m = Tree V.Term (F (IRef m))
+type ValBody m = V.Term # F (IRef m)
 
 newVar :: Monad m => T m V.Var
 newVar = V.Var . Identifier . UUIDUtils.toSBS16 <$> Transaction.newKey
 
 readValI ::
-    (Monad m, Binary (Tree t (F (IRef m)))) =>
-    Tree (F (IRef m)) t -> T m (Tree t (F (IRef m)))
+    (Monad m, Binary (t # F (IRef m))) =>
+    F (IRef m) # t -> T m (t # F (IRef m))
 readValI = Transaction.readIRef . (^. _F)
 
 writeValI ::
-    (Monad m, Binary (Tree t (F (IRef m)))) =>
-    Tree (F (IRef m)) t -> Tree t (F (IRef m)) -> T m ()
+    (Monad m, Binary (t # F (IRef m))) =>
+    F (IRef m) # t -> t # F (IRef m) -> T m ()
 writeValI = Transaction.writeIRef . (^. _F)
 
 newValI ::
-    (Monad m, Binary (Tree t (F (IRef m)))) =>
-    Tree t (F (IRef m)) -> T m (Tree (F (IRef m)) t)
+    (Monad m, Binary (t # F (IRef m))) =>
+    t # F (IRef m) -> T m (F (IRef m) # t)
 newValI = fmap (_F #) . Transaction.newIRef
 
 instance Monad m => HStore m V.Term

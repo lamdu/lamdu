@@ -1,5 +1,7 @@
 -- | Convert Lamdu.Calc.Type datatypes to sugared counterparts
 
+{-# LANGUAGE TypeOperators #-}
+
 module Lamdu.Sugar.Convert.Type
     ( convertType
     , convertScheme
@@ -7,7 +9,7 @@ module Lamdu.Sugar.Convert.Type
 
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
-import           Hyper (Tree, Pure(..), Ann(..), _Pure)
+import           Hyper (Pure(..), Ann(..), type (#), _Pure)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))
@@ -26,7 +28,7 @@ import           Lamdu.Prelude
 
 convertComposite ::
     MonadTransaction n m =>
-    EntityId -> Tree Pure T.Row ->
+    EntityId -> Pure # T.Row ->
     m (CompositeFields InternalName (Annotated EntityId (Type InternalName)))
 convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
@@ -42,7 +44,7 @@ convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
     MonadTransaction n m =>
-    EntityId -> Tree Pure T.Type -> m (Annotated EntityId (Type InternalName))
+    EntityId -> Pure # T.Type -> m (Annotated EntityId (Type InternalName))
 convertType entityId typ =
     case typ ^. _Pure of
     T.TVar tv -> nameWithContext tv anonTag & TVar & pure
@@ -67,6 +69,6 @@ convertType entityId typ =
     T.TVariant composite -> TVariant <$> convertComposite entityId composite
     <&> Ann (Const entityId)
 
-convertScheme :: MonadTransaction n m => EntityId -> Tree Pure T.Scheme -> m (Scheme InternalName)
+convertScheme :: MonadTransaction n m => EntityId -> Pure # T.Scheme -> m (Scheme InternalName)
 convertScheme entityId (Pure (S.Scheme tvs typ)) =
     Scheme tvs <$> convertType entityId typ

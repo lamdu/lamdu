@@ -1,4 +1,4 @@
-{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE PolyKinds, TypeOperators #-}
 
 module Lamdu.Sugar.Convert.GetVar
     ( convert, globalNameRef
@@ -43,7 +43,7 @@ jumpToDefI ::
 jumpToDefI cp defI =
     EntityId.ofIRef defI <$ DataOps.newPane cp (Anchors.PaneDefinition defI)
 
-inlineDef :: Monad m => V.Var -> Tree (HRef m) V.Term -> ConvertM m (T m EntityId)
+inlineDef :: Monad m => V.Var -> HRef m # V.Term -> ConvertM m (T m EntityId)
 inlineDef globalId dest =
     (,)
     <$> Lens.view id
@@ -110,7 +110,7 @@ inlineableDefinition ctx var entityId =
 
 convertGlobal ::
     Monad m =>
-    V.Var -> Tree (Input.Payload m a) V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    V.Var -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGlobal var exprPl =
     do
         ctx <- Lens.view id
@@ -141,7 +141,7 @@ convertGlobal var exprPl =
 
 convertGetLet ::
     Monad m =>
-    V.Var -> Tree (Input.Payload m a) V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    V.Var -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
     do
         inline <-
@@ -157,7 +157,7 @@ convertGetLet param exprPl =
 
 convertParamsRecord ::
     Monad m =>
-    V.Var -> Tree (Input.Payload m a) V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    V.Var -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertParamsRecord param exprPl =
     GetParamsRecord ParamsRecordVarRef
     { _prvFieldNames =
@@ -198,7 +198,7 @@ convertParam param =
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Var -> Tree (Input.Payload m a) V.Term -> ConvertM m (ExpressionU m a)
+    V.Var -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
 convert param exprPl
     | param == ConvertFragment.fragmentVar =
         addActions [] exprPl BodyPlaceHolder

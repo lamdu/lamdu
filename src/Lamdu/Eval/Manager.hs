@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, TypeOperators #-}
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new
@@ -94,7 +94,7 @@ eDb = dbMVar . eParams
 
 loadDef ::
     Evaluator -> DefI ViewM ->
-    IO (Def.Definition (Tree (Ann (ExprIRef.HRef ViewM)) Term) (DefI ViewM))
+    IO (Def.Definition (Ann (ExprIRef.HRef ViewM) # Term) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
 evalActions :: Evaluator -> Eval.Actions (ValI ViewM)

@@ -1,5 +1,5 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes #-}
+{-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes, TypeOperators #-}
 module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
@@ -38,7 +38,7 @@ addToWorkArea w =
     }
 
 class AddParens expr where
-    addToBody :: Tree expr (Ann (Const a)) -> Tree expr (Ann (Const (MinOpPrec, NeedsParens, a)))
+    addToBody :: expr # Ann (Const a) -> expr # Ann (Const (MinOpPrec, NeedsParens, a))
 
     addToNode :: Annotated a expr -> Annotated (MinOpPrec, NeedsParens, a) expr
     addToNode (Ann (Const pl) x) = Ann (Const (0, NoNeedForParens, pl)) (addToBody x)
@@ -85,7 +85,7 @@ addToExprWith ::
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
-    Lens.Prism' (Tree (LabeledApply name i o) (Ann (Const a)))
+    Lens.Prism' (LabeledApply name i o # Ann (Const a))
     ( Expression name i o a
     , Annotated a (Const (BinderVarRef name o))
     , Expression name i o a
@@ -118,8 +118,8 @@ type SideSymbol =
 
 loopExprBody ::
     HasPrecedence name =>
-    Precedence Prec -> Tree (Body name i o) (Ann (Const a)) ->
-    (NeedsParens, Tree (Body name i o) (Ann (Const (MinOpPrec, NeedsParens, a))))
+    Precedence Prec -> Body name i o # Ann (Const a) ->
+    (NeedsParens, Body name i o # Ann (Const (MinOpPrec, NeedsParens, a)))
 loopExprBody parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
