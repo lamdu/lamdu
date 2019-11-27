@@ -6,7 +6,6 @@ module Lamdu.GUI.Expr.ApplyEdit
 
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Animation (AnimId)
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
@@ -59,39 +58,6 @@ makeFunc role func =
         pl = func ^. annotation
         myId = WidgetIds.fromExprPayload pl
 
-isBoxed :: Sugar.LabeledApply name i o a -> Bool
-isBoxed apply =
-    Lens.has (Sugar.aAnnotatedArgs . traverse) apply
-    || Lens.has (Sugar.aPunnedArgs . traverse) apply
-
-makeFuncRow ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Maybe AnimId ->
-    Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
-    GuiM env i o (Responsive o)
-makeFuncRow mParensId apply =
-    case apply ^. Sugar.aSpecialArgs of
-    Sugar.Verbose -> makeFunc GetVarEdit.Normal func
-    Sugar.Operator l r ->
-        (ResponsiveExpr.boxSpacedMDisamb ?? mParensId)
-        <*> sequenceA
-        [ (Options.boxSpaced ?? Options.disambiguationNone)
-            <*> sequenceA
-            [ GuiM.makeSubexpression l
-            , makeFunc GetVarEdit.Operator func
-            ]
-        , GuiM.makeSubexpression r
-        ]
-    where
-        func = apply ^. Sugar.aFunc
-
 makeLabeled ::
     ( Monad i, Monad o
     , Grid.HasTexts env
@@ -105,12 +71,22 @@ makeLabeled ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled apply pl =
-    stdWrapParentExpr pl
-    <*> (makeFuncRow (ExprGui.mParensId pl) apply >>= addBox)
+    stdWrapParentExpr pl <*>
+    case apply ^. Sugar.aSpecialArgs of
+    Sugar.Verbose -> makeFunc GetVarEdit.Normal func
+    Sugar.Operator l r ->
+        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+        <*> sequenceA
+        [ (Options.boxSpaced ?? Options.disambiguationNone)
+            <*> sequenceA
+            [ GuiM.makeSubexpression l
+            , makeFunc GetVarEdit.Operator func
+            ]
+        , GuiM.makeSubexpression r
+        ]
+    >>= addArgs apply
     where
-        addBox
-            | isBoxed apply = mkBoxed apply
-            | otherwise = pure
+        func = apply ^. Sugar.aFunc
 
 makeArgRow ::
     (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
@@ -129,7 +105,7 @@ makeArgRow arg =
             , _tagPost = Nothing
             }
 
-mkBoxed ::
+addArgs ::
     ( Monad i, Monad o
     , Glue.HasTexts env
     , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
@@ -138,7 +114,7 @@ mkBoxed ::
     ) =>
     Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Responsive o -> GuiM env i o (Responsive o)
-mkBoxed apply funcRow =
+addArgs apply funcRow =
     do
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
@@ -148,8 +124,12 @@ mkBoxed apply funcRow =
             case apply ^. Sugar.aPunnedArgs of
             [] -> pure []
             args -> GetVarEdit.makePunnedVars args <&> (:[])
-        Styled.addValFrame
-            <*> (Responsive.vboxSpaced ?? (funcRow : argRows ++ punnedArgs))
+        let extraRows = argRows ++ punnedArgs
+        if null extraRows
+            then pure funcRow
+            else
+                Styled.addValFrame
+                <*> (Responsive.vboxSpaced ?? (funcRow : extraRows))
 
 makeSimple ::
     ( Monad i, Monad o
