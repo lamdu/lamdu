@@ -158,18 +158,18 @@ loopExprBody parentPrec body_ =
             InjectVal x -> sideSymbol loopExpr before after id 0 (cons . InjectVal) x
             where
                 cons = BodyInject . Inject t
+        newParentPrec needParens
+            | needParens = pure 0
+            | otherwise = parentPrec
         simpleApply (V.App f a) =
             BodySimpleApply V.App
             { V._appFunc =
-                loopExpr 0 (newParentPrec & after .~ 13) f
+                loopExpr 0 (newParentPrec needParens & after .~ 13) f
             , V._appArg =
-                loopExpr 13 (newParentPrec & before .~ 13) a
+                loopExpr 13 (newParentPrec needParens & before .~ 13) a
             } & result needParens
             where
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
-                newParentPrec
-                    | needParens = pure 0
-                    | otherwise = parentPrec
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
@@ -178,16 +178,13 @@ loopExprBody parentPrec body_ =
             Just b -> simpleInfix b
         simpleInfix (l, func, r) =
             bareInfix #
-            ( loopExpr 0 (newParentPrec & after .~ prec) l
+            ( loopExpr 0 (newParentPrec needParens & after .~ prec) l
             , addToNode func
-            , loopExpr (prec+1) (newParentPrec & before .~ prec) r
+            , loopExpr (prec+1) (newParentPrec needParens & before .~ prec) r
             ) & BodyLabeledApply & result needParens
             where
                 prec = func ^. hVal . Lens._Wrapped . bvNameRef . nrName & precedence
                 needParens =
                     parentPrec ^. before >= prec || parentPrec ^. after > prec
-                newParentPrec
-                    | needParens = pure 0
-                    | otherwise = parentPrec
         ifElse x =
             addToBody x & BodyIfElse & result (parentPrec ^. after > 1)
