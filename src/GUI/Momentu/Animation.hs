@@ -9,7 +9,7 @@ module GUI.Momentu.Animation
     , unitSquare, emptyRectangle
     , coloredRectangle
     , translate, scale
-    , singletonFrame
+    , singletonFrame, singletonUnitImage
     , module GUI.Momentu.Animation.Id
     ) where
 
@@ -59,10 +59,11 @@ unitImages = images . iUnitImage
 singletonFrame :: Size -> AnimId -> Draw.Image () -> Frame
 singletonFrame size animId =
     scale size .
-    singletonUnitImage .
+    singletonUnitImage animId .
     (Draw.scaleV (1 / size) %%)
-    where
-        singletonUnitImage image = Frame [Image animId image (Rect 0 1)]
+
+singletonUnitImage :: AnimId -> Draw.Image () -> Frame
+singletonUnitImage animId image = Frame [Image animId image (Rect 0 1)]
 
 draw :: Frame -> Draw.Image ()
 draw frame =

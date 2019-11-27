@@ -3,10 +3,13 @@ module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
-    , PostProcessAnnotation, postProcessAnnotationFromSelected
+
+    , PostProcessAnnotation, WhichAnnotation(..), ShrinkRatio
+    , postProcessAnnotationFromSelected
+
     , evaluationResult
     , addAnnotationBackground -- used for open holes
-    , maybeAddAnnotationPl
+    , maybeAddAnnotationPl, maybeAddAnnotationPlWith
     ) where
 
 import qualified Control.Lens as Lens
@@ -251,19 +254,24 @@ addEvaluationResult mNeigh resDisp postProcess =
     Sugar.RFunc _ -> pure (flip const)
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
-maybeAddAnnotationPl ::
+maybeAddAnnotationPlWith ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
+    (WhichAnnotation -> GuiM env i o (View -> View)) ->
     Sugar.Payload Name i o1 ExprGui.Payload ->
     GuiM env i o (Widget o -> Widget o)
-maybeAddAnnotationPl pl =
+maybeAddAnnotationPlWith finalProcess pl =
     do
         postProcessAnnotation <-
             if pl ^. Sugar.plNeverShrinkAnnotation
             then pure keepWideTypeAnnotation
             else isExprSelected <&> postProcessAnnotationFromSelected
-        maybeAddAnnotation postProcessAnnotation
+        maybeAddAnnotation
+            (\which ->
+                (.)
+                <$> (finalProcess which <&> fmap)
+                <*> postProcessAnnotation which)
             (pl ^. Sugar.plAnnotation)
             & Reader.local (Element.animIdPrefix .~ animId)
     where
@@ -274,6 +282,13 @@ maybeAddAnnotationPl pl =
                 isOnDotter <- GuiState.isSubCursor ?? WidgetIds.dotterId myId
                 pure (isOnExpr && not isOnDotter)
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+
+maybeAddAnnotationPl ::
+    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
+    , Has (Texts.Name Text) env
+    ) =>
+    Sugar.Payload Name i o1 ExprGui.Payload -> GuiM env i o (Widget o -> Widget o)
+maybeAddAnnotationPl = maybeAddAnnotationPlWith (const (pure id))
 
 evaluationResult ::
     Monad i =>

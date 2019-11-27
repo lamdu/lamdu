@@ -4,7 +4,9 @@ module Lamdu.GUI.Expr.FragmentEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -13,18 +15,23 @@ import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState
+import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Hyper (Ann(..), type (#))
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
+import           Lamdu.GUI.ExpressionGui.Annotation
+                 (maybeAddAnnotationPlWith, WhichAnnotation(..))
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -71,7 +78,7 @@ make fragment pl =
 
         fragmentExprGui <- fragment ^. Sugar.fExpr & GuiM.makeSubexpression
 
-        addAnnotation <- maybeAddAnnotationPl pl
+        addAnnotation <- maybeAddAnnotationPlWith postProcessAnn pl
 
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
@@ -104,6 +111,25 @@ make fragment pl =
                 ((strollDest ^. Lens._Unwrapped, strollDest ^. Lens._Unwrapped)
                     <$ guard (not isHoleResult))
     where
+        lineAbove color animId spacing ann =
+            ann
+            & Element.setLayers . Element.layers %~ (<> [line])
+            where
+                line =
+                    Anim.coloredRectangle animId color
+                    & Anim.scale (Vector2 (ann ^. View.vSize . _1) (-spacing))
+
+        postProcessAnn TypeAnnotation
+            | not (fragment ^. Sugar.fTypeMatch) =
+            do
+                color <- Lens.view (has . Theme.errorColor)
+                animId <- Element.subAnimId ?? ["err-line"]
+                spacing <- Lens.view
+                    (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
+                stdFontHeight <- Spacer.stdFontHeight
+                lineAbove color animId (spacing * stdFontHeight) & pure
+        postProcessAnn _ = pure id
+
         myId = WidgetIds.fromExprPayload pl
         holeIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         closedHoleId = HoleWidgetIds.hidClosed holeIds
