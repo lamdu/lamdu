@@ -9,7 +9,6 @@ module Revision.Deltum.Hyper
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary)
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Class.Context (HContext(..))

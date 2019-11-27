@@ -15,7 +15,6 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
-import           Data.Binary (Binary)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import qualified Data.List as List

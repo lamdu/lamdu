@@ -5,7 +5,6 @@ module Lamdu.I18N.LangId where
 
 import qualified Control.Lens as Lens
 import           Data.Aeson (ToJSON, FromJSON, ToJSONKey, FromJSONKey)
-import           Data.Binary (Binary)
 
 import           Lamdu.Prelude
 

@@ -4,7 +4,6 @@ module GUI.Momentu.Widget.Id
     , joinId, subId
     ) where
 
-import Data.Binary (Binary)
 import Data.List (intercalate)
 import Data.List.Lens (prefixed)
 import GUI.Momentu.Animation.Id (AnimId)

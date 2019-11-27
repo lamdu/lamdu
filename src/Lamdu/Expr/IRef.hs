@@ -16,7 +16,6 @@ module Lamdu.Expr.IRef
     , module Revision.Deltum.Hyper
     ) where
 
-import           Data.Binary (Binary)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)

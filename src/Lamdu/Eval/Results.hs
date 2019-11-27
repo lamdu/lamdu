@@ -16,7 +16,6 @@ module Lamdu.Eval.Results
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary)
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 import           Data.List.Lens (prefixed)

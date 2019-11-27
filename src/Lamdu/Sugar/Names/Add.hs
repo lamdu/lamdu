@@ -19,7 +19,6 @@ import           Data.Coerce (coerce)
 import           Data.Foldable (fold)
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
-import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
@@ -43,7 +42,7 @@ import           Lamdu.Sugar.Names.Walk (MonadNaming(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types
 
-import           Lamdu.Prelude hiding (Map)
+import           Lamdu.Prelude
 
 ------------------------------
 ------ Pass Auto Tags --------

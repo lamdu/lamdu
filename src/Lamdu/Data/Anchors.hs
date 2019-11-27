@@ -17,7 +17,6 @@ module Lamdu.Data.Anchors
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary)
 import           Data.ByteString.Char8 ()
 import           Data.Property (MkProperty, MkProperty')
 import           Data.UUID.Types (nil)

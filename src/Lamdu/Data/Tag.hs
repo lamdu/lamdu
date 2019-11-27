@@ -11,7 +11,6 @@ import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Data.Aeson ((.=), (.:))
 import qualified Data.Aeson.Types as Aeson
-import           Data.Binary
 import           GUI.Momentu.Direction (Layout(..))
 import qualified GUI.Momentu.Direction as Dir
 import           Lamdu.I18N.LangId (LangId(..))

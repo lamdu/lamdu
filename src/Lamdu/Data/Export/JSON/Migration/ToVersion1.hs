@@ -14,7 +14,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (asum)
 import qualified Data.Map.Extended as Map
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Lamdu.Data.Export.JSON.Migration.Common (version)
 

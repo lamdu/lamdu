@@ -11,12 +11,7 @@ module Data.MMap
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Data.Binary (Binary)
-import           Data.Map (Map)
 import qualified Data.Map.Extended as Map
-import           Data.Semigroup (Semigroup(..))
-import           Data.Set (Set)
-import           GHC.Generics (Generic)
 
 import           Lamdu.Prelude hiding (filter)
 
