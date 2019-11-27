@@ -53,8 +53,6 @@ data Texts a = Texts
     , _mainLoop :: MainLoop.Texts a
     }
     deriving Eq
--- Get-field's dot is currently omitted from the symbols,
--- because it has special disambiguation logic implemented in the dotter etc.
 Lens.makeLenses ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 

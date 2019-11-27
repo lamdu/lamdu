@@ -5,7 +5,6 @@ module Lamdu.GUI.ExpressionGui.Wrap
     , parentDelegator
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -18,7 +17,6 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.Expr.Dotter as Dotter
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -68,10 +66,9 @@ stdWrap ::
 stdWrap pl =
     (takeFocusIfNeeded pl <&> (Widget.widget %~))
     <<< (maybeAddAnnotationPl pl <&> (Widget.widget %~))
-    <<< Dotter.with pl
     <<< ExprEventMap.add ExprEventMap.defaultOptions pl
     where
-        (<<<) = liftA2 (.)
+        f <<< g = (.) <$> f <*> g
 
 parentDelegator ::
     ( HasCallStack, MonadReader env m, Has Config env

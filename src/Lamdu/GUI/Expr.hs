@@ -16,7 +16,6 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Hyper (Ann(..), type (#))
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
-import qualified Lamdu.GUI.Expr.Dotter as Dotter
 import qualified Lamdu.GUI.Expr.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -85,24 +84,21 @@ makeEditor ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeEditor body pl =
-    do
-        d <- Dotter.addEventMap ?? myId
-        case body of
-            Sugar.BodyPlaceHolder    -> placeHolder pl
-            Sugar.BodyHole         x -> HoleEdit.make         x pl
-            Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl <&> d
-            Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl <&> d
-            Sugar.BodyLam          x -> LambdaEdit.make       x pl
-            Sugar.BodyLiteral      x -> LiteralEdit.make      x pl
-            Sugar.BodyRecord       x -> RecordEdit.make       x pl
-            Sugar.BodyCase         x -> CaseEdit.make         x pl <&> d
-            Sugar.BodyIfElse       x -> IfElseEdit.make       x pl <&> d
-            Sugar.BodyGetField     x -> GetFieldEdit.make     x pl <&> d
-            Sugar.BodyInject       x -> InjectEdit.make       x pl
-            Sugar.BodyGetVar       x -> GetVarEdit.make       x pl <&> d
-            Sugar.BodyToNom        x -> NominalEdit.makeToNom x pl
-            Sugar.BodyFromNom      x -> NominalEdit.makeFromNom x pl
-            Sugar.BodyFragment     x -> FragmentEdit.make     x pl
-            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
-    where
-        myId = WidgetIds.fromExprPayload pl
+    case body of
+    Sugar.BodyPlaceHolder    -> placeHolder pl
+    Sugar.BodyHole         x -> HoleEdit.make         x pl
+    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl
+    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl
+    Sugar.BodyLam          x -> LambdaEdit.make       x pl
+    Sugar.BodyLiteral      x -> LiteralEdit.make      x pl
+    Sugar.BodyRecord       x -> RecordEdit.make       x pl
+    Sugar.BodyCase         x -> CaseEdit.make         x pl
+    Sugar.BodyIfElse       x -> IfElseEdit.make       x pl
+    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl
+    Sugar.BodyInject       x -> InjectEdit.make       x pl
+    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl
+    Sugar.BodyToNom        x -> NominalEdit.makeToNom x pl
+    Sugar.BodyFromNom      x -> NominalEdit.makeFromNom x pl
+    Sugar.BodyFragment     x -> FragmentEdit.make     x pl
+    & Reader.local
+        (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))

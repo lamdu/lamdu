@@ -47,6 +47,3 @@ replId = Id ["repl"]
 
 tagHoleId :: Id -> Id
 tagHoleId = (`WidgetId.joinId` ["hole"])
-
-dotterId :: Id -> Id
-dotterId widgetId = widgetId `WidgetId.joinId` ["dotter"]

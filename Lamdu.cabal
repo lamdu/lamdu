@@ -335,7 +335,6 @@ Library
                   , Lamdu.GUI.Expr.BinderEdit
                   , Lamdu.GUI.Expr.BuiltinEdit
                   , Lamdu.GUI.Expr.CaseEdit
-                  , Lamdu.GUI.Expr.Dotter
                   , Lamdu.GUI.Expr.EventMap
                   , Lamdu.GUI.Expr.FragmentEdit
                   , Lamdu.GUI.Expr.GetFieldEdit
