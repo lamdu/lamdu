@@ -7,7 +7,6 @@ module Lamdu.GUI.Expr.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
-import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -36,7 +35,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper (Ann(..))
 import           Hyper.Combinator.Ann (Annotated)
-import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -162,15 +160,13 @@ makeNameRef role color myId nameRef =
                 do
                     savePrecursor
                     nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
-        nameText <- Name.visible name <&> (^. _1 . Name.ttText)
-        let isOperator = Text.all (`elem` Chars.operator) nameText
         let mAddMarker =
                 case role of
                 Operator
-                    | isOperator -> id
+                    | Name.isOperator name -> id
                     | otherwise -> (Label.make "." /|/)
                 Normal
-                    | isOperator -> fmap (unappliedOperatorMarker nameId)
+                    | Name.isOperator name -> fmap (unappliedOperatorMarker nameId)
                     | otherwise -> id
         makeSimpleView color name nameId
             & mAddMarker

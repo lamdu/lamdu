@@ -1,4 +1,3 @@
-
 module Lamdu.CharClassification
     ( operator, bracket, digit, hexDigit
     ) where
