@@ -14,6 +14,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive(..), rWide, rWideDisambig, rNarrow)
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -81,7 +82,9 @@ make fragment pl =
         fragmentExprGui <-
             GuiM.makeSubexpression (fragment ^. Sugar.fExpr) & GuiState.assignCursor myId innerId
         hover <- Hover.hover
-        searchAreaGui <- SearchArea.make (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm
+        searchAreaGui <-
+            SearchArea.make (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm
+            <&> fmap Responsive.fromWithTextPos
         isHoleResult <- GuiM.isHoleResult
         let mkSearchArea
                 | isHoleResult = const Element.empty

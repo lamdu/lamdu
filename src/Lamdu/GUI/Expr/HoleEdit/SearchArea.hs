@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
+import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
@@ -19,8 +20,6 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
@@ -169,7 +168,7 @@ make ::
     i [Sugar.HoleOption Name i o] ->
     Sugar.Payload Name i o ExprGui.Payload ->
     (Text -> Bool) ->
-    GuiM env i o (Menu.Placement -> Responsive o)
+    GuiM env i o (Menu.Placement -> TextWidget o)
 make mkOptions pl allowedTerms =
     do
         env <- Lens.view id
@@ -201,19 +200,18 @@ make mkOptions pl allowedTerms =
                         <*> SearchMenu.make makeTerm
                             (filteredOptions options) annotationGui searchMenuId
                         <&> Lens.mapped . Align.tValue %~ inPlaceOfClosed
-                        <&> Lens.mapped %~ Responsive.fromWithTextPos
             else
-                Responsive.fromWithTextPos closedSearchTermGui
-                & (if isActive
+                closedSearchTermGui
+                <&> (if isActive
                     then Widget.setFocused
                     else id
                     )
-                & (if isAHoleInHole
+                <&> (if isAHoleInHole
                     then
                         Widget.widget . Widget.wState .
                         Widget._StateUnfocused . Widget.uMStroll .~ Nothing
                     else id)
-                & Widget.weakerEvents
+                <&> Widget.weakerEvents
                   (-- Editing search term of a closed hole opens it:
                       term ^. SearchMenu.termEditEventMap
                       <&> Lens.mapped . GuiState.uCursor %~

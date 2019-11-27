@@ -5,10 +5,12 @@ module Lamdu.GUI.Expr.HoleEdit
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
+import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -84,13 +86,14 @@ make hole pl =
                     )
                 | otherwise = (mempty, mempty)
         litEventMap <- mkLitEventMap
-        ExprEventMap.add options pl
+        (ExprEventMap.add options pl <&> (Align.tValue %~))
             <*> ( SearchArea.make (hole ^. Sugar.holeOptions)
                     pl allowedHoleSearchTerm ?? Menu.AnyPlace
-                    <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
+                    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
                 )
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)
-    & GuiState.assignCursor (hidHole widgetIds) searchMenuId
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)
+            <&> Responsive.fromWithTextPos
+        & GuiState.assignCursor (hidHole widgetIds) searchMenuId
     where
         searchMenuId = hidOpen widgetIds
         widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
