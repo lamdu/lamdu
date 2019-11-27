@@ -60,7 +60,9 @@ loadWorkArea ::
         (Sugar.Payload Name (T m) (T m) ExprGui.Payload))
 loadWorkArea env cp =
     SugarConvert.loadWorkArea env cp
-    >>= report . AddNames.addToWorkArea env (fmap (Tag.getTagName env) . ExprIRef.readTagData)
+    >>= report .
+        AddNames.addToWorkArea env
+        (fmap (Tag.getTagName env) . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ toGuiMPayload
     where

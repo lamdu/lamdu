@@ -71,7 +71,8 @@ compile repl =
             , Compiler.loggingMode = Compiler.Fast Compiler.ReleaseDontMemoDefs
             , Compiler.readAssocTag = lift . getP . Anchors.assocTag
             , Compiler.readAssocName =
-                fmap ((^. name) . getTagName compileNameEnv) . lift . ExprIRef.readTagData
+                fmap ((^. _2 . name) . getTagName compileNameEnv) . lift .
+                ExprIRef.readTagData
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def

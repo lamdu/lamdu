@@ -128,7 +128,7 @@ assocTagName env tag =
     where
         lang = env ^. has
         result info =
-            Property (getTagName env info ^. name)
+            Property (getTagName env info ^. _2 . name)
             (Transaction.writeIRef (ExprIRef.tagI tag) . setName)
             where
                 setName x

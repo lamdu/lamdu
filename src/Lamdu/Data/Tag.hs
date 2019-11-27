@@ -4,6 +4,7 @@ module Lamdu.Data.Tag
     ( Tag(..), tagOrder, tagSymbol, tagTexts
     , Symbol(..), _NoSymbol, _UniversalSymbol, _DirectionalSymbol, DirOp(..), opLeftToRight, opRightToLeft
     , TextsInLang(..), name, abbreviation, disambiguationText
+    , IsOperator(..)
     , getTagName
     ) where
 
@@ -47,6 +48,9 @@ data TextsInLang = TextsInLang
     deriving anyclass Binary
 Lens.makeLenses ''TextsInLang
 
+data IsOperator = NotAnOperator | IsAnOperator
+    deriving (Eq, Ord)
+
 instance Aeson.ToJSON TextsInLang where
     toJSON (TextsInLang txt Nothing Nothing) = Aeson.toJSON txt
     toJSON (TextsInLang txt mAbb mDis) =
@@ -78,19 +82,19 @@ Lens.makeLenses ''Tag
 
 getTagName ::
     (Has LangId env, Has Dir.Layout env) =>
-    env -> Tag -> TextsInLang
+    env -> Tag -> (IsOperator, TextsInLang)
 getTagName env tag =
     case tag ^. tagSymbol of
-    NoSymbol -> n
-    UniversalSymbol x -> TextsInLang x Nothing Nothing
+    NoSymbol -> (NotAnOperator, n)
+    UniversalSymbol x -> (IsAnOperator, TextsInLang x Nothing Nothing)
     DirectionalSymbol (DirOp l r) ->
         case env ^. has of
         LeftToRight -> opOrName l
         RightToLeft -> opOrName r
     where
         opOrName x
-            | x == mempty = n -- No op for this direction
-            | otherwise = TextsInLang x Nothing Nothing
+            | x == mempty = (NotAnOperator, n) -- No op for this direction
+            | otherwise = (IsAnOperator, TextsInLang x Nothing Nothing)
         n =
             tag ^. tagTexts . Lens.at (env ^. has)
             & fromMaybe fallback

@@ -96,12 +96,13 @@ pAOpGetName n = PAName n False & pure
 ------------------------------
 data P0Name = P0Name
     { _p0TagName :: Tag.TextsInLang
+    , _p0IsOperator :: Tag.IsOperator
     , _p0InternalName :: InternalName
     , _p0IsAutoGen :: Bool
     }
 
 newtype P0Env i = P0Env
-    { _p0GetName :: T.Tag -> i Tag.TextsInLang
+    { _p0GetName :: T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)
     }
 Lens.makeLenses ''P0Env
 
@@ -126,7 +127,7 @@ p0lift = Pass0LoadNames . lift
 getP0Name :: Monad i => PAName -> Pass0LoadNames i P0Name
 getP0Name (PAName internalName isAutoGen) =
     Lens.view p0GetName ?? internalName ^. inTag >>= p0lift
-    <&> \x -> P0Name x internalName isAutoGen
+    <&> \(isOp, x) -> P0Name x isOp internalName isAutoGen
 
 ------------------------------
 ---------- Pass 1 ------------
@@ -159,7 +160,7 @@ data P1Out = P1Out
 Lens.makeLenses ''P1Out
 
 data P1KindedName
-    = P1TagName Annotated.Name Tag.TextsInLang
+    = P1TagName Annotated.Name Tag.IsOperator Tag.TextsInLang
     | P1AnonName UUID
 
 data P1Name = P1Name
@@ -195,7 +196,7 @@ displayOf env text
 p1Name ::
     Maybe Disambiguator -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp i o) P1Name
-p1Name mDisambiguator nameType (P0Name texts internalName autoGen) =
+p1Name mDisambiguator nameType (P0Name texts isOp internalName autoGen) =
     -- NOTE: We depend on the anonTag key in the map
     liftCPS (traverse_ tellCtx ctx) *>
     CPS (\inner ->
@@ -212,7 +213,7 @@ p1Name mDisambiguator nameType (P0Name texts internalName autoGen) =
                 case ctx of
                 Nothing -> error "Anon tag with no context"
                 Just uuid -> P1AnonName uuid
-            else P1TagName aName texts
+            else P1TagName aName isOp texts
         , p1LocalsBelow = innerOut ^. p1Locals
         , p1IsAutoGen = autoGen
         }
@@ -460,12 +461,14 @@ getTagText tag texts =
 
 p2tagName ::
     MMap T.Tag Clash.Info -> Annotated.Name -> Tag.TextsInLang -> Bool ->
+    Tag.IsOperator ->
     Pass2MakeNames i o Name
-p2tagName tagsBelow aName texts isAutoGen =
+p2tagName tagsBelow aName texts isAutoGen isOp =
     TagName
     <$> getTagText tag texts
     <*> getCollision tagsBelow aName
     ?? isAutoGen
+    ?? isOp == Tag.IsAnOperator
     <&> NameTag
     where
         tag = aName ^. Annotated.tag
@@ -476,8 +479,8 @@ p2globalAnon uuid =
     <&> maybe (Unnamed 0) Unnamed
 
 p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
-p2nameConvertor nameType (P1Name (P1TagName aName texts) tagsBelow isAutoGen) =
-    p2tagName tagsBelow aName texts isAutoGen <&>
+p2nameConvertor nameType (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
+    p2tagName tagsBelow aName texts isAutoGen isOp <&>
     case nameType of
     Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
@@ -494,12 +497,12 @@ p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
 
 p2cpsNameConvertor :: Walk.CPSNameConvertor (Pass2MakeNames i o)
 p2cpsNameConvertor (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
-p2cpsNameConvertor (P1Name (P1TagName aName texts) tagsBelow isAutoGen) =
+p2cpsNameConvertor (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
     do
         env0 <- Lens.view id
         (newNameForm, env1) <-
-            p2tagName tagsBelow aName texts isAutoGen
+            p2tagName tagsBelow aName texts isAutoGen isOp
             <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
         visText <- visible newNameForm <&> (^. _1 . ttText)
         let env2 = env1 & p2TextsAbove %~ Set.insert visText
@@ -515,7 +518,7 @@ runPasses ::
     , Functor i
     ) =>
     env ->
-    (T.Tag -> i Tag.TextsInLang) ->
+    (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
     (z -> PassAutoTags i a) ->
     (a -> Pass0LoadNames i b) ->
     (b -> Pass1PropagateUp i o c) ->
@@ -535,7 +538,7 @@ addToWorkArea ::
     , Monad i
     ) =>
     env ->
-    (T.Tag -> i Tag.TextsInLang) ->
+    (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
     WorkArea InternalName i o (Payload InternalName i o a) ->
     i (WorkArea Name i o (Payload Name i o a))
 addToWorkArea env getName =
