@@ -18,12 +18,15 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
+import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap, stdWrapParentExpr)
+import qualified Lamdu.GUI.ExpressionGui.Wrap as Wrap
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -71,21 +74,27 @@ makeLabeled ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled apply pl =
-    stdWrapParentExpr pl <*>
-    case apply ^. Sugar.aSpecialArgs of
-    Sugar.Verbose -> makeFunc GetVarEdit.Normal func
-    Sugar.Operator l r ->
-        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-        <*> sequenceA
-        [ (Options.boxSpaced ?? Options.disambiguationNone)
+    ExprEventMap.add ExprEventMap.defaultOptions pl <*>
+    ( Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*>
+        case apply ^. Sugar.aSpecialArgs of
+        Sugar.Verbose -> makeFunc GetVarEdit.Normal func >>= wrap
+        Sugar.Operator l r ->
+            (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> sequenceA
             [ GuiM.makeSubexpression l
-            , makeFunc GetVarEdit.Operator func
+            , (Options.boxSpaced ?? Options.disambiguationNone)
+                <*> sequenceA
+                [ makeFunc GetVarEdit.Operator func
+                , GuiM.makeSubexpression r
+                ]
+                >>= wrap
             ]
-        , GuiM.makeSubexpression r
-        ]
-    >>= addArgs apply
+    )
     where
+        wrap x =
+            (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+            addArgs apply x
+
         func = apply ^. Sugar.aFunc
 
 makeArgRow ::
