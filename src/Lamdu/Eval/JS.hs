@@ -36,7 +36,7 @@ import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import           Generic.Data (Generically(..))
-import           Hyper (Ann(..), hflipped, hmapped1, hfolded1)
+import           Hyper (Ann(..), HFunctor(..), HFoldable(..), hflipped)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (Identifier(..), identHex)
@@ -310,10 +310,13 @@ compilerActions toUUID depsMVar actions output =
         readGlobal $
         \def ->
         ( Dependencies
-          { subExprDeps = def ^.. Def.defBody . Lens.folded . hflipped . hfolded1 . Lens._Wrapped & Set.fromList
-          , globalDeps = mempty
-          }
-        , def & Def.defBody . Lens.mapped . hflipped . hmapped1 . Lens._Wrapped %~ Compiler.ValId . toUUID
+            { subExprDeps =
+                def ^.. Def.defBody . Lens.folded . hflipped
+                >>= hfoldMap (const (^.. Lens._Wrapped))
+                & Set.fromList
+            , globalDeps = mempty
+            }
+        , def & Def.defBody . Lens.mapped . hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId . toUUID))
         )
     , Compiler.readGlobalType = readGlobal ((^. Def.defType) <&> (,) mempty)
     , Compiler.output = output
@@ -384,7 +387,8 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
                 let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
                 withForkedIO processOutput $
                     do
-                        replVal <&> hflipped . hmapped1 . Lens._Wrapped %~ Compiler.ValId . toUUID
+                        replVal
+                            <&> hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId . toUUID))
                             & Compiler.compileRepl
                                 (compilerActions toUUID depsMVar actions outputJS)
                         flushJS
@@ -421,7 +425,10 @@ start toUUID fromUUID actions replExpr =
         depsMVar <-
             newMVar Dependencies
             { globalDeps = Set.empty
-            , subExprDeps = replExpr ^.. Lens.folded . hflipped . hfolded1 . Lens._Wrapped & Set.fromList
+            , subExprDeps =
+                replExpr ^.. Lens.folded . hflipped
+                >>= hfoldMap (const (^.. Lens._Wrapped))
+                & Set.fromList
             }
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar
