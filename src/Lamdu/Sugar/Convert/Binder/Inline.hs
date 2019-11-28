@@ -1,11 +1,11 @@
-{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators #-}
+{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.Type.Functor (F)
+import           Hyper.Type.Functor (F, _F)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (HRef)
@@ -14,29 +14,40 @@ import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.IRef (IRef)
+import           Revision.Deltum.Hyper (Write(..))
+import           Revision.Deltum.IRef (IRef, uuid)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
 type T = Transaction
 
-redexes :: Val a -> ([(V.Var, Val a)], Val a)
+redexes ::
+    Ann a # V.Term ->
+    ([(V.Var, Ann a # V.Term)], Ann a # V.Term)
 redexes (Ann _ (V.BApp (V.App (Ann _ (V.BLam lam)) arg))) =
     redexes (lam ^. V.lamOut)
     & _1 %~ (:) (lam ^. V.lamIn, arg)
 redexes v = ([], v)
 
-wrapWithRedexes :: [(V.Var, Val (Maybe a))] -> Val (Maybe a) -> Val (Maybe a)
+wrapWithRedexes ::
+    [(V.Var, Ann (Write m) # V.Term)] ->
+    Ann (Write m) # V.Term ->
+    Ann (Write m) # V.Term
 wrapWithRedexes rs x =
     foldr wrapWithRedex x rs
     where
         wrapWithRedex (v, a) b =
-            V.App (Ann (Const Nothing) (V.BLam (V.Lam v b))) a
+            V.App (Ann WriteNew (V.BLam (V.Lam v b))) a
             & V.BApp
-            & Ann (Const Nothing)
+            & Ann WriteNew
 
-inlineLetH :: V.Var -> Val (Maybe a) -> Val (Maybe a) -> Val (Maybe a)
+inlineLetH ::
+    forall m.
+    V.Var ->
+    Ann (Write m) # V.Term ->
+    Ann (Write m) # V.Term ->
+    Ann (Write m) # V.Term
 inlineLetH var arg bod =
     go bod & uncurry wrapWithRedexes
     where
@@ -54,11 +65,17 @@ inlineLetH var arg bod =
                   & V.Lam param & V.BLam & Ann stored
                 )
             _ ->
-                ( r ^.. htraverse1 . Lens._Wrapped . _1 . traverse
-                , r & htraverse1 %~ (^. Lens._Wrapped . _2) & Ann stored
+                ( hfoldMap (const (^.. _1 . Lens._Wrapped . traverse)) r
+                , hmap (const (^. _2)) r & Ann stored
                 )
                 where
-                    r = b & htraverse1 %~ Lens.Const . go
+                    r :: V.Term # (Const [(V.Var, Ann (Write m) # V.Term)] :*: Ann (Write m))
+                    r =
+                        hmap
+                        ( \case
+                            HWitness V.W_Term_Term ->
+                                go <&> \(res, body) -> Const res :*: body
+                        ) b
 
 cursorDest :: Val a -> a
 cursorDest x =
@@ -76,15 +93,17 @@ inlineLet topLevelProp redex =
     <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readRecursively
-    <&> hflipped . hmapped1 %~ Const . Just
+    <&> hflipped %~ hmap (const ExistingRef)
     <&> inlineLetH
         (redex ^. Redex.lam . V.lamIn)
-        (redex ^. Redex.arg & hflipped . hmapped1 %~ Const . Just)
-    <&> hflipped . hmapped1 %~ f
+        (redex ^. Redex.arg & hflipped %~ hmap (const ExistingRef))
+    <&> hflipped %~ hmap (const (:*: Const ()))
     >>= ExprIRef.writeRecursively
     <&> (^. hAnn . _1)
     >>= topLevelProp ^. ExprIRef.setIref
-    & (cursorDest (redex ^. Redex.arg & hflipped . hmapped1 %~ Const . EntityId.ofValI) <$)
+    & (dst <$)
     where
-        f (Const Nothing) = ExprIRef.WriteNew :*: Const ()
-        f (Const (Just x)) = ExprIRef.ExistingRef x :*: Const ()
+        dst =
+            redex ^. Redex.arg
+            & hflipped %~ hmap (const (Const . EntityId.EntityId . uuid . (^. _F)))
+            & cursorDest

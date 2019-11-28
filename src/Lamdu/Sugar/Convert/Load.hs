@@ -64,6 +64,28 @@ unmemoizedInfer defExpr =
         infer (defExpr ^. Definition.expr) & Reader.local (const scope)
             <&> (, scope)
 
+class LookupEvalRes h where
+    lookupEvalRes ::
+        CurAndPrev EvalResults ->
+        Map NominalId (Pure # NominalDecl T.Type) ->
+        (HRef m :*: InferResult (Pure :*: UVar)) # h ->
+        CurAndPrev EvalResultsForExpr
+    lookupEvalResRecursive :: Proxy h -> Dict (HNodesConstraint h LookupEvalRes)
+
+instance LookupEvalRes V.Term where
+    lookupEvalRes evalRes nomsMap (valIProp :*: inferRes) =
+        evalRes
+        <&> exprEvalRes nomsMap (inferRes ^. inferResult . Lens._1)
+            (valIProp ^. ExprIRef.iref)
+    lookupEvalResRecursive _ = Dict
+
+instance Recursive LookupEvalRes where
+    recurse =
+        lookupEvalResRecursive . p
+        where
+            p :: Proxy (LookupEvalRes k) -> Proxy k
+            p _ = Proxy
+
 preparePayloads ::
     InferState ->
     V.Scope # UVar ->
@@ -73,11 +95,11 @@ preparePayloads ::
     Ann (Input.Payload m ()) # V.Term
 preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
     inferredVal
-    & hflipped . hmapped1 %~ f
+    & hflipped %~ hmap (Proxy @LookupEvalRes #> f)
     & Input.preparePayloads
     & Input.initScopes inferState topLevelScope []
     where
-        f (valIProp :*: inferRes) =
+        f pl@(valIProp :*: inferRes) =
             Input.PreparePayloadInput
             { Input.ppEntityId = eId
             , Input.ppMakePl =
@@ -89,15 +111,12 @@ preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
                 , Input._stored = valIProp
                 , Input._inferRes = inferRes
                 , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
-                , Input._evalResults =
-                    evalRes
-                    <&> exprEvalRes nomsMap (inferRes ^. inferResult . Lens._1)
-                        (valIProp ^. ExprIRef.iref)
+                , Input._evalResults = lookupEvalRes evalRes nomsMap pl
                 , Input._userData = ()
                 }
             }
             where
-                eId = valIProp ^. ExprIRef.iref & EntityId.ofValI
+                eId = valIProp ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId
 
 exprEvalRes ::
     Map NominalId (Pure # NominalDecl T.Type) ->
