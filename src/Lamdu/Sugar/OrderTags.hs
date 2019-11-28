@@ -63,7 +63,12 @@ orderRecord (Sugar.Composite items punned tail_ addItem) =
     <*> traverse orderNode tail_
     <*> pure addItem
 
-instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o)
+instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o) where
+    order (Sugar.LabeledApply func specialArgs annotated punned) =
+        Sugar.LabeledApply func specialArgs
+        <$> orderByTag (^. Sugar.aaTag) annotated
+        <*> pure punned
+        >>= htraverse (Proxy @(Order m name o) #> orderNode)
 
 orderCase ::
     Monad m =>
