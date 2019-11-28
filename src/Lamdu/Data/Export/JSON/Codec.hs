@@ -1,5 +1,5 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
@@ -405,39 +405,39 @@ decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (V.Term # Ann (Const UUI
 decodeValBody obj =
     jsum
     [ V.App
-      <$> (obj .: "applyFunc" <&> c <&> Lens.Const)
-      <*> (obj .: "applyArg" <&> c <&> Lens.Const)
+      <$> (obj .: "applyFunc" <&> c)
+      <*> (obj .: "applyArg" <&> c)
       <&> V.BApp
     , V.Lam
       <$> (obj .: "lamVar" >>= decodeIdent <&> V.Var)
-      <*> (obj .: "lamBody" <&> c <&> Lens.Const)
+      <*> (obj .: "lamBody" <&> c)
       <&> V.BLam
     , V.GetField
-      <$> (obj .: "getFieldRec" <&> c <&> Lens.Const)
+      <$> (obj .: "getFieldRec" <&> c)
       <*> (obj .: "getFieldName" >>= decodeTagId)
       <&> V.BGetField
     , RowExtend
       <$> (obj .: "extendTag" >>= decodeTagId)
-      <*> (obj .: "extendVal" <&> c <&> Lens.Const)
-      <*> (obj .: "extendRest" <&> c <&> Lens.Const)
+      <*> (obj .: "extendVal" <&> c)
+      <*> (obj .: "extendRest" <&> c)
       <&> V.BRecExtend
     , V.Inject
       <$> (obj .: "injectTag" >>= decodeTagId)
-      <*> (obj .: "injectVal" <&> c <&> Lens.Const)
+      <*> (obj .: "injectVal" <&> c)
       <&> V.BInject
     , RowExtend
       <$> (obj .: "caseTag" >>= decodeTagId)
-      <*> (obj .: "caseHandler" <&> c <&> Lens.Const)
-      <*> (obj .: "caseRest" <&> c <&> Lens.Const)
+      <*> (obj .: "caseHandler" <&> c)
+      <*> (obj .: "caseRest" <&> c)
       <&> V.BCase
     , ToNom
       <$> (obj .: "toNomId" >>= decodeIdent <&> T.NominalId)
-      <*> (obj .: "toNomVal" <&> c <&> Lens.Const)
+      <*> (obj .: "toNomVal" <&> c)
       <&> V.BToNom
     , decodeLeaf obj <&> V.BLeaf
     ] >>= htraverse1 (decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
     where
-        c = Lens.Const
+        c = Lens.Const . Lens.Const
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =
