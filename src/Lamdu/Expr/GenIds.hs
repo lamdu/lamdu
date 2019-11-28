@@ -105,26 +105,25 @@ randomizeParamIdsG preNG gen initMap =
     (`evalState` gen) . (`runReaderT` initMap) . go
     where
         go (Ann s v) =
-            do
-                parMap <- Reader.ask
-                case v of
-                    V.BLam (V.Lam oldParamId body) ->
-                        do
-                            newParamId <- lift . state $ makeName oldParamId s
-                            go body
-                                & Reader.local (Map.insert oldParamId newParamId)
-                                <&> V.Lam newParamId
-                                <&> V.BLam
-                    V.BLeaf (V.LVar par) ->
-                        pure $ V.BLeaf $ V.LVar $ fromMaybe par $ Map.lookup par parMap
-                    x@V.BLeaf {}      -> htraverse1 go x
-                    x@V.BApp {}       -> htraverse1 go x
-                    x@V.BGetField {}  -> htraverse1 go x
-                    x@V.BRecExtend {} -> htraverse1 go x
-                    x@V.BCase {}      -> htraverse1 go x
-                    x@V.BInject {}    -> htraverse1 go x
-                    x@V.BToNom {}     -> htraverse1 go x
-                    <&> Ann s
+            case v of
+            V.BLam (V.Lam oldParamId body) ->
+                do
+                    newParamId <- lift . state $ makeName oldParamId s
+                    go body
+                        & Reader.local (Map.insert oldParamId newParamId)
+                        <&> V.Lam newParamId
+                        <&> V.BLam
+            V.BLeaf (V.LVar par) ->
+                Reader.ask <&> Map.lookup par <&> fromMaybe par
+                <&> V.LVar <&> V.BLeaf
+            V.BLeaf{}      -> htraverse1 go v
+            V.BApp{}       -> htraverse1 go v
+            V.BGetField{}  -> htraverse1 go v
+            V.BRecExtend{} -> htraverse1 go v
+            V.BCase{}      -> htraverse1 go v
+            V.BInject{}    -> htraverse1 go v
+            V.BToNom{}     -> htraverse1 go v
+            <&> Ann s
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 
