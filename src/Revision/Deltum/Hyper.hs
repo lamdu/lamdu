@@ -5,7 +5,8 @@ module Revision.Deltum.Hyper
     ( HStore(..), readRecursively
     , HRef(..), iref, setIref
     , toHRefs
-    , Write(..), writeRecursively
+    , Write(..), _WriteNew, _ExistingRef
+    , writeRecursively
     ) where
 
 import qualified Control.Lens as Lens
@@ -49,6 +50,7 @@ data Write m h
     = WriteNew
     | ExistingRef (F (IRef m) h)
     deriving (Generic, Binary)
+Lens.makePrisms ''Write
 
 readRecursively ::
     HStore m t =>

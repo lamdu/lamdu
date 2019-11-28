@@ -43,6 +43,7 @@ import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID(..))
+import           Revision.Deltum.Hyper (writeRecursively, _ExistingRef)
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -209,12 +210,12 @@ export msg act exportPath =
             putStrLn $ "Exporting " ++ msg ++ " to " ++ show exportPath
             LBS.writeFile exportPath (AesonPretty.encodePretty json)
 
-writeValAt :: Monad m => Val (ValI m) -> T m (ValI m)
-writeValAt (Ann (Const valI) body) =
-    valI <$ (htraverse1 writeValAt body >>= ExprIRef.writeValI valI)
-
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
-writeValAtUUID x = x & hflipped . hmapped1 . Lens._Wrapped %~ (_F #) . IRef.unsafeFromUUID & writeValAt
+writeValAtUUID x =
+    x
+    & hflipped . hmapped1 %~ (:*: Const ()) . (_ExistingRef . _F #) . IRef.unsafeFromUUID . getConst
+    & writeRecursively
+    <&> (^. hAnn . _1)
 
 insertTo ::
     (Monad m, Ord a, Binary a) =>
