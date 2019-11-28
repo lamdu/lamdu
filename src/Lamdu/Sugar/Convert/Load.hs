@@ -135,9 +135,9 @@ readValAndAddProperties ::
     Monad m => HRef m # V.Term -> T m (Ann (HRef m) # V.Term)
 readValAndAddProperties prop =
     ExprIRef.readRecursively (prop ^. ExprIRef.iref)
-    <&> hflipped . hmapped1 %~ (:*: Const ())
+    <&> hflipped %~ hmap (const (:*: Const ()))
     <&> ExprIRef.toHRefs (prop ^. ExprIRef.setIref)
-    <&> hflipped . hmapped1 %~ (^. Lens._1)
+    <&> hflipped %~ hmap (const (^. Lens._1))
 
 data InferOut m = InferOut
     { _irVal :: Ann (Input.Payload m [EntityId]) # V.Term

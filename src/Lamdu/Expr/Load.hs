@@ -23,9 +23,9 @@ type T = Transaction
 expr :: Monad m => HRef m # Term -> T m (Ann (HRef m) # Term)
 expr (HRef valI writeRoot) =
     ExprIRef.readRecursively valI
-    <&> hflipped . hmapped1 %~ (:*: Const ())
+    <&> hflipped %~ hmap (const (:*: Const ()))
     <&> ExprIRef.toHRefs writeRoot
-    <&> hflipped . hmapped1 %~ (^. Lens._1)
+    <&> hflipped %~ hmap (const (^. Lens._1))
 
 defExprH ::
     Monad m =>
