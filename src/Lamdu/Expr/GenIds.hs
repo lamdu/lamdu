@@ -1,5 +1,5 @@
 -- TODO: Split/rename to more generic (non-sugar) modules
-{-# LANGUAGE ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, TypeOperators, GADTs #-}
 
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams
@@ -116,14 +116,20 @@ randomizeParamIdsG preNG gen initMap =
             V.BLeaf (V.LVar par) ->
                 Reader.ask <&> Map.lookup par <&> fromMaybe par
                 <&> V.LVar <&> V.BLeaf
-            V.BLeaf{}      -> htraverse1 go v
-            V.BApp{}       -> htraverse1 go v
-            V.BGetField{}  -> htraverse1 go v
-            V.BRecExtend{} -> htraverse1 go v
-            V.BCase{}      -> htraverse1 go v
-            V.BInject{}    -> htraverse1 go v
-            V.BToNom{}     -> htraverse1 go v
+            V.BLeaf{}      -> def
+            V.BApp{}       -> def
+            V.BGetField{}  -> def
+            V.BRecExtend{} -> def
+            V.BCase{}      -> def
+            V.BInject{}    -> def
+            V.BToNom{}     -> def
             <&> Ann s
+            where
+                def =
+                    htraverse
+                    ( \case
+                        HWitness V.W_Term_Term -> go
+                    ) v
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 
