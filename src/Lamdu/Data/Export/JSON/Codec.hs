@@ -435,9 +435,9 @@ decodeValBody obj =
       <*> (obj .: "toNomVal" <&> c)
       <&> V.BToNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= htraverse1 (decodeVal . (^. Lens._Wrapped . Lens._Wrapped))
+    ] >>= htraverse1 (decodeVal . (^. Lens._Wrapped))
     where
-        c = Lens.Const . Lens.Const
+        c = Lens.Const
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =
