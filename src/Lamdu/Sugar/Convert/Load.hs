@@ -21,6 +21,7 @@ import           Hyper.Infer (InferResult(..), inferResult, infer)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Type.Functor (_F)
 import           Hyper.Unify (Unify, unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
@@ -42,6 +43,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -64,7 +66,7 @@ preparePayloads ::
     InferState ->
     V.Scope # UVar ->
     Map NominalId (Pure # NominalDecl T.Type) ->
-    CurAndPrev (EvalResults (ValI m)) ->
+    CurAndPrev EvalResults ->
     Annotated (HRef m # V.Term, InferResult (Pure :*: UVar) # V.Term) V.Term ->
     Ann (Input.Payload m ()) # V.Term
 preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
@@ -99,19 +101,21 @@ exprEvalRes ::
     Map NominalId (Pure # NominalDecl T.Type) ->
     Pure # T.Type ->
     ValI m ->
-    EvalResults (ValI m) ->
+    EvalResults ->
     EvalResultsForExpr
 exprEvalRes nomsMap typ pl r =
     EvalResultsForExpr
-    { _eResults = r ^. erExprValues . Lens.ix pl <&> addTypes nomsMap typ
+    { _eResults = r ^. erExprValues . Lens.ix uuid <&> addTypes nomsMap typ
     , _eAppliesOfLam =
         case typ of
         Pure (T.TFun (FuncType paramType _)) ->
-            r ^. erAppliesOfLam . Lens.ix pl
+            r ^. erAppliesOfLam . Lens.ix uuid
             <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
         _ | r ^. erAppliesOfLam & Map.null -> Map.empty
             | otherwise -> error "Have non-empty erAppliesOfLam for non-function-type"
     }
+    where
+        uuid = IRef.uuid (pl ^. _F)
 
 makeNominalsMap ::
     Monad m =>
@@ -162,7 +166,7 @@ resolve =
 
 runInferResult ::
     Monad m =>
-    Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    Debug.Monitors -> CurAndPrev EvalResults ->
     PureInfer (V.Scope # UVar) (Annotated (HRef m # V.Term, InferResult UVar # V.Term) V.Term, V.Scope # UVar) ->
     T m (Either (Pure # T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
@@ -195,7 +199,7 @@ runInferResult _monitors evalRes act =
 inferDef ::
     Monad m =>
     InferFunc (HRef m) -> Debug.Monitors ->
-    CurAndPrev (EvalResults (ValI m)) ->
+    CurAndPrev EvalResults ->
     Definition.Expr (Ann (HRef m) # V.Term) -> V.Var ->
     T m (Either (Pure # T.TypeError) (InferOut m))
 inferDef inferFunc monitors results defExpr defVar =
@@ -210,7 +214,7 @@ inferDef inferFunc monitors results defExpr defVar =
 
 inferDefExpr ::
     Monad m =>
-    InferFunc (HRef m) -> Debug.Monitors -> CurAndPrev (EvalResults (ValI m)) ->
+    InferFunc (HRef m) -> Debug.Monitors -> CurAndPrev EvalResults ->
     Definition.Expr (Ann (HRef m) # V.Term) ->
     T m (Either (Pure # T.TypeError) (InferOut m))
 inferDefExpr inferFunc monitors results defExpr =

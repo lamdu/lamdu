@@ -13,6 +13,7 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
+import           Data.UUID (UUID)
 import           Hyper (Pure(..), Ann(..), type (#), hVal)
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -24,7 +25,6 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
@@ -219,7 +219,7 @@ param entityId evalResults =
 completion ::
     Monad m =>
     Anchors.CodeAnchors m ->
-    EntityId -> CurAndPrev (Maybe (Either (ER.EvalException (ValI m)) ERV)) ->
+    EntityId -> CurAndPrev (Maybe (Either (ER.EvalException UUID) ERV)) ->
     EvalCompletion InternalName (T m)
 completion cp entityId completions =
     completions <&> Lens._Just %~ f
@@ -231,7 +231,7 @@ completion cp entityId completions =
                     position
                     <&>
                     \(whichGlobal, valI) ->
-                    EntityId.ofValI valI
+                    EntityId.EntityId valI
                     <$ case whichGlobal of
                     ER.GlobalRepl -> pure ()
                     ER.GlobalDef varId ->

@@ -36,7 +36,7 @@ import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
 import           Generic.Data (Generically(..))
-import           Hyper (Ann(..), HFunctor(..), HFoldable(..), hflipped)
+import           Hyper
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Identifier (Identifier(..), identHex)
@@ -62,24 +62,24 @@ import           System.Process.Utils (withProcess)
 
 import           Lamdu.Prelude
 
-data Actions srcId = Actions
-    { _aLoadGlobal :: V.Var -> IO (Definition (Val srcId) ())
+data Actions = Actions
+    { _aLoadGlobal :: V.Var -> IO (Definition (Annotated UUID V.Term) ())
     , _aReportUpdatesAvailable :: IO ()
     , _aJSDebugPaths :: JSDebugPaths FilePath
     }
 Lens.makeLenses ''Actions
 
-data Dependencies srcId = Dependencies
-    { subExprDeps :: Set srcId
+data Dependencies = Dependencies
+    { subExprDeps :: Set UUID
     , globalDeps :: Set V.Var
     } deriving stock Generic
-    deriving (Semigroup, Monoid) via Generically (Dependencies srcId)
+    deriving (Semigroup, Monoid) via Generically Dependencies
 
-data Evaluator srcId = Evaluator
+data Evaluator = Evaluator
     { stop :: IO ()
     , executeReplIOProcess :: IO ()
-    , eDeps :: MVar (Dependencies srcId)
-    , eResultsRef :: IORef (EvalResults srcId)
+    , eDeps :: MVar Dependencies
+    , eResultsRef :: IORef EvalResults
     }
 
 type Parse = State (IntMap (ER.Val ()))
@@ -195,13 +195,12 @@ fromDouble :: Double -> ER.Val ()
 fromDouble = Ann (Const ()) . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
 
 addVal ::
-    Ord srcId =>
-    (UUID -> srcId) -> Json.Object ->
+    Json.Object ->
     Parse
-    ( Map srcId (Map ScopeId (ER.Val ())) ->
-      Map srcId (Map ScopeId (ER.Val ()))
+    ( Map UUID (Map ScopeId (ER.Val ())) ->
+      Map UUID (Map ScopeId (ER.Val ()))
     )
-addVal fromUUID obj =
+addVal obj =
     case obj .: "result" of
     Nothing -> pure id
     Just result ->
@@ -209,19 +208,18 @@ addVal fromUUID obj =
         <&> \pr ->
         Map.alter
         (<> Just (Map.singleton (ScopeId scope) pr))
-        (fromUUID (parseUUID exprId))
+        (parseUUID exprId)
     where
         Just scope = obj .: "scope"
         Just exprId = obj .: "exprId"
 
 newScope ::
-    Ord srcId =>
-    (UUID -> srcId) -> Json.Object ->
+    Json.Object ->
     Parse
-    ( Map srcId (Map ScopeId [(ScopeId, ER.Val ())]) ->
-      Map srcId (Map ScopeId [(ScopeId, ER.Val ())])
+    ( Map UUID (Map ScopeId [(ScopeId, ER.Val ())]) ->
+      Map UUID (Map ScopeId [(ScopeId, ER.Val ())])
     )
-newScope fromUUID obj =
+newScope obj =
     do
         arg <-
             case obj .: "arg" of
@@ -230,7 +228,7 @@ newScope fromUUID obj =
         let apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
         let addApply Nothing = Just apply
             addApply (Just x) = Just (Map.unionWith (++) x apply)
-        Map.alter addApply (fromUUID (parseUUID lamId)) & pure
+        Map.alter addApply (parseUUID lamId) & pure
     where
         Just parentScope = obj .: "parentScope"
         Just scope = obj .: "scope"
@@ -243,8 +241,8 @@ completionSuccess obj =
     Just x -> parseResult x
 
 completionError ::
-    Monad m => (UUID -> srcId) -> Json.Object -> m (ER.EvalException srcId)
-completionError fromUUID obj =
+    Monad m => Json.Object -> m (ER.EvalException UUID)
+completionError obj =
     case obj .: "err" of
     Nothing -> "Completion error report missing valid err: " ++ show obj & fail
     Just x ->
@@ -259,25 +257,24 @@ completionError fromUUID obj =
             Just (g, e) ->
                 (,)
                 <$> ER.decodeWhichGlobal g
-                ?? fromUUID (parseUUID e)
+                ?? parseUUID e
                 <&> Just
         )
         & either fail pure
 
 processEvent ::
-    Ord srcId =>
-    (UUID -> srcId) -> IORef (EvalResults srcId) -> Actions srcId ->
+    IORef EvalResults -> Actions ->
     Json.Object -> IO ()
-processEvent fromUUID resultsRef actions obj =
+processEvent resultsRef actions obj =
     case event of
     "Result" ->
-        runParse (addVal fromUUID obj) (ER.erExprValues %~)
+        runParse (addVal obj) (ER.erExprValues %~)
     "NewScope" ->
-        runParse (newScope fromUUID obj) (ER.erAppliesOfLam %~)
+        runParse (newScope obj) (ER.erAppliesOfLam %~)
     "CompletionSuccess" ->
         runParse (completionSuccess obj) (\res -> ER.erCompleted ?~ Right res)
     "CompletionError" ->
-        runParse (completionError fromUUID obj) (\exc -> ER.erCompleted ?~ Left exc)
+        runParse (completionError obj) (\exc -> ER.erCompleted ?~ Left exc)
     _ -> "Unknown event " ++ event & putStrLn
     where
         runParse act postProcess =
@@ -299,10 +296,9 @@ withJSDebugHandles paths =
         withPath path = withFile path WriteMode & ContT
 
 compilerActions ::
-    Ord a =>
-    (a -> UUID) -> MVar (Dependencies a) -> Actions a -> (String -> IO ()) ->
+    MVar Dependencies -> Actions -> (String -> IO ()) ->
     Compiler.Actions IO
-compilerActions toUUID depsMVar actions output =
+compilerActions depsMVar actions output =
     Compiler.Actions
     { Compiler.readAssocName = pure . fromString . identHex . tagName
     , Compiler.readAssocTag = pure anonTag & const
@@ -316,7 +312,7 @@ compilerActions toUUID depsMVar actions output =
                 & Set.fromList
             , globalDeps = mempty
             }
-        , def & Def.defBody . Lens.mapped . hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId . toUUID))
+        , def & Def.defBody . Lens.mapped . hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId))
         )
     , Compiler.readGlobalType = readGlobal ((^. Def.defType) <&> (,) mempty)
     , Compiler.output = output
@@ -365,12 +361,10 @@ processNodeOutput copyNodeOutput handleEvent stdout =
                 hFlush handle
 
 asyncStart ::
-    Ord srcId =>
-    (srcId -> UUID) -> (UUID -> srcId) ->
-    MVar (Dependencies srcId) -> MVar () -> IORef (EvalResults srcId) ->
-    Def.Expr (Val srcId) -> Actions srcId ->
+    MVar Dependencies -> MVar () -> IORef EvalResults ->
+    Def.Expr (Val UUID) -> Actions ->
     IO ()
-asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
+asyncStart depsMVar executeReplMVar resultsRef replVal actions =
     withSystemTempFile "lamdu-output.js" $
     \lamduOutputPath lamduOutputHandle ->
     do
@@ -382,15 +376,14 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
                 let handlesJS = lamduOutputHandle : jsHandles ^.. jsDebugCodePath . Lens._Just
                 let outputJS line = traverse_ (`hPutStrLn` line) handlesJS
                 let flushJS = traverse_ hFlush handlesJS
-                let handleEvent = processEvent fromUUID resultsRef actions
+                let handleEvent = processEvent resultsRef actions
                 let nodeOutputHandle = jsHandles ^. jsDebugNodeOutputPath
                 let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
                 withForkedIO processOutput $
                     do
                         replVal
-                            <&> hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId . toUUID))
-                            & Compiler.compileRepl
-                                (compilerActions toUUID depsMVar actions outputJS)
+                            <&> hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId))
+                            & Compiler.compileRepl (compilerActions depsMVar actions outputJS)
                         flushJS
                         let flushedOutput handle msg =
                                 do
@@ -414,13 +407,12 @@ asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replVal actions =
 --
 -- Pause must be called for a started/resumed evaluator, and if given
 -- an already paused evaluator, will wait for its resumption.
-whilePaused :: Evaluator srcId -> (Dependencies srcId -> IO a) -> IO a
+whilePaused :: Evaluator -> (Dependencies -> IO a) -> IO a
 whilePaused = withMVar . eDeps
 
 start ::
-    Ord srcId => (srcId -> UUID) -> (UUID -> srcId) ->
-    Actions srcId -> Def.Expr (Val srcId) -> IO (Evaluator srcId)
-start toUUID fromUUID actions replExpr =
+    Actions -> Def.Expr (Val UUID) -> IO Evaluator
+start actions replExpr =
     do
         depsMVar <-
             newMVar Dependencies
@@ -432,7 +424,7 @@ start toUUID fromUUID actions replExpr =
             }
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar
-        tid <- asyncStart toUUID fromUUID depsMVar executeReplMVar resultsRef replExpr actions & forkIO
+        tid <- asyncStart depsMVar executeReplMVar resultsRef replExpr actions & forkIO
         pure Evaluator
             { stop = killThread tid
             , executeReplIOProcess = putMVar executeReplMVar ()
@@ -440,5 +432,5 @@ start toUUID fromUUID actions replExpr =
             , eResultsRef = resultsRef
             }
 
-getResults :: Evaluator srcId -> IO (EvalResults srcId)
+getResults :: Evaluator -> IO EvalResults
 getResults = readIORef . eResultsRef

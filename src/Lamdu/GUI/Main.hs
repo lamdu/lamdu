@@ -72,7 +72,7 @@ type Ctx env =
     , Has Config env
     , Has SugarConfig.Config env
     , Element.HasAnimIdPrefix env
-    , Has (CodeEdit.EvalResults ViewM) env
+    , Has CodeEdit.EvalResults env
     , Has (CodeEdit.ExportActions ViewM) env
     , Has VCConfig.Config env, Has VCConfig.Theme env
     , Has Menu.Config env

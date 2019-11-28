@@ -13,7 +13,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.I18N.Code as Texts
@@ -49,7 +48,7 @@ loadWorkArea ::
     , Has (Texts.Code Text) env
     , Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has SugarConfig.Config env
     , Has Cache.Functions env, Has Annotations.Mode env
     , Monad m

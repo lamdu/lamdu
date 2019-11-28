@@ -21,6 +21,7 @@ import qualified Data.IntMap as IntMap
 import           Data.List.Lens (prefixed)
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           Data.UUID (UUID)
 import qualified Hyper
 import           Hyper (Ann(..), type (:#))
 import           Hyper.Combinator.Ann (Annotated)
@@ -125,15 +126,15 @@ extractField errPl tag x =
     "Expected record with tag: " ++ show tag ++ " got: " ++ show x
     & Text.pack & EvalTypeError & RError & Ann (Const errPl)
 
-data EvalResults srcId =
+data EvalResults =
     EvalResults
-    { _erExprValues :: Map srcId (Map ScopeId (Val ()))
-    , _erAppliesOfLam :: Map srcId (Map ScopeId [(ScopeId, Val ())])
+    { _erExprValues :: Map UUID (Map ScopeId (Val ()))
+    , _erAppliesOfLam :: Map UUID (Map ScopeId [(ScopeId, Val ())])
     , _erCache :: IntMap (Val ())
-    , _erCompleted :: Maybe (Either (EvalException srcId) (Val ()))
+    , _erCompleted :: Maybe (Either (EvalException UUID) (Val ()))
     }
 
-empty :: EvalResults srcId
+empty :: EvalResults
 empty =
     EvalResults
     { _erExprValues = Map.empty

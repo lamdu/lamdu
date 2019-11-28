@@ -33,10 +33,8 @@ import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Sprites (Sprites)
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.I18N.LangId (LangId)
@@ -52,7 +50,7 @@ import qualified Test.Lamdu.Config as TestConfig
 
 import           Test.Lamdu.Prelude
 
-type EvalResults = CurAndPrev (EvalResults.EvalResults (ValI ViewM))
+type EvalResults = CurAndPrev EvalResults.EvalResults
 
 data Env =
     Env

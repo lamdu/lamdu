@@ -25,7 +25,7 @@ import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Eval.Results.Process (addTypes)
-import           Lamdu.Expr.IRef (DefI, ValI, HRef)
+import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.I18N.LangId (LangId)
@@ -98,7 +98,7 @@ assertInferSuccess =
 convertInferDefExpr ::
     ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
@@ -158,7 +158,7 @@ convertInferDefExpr env cp defType defExpr defI =
 convertDefBody ::
     ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
@@ -186,7 +186,7 @@ convertRepl ::
     , Has LangId env
     , Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
@@ -252,7 +252,7 @@ convertRepl env cp =
 convertPaneBody ::
     ( Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
@@ -300,7 +300,7 @@ paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 convertPane ::
     ( Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
@@ -341,7 +341,7 @@ convertPane env cp replEntityId (Property panes setPanes) i pane =
 loadPanes ::
     ( Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
@@ -357,7 +357,7 @@ loadPanes env cp replEntityId =
 loadWorkArea ::
     ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
     , Has Debug.Monitors env
-    , Has (CurAndPrev (EvalResults (ValI m))) env
+    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->

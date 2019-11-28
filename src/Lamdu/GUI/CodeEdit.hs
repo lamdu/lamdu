@@ -45,7 +45,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
@@ -88,7 +87,7 @@ data ExportActions m = ExportActions
     , importAll :: FilePath -> IOTrans m ()
     }
 
-type EvalResults m = CurAndPrev (EvalResults.EvalResults (ValI m))
+type EvalResults = CurAndPrev EvalResults.EvalResults
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Has Config env
@@ -97,7 +96,7 @@ make ::
     , Has Theme env, GuiState.HasState env
     , Has SugarConfig.Config env
     , Spacer.HasStdSpacing env
-    , Has (EvalResults m) env
+    , Has EvalResults env
     , Has (ExportActions m) env
     , Has Settings env, HasStyle env
     , Has Hover.Style env, Has Menu.Config env

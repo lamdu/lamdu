@@ -17,7 +17,7 @@ import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Type.Functor (_F)
-import           Lamdu.Calc.Term (Val, Term)
+import           Lamdu.Calc.Term (Term)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
@@ -41,7 +41,7 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data BGEvaluator = NotStarted | Started (Eval.Evaluator (ValI ViewM))
+data BGEvaluator = NotStarted | Started Eval.Evaluator
 
 Lens.makePrisms ''BGEvaluator
 
@@ -55,7 +55,7 @@ data NewParams = NewParams
 data Evaluator = Evaluator
     { eParams :: NewParams
     , eEvaluatorRef :: IORef BGEvaluator
-    , ePrevResultsRef :: IORef (EvalResults (ValI ViewM))
+    , ePrevResultsRef :: IORef EvalResults
     , eCancelTimerRef :: IORef (Maybe ThreadId)
     }
 
@@ -77,12 +77,12 @@ runViewTransactionInIO dbM trans =
     withDb dbM $ \db ->
     DbLayout.runDbTransaction db (VersionControl.runAction trans)
 
-getLatestResults :: Evaluator -> IO (EvalResults (ValI ViewM))
+getLatestResults :: Evaluator -> IO EvalResults
 getLatestResults evaluator =
     readIORef (eEvaluatorRef evaluator) <&> (^? _Started)
     >>= maybe (pure EvalResults.empty) Eval.getResults
 
-getResults :: Evaluator -> IO (CurAndPrev (EvalResults (ValI ViewM)))
+getResults :: Evaluator -> IO (CurAndPrev EvalResults)
 getResults evaluator =
     do
         res <- getLatestResults evaluator
@@ -97,14 +97,14 @@ loadDef ::
     IO (Def.Definition (Ann (ExprIRef.HRef ViewM) # Term) (DefI ViewM))
 loadDef evaluator = runViewTransactionInIO (eDb evaluator) . Load.def
 
-evalActions :: Evaluator -> Eval.Actions (ValI ViewM)
+evalActions :: Evaluator -> Eval.Actions
 evalActions evaluator =
     Eval.Actions
     { Eval._aLoadGlobal =
         \globalId ->
         ExprIRef.defI globalId
         & loadDef evaluator
-        <&> Def.defBody . Lens.mapped . hflipped . hmapped1 %~ Const . (^. ExprIRef.iref)
+        <&> Def.defBody . Lens.mapped . hflipped . hmapped1 %~ Const . IRef.uuid . (^. ExprIRef.iref . _F)
         <&> Lens.mapped .~ ()
     , Eval._aReportUpdatesAvailable =
       do
@@ -118,11 +118,6 @@ evalActions evaluator =
 replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
 replIRef = DbLayout.repl DbLayout.codeIRefs
 
-startBG ::
-    Eval.Actions (ValI m) -> Def.Expr (Val (ValI m)) ->
-    IO (Eval.Evaluator (ValI m))
-startBG = Eval.start toUUID ((_F #) . IRef.unsafeFromUUID)
-
 start :: Evaluator -> IO ()
 start evaluator =
     readIORef (eEvaluatorRef evaluator)
@@ -132,12 +127,11 @@ start evaluator =
         DbLayout.repl DbLayout.codeAnchors
         & Load.defExpr
         & runViewTransactionInIO (eDb evaluator)
-        <&> Lens.mapped . hflipped . hmapped1 %~ Const . (^. ExprIRef.iref)
-        >>= startBG
-            (evalActions evaluator) <&> Started
+        <&> Lens.mapped . hflipped . hmapped1 %~ Const . IRef.uuid . (^. ExprIRef.iref . _F)
+        >>= Eval.start (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)
 
-onEvaluator :: (Eval.Evaluator (ValI ViewM) -> IO ()) -> Evaluator -> IO ()
+onEvaluator :: (Eval.Evaluator -> IO ()) -> Evaluator -> IO ()
 onEvaluator action evaluator =
     readIORef (eEvaluatorRef evaluator)
     <&> (^? _Started)
@@ -153,10 +147,10 @@ stop evaluator =
 executeReplIOProcess :: Evaluator -> IO ()
 executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
 
-sumDependency :: Eval.Dependencies (ValI m) -> Set UUID
+sumDependency :: Eval.Dependencies -> Set UUID
 sumDependency (Eval.Dependencies subexprs globals) =
     mconcat
-    [ Set.map toUUID subexprs
+    [ subexprs
     , Set.map (toUUID . ExprIRef.defI) globals
     ]
 

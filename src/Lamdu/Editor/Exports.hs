@@ -6,14 +6,13 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
 import           Lamdu.Eval.Results (EvalResults)
-import           Lamdu.Expr.IRef (ValI)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Main as GUIMain
 
 import           Lamdu.Prelude
 
 exportActions ::
-    Config -> EvalResults (ValI ViewM) -> IO () -> GUIMain.ExportActions ViewM
+    Config -> EvalResults -> IO () -> GUIMain.ExportActions ViewM
 exportActions config evalResults executeIOProcess =
     GUIMain.ExportActions
     { GUIMain.exportReplActions =

@@ -17,6 +17,7 @@ import           Data.String (IsString(..))
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper
+import           Hyper.Type.Functor (_F)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Data.Anchors as Anchors
@@ -28,12 +29,13 @@ import           Lamdu.Data.Tag (getTagName, name)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EV
-import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Expr.UniqueId (toUUID)
 import           Lamdu.I18N.LangId (LangId(..))
 import qualified Lamdu.Paths as Paths
+import           Revision.Deltum.Hyper (HRef)
+import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 
@@ -98,7 +100,7 @@ formatResult (Ann _ b) =
 readRepl :: T ViewM (Def.Expr (Ann (HRef ViewM) # Term))
 readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
 
-exportFancy :: EvalResults (ValI ViewM) -> T ViewM (IO ())
+exportFancy :: EvalResults -> T ViewM (IO ())
 exportFancy evalResults =
     do
         exportedCode <- jsonExportRepl <&> AesonPretty.encodePretty
@@ -106,7 +108,7 @@ exportFancy evalResults =
         let replResult =
                 evalResults
                 ^? EV.erExprValues
-                . Lens.ix (repl ^. Def.expr . hAnn . ExprIRef.iref)
+                . Lens.ix (IRef.uuid (repl ^. Def.expr . hAnn . ExprIRef.iref . _F))
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"

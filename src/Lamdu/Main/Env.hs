@@ -54,7 +54,7 @@ import qualified Lamdu.Sugar.Config as SugarConfig
 import           Lamdu.Prelude
 
 data Env = Env
-    { _evalRes :: GUIMain.EvalResults ViewM
+    { _evalRes :: GUIMain.EvalResults
     , _exportActions :: GUIMain.ExportActions ViewM
     , _config :: Config
     , _theme :: Theme
@@ -73,7 +73,7 @@ instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
 instance GuiState.HasCursor Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions
-instance Has (GUIMain.EvalResults ViewM) Env where has = evalRes
+instance Has GUIMain.EvalResults Env where has = evalRes
 instance Has Settings Env where has = settings . Property.pVal
 instance Has Style Env where has = style
 instance Has MainLoop.Env Env where has = mainLoop
