@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
-import           Hyper (Ann(..), type (#), htraverse1, Pure(..), _Pure)
+import           Hyper (Ann(..), Pure(..), HWitness(..), HFunctor(..), type (#), _Pure, htraverse)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -381,7 +381,7 @@ decodeVal =
 
 encodeValBody :: V.Term # Ann (Const UUID) -> AesonTypes.Object
 encodeValBody body =
-    case body & htraverse1 %~ Lens.Const . encodeVal of
+    case encBody of
     V.BApp (V.App func arg) ->
         HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
     V.BLam (V.Lam (V.Var varId) res) ->
@@ -399,6 +399,12 @@ encodeValBody body =
         HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
     V.BLeaf x -> encodeLeaf x
     where
+        encBody :: V.Term # Const Encoded
+        encBody =
+            hmap
+            ( \case
+                HWitness V.W_Term_Term -> Lens.Const . encodeVal
+            ) body
         c x = x ^. Lens._Wrapped
 
 decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (V.Term # Ann (Const UUID))
@@ -435,8 +441,13 @@ decodeValBody obj =
       <*> (obj .: "toNomVal" <&> c)
       <&> V.BToNom
     , decodeLeaf obj <&> V.BLeaf
-    ] >>= htraverse1 (decodeVal . (^. Lens._Wrapped))
+    ] >>=
+    htraverse
+    ( \case
+        HWitness V.W_Term_Term -> decodeVal . (^. Lens._Wrapped)
+    )
     where
+        c :: Encoded -> Const Encoded # n
         c = Lens.Const
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
