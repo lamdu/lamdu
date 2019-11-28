@@ -163,7 +163,7 @@ addLetParam var redex =
             storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . hAnn)
     _ -> convertLetToLam var storedRedex & pure
     where
-        storedRedex = redex & hmapped1 %~ (^. Input.stored)
+        storedRedex = Redex.hmapRedex (const (^. Input.stored)) redex
 
 sameLet :: Redex # HRef m -> HRef m # V.Term
 sameLet redex = redex ^. Redex.arg . hAnn
@@ -190,7 +190,7 @@ processLet redex =
                     where
                         outerScope = outerScopeInfo ^. ConvertM.osiScope . V.scopeVarTypes
         case varsExitingScope of
-            [] -> sameLet (redex & hmapped1 %~ (^. Input.stored)) & pure & pure
+            [] -> sameLet (Redex.hmapRedex (const (^. Input.stored)) redex) & pure & pure
             [x] -> addLetParam x redex
             _ -> error "multiple osiVarsUnderPos not expected!?"
     where

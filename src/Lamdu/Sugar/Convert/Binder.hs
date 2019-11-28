@@ -52,7 +52,7 @@ makeInline ::
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after ++ before)
     | otherwise =
-        inlineLet stored (redex & hmapped1 %~ (^. Input.stored . ExprIRef.iref))
+        inlineLet stored (Redex.hmapRedex (const (^. Input.stored . ExprIRef.iref)) redex)
         & InlineVar
     where
         otherUses = filter (/= useId) uses

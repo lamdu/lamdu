@@ -1,13 +1,15 @@
-{-# LANGUAGE TemplateHaskell, TypeOperators, GADTs, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeOperators, RankNTypes, GADTs #-}
 
 module Lamdu.Sugar.Convert.Binder.Redex
-    ( Redex(..) , bodyScope, lam, lamPl, paramRefs, arg
+    ( Redex(..), bodyScope, lam, lamPl, paramRefs, arg
+    , hmapRedex
     , check
     ) where
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.TH.Nodes (makeHNodes)
+import           Hyper.Recurse
+import           Hyper.Type.AST.Lam
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Eval.Results (ScopeId)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -24,15 +26,19 @@ data Redex a = Redex
     }
 Lens.makeLenses ''Redex
 
-makeHNodes ''Redex
-
-instance HFunctor Redex where
-    hmap f r =
-        r
-        { _lamPl = f (HWitness W_Redex_Term) (r ^. lamPl)
-        , _lam = r ^. lam & hmapped1 . hflipped . hmapped1 %~ f (HWitness W_Redex_Term)
-        , _arg = r ^. arg & hflipped . hmapped1 %~ f (HWitness W_Redex_Term)
-        }
+hmapRedex ::
+    (forall n. HRecWitness V.Term n -> p # n -> q # n) ->
+    Redex # p -> Redex # q
+hmapRedex f r =
+    r
+    { _lamPl = f HRecSelf (r ^. lamPl)
+    , _lam =
+        hmap
+        ( \case
+            HWitness W_Lam_expr -> hflipped %~ hmap (\(HWitness w) -> f w)
+        ) (r ^. lam)
+    , _arg = r ^. arg & hflipped %~ hmap (\(HWitness w) -> f w)
+    }
 
 check ::
     V.Term # Ann (Input.Payload m a) ->
