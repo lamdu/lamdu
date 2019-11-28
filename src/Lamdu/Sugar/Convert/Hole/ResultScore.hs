@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators, GADTs, TypeApplications #-}
 module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where
@@ -40,7 +40,10 @@ score :: Val (Pure # Type) -> [Int]
 score x =
     (if Lens.has ExprLens.valBodyHole (x ^. hVal) then 1 else 0) :
     resultTypeScore (x ^. annotation) ++
-    (x ^.. hVal . htraverse1 >>= score)
+    hfoldMap
+    ( \case
+        HWitness V.W_Term_Term -> score
+    ) (x ^. hVal)
 
 resultScore :: Val (Pure # Type) -> HoleResultScore
 resultScore x =
@@ -49,12 +52,19 @@ resultScore x =
     , _hrsScore = score x
     }
 
-numFragments :: Val a -> Int
+numFragments :: Ann a # V.Term -> Int
 numFragments x =
-    sum (x ^.. hVal . htraverse1 <&> numFragments) +
+    inner +
     if Lens.has appliedHole x
     then 1
     else 0
+    where
+        inner =
+            hfoldMap @_ @[Int]
+            ( \case
+                HWitness V.W_Term_Term -> (:[]) . numFragments
+            ) (x ^. hVal)
+            & sum
 
-appliedHole :: Lens.Traversal' (Val a) ()
+appliedHole :: Lens.Traversal' (Ann a # V.Term) ()
 appliedHole = hVal . V._BApp . V.appFunc . hVal . V._BLeaf . V._LHole

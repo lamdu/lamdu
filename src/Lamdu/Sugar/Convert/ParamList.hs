@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.ParamList
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Pure(..), type (#), hflipped, hfolded1)
+import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -15,7 +15,6 @@ import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.New (newUnbound, newTerm)
 import           Lamdu.Calc.Infer (PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type)
 import qualified Lamdu.Calc.Type as T
@@ -48,10 +47,11 @@ mkFuncType paramList =
 
 loadForLambdas ::
     Monad m =>
-    Val (HRef m # V.Term, InferResult UVar # V.Term) ->
+    Ann (HRef m :*: InferResult UVar) # V.Term ->
     T m (PureInfer (V.Scope # UVar) ())
 loadForLambdas x =
-    Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList x
+    x & hflipped . hmapped1 %~ (\(p0 :*: p1) -> Const (p0, p1))
+    & Lens.itraverseOf ExprLens.subExprPayloads loadLambdaParamList
     <&> \exprWithLoadActions -> exprWithLoadActions ^.. hflipped . hfolded1 . Lens._Wrapped & sequence_
     where
         loadLambdaParamList (Pure V.BLam {}) pl = loadUnifyParamList pl

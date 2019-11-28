@@ -17,12 +17,14 @@ import qualified Control.Monad.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import           Hyper
-import           Hyper.Infer (InferResult(..), inferResult, infer)
+import           Hyper.Class.Infer.InferOf (RTraversableInferOf)
+import           Hyper.Infer
+import           Hyper.Recurse
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
-import           Hyper.Unify (Unify, unify)
+import           Hyper.Unify (UnifyGen, unify)
 import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
@@ -67,15 +69,15 @@ preparePayloads ::
     V.Scope # UVar ->
     Map NominalId (Pure # NominalDecl T.Type) ->
     CurAndPrev EvalResults ->
-    Annotated (HRef m # V.Term, InferResult (Pure :*: UVar) # V.Term) V.Term ->
+    Ann (HRef m :*: InferResult (Pure :*: UVar)) # V.Term ->
     Ann (Input.Payload m ()) # V.Term
 preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
     inferredVal
-    & hflipped . hmapped1 %~ f . getConst
+    & hflipped . hmapped1 %~ f
     & Input.preparePayloads
     & Input.initScopes inferState topLevelScope []
     where
-        f (valIProp, inferRes) =
+        f (valIProp :*: inferRes) =
             Input.PreparePayloadInput
             { Input.ppEntityId = eId
             , Input.ppMakePl =
@@ -150,24 +152,45 @@ data InferOut m = InferOut
 Lens.makeLenses ''InferOut
 
 resolve ::
-    forall t a m.
-    RTraversable t =>
-    Annotated (HRef m # V.Term, InferResult UVar # V.Term) t ->
-    PureInfer a (Annotated (HRef m # V.Term, InferResult (Pure :*: UVar) # V.Term) t)
+    forall pl.
+    Ann (pl :*: InferResult UVar) # V.Term ->
+    PureInfer (V.Scope # UVar) (Ann (pl :*: InferResult (Pure :*: UVar)) # V.Term)
 resolve =
-    hflipped (htraverse (const (Lens._Wrapped f)))
+    hflipped (htraverse (Proxy @(Infer (PureInfer (V.Scope # UVar))) #*# Proxy @RTraversableInferOf #> _2 f))
     where
         f ::
-            (HRef m # V.Term, InferResult UVar # V.Term) ->
-            PureInfer a (HRef m # V.Term, InferResult (Pure :*: UVar) # V.Term)
-        f (stored, inferred) =
-            Lens.from _HFlip (htraverse (Proxy @(Unify (PureInfer a)) #> \x -> applyBindings x <&> (:*: x))) inferred
-            <&> \x -> (stored, x)
+            forall n.
+            (RTraversableInferOf n, Infer (PureInfer (V.Scope # UVar)) n) =>
+            InferResult UVar # n ->
+            PureInfer (V.Scope # UVar) (InferResult (Pure :*: UVar) # n)
+        f inferred =
+            withDict (inferContext (Proxy @(PureInfer (V.Scope # UVar))) (Proxy @n)) $
+            Lens.from _HFlip
+            ( htraverse
+                ( Proxy @(UnifyGen (PureInfer (V.Scope # UVar))) #>
+                    \x -> applyBindings x <&> (:*: x)
+                )
+            ) inferred
+
+class InferResTids h where
+    inferResTids :: InferResult (Pure :*: UVar) # h -> [T.NominalId]
+    inferResTidsRecursive :: Proxy h -> Dict (HNodesConstraint h InferResTids)
+
+instance InferResTids V.Term where
+    inferResTids = (^.. inferResult . _1 . ExprLens.tIds)
+    inferResTidsRecursive _ = Dict
+
+instance Recursive InferResTids where
+    recurse =
+        inferResTidsRecursive . p
+        where
+            p :: Proxy (InferResTids h) -> Proxy h
+            p _ = Proxy
 
 runInferResult ::
     Monad m =>
     Debug.Monitors -> CurAndPrev EvalResults ->
-    PureInfer (V.Scope # UVar) (Annotated (HRef m # V.Term, InferResult UVar # V.Term) V.Term, V.Scope # UVar) ->
+    PureInfer (V.Scope # UVar) (Ann (HRef m :*: InferResult UVar) # V.Term, V.Scope # UVar) ->
     T m (Either (Pure # T.TypeError) (InferOut m))
 runInferResult _monitors evalRes act =
     -- TODO: use _monitors
@@ -183,7 +206,7 @@ runInferResult _monitors evalRes act =
             case resolve inferredTerm & runPureInfer V.emptyScope inferState1 of
             Left x -> Left x & pure
             Right (resolvedTerm, _inferState2) ->
-                hfoldMap (const (^.. Lens._Wrapped . _2 . inferResult . _1 . ExprLens.tIds))
+                hfoldMap (Proxy @InferResTids #> inferResTids . (^. _2))
                 (_HFlip # resolvedTerm)
                 & makeNominalsMap
                 <&>
@@ -209,7 +232,6 @@ inferDef inferFunc monitors results defExpr defVar =
             inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
         (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . Lens._2 . inferResult)
-    <&> Lens._1 . hflipped . hmapped1 %~ (\(x :*: r) -> Const (x, r))
     & runInferResult monitors results
 
 inferDefExpr ::
@@ -219,5 +241,4 @@ inferDefExpr ::
     T m (Either (Pure # T.TypeError) (InferOut m))
 inferDefExpr inferFunc monitors results defExpr =
     inferFunc defExpr
-    <&> Lens._1 . hflipped . hmapped1 %~ (\(x :*: r) -> Const (x, r))
     & runInferResult monitors results

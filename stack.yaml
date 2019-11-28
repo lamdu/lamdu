@@ -9,7 +9,7 @@ extra-deps:
 - github: lamdu/bindings-freetype-gl
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/lamdu-calculus
-  commit: df5ffb2b49b304ee5f05ca2e9fea4362f25ee85b
+  commit: b19d9dfd4a381cc946a9a97f985f56eff7eec896
 - github: lamdu/hypertypes
   commit: 89470d1d5ea6ca7fd1e52e262a5055a9c05e8223
 - github: lamdu/graphics-drawingcombinators
