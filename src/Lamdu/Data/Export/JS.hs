@@ -61,12 +61,13 @@ compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
 compile :: Monad m => Def.Expr (Ann (HRef m) # Term) -> T m String
 compile repl =
-    repl <&> hflipped . hmapped1 %~ Const . valId
+    repl <&> hflipped %~ hmap (const valId)
     & Compiler.compileRepl actions
     & execWriterT
     <&> unlines
     where
-        valId = Compiler.ValId . toUUID . (^. ExprIRef.iref)
+        valId :: HRef m # n -> Const Compiler.ValId # n
+        valId = Const . Compiler.ValId . toUUID . (^. ExprIRef.iref)
         actions =
             Compiler.Actions
             { Compiler.output = tell . (:[])
@@ -78,7 +79,7 @@ compile repl =
             , Compiler.readGlobal =
                 \globalId ->
                 ExprIRef.defI globalId & ExprLoad.def
-                <&> Def.defBody . Lens.mapped . hflipped . hmapped1 %~ Const . valId
+                <&> Def.defBody . Lens.mapped . hflipped %~ hmap (const valId)
                 <&> void
                 & lift
             , Compiler.readGlobalType =
