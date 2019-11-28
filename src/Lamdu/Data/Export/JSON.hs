@@ -135,7 +135,7 @@ instance ExportSubexpr V.Term where
 exportVal :: Monad m => Ann (HRef m) # V.Term -> Export m ()
 exportVal x =
     do
-        (x & hflipped . hmapped1 .~ Const ())
+        (x & hflipped %~ hmap (const (const (Const ()))))
             ^.. ExprLens.valGlobals mempty
             & traverse_ exportDef
         x ^.. ExprLens.valTags & traverse_ exportTag
@@ -152,8 +152,8 @@ exportDef globalId =
         def ^. Definition.defBody & traverse_ exportVal
         let def' =
                 def
-                & Definition.defBody . Lens.mapped . hflipped . hmapped1 %~
-                    Const . toUUID . (^. ExprIRef.iref)
+                & Definition.defBody . Lens.mapped . hflipped %~
+                    hmap (const (Const . toUUID . (^. ExprIRef.iref)))
         (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
     & withVisited visitedDefs globalId
     where
@@ -165,7 +165,7 @@ exportRepl =
         repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
         traverse_ exportVal repl
         repl
-            <&> hflipped . hmapped1 %~ Const . toUUID . (^. ExprIRef.iref)
+            <&> hflipped %~ hmap (const (Const . toUUID . (^. ExprIRef.iref)))
             & Codec.EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
@@ -213,7 +213,7 @@ export msg act exportPath =
 writeValAtUUID :: Monad m => Val UUID -> T m (ValI m)
 writeValAtUUID x =
     x
-    & hflipped . hmapped1 %~ (:*: Const ()) . (_ExistingRef . _F #) . IRef.unsafeFromUUID . getConst
+    & hflipped %~ hmap (const ((:*: Const ()) . (_ExistingRef . _F #) . IRef.unsafeFromUUID . getConst))
     & writeRecursively
     <&> (^. hAnn . _1)
 
