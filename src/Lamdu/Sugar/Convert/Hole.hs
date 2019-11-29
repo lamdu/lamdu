@@ -99,7 +99,7 @@ convert posInfo holePl =
     <*> makeSetToLiteral holePl
     <*> pure Nothing
     <&> BodyHole
-    >>= addActions [] holePl
+    >>= addActions (Const ()) holePl
     <&> annotation . pActions . mSetToHole .~ Nothing
 
 data ResultProcessor m = forall a. ResultProcessor

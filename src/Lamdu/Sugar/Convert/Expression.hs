@@ -40,7 +40,7 @@ convertLiteralCommon mkLit mkBody x exprPl =
     , _pSet =
       ExprIRef.writeValI iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
-    } & mkLit & BodyLiteral & addActions [] exprPl
+    } & mkLit & BodyLiteral & addActions (Const ()) exprPl
     where
         iref = exprPl ^. Input.stored . ExprIRef.iref
 

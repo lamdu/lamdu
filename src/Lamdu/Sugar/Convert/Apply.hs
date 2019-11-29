@@ -62,8 +62,8 @@ convert posInfo app@(V.App funcI argI) exprPl =
                     , argS
                     )
         convertAppliedCase app funcS argS exprPl & justToLeft
-        convertLabeled (app ^.. htraverse1) funcS argS exprPl & justToLeft
-        convertPrefix (app ^.. htraverse1) funcS argS exprPl & lift
+        convertLabeled app funcS argS exprPl & justToLeft
+        convertPrefix app funcS argS exprPl & lift
 
 validateDefParamsMatchArgs ::
     MonadPlus m =>
@@ -87,8 +87,8 @@ validateDefParamsMatchArgs var record frozenDeps =
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
 
 convertLabeled ::
-    (Monad m, Foldable f, Monoid a) =>
-    f (Ann (Input.Payload m a) # V.Term) ->
+    (Monad m, Monoid a, Recursively HFoldable h) =>
+    h # Ann (Input.Payload m a) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU m a)
 convertLabeled subexprs funcS argS exprPl =
@@ -128,8 +128,8 @@ convertLabeled subexprs funcS argS exprPl =
         addActionsWith userPayload exprPl bod & lift
 
 convertPrefix ::
-    (Monad m, Foldable f, Monoid a) =>
-    f (Ann (Input.Payload m a) # V.Term) ->
+    (Monad m, Monoid a, Recursively HFoldable h) =>
+    h # Ann (Input.Payload m a) ->
     ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convertPrefix subexprs funcS argS applyPl =

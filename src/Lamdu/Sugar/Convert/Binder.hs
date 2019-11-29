@@ -156,10 +156,7 @@ convertBinder expr@(Ann pl body) =
             { _hAnn =
                 a & pInput .~
                 ( pl & Input.userData .~
-                    mconcat
-                    (subexprPayloads
-                    (body ^.. htraverse1)
-                    (x ^.. SugarLens.childPayloads))
+                    mconcat (subexprPayloads body (x ^.. SugarLens.childPayloads))
                 )
                 & Const
             , _hVal = BinderExpr x
@@ -261,7 +258,7 @@ convertLam lam exprPl =
                     & fBody %~ markNodeLightParams paramNames
                     & Lambda LightLambda UnlimitedFuncApply
         BodyLam lambda
-            & addActions (lam ^.. V.lamOut) exprPl
+            & addActions lam exprPl
             <&> hVal %~
                 hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 

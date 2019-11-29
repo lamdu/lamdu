@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeFamilies, TypeApplications, TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, TypeFamilies, TypeApplications, TypeOperators, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
@@ -253,10 +253,14 @@ setChildReplaceParentActions =
         p = Proxy
 
 subexprPayloads ::
-    Foldable f =>
-    f (Ann (Input.Payload m a) # V.Term) -> [ConvertPayload m a] -> [a]
+    forall h m a.
+    Recursively HFoldable h =>
+    h # Ann (Input.Payload m a) -> [ConvertPayload m a] -> [a]
 subexprPayloads subexprs cullPoints =
-    subexprs ^.. Lens.folded . Lens.to (culledSubexprPayloads toCull) . Lens.folded
+    withDict (recursively (Proxy @(HFoldable h))) $
+    hfoldMap
+    ( Proxy @(Recursively HFoldable) #> culledSubexprPayloads toCull
+    ) subexprs
     where
         -- | The direct child exprs of the sugar expr
         cullSet =
@@ -287,8 +291,8 @@ addActionsWith userData exprPl bodyS =
             } & pure
 
 addActions ::
-    (Monad m, Monoid a, Foldable f) =>
-    f (Ann (Input.Payload m a) # V.Term) -> Input.Payload m a # V.Term ->
+    (Monad m, Monoid a, Recursively HFoldable h) =>
+    h # Ann (Input.Payload m a) -> Input.Payload m a # V.Term ->
     Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =

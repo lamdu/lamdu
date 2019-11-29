@@ -10,7 +10,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import           Hyper (Ann(..), type (#))
+import           Hyper (Ann(..), type (#), _ANode)
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -49,7 +49,7 @@ text (ToNom tid c@(Ann litPl bod)) toNomPl =
             , _pSet =
                 ExprIRef.writeValI litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
-            } & LiteralText & BodyLiteral & addActions [c] toNomPl
+            } & LiteralText & BodyLiteral & addActions (_ANode # c) toNomPl
             & lift
     where
         litIRef = litPl ^. Input.stored . ExprIRef.iref

@@ -201,7 +201,7 @@ convert ::
     V.Var -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
 convert param exprPl
     | param == ConvertFragment.fragmentVar =
-        addActions [] exprPl BodyPlaceHolder
+        addActions (Const ()) exprPl BodyPlaceHolder
     | otherwise =
         do
             convertGlobal param exprPl & justToLeft
@@ -210,4 +210,4 @@ convert param exprPl
             convertParam param & lift
         & runMatcherT
         <&> BodyGetVar
-        >>= addActions [] exprPl
+        >>= addActions (Const ()) exprPl

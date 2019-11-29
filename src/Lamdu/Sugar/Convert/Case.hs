@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
-import           Hyper (Ann(..), type (#), annotation, hVal, hAnn)
+import           Hyper (Ann(..), type (#), annotation, hVal, hAnn, _ANode)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -38,7 +38,7 @@ convertAbsurd pl =
     Composite.convertEmpty DataOps.case_ pl
     <&> Case LambdaCase
     <&> BodyCase
-    >>= addActions [] pl
+    >>= addActions (Const ()) pl
 
 _CaseThatIsLambdaCase ::
     Lens.Prism' (Case name i o # k) (Composite name i o # k)
@@ -98,7 +98,7 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
         (guard ifSugar *> convertIfElse setTo appliedCaseB)
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
-            & addActions [arg] exprPl & lift
+            & addActions (_ANode # arg) exprPl & lift
             <&> annotation . pInput . Input.entityId .~ funcS ^. annotation . pInput . Input.entityId
             <&> annotation . pInput . Input.userData <>~
                 (exprPl ^. Input.userData <> funcS ^. annotation . pInput . Input.userData)

@@ -58,7 +58,11 @@ recursivelyFixExpr mFix =
         recurse x =
             case x ^? argToHoleFunc of
             Just arg -> go IsHoleArg arg
-            Nothing -> traverse_ (go NotHoleArg) (x ^.. hVal . htraverse1)
+            Nothing ->
+                htraverse_
+                ( \case
+                    HWitness V.W_Term_Term -> go NotHoleArg
+                ) (x ^. hVal)
 
 changeFuncRes :: Monad m => V.Var -> Ann (HRef m) # V.Term -> T m ()
 changeFuncRes usedDefVar =

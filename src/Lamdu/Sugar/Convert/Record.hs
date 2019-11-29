@@ -25,7 +25,7 @@ convertEmpty ::
 convertEmpty pl =
     Composite.convertEmpty DataOps.recExtend pl
     <&> BodyRecord
-    >>= addActions [] pl
+    >>= addActions (Const ()) pl
 
 convertExtend ::
     (Monad m, Monoid a) =>

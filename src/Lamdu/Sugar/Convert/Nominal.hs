@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Nominal
     ) where
 
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
-import           Hyper (Ann(..), type (#))
+import           Hyper (Ann(..), type (#), _ANode)
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
@@ -30,7 +30,7 @@ convertToNom t@(ToNom tid x) pl =
             <$> ConvertTId.convert tid
             <*> ConvertBinder.convertBinder x
             <&> BodyToNom
-            >>= addActions [x] pl
+            >>= addActions (_ANode # x) pl
             & lift
     & runMatcherT
 
@@ -39,4 +39,4 @@ convertFromNom ::
     NominalId -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convertFromNom tid pl =
-    ConvertTId.convert tid <&> BodyFromNom >>= addActions [] pl
+    ConvertTId.convert tid <&> BodyFromNom >>= addActions (Const ()) pl

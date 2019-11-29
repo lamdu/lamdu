@@ -58,7 +58,7 @@ convert (V.Inject tag injected) exprPl =
                     void typeProtect
         ConvertTag.ref tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
             <&> (`Inject` inj) <&> BodyInject
-            >>= addActions [] exprPl
+            >>= addActions (Const ()) exprPl
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . ExprIRef.iref

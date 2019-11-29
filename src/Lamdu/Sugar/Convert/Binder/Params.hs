@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections, TypeFamilies, DataKinds, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections, TypeFamilies, DataKinds, TypeOperators, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams
@@ -81,7 +81,7 @@ mkStoredLam ::
     Input.Payload m a # V.Term -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamOut . hflipped . hmapped1 %~ (^. Input.stored))
+    (lam & V.lamOut . hflipped %~ hmap (const (^. Input.stored)))
     (pl ^. Input.stored)
 
 setParamList ::
@@ -112,7 +112,10 @@ unappliedUsesOfVar var (Ann _ (V.BApp (App f x))) =
         rx  | Lens.has ExprLens.valHole f && Lens.has ExprLens.valVar x = []
             | otherwise = unappliedUsesOfVar var x
 unappliedUsesOfVar var x =
-    (x ^.. hVal . hfolded1) >>= unappliedUsesOfVar var
+    hfoldMap
+    ( \case
+        HWitness V.W_Term_Term -> unappliedUsesOfVar var
+    ) (x ^. hVal)
 
 wrapUnappliedUsesOfVar :: Monad m => V.Var -> Ann (HRef m) # V.Term -> T m ()
 wrapUnappliedUsesOfVar var = traverse_ DataOps.applyHoleTo . unappliedUsesOfVar var
@@ -121,7 +124,10 @@ argsOfCallTo :: V.Var -> Ann a # V.Term -> [a # V.Term]
 argsOfCallTo var (Ann _ (V.BApp (App (Ann _ (V.BLeaf (V.LVar v))) x)))
     | v == var = [x ^. hAnn]
 argsOfCallTo var x =
-    (x ^.. hVal . hfolded1) >>= argsOfCallTo var
+    hfoldMap
+    ( \case
+        HWitness V.W_Term_Term -> argsOfCallTo var
+    ) (x ^. hVal)
 
 changeCallArgs ::
     Monad m =>
@@ -313,9 +319,10 @@ changeGetFieldTags param prevTag chosenTag x =
     V.BLeaf (V.LVar v)
         | v == param -> DataOps.applyHoleTo (x ^. hAnn) & void
     b ->
-        traverse_
-        (changeGetFieldTags param prevTag chosenTag)
-        (b ^.. htraverse1)
+        htraverse_
+        ( \case
+            HWitness V.W_Term_Term -> changeGetFieldTags param prevTag chosenTag
+        ) b
 
 setFieldParamTag ::
     Monad m =>
@@ -627,7 +634,12 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
             case expr ^. hVal of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
             V.BGetField (V.GetField r _) -> go True r
-            x -> all (go False) (x ^.. htraverse1)
+            x ->
+                hfoldMap @_ @[Bool]
+                ( \case
+                    HWitness V.W_Term_Term -> (:[]) . go False
+                ) x
+                & and
 
 -- Post process param add and delete actions to detach lambda.
 -- This isn't done for all actions as some already perform this function.
@@ -748,7 +760,7 @@ convertEmptyParams binderKind x =
     , _cpAddFirstParam =
         do
             (newParam, _) <-
-                x & hflipped . hmapped1 %~ (^. Input.stored)
+                x & hflipped %~ hmap (const (^. Input.stored))
                 & convertBinderToFunction DataOps.newHole binderKind
             postProcess
             EntityId.ofTaggedEntity newParam Anchors.anonTag & pure

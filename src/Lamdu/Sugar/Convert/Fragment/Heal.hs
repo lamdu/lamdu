@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators, TypeApplications, ScopedTypeVariables, GADTs #-}
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
@@ -37,43 +37,53 @@ data PriorityClass
 
 type Priority = (PriorityClass, Int)
 
-fixPriorities ::
-    Annotated ((a, Int), b) Term ->
-    Annotated ((a, Int), b) Term
-fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
-    case b of
-    V.BGetField g ->
-        g & V.getFieldRecord . score +~ (-1) & V.BGetField
-        & res 1
-    V.BRecExtend r -> V.BRecExtend r & res (-1)
-    V.BCase c -> c & Row.eVal . score +~ (-1) & V.BCase & res (-1)
-    V.BApp a -> a & V.appFunc . score +~ (-1) & V.BApp & res 0
-    _ -> x
-    where
-        res diff = Ann (Const ((cat, priority + diff), pl))
-        score = annotation . _1 . _2
+class HFunctor h => Prepare h where
+    fixPriorities ::
+        Annotated ((a, Int), b) h ->
+        Annotated ((a, Int), b) h
+    wrap :: Monad m => HRef m # h -> T m ()
+
+instance Prepare Term where
+    fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
+        case b of
+        V.BGetField g ->
+            g & V.getFieldRecord . score +~ (-1) & V.BGetField
+            & res 1
+        V.BRecExtend r -> V.BRecExtend r & res (-1)
+        V.BCase c -> c & Row.eVal . score +~ (-1) & V.BCase & res (-1)
+        V.BApp a -> a & V.appFunc . score +~ (-1) & V.BApp & res 0
+        _ -> x
+        where
+            res diff = Ann (Const ((cat, priority + diff), pl))
+            score = annotation . _1 . _2
+    wrap a = () <$ DataOps.applyHoleTo a
 
 prepareInFragExpr ::
-    Monad m =>
-    Annotated (HRef m # Term) Term ->
-    Annotated (Priority, EditAction (T m ())) Term
-prepareInFragExpr (Ann (Const a) v) =
-    v & htraverse1 %~ prepareInFragExpr
-    & Ann (Const ((InFragment, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))
+    forall m h.
+    (Monad m, Recursively Prepare h) =>
+    Ann (HRef m) # h ->
+    Annotated (Priority, EditAction (T m ())) h
+prepareInFragExpr (Ann a v) =
+    withDict (recursively (Proxy @(Prepare h))) $
+    hmap (Proxy @(Recursively Prepare) #> prepareInFragExpr) v
+    & Ann (Const ((InFragment, 0), OnNoUnify (wrap a)))
     & fixPriorities
 
 prepare ::
     Monad m =>
     ValI m ->
-    Annotated (HRef m # Term) Term ->
+    Ann (HRef m) # Term ->
     Annotated (Priority, EditAction (T m ())) Term
-prepare fragI (Ann (Const a) v) =
+prepare fragI (Ann a v) =
     if fragI == a ^. iref
     then
-        fragmented ^. hVal & htraverse1 %~ prepareInFragExpr
-        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. annotation . iref))))
+        fragmented ^. hVal & hmap (Proxy @(Recursively Prepare) #> prepareInFragExpr)
+        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. hAnn . iref))))
     else
-        v & htraverse1 %~ prepare fragI
+        hmap
+        ( \case
+            HWitness V.W_Term_Term -> prepare fragI
+        ) v
         & Ann (Const ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))
     & fixPriorities
     where
@@ -85,7 +95,7 @@ healMismatch =
         postProcess <- ConvertM.postProcessAssert
         topLevelExpr <-
             Lens.view ConvertM.scTopLevelExpr
-            <&> hflipped . hmapped1 %~ Const . (^. Input.stored)
+            <&> hflipped %~ hmap (const (^. Input.stored))
         deps <- Lens.view (ConvertM.scFrozenDeps . Property.pVal)
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
         pure $
@@ -108,9 +118,9 @@ healMismatch =
             & either (error "bug in heal!")
                 -- Doing the inner changes first and then the outer ones so that
                 -- setting inner properties won't override outer iref values
-                (traverse_ act . reverse . (^.. hflipped . hfolded1) . fst)
+                (sequence_ . reverse . hfoldMap (const act) . (^. _1 . hflipped))
             >> postProcess
     where
-        act (Const (_, OnUnify x) :*: Good{}) = x
-        act (Const (_, OnNoUnify x) :*: Mismatch{}) = x
-        act _ = pure ()
+        act (Const (_, OnUnify x) :*: Good{}) = [x]
+        act (Const (_, OnNoUnify x) :*: Mismatch{}) = [x]
+        act _ = []

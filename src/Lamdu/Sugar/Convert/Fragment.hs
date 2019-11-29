@@ -119,7 +119,7 @@ convertAppliedHole ::
     Input.Payload m a # V.Term ->
     ExpressionU m a ->
     MaybeT (ConvertM m) (ExpressionU m a)
-convertAppliedHole posInfo (V.App funcI argI) exprPl argS =
+convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
         guard (Lens.has ExprLens.valHole funcI)
@@ -154,7 +154,7 @@ convertAppliedHole posInfo (V.App funcI argI) exprPl argS =
                 , _fTypeMatch = isTypeMatch
                 , _fOptions = options
                 } & pure
-            >>= addActions [funcI, argI] exprPl
+            >>= addActions app exprPl
             & lift
     <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
     where
