@@ -114,7 +114,7 @@ holeResultProcessor :: Monad m => ResultProcessor m
 holeResultProcessor =
     ResultProcessor
     { rpEmptyPl = ()
-    , rpPostProcess = pure . (hflipped . hmapped1 %~ (Const () :*:))
+    , rpPostProcess = pure . (hflipped %~ hmap (const (Const () :*:)))
     , rpPreConversion = id
     }
 
@@ -145,7 +145,7 @@ mkHoleSuggesteds sugarContext resultProcessor holePl =
     -- TODO: use a specific monad here that has no Either
     & assertSuccessfulInfer
     & fst
-    <&> hflipped . hmapped1 .~ Const () -- TODO: "Avoid re-inferring known type here"
+    <&> hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
     <&> mkOption sugarContext resultProcessor holePl
     where
         inferContext = sugarContext ^. ConvertM.scInferContext
@@ -269,7 +269,7 @@ loadNewDeps currentDeps scope x =
             Ord r =>
             Getting' Deps (Map r x) -> Folding' (Ann (Const ()) # V.Term) r -> [r]
         newDeps depsLens valLens =
-            Set.fromList ((x & hflipped . hmapped1 .~ Const ()) ^.. valLens)
+            Set.fromList ((x & hflipped %~ hmap (const (const (Const ())))) ^.. valLens)
             `Set.difference` Map.keysSet (currentDeps ^. depsLens)
             & Set.toList
         newDepVars = newDeps depsGlobalTypes (ExprLens.valGlobals scopeVars)

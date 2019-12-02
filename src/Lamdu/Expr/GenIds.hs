@@ -133,7 +133,9 @@ randomizeParamIdsG preNG gen initMap =
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
 
-randomizeParamIds :: RandomGen g => g -> Val a -> Val a
+randomizeParamIds ::
+    RandomGen g =>
+    g -> Ann a # V.Term -> Ann a # V.Term
 randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty
 
 randomizeExprAndParams ::
