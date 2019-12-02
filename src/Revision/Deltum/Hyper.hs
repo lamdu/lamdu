@@ -90,6 +90,7 @@ toHRefs setValI (Ann (i :*: a) body) =
             ( \n ->
                 x & hAnn . _1 .~ n
                 & s
+                & getConst
                 & hmap (const (^. hAnn . Lens._1))
                 & Transaction.writeIRef (i ^. _F)
             ) x
