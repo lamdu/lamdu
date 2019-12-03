@@ -6,12 +6,12 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Hyper
+import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Type.AST.Scheme (QVarInstances(..))
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type(..), Row(..), Types(..))
 import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
@@ -36,16 +36,16 @@ compositeTypeScore x =
     RExtend (RowExtend _ t r) ->
         max (resultTypeScore t) (compositeTypeScore r)
 
-score :: Val (Pure # Type) -> [Int]
+score :: Ann (InferResult Pure) # V.Term -> [Int]
 score x =
     (if Lens.has ExprLens.valBodyHole (x ^. hVal) then 1 else 0) :
-    resultTypeScore (x ^. annotation) ++
+    resultTypeScore (x ^. hAnn . inferResult) ++
     hfoldMap
     ( \case
         HWitness V.W_Term_Term -> score
     ) (x ^. hVal)
 
-resultScore :: Val (Pure # Type) -> HoleResultScore
+resultScore :: Ann (InferResult Pure) # V.Term -> HoleResultScore
 resultScore x =
     HoleResultScore
     { _hrsNumFragments = numFragments x

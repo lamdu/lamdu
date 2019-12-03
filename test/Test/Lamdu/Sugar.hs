@@ -8,6 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper
+import           Hyper.Type.Functor
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Term (Term)
@@ -29,6 +30,7 @@ import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
+import           Revision.Deltum.IRef (IRef(..))
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.Lamdu.Db (withDB)
 import           Test.Lamdu.Env (EvalResults)
@@ -75,17 +77,13 @@ data WorkAreaLowLevel = WorkAreaLowLevel
     , wallPanes :: [PaneLowLevel]
     }
 
-workAreaLowLevelValProps :: WorkAreaLowLevel -> [HRef ViewM # Term]
-workAreaLowLevelValProps (WorkAreaLowLevel r p) =
-    defExprs ^.. Lens.folded . Def.expr . hflipped . hfolded1
+workAreaLowLevelEntityIds :: WorkAreaLowLevel -> Set EntityId
+workAreaLowLevelEntityIds (WorkAreaLowLevel r p) =
+    defExprs ^.. Lens.folded . Def.expr . hflipped
+    >>= hfoldMap (\_ x -> [EntityId.EntityId (uuid (x ^. iref . _F))])
+    & Set.fromList
     where
         defExprs = r : p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
-
-workAreaLowLevelEntityIds :: WorkAreaLowLevel -> Set EntityId
-workAreaLowLevelEntityIds wall =
-    workAreaLowLevelValProps wall
-    <&> EntityId.ofValI . (^. iref)
-    & Set.fromList
 
 loadPane :: Anchors.Pane ViewM -> T ViewM PaneLowLevel
 loadPane (Anchors.PaneDefinition def) = ExprLoad.def def <&> PaneDefLowLevel

@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, TypeFamilies, PolyKinds #-}
+{-# LANGUAGE ExistentialQuantification, TypeFamilies, PolyKinds, RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables, TypeOperators, TupleSections, TypeApplications #-}
 module Lamdu.Sugar.Convert.Hole
     ( convert
@@ -31,7 +31,7 @@ import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import           Hyper
-import           Hyper.Infer (InferResult(..), inferResult)
+import           Hyper.Infer
 import           Hyper.Recurse (wrap, unwrap)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
@@ -39,7 +39,6 @@ import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (F(..), _F)
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
-import           Hyper.Unify.Apply (applyBindings)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
 import qualified Lamdu.Annotations as Annotations
@@ -106,7 +105,7 @@ data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a
     , rpPostProcess ::
         Ann (Write m :*: InferResult UVar) # V.Term ->
-        ResultGen m (Ann (Const a :*: Write m :*: InferResult UVar) # V.Term)
+        ResultGen m (Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term)
     , rpPreConversion :: Preconversion m a
     }
 
@@ -114,7 +113,7 @@ holeResultProcessor :: Monad m => ResultProcessor m
 holeResultProcessor =
     ResultProcessor
     { rpEmptyPl = ()
-    , rpPostProcess = pure . (hflipped %~ hmap (const (Const () :*:)))
+    , rpPostProcess = pure . (hflipped %~ hmap (const (_1 %~ (Const () :*:))))
     , rpPreConversion = id
     }
 
@@ -138,7 +137,7 @@ mkHoleSuggesteds ::
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferRes . inferResult . Lens._2
     & Suggest.forType
-    & runPureInfer (holePl ^. Input.inferScope) inferContext
+    & runPureInfer (holePl ^. Input.inferScope) inferCtx
 
     -- TODO: Change ConvertM to be stateful rather than reader on the
     -- sugar context, to collect union-find updates.
@@ -148,7 +147,7 @@ mkHoleSuggesteds sugarContext resultProcessor holePl =
     <&> hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
     <&> mkOption sugarContext resultProcessor holePl
     where
-        inferContext = sugarContext ^. ConvertM.scInferContext
+        inferCtx = sugarContext ^. ConvertM.scInferContext
 
 strip :: Recursively HFunctor h => Ann a # h -> Pure # h
 strip = unwrap (const (^. hVal))
@@ -279,12 +278,12 @@ loadNewDeps currentDeps scope x =
 -- Used for hole's base exprs, to perform sugaring and get names from sugared exprs.
 -- TODO: We shouldn't need to perform sugaring for base exprs, and this should be removed.
 prepareUnstoredPayloads ::
-    Val (InferResult (Pure :*: UVar) # V.Term, EntityId, a) ->
+    Ann (InferResult (Pure :*: UVar) :*: Const (EntityId, a)) # V.Term ->
     Ann (Input.Payload m a) # V.Term
 prepareUnstoredPayloads v =
-    v & hflipped . hmapped1 %~ mk . getConst & Input.preparePayloads
+    v & hflipped %~ hmap (const mk) & Input.preparePayloads
     where
-        mk (inferPl, eId, x) =
+        mk (inferPl :*: Const (eId, x)) =
             Input.PreparePayloadInput
             { Input.ppEntityId = eId
             , Input.ppMakePl =
@@ -343,10 +342,11 @@ sugar sugarContext holePl v =
             <&> assertSuccessfulInfer
             <&>
             ( \((term, topLevelScope), inferCtx) ->
-                ( (hflipped . htraverse1) mkPayload term
-                    & runPureInfer scope inferCtx
+                ( inferUVarsApplyBindings term
+                    & runPureInfer () inferCtx
                     & assertSuccessfulInfer
                     & fst
+                    & hflipped %~ hmap (const mkPayload)
                     & EntityId.randomizeExprAndParams
                         (Random.genFromHashable (holePl ^. Input.entityId))
                     & prepareUnstoredPayloads
@@ -364,16 +364,8 @@ sugar sugarContext holePl v =
                 )
     where
         scope = holePl ^. Input.inferScope
-        mkPayload ::
-            (Const a :*: InferResult UVar) # V.Term ->
-            PureInfer (V.Scope # UVar)
-                (Const (EntityId -> (InferResult (Pure :*: UVar) # V.Term, EntityId, a)) # V.Term)
         mkPayload (Const x :*: inferPl) =
-            htraverseFlipped
-            (Proxy @(Unify (PureInfer (V.Scope # UVar))) #> \i -> applyBindings i <&> (:*: i))
-            inferPl
-            <&> (\r entityId -> (r, entityId, x))
-            <&> Const
+            _HFunc # \(Const entityId) -> inferPl :*: Const (entityId, x)
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [HPlain V.Term]
 getLocalScopeGetVars sugarContext par
@@ -393,24 +385,24 @@ getLocalScopeGetVars sugarContext par
 writeResult ::
     Monad m =>
     Preconversion m a -> InferState -> HRef m # V.Term ->
-    Ann (Const a :*: Write m :*: InferResult UVar) # V.Term ->
+    Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term ->
     T m (Ann (Input.Payload m ()) # V.Term)
-writeResult preConversion inferContext holeStored inferredVal =
+writeResult preConversion inferCtx holeStored inferredVal =
     do
         writtenExpr <-
-            inferredVal
-            & hflipped . hmapped1 %~ intoStorePoint
+            inferUVarsApplyBindings inferredVal
+            & runPureInfer () inferCtx
+            & assertSuccessfulInfer
+            & fst
+            & hflipped %~ hmap (\_ ((Const a :*: w) :*: i) -> w :*: i :*: Const a)
             & writeExprMStored (holeStored ^. ExprIRef.iref)
             <&> ExprIRef.toHRefs (holeStored ^. ExprIRef.setIref)
-            <&> addBindingsAll
-            <&> hflipped . hmapped1 %~ toPayload
+            <&> hflipped %~ hmap (const toPayload)
             <&> Input.preparePayloads
         (holeStored ^. ExprIRef.setIref) (writtenExpr ^. hAnn . Input.stored . ExprIRef.iref)
         preConversion writtenExpr & pure
     where
-        intoStorePoint (Const a :*: mStorePoint :*: inferred) =
-            mStorePoint :*: Const (inferred, a)
-        toPayload (stored :*: Const (inferRes, a)) =
+        toPayload (stored :*: inferRes :*: Const a) =
             -- TODO: Evaluate hole results instead of Map.empty's?
             Input.PreparePayloadInput
             { Input.ppEntityId = eId
@@ -428,33 +420,16 @@ writeResult preConversion inferContext holeStored inferredVal =
                 }
             }
             where
-                eId = stored ^. ExprIRef.iref & EntityId.ofValI
+                eId = stored ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId
         noEval = Input.EvalResultsForExpr Map.empty Map.empty
-        addBindingsAll ::
-            Ann (HRef m :*: Const (InferResult UVar # V.Term, a)) # V.Term ->
-            Ann (HRef m :*: Const (InferResult (Pure :*: UVar) # V.Term, a)) # V.Term
-        addBindingsAll x =
-            (hflipped . htraverse1 . Lens._2 . Lens._Wrapped) addBindings x
-            & runPureInfer () inferContext
-            & assertSuccessfulInfer
-            & fst
-        addBindings ::
-            (InferResult UVar # V.Term, a) ->
-            PureInfer () (InferResult (Pure :*: UVar) # V.Term, a)
-        addBindings (inferRes, a) =
-            htraverseFlipped
-            (Proxy @(Unify (PureInfer ())) #> \i -> applyBindings i <&> (:*: i))
-            inferRes
-            <&> (, a)
 
 detachValIfNeeded ::
-    (InferResult UVar # V.Term -> a # V.Term) ->
-    (a # V.Term -> InferResult UVar # V.Term) ->
+    (a # V.Term) ->
     UVar # T.Type ->
-    Ann a # V.Term ->
+    Ann (a :*: InferResult UVar) # V.Term ->
     -- TODO: PureInfer?
-    State InferState (Ann a # V.Term)
-detachValIfNeeded mkPl getPlInfer holeType x =
+    State InferState (Ann (a :*: InferResult UVar) # V.Term)
+detachValIfNeeded defPl holeType x =
     do
         unifyRes <-
             do
@@ -462,25 +437,22 @@ detachValIfNeeded mkPl getPlInfer holeType x =
                 -- Verify occurs checks.
                 -- TODO: share with applyBindings that happens for sugaring.
                 s <- State.get
-                _ <-
-                    x ^.. hflipped . hfolded1 . Lens.to getPlInfer
-                    & traverse_
-                        (htraverseFlipped (Proxy @(Unify (PureInfer ())) #> applyBindings))
+                _ <- inferUVarsApplyBindings x
                 r <$ State.put s
             & liftPureInfer
         let mkFragmentExpr =
                 FuncType xType holeType & T.TFun
                 & UTermBody mempty & UTerm & newVar binding
                 <&> \funcType ->
-                let func = V.BLeaf V.LHole & Ann (mkPl (inferResult # funcType))
-                in  func `V.App` x & V.BApp & Ann (mkPl (inferResult # holeType))
+                let func = V.BLeaf V.LHole & Ann (defPl :*: inferResult # funcType)
+                in  func `V.App` x & V.BApp & Ann (defPl :*: inferResult # holeType)
         case unifyRes of
             Right{} -> pure x
             Left{} ->
                 liftPureInfer mkFragmentExpr
                 <&> assertSuccessfulInfer
     where
-        xType = getPlInfer (x ^. hAnn) ^. inferResult
+        xType = x ^. hAnn . _2 . inferResult
         liftPureInfer ::
             PureInfer () a -> State InferState (Either (Pure # T.TypeError) a)
         liftPureInfer act =
@@ -506,7 +478,7 @@ mkResultVals sugarContext scope seed =
             form <-
                 Suggest.termTransformsWithModify (Const () :*:) (^. _2) i
                 & mapStateT ListClass.fromList
-            pure (newDeps, form & hflipped . hmapped1 . _1 .~ WriteNew)
+            pure (newDeps, form & hflipped %~ hmap (const (_1 .~ WriteNew)))
     where
         txn = lift . lift
 
@@ -514,7 +486,7 @@ mkResult ::
     Monad m =>
     Preconversion m a -> ConvertM.Context m -> T m () ->
     Input.Payload m b # V.Term ->
-    Ann (Const a :*: Write m :*: InferResult UVar) # V.Term ->
+    Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term ->
     T m (HoleResult InternalName (T m) (T m))
 mkResult preConversion sugarContext updateDeps holePl x =
     do
@@ -552,7 +524,7 @@ toScoredResults ::
     (Monad f, Monad m) =>
     a -> Preconversion m a -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term ->
-    StateT InferState f (Deps, Ann (Const a :*: Write m :*: InferResult UVar) # V.Term) ->
+    StateT InferState f (Deps, Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term) ->
     f ( HoleResultScore
       , T m (HoleResult InternalName (T m) (T m))
       )
@@ -561,22 +533,32 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
     >>= _2 %%~
         toStateT .
         detachValIfNeeded
-            (\x -> Const emptyPl :*: WriteNew :*: x)
-            (^. _2 . _2) (holePl ^. Input.inferRes. inferResult . Lens._2)
+            (Const emptyPl :*: WriteNew)
+            (holePl ^. Input.inferRes. inferResult . Lens._2)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-    <&> \((newDeps, x), inferContext) ->
+    <&> \((newDeps, x), inferCtx) ->
     let newSugarContext =
             sugarContext
-            & ConvertM.scInferContext .~ inferContext
+            & ConvertM.scInferContext .~ inferCtx
             & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
         updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( x & hflipped . htraverse1 %%~ fmap Const . applyBindings . (^. _2 . _2 . inferResult)
-          & runPureInfer (holePl ^. Input.inferScope) inferContext
-          & assertSuccessfulInfer
-          & fst
-          & resultScore
+    in  ( inferUVarsApplyBindings x
+            <&> hflipped %~ hmap
+                ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
+                    \w ->
+                    withDict (recursively (p0 w)) $
+                    withDict (inferOfConstraint (Proxy @HFunctor) w) $
+                    (hflipped %~ hmap (const (^. _1))) . (^. _2)
+                )
+            & runPureInfer () inferCtx
+            & assertSuccessfulInfer
+            & fst
+            & resultScore
         , mkResult preConversion newSugarContext updateDeps holePl x
         )
+    where
+        p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
+        p0 _ = Proxy
 
 mkResults ::
     Monad m =>
@@ -611,8 +593,9 @@ randomizeNonStoredRefs ::
     Ann (ExprIRef.Write m :*: a) # V.Term ->
     Ann (ExprIRef.Write m :*: a) # V.Term
 randomizeNonStoredRefs uniqueIdent gen v =
-    evalState ((hflipped . htraverse1 . _1) f v) gen
+    evalState (hflipped (htraverse (const (_1 f))) v) gen
     where
+        f :: Write m # h -> State Random.StdGen (Write m # h)
         f ExprIRef.WriteNew =
             state random
             <&> UUID.toByteString <&> BS.strictify
@@ -635,7 +618,7 @@ writeExprMStored exprIRef exprMStorePoint =
     where
         uniqueIdent =
             Binary.encode
-            ( exprMStorePoint & hflipped . hmapped1 %~ Const . (^. _1)
+            ( exprMStorePoint & hflipped %~ hmap (const (^. _1))
             , exprIRef
             )
             & SHA256.hashlazy

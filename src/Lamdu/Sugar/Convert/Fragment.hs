@@ -1,6 +1,6 @@
 -- | Convert applied holes to Fragments
 
-{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators #-}
+{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole
@@ -18,7 +18,8 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import           Hyper
-import           Hyper.Infer (InferResult, inferResult, inferUVarsApplyBindings)
+import           Hyper.Class.Infer.InferOf (InferOfConstraint)
+import           Hyper.Infer
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Apply (applyBindings)
@@ -90,10 +91,21 @@ mkAppliedHoleSuggesteds ::
     [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
-    (Suggest.termTransforms (WriteNew :*:) (^. _2) (argI & hflipped . hmapped1 %~ onPl))
-    (sugarContext ^. ConvertM.scInferContext)
+    ( Suggest.termTransforms (WriteNew :*:) (^. _2)
+        ( argI & hflipped %~
+            hmap
+            ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
+                \w ->
+                withDict (recursively (p0 w)) $
+                withDict (inferOfConstraint (Proxy @HFunctor) w)
+                onPl
+            )
+        )
+    ) (sugarContext ^. ConvertM.scInferContext)
     <&> onSuggestion
     where
+        p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
+        p0 _ = Proxy
         onPl pl =
             ExistingRef (pl ^. Input.stored . iref) :*:
             (pl ^. Input.inferRes & hflipped %~ hmap (const (^. Lens._2)))
@@ -178,7 +190,7 @@ holeResultsEmplaceFragment ::
     Monad m =>
     Ann (Input.Payload n a) # V.Term ->
     Ann (Write n :*: InferResult UVar) # V.Term ->
-    Hole.ResultGen m (Ann (Const IsFragment :*: Write n :*: InferResult UVar) # V.Term)
+    Hole.ResultGen m (Ann ((Const IsFragment :*: Write n) :*: InferResult UVar) # V.Term)
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
@@ -192,7 +204,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
             -- emplacing another fragment wrapping the fragmentExpr:
             ListClass.fromList
             [ do
-                _ <- unify fragmentType (pl ^. _2 . _2 . inferResult)
+                _ <- unify fragmentType (pl ^. _2 . inferResult)
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
@@ -201,31 +213,43 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 fragmentExpr <$ State.put t
                 & liftPureInfer ()
                 & mapStateT exceptToListT
-            , FuncType (pl ^. _2 . _2 . inferResult) fragmentType
+            , FuncType (pl ^. _2 . inferResult) fragmentType
                 & T.TFun
                 & UTermBody mempty & UTerm & newVar binding
                 & liftPureInfer () & mapStateT exceptToListT
                 <&>
                 \t ->
                 V.App
-                (Ann (Const NotFragment :*: WriteNew :*: inferResult # t) (V.BLeaf V.LHole))
+                (Ann ((Const NotFragment :*: WriteNew) :*: inferResult # t) (V.BLeaf V.LHole))
                 fragmentExpr
-                & V.BApp & Ann (Const NotFragment :*: WriteNew :*: pl ^. _2 . _2)
+                & V.BApp & Ann ((Const NotFragment :*: WriteNew) :*: pl ^. _2)
             ]
             & lift
             & join
             & mapStateT (ListClass.take 1)
-        fragmentExpr = rawFragmentExpr & hflipped . hmapped1 %~ onFragmentPayload
+        fragmentExpr =
+            rawFragmentExpr
+            & hflipped %~
+                hmap
+                ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
+                    \w ->
+                    withDict (recursively (p0 w)) $
+                    withDict (inferOfConstraint (Proxy @HFunctor) w)
+                    onFragmentPayload
+                )
+        p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
+        p0 _ = Proxy
         onFragmentPayload pl =
-            Const IsFragment :*: ExistingRef (pl ^. Input.stored . iref)
-            :*: (pl ^. Input.inferRes & inferResult %~ (^. _2))
+            (Const IsFragment :*: ExistingRef (pl ^. Input.stored . iref))
+            :*: (pl ^. Input.inferRes & hflipped %~ hmap (const (^. _2)))
         fragmentType = rawFragmentExpr ^. hAnn . Input.inferRes . inferResult . _2
+
 data IsFragment = IsFragment | NotFragment
 
 markNotFragment ::
     Ann (Write n :*: InferResult UVar) # V.Term ->
-    Ann (Const IsFragment :*: Write n :*: InferResult UVar) # V.Term
-markNotFragment = hflipped . hmapped1 %~ (Const NotFragment :*:)
+    Ann ((Const IsFragment :*: Write n) :*: InferResult UVar) # V.Term
+markNotFragment = hflipped %~ hmap (const (_1 %~ (Const NotFragment :*:)))
 
 -- TODO: Unify type according to IsFragment, avoid magic var
 fragmentVar :: V.Var
@@ -241,16 +265,29 @@ replaceFragment parentEntityId idxInParent (Ann pl bod) =
         V.LVar fragmentVar & V.BLeaf
         & Ann (pl & Input.entityId .~ EntityId.ofFragmentUnder idxInParent parentEntityId & Input.userData .~ ())
     NotFragment ->
-        bod & Lens.indexing htraverse1 %@~ replaceFragment (pl ^. Input.entityId)
+        htraverse
+        ( \case
+            HWitness V.W_Term_Term ->
+                \x ->
+                do
+                    i <- Lens.use id
+                    id += 1
+                    replaceFragment (pl ^. Input.entityId) i x & pure
+        ) bod
+        & (`State.evalState` (0 :: Int))
         & Ann (pl & Input.userData .~ ())
 
+newtype Foo f a h = Foo { getFoo :: f (Ann a h) }
+
 emplaceInHoles ::
+    forall f a.
     Applicative f =>
     (a # V.Term -> f (Ann a # V.Term)) ->
     Ann a # V.Term -> [f (Ann a # V.Term)]
 emplaceInHoles replaceHole =
     map fst . filter snd . (`runStateT` False) . go
     where
+        go :: Ann a # V.Term -> StateT Bool [] (f (Ann a # V.Term))
         go oldVal@(Ann x bod) =
             do
                 alreadyReplaced <- State.get
@@ -270,22 +307,24 @@ emplaceInHoles replaceHole =
                                 , pure (pure oldVal)
                                 ]
                         _ ->
-                            htraverse1 (fmap Lens.Const . go) bod
-                            <&> Lens.sequenceAOf (htraverse1 . Lens._Wrapped)
-                            <&> Lens.mapped . htraverse1 %~ (^. Lens._Wrapped)
+                            htraverse
+                            ( \case
+                                HWitness V.W_Term_Term -> fmap Foo . go
+                            ) bod
+                            <&> htraverse (const getFoo)
                             <&> Lens.mapped %~ Ann x
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::
     UVar # T.Type ->
     Ann (Write m :*: InferResult UVar) # V.Term ->
-    State InferState (Ann (Const IsFragment :*: Write m :*: InferResult UVar) # V.Term)
+    State InferState (Ann ((Const IsFragment :*: Write m) :*: InferResult UVar) # V.Term)
 mkResultValFragment inferred x =
-    x & hflipped . hmapped1 %~ onPl
-    & Hole.detachValIfNeeded (\i -> Const IsFragment :*: WriteNew :*: i) (^. _2 . _2) inferred
+    x & hflipped %~ hmap (const onPl)
+    & Hole.detachValIfNeeded (Const IsFragment :*: WriteNew) inferred
     where
-        onPl i@(WriteNew :*: _) = Const IsFragment :*: i
-        onPl i = Const NotFragment :*: i
+        onPl (WriteNew :*: i) = (Const IsFragment :*: WriteNew) :*: i
+        onPl i = i & _1 %~ (Const NotFragment :*:)
 
 mkOptionFromFragment ::
     Monad m =>
@@ -299,10 +338,10 @@ mkOptionFromFragment sugarContext exprPl x =
     , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
-            newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) scope x
+            newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) (exprPl ^. Input.inferScope) x
             let newSugarContext =
                     sugarContext
-                    & ConvertM.scInferContext .~ inferContext
+                    & ConvertM.scInferContext .~ inferCtx
                     & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
             let updateDeps = (depsProp ^. Property.pSet) newDeps
             pure
@@ -314,17 +353,32 @@ mkOptionFromFragment sugarContext exprPl x =
     }
     where
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
-        (result, inferContext) =
+        (result, inferCtx) =
             runState
             (mkResultValFragment (exprPl ^. Input.inferRes . inferResult . _2) x)
             (sugarContext ^. ConvertM.scInferContext)
         resolved =
-            (hflipped . htraverse1) (fmap Const . applyBindings . (^. _2 . _2 . inferResult)) result
-            & runPureInfer scope inferContext
+            result & hflipped %~ hmap (const ((Const () :*:) . (^. _2)))
+            & inferUVarsApplyBindings
+            <&> hflipped %~ hmap
+                ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
+                    \w ->
+                    withDict (recursively (p0 w)) $
+                    withDict (inferOfConstraint (Proxy @HFunctor) w) $
+                    (hflipped %~ hmap (const (^. _1))) . (^. _2)
+                )
+            & runPureInfer () inferCtx
             & Hole.assertSuccessfulInfer
             & fst
-        scope = exprPl ^. Input.inferScope
+        p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
+        p0 _ = Proxy
         topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         baseExpr = pruneExpr x
+        pruneExpr :: Ann (Write m :*: a) # V.Term -> Ann (Const ()) # V.Term
         pruneExpr (Ann (ExistingRef{} :*: _) _) = V.BLeaf V.LHole & Ann (Const ())
-        pruneExpr (Ann _ b) = b & htraverse1 %~ pruneExpr & Ann (Const ())
+        pruneExpr (Ann _ b) =
+            hmap
+            ( \case
+                HWitness V.W_Term_Term -> pruneExpr
+            ) b
+            & Ann (Const ())

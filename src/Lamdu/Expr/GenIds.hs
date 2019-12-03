@@ -23,7 +23,6 @@ import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Recurse (recurse)
 import           Lamdu.Calc.Identifier (Identifier(..))
-import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Revision.Deltum.Transaction (Transaction)
@@ -53,14 +52,14 @@ randomTag g = randomIdentifier g & _1 %~ T.Tag
 randomizeExpr ::
     forall gen r t a.
     (RandomGen gen, Random r, RTraversable t) =>
-    gen -> Annotated (r -> a) t -> Annotated a t
-randomizeExpr gen (Ann (Const pl) body) =
+    gen -> Ann (HFunc (Const r) a) # t -> Ann a # t
+randomizeExpr gen (Ann (HFunc pl) body) =
     withDict (recurse (Proxy @(RTraversable t))) $
     (`evalState` gen) $
     do
         r <- state random
         newBody <- htraverse (Proxy @RTraversable #> randomizeSubexpr) body
-        Ann (Const (pl r)) newBody & pure
+        Ann (pl (Const r)) newBody & pure
     where
         randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 
@@ -140,7 +139,7 @@ randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty
 
 randomizeExprAndParams ::
     (RandomGen gen, Random r) =>
-    gen -> Val (r -> a) -> Val a
+    gen -> Ann (HFunc (Const r) a) # V.Term -> Ann a # V.Term
 randomizeExprAndParams gen =
     randomizeParamIds paramGen . randomizeExpr exprGen
     where

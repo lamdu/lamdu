@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators, TypeApplications #-}
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
@@ -13,6 +13,9 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper
+import           Hyper.Class.Infer.InferOf
+import           Hyper.Class.Nodes
+import           Hyper.Infer (InferOf)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -222,7 +225,19 @@ convertRepl env cp =
                 }
         let typ = valInferred ^. hAnn . Input.inferredType
         nomsMap <-
-            valInferred ^.. hflipped . hfolded1 . Input.inferredType . ExprLens.tIds
+            hfoldMap
+            ( Proxy @(Recursively (InferOfConstraint HFoldable)) #*#
+                Proxy @(Recursively (InferOfConstraint (HNodesHaveConstraint ExprLens.HasTIds))) #*#
+                \w ->
+                withDict (recursively (p0 w)) $
+                withDict (recursively (p1 w)) $
+                withDict (inferOfConstraint (Proxy @HFoldable) w) $
+                withDict (inferOfConstraint (Proxy @(HNodesHaveConstraint ExprLens.HasTIds)) w) $
+                withDict (hNodesHaveConstraint (Proxy @ExprLens.HasTIds) (p2 w)) $
+                hfoldMap
+                ( Proxy @ExprLens.HasTIds #> (^.. _1 . ExprLens.tIds)
+                ) . (^. Input.inferRes . hflipped)
+            ) (_HFlip # valInferred)
             & Load.makeNominalsMap
         let completion =
                 env ^. has
@@ -242,6 +257,12 @@ convertRepl env cp =
             , _replResult = ConvertEval.completion cp replEntityId completion
             }
     where
+        p0 :: proxy h -> Proxy (InferOfConstraint HFoldable h)
+        p0 _ = Proxy
+        p1 :: proxy h -> Proxy (InferOfConstraint (HNodesHaveConstraint ExprLens.HasTIds) h)
+        p1 _ = Proxy
+        p2 :: proxy h -> Proxy (InferOf h)
+        p2 _ = Proxy
         cachedInfer = Cache.infer (env ^. has)
         postProcess = PostProcess.expr cachedInfer (env ^. has) prop
         prop = Anchors.repl cp

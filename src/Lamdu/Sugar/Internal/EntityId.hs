@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators #-}
 module Lamdu.Sugar.Internal.EntityId
     ( EntityId(..)
     , bs
@@ -20,8 +20,7 @@ import qualified Data.ByteString as BS
 import           Data.Hashable (Hashable)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           Hyper (HFunctor(..), hflipped)
-import           Lamdu.Calc.Term (Val)
+import           Hyper
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.GenIds as GenIds
@@ -42,10 +41,10 @@ bs (EntityId uuid) = UUIDUtils.toSBS16 uuid
 
 randomizeExprAndParams ::
     RandomGen gen =>
-    gen -> Val (EntityId -> a) -> Val a
+    gen -> Ann (HFunc (Const EntityId) a) # V.Term -> Ann a # V.Term
 randomizeExprAndParams gen =
     GenIds.randomizeExprAndParams gen .
-    (hflipped %~ hmap (const (Lens._Wrapped %~ (. EntityId))))
+    (hflipped %~ hmap (const (_HFunc . Lens.argument . Lens._Wrapped %~ EntityId)))
 
 augment :: ByteString -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ UUIDUtils.augment str x

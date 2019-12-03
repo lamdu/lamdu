@@ -191,7 +191,7 @@ runInferResult _monitors evalRes act =
         case runPureInfer V.emptyScope inferState0 doLoad of
         Left x -> Left x & pure
         Right (_, inferState1) ->
-            case inferUVarsApplyBindings inferredTerm & runPureInfer V.emptyScope inferState1 of
+            case inferUVarsApplyBindings inferredTerm & runPureInfer () inferState1 of
             Left x -> Left x & pure
             Right (resolvedTerm, _inferState2) ->
                 hfoldMap (Proxy @InferResTids #> inferResTids . (^. _2))
