@@ -11,7 +11,6 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -88,15 +87,14 @@ make hole pl =
         litEventMap <- mkLitEventMap
         (ExprEventMap.add options pl <&> (Align.tValue %~))
             <*> ( SearchArea.make SearchArea.WithAnnotation (hole ^. Sugar.holeOptions)
-                    pl allowedHoleSearchTerm ?? Menu.AnyPlace
+                    pl allowedHoleSearchTerm widgetIds ?? Menu.AnyPlace
                     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
                 )
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)
             <&> Responsive.fromWithTextPos
-        & GuiState.assignCursor (hidHole widgetIds) searchMenuId
     where
         searchMenuId = hidOpen widgetIds
-        widgetIds = HoleWidgetIds.make (pl ^. Sugar.plEntityId)
+        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         options =
             ExprEventMap.defaultOptions
             { ExprEventMap.addOperatorSetHoleState = Just (pl ^. Sugar.plEntityId)

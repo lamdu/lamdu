@@ -37,7 +37,6 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
-import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM, makeBinder)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans(..))
@@ -161,7 +160,7 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 E.toDoc env
                 [has . MomentuTexts.navigation, has . Texts.jumpToError]
         let jumpEventMap j =
-                j <&> dest
+                j <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
             (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
@@ -187,12 +186,6 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                     & pure
             else
                 pure indicator
-    where
-        dest entityId =
-            case errorType of
-            Sugar.CompiledError Sugar.ReachedHole ->
-                HoleWidgetIds.make entityId & HoleWidgetIds.hidClosed
-            _ -> WidgetIds.fromEntityId entityId
 
 indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]

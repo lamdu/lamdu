@@ -26,7 +26,6 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -204,8 +203,7 @@ testOpPrec =
             fromWorkArea baseEnv
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fBody . annotation . Sugar.plEntityId)
-            <&> HoleWidgetIds.make
-            <&> HoleWidgetIds.hidClosed
+            <&> WidgetIds.fromEntityId
         workArea <- convertWorkArea baseEnv
         _ <- applyEvent (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
         workArea' <- convertWorkArea baseEnv

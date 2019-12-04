@@ -14,6 +14,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -139,15 +140,12 @@ makeInferredTypeAnnotation ::
     , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Glue.HasTexts env
     , Has (Texts.Code Text) env
     ) =>
-    Sugar.Payload Name i o a0 -> m View
-makeInferredTypeAnnotation pl =
+    Sugar.Annotation Name i -> AnimId -> m View
+makeInferredTypeAnnotation ann animId =
     Annotation.addAnnotationBackground
-    <*> TypeView.make (pl ^?! Sugar.plAnnotation . SugarLens.annotationTypes)
+    <*> TypeView.make (ann ^?! SugarLens.annotationTypes)
     <&> (^. Align.tValue)
     & Reader.local (Element.animIdPrefix .~ animId)
-    where
-        animId =
-            pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
 
 -- Filter out events which should be taken by search term event map instead.
 filterSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
@@ -171,9 +169,9 @@ make ::
     AnnotationMode ->
     i [Sugar.HoleOption Name i o] ->
     Sugar.Payload Name i o ExprGui.Payload ->
-    (Text -> Bool) ->
+    (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> TextWidget o)
-make annMode mkOptions pl allowedTerms =
+make annMode mkOptions pl allowedTerms widgetIds =
     do
         env <- Lens.view id
         let fdWrap =
@@ -195,7 +193,7 @@ make annMode mkOptions pl allowedTerms =
                         WithoutAnnotation -> pure Element.empty
                         WithAnnotation ->
                             Annotation.annotationSpacer
-                            /-/ makeInferredTypeAnnotation pl
+                            /-/ makeInferredTypeAnnotation (pl ^. Sugar.plAnnotation) animId
                     options <- GuiM.im mkOptions
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
@@ -239,9 +237,7 @@ make annMode mkOptions pl allowedTerms =
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
                     <&> SearchMenu.termWidget %~
                         addFrame . Element.padAround (frameWidth & _2 .~ 0)
-        animId =
-            pl ^. Sugar.plEntityId & HoleWidgetIds.make & hidHole & Widget.toAnimId
-        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
+        animId = hidClosed widgetIds & Widget.toAnimId
         searchMenuId = hidOpen widgetIds
         allowedTermsCtx txt =
             SearchMenu.TermCtx

@@ -84,7 +84,7 @@ make fragment pl =
 
         searchArea <-
             SearchArea.make SearchArea.WithoutAnnotation
-            (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm
+            (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm holeIds
             ?? Menu.AnyPlace
 
         qmark <-
@@ -131,7 +131,7 @@ make fragment pl =
         postProcessAnn _ = pure id
 
         myId = WidgetIds.fromExprPayload pl
-        holeIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
+        holeIds = myId <> Widget.Id ["hole"] & HoleWidgetIds.makeFrom
         closedHoleId = HoleWidgetIds.hidClosed holeIds
         strollDest = HoleWidgetIds.hidOpen holeIds
         healEventMap env =

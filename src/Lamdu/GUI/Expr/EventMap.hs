@@ -19,7 +19,6 @@ import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
-import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -220,7 +219,7 @@ transformEventMap =
             addOperatorSetHoleState options & maybe detach pure
         Sugar.FragmentAlready holeId -> pure holeId
         Sugar.FragmentExprAlready holeId -> pure holeId
-        <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+        <&> WidgetIds.fromEntityId
         & action
 
 detachEventMap ::
@@ -238,7 +237,7 @@ detachEventMap =
         | exprInfoIsSelected exprInfo ->
             E.keysEventMapMovesCursor (env ^. has . Config.detachKeys)
             (E.toDoc env [has . MomentuTexts.edit, has . Texts.modify])
-            (act <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen)
+            (act <&> WidgetIds.fromEntityId)
             <>
             E.keysEventMap (env ^. has . Config.parenDetachKeys)
             (E.toDoc env [has . MomentuTexts.edit, has . Texts.detach])
