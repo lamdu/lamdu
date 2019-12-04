@@ -148,7 +148,7 @@ make =
                 , TextEdit._sEmptyStringsColors = pure (Color 1 1 1 1)
                 }
             , _eAnimIdPrefix = []
-            , _eDirLayout = Dir.LeftToRight -- TODO: Test other directions
+            , _eDirLayout = Dir.LeftToRight
             , _eLanguage = testLang
             }
 

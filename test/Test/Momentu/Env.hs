@@ -26,7 +26,7 @@ data Env = Env
 env :: Env
 env =
     Env
-    { _eDirLayout = Dir.LeftToRight -- TODO: Test other layout directions
+    { _eDirLayout = Dir.LeftToRight
     , _eDirTexts =
         Dir.Texts
         { Dir._left = "left"
