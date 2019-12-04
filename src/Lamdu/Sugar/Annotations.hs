@@ -143,7 +143,9 @@ markBodyAnnotations oldBody =
     BodyFragment fragment ->
         ( forceShowTypeOrEval
         , fragment
-            & fExpr . nonHoleAnn .~ forceShowTypeOrEval
+            & (if not (fragment ^. fTypeMatch)
+                  then fExpr . nonHoleAnn .~ forceShowTypeOrEval
+                  else id)
             & BodyFragment
         )
     BodyCase cas ->
