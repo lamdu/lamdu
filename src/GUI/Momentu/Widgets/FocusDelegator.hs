@@ -69,7 +69,12 @@ make =
     case () of
     ()
         | selfIsFocused && childIsFocused ->
-            error "FocusDelegator both itself and child focused"
+            unlines
+            [ "FocusDelegator both itself and child focused. parentDoc:"
+            , show (focusParentDoc config)
+            , "childDoc:"
+            , show (focusChildDoc config)
+            ] & error
 
         | selfIsFocused ->
             Widget.setFocused childWidget
