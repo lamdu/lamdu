@@ -44,7 +44,7 @@ module GUI.Momentu.Widget
     , setFocused, setFocusedWith
 
     , strollAheadKeys, strollBackKeys
-    , takesStroll
+    , takesStroll, disableStroll
     , glueStates
     ) where
 
@@ -82,10 +82,13 @@ enterResultCursor :: (HasWidget w, Functor f) => Lens.Setter' (w f) Id
 enterResultCursor =
     widget . enterResult . enterResultEvent . Lens.mapped . State.uCursor . Lens.mapped
 
-takesStroll :: Id -> Widget a -> Widget a
+takesStroll :: HasWidget w => Id -> w a -> w a
 takesStroll myId =
-    wState . _StateUnfocused . uMStroll ?~
+    widget . wState . _StateUnfocused . uMStroll ?~
     (myId ^. Lens._Unwrapped, myId ^. Lens._Unwrapped)
+
+disableStroll :: HasWidget w => w a -> w a
+disableStroll = widget . wState . _StateUnfocused . uMStroll .~ Nothing
 
 takesFocus ::
     (HasWidget w, Functor f) =>

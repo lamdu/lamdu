@@ -206,15 +206,10 @@ make annMode mkOptions pl allowedTerms widgetIds =
                         <&> Lens.mapped . Align.tValue %~ inPlaceOfClosed
             else
                 closedSearchTermGui
-                <&> (if isActive
-                    then Widget.setFocused
-                    else id
-                    )
+                <&> (if isActive then Widget.setFocused else id)
                 <&> (if isAHoleInHole
-                    then
-                        Widget.widget . Widget.wState .
-                        Widget._StateUnfocused . Widget.uMStroll .~ Nothing
-                    else id)
+                    then Widget.disableStroll
+                    else Widget.takesStroll (hidClosed widgetIds))
                 <&> Widget.weakerEvents
                   (-- Editing search term of a closed hole opens it:
                       term ^. SearchMenu.termEditEventMap

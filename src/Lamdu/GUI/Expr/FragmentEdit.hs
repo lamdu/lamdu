@@ -82,34 +82,33 @@ make fragment pl =
 
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
-        searchArea <-
+        rawSearchArea <-
             SearchArea.make SearchArea.WithoutAnnotation
             (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm holeIds
             ?? Menu.AnyPlace
 
         qmark <-
-            (Element.padToSize ?? searchArea ^. Align.tValue . Widget.wSize ?? 0)
-            <*>
-            ( (Widget.makeFocusableView ?? closedHoleId <&> (Align.tValue %~))
-                <*> Label.make "?"
-            ) <&> Responsive.fromWithTextPos
+            (Element.padToSize ?? rawSearchArea ^. Align.tValue . Widget.wSize ?? 0.5)
+            <*> Label.make "?"
+
+        searchArea <-
+            Element.padToSize ?? qmark ^. Align.tValue . View.vSize ?? 0.5
+            <&> (Align.tValue %~)
+            ?? rawSearchArea
 
         ExprEventMap.add ExprEventMap.defaultOptions pl
             <*>
             ( parentDelegator myId
                 ?? hbox
                 [ fragmentExprGui
-                , if isSelected && not isHoleResult
-                    then Responsive.fromWithTextPos searchArea
-                    else qmark
+                , Responsive.fromWithTextPos $
+                    if isSelected && not isHoleResult
+                    then searchArea
+                    else searchArea <&> Element.setLayers .~ qmark ^. Align.tValue . View.vAnimLayers
                 ]
             )
             <&> Widget.widget %~ addAnnotation
             <&> Widget.widget %~ Widget.weakerEvents (healEventMap env)
-            <&> Widget.widget . Widget.wState . Widget._StateUnfocused .
-                Widget.uMStroll .~
-                ((strollDest ^. Lens._Unwrapped, strollDest ^. Lens._Unwrapped)
-                    <$ guard (not isHoleResult))
     where
         lineAbove color animId spacing ann =
             ann
@@ -132,8 +131,6 @@ make fragment pl =
 
         myId = WidgetIds.fromExprPayload pl
         holeIds = myId <> Widget.Id ["hole"] & HoleWidgetIds.makeFrom
-        closedHoleId = HoleWidgetIds.hidClosed holeIds
-        strollDest = HoleWidgetIds.hidOpen holeIds
         healEventMap env =
             fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor
