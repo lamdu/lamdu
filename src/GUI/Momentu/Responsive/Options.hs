@@ -141,10 +141,7 @@ boxH =
 
 box ::
     (Applicative f, MonadReader env m, Glue.HasTexts env) =>
-    m
-    ( Disambiguators f ->
-      [Responsive f] ->
-      Responsive f )
+    m (Disambiguators f -> [Responsive f] -> Responsive f)
 box = boxH ?? id ?? id
 
 boxSpaced ::
