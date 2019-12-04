@@ -45,8 +45,8 @@ data StatusWidget f = StatusWidget
 Lens.makeLenses ''StatusWidget
 
 instance Functor f => Element (StatusWidget f) where
-    setLayers = widget . setLayers
-    hoverLayers = widget %~ hoverLayers
+    setLayeredImage = widget . setLayeredImage
+    hoverLayeredImage = widget %~ hoverLayeredImage
     padImpl x y = widget %~ padImpl x y
     scale x = widget %~ scale x
     empty = StatusWidget Element.empty mempty

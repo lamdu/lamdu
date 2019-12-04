@@ -118,8 +118,8 @@ instance
                 Vertical -> l ^. rWide
 
 instance Functor f => Element (Responsive f) where
-    setLayers = Widget.widget . Element.setLayers
-    hoverLayers = Widget.widget %~ Element.hoverLayers
+    setLayeredImage = Widget.widget . Element.setLayeredImage
+    hoverLayeredImage = Widget.widget %~ Element.hoverLayeredImage
     empty = Responsive Element.empty Element.empty (const Element.empty)
     scale = error "Responsive: scale not Implemented"
     padImpl topLeft bottomRight w =

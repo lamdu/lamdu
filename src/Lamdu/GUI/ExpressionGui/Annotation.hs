@@ -109,7 +109,7 @@ hoverWideAnnotation which =
                 in
                 addBg wideView
                 & View.vSize .~ shrunkView ^. View.vSize
-                & Element.hoverLayers
+                & Element.hoverLayeredImage
 
 processAnnotationGui ::
     (MonadReader env m, Has Theme env, Spacer.HasStdSpacing env) =>
@@ -188,8 +188,8 @@ makeEvalView mNeighbours evalRes =
         let prevPos = Vector2 0 0.5 * evalView ^. Element.size - prev ^. Element.size
         let nextPos = Vector2 1 0.5 * evalView ^. Element.size
         evalView
-            & Element.setLayers <>~ Element.translateLayers prevPos (prev ^. View.vAnimLayers)
-            & Element.setLayers <>~ Element.translateLayers nextPos (next ^. View.vAnimLayers)
+            & Element.setLayeredImage <>~ Element.translateLayeredImage prevPos (prev ^. View.vAnimLayers)
+            & Element.setLayeredImage <>~ Element.translateLayeredImage nextPos (next ^. View.vAnimLayers)
             & pure
     where
         evalAnimId erd =

@@ -104,7 +104,7 @@ make fragment pl =
                 , Responsive.fromWithTextPos $
                     if isSelected && not isHoleResult
                     then searchArea
-                    else searchArea <&> Element.setLayers .~ qmark ^. Align.tValue . View.vAnimLayers
+                    else searchArea <&> Element.setLayeredImage .~ qmark ^. Align.tValue . View.vAnimLayers
                 ]
             )
             <&> Widget.widget %~ addAnnotation
@@ -112,7 +112,7 @@ make fragment pl =
     where
         lineAbove color animId spacing ann =
             ann
-            & Element.setLayers . Element.layers %~ (<> [line])
+            & Element.setLayeredImage . Element.layers %~ (<> [line])
             where
                 line =
                     Anim.coloredRectangle animId color

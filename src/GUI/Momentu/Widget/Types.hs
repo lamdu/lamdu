@@ -40,7 +40,7 @@ data Unfocused a = Unfocused
         -- "Strolling" is navigating using "Tab"/"Shift-Tab"
         -- to form entry fields or other points of interest.
         Maybe (Semigroup.First Id, Semigroup.Last Id)
-    , _uLayers :: Element.Layers
+    , _uLayers :: Element.LayeredImage
     } deriving Functor
 
 data EnterResult a = EnterResult
@@ -80,7 +80,7 @@ data Focused a = Focused
     , _fEventMap :: EventContext -> EventMap a
     , _fPreEvents :: PreEvents a
     , _fMEnterPoint :: Maybe (Vector2 R -> EnterResult a)
-    , _fLayers :: Element.Layers
+    , _fLayers :: Element.LayeredImage
     } deriving Functor
 
 data PreEvent a = PreEvent

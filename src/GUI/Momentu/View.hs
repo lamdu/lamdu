@@ -20,17 +20,17 @@ import           Lamdu.Prelude
 
 data View = View
     { _vSize :: Size
-    , _vAnimLayers :: Element.Layers
+    , _vAnimLayers :: Element.LayeredImage
     }
 Lens.makeLenses ''View
 
 instance Element View where
-    setLayers f (View sz ls) = Lens.indexed f sz ls <&> View sz
-    hoverLayers = Element.setLayers . Element.layers %~ (mempty:)
+    setLayeredImage f (View sz ls) = Lens.indexed f sz ls <&> View sz
+    hoverLayeredImage = Element.setLayeredImage . Element.layers %~ (mempty:)
     padImpl leftAndTop rightAndBottom x =
         x
         & vSize +~ leftAndTop + rightAndBottom
-        & vAnimLayers %~ Element.translateLayers leftAndTop
+        & vAnimLayers %~ Element.translateLayeredImage leftAndTop
     scale ratio x =
         x
         & vSize *~ ratio
@@ -44,7 +44,7 @@ instance Has Dir.Layout env => Glue env View View where
     glue = Glue.glueH $ \v0 v1 -> v0 & vAnimLayers <>~ v1 ^. vAnimLayers
 
 make :: Size -> Anim.Frame -> View
-make sz frame = View sz (Element.Layers [frame])
+make sz frame = View sz (Element.LayeredImage [frame])
 
 animFrames :: Lens.Traversal' View Anim.Frame
 animFrames = vAnimLayers . Element.layers . traverse

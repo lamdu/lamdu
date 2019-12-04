@@ -7,7 +7,7 @@ import qualified GUI.Momentu.Element as Element
 
 import           Test.Lamdu.Prelude
 
-verifyLayers :: HasCallStack => Element.Layers -> Either String ()
+verifyLayers :: HasCallStack => Element.LayeredImage -> Either String ()
 verifyLayers view =
     case clashingIds of
     [] -> Right ()

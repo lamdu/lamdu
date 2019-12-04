@@ -2,7 +2,7 @@
 module GUI.Momentu.Element
     ( Element(..), SizedElement(..), Size
     , HasAnimIdPrefix(..), subAnimId, locallyAugmented
-    , Layers(..), layers, translateLayers, addLayersAbove, render
+    , LayeredImage(..), layers, translateLayeredImage, layeredImageAbove, render
     , pad, padAround
     , topLayer, bottomLayer
     , width, height
@@ -20,35 +20,35 @@ import qualified Graphics.DrawingCombinators as Draw
 
 import           Lamdu.Prelude
 
--- | Layers is a list of animation frames that overlay on top of each
+-- | LayeredImage is a list of animation frames that overlay on top of each
 -- other (first element is most obscured one). When composing Views,
 -- the layers at the same list index are composed together and all
 -- obscure the layers from a lower index.
-newtype Layers = Layers { _layers :: [Anim.Frame] }
-Lens.makeLenses ''Layers
+newtype LayeredImage = LayeredImage { _layers :: [Anim.Frame] }
+Lens.makeLenses ''LayeredImage
 
-instance Semigroup Layers where
-    xs <> Layers [] = xs
-    Layers [] <> ys = ys
-    Layers (x:xs) <> Layers (y:ys) =
-        Layers (x<>y : rest ^. layers)
+instance Semigroup LayeredImage where
+    xs <> LayeredImage [] = xs
+    LayeredImage [] <> ys = ys
+    LayeredImage (x:xs) <> LayeredImage (y:ys) =
+        LayeredImage (x<>y : rest ^. layers)
         where
-            rest = Layers xs <> Layers ys
+            rest = LayeredImage xs <> LayeredImage ys
 
-instance Monoid Layers where mempty = Layers []
+instance Monoid LayeredImage where mempty = LayeredImage []
 
-addLayersAbove :: Layers -> Layers -> Layers
-addLayersAbove (Layers xs) (Layers ys) = Layers (ys ++ xs)
+layeredImageAbove :: LayeredImage -> LayeredImage -> LayeredImage
+layeredImageAbove (LayeredImage xs) (LayeredImage ys) = LayeredImage (ys ++ xs)
 
-translateLayers :: Vector2 R -> Layers -> Layers
-translateLayers pos = layers . traverse %~ Anim.translate pos
+translateLayeredImage :: Vector2 R -> LayeredImage -> LayeredImage
+translateLayeredImage pos = layers . traverse %~ Anim.translate pos
 
-render :: Layers -> Anim.Frame
+render :: LayeredImage -> Anim.Frame
 render x = x ^. layers . Lens.reversed . traverse
 
 class Element a where
-    setLayers :: Lens.IndexedSetter' Size a Layers
-    hoverLayers :: a -> a
+    setLayeredImage :: Lens.IndexedSetter' Size a LayeredImage
+    hoverLayeredImage :: a -> a
     padImpl :: Vector2 R -> Vector2 R -> a -> a
     scale :: Vector2 R -> a -> a
     empty :: a
@@ -63,7 +63,7 @@ pad =
     Dir.RightToLeft ->
         \(Vector2 r t) (Vector2 l b) -> padImpl (Vector2 l t) (Vector2 r b)
 
--- Different `SetLayers`s do additional things when padding
+-- Different `SetLayeredImage`s do additional things when padding
 -- (Moving focal points, alignments, etc)
 padAround :: Element a => Vector2 R -> a -> a
 padAround p = padImpl p p
@@ -71,13 +71,13 @@ padAround p = padImpl p p
 class Element a => SizedElement a where size :: Lens.Getter a Size
 
 bottomLayer :: Element a => Lens.IndexedSetter' Size a Anim.Frame
-bottomLayer = setLayers <. (layers . Lens.ix 0)
+bottomLayer = setLayeredImage <. (layers . Lens.ix 0)
 
 topLayer :: Element a => Lens.IndexedSetter' Size a Anim.Frame
-topLayer = setLayers <. (layers . Lens.reversed . Lens.ix 0)
+topLayer = setLayeredImage <. (layers . Lens.reversed . Lens.ix 0)
 
 tint :: Element a => Draw.Color -> a -> a
-tint color = setLayers . layers . traverse . Anim.unitImages %~ Draw.tint color
+tint color = setLayeredImage . layers . traverse . Anim.unitImages %~ Draw.tint color
 
 width :: SizedElement a => Lens.Getter a R
 width = size . _1

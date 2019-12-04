@@ -57,10 +57,10 @@ widgetSize f w =
         Vector2 ow oh = w ^. wSize
 
 instance Functor f => Element (Widget f) where
-    setLayers = sizedState <. stateLayers
-    hoverLayers w =
+    setLayeredImage = sizedState <. stateLayers
+    hoverLayeredImage w =
         w
-        & Element.setLayers . Element.layers %~ (mempty :)
+        & Element.setLayeredImage . Element.layers %~ (mempty :)
         & enterResult . enterResultLayer +~ 1
     empty = fromView Element.empty
     padImpl leftAndTop rightAndBottom w =
@@ -69,7 +69,7 @@ instance Functor f => Element (Widget f) where
         & widgetSize +~ leftAndTop + rightAndBottom
     scale mult w =
         w
-        & Element.setLayers . Element.layers . Lens.mapped %~ Anim.scale mult
+        & Element.setLayeredImage . Element.layers . Lens.mapped %~ Anim.scale mult
         & widgetSize *~ mult
         & wFocused . fFocalAreas . traverse . Rect.topLeftAndSize *~ mult
         & eventMapMaker . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeftAndSize //~ mult
@@ -85,13 +85,13 @@ instance
     ( Functor f, Has Dir.Layout env
     ) => Glue env (Widget f) View where
     type Glued (Widget f) View = Widget f
-    glue = Glue.glueH $ \w v -> w & Element.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \w v -> w & Element.setLayeredImage <>~ v ^. View.vAnimLayers
 
 instance
     ( Functor f, Has Dir.Layout env
     ) => Glue env View (Widget f) where
     type Glued View (Widget f) = Widget f
-    glue = Glue.glueH $ \v w -> w & Element.setLayers <>~ v ^. View.vAnimLayers
+    glue = Glue.glueH $ \v w -> w & Element.setLayeredImage <>~ v ^. View.vAnimLayers
 
 instance
     ( Applicative f, f ~ g
@@ -243,7 +243,7 @@ chooseEnter Dir.LeftToRight Horizontal FromRight{} _  r1 = r1
 chooseEnter Dir.RightToLeft Horizontal FromLeft{}  _  r1 = r1
 chooseEnter Dir.RightToLeft Horizontal FromRight{} r0 _  = r0
 
-stateLayers :: Lens.Setter' (State a) Element.Layers
+stateLayers :: Lens.Setter' (State a) Element.LayeredImage
 stateLayers = stateLens uLayers (Lens.mapped . fLayers)
 
 enterResult :: Lens.Setter' (Widget f) (EnterResult (f State.Update))
@@ -295,7 +295,7 @@ translateGeneric f pos w =
         translateUnfocused u =
             u
             & uMEnter . Lens._Just %~ translateEnter
-            & uLayers %~ Element.translateLayers pos
+            & uLayers %~ Element.translateLayeredImage pos
             <&> f
         translateEnter enter =
             enter
@@ -323,7 +323,7 @@ translateFocusedGeneric f pos x =
             & fMEnterPoint . Lens._Just . Lens.mapped . enterResultRect . Rect.topLeft +~ pos
             & fFocalAreas . traverse . Rect.topLeft +~ pos
             & fEventMap . Lens.argument . eVirtualCursor . State.vcRect . Rect.topLeft -~ pos
-            & fLayers %~ Element.translateLayers pos
+            & fLayers %~ Element.translateLayeredImage pos
             <&> f
 
 fromView :: View -> Widget a

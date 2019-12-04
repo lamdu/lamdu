@@ -161,7 +161,7 @@ addDiagonal =
                 & void
                 & Anim.singletonFrame 1 (animId ++ ["diagonal"])
                 & Anim.scale sz
-        in  Element.setLayers <. Element.layers %@~ snoc . mkFrame
+        in  Element.setLayeredImage <. Element.layers %@~ snoc . mkFrame
     where
         snoc x xs = xs ++ [x]
 

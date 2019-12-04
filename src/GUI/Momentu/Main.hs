@@ -303,7 +303,7 @@ wrapMakeWidget zoom options lookupModeRef mkWidgetUnmemod size =
                 putStrLn $ "Invalid cursor: " ++ show cursor
                 color <- _cInvalidCursorOverlayColor
                 widget
-                    & Element.setLayers . Element.layers <. Lens.reversed . Lens.ix 0 %@~
+                    & Element.setLayeredImage . Element.layers <. Lens.reversed . Lens.ix 0 %@~
                     (<>) . (`Anim.scale` Anim.coloredRectangle bgColorAnimId color)
                     & pure
         Config{_cInvalidCursorOverlayColor} = config

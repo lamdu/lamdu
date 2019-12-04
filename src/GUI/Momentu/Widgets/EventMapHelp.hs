@@ -303,7 +303,7 @@ addHelpViewWith mkHelpView size focus =
                         <$> Lens.view (has . styleBGColor))
             ) <*> mkHelpView size focus
         atEdge <- hoverEdge size ?? helpView
-        focus & Widget.fLayers %~ Element.addLayersAbove (atEdge ^. vAnimLayers) & pure
+        focus & Widget.fLayers %~ Element.layeredImageAbove (atEdge ^. vAnimLayers) & pure
 
 addHelpView ::
     ( MonadReader env m, HasStyle env

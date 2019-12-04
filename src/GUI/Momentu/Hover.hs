@@ -58,8 +58,8 @@ newtype Hover a = Hover { _unHover :: a }
 Lens.makeLenses ''Hover
 
 instance Element a => Element (Hover a) where
-    setLayers = unHover . Element.setLayers
-    hoverLayers = unHover %~ Element.hoverLayers
+    setLayeredImage = unHover . Element.setLayeredImage
+    hoverLayeredImage = unHover %~ Element.hoverLayeredImage
     padImpl p0 p1 = unHover %~ Element.padImpl p0 p1
     scale r = unHover %~ Element.scale r
     empty = Hover Element.empty
@@ -68,8 +68,8 @@ instance SizedElement a => SizedElement (Hover a) where
     size = unHover . Element.size
 
 instance Functor f => Element (AnchoredWidget f) where
-    setLayers = anchored . Element.setLayers
-    hoverLayers = anchored %~ Element.hoverLayers
+    setLayeredImage = anchored . Element.setLayeredImage
+    hoverLayeredImage = anchored %~ Element.hoverLayeredImage
     empty = AnchoredWidget 0 Element.empty
     padImpl tl br (AnchoredWidget point w) =
         AnchoredWidget
@@ -104,7 +104,7 @@ instance
     glue =
         Glue.glueH f
         where
-            f w v = w & Element.setLayers <>~ v ^. View.vAnimLayers
+            f w v = w & Element.setLayeredImage <>~ v ^. View.vAnimLayers
 
 instance
     ( Functor f, Has Dir.Layout env
@@ -113,7 +113,7 @@ instance
     glue =
         Glue.glueH f
         where
-            f v w = w & Element.setLayers <>~ v ^. View.vAnimLayers
+            f v w = w & Element.setLayeredImage <>~ v ^. View.vAnimLayers
 
 instance
     ( Applicative f, f ~ g, Glue.HasTexts env
@@ -200,7 +200,7 @@ addFrame =
 hover ::
     (MonadReader env m, SizedElement a, Has Style env, Element.HasAnimIdPrefix env) =>
     m (a -> Hover a)
-hover = addFrame <&> ((Hover . Element.hoverLayers) .)
+hover = addFrame <&> ((Hover . Element.hoverLayeredImage) .)
 
 sequenceHover :: Functor f => Hover (f a) -> f (Hover a)
 sequenceHover (Hover x) = x <&> Hover

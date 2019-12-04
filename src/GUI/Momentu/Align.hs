@@ -48,8 +48,8 @@ toWithTextPos :: SizedElement a => Aligned a -> WithTextPos a
 toWithTextPos (Aligned (Vector2 _ yratio) w) = WithTextPos (yratio * w ^. Element.height) w
 
 instance SizedElement a => Element (Aligned a) where
-    setLayers = value . Element.setLayers
-    hoverLayers = value %~ Element.hoverLayers
+    setLayeredImage = value . Element.setLayeredImage
+    hoverLayeredImage = value %~ Element.hoverLayeredImage
     empty = Aligned 0 Element.empty
     padImpl topLeftPadding bottomRightPadding (Aligned ratio w) =
         Aligned
@@ -64,8 +64,8 @@ instance SizedElement a => Element (Aligned a) where
 instance SizedElement a => SizedElement (Aligned a) where size = value . Element.size
 
 instance SizedElement a => Element (WithTextPos a) where
-    setLayers = tValue . Element.setLayers
-    hoverLayers = tValue %~ Element.hoverLayers
+    setLayeredImage = tValue . Element.setLayeredImage
+    hoverLayeredImage = tValue %~ Element.hoverLayeredImage
     empty = WithTextPos 0 Element.empty
     padImpl tl br (WithTextPos y w) =
         WithTextPos
