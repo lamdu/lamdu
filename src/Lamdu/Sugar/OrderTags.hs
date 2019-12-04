@@ -80,9 +80,18 @@ instance Monad m => Order m name o (Lens.Const a)
 instance Monad m => Order m name o (Sugar.Else name (T m) o)
 instance Monad m => Order m name o (Sugar.IfElse name (T m) o)
 instance Monad m => Order m name o (Sugar.Let name (T m) o)
-instance Monad m => Order m name o (Sugar.Function name (T m) o)
-    -- The ordering for binder params already occurs at the Assignment's conversion,
-    -- because it needs to be consistent with the presentation mode.
+
+instance Monad m => Order m name o (Sugar.Function name (T m) o) where
+    order x =
+        x
+        & (Sugar.fParams . Sugar._Params) orderParams
+        >>= Sugar.fBody orderNode
+
+orderParams :: Monad m => OrderT m [(Sugar.FuncParam name (T m), Sugar.ParamInfo name (T m) o)]
+orderParams xs =
+    xs
+    & (Lens.traversed . _1 . Sugar.fpAnnotation . Sugar._AnnotationType) orderType
+    >>= orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag)
 
 -- Special case assignment and binder to invoke the special cases in expr
 

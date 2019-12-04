@@ -43,6 +43,7 @@ score x =
     hfoldMap
     ( \case
         HWitness V.W_Term_Term -> score
+        HWitness V.W_Term_HCompose_Prune_Type -> const []
     ) (x ^. hVal)
 
 resultScore :: Ann (InferResult Pure) # V.Term -> HoleResultScore
@@ -63,6 +64,7 @@ numFragments x =
             hfoldMap @_ @[Int]
             ( \case
                 HWitness V.W_Term_Term -> (:[]) . numFragments
+                HWitness V.W_Term_HCompose_Prune_Type -> const []
             ) (x ^. hVal)
             & sum
 

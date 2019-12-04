@@ -31,7 +31,9 @@ onMatchingSubexprs action predicate x =
         else pure ()
     ) *>
     htraverse_
-    ( \(HWitness V.W_Term_Term) -> onMatchingSubexprs action predicate
+    ( \case
+        HWitness V.W_Term_Term -> onMatchingSubexprs action predicate
+        _ -> const (pure ())
     ) (x ^. hVal)
 
 toHole :: Monad m => HRef m # V.Term -> T m ()

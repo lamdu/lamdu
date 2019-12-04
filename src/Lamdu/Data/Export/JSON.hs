@@ -1,5 +1,5 @@
 -- | Import/Export JSON support
-{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll, verifyAll
@@ -25,6 +25,7 @@ import           Hyper
 import           Hyper.Recurse (unwrapM, (##>>))
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Hyper.Type.Functor (_F)
+import           Hyper.Type.Prune (Prune)
 import           Lamdu.Calc.Identifier (Identifier)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -68,7 +69,7 @@ entityOrdering :: Codec.Entity -> EntityOrdering
 entityOrdering (Codec.EntitySchemaVersion _)                          = (0, "")
 entityOrdering (Codec.EntityTag (T.Tag ident)_ )                      = (1, ident)
 entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
-entityOrdering (Codec.EntityLamVar _ _ _ (V.Var ident))               = (3, ident)
+entityOrdering (Codec.EntityLamVar _ (V.Var ident))                   = (3, ident)
 entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
 entityOrdering (Codec.EntityRepl _)                                   = (5, "")
 
@@ -120,17 +121,21 @@ exportNominal nomId =
 
 class ExportSubexpr k where
     exportSubexpr :: Monad m => Ann (HRef m) # k -> Export m ()
+    exportSubexpr _ = pure ()
 
 instance ExportSubexpr V.Term where
-    exportSubexpr (Ann lamP (V.BLam (V.Lam lamVar _))) =
+    exportSubexpr (Ann _ (V.BLam (V.TypedLam lamVar _ _))) =
         do
             tag <- readAssocTag lamVar & trans
             exportTag tag
-            mParamList <- Property.getP (Anchors.assocFieldParamList lamI) & trans
-            Codec.EntityLamVar mParamList tag (toUUID lamI) lamVar & tell
-        where
-            lamI = lamP ^. ExprIRef.iref
+            Codec.EntityLamVar tag lamVar & tell
     exportSubexpr _ = pure ()
+
+instance ExportSubexpr (HCompose Prune T.Type)
+    -- TODO: Export noms!
+
+instance ExportSubexpr (HCompose Prune T.Row)
+    -- TODO: Export used tags!
 
 exportVal :: Monad m => Ann (HRef m) # V.Term -> Export m ()
 exportVal x =
@@ -249,13 +254,9 @@ importTag tagId tagData =
         Transaction.writeIRef (ExprIRef.tagI tagId) tagData
         tagId `insertTo` DbLayout.tags
 
-importLamVar :: Monad m => Maybe Meta.ParamList -> T.Tag -> UUID -> V.Var -> T m ()
-importLamVar paramList tag lamUUID var =
-    do
-        Property.setP (Anchors.assocFieldParamList lamI) paramList
-        Property.setP (Anchors.assocTag var) tag
-    where
-        lamI = _F # IRef.unsafeFromUUID lamUUID
+importLamVar :: Monad m => T.Tag -> V.Var -> T m ()
+importLamVar tag var =
+    Property.setP (Anchors.assocTag var) tag
 
 importNominal :: T.Tag -> T.NominalId -> Maybe (Pure # NominalDecl T.Type) -> T ViewM ()
 importNominal tag nomId nominal =
@@ -269,7 +270,7 @@ importOne (Codec.EntityDef def) = importDef def
 importOne (Codec.EntityRepl x) = importRepl x
 importOne (Codec.EntityTag tagId tagData) = importTag tagId tagData
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
-importOne (Codec.EntityLamVar paramList tag lamUUID var) = importLamVar paramList tag lamUUID var
+importOne (Codec.EntityLamVar tag var) = importLamVar tag var
 importOne (Codec.EntitySchemaVersion _) =
     fail "Only one schemaVersion allowed in beginning of document"
 

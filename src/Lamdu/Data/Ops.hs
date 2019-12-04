@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators, TypeFamilies #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
@@ -19,7 +19,9 @@ import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified GUI.Momentu.Direction as Dir
+import           Hyper (_HCompose)
 import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.Prune (Prune(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.CharClassification as Chars
@@ -69,8 +71,9 @@ lambdaWrap :: Monad m => HRef m # V.Term -> T m (V.Var, HRef m # V.Term)
 lambdaWrap exprP =
     do
         newParam <- ExprIRef.newVar
+        t <- _HCompose # Pruned & ExprIRef.newValI
         newExprI <-
-            exprP ^. ExprIRef.iref & V.Lam newParam & V.BLam
+            exprP ^. ExprIRef.iref & V.TypedLam newParam t & V.BLam
             & ExprIRef.newValI
         (newParam, exprP & ExprIRef.iref .~ newExprI) <$
             (exprP ^. ExprIRef.setIref) newExprI
@@ -80,12 +83,14 @@ redexWrapWithGivenParam ::
     V.Var -> ValI m -> HRef m # V.Term -> T m (HRef m # V.Term)
 redexWrapWithGivenParam param newValueI exprP =
     do
-        newLambdaI <- exprP ^. ExprIRef.iref & mkLam & ExprIRef.newValI
+        newLambdaI <- exprP ^. ExprIRef.iref & mkLam >>= ExprIRef.newValI
         newApplyI <- ExprIRef.newValI . V.BApp $ V.App newLambdaI newValueI
-        (exprP & ExprIRef.setIref .~ (ExprIRef.writeValI newLambdaI . mkLam)) <$
-            (exprP ^. ExprIRef.setIref) newApplyI
+        let newSet v = mkLam v >>= ExprIRef.writeValI newLambdaI
+        (exprP & ExprIRef.setIref .~ newSet) <$ (exprP ^. ExprIRef.setIref) newApplyI
     where
-        mkLam = V.BLam . V.Lam param
+        mkLam b =
+            _HCompose # Pruned & ExprIRef.newValI
+            <&> (V.TypedLam param ?? b) <&> V.BLam
 
 redexWrap :: Monad m => HRef m # V.Term -> T m (ValI m)
 redexWrap exprP =
@@ -185,7 +190,8 @@ newIdentityLambda =
     do
         paramId <- ExprIRef.newVar
         getVar <- V.LVar paramId & V.BLeaf & ExprIRef.newValI
-        lamI <- V.Lam paramId getVar & V.BLam & ExprIRef.newValI
+        paramType <- _HCompose # Pruned & ExprIRef.newValI
+        lamI <- V.TypedLam paramId paramType getVar & V.BLam & ExprIRef.newValI
         pure (paramId, lamI)
 
 setTagOrder :: Monad m => T.Tag -> Int -> T m ()

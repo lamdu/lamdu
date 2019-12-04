@@ -15,6 +15,7 @@ import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
+import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import qualified Lamdu.Annotations as Annotations
@@ -112,8 +113,9 @@ mkExtractToLet outerScope stored =
                 -- stored becomes "x")
                 do
                     newParam <- ExprIRef.newVar
+                    paramType <- _HCompose # Pruned & ExprIRef.newValI
                     lamI <-
-                        V.Lam newParam extractPosI & V.BLam
+                        V.TypedLam newParam paramType extractPosI & V.BLam
                         & ExprIRef.newValI
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValI
                     (stored ^. ExprIRef.setIref) getVarI
@@ -155,7 +157,8 @@ makeSetToLiteral exprPl =
     do
         update
         l <-
-            x & hflipped . hmapped1 .~ ExprIRef.WriteNew :*: Const () & ExprIRef.writeRecursively
+            x & hflipped %~ hmap (const (const (ExprIRef.WriteNew :*: Const ())))
+            & ExprIRef.writeRecursively
             <&> (^. hAnn . _1)
         _ <- setToVal (exprPl ^. Input.stored) l
         EntityId.ofValI l & pure

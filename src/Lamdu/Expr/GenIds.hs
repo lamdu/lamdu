@@ -105,12 +105,12 @@ randomizeParamIdsG preNG gen initMap =
     where
         go (Ann s v) =
             case v of
-            V.BLam (V.Lam oldParamId body) ->
+            V.BLam (V.TypedLam oldParamId typ body) ->
                 do
                     newParamId <- lift . state $ makeName oldParamId s
                     go body
                         & Reader.local (Map.insert oldParamId newParamId)
-                        <&> V.Lam newParamId
+                        <&> V.TypedLam newParamId typ
                         <&> V.BLam
             V.BLeaf (V.LVar par) ->
                 Reader.ask <&> Map.lookup par <&> fromMaybe par
@@ -128,6 +128,7 @@ randomizeParamIdsG preNG gen initMap =
                     htraverse
                     ( \case
                         HWitness V.W_Term_Term -> go
+                        HWitness V.W_Term_HCompose_Prune_Type -> pure
                     ) v
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s

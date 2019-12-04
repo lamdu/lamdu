@@ -16,12 +16,14 @@ import           Control.Monad.Transaction (getP, setP)
 import qualified Data.List.Extended as List
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (unsafeUnjust)
-import           Data.Property (MkProperty')
+import           Data.Property (MkProperty', modP)
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
 import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Type.Functor (F)
+import           Hyper.Type.Prune (Prune(..), _Unpruned)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
@@ -38,13 +40,13 @@ import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import           Lamdu.Sugar.Convert.ParamList (ParamList)
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -68,30 +70,25 @@ data FieldParam = FieldParam
     }
 
 data StoredLam m = StoredLam
-    { _slLam :: V.Lam V.Var V.Term # Ann (HRef m)
+    { _slLam :: V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m)
     , _slLambdaProp :: HRef m # V.Term
     }
 Lens.makeLenses ''StoredLam
 
-slParamList :: Monad m => StoredLam m -> MkProperty' (T m) (Maybe ParamList)
-slParamList = Anchors.assocFieldParamList . (^. slLambdaProp . ExprIRef.iref)
-
 mkStoredLam ::
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (lam & V.lamOut . hflipped %~ hmap (const (^. Input.stored)))
+    (hmap (Proxy @(Recursively HFunctor) #>  hflipped %~ hmap (const (^. Input.stored))) lam)
     (pl ^. Input.stored)
 
-setParamList ::
+setParamsOrder ::
     Monad m =>
-    Maybe (MkProperty' (T m) PresentationMode) ->
-    MkProperty' (T m) (Maybe [T.Tag]) -> [T.Tag] -> T m ()
-setParamList mPresMode paramListProp newParamList =
+    Maybe (MkProperty' (T m) PresentationMode) -> [T.Tag] -> T m ()
+setParamsOrder mPresMode newParamList =
     do
         Lens.itraverse_ (flip DataOps.setTagOrder) newParamList
-        Just newParamList & setP paramListProp
         case mPresMode of
             Nothing -> pure ()
             Just presModeProp ->
@@ -115,6 +112,7 @@ unappliedUsesOfVar var x =
     hfoldMap
     ( \case
         HWitness V.W_Term_Term -> unappliedUsesOfVar var
+        _ -> const []
     ) (x ^. hVal)
 
 wrapUnappliedUsesOfVar :: Monad m => V.Var -> Ann (HRef m) # V.Term -> T m ()
@@ -127,6 +125,7 @@ argsOfCallTo var x =
     hfoldMap
     ( \case
         HWitness V.W_Term_Term -> argsOfCallTo var
+        _ -> const []
     ) (x ^. hVal)
 
 changeCallArgs ::
@@ -148,29 +147,60 @@ fixLamUsages =
     <&> \protectedSetToVal fixOp binderKind storedLam ->
     case binderKind of
     BinderKindDef defI ->
-        changeCallArgs fixOp (storedLam ^. slLam . V.lamOut) (ExprIRef.globalId defI)
+        changeCallArgs fixOp (storedLam ^. slLam . V.tlOut) (ExprIRef.globalId defI)
     BinderKindLet redexLam ->
-        changeCallArgs fixOp (redexLam ^. V.lamOut) (redexLam ^. V.lamIn)
+        changeCallArgs fixOp (redexLam ^. V.tlOut) (redexLam ^. V.tlIn)
     BinderKindLambda ->
         protectedSetToVal prop (prop ^. ExprIRef.iref) & void
         where
             prop = storedLam ^. slLambdaProp
 
+writeNewParamList ::
+    Monad m =>
+    [T.Tag] ->
+    T m (F (IRef m) # HCompose Prune T.Type)
+writeNewParamList tags =
+    hcomposed _Unpruned . T._TRecord . _HCompose #
+    foldl extend (newTerm (hcomposed _Unpruned # T.REmpty)) tags
+    & newTerm
+    & ExprIRef.writeRecursively
+    <&> (^. hAnn . _1)
+    where
+        newTerm = Ann (ExprIRef.WriteNew :*: Const ())
+        extend rest f =
+            hcomposed _Unpruned . T._RExtend #
+            RowExtend f (_HCompose # newTerm (_HCompose # Pruned)) (_HCompose # rest)
+            & newTerm
+
 addFieldParam ::
     Monad m =>
     ConvertM m
-    (Maybe (MkProperty' (T m) PresentationMode) -> T m (ValI m) ->
-        BinderKind m -> StoredLam m -> (T.Tag -> ParamList) -> T.Tag -> T m ())
+    (T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> [T.Tag]) -> T.Tag -> T m ())
 addFieldParam =
     fixLamUsages
-    <&> \fixUsages mPresMode mkArg binderKind storedLam mkNewTags tag ->
+    <&>
+    \fixUsages mkArg binderKind storedLam mkTags tag ->
     do
+        let newTags = mkTags tag
+        Lens.itraverse_ (flip DataOps.setTagOrder) newTags
+        let t = storedLam ^. slLam . V.tlInType
+        case t ^. hVal . _HCompose of
+            Pruned ->
+                writeNewParamList newTags
+                >>= t ^. hAnn . ExprIRef.setIref
+            Unpruned (HCompose (T.TRecord (HCompose r))) ->
+                do
+                    fieldType <- _HCompose # Pruned & ExprIRef.newValI
+                    hcomposed _Unpruned . T._RExtend #
+                        RowExtend tag (_HCompose # fieldType) (_HCompose # (r ^. hAnn . ExprIRef.iref))
+                        & ExprIRef.newValI
+                        >>= r ^. hAnn . ExprIRef.setIref
+            _ -> fail "adding field to type that isn't a record!"
         let addFieldToCall argI =
                 do
                     newArg <- mkArg
                     RowExtend tag newArg argI
                         & V.BRecExtend & ExprIRef.newValI
-        setParamList mPresMode (slParamList storedLam) (mkNewTags tag)
         fixUsages addFieldToCall binderKind storedLam
 
 mkCpScopesOfLam :: Input.Payload m a # V.Term -> EvalScopes  [BinderParamScopeId]
@@ -189,14 +219,14 @@ getFieldOnVar =
 
 getFieldParamsToHole ::
     Monad m =>
-    T.Tag -> V.Lam V.Var V.Term # Ann (HRef m) -> T m ()
-getFieldParamsToHole tag (V.Lam param lamBody) =
+    T.Tag -> V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) -> T m ()
+getFieldParamsToHole tag (V.TypedLam param _paramTyp lamBody) =
     SubExprs.onMatchingSubexprs SubExprs.toHole (getFieldOnVar . Lens.only (param, tag)) lamBody
 
 getFieldParamsToParams ::
     Monad m =>
-    V.Lam V.Var V.Term # Ann (HRef m) -> T.Tag -> T m ()
-getFieldParamsToParams (V.Lam param lamBody) tag =
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) -> T.Tag -> T m ()
+getFieldParamsToParams (V.TypedLam param _paramTyp lamBody) tag =
     SubExprs.onMatchingSubexprs (toParam . (^. ExprIRef.iref))
     (getFieldOnVar . Lens.only (param, tag)) lamBody
     where
@@ -235,20 +265,41 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
     fixLamUsages
     <&> \fixUsages ->
     do
-        setP (slParamList storedLam) newTags
+        case (mNewTags, storedParamType ^. hVal . _HCompose) of
+            (Just newTags, Pruned) ->
+                writeNewParamList newTags
+                >>= storedParamType ^. hAnn . ExprIRef.setIref
+            (Just{}, Unpruned (HCompose (T.TRecord (HCompose r)))) ->
+                r & hflipped %~ hmap (\_ i -> ExprIRef.ExistingRef (i ^. ExprIRef.iref) :*: Const ())
+                & removeField
+                & ExprIRef.writeRecursively
+                <&> (^. hAnn . _1)
+                >>= r ^. hAnn . ExprIRef.setIref
+            (Just{}, Unpruned _) -> fail "removing field from type that isn't a record!"
+            (Nothing, _) ->
+                _HCompose # Pruned & ExprIRef.newValI
+                >>= storedParamType ^. hAnn . ExprIRef.setIref
         getFieldParamsToHole tag (storedLam ^. slLam)
         traverse_ onLastTag mLastTag
         fixUsages fixRecurseArg binderKind storedLam
     where
+        removeField (Ann a (HCompose (Unpruned (HCompose (T.RExtend (RowExtend f t rest))))))
+            | f == fpTag fp = rest ^. _HCompose
+            | otherwise =
+                rest & _HCompose %~ removeField
+                & RowExtend f t
+                & Ann a . (hcomposed _Unpruned . T._RExtend #)
+        removeField (Ann _ _) = error "expected field not preset!"
+        storedParamType = storedLam ^. slLam . V.tlInType
         onLastTag lastTag =
             do
                 getFieldParamsToParams (storedLam ^. slLam) lastTag
-                setP (Anchors.assocTag (storedLam ^. slLam . V.lamIn)) lastTag
+                setP (Anchors.assocTag (storedLam ^. slLam . V.tlIn)) lastTag
         tag = fpTag fp
         fixRecurseArg =
             maybe (fixCallArgRemoveField tag)
             fixCallToSingleArg mLastTag
-        (newTags, mLastTag) =
+        (mNewTags, mLastTag) =
             case List.delete tag tags of
             [x] -> (Nothing, Just x)
             xs -> (Just xs, Nothing)
@@ -264,13 +315,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
         add <- addFieldParam
         let addParamAfter newTag =
                 do
-                    -- Reread list for when both choosing param and adding new one
-                    -- using pre-events.
-                    getP (slParamList storedLam)
-                        <&> fromMaybe (error "no params?")
-                        <&> flip (List.insertAt (length tagsBefore + 1))
-                        >>= (add mPresMode DataOps.newHole binderKind
-                             storedLam ?? newTag)
+                    add DataOps.newHole binderKind storedLam (\x -> tagsBefore <> [x] <> tagsAfter) newTag
                     postProcess
         addNext <-
             ConvertTag.replace (nameWithContext param)
@@ -285,16 +330,16 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                 [] -> Nothing
                 b ->
                     init b ++ (fpTag fp : last b : tagsAfter)
-                    & setParamList mPresMode (slParamList storedLam) & Just
+                    & setParamsOrder mPresMode & Just
             , _fpMOrderAfter =
                 case tagsAfter of
                 [] -> Nothing
                 (x:xs) ->
                     tagsBefore ++ (x : fpTag fp : xs)
-                    & setParamList mPresMode (slParamList storedLam) & Just
+                    & setParamsOrder mPresMode & Just
             }
     where
-        param = storedLam ^. slLam . V.lamIn
+        param = storedLam ^. slLam . V.tlIn
         (tagsBefore, tagsAfter) = break (== fpTag fp) tags & _2 %~ tail
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
@@ -322,6 +367,7 @@ changeGetFieldTags param prevTag chosenTag x =
         htraverse_
         ( \case
             HWitness V.W_Term_Term -> changeGetFieldTags param prevTag chosenTag
+            _ -> const (pure ())
         ) b
 
 setFieldParamTag ::
@@ -330,10 +376,30 @@ setFieldParamTag ::
     StoredLam m -> [T.Tag] -> T.Tag -> ConvertM m (T.Tag -> T m ())
 setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     (,) <$> fixLamUsages <*> ConvertM.postProcessAssert
-    <&> \(fixUsages, postProcess) chosenTag ->
+    <&>
+    \(fixUsages, postProcess) chosenTag ->
     do
+        maybe (pure ()) (`modP` (<&> Lens.filteredBy (Lens.only prevTag) .~ chosenTag)) mPresMode
         tagsBefore ++ chosenTag : tagsAfter
-            & setParamList mPresMode (slParamList storedLam)
+            & Lens.itraverse_ (flip DataOps.setTagOrder)
+        case storedParamType ^. hVal . _HCompose of
+            Pruned ->
+                writeNewParamList (prevTagList <&> Lens.filteredBy (Lens.only prevTag) .~ chosenTag)
+                >>= storedParamType ^. hAnn . ExprIRef.setIref
+            Unpruned (HCompose (T.TRecord (HCompose r))) ->
+                r & hflipped %~ hmap (\_ i -> ExprIRef.ExistingRef (i ^. ExprIRef.iref) :*: Const ())
+                & changeField
+                & ExprIRef.writeRecursively
+                <&> (^. hAnn . _1)
+                >>= r ^. hAnn . ExprIRef.setIref
+                where
+                    changeField (Ann a (HCompose (Unpruned (HCompose (T.RExtend (RowExtend f t rest)))))) =
+                        ( if prevTag == f
+                            then RowExtend chosenTag t rest
+                            else rest & _HCompose %~ changeField & RowExtend f t
+                        ) & Ann a . (hcomposed _Unpruned . T._RExtend #)
+                    changeField (Ann _ _) = error "expected field not preset!"
+            _ -> fail "changing field in type that isn't a record!"
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. Row.eKey == prevTag =
                     argI <$
@@ -353,30 +419,28 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
             changeFieldToCall argI = ExprIRef.readValI argI >>= fixArg argI
         fixUsages changeFieldToCall binderKind storedLam
         changeGetFieldTags
-            (storedLam ^. slLam . V.lamIn) prevTag chosenTag
-            (storedLam ^. slLam . V.lamOut)
+            (storedLam ^. slLam . V.tlIn) prevTag chosenTag
+            (storedLam ^. slLam . V.tlOut)
         postProcess
     where
+        storedParamType = storedLam ^. slLam . V.tlInType
         (tagsBefore, tagsAfter) = break (== prevTag) prevTagList & _2 %~ tail
 
 convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ConventionalParams m)
-convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
+convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) lamPl =
     do
         params <- traverse mkParam fieldParams
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let addFirst tag =
                 do
-                    getP (slParamList storedLam)
-                        <&> fromMaybe (error "no params?")
-                        <&> flip (:)
-                        >>= (add mPresMode DataOps.newHole binderKind storedLam ?? tag)
+                    add DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag)) tag
                     postProcess
         addFirstSelection <-
             ConvertTag.replace (nameWithContext param)
@@ -442,7 +506,7 @@ removeCallsToVar funcVar x =
             _ -> error "assertion: expected BApp"
 
 makeDeleteLambda :: Monad m => BinderKind m -> StoredLam m -> ConvertM m (T m ())
-makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp) =
+makeDeleteLambda binderKind (StoredLam (V.TypedLam paramVar _paramTyp lamBodyStored) lambdaProp) =
     ConvertM.typeProtectedSetToVal
     <&> \protectedSetToVal ->
     do
@@ -453,7 +517,7 @@ makeDeleteLambda binderKind (StoredLam (V.Lam paramVar lamBodyStored) lambdaProp
                 (ExprIRef.globalId defI) lamBodyStored
             BinderKindLet redexLam ->
                 removeCallsToVar
-                (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
+                (redexLam ^. V.tlIn) (redexLam ^. V.tlOut)
             BinderKindLambda -> pure ()
         let lamBodyI = lamBodyStored ^. hAnn . ExprIRef.iref
         protectedSetToVal lambdaProp lamBodyI & void
@@ -489,7 +553,7 @@ convertToRecordParams =
     fixLamUsages <&>
     \fixUsages mkNewArg binderKind storedLam newParamPosition newParam ->
     do
-        let paramVar = storedLam ^. slLam . V.lamIn
+        let paramVar = storedLam ^. slLam . V.tlIn
         oldParam <-
             getP (Anchors.assocTag paramVar)
             >>=
@@ -504,11 +568,25 @@ convertToRecordParams =
         case newParamPosition of
             NewParamBefore -> [newParam, oldParam]
             NewParamAfter -> [oldParam, newParam]
-            & setParamList Nothing (slParamList storedLam)
+            & Lens.itraverse_ (flip DataOps.setTagOrder)
+        let t = storedLam ^. slLam . V.tlInType
+        newParamType <- _HCompose # Pruned & ExprIRef.newValI
+        hcomposed _Unpruned # T.REmpty
+            & ExprIRef.newValI
+            >>= extend oldParam (t ^. hAnn . ExprIRef.iref)
+            >>= extend newParam newParamType
+            <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
+            >>= ExprIRef.newValI
+            >>= t ^. hAnn . ExprIRef.setIref
         convertVarToGetField oldParam paramVar
-            (storedLam ^. slLam . V.lamOut)
+            (storedLam ^. slLam . V.tlOut)
         fixUsages (wrapArgWithRecord mkNewArg oldParam newParam)
             binderKind storedLam
+    where
+        extend tag typ rest =
+            hcomposed _Unpruned . T._RExtend #
+            RowExtend tag (_HCompose # typ) (_HCompose # rest)
+            & ExprIRef.newValI
 
 lamParamType :: Input.Payload m a # V.Term -> Pure # T.Type
 lamParamType lamExprPl =
@@ -542,7 +620,7 @@ makeNonRecordParamActions binderKind storedLam =
             , _fpMOrderAfter = Nothing
             }
     where
-        param = storedLam ^. slLam . V.lamIn
+        param = storedLam ^. slLam . V.tlIn
 
 mkVarInfo :: Ann a # Type InternalName -> VarInfo
 mkVarInfo (Ann _ TFun{}) = VarFunction
@@ -581,10 +659,10 @@ mkFuncParam entityId lamExprPl info =
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ConventionalParams m)
-convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
+convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
     do
         funcParamActions <- makeNonRecordParamActions binderKind storedLam
         nullParamSugar <-
@@ -629,8 +707,8 @@ convertNonRecordParam binderKind lam@(V.Lam param _) lamExprPl =
     where
         storedLam = mkStoredLam lam lamExprPl
 
-isParamAlwaysUsedWithGetField :: V.Lam V.Var V.Term # Ann a -> Bool
-isParamAlwaysUsedWithGetField (V.Lam param bod) =
+isParamAlwaysUsedWithGetField :: V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann a -> Bool
+isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
     go False bod
     where
         go isGetFieldChild expr =
@@ -641,6 +719,7 @@ isParamAlwaysUsedWithGetField (V.Lam param bod) =
                 hfoldMap @_ @[Bool]
                 ( \case
                     HWitness V.W_Term_Term -> (:[]) . go False
+                    HWitness V.W_Term_HCompose_Prune_Type -> const []
                 ) x
                 & and
 
@@ -657,7 +736,7 @@ postProcessActions post x
 
 convertLamParams ::
     Monad m =>
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
@@ -680,7 +759,7 @@ convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m ->
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
@@ -700,30 +779,14 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , let fieldParams = fields <&> makeFieldParam lambdaPl
                 ->
                     if Set.null (tagsInOuterScope `Set.intersection` myTags)
-                    then
-                        do
-                            presModeTags <- Lens._Just getP mPresMode <&> mPresModeToTags
-                            paramList <-
-                                getP (Anchors.assocFieldParamList (lambdaPl ^. Input.stored . ExprIRef.iref))
-                                <&> (^.. Lens._Just . traverse)
-                            let presModeOrder tag =
-                                    ( takeWhile (/= tag) presModeTags & length
-                                    , takeWhile (/= tag) paramList & length
-                                    )
-                            convertRecordParams mPresMode binderKind
-                                (fieldParams & List.sortOn (presModeOrder . fpTag))
-                                lambda lambdaPl
+                    then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
                     else
                         convertNonRecordParam binderKind lambda lambdaPl
                         <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
             _ -> convertNonRecordParam binderKind lambda lambdaPl
     where
-        param = lambda ^. V.lamIn
+        param = lambda ^. V.tlIn
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
-        mPresModeToTags p =
-            case p of
-            Just (Operator t0 t1) -> [t0, t1]
-            _ -> []
 
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Ann (HRef m) # V.Term -> T m ()
@@ -745,7 +808,7 @@ convertBinderToFunction mkArg binderKind x =
                 convertVarToCalls mkArg (ExprIRef.globalId defI) x
             BinderKindLet redexLam ->
                 convertVarToCalls mkArg
-                (redexLam ^. V.lamIn) (redexLam ^. V.lamOut)
+                (redexLam ^. V.tlIn) (redexLam ^. V.tlOut)
             BinderKindLambda -> error "Lambda will never be an empty-params binder"
         pure (newParam, newValP)
 
@@ -773,12 +836,13 @@ convertEmptyParams binderKind x =
     }
 
 convertParams ::
-    Monad m =>
+    (Monad m, Monoid a) =>
     BinderKind m -> V.Var -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , ConventionalParams m
     , Ann (Input.Payload m a) # V.Term
+    , a
     )
 convertParams binderKind defVar expr =
     do
@@ -786,12 +850,16 @@ convertParams binderKind defVar expr =
         case expr ^. hVal of
             V.BLam lambda ->
                 convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. hAnn)
-                <&> f
+                <&>
+                \convParams ->
+                ( mPresMode convParams
+                , convParams
+                , lambda ^. V.tlOut
+                , hfoldMap (const (^. Input.userData)) (lambda ^. V.tlInType . hflipped)
+                )
                 where
-                    f convParams =
-                        (mPresMode convParams, convParams, lambda ^. V.lamOut)
                     mPresMode convParams =
                         presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
                     presMode = Anchors.assocPresentationMode defVar
-            _ -> convertEmptyParams binderKind expr <&> (Nothing, , expr)
+            _ -> convertEmptyParams binderKind expr <&> (Nothing, , expr, mempty)
             <&> _2 %~ postProcessActions postProcess

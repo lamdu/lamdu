@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators, TypeApplications, ScopedTypeVariables, GADTs #-}
+{-# LANGUAGE TypeOperators, TypeApplications, ScopedTypeVariables, GADTs, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
@@ -9,16 +10,19 @@ import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Infer.Blame (BlameResult(..), blame)
 import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Type.Prune (Prune(..), _Unpruned)
 import           Hyper.Unify.Generalize (GTerm(..))
 import           Hyper.Unify.New (newUnbound)
 import qualified Lamdu.Calc.Infer as Infer
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValI, HRef, globalId, iref)
+import           Lamdu.Expr.IRef (ValI, globalId, iref, writeValI)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Revision.Deltum.Hyper (HRef, HStore)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -31,6 +35,7 @@ data EditAction a
 
 data PriorityClass
     = HealPoint
+    | TypeAnnotation
     | InFragment
     | Other
     deriving (Eq, Ord)
@@ -41,6 +46,7 @@ class HFunctor h => Prepare h where
     fixPriorities ::
         Annotated ((a, Int), b) h ->
         Annotated ((a, Int), b) h
+    fixPriorities = id
     wrap :: Monad m => HRef m # h -> T m ()
 
 instance Prepare Term where
@@ -58,6 +64,12 @@ instance Prepare Term where
             score = annotation . _1 . _2
     wrap a = () <$ DataOps.applyHoleTo a
 
+instance Prepare (HCompose Prune T.Type) where
+    wrap a = writeValI (a ^. iref) (_HCompose # Pruned)
+
+instance Prepare (HCompose Prune T.Row) where
+    wrap a = writeValI (a ^. iref) (_HCompose # Pruned)
+
 prepareInFragExpr ::
     forall m h.
     (Monad m, Recursively Prepare h) =>
@@ -68,6 +80,23 @@ prepareInFragExpr (Ann a v) =
     hmap (Proxy @(Recursively Prepare) #> prepareInFragExpr) v
     & Ann (Const ((InFragment, 0), OnNoUnify (wrap a)))
     & fixPriorities
+
+class (HStore m (HCompose Prune h), HFunctor h) => PrepareParamType m h
+instance Monad m => PrepareParamType m T.Type
+instance Monad m => PrepareParamType m T.Row
+
+prepareParamType ::
+    forall m h.
+    (Monad m, Recursively (PrepareParamType m) h) =>
+    Ann (HRef m) # HCompose Prune h ->
+    Annotated (Priority, EditAction (T m ())) (HCompose Prune h)
+prepareParamType (Ann a b) =
+    withDict (recursively (Proxy @(PrepareParamType m h))) $
+    Ann
+    ( Const ((TypeAnnotation, 0)
+    , OnNoUnify (writeValI (a ^. iref) (_HCompose # Pruned)))
+    ) (b & hcomposed _Unpruned %~
+        hmap (Proxy @(Recursively (PrepareParamType m)) #> _HCompose %~ prepareParamType))
 
 prepare ::
     Monad m =>
@@ -83,6 +112,7 @@ prepare fragI (Ann a v) =
         hmap
         ( \case
             HWitness V.W_Term_Term -> prepare fragI
+            HWitness V.W_Term_HCompose_Prune_Type -> prepareParamType
         ) v
         & Ann (Const ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))
     & fixPriorities

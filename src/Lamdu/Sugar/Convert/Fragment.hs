@@ -273,6 +273,8 @@ replaceFragment parentEntityId idxInParent (Ann pl bod) =
                     i <- Lens.use id
                     id += 1
                     replaceFragment (pl ^. Input.entityId) i x & pure
+            HWitness V.W_Term_HCompose_Prune_Type ->
+                pure . (hflipped %~ hmap (const (Input.userData .~ ())))
         ) bod
         & (`State.evalState` (0 :: Int))
         & Ann (pl & Input.userData .~ ())
@@ -310,6 +312,7 @@ emplaceInHoles replaceHole =
                             htraverse
                             ( \case
                                 HWitness V.W_Term_Term -> fmap Foo . go
+                                HWitness V.W_Term_HCompose_Prune_Type -> pure . Foo . pure
                             ) bod
                             <&> htraverse (const getFoo)
                             <&> Lens.mapped %~ Ann x
@@ -380,5 +383,7 @@ mkOptionFromFragment sugarContext exprPl x =
             hmap
             ( \case
                 HWitness V.W_Term_Term -> pruneExpr
+                HWitness V.W_Term_HCompose_Prune_Type ->
+                    hflipped %~ hmap (\_ _ -> Const ())
             ) b
             & Ann (Const ())

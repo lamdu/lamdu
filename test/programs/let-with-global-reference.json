@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tagOrder": 0,
@@ -11,21 +11,15 @@
     },
     {
         "tag": null,
-        "lamId": "6fead615-20f3-4317-a104-94327bc82af9",
-        "lamVar": "2ec25931c08b44c38c4c4293fcab37ca",
-        "lamFieldParams": null
+        "lamVar": "2ec25931c08b44c38c4c4293fcab37ca"
     },
     {
         "tag": null,
-        "lamId": "4dc44b1e-f1c4-45b5-8074-29775d48bc1f",
-        "lamVar": "712611417762435eb39b3db7e6f211d2",
-        "lamFieldParams": null
+        "lamVar": "712611417762435eb39b3db7e6f211d2"
     },
     {
         "tag": null,
-        "lamId": "595eeca6-39be-490c-bde3-afcda74dd17a",
-        "lamVar": "931dfe35cd2549e3a9b4a69a5c608cb5",
-        "lamFieldParams": null
+        "lamVar": "931dfe35cd2549e3a9b4a69a5c608cb5"
     },
     {
         "tag": "f5fc847215e75abfd5f4698f7688555f",
@@ -60,10 +54,16 @@
             },
             "val": {
                 "applyFunc": {
+                    "lamParamType": {
+                        "id": "03689466-579b-5512-80df-3901577490b9"
+                    },
                     "lamVar": "712611417762435eb39b3db7e6f211d2",
                     "id": "4dc44b1e-f1c4-45b5-8074-29775d48bc1f",
                     "lamBody": {
                         "applyFunc": {
+                            "lamParamType": {
+                                "id": "d169778f-d0a5-53a5-8d23-8766e40e95c6"
+                            },
                             "lamVar": "2ec25931c08b44c38c4c4293fcab37ca",
                             "id": "6fead615-20f3-4317-a104-94327bc82af9",
                             "lamBody": {
@@ -72,6 +72,9 @@
                             }
                         },
                         "applyArg": {
+                            "lamParamType": {
+                                "id": "94d2c30b-0871-5b16-b127-7901a99c60b6"
+                            },
                             "lamVar": "931dfe35cd2549e3a9b4a69a5c608cb5",
                             "id": "595eeca6-39be-490c-bde3-afcda74dd17a",
                             "lamBody": {

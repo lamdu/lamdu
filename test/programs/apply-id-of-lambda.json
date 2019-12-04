@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tagOrder": 0,
@@ -29,18 +29,11 @@
     },
     {
         "tag": null,
-        "lamId": "163a0806-8fbf-4754-8323-bcafd267321b",
-        "lamVar": "8127476fd88dd922260ce9435f9f1c87",
-        "lamFieldParams": [
-            "64077ff41e0a8ee59e103f93023ad302",
-            "fa4970527c82ac935af48b0693d96cd9"
-        ]
+        "lamVar": "8127476fd88dd922260ce9435f9f1c87"
     },
     {
         "tag": "a386d980d96f732451f7b7b7ebab441c",
-        "lamId": "6b0dae3b-248b-459d-b5be-132b853c77e9",
-        "lamVar": "d852a0789d16442590005ba054341671",
-        "lamFieldParams": null
+        "lamVar": "d852a0789d16442590005ba054341671"
     },
     {
         "tag": "a56145270ce6b3bebd1dd012b7394867",
@@ -60,6 +53,9 @@
             ]
         },
         "val": {
+            "lamParamType": {
+                "id": "623d1ddb-f0ac-5123-a86d-7dfdbb42422b"
+            },
             "lamVar": "d852a0789d16442590005ba054341671",
             "id": "6b0dae3b-248b-459d-b5be-132b853c77e9",
             "lamBody": {
@@ -94,6 +90,24 @@
                         "id": "51a0d65d-a828-ef61-8385-871a5044b540"
                     },
                     "applyArg": {
+                        "lamParamType": {
+                            "record": [
+                                {
+                                    "rowId": "b0e8c0ec-d632-5637-9d73-c4a17b63dbc1",
+                                    "id": "0006baae-acbd-5c3f-b8e7-ec4806ff20d9",
+                                    "rowTag": "64077ff41e0a8ee59e103f93023ad302"
+                                },
+                                {
+                                    "rowId": "d20aa18e-1400-542a-a462-7ba2f7753924",
+                                    "id": "b895e850-37e1-5282-a70a-4946581f2a37",
+                                    "rowTag": "fa4970527c82ac935af48b0693d96cd9"
+                                },
+                                {
+                                    "rowId": "0f783a59-f741-5d48-8687-54dc1b5ca2a9"
+                                }
+                            ],
+                            "id": "bc7551b1-55cb-55a9-86ad-fff5961c9fe0"
+                        },
                         "lamVar": "8127476fd88dd922260ce9435f9f1c87",
                         "id": "163a0806-8fbf-4754-8323-bcafd267321b",
                         "lamBody": {

@@ -14,6 +14,7 @@ import           Hyper.Infer (InferResult, inferResult, inferBody)
 import           Hyper.Type.AST.FuncType
 import           Hyper.Type.AST.Nominal
 import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.Prune
 import           Hyper.Unify
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Lookup (semiPruneLookup)
@@ -183,7 +184,11 @@ forTypeUTermWithoutSplit t =
         semiPruneLookup param <&> (^? _2 . _UTerm . uBody . T._TVariant) >>=
         \case
         Just row -> suggestCaseWith row result
-        Nothing -> forTypeWithoutSplit result <&> V.Lam "var" <&> V.BLam
+        Nothing ->
+            V.TypedLam "var"
+            <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
+            <*> forTypeWithoutSplit result
+            <&> V.BLam
     _ -> V.BLeaf V.LHole & pure
 
 suggestRecord ::
@@ -213,7 +218,12 @@ suggestCaseWith variantType resultType =
         RowExtend tag
         <$> (Ann
                 <$> (mkCaseType fieldType <&> (inferResult #))
-                <*> (autoLambdas resultType <&> V.Lam "var" <&> V.BLam))
+                <*> (V.TypedLam "var"
+                    <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
+                    <*> autoLambdas resultType
+                    <&> V.BLam
+                    )
+            )
         <*> (Ann
                 <$> (T.TVariant rest & newTerm >>= mkCaseType <&> (inferResult #))
                 <*> suggestCaseWith rest resultType)
@@ -226,9 +236,12 @@ suggestCaseWith variantType resultType =
 
 autoLambdas :: Unify m T.Type => UVarOf m # T.Type -> m (TypedTerm m)
 autoLambdas typ =
-    semiPruneLookup typ <&> (^? _2 . _UTerm . uBody . T._TFun . funcOut) >>=
+    semiPruneLookup typ <&> (^? _2 . _UTerm . uBody . T._TFun) >>=
     \case
-    Just result -> autoLambdas result <&> V.Lam "var" <&> V.BLam
+    Just result ->
+        autoLambdas (result ^. funcOut)
+        <&> V.TypedLam "var" (Ann (inferResult # (result ^. funcIn)) (_HCompose # Pruned))
+        <&> V.BLam
     Nothing -> V.BLeaf V.LHole & pure
     <&> Ann (inferResult # typ)
 
@@ -251,6 +264,7 @@ fillHoles mkPl getInferred x =
     ( htraverse $
         \case
         HWitness V.W_Term_Term -> fillHoles mkPl getInferred
+        _ -> pure
     ) x
 
 -- | Transform by wrapping OR modifying a term. Used by both holes and

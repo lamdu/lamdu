@@ -1,126 +1,173 @@
 [
     {
+        "schemaVersion": 13
+    },
+    {
+        "tagOrder": 0,
+        "op": "*",
+        "tag": "684888c0ebb17f374298b65ee2807526"
+    },
+    {
+        "tagOrder": 0,
+        "op": "-",
+        "tag": "3973e022e93220f9212c18d0d0c543ae"
+    },
+    {
+        "tagOrder": 0,
+        "op": "==",
+        "tag": "f16474a9900a44186e87098f5fcb153a"
+    },
+    {
+        "tagOrder": 0,
+        "tag": "b760f44fa5965c2474a3b471467a22c4",
+        "names": {
+            "english": "bool"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "049b3253f4a8e2eb6441b5ae55046d3b",
+        "names": {
+            "english": "factorial"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "2d711642b726b04401627ca9fbac32f5",
+        "names": {
+            "english": "x"
+        }
+    },
+    {
         "tagOrder": 1,
         "tag": "42493a66616c73650000000000000000",
-        "name": "False"
+        "names": {
+            "english": "False"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a696e6669786c00000000000000",
-        "name": "infixl"
+        "names": {
+            "english": "infixl"
+        }
     },
     {
         "tagOrder": 1,
         "tag": "42493a696e6669787200000000000000",
-        "name": "infixr"
+        "names": {
+            "english": "infixr"
+        }
     },
     {
         "tagOrder": 0,
         "tag": "42493a74727565000000000000000000",
-        "name": "True"
+        "names": {
+            "english": "True"
+        }
     },
     {
         "nomType": {
             "schemeType": {
-                "sum": {
-                    "42493a66616c73650000000000000000": {
-                        "record": {}
+                "variant": [
+                    {
+                        "record": [],
+                        "rowTag": "42493a66616c73650000000000000000"
                     },
-                    "42493a74727565000000000000000000": {
-                        "record": {}
+                    {
+                        "record": [],
+                        "rowTag": "42493a74727565000000000000000000"
                     }
-                }
+                ]
             }
         },
-        "nom": "426f6f6c000000000000000000000000",
-        "name": "Bool"
+        "tag": "b760f44fa5965c2474a3b471467a22c4",
+        "nom": "426f6f6c000000000000000000000000"
     },
     {
-        "lamId": "a7350652-846b-4361-8e27-d073002d3e47",
-        "name": "x",
-        "lamVar": "2ae46ac33bdd45509b3dde996a450917",
-        "lamFieldParams": null
+        "tag": "2d711642b726b04401627ca9fbac32f5",
+        "lamVar": "2ae46ac33bdd45509b3dde996a450917"
     },
     {
-        "lamId": "ae750669-796d-49e3-a1df-c8fe6a728981",
-        "lamVar": "7cb351fcd8f93c38abb89db4eb5f7ff7",
-        "lamFieldParams": null
+        "tag": null,
+        "lamVar": "7cb351fcd8f93c38abb89db4eb5f7ff7"
     },
     {
-        "lamId": "be303b9b-5205-4009-aa20-ade5770fd35b",
-        "lamVar": "c4fcbabcef919016bdc3d8f11a66130f",
-        "lamFieldParams": null
+        "tag": null,
+        "lamVar": "c4fcbabcef919016bdc3d8f11a66130f"
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            4
+        "tag": "f16474a9900a44186e87098f5fcb153a",
+        "defPresentationMode": {
+            "Operator": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
+        "builtin": [
+            "Prelude",
+            "=="
         ],
-        "builtin": {
-            "name": [
-                "Prelude",
-                "=="
-            ],
-            "scheme": {
-                "schemeType": {
-                    "funcParam": {
-                        "record": {
-                            "42493a696e6669786c00000000000000": {
-                                "typeVar": "61"
-                            },
-                            "42493a696e6669787200000000000000": {
-                                "typeVar": "61"
-                            }
+        "def": "0de3f3f9c1ce450590f76395c35fc113",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": [
+                        {
+                            "typeVar": "61",
+                            "rowTag": "42493a696e6669786c00000000000000"
+                        },
+                        {
+                            "typeVar": "61",
+                            "rowTag": "42493a696e6669787200000000000000"
                         }
-                    },
-                    "funcResult": {
-                        "nomId": "426f6f6c000000000000000000000000"
-                    }
-                },
-                "schemeBinders": {
-                    "typeVars": [
-                        "61"
                     ]
+                },
+                "funcResult": {
+                    "nomId": "426f6f6c000000000000000000000000"
                 }
-            }
-        },
-        "name": "==",
-        "def": "0de3f3f9c1ce450590f76395c35fc113"
+            },
+            "typeVars": [
+                "61"
+            ]
+        }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            6
+        "tag": "3973e022e93220f9212c18d0d0c543ae",
+        "defPresentationMode": {
+            "Operator": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
+        },
+        "builtin": [
+            "Prelude",
+            "-"
         ],
-        "builtin": {
-            "name": [
-                "Prelude",
-                "-"
-            ],
-            "scheme": {
-                "schemeType": {
-                    "funcParam": {
-                        "record": {
-                            "42493a696e6669786c00000000000000": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            },
-                            "42493a696e6669787200000000000000": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            }
+        "def": "106bbf2db4eb4ba0a4ac27214c5a162b",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": [
+                        {
+                            "nomId": "42493a666c6f61740000000000000000",
+                            "rowTag": "42493a696e6669786c00000000000000"
+                        },
+                        {
+                            "nomId": "42493a666c6f61740000000000000000",
+                            "rowTag": "42493a696e6669787200000000000000"
                         }
-                    },
-                    "funcResult": {
-                        "nomId": "42493a666c6f61740000000000000000"
-                    }
+                    ]
+                },
+                "funcResult": {
+                    "nomId": "42493a666c6f61740000000000000000"
                 }
             }
-        },
-        "name": "-",
-        "def": "106bbf2db4eb4ba0a4ac27214c5a162b"
+        }
     },
     {
+        "tag": "049b3253f4a8e2eb6441b5ae55046d3b",
         "defPresentationMode": "Verbose",
-        "name": "factorial",
         "def": "3b9d0a5e8f0d417d9320981fb2f41d58",
         "typ": {
             "schemeType": {
@@ -132,7 +179,92 @@
                 }
             }
         },
+        "frozenDeps": {
+            "defTypes": {
+                "106bbf2db4eb4ba0a4ac27214c5a162b": {
+                    "schemeType": {
+                        "funcParam": {
+                            "record": [
+                                {
+                                    "nomId": "42493a666c6f61740000000000000000",
+                                    "rowTag": "42493a696e6669786c00000000000000"
+                                },
+                                {
+                                    "nomId": "42493a666c6f61740000000000000000",
+                                    "rowTag": "42493a696e6669787200000000000000"
+                                }
+                            ]
+                        },
+                        "funcResult": {
+                            "nomId": "42493a666c6f61740000000000000000"
+                        }
+                    }
+                },
+                "0de3f3f9c1ce450590f76395c35fc113": {
+                    "schemeType": {
+                        "funcParam": {
+                            "record": [
+                                {
+                                    "typeVar": "61",
+                                    "rowTag": "42493a696e6669786c00000000000000"
+                                },
+                                {
+                                    "typeVar": "61",
+                                    "rowTag": "42493a696e6669787200000000000000"
+                                }
+                            ]
+                        },
+                        "funcResult": {
+                            "nomId": "426f6f6c000000000000000000000000"
+                        }
+                    },
+                    "typeVars": [
+                        "61"
+                    ]
+                },
+                "5a6cdaa2a63f4f12a18cead35e48b013": {
+                    "schemeType": {
+                        "funcParam": {
+                            "record": [
+                                {
+                                    "nomId": "42493a666c6f61740000000000000000",
+                                    "rowTag": "42493a696e6669786c00000000000000"
+                                },
+                                {
+                                    "nomId": "42493a666c6f61740000000000000000",
+                                    "rowTag": "42493a696e6669787200000000000000"
+                                }
+                            ]
+                        },
+                        "funcResult": {
+                            "nomId": "42493a666c6f61740000000000000000"
+                        }
+                    }
+                }
+            },
+            "nominals": {
+                "426f6f6c000000000000000000000000": {
+                    "nomType": {
+                        "schemeType": {
+                            "variant": [
+                                {
+                                    "record": [],
+                                    "rowTag": "42493a66616c73650000000000000000"
+                                },
+                                {
+                                    "record": [],
+                                    "rowTag": "42493a74727565000000000000000000"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "val": {
+            "lamParamType": {
+                "id": "eab357bc-4240-500c-ab48-e83ea91611b5"
+            },
             "lamVar": "2ae46ac33bdd45509b3dde996a450917",
             "id": "a7350652-846b-4361-8e27-d073002d3e47",
             "lamBody": {
@@ -143,6 +275,9 @@
                             "absurd": {}
                         },
                         "caseHandler": {
+                            "lamParamType": {
+                                "id": "6e1e2ec8-bc7f-52e9-8dab-caf15d4457df"
+                            },
                             "lamVar": "7cb351fcd8f93c38abb89db4eb5f7ff7",
                             "id": "ae750669-796d-49e3-a1df-c8fe6a728981",
                             "lamBody": {
@@ -155,6 +290,9 @@
                         "id": "120c58cd-e1ab-4b4a-aa08-bfeea8439956"
                     },
                     "caseHandler": {
+                        "lamParamType": {
+                            "id": "09054f66-f214-51cd-a512-0840fd6a9954"
+                        },
                         "lamVar": "c4fcbabcef919016bdc3d8f11a66130f",
                         "id": "be303b9b-5205-4009-aa20-ade5770fd35b",
                         "lamBody": {
@@ -220,9 +358,11 @@
                     "id": "33c675a8-8fad-4d65-acf8-a14809337ce6"
                 },
                 "applyArg": {
-                    "fromNomId": "426f6f6c000000000000000000000000",
-                    "id": "378507ca-44d0-4112-95f7-a496d6815ab9",
-                    "fromNomVal": {
+                    "applyFunc": {
+                        "fromNomId": "426f6f6c000000000000000000000000",
+                        "id": "4049b97a-727f-5642-97ca-a96b2758b6b2"
+                    },
+                    "applyArg": {
                         "applyFunc": {
                             "var": "0de3f3f9c1ce450590f76395c35fc113",
                             "id": "ff668eef-95da-421c-b501-a29c96abc364"
@@ -249,113 +389,74 @@
                             }
                         },
                         "id": "e6865048-e019-4520-ae8f-c3095727ba5e"
-                    }
+                    },
+                    "id": "378507ca-44d0-4112-95f7-a496d6815ab9"
                 },
                 "id": "b9fbed2c-3f40-4778-a045-73039d017d48"
             }
+        }
+    },
+    {
+        "tag": "684888c0ebb17f374298b65ee2807526",
+        "defPresentationMode": {
+            "Operator": [
+                "42493a696e6669786c00000000000000",
+                "42493a696e6669787200000000000000"
+            ]
         },
-        "frozenDefTypes": {
-            "106bbf2db4eb4ba0a4ac27214c5a162b": {
-                "schemeType": {
-                    "funcParam": {
-                        "record": {
-                            "42493a696e6669786c00000000000000": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            },
-                            "42493a696e6669787200000000000000": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            }
+        "builtin": [
+            "Prelude",
+            "*"
+        ],
+        "def": "5a6cdaa2a63f4f12a18cead35e48b013",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": [
+                        {
+                            "nomId": "42493a666c6f61740000000000000000",
+                            "rowTag": "42493a696e6669786c00000000000000"
+                        },
+                        {
+                            "nomId": "42493a666c6f61740000000000000000",
+                            "rowTag": "42493a696e6669787200000000000000"
                         }
-                    },
-                    "funcResult": {
-                        "nomId": "42493a666c6f61740000000000000000"
-                    }
-                }
-            },
-            "0de3f3f9c1ce450590f76395c35fc113": {
-                "schemeType": {
-                    "funcParam": {
-                        "record": {
-                            "42493a696e6669786c00000000000000": {
-                                "typeVar": "61"
-                            },
-                            "42493a696e6669787200000000000000": {
-                                "typeVar": "61"
-                            }
-                        }
-                    },
-                    "funcResult": {
-                        "nomId": "426f6f6c000000000000000000000000"
-                    }
-                },
-                "schemeBinders": {
-                    "typeVars": [
-                        "61"
                     ]
-                }
-            },
-            "5a6cdaa2a63f4f12a18cead35e48b013": {
-                "schemeType": {
-                    "funcParam": {
-                        "record": {
-                            "42493a696e6669786c00000000000000": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            },
-                            "42493a696e6669787200000000000000": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            }
-                        }
-                    },
-                    "funcResult": {
-                        "nomId": "42493a666c6f61740000000000000000"
-                    }
+                },
+                "funcResult": {
+                    "nomId": "42493a666c6f61740000000000000000"
                 }
             }
         }
     },
     {
-        "defPresentationMode": [
-            "Infix",
-            7
-        ],
-        "builtin": {
-            "name": [
-                "Prelude",
-                "*"
-            ],
-            "scheme": {
-                "schemeType": {
-                    "funcParam": {
-                        "record": {
-                            "42493a696e6669786c00000000000000": {
+        "repl": {
+            "frozenDeps": {
+                "defTypes": {
+                    "3b9d0a5e8f0d417d9320981fb2f41d58": {
+                        "schemeType": {
+                            "funcParam": {
                                 "nomId": "42493a666c6f61740000000000000000"
                             },
-                            "42493a696e6669787200000000000000": {
+                            "funcResult": {
                                 "nomId": "42493a666c6f61740000000000000000"
                             }
                         }
-                    },
-                    "funcResult": {
-                        "nomId": "42493a666c6f61740000000000000000"
                     }
                 }
+            },
+            "val": {
+                "applyFunc": {
+                    "var": "3b9d0a5e8f0d417d9320981fb2f41d58",
+                    "id": "a938b8f3-b57c-4925-8bdd-1743bf154c2c"
+                },
+                "applyArg": {
+                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
+                    "primId": "42493a666c6f61740000000000000000",
+                    "id": "02267cec-927b-44b0-83b8-cc960647d821"
+                },
+                "id": "cda4fa6a-35e3-4d7f-9e5a-d47466a11f3b"
             }
-        },
-        "name": "*",
-        "def": "5a6cdaa2a63f4f12a18cead35e48b013"
-    },
-    {
-        "repl": {
-            "applyFunc": {
-                "var": "3b9d0a5e8f0d417d9320981fb2f41d58",
-                "id": "a938b8f3-b57c-4925-8bdd-1743bf154c2c"
-            },
-            "applyArg": {
-                "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
-                "primId": "42493a666c6f61740000000000000000",
-                "id": "02267cec-927b-44b0-83b8-cc960647d821"
-            },
-            "id": "cda4fa6a-35e3-4d7f-9e5a-d47466a11f3b"
         }
     }
 ]

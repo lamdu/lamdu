@@ -62,6 +62,7 @@ recursivelyFixExpr mFix =
                 htraverse_
                 ( \case
                     HWitness V.W_Term_Term -> go NotHoleArg
+                    _ -> const (pure ())
                 ) (x ^. hVal)
 
 changeFuncRes :: Monad m => V.Var -> Ann (HRef m) # V.Term -> T m ()

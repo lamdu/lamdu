@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tagOrder": 0,
@@ -19,33 +19,36 @@
     },
     {
         "tag": "a386d980d96f732451f7b7b7ebab441c",
-        "lamId": "344b5f6e-3ddf-2c73-5220-1f87099f85a6",
-        "lamVar": "0f20321f35a5093d27463d21d2980843",
-        "lamFieldParams": null
+        "lamVar": "0f20321f35a5093d27463d21d2980843"
     },
     {
         "tag": "969119fb8369b77990cb826a87842aed",
-        "lamId": "ed3583ba-b300-421c-95d2-654c27dd9e0c",
-        "lamVar": "472dad7a54c94b96a83b055f6a457a5d",
-        "lamFieldParams": null
+        "lamVar": "472dad7a54c94b96a83b055f6a457a5d"
     },
     {
         "tag": "a386d980d96f732451f7b7b7ebab441c",
-        "lamId": "9e6d24d5-7b99-4fea-91d6-9e397a80ae86",
-        "lamVar": "5b175fd0a1bf49bc8ec1a1aa5ed84d4f",
-        "lamFieldParams": null
+        "lamVar": "5b175fd0a1bf49bc8ec1a1aa5ed84d4f"
     },
     {
         "repl": {
             "val": {
+                "lamParamType": {
+                    "id": "a4f33208-dcb2-57f3-83fb-a2a080cf4d03"
+                },
                 "lamVar": "0f20321f35a5093d27463d21d2980843",
                 "id": "344b5f6e-3ddf-2c73-5220-1f87099f85a6",
                 "lamBody": {
                     "applyFunc": {
+                        "lamParamType": {
+                            "id": "2c480276-7ba2-544a-a400-51c145a64d32"
+                        },
                         "lamVar": "5b175fd0a1bf49bc8ec1a1aa5ed84d4f",
                         "id": "9e6d24d5-7b99-4fea-91d6-9e397a80ae86",
                         "lamBody": {
                             "applyFunc": {
+                                "lamParamType": {
+                                    "id": "792a98a7-1849-56cb-a961-ab1d156c183e"
+                                },
                                 "lamVar": "472dad7a54c94b96a83b055f6a457a5d",
                                 "id": "ed3583ba-b300-421c-95d2-654c27dd9e0c",
                                 "lamBody": {

@@ -1,16 +1,17 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tag": null,
-        "lamId": "22457b0f-d0eb-56c0-3f28-fcd27375ee4f",
-        "lamVar": "eada442322bdc44ddd0fe77a08a9dff0",
-        "lamFieldParams": null
+        "lamVar": "eada442322bdc44ddd0fe77a08a9dff0"
     },
     {
         "repl": {
             "val": {
+                "lamParamType": {
+                    "id": "4bca2c45-e733-5cad-bf56-a00eda69a20e"
+                },
                 "lamVar": "eada442322bdc44ddd0fe77a08a9dff0",
                 "id": "22457b0f-d0eb-56c0-3f28-fcd27375ee4f",
                 "lamBody": {

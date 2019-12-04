@@ -3,7 +3,6 @@ module Lamdu.Data.Meta
     ( DefinitionState(..)
     , SpecialArgs(..), _Verbose, _Operator
     , PresentationMode
-    , ParamList
     ) where
 
 import qualified Control.Lens as Lens
@@ -22,7 +21,5 @@ data SpecialArgs a
     deriving anyclass Binary
 
 type PresentationMode = SpecialArgs T.Tag
-
-type ParamList = [T.Tag]
 
 Lens.makePrisms ''SpecialArgs

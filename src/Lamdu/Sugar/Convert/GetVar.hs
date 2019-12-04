@@ -78,7 +78,7 @@ inlineDef globalId dest =
                 do
                     isRecursive <-
                         ExprIRef.readRecursively (defExpr ^. Def.expr)
-                        <&> hflipped . hmapped1 %~ Const
+                        <&> hflipped %~ hmap (\_ _ -> Const ())
                         <&> Lens.has (ExprLens.valGlobals mempty . Lens.only globalId)
                     if isRecursive
                         then gotoDef
@@ -100,7 +100,7 @@ globalNameRef cp defI =
 inlineableDefinition :: ConvertM.Context m -> V.Var -> EntityId -> Bool
 inlineableDefinition ctx var entityId =
     ctx ^. ConvertM.scTopLevelExpr
-    & hflipped . hmapped1 %~ Const . (^. Input.entityId)
+    & hflipped %~ hmap (const (Const . (^. Input.entityId)))
     & Lens.nullOf (ExprLens.valGlobals recursiveVars . Lens.ifiltered f)
     where
         recursiveVars =

@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Binder.Inline
 import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Type.Functor (F, _F)
+import           Hyper.Type.Prune (Prune(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Expr.IRef (HRef)
@@ -26,8 +27,8 @@ redexes ::
     Ann a # V.Term ->
     ([(V.Var, Ann a # V.Term)], Ann a # V.Term)
 redexes (Ann _ (V.BApp (V.App (Ann _ (V.BLam lam)) arg))) =
-    redexes (lam ^. V.lamOut)
-    & _1 %~ (:) (lam ^. V.lamIn, arg)
+    redexes (lam ^. V.tlOut)
+    & _1 %~ (:) (lam ^. V.tlIn, arg)
 redexes v = ([], v)
 
 wrapWithRedexes ::
@@ -38,7 +39,10 @@ wrapWithRedexes rs x =
     foldr wrapWithRedex x rs
     where
         wrapWithRedex (v, a) b =
-            V.App (Ann WriteNew (V.BLam (V.Lam v b))) a
+            V.TypedLam v (Ann WriteNew (_HCompose # Pruned)) b
+            & V.BLam
+            & Ann WriteNew
+            & (`V.App` a)
             & V.BApp
             & Ann WriteNew
 
@@ -55,14 +59,14 @@ inlineLetH var arg bod =
             case (b, arg ^. hVal) of
             (V.BLeaf (V.LVar v), _) | v == var -> redexes arg
             (V.BApp (V.App (Ann _ (V.BLeaf (V.LVar v))) a)
-              , V.BLam (V.Lam param lamBody))
+              , V.BLam (V.TypedLam param _paramTyp lamBody))
               | v == var ->
                 redexes lamBody
                 & _1 %~ (:) (param, a)
-            (V.BLam (V.Lam param lamBody), _) ->
+            (V.BLam (V.TypedLam param paramType lamBody), _) ->
                 ( []
                 , go lamBody & uncurry wrapWithRedexes
-                  & V.Lam param & V.BLam & Ann stored
+                  & V.TypedLam param paramType & V.BLam & Ann stored
                 )
             _ ->
                 ( hfoldMap (const (^.. _1 . Lens._Wrapped . traverse)) r
@@ -75,12 +79,13 @@ inlineLetH var arg bod =
                         ( \case
                             HWitness V.W_Term_Term ->
                                 go <&> \(res, body) -> Const res :*: body
+                            _ -> \(Ann a body) -> Const [] :*: Ann a body
                         ) b
 
 cursorDest :: Val a -> a
 cursorDest x =
     case x ^. hVal of
-    V.BLam lam -> lam ^. V.lamOut
+    V.BLam lam -> lam ^. V.tlOut
     _ -> x
     & redexes
     & (^. _2 . annotation)
@@ -90,12 +95,12 @@ inlineLet ::
     HRef m # V.Term -> Redex # F (IRef m) -> T m EntityId
 inlineLet topLevelProp redex =
     topLevelProp ^. ExprIRef.iref & ExprIRef.readRecursively
-    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.lamOut . hAnn)
+    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.tlOut . hAnn)
     <&> fromMaybe (error "malformed redex")
     >>= ExprIRef.readRecursively
     <&> hflipped %~ hmap (const ExistingRef)
     <&> inlineLetH
-        (redex ^. Redex.lam . V.lamIn)
+        (redex ^. Redex.lam . V.tlIn)
         (redex ^. Redex.arg & hflipped %~ hmap (const ExistingRef))
     <&> hflipped %~ hmap (const (:*: Const ()))
     >>= ExprIRef.writeRecursively

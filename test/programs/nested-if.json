@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tagOrder": 1,
@@ -21,14 +21,16 @@
     {
         "nomType": {
             "schemeType": {
-                "variant": {
-                    "42493a66616c73650000000000000000": {
-                        "record": {}
+                "variant": [
+                    {
+                        "record": [],
+                        "rowTag": "42493a66616c73650000000000000000"
                     },
-                    "42493a74727565000000000000000000": {
-                        "record": {}
+                    {
+                        "record": [],
+                        "rowTag": "42493a74727565000000000000000000"
                     }
-                }
+                ]
             }
         },
         "tag": "b760f44fa5965c2474a3b471467a22c4",
@@ -36,21 +38,15 @@
     },
     {
         "tag": null,
-        "lamId": "a4879461-2973-3e85-8faf-41a2d664d344",
-        "lamVar": "4503989b70d34169eac5a7ff336fa052",
-        "lamFieldParams": null
+        "lamVar": "4503989b70d34169eac5a7ff336fa052"
     },
     {
         "tag": null,
-        "lamId": "374aca41-1db4-a30c-6f5c-d2ab83f19deb",
-        "lamVar": "45c7e64846683308b2b1de679bd83129",
-        "lamFieldParams": null
+        "lamVar": "45c7e64846683308b2b1de679bd83129"
     },
     {
         "tag": null,
-        "lamId": "c868540b-79ca-3407-a20c-0cf4788e9a00",
-        "lamVar": "65b2cb501b58998c2cace0328488f70a",
-        "lamFieldParams": null
+        "lamVar": "65b2cb501b58998c2cace0328488f70a"
     },
     {
         "repl": {
@@ -59,14 +55,16 @@
                     "426f6f6c000000000000000000000000": {
                         "nomType": {
                             "schemeType": {
-                                "variant": {
-                                    "42493a66616c73650000000000000000": {
-                                        "record": {}
+                                "variant": [
+                                    {
+                                        "record": [],
+                                        "rowTag": "42493a66616c73650000000000000000"
                                     },
-                                    "42493a74727565000000000000000000": {
-                                        "record": {}
+                                    {
+                                        "record": [],
+                                        "rowTag": "42493a74727565000000000000000000"
                                     }
-                                }
+                                ]
                             }
                         }
                     }
@@ -80,6 +78,9 @@
                             "absurd": {}
                         },
                         "caseHandler": {
+                            "lamParamType": {
+                                "id": "11275977-f169-56ae-b673-5b24f402d15c"
+                            },
                             "lamVar": "45c7e64846683308b2b1de679bd83129",
                             "id": "374aca41-1db4-a30c-6f5c-d2ab83f19deb",
                             "lamBody": {
@@ -98,6 +99,9 @@
                                     "absurd": {}
                                 },
                                 "caseHandler": {
+                                    "lamParamType": {
+                                        "id": "05db2e33-c73e-570b-aafa-3b7290c359c9"
+                                    },
                                     "lamVar": "65b2cb501b58998c2cace0328488f70a",
                                     "id": "c868540b-79ca-3407-a20c-0cf4788e9a00",
                                     "lamBody": {
@@ -109,6 +113,9 @@
                                 "id": "93be6fd8-a35e-3353-a7ac-800b6085648e"
                             },
                             "caseHandler": {
+                                "lamParamType": {
+                                    "id": "9e281eac-6e4f-531d-83a3-5fd86f2a9b16"
+                                },
                                 "lamVar": "4503989b70d34169eac5a7ff336fa052",
                                 "id": "a4879461-2973-3e85-8faf-41a2d664d344",
                                 "lamBody": {

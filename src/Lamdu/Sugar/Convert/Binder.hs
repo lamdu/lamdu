@@ -12,7 +12,9 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Recurse (Recursive(..), foldMapRecursive, proxyArgument, (##>>))
+import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, HRef)
@@ -42,9 +44,9 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) -> T m ()
-lamParamToHole (V.Lam param x) =
-    SubExprs.getVarsToHole param (x & hflipped . hmapped1 %~ (^. Input.stored))
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) -> T m ()
+lamParamToHole (V.TypedLam param _paramTyp x) =
+    SubExprs.getVarsToHole param (x & hflipped %~ hmap (const (^. Input.stored)))
 
 makeInline ::
     Monad m =>
@@ -95,7 +97,7 @@ convertLet pl redex =
         let del =
                 do
                     lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.lamOut . hAnn . Input.stored
+                    redex ^. Redex.lam . V.tlOut . hAnn . Input.stored
                         & replaceWith stored & void
                 <* postProcess
         typS <-
@@ -119,7 +121,9 @@ convertLet pl redex =
                 Const ConvertPayload
                 { _pInput =
                     pl
-                    & Input.userData .~ redex ^. Redex.lamPl . Input.userData
+                    & Input.userData .~
+                        (redex ^. Redex.lamPl . Input.userData) <>
+                        hfoldMap (const (^. Input.userData)) (redex ^. Redex.lam . V.tlInType . hflipped)
                 , _pActions = actions
                 }
             }
@@ -128,9 +132,9 @@ convertLet pl redex =
         stored = pl ^. Input.stored
         binderKind =
             redex ^. Redex.lam
-            & V.lamOut . hflipped . hmapped1 %~ (^. Input.stored)
+            & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored)))
             & BinderKindLet
-        V.Lam param bod = redex ^. Redex.lam
+        V.TypedLam param _paramTyp bod = redex ^. Redex.lam
 
 convertBinder ::
     (Monad m, Monoid a) =>
@@ -226,8 +230,6 @@ makeAssignment chosenScopeProp params funcBody pl =
                 { _hAnn =
                     Const ConvertPayload
                     { _pInput =
-                        -- TODO: Why are redundant hidden entity ids
-                        -- returned here?
                         pl & Input.userData .~ mempty
                     , _pActions = nodeActions
                     }
@@ -236,7 +238,7 @@ makeAssignment chosenScopeProp params funcBody pl =
 
 convertLam ::
     (Monad m, Monoid a) =>
-    V.Lam V.Var V.Term # Ann (Input.Payload m a) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convertLam lam exprPl =
@@ -244,8 +246,8 @@ convertLam lam exprPl =
         convParams <- convertLamParams lam exprPl
         func <-
             makeFunction
-            (lam ^. V.lamIn & Anchors.assocScopeRef)
-            convParams (lam ^. V.lamOut)
+            (lam ^. V.tlIn & Anchors.assocScopeRef)
+            convParams (lam ^. V.tlOut)
         let paramNames =
                 func ^..
                 fParams . _Params . traverse . _2 . piTag . tagRefTag . tagName
@@ -386,10 +388,11 @@ convertAssignment binderKind defVar expr =
         )
     True ->
         do
-            (mPresentationModeProp, convParams, funcBody) <-
+            (mPresentationModeProp, convParams, funcBody, paramsUserData) <-
                 convertParams binderKind defVar expr
             makeAssignment (Anchors.assocScopeRef defVar) convParams
                 funcBody (expr ^. hAnn)
+                <&> annotation . pInput . Input.userData <>~ paramsUserData
                 <&> (,) mPresentationModeProp
 
 convertDefinitionBinder ::

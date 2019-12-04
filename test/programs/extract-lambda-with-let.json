@@ -1,26 +1,28 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tag": null,
-        "lamId": "8f3e9696-8b91-44d4-7642-13a47157f294",
-        "lamVar": "7624c3483f77ee52311755d6c87aadcf",
-        "lamFieldParams": null
+        "lamVar": "7624c3483f77ee52311755d6c87aadcf"
     },
     {
         "tag": null,
-        "lamId": "4ff174ba-6409-47d3-965d-aa66856e5e60",
-        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5",
-        "lamFieldParams": null
+        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5"
     },
     {
         "repl": {
             "val": {
+                "lamParamType": {
+                    "id": "80489c13-2faf-58b3-8c0a-227ea92ee9d4"
+                },
                 "lamVar": "7624c3483f77ee52311755d6c87aadcf",
                 "id": "8f3e9696-8b91-44d4-7642-13a47157f294",
                 "lamBody": {
                     "applyFunc": {
+                        "lamParamType": {
+                            "id": "bd3e436d-344b-5746-afe0-e689432a2ae6"
+                        },
                         "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5",
                         "id": "4ff174ba-6409-47d3-965d-aa66856e5e60",
                         "lamBody": {

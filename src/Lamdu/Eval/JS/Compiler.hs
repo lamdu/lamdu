@@ -25,6 +25,7 @@ import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Definition (depsGlobalTypes)
@@ -573,8 +574,12 @@ slowLoggingLambdaPrefix logUsed parentScopeDepth lamValId argVal =
 listenNoTellLogUsed :: Monad m => M m a -> M m (a, LogUsed)
 listenNoTellLogUsed = censor (const LogUnused) . listen
 
-compileLambda :: Monad m => ValId -> V.Lam V.Var V.Term # Ann (Const ValId) -> M m CodeGen
-compileLambda valId (V.Lam v res) =
+compileLambda ::
+    Monad m =>
+    ValId ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Const ValId) ->
+    M m CodeGen
+compileLambda valId (V.TypedLam v _paramTyp res) =
     Lens.view envMode
     >>= \case
         Fast{} -> compileRes <&> mkLambda
@@ -636,7 +641,7 @@ compileAppliedFunc isTail valId func arg' =
                 <&> (varinit "x" arg' :)
                 <&> codeGenFromLamStmts
                 >>= maybeLogSubexprResult valId
-            (Fast {}, V.BLam (V.Lam v res)) ->
+            (Fast {}, V.BLam (V.TypedLam v _paramTyp res)) ->
                 do
                     (vId, lamStmts) <-
                         compileVal isTail res <&> codeGenLamStmts

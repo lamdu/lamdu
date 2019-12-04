@@ -1,5 +1,5 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
@@ -7,6 +7,7 @@ module Lamdu.Data.Export.JSON.Codec
 
 import qualified Control.Lens as Lens
 import           Data.Aeson ((.=), (.:))
+import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.ByteString.Base16 as Hex
@@ -16,12 +17,12 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
-import           Hyper (HWitness(..), HFunctor(..), htraverse)
+import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
-import qualified Hyper.Type.AST.Row as Row
 import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
+import           Hyper.Type.Prune (Prune(..), _Unpruned)
 import           Lamdu.Calc.Definition
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)
 import           Lamdu.Calc.Term (Val)
@@ -49,7 +50,7 @@ data Entity
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag T.Tag Tag
     | EntityNominal T.Tag T.NominalId (Maybe (Pure # NominalDecl T.Type))
-    | EntityLamVar (Maybe Meta.ParamList) T.Tag UUID V.Var
+    | EntityLamVar T.Tag V.Var
 Lens.makePrisms ''Entity
 
 instance AesonTypes.ToJSON Entity where
@@ -58,21 +59,18 @@ instance AesonTypes.ToJSON Entity where
     toJSON (EntityDef def) = encodeDef def
     toJSON (EntityTag tid tdata) = encodeNamedTag (tid, tdata)
     toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
-    toJSON (EntityLamVar mParamList tag lamI var) = encodeTaggedLamVar (mParamList, tag, lamI, var)
+    toJSON (EntityLamVar tag var) = encodeTaggedLamVar (tag, var)
 
 instance AesonTypes.FromJSON Entity where
     parseJSON =
         decodeVariant "entity"
-        [ ("repl" , fmap EntityRepl . decodeRepl)
-        , ("def"  , fmap EntityDef  . decodeDef)
+        [ ("repl", fmap EntityRepl . decodeRepl)
+        , ("def", fmap EntityDef  . decodeDef)
         , ("tagOrder", fmap (uncurry EntityTag) . decodeNamedTag)
-        , ("nom"  , fmap (\((tag, nomId), nom) -> EntityNominal tag nomId nom) . decodeTaggedNominal)
-        , ("lamId", fmap (uncurry4 EntityLamVar) . decodeTaggedLamVar)
+        , ("nom", fmap (\((tag, nomId), nom) -> EntityNominal tag nomId nom) . decodeTaggedNominal)
+        , ("lamVar", fmap (uncurry EntityLamVar) . decodeTaggedLamVar)
         , ("schemaVersion", fmap EntitySchemaVersion . decodeSchemaVersion)
         ]
-
-uncurry4 :: (a -> b -> c -> d -> e) -> (a, b, c, d) -> e
-uncurry4 f (x0, x1, x2, x3) = f x0 x1 x2 x3
 
 encodePresentationMode :: Encoder Meta.PresentationMode
 encodePresentationMode Meta.Verbose = Aeson.String "Verbose"
@@ -183,15 +181,6 @@ decodeTagId :: Decoder T.Tag
 decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
-encodeFlatComposite :: Encoder (Row.FlatRowExtends T.Tag T.Type T.Row # Pure)
-encodeFlatComposite (Row.FlatRowExtends fields rest) =
-    case rest ^. _Pure of
-    T.REmpty -> encodedFields fields
-    T.RVar (T.Var name) -> AesonTypes.toJSON [encodedFields fields, encodeIdent name]
-    T.RExtend{} -> error "RExtend in tail of flat row"
-    where
-        encodedFields = encodeIdentMap T.tagName encodeType
-
 jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
 jsum parsers =
     parsers <&> toEither
@@ -201,35 +190,33 @@ jsum parsers =
         swapEither (Left x) = Right x
         swapEither (Right x) = Left x
 
-decodeFlatComposite :: Decoder (Row.FlatRowExtends T.Tag T.Type T.Row # Pure)
-decodeFlatComposite json =
-    jsum
-    [ do
-          (encodedFields, encodedIdent) <- Aeson.parseJSON json
-          fields <- decodeFields encodedFields
-          tv <- decodeIdent encodedIdent <&> T.Var
-          Row.FlatRowExtends fields (_Pure . T._RVar # tv) & pure
-
-    , Aeson.parseJSON json
-      >>= decodeFields
-      <&> (`Row.FlatRowExtends` (_Pure # T.REmpty))
-    ]
-    where
-        decodeFields = decodeIdentMap T.Tag decodeType
-
 encodeComposite :: Encoder (Pure # T.Row)
-encodeComposite x = encodeFlatComposite (x ^. T.flatRow)
+encodeComposite  =
+    Aeson.Array . Vector.fromList . go
+    where
+        go (Pure T.REmpty) = []
+        go (Pure (T.RVar (T.Var name))) =
+            [mempty & Lens.at "rowVar" ?~ encodeIdent name & Aeson.Object]
+        go (Pure (T.RExtend (RowExtend t v r))) =
+            (encodeType v & _Object . Lens.at "rowTag" ?~ encodeTagId t) : go r
 
 decodeComposite :: Decoder (Pure # T.Row)
-decodeComposite x =
-    decodeFlatComposite x <&> unflatten
+decodeComposite (Aeson.Array vec) =
+    case items ^? Lens._Snoc >>= _2 (^? _Object . Lens.ix "rowVar") of
+    Just (elems, restVar) ->
+        foldr field (decodeIdent restVar <&> Pure . T.RVar . T.Var) elems
+    _ -> foldr field (Pure T.REmpty & pure) items
     where
-        unflatten (Row.FlatRowExtends extends rest) =
-            -- It appears that we've accidentally relies on sorted order of fields.
-            -- Using a foldl here will cause typing "1+2" appear as "2+1"!!
-            foldr f rest (Map.toList extends)
-            where
-                f (key, val) acc = _Pure . T._RExtend # RowExtend key val acc
+        items = Vector.toList vec
+        field x rest =
+            Aeson.withObject "RowField" ?? x $
+            \o ->
+            RowExtend
+            <$> (o .: "rowTag" >>= decodeTagId)
+            <*> decodeType x
+            <*> rest
+            <&> Pure . T.RExtend
+decodeComposite x = fail ("malformed row" <> show x)
 
 encodeType :: Encoder (Pure # T.Type)
 encodeType t =
@@ -366,89 +353,137 @@ decodeLeaf =
                 x -> fail ("bad val for leaf " ++ show x)
             )
 
-encodeVal :: Encoder (Val UUID)
+encodeVal :: Codec h => Encoder (Ann (Const UUID) # h)
 encodeVal (Ann uuid body) =
-    encodeValBody body
+    encodeBody body
     & insertField "id" uuid
     & AesonTypes.Object
 
-decodeVal :: Decoder (Val UUID)
+class Codec h where
+    decodeBody :: AesonTypes.Object -> AesonTypes.Parser (h # Ann (Const UUID))
+    encodeBody :: h # Ann (Const UUID) -> AesonTypes.Object
+
+decodeVal :: Codec h => Decoder (Ann (Const UUID) # h)
 decodeVal =
     AesonTypes.withObject "val" $ \obj ->
     Ann
     <$> (obj .: "id")
-    <*> decodeValBody obj
+    <*> decodeBody obj
 
-encodeValBody :: V.Term # Ann (Const UUID) -> AesonTypes.Object
-encodeValBody body =
-    case encBody of
-    V.BApp (V.App func arg) ->
-        HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
-    V.BLam (V.Lam (V.Var varId) res) ->
-        HashMap.fromList ["lamVar" .= encodeIdent varId, "lamBody" .= c res]
-    V.BGetField (V.GetField reco tag) ->
-        HashMap.fromList ["getFieldRec" .= c reco, "getFieldName" .= encodeTagId tag]
-    V.BRecExtend (RowExtend tag x rest) ->
-        HashMap.fromList
-        ["extendTag" .= encodeTagId tag, "extendVal" .= c x, "extendRest" .= c rest]
-    V.BInject (V.Inject tag x) ->
-        HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= c x]
-    V.BCase (RowExtend tag handler restHandler) ->
-        HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= c handler, "caseRest" .= c restHandler]
-    V.BToNom (ToNom (T.NominalId nomId) x) ->
-        HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
-    V.BLeaf x -> encodeLeaf x
-    where
-        encBody :: V.Term # Const Encoded
-        encBody =
-            hmap
-            ( \case
-                HWitness V.W_Term_Term -> Lens.Const . encodeVal
-            ) body
-        c x = x ^. Lens._Wrapped
+instance Codec V.Term where
+    encodeBody body =
+        case encBody of
+        V.BApp (V.App func arg) ->
+            HashMap.fromList ["applyFunc" .= c func, "applyArg" .= c arg]
+        V.BLam (V.TypedLam (V.Var varId) paramType res) ->
+            HashMap.fromList ["lamVar" .= encodeIdent varId, "lamParamType" .= c paramType, "lamBody" .= c res]
+        V.BGetField (V.GetField reco tag) ->
+            HashMap.fromList ["getFieldRec" .= c reco, "getFieldName" .= encodeTagId tag]
+        V.BRecExtend (RowExtend tag x rest) ->
+            HashMap.fromList
+            ["extendTag" .= encodeTagId tag, "extendVal" .= c x, "extendRest" .= c rest]
+        V.BInject (V.Inject tag x) ->
+            HashMap.fromList ["injectTag" .= encodeTagId tag, "injectVal" .= c x]
+        V.BCase (RowExtend tag handler restHandler) ->
+            HashMap.fromList ["caseTag" .= encodeTagId tag, "caseHandler" .= c handler, "caseRest" .= c restHandler]
+        V.BToNom (ToNom (T.NominalId nomId) x) ->
+            HashMap.fromList ["toNomId" .= encodeIdent nomId, "toNomVal" .= c x]
+        V.BLeaf x -> encodeLeaf x
+        where
+            encBody :: V.Term # Const Encoded
+            encBody = hmap (Proxy @Codec #> Lens.Const . encodeVal) body
+            c x = x ^. Lens._Wrapped
+    decodeBody obj =
+        jsum
+        [ V.App
+        <$> (obj .: "applyFunc" <&> c)
+        <*> (obj .: "applyArg" <&> c)
+        <&> V.BApp
+        , V.TypedLam
+        <$> (obj .: "lamVar" >>= decodeIdent <&> V.Var)
+        <*> (obj .: "lamParamType" <&> c)
+        <*> (obj .: "lamBody" <&> c)
+        <&> V.BLam
+        , V.GetField
+        <$> (obj .: "getFieldRec" <&> c)
+        <*> (obj .: "getFieldName" >>= decodeTagId)
+        <&> V.BGetField
+        , RowExtend
+        <$> (obj .: "extendTag" >>= decodeTagId)
+        <*> (obj .: "extendVal" <&> c)
+        <*> (obj .: "extendRest" <&> c)
+        <&> V.BRecExtend
+        , V.Inject
+        <$> (obj .: "injectTag" >>= decodeTagId)
+        <*> (obj .: "injectVal" <&> c)
+        <&> V.BInject
+        , RowExtend
+        <$> (obj .: "caseTag" >>= decodeTagId)
+        <*> (obj .: "caseHandler" <&> c)
+        <*> (obj .: "caseRest" <&> c)
+        <&> V.BCase
+        , ToNom
+        <$> (obj .: "toNomId" >>= decodeIdent <&> T.NominalId)
+        <*> (obj .: "toNomVal" <&> c)
+        <&> V.BToNom
+        , decodeLeaf obj <&> V.BLeaf
+        ] >>=
+        htraverse (Proxy @Codec #> decodeVal . (^. Lens._Wrapped))
+        where
+            c :: Encoded -> Const Encoded # n
+            c = Lens.Const
 
-decodeValBody :: AesonTypes.Object -> AesonTypes.Parser (V.Term # Ann (Const UUID))
-decodeValBody obj =
-    jsum
-    [ V.App
-      <$> (obj .: "applyFunc" <&> c)
-      <*> (obj .: "applyArg" <&> c)
-      <&> V.BApp
-    , V.Lam
-      <$> (obj .: "lamVar" >>= decodeIdent <&> V.Var)
-      <*> (obj .: "lamBody" <&> c)
-      <&> V.BLam
-    , V.GetField
-      <$> (obj .: "getFieldRec" <&> c)
-      <*> (obj .: "getFieldName" >>= decodeTagId)
-      <&> V.BGetField
-    , RowExtend
-      <$> (obj .: "extendTag" >>= decodeTagId)
-      <*> (obj .: "extendVal" <&> c)
-      <*> (obj .: "extendRest" <&> c)
-      <&> V.BRecExtend
-    , V.Inject
-      <$> (obj .: "injectTag" >>= decodeTagId)
-      <*> (obj .: "injectVal" <&> c)
-      <&> V.BInject
-    , RowExtend
-      <$> (obj .: "caseTag" >>= decodeTagId)
-      <*> (obj .: "caseHandler" <&> c)
-      <*> (obj .: "caseRest" <&> c)
-      <&> V.BCase
-    , ToNom
-      <$> (obj .: "toNomId" >>= decodeIdent <&> T.NominalId)
-      <*> (obj .: "toNomVal" <&> c)
-      <&> V.BToNom
-    , decodeLeaf obj <&> V.BLeaf
-    ] >>=
-    htraverse
-    ( \case
-        HWitness V.W_Term_Term -> decodeVal . (^. Lens._Wrapped)
-    )
-    where
-        c :: Encoded -> Const Encoded # n
-        c = Lens.Const
+instance Codec (HCompose Prune T.Type) where
+    decodeBody obj
+        | (obj & Lens.at "id" .~ Nothing) == mempty =
+            _HCompose # Pruned & pure
+        | otherwise =
+            obj .: "record"
+            >>=
+            \case
+            Aeson.Array objs ->
+                case traverse (^? _Object) objs >>= (^? Lens._Snoc) of
+                Nothing -> fail "Malformed row fields"
+                Just (fields, rTail) ->
+                    foldr extend
+                    (rTail .: "rowId" <&> Const <&> (`Ann` (hcomposed _Unpruned # T.REmpty)))
+                    fields
+                    where
+                        extend field rest =
+                            Ann
+                            <$> (field .: "rowId" <&> Const)
+                            <*> ( RowExtend
+                                    <$> (field .: "rowTag" >>= decodeTagId)
+                                    <*> (field .: "id" <&> Const <&> (`Ann` (_HCompose # Pruned)) <&> (_HCompose #))
+                                    <*> (rest <&> (_HCompose #))
+                                    <&> (hcomposed _Unpruned . T._RExtend #)
+                                )
+            _ -> fail "Malformed params record"
+            <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
+    encodeBody (HCompose Pruned) = mempty
+    encodeBody (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
+        mempty & Lens.at "record" ?~ (Aeson.Array . Vector.fromList) (go row)
+        where
+            go (Ann uuid (HCompose b)) =
+                Aeson.Object (insertField "rowId" uuid x) : xs
+                where
+                    (x, xs) =
+                        case b of
+                        Pruned -> (mempty, [])
+                        Unpruned (HCompose T.REmpty) -> (mempty, [])
+                        Unpruned
+                            (HCompose
+                                (T.RExtend
+                                    (RowExtend t
+                                        (HCompose (Ann fId (HCompose Pruned)))
+                                        (HCompose r)))) ->
+                            ( mempty
+                                & Lens.at "rowTag" ?~ encodeTagId t
+                                & insertField "id" fId
+                            , go r
+                            )
+                        Unpruned _ -> error "TODO"
+    encodeBody (HCompose (Unpruned _)) = error "TODO"
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =
@@ -585,42 +620,17 @@ decodeNamedTag obj =
         <*> decodeSquashed "names" Aeson.parseJSON obj
     )
 
-encodeParamList :: Encoder Meta.ParamList
-encodeParamList = Aeson.toJSON . map encodeTagId
-
-decodeParamList :: Decoder Meta.ParamList
-decodeParamList json = Aeson.parseJSON json >>= traverse decodeTagId
-
-encodeMaybe :: Encoder a -> Encoder (Maybe a)
-encodeMaybe encoder mVal = mVal <&> encoder & Aeson.toJSON
-
-decodeMaybe :: Decoder a -> Decoder (Maybe a)
-decodeMaybe decoder json = Aeson.parseJSON json >>= traverse decoder
-
-encodeLam :: (UUID, Maybe Meta.ParamList) -> Aeson.Object
-encodeLam (lamI, mParamList) =
-    HashMap.fromList
-    [ "lamId" .= lamI
-    , "lamFieldParams" .= encodeMaybe encodeParamList mParamList
-    ]
-
-decodeLam :: Aeson.Object -> AesonTypes.Parser (UUID, Maybe Meta.ParamList)
-decodeLam obj =
-    (,)
-    <$> (obj .: "lamId")
-    <*> (obj .: "lamFieldParams" >>= decodeMaybe decodeParamList)
-
 encodeTaggedLamVar ::
-    Encoder (Maybe Meta.ParamList, T.Tag, UUID, V.Var)
-encodeTaggedLamVar (mParamList, tag, lamI, V.Var ident) =
-    encodeTagged "lamVar" encodeLam ((tag, ident), (lamI, mParamList)) & Aeson.Object
+    Encoder (T.Tag, V.Var)
+encodeTaggedLamVar (tag, V.Var ident) =
+    encodeTagged "lamVar" (const mempty) ((tag, ident), ()) & Aeson.Object
 
 decodeTaggedLamVar ::
-    Aeson.Object -> AesonTypes.Parser (Maybe Meta.ParamList, T.Tag, UUID, V.Var)
+    Aeson.Object -> AesonTypes.Parser (T.Tag, V.Var)
 decodeTaggedLamVar json =
-    decodeTagged "lamVar" decodeLam json
-    <&> \((tag, ident), (lamI, mParamList)) ->
-    (mParamList, tag, lamI, V.Var ident)
+    decodeTagged "lamVar" (\_ -> pure ()) json
+    <&> \((tag, ident), ()) ->
+    (tag, V.Var ident)
 
 encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe (Pure # NominalDecl T.Type))
 encodeTaggedNominal ((tag, T.NominalId nomId), mNom) =

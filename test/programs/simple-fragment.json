@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tagOrder": 0,
@@ -15,9 +15,7 @@
     },
     {
         "tag": "a386d980d96f732451f7b7b7ebab441c",
-        "lamId": "6b0dae3b-248b-459d-b5be-132b853c77e9",
-        "lamVar": "d852a0789d16442590005ba054341671",
-        "lamFieldParams": null
+        "lamVar": "d852a0789d16442590005ba054341671"
     },
     {
         "tag": "a56145270ce6b3bebd1dd012b7394867",
@@ -37,6 +35,9 @@
             ]
         },
         "val": {
+            "lamParamType": {
+                "id": "623d1ddb-f0ac-5123-a86d-7dfdbb42422b"
+            },
             "lamVar": "d852a0789d16442590005ba054341671",
             "id": "6b0dae3b-248b-459d-b5be-132b853c77e9",
             "lamBody": {

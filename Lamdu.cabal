@@ -302,6 +302,7 @@ Library
                   , Lamdu.Data.Export.JSON.Migration.ToVersion10
                   , Lamdu.Data.Export.JSON.Migration.ToVersion11
                   , Lamdu.Data.Export.JSON.Migration.ToVersion12
+                  , Lamdu.Data.Export.JSON.Migration.ToVersion13
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs
@@ -426,7 +427,6 @@ Library
                   , Lamdu.Sugar.Convert.Load
                   , Lamdu.Sugar.Convert.Monad
                   , Lamdu.Sugar.Convert.Nominal
-                  , Lamdu.Sugar.Convert.ParamList
                   , Lamdu.Sugar.Convert.PostProcess
                   , Lamdu.Sugar.Convert.Record
                   , Lamdu.Sugar.Convert.TId

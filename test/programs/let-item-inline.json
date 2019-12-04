@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 12
+        "schemaVersion": 13
     },
     {
         "tagOrder": 0,
@@ -15,23 +15,25 @@
     },
     {
         "tag": null,
-        "lamId": "2210ad98-83ef-5ca8-859e-adbd59f50931",
-        "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
-        "lamFieldParams": null
+        "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4"
     },
     {
         "tag": null,
-        "lamId": "2272c467-d24d-4372-aed0-a6e143645463",
-        "lamVar": "ae84b9eb16d3492c91aa6e5c4f79b554",
-        "lamFieldParams": null
+        "lamVar": "ae84b9eb16d3492c91aa6e5c4f79b554"
     },
     {
         "repl": {
             "val": {
+                "lamParamType": {
+                    "id": "4f143bda-2dfc-52df-8788-9a68683613d0"
+                },
                 "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
                 "id": "2210ad98-83ef-5ca8-859e-adbd59f50931",
                 "lamBody": {
                     "applyFunc": {
+                        "lamParamType": {
+                            "id": "ca1761e0-a1d2-5f5b-8b88-106cd39beb8b"
+                        },
                         "lamVar": "ae84b9eb16d3492c91aa6e5c4f79b554",
                         "id": "2272c467-d24d-4372-aed0-a6e143645463",
                         "lamBody": {

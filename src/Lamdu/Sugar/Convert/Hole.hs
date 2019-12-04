@@ -38,6 +38,7 @@ import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (F(..), _F)
+import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
@@ -224,11 +225,11 @@ mkOptions posInfo resultProcessor holePl =
             , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
             , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
             , nominalOptions
-            , [ V.BLamP "NewLambda" (V.BLeafP V.LHole)
+            , [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole)
               , V.BLeafP V.LRecEmpty
               , V.BLeafP V.LAbsurd
               ]
-            , [ V.BLamP "NewLambda" (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
+            , [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
               | posInfo == ConvertM.BinderPos
               ]
             ]
@@ -350,7 +351,7 @@ sugar sugarContext holePl v =
                     & EntityId.randomizeExprAndParams
                         (Random.genFromHashable (holePl ^. Input.entityId))
                     & prepareUnstoredPayloads
-                    & Input.initScopes inferCtx topLevelScope (holePl ^. Input.localsInScope)
+                    & Input.initScopes topLevelScope (holePl ^. Input.localsInScope)
                 , inferCtx
                 )
             ) & transaction
@@ -493,7 +494,7 @@ mkResult preConversion sugarContext updateDeps holePl x =
         updateDeps
         writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
             (holePl ^. Input.stored) x
-        <&> Input.initScopes (sugarContext ^. ConvertM.scInferContext)
+        <&> Input.initScopes
                 (holePl ^. Input.inferScope)
                     -- TODO: this is kind of wrong
                     -- The scope for a proper term should be from after loading its infer deps

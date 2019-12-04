@@ -12,7 +12,6 @@ module Lamdu.Data.Anchors
     , assocScopeRef
     , assocPresentationMode
     , assocDefinitionState
-    , assocFieldParamList
     , BinderParamScopeId(..), bParamScopeId
     ) where
 
@@ -25,7 +24,7 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
-import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode, ParamList)
+import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode)
 import           Lamdu.Eval.Results (ScopeId)
 import           Lamdu.Expr.IRef (DefI, ValI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
@@ -97,11 +96,6 @@ assocTag = Transaction.assocDataRefDef anonTag "Tag" . UniqueId.toUUID
 
 assocScopeRef :: Monad m => V.Var -> MkProperty' (T m) (Maybe BinderParamScopeId)
 assocScopeRef = Transaction.assocDataRef "ScopeId" . UniqueId.toUUID
-
-assocFieldParamList ::
-    Monad m => ValI m -> MkProperty' (T m) (Maybe ParamList)
-assocFieldParamList =
-    Transaction.assocDataRef "field param list" . UniqueId.toUUID
 
 assocPresentationMode :: Monad m => V.Var -> MkProperty' (T m) PresentationMode
 assocPresentationMode =

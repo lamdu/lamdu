@@ -1,7 +1,7 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeApplications, TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, FlexibleInstances #-}
 module Lamdu.Sugar.Convert.Load
     ( InferOut(..), irVal, irCtx
     , inferDef
@@ -14,7 +14,7 @@ module Lamdu.Sugar.Convert.Load
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
-import           Data.CurAndPrev (CurAndPrev)
+import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer
@@ -23,6 +23,7 @@ import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
+import           Hyper.Type.Prune (Prune)
 import           Hyper.Unify (unify)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
@@ -40,7 +41,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Sugar.Convert.Input (EvalResultsForExpr(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
-import qualified Lamdu.Sugar.Convert.ParamList as ParamList
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import qualified Revision.Deltum.IRef as IRef
@@ -68,6 +68,7 @@ class LookupEvalRes h where
         Map NominalId (Pure # NominalDecl T.Type) ->
         (HRef m :*: InferResult (Pure :*: UVar)) # h ->
         CurAndPrev EvalResultsForExpr
+    lookupEvalRes _ _ _ = CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
     lookupEvalResRecursive :: Proxy h -> Dict (HNodesConstraint h LookupEvalRes)
 
 instance LookupEvalRes V.Term where
@@ -77,21 +78,26 @@ instance LookupEvalRes V.Term where
             (valIProp ^. ExprIRef.iref)
     lookupEvalResRecursive _ = Dict
 
+instance LookupEvalRes (HCompose Prune T.Type) where
+    lookupEvalResRecursive _ = Dict
+
+instance LookupEvalRes (HCompose Prune T.Row) where
+    lookupEvalResRecursive _ = Dict
+
 instance Recursive LookupEvalRes where
     recurse = lookupEvalResRecursive . proxyArgument
 
 preparePayloads ::
-    InferState ->
     V.Scope # UVar ->
     Map NominalId (Pure # NominalDecl T.Type) ->
     CurAndPrev EvalResults ->
     Ann (HRef m :*: InferResult (Pure :*: UVar)) # V.Term ->
     Ann (Input.Payload m ()) # V.Term
-preparePayloads inferState topLevelScope nomsMap evalRes inferredVal =
+preparePayloads topLevelScope nomsMap evalRes inferredVal =
     inferredVal
     & hflipped %~ hmap (Proxy @LookupEvalRes #> f)
     & Input.preparePayloads
-    & Input.initScopes inferState topLevelScope []
+    & Input.initScopes topLevelScope []
     where
         f pl@(valIProp :*: inferRes) =
             Input.PreparePayloadInput
@@ -172,6 +178,14 @@ instance InferResTids V.Term where
     inferResTids = (^.. inferResult . _1 . ExprLens.tIds)
     inferResTidsRecursive _ = Dict
 
+instance InferResTids (HCompose Prune T.Type) where
+    inferResTids _ = []
+    inferResTidsRecursive _ = Dict
+
+instance InferResTids (HCompose Prune T.Row) where
+    inferResTids _ = []
+    inferResTidsRecursive _ = Dict
+
 instance Recursive InferResTids where
     recurse = inferResTidsRecursive . proxyArgument
 
@@ -185,25 +199,19 @@ runInferResult _monitors evalRes act =
     case runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act of
     Left x -> Left x & pure
     Right ((inferredTerm, topLevelScope), inferState0) ->
-        ParamList.loadForLambdas inferredTerm
-        >>=
-        \doLoad ->
-        case runPureInfer V.emptyScope inferState0 doLoad of
+        case inferUVarsApplyBindings inferredTerm & runPureInfer () inferState0 of
         Left x -> Left x & pure
-        Right (_, inferState1) ->
-            case inferUVarsApplyBindings inferredTerm & runPureInfer () inferState1 of
-            Left x -> Left x & pure
-            Right (resolvedTerm, _inferState2) ->
-                hfoldMap (Proxy @InferResTids #> inferResTids . (^. _2))
-                (_HFlip # resolvedTerm)
-                & makeNominalsMap
-                <&>
-                \nomsMap ->
-                InferOut
-                ( preparePayloads inferState1 topLevelScope nomsMap evalRes resolvedTerm
-                    & hflipped %~ hmap (const setUserData)
-                ) inferState1
-                & Right
+        Right (resolvedTerm, _inferState1) ->
+            hfoldMap (Proxy @InferResTids #> inferResTids . (^. _2))
+            (_HFlip # resolvedTerm)
+            & makeNominalsMap
+            <&>
+            \nomsMap ->
+            InferOut
+            ( preparePayloads topLevelScope nomsMap evalRes resolvedTerm
+                & hflipped %~ hmap (const setUserData)
+            ) inferState0
+            & Right
     where
         setUserData pl = pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 

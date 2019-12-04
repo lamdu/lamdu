@@ -20,6 +20,7 @@ import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Hyper.Type.Functor (F(..), _F)
+import           Hyper.Type.Prune (Prune)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -84,3 +85,5 @@ newValI ::
 newValI = fmap (_F #) . Transaction.newIRef
 
 instance Monad m => HStore m V.Term
+instance Monad m => HStore m (HCompose Prune T.Type)
+instance Monad m => HStore m (HCompose Prune T.Row)

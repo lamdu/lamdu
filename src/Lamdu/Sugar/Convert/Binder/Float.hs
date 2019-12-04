@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, TypeOperators #-}
+{-# LANGUAGE PatternGuards, TypeOperators, GADTs, TypeApplications #-}
 
 module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope
@@ -11,6 +11,7 @@ import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Row (FlatRowExtends(..))
+import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Definition as Def
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -72,13 +73,19 @@ moveToGlobalScope =
         -- extraction/generalization of the inner type
         postProcess
 
-isVarAlwaysApplied :: V.Lam V.Var V.Term # Ann a -> Bool
-isVarAlwaysApplied (V.Lam var x) =
+isVarAlwaysApplied :: V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann a -> Bool
+isVarAlwaysApplied (V.TypedLam var _paramTyp x) =
     go False x
     where
         go isApplied (Ann _ (V.BLeaf (V.LVar v))) | v == var = isApplied
         go _ (Ann _ (V.BApp (V.App f a))) = go True f && go False a
-        go _ v = all (go False) (v ^.. hVal . htraverse1)
+        go _ v =
+            hfoldMap @_ @[Bool]
+            ( \case
+                HWitness V.W_Term_Term -> (:[]) . go False
+                _ -> const []
+            ) (v ^. hVal)
+            & and
 
 convertLetToLam ::
     Monad m => V.Var -> Redex # HRef m -> T m (HRef m # V.Term)
@@ -97,8 +104,8 @@ convertLetToLam var redex =
 
 convertVarToGetFieldParam ::
     Monad m =>
-    V.Var -> T.Tag -> V.Lam V.Var V.Term # Ann (HRef m) -> T m ()
-convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
+    V.Var -> T.Tag -> V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) -> T m ()
+convertVarToGetFieldParam oldVar paramTag (V.TypedLam lamVar _paramTyp lamBody) =
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
         toNewParam prop =
@@ -109,13 +116,13 @@ convertVarToGetFieldParam oldVar paramTag (V.Lam lamVar lamBody) =
 
 convertLetParamToRecord ::
     Monad m =>
-    V.Var -> V.Lam V.Var V.Term # Ann (HRef m) -> Params.StoredLam m ->
+    V.Var -> V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) -> Params.StoredLam m ->
     ConvertM m (T m (HRef m # V.Term))
 convertLetParamToRecord var letLam storedLam =
     Params.convertToRecordParams <&> \toRecordParams ->
     do
         tagForExistingParam <-
-            storedLam ^. Params.slLam . V.lamIn & Anchors.assocTag & Property.getP
+            storedLam ^. Params.slLam . V.tlIn & Anchors.assocTag & Property.getP
         addAsTag <-
             Property.getP (Anchors.assocTag var)
             >>=
@@ -131,14 +138,14 @@ convertLetParamToRecord var letLam storedLam =
 
 addFieldToLetParamsRecord ::
     Monad m =>
-    [T.Tag] -> V.Var -> V.Lam V.Var V.Term # Ann (HRef m) ->
+    [T.Tag] -> V.Var -> V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
     Params.StoredLam m -> ConvertM m (T m (HRef m # V.Term))
 addFieldToLetParamsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
     \addParam ->
     do
         paramTag <- DataOps.genNewTag
-        addParam Nothing mkNewArg (BinderKindLet letLam) storedLam
+        addParam mkNewArg (BinderKindLet letLam) storedLam
             ((fieldTags ++) . pure) paramTag
         convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp & pure
@@ -156,8 +163,7 @@ addLetParam var redex =
             | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
             , let fields = Map.toList fieldsMap
             , Params.isParamAlwaysUsedWithGetField lam ->
-            addFieldToLetParamsRecord
-                (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam
+            addFieldToLetParamsRecord (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam
         _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
         where
             storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . hAnn)
@@ -211,7 +217,7 @@ makeFloatLetToOuterScope setTopLevel redex =
     <&>
     \(makeNewLet, ctx, floatToGlobal, postProcess) ->
     do
-        redex ^. Redex.lam . V.lamOut . hAnn . Input.stored .
+        redex ^. Redex.lam . V.tlOut . hAnn . Input.stored .
             ExprIRef.iref & setTopLevel
         newLetP <- makeNewLet
         r <-
@@ -238,10 +244,10 @@ makeFloatLetToOuterScope setTopLevel redex =
                 <&> ExtractToLet
         r <$ postProcess fixUsages
     where
-        param = redex ^. Redex.lam . V.lamIn
+        param = redex ^. Redex.lam . V.tlIn
         fixUsages _ =
-            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.lamOut . hAnn . Input.stored)
-            >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.lamIn)
+            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.tlOut . hAnn . Input.stored)
+            >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.tlIn)
         newRedex =
             redex
-            & Redex.lam . V.lamOut . hAnn . Input.stored . ExprIRef.setIref .~ setTopLevel
+            & Redex.lam . V.tlOut . hAnn . Input.stored . ExprIRef.setIref .~ setTopLevel
