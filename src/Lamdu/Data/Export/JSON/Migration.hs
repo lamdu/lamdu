@@ -59,7 +59,11 @@ toIO = either (fail . unpack) pure
 applyMigrations :: Aeson.Value -> Int -> IO Aeson.Value
 applyMigrations doc ver
     | ver == currentVersion = pure doc
-    | ver > currentVersion = "Cannot read docs of version: " ++ show ver & fail
+    | ver > currentVersion =
+        unwords
+        [ "Cannot read JSON from version:"
+        , show ver, "but only up to", show currentVersion ]
+        & fail
     | otherwise =
         do
             putStrLn $ "Migrating version " ++ show ver ++ " -> " ++ show (ver + 1)
