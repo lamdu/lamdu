@@ -87,15 +87,20 @@ make fragment pl =
             (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm holeIds
             ?? Menu.AnyPlace
 
-        qmark <-
+        qmarkView <-
             (Element.padToSize ?? rawSearchArea ^. Align.tValue . Widget.wSize ?? 0.5)
             <*> Label.make "?"
 
         searchArea <-
-            Element.padToSize ?? qmark ^. Align.tValue . View.vSize ?? 0.5
+            Element.padToSize ?? qmarkView ^. Align.tValue . View.vSize ?? 0.5
             <&> (Align.tValue %~)
             ?? rawSearchArea
+            <&> Lens.mapped %~
+                Widget.weakerEvents (healEventMap (Config.delKeys env) env)
+        let qmarkImage = qmarkView ^. Align.tValue . View.vAnimLayers
+        let searchAreaQMark = searchArea <&> Element.setLayeredImage .~ qmarkImage
 
+        let healKeys = env ^. has . Config.healKeys
         ExprEventMap.add ExprEventMap.defaultOptions pl
             <*>
             ( parentDelegator myId
@@ -104,11 +109,11 @@ make fragment pl =
                 , Responsive.fromWithTextPos $
                     if isSelected && not isHoleResult
                     then searchArea
-                    else searchArea <&> Element.setLayeredImage .~ qmark ^. Align.tValue . View.vAnimLayers
+                    else searchAreaQMark
                 ]
             )
             <&> Widget.widget %~ addAnnotation
-            <&> Widget.weakerEvents (healEventMap env)
+            <&> Widget.weakerEvents (healEventMap healKeys env)
     where
         lineAbove color animId spacing ann =
             ann
@@ -131,8 +136,6 @@ make fragment pl =
 
         myId = WidgetIds.fromExprPayload pl
         holeIds = myId <> Widget.Id ["hole"] & HoleWidgetIds.makeFrom
-        healEventMap env =
+        healEventMap keys env =
             fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
-            & E.keysEventMapMovesCursor
-                (Config.delKeys env <> env ^. has . Config.healKeys)
-                (fragmentDoc env (has . Texts.heal))
+            & E.keysEventMapMovesCursor keys (fragmentDoc env (has . Texts.heal))
