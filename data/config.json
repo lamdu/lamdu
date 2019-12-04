@@ -3,7 +3,7 @@
     "debug": {
         "showFPS": false,
         "virtualCursorShown": false,
-        "printCursor": true,
+        "printCursor": false,
         "jumpToSourceKeys": [ "Cmd+F12" ],
         "breakpoints": {
             "inference": false,
