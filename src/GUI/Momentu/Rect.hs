@@ -9,7 +9,7 @@ module GUI.Momentu.Rect
     , center, centeredSize
     , distances, rangeDistance
     , sqrDistance, sqrPointDistance
-    , isWithin
+    , isWithin, overlap, rectWithin
     ) where
 
 import           Control.DeepSeq (NFData(..))
@@ -126,9 +126,19 @@ sqrDistance r1 r2 = Vector2.sqrNorm (distances r1 r2)
 sqrPointDistance :: Vector2 R -> Rect -> R
 sqrPointDistance p r = Vector2.sqrNorm (distances (Rect p 0) r)
 
+both :: (Applicative f, Foldable f) => (a -> b -> Bool) -> f a -> f b -> Bool
+both p v0 v1 = p <$> v0 <*> v1 & and
+
 isWithin :: Vector2 R -> Rect -> Bool
-isWithin v r =
-    inside <$> v - r ^. topLeft <*> r ^. size
-    & and
+v `isWithin` r =
+    both inside (v - r ^. topLeft) (r ^. size)
     where
         inside x l = 0 <= x && x <= l
+
+rectWithin :: Rect -> Rect -> Bool
+r0 `rectWithin` r1 = all (`isWithin` r1) [r0 ^. topLeft, r0 ^. bottomRight]
+
+overlap :: Rect -> Rect -> Bool
+overlap r0 r1 =
+    both (<) (r0 ^. topLeft) (r1 ^. bottomRight)
+    && both (<) (r1 ^. topLeft) (r0 ^. bottomRight)
