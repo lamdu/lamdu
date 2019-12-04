@@ -392,9 +392,6 @@ testPrograms =
               -- This program, saved with an old codec (the first version),
               -- is not compatible with that
               "old-codec-factorial.json"
-            , "let-with-global-reference.json"
-            , "if-with-mismatch.json"
-              -- Hovering fragment closed hole violates reversible navigation
             ]
 
 testOne :: FilePath -> IO ()
