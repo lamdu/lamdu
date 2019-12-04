@@ -17,15 +17,13 @@ import qualified Control.Monad.State as State
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import           Hyper
-import           Hyper.Class.Infer.InferOf (RTraversableInferOf)
 import           Hyper.Infer
 import           Hyper.Recurse
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
-import           Hyper.Unify (UnifyGen, unify)
-import           Hyper.Unify.Apply (applyBindings)
+import           Hyper.Unify (unify)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
 import           Hyper.Unify.New (newUnbound)
@@ -166,30 +164,6 @@ data InferOut m = InferOut
     }
 Lens.makeLenses ''InferOut
 
-resolve ::
-    forall pl.
-    Ann (pl :*: InferResult UVar) # V.Term ->
-    PureInfer (V.Scope # UVar) (Ann (pl :*: InferResult (Pure :*: UVar)) # V.Term)
-resolve =
-    htraverseFlipped $
-    Proxy @(Infer (PureInfer (V.Scope # UVar))) #*#
-    Proxy @RTraversableInferOf #>
-    _2 f
-    where
-        f ::
-            forall n.
-            (RTraversableInferOf n, Infer (PureInfer (V.Scope # UVar)) n) =>
-            InferResult UVar # n ->
-            PureInfer (V.Scope # UVar) (InferResult (Pure :*: UVar) # n)
-        f inferred =
-            withDict (inferContext (Proxy @(PureInfer (V.Scope # UVar))) (Proxy @n)) $
-            Lens.from _HFlip
-            ( htraverse
-                ( Proxy @(UnifyGen (PureInfer (V.Scope # UVar))) #>
-                    \x -> applyBindings x <&> (:*: x)
-                )
-            ) inferred
-
 class InferResTids h where
     inferResTids :: InferResult (Pure :*: UVar) # h -> [T.NominalId]
     inferResTidsRecursive :: Proxy h -> Dict (HNodesConstraint h InferResTids)
@@ -217,7 +191,7 @@ runInferResult _monitors evalRes act =
         case runPureInfer V.emptyScope inferState0 doLoad of
         Left x -> Left x & pure
         Right (_, inferState1) ->
-            case resolve inferredTerm & runPureInfer V.emptyScope inferState1 of
+            case inferUVarsApplyBindings inferredTerm & runPureInfer V.emptyScope inferState1 of
             Left x -> Left x & pure
             Right (resolvedTerm, _inferState2) ->
                 hfoldMap (Proxy @InferResTids #> inferResTids . (^. _2))

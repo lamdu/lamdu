@@ -18,7 +18,7 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import           Hyper
-import           Hyper.Infer (InferResult, inferResult)
+import           Hyper.Infer (InferResult, inferResult, inferUVarsApplyBindings)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Apply (applyBindings)
@@ -196,7 +196,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
                 -- Perform occurs checks
                 -- TODO: Share with occurs check that happens for sugaring?
                 t <- State.get
-                _ <- (hflipped . htraverse1) (fmap Const . applyBindings . (^. _2 . inferResult)) x
+                _ <- inferUVarsApplyBindings x
                 -- Roll back state after occurs checks
                 fragmentExpr <$ State.put t
                 & liftPureInfer ()

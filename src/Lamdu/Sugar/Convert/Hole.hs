@@ -369,8 +369,8 @@ sugar sugarContext holePl v =
             PureInfer (V.Scope # UVar)
                 (Const (EntityId -> (InferResult (Pure :*: UVar) # V.Term, EntityId, a)) # V.Term)
         mkPayload (Const x :*: inferPl) =
-            hflipped
-            (htraverse (Proxy @(Unify (PureInfer (V.Scope # UVar))) #> \i -> applyBindings i <&> (:*: i)))
+            htraverseFlipped
+            (Proxy @(Unify (PureInfer (V.Scope # UVar))) #> \i -> applyBindings i <&> (:*: i))
             inferPl
             <&> (\r entityId -> (r, entityId, x))
             <&> Const
@@ -442,8 +442,8 @@ writeResult preConversion inferContext holeStored inferredVal =
             (InferResult UVar # V.Term, a) ->
             PureInfer () (InferResult (Pure :*: UVar) # V.Term, a)
         addBindings (inferRes, a) =
-            hflipped
-            (htraverse (Proxy @(Unify (PureInfer ())) #> \i -> applyBindings i <&> (:*: i)))
+            htraverseFlipped
+            (Proxy @(Unify (PureInfer ())) #> \i -> applyBindings i <&> (:*: i))
             inferRes
             <&> (, a)
 
