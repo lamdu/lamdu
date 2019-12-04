@@ -171,7 +171,10 @@ resolve ::
     Ann (pl :*: InferResult UVar) # V.Term ->
     PureInfer (V.Scope # UVar) (Ann (pl :*: InferResult (Pure :*: UVar)) # V.Term)
 resolve =
-    hflipped (htraverse (Proxy @(Infer (PureInfer (V.Scope # UVar))) #*# Proxy @RTraversableInferOf #> _2 f))
+    htraverseFlipped $
+    Proxy @(Infer (PureInfer (V.Scope # UVar))) #*#
+    Proxy @RTraversableInferOf #>
+    _2 f
     where
         f ::
             forall n.

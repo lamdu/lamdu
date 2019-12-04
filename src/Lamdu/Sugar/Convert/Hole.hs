@@ -356,7 +356,7 @@ sugar sugarContext holePl v =
             ) & transaction
         convertBinder val
             <&> hflipped %~ hmap (const (Lens._Wrapped %~ (,) neverShowAnnotations))
-            >>= hflipped (htraverse (const (Lens._Wrapped convertPayload)))
+            >>= htraverseFlipped (const (Lens._Wrapped convertPayload))
             & ConvertM.run
                 (sugarContext
                     & ConvertM.scInferContext .~ inferCtx
@@ -465,7 +465,7 @@ detachValIfNeeded mkPl getPlInfer holeType x =
                 _ <-
                     x ^.. hflipped . hfolded1 . Lens.to getPlInfer
                     & traverse_
-                        (hflipped (htraverse (Proxy @(Unify (PureInfer ())) #> applyBindings)))
+                        (htraverseFlipped (Proxy @(Unify (PureInfer ())) #> applyBindings))
                 r <$ State.put s
             & liftPureInfer
         let mkFragmentExpr =
@@ -528,7 +528,7 @@ mkResult preConversion sugarContext updateDeps holePl x =
                     -- But that's only necessary for suggesting hole results?
                     -- And we are in a hole result here
                 (holePl ^. Input.localsInScope)
-        <&> (convertBinder >=> hflipped (htraverse (const (Lens._Wrapped convertPayload))) . (hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
+        <&> (convertBinder >=> htraverseFlipped (const (Lens._Wrapped convertPayload)) . (hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
         >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
         & Transaction.fork
         <&> \(fConverted, forkedChanges) ->

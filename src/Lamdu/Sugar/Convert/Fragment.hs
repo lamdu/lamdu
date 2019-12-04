@@ -135,7 +135,7 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
             options <-
                 argS
                 & hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))
-                & hflipped (htraverse (const (Lens._Wrapped convertPayload)))
+                & htraverseFlipped (const (Lens._Wrapped convertPayload))
                 >>= (mkOptions posInfo sugarContext argI ?? exprPl)
                 & Reader.local (ConvertM.scAnnotationsMode .~ Annotations.None)
             healMis <- healMismatch

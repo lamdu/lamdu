@@ -49,7 +49,7 @@ instance Foldable (DefinitionExpression name i o) where
     foldMap f = (^. deContent . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
 
 instance Traversable (DefinitionExpression name i o) where
-    traverse f = (deContent . hflipped) (htraverse (\_ -> Lens._Wrapped f))
+    traverse f = deContent (htraverseFlipped (\_ -> Lens._Wrapped f))
 
 data DefinitionBuiltin name o = DefinitionBuiltin
     { _biName :: Definition.FFIName
@@ -104,7 +104,7 @@ instance Foldable (Repl name i o) where
     foldMap f = (^. replExpr . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
 
 instance Traversable (Repl name i o) where
-    traverse f = (replExpr . hflipped) (htraverse (\_ -> Lens._Wrapped f))
+    traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
 
 data WorkArea name i o a = WorkArea
     { _waPanes :: [Pane name i o a]

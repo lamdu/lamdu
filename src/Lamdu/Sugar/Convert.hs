@@ -139,8 +139,8 @@ convertInferDefExpr env cp defType defExpr defI =
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             <&> _DefinitionBodyExpression . deContent %~ markAnnotations (env ^. has)
-            >>= (_DefinitionBodyExpression . deContent . hflipped)
-                (htraverse (const (Lens._Wrapped convertPayload)))
+            >>= (_DefinitionBodyExpression . deContent)
+                (htraverseFlipped (const (Lens._Wrapped convertPayload)))
             & ConvertM.run context
     where
         cachedInfer = Cache.infer (env ^. has)
@@ -231,7 +231,7 @@ convertRepl env cp =
         expr <-
             convertBinder valInferred
             <&> markAnnotations (env ^. has)
-            >>= hflipped (htraverse (const (Lens._Wrapped convertPayload)))
+            >>= htraverseFlipped (const (Lens._Wrapped convertPayload))
             & ConvertM.run context
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
