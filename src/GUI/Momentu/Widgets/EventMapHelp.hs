@@ -281,7 +281,7 @@ hoverEdge ::
     (MonadReader env m, Element.SizedElement a, Has Dir.Layout env) =>
     Widget.Size -> m (a -> a)
 hoverEdge size =
-    (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w & Element.hoverLayers
+    (Element.padToSize ?? size ?? 1) <&> \pad w -> pad w
 
 toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown
@@ -303,7 +303,7 @@ addHelpViewWith mkHelpView size focus =
                         <$> Lens.view (has . styleBGColor))
             ) <*> mkHelpView size focus
         atEdge <- hoverEdge size ?? helpView
-        focus & Widget.fLayers <>~ atEdge ^. vAnimLayers & pure
+        focus & Widget.fLayers %~ Element.addLayersAbove (atEdge ^. vAnimLayers) & pure
 
 addHelpView ::
     ( MonadReader env m, HasStyle env
