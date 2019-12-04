@@ -12,6 +12,7 @@ import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import           GUI.Momentu.Rect (Rect(..))
+import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
@@ -251,14 +252,18 @@ testKeyboardDirAndBack posEnv posVirt way back =
             Pretty.text (show (posEnv ^. GuiState.cursor)) $+$
             pPrint way $+$ pPrint back <> ": "
 
-comparePositions :: Rect -> Rect -> Ordering
-comparePositions (Rect p0 s0) (Rect p1 s1) =
-    compare (p0 ^. _2) (p1 ^. _2) <> compare (p0 ^. _1) (p1 ^. _1) <>
-    compare (s0 ^. _2) (s1 ^. _2) <> compare (s0 ^. _1) (s1 ^. _1)
+data RectOrdering = Before | Undetermined | After
+    deriving Eq
 
-rectWithin :: Rect -> Rect -> Bool
-rectWithin (Rect (Vector2 x0 y0) (Vector2 w0 h0)) (Rect (Vector2 x1 y1) (Vector2 w1 h1)) =
-    x0 >= x1 && y0 >= y1 && x0 + w0 <= x1 + w1 && y0 + h0 <= h1 + h1
+comparePositions :: Rect -> Rect -> RectOrdering
+comparePositions r0 r1
+    | r0 `Rect.rectWithin` r1 = error "TODO: After?"
+    | r1 `Rect.rectWithin` r0 = error "TODO: Before?"
+    | r0 ^. Rect.bottom < r1 ^. Rect.top  = Before
+    | r1 ^. Rect.bottom < r0 ^. Rect.top  = After
+    | r0 ^. Rect.right  < r1 ^. Rect.left = Before
+    | r1 ^. Rect.right  < r0 ^. Rect.left = After
+    | otherwise = Undetermined
 
 testTabNavigation ::
     HasCallStack =>
@@ -285,20 +290,16 @@ testTabNavigation env virtCursor =
                             (GuiState.update upd env)
                         let p0 = w0 ^?! pos
                         let p1 = w1 ^?! pos
-                        if comparePositions p1 p0 == expected || rectWithin p0 p1 || rectWithin p1 p0
-                            then
-                                -- TODO: Is/when-is it ok that tab goes to an outer/inner rect?
-                                pure ()
-                            else
-                                show (env ^. GuiState.cursor) <> ": " <> name <>
-                                " did not move to expected direction"
-                                & fail
+                        when (comparePositions p1 p0 /= expected) $
+                            show (env ^. GuiState.cursor) <> ": " <> name <>
+                            " did not move to expected direction"
+                            & fail
         traverse_ testDir dirs
     where
         pos = Widget.fFocalAreas . traverse
         dirs =
-            [ ("tab", simpleKeyEvent (head Widget.strollAheadKeys), GT)
-            , ("shift-tab", simpleKeyEvent (head Widget.strollBackKeys), LT)
+            [ ("tab", simpleKeyEvent (head Widget.strollAheadKeys), After)
+            , ("shift-tab", simpleKeyEvent (head Widget.strollBackKeys), Before)
             ]
 
 testConsistentKeyboardNavigation :: Env.Env -> VirtualCursor -> T ViewM ()
