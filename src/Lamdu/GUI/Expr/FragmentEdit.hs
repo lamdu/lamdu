@@ -108,7 +108,7 @@ make fragment pl =
                 ]
             )
             <&> Widget.widget %~ addAnnotation
-            <&> Widget.widget %~ Widget.weakerEvents (healEventMap env)
+            <&> Widget.weakerEvents (healEventMap env)
     where
         lineAbove color animId spacing ann =
             ann
