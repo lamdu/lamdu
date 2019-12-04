@@ -80,11 +80,7 @@ instance LookupEvalRes V.Term where
     lookupEvalResRecursive _ = Dict
 
 instance Recursive LookupEvalRes where
-    recurse =
-        lookupEvalResRecursive . p
-        where
-            p :: Proxy (LookupEvalRes k) -> Proxy k
-            p _ = Proxy
+    recurse = lookupEvalResRecursive . proxyArgument
 
 preparePayloads ::
     InferState ->
@@ -200,11 +196,7 @@ instance InferResTids V.Term where
     inferResTidsRecursive _ = Dict
 
 instance Recursive InferResTids where
-    recurse =
-        inferResTidsRecursive . p
-        where
-            p :: Proxy (InferResTids h) -> Proxy h
-            p _ = Proxy
+    recurse = inferResTidsRecursive . proxyArgument
 
 runInferResult ::
     Monad m =>

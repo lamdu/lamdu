@@ -11,7 +11,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Recurse (Recursive(..), foldMapRecursive, (##>>))
+import           Hyper.Recurse (Recursive(..), foldMapRecursive, proxyArgument, (##>>))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -286,11 +286,7 @@ class GetParam (t :: AHyperType -> *) where
     getParamRecursive _ = Dict
 
 instance Recursive GetParam where
-    recurse =
-        getParamRecursive . p
-        where
-            p :: Proxy (GetParam k) -> Proxy k
-            p _ = Proxy
+    recurse = getParamRecursive . proxyArgument
 
 instance GetParam (Const (BinderVarRef InternalName o)) where
 instance GetParam (Const (NullaryVal InternalName i o))

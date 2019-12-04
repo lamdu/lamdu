@@ -15,7 +15,7 @@ module Lamdu.Sugar.Lens
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.Recurse (Recursive(..))
+import           Hyper.Recurse (Recursive(..), proxyArgument)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -41,11 +41,7 @@ class HTraversable t => SugarExpr t where
     sugarExprRecursive _ = Dict
 
 instance Recursive SugarExpr where
-    recurse =
-        sugarExprRecursive . p
-        where
-            p :: Proxy (SugarExpr k) -> Proxy k
-            p _ = Proxy
+    recurse = sugarExprRecursive . proxyArgument
 
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (NullaryVal name i o))

@@ -13,7 +13,6 @@ import qualified Control.Lens as Lens
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Class.Context (HContext(..))
-import           Hyper.Combinator.Cont
 import           Hyper.Recurse
 import           Hyper.Type.Functor (F(..), _F)
 import           Revision.Deltum.IRef (IRef, uuid)
@@ -33,11 +32,7 @@ class (Monad m, HTraversable h, HContext h, Binary (h # F (IRef m))) => HStore m
     hstoreRecursive _ _ = Dict
 
 instance Recursive (HStore m) where
-    recurse =
-        hstoreRecursive (Proxy @m) . p
-        where
-            p :: Proxy (HStore m t) -> Proxy t
-            p _ = Proxy
+    recurse = hstoreRecursive (Proxy @m) . proxyArgument
 
 -- TODO: Better name?
 data HRef m h = HRef
@@ -85,7 +80,7 @@ toHRefs setValI (Ann (i :*: a) body) =
     hcontext body
     & hmap
         ( Proxy @(HStore m) #>
-            \(HCont s :*: x) ->
+            \(HFunc s :*: x) ->
             toHRefs
             ( \n ->
                 x & hAnn . _1 .~ n
