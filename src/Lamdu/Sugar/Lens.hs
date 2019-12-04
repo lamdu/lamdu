@@ -99,7 +99,7 @@ defSchemes = drBody . defBodySchemes
 binderFuncParamActions ::
     Lens.Traversal' (BinderParams name i o) (FuncParamActions name i o)
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
-binderFuncParamActions f (Params ps) = (traverse . fpInfo . piActions) f ps <&> Params
+binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Params
 
 binderResultExpr ::
     Lens.IndexedLens' (Body name i o # Ann (Const ()))

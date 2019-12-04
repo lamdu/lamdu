@@ -18,7 +18,7 @@ module Lamdu.Sugar.Types.Parts
     , -- Binders
       BinderParams(..), _NullParam, _Params
     , BinderBodyScope(..)
-    , FuncParam(..), fpInfo, fpAnnotation, fpVarInfo
+    , FuncParam(..), fpAnnotation, fpVarInfo
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , NullParamActions(..), npDeleteLambda
     , ParamInfo(..), piActions, piTag
@@ -83,11 +83,10 @@ data ParamInfo name i o = ParamInfo
     , _piActions :: FuncParamActions name i o
     } deriving Generic
 
-data FuncParam name i info = FuncParam
+data FuncParam name i = FuncParam
     { _fpAnnotation :: Annotation name i
     , _fpVarInfo :: VarInfo
-    , _fpInfo :: info
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
 data ExtractDestination
     = ExtractToLet EntityId
@@ -123,8 +122,8 @@ data BinderParams name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam name i (NullParamActions o))
-    | Params [FuncParam name i (ParamInfo name i o)]
+      NullParam (FuncParam name i, NullParamActions o)
+    | Params [(FuncParam name i, ParamInfo name i o)]
     deriving Generic
 
 data BinderBodyScope

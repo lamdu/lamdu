@@ -175,12 +175,13 @@ repl (Ann (Const pl) x) =
 
 mkFuncParam ::
     (UUID, T.Tag) ->
-    Sugar.FuncParam name Identity (Sugar.ParamInfo InternalName Identity Unit)
+    (Sugar.FuncParam name Identity, Sugar.ParamInfo InternalName Identity Unit)
 mkFuncParam (paramVar, paramTag) =
-    Sugar.FuncParam
-    { Sugar._fpAnnotation = Sugar.AnnotationNone
-    , Sugar._fpInfo =
-        Sugar.ParamInfo
+    ( Sugar.FuncParam
+        { Sugar._fpAnnotation = Sugar.AnnotationNone
+        , Sugar._fpVarInfo = Sugar.VarGeneric
+        }
+    , Sugar.ParamInfo
         { Sugar._piTag = mkTag (Just paramVar) paramTag
         , Sugar._piActions =
             Sugar.FuncParamActions
@@ -190,8 +191,7 @@ mkFuncParam (paramVar, paramTag) =
             , Sugar._fpMOrderAfter = Nothing
             }
         }
-    , Sugar._fpVarInfo = Sugar.VarGeneric
-    }
+    )
 
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->

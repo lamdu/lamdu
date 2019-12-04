@@ -87,7 +87,7 @@ replBody = replBinder . _BinderExpr
 replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Ann (Const a))
 replLet = replBinder . _BinderLet
 
-lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i (ParamInfo name i o))
+lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i, ParamInfo name i o)
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 testUnnamed :: Test
@@ -113,7 +113,7 @@ testChangeParam =
             workArea ^?!
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
-            hVal . lamFirstParam . fpInfo . piTag . tagRefReplace . tsNewTag
+            hVal . lamFirstParam . _2 . piTag . tagRefReplace . tsNewTag
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -205,7 +205,7 @@ paramAnnotations =
     where
         verify workArea =
             unless
-            (Lens.allOf (replBody . lamFirstParam . fpAnnotation) (Lens.has _AnnotationNone) workArea)
+            (Lens.allOf (replBody . lamFirstParam . _1 . fpAnnotation) (Lens.has _AnnotationNone) workArea)
             (fail "parameter should not have type annotation")
 
 delParam :: Test
@@ -213,7 +213,7 @@ delParam =
     testSugarActions "const-five.json" [(^?! action), verify]
     & testCase "del-param"
     where
-        action = replBody . lamFirstParam . fpInfo . piActions . fpDelete
+        action = replBody . lamFirstParam . _2 . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = fail "Expected 5"
@@ -381,7 +381,7 @@ delDefParam =
             drBody . _DefinitionBodyExpression . deContent .
             hVal . _BodyFunction .
             fParams . _Params . traverse .
-            fpInfo . piActions . fpDelete
+            _2 . piActions . fpDelete
 
 updateDef :: Test
 updateDef =

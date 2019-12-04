@@ -408,16 +408,18 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.Lam param _) lamPl =
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
                 typeS <- convertType (EntityId.ofTypeOf paramEntityId) (fpFieldType fp)
-                pure FuncParam
-                    { _fpAnnotation =
-                        AnnotationVal ValAnnotation
-                        { _annotationType = Just typeS
-                        , _annotationVal =
-                            fpValue fp & ConvertEval.param (EntityId.ofEvalOf paramEntityId)
+                pure
+                    ( FuncParam
+                        { _fpAnnotation =
+                            AnnotationVal ValAnnotation
+                            { _annotationType = Just typeS
+                            , _annotationVal =
+                                fpValue fp & ConvertEval.param (EntityId.ofEvalOf paramEntityId)
+                            }
+                        , _fpVarInfo = mkVarInfo typeS
                         }
-                    , _fpInfo = paramInfo
-                    , _fpVarInfo = mkVarInfo typeS
-                    }
+                    , paramInfo
+                    )
             where
                 tag = fpTag fp
                 tagList = fieldParams <&> fpTag
@@ -552,27 +554,28 @@ mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal tid (name ^. inTag)
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a # V.Term -> info ->
-    ConvertM m (FuncParam InternalName (T m) info)
+    ConvertM m (FuncParam InternalName (T m), info)
 mkFuncParam entityId lamExprPl info =
     (,)
     <$> Lens.view ConvertM.scAnnotationsMode
     <*> convertType (EntityId.ofTypeOf entityId) typ
     <&> \(annMode, typS) ->
-    FuncParam
-    { _fpInfo = info
-    , _fpAnnotation =
-        case annMode of
-        Annotations.None -> AnnotationNone
-        Annotations.Types -> AnnotationType typS
-        Annotations.Evaluation ->
-            AnnotationVal ValAnnotation
-            { _annotationType = Nothing
-            , _annotationVal =
-                lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
-                & ConvertEval.param (EntityId.ofEvalOf entityId)
-            }
-    , _fpVarInfo = mkVarInfo typS
-    }
+    ( FuncParam
+        { _fpAnnotation =
+            case annMode of
+            Annotations.None -> AnnotationNone
+            Annotations.Types -> AnnotationType typS
+            Annotations.Evaluation ->
+                AnnotationVal ValAnnotation
+                { _annotationType = Nothing
+                , _annotationVal =
+                    lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
+                    & ConvertEval.param (EntityId.ofEvalOf entityId)
+                }
+        , _fpVarInfo = mkVarInfo typS
+        }
+    , info
+    )
     where
         typ = lamParamType lamExprPl
 

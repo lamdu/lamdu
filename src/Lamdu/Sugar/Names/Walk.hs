@@ -455,13 +455,15 @@ withParamInfo varInfo (ParamInfo tag fpActions) =
 
 withFuncParam ::
     MonadNaming m =>
-    (Sugar.VarInfo -> a -> CPS m b) -> FuncParam (OldName m) (IM m) a ->
-    CPS m (FuncParam (NewName m) (IM m) b)
-withFuncParam f (FuncParam pl varInfo info) =
-    FuncParam
-    <$> liftCPS (toAnnotation pl)
-    <*> pure varInfo
-    <*> f varInfo info
+    (Sugar.VarInfo -> a -> CPS m b) -> (FuncParam (OldName m) (IM m), a) ->
+    CPS m (FuncParam (NewName m) (IM m), b)
+withFuncParam f (FuncParam pl varInfo, info) =
+    (,)
+    <$>
+    ( FuncParam
+        <$> liftCPS (toAnnotation pl)
+        <*> pure varInfo
+    ) <*> f varInfo info
 
 withBinderParams ::
     MonadNaming m =>

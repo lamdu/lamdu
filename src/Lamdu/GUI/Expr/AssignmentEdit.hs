@@ -296,12 +296,12 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
                 <*> grammar (label Texts.defer)
             fromParamList delVarBackwardsId rhsId
-                [p & Sugar.fpInfo %~ nullParamEditInfo lhsId nullParamGui]
+                [p & _2 %~ nullParamEditInfo lhsId nullParamGui]
         where
             nullParamId = Widget.joinId lhsId ["param"]
     Sugar.Params ps ->
         ps
-        & traverse . Sugar.fpInfo %%~ onFpInfo
+        & traverse . _2 %%~ onFpInfo
         >>= fromParamList delVarBackwardsId rhsId
         where
             onFpInfo x =
@@ -313,7 +313,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     where
         fromParamList delDestFirst delDestLast paramList =
             withPrevNext delDestFirst delDestLast
-            (ParamEdit.iId . (^. Sugar.fpInfo)) paramList
+            (ParamEdit.iId . snd) paramList
             & traverse mkParam <&> concat
             where
                 mkParam (prevId, nextId, param) = ParamEdit.make annotationOpts prevId nextId param
@@ -427,7 +427,9 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
             case func ^. Sugar.fParams of
             Sugar.NullParam{} -> bodyId
             Sugar.Params ps ->
-                ps ^?! traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+                ps ^?!
+                traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance
+                & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
         funcPl = func ^. Sugar.fBody . annotation
         bodyId = WidgetIds.fromExprPayload funcPl

@@ -58,7 +58,8 @@ make myId (Sugar.Params params) prop =
             ?? defConfig ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where
-        paramTags = params ^.. traverse . Sugar.fpInfo . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
+        paramTags =
+            params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
         mkPair mode = Styled.mkFocusableLabel ?? OneOf (lens mode) <&> (,) mode
 make _ _ _ =
     -- This shouldn't happen?

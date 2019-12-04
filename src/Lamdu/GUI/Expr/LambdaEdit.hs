@@ -148,7 +148,7 @@ mkLightLambda params myId =
         paramIds =
             case params of
             Sugar.NullParam{} -> []
-            Sugar.Params ps -> ps <&> (^. Sugar.fpInfo . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
+            Sugar.Params ps -> ps <&> (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
 
 make ::
     ( Monad i, Monad o
