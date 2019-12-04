@@ -4,7 +4,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Responsive.Expression
     ( Style(..), indentBarWidth, indentBarGap, indentBarColor
-    , disambiguators, boxSpacedMDisamb, indent
+    , disambiguators, mDisambiguators
+    , boxSpacedMDisamb, indent
     , addParens
     ) where
 
@@ -46,6 +47,13 @@ disambiguators =
         h <- addParens
         v <- indent
         Options.Disambiguators <$> h <*> v & pure
+
+mDisambiguators ::
+    ( MonadReader env m, Functor f, Has Style env, Spacer.HasStdSpacing env
+    , Has Dir.Layout env
+    ) =>
+    m (Maybe AnimId -> Options.Disambiguators f)
+mDisambiguators = disambiguators <&> maybe Options.disambiguationNone
 
 addParens ::
     ( MonadReader env m, Has TextView.Style env, Functor f, Has Dir.Layout env
@@ -107,8 +115,4 @@ boxSpacedMDisamb ::
     , Glue.HasTexts env
     ) =>
     m (Maybe AnimId -> [Responsive f] -> Responsive f)
-boxSpacedMDisamb =
-    do
-        disamb <- disambiguators
-        b <- Options.boxSpaced
-        pure (b . maybe Options.disambiguationNone disamb)
+boxSpacedMDisamb = (.) <$> Options.boxSpaced <*> mDisambiguators
