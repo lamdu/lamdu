@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
 import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Lamdu.Data.Db.Layout (ViewM)
@@ -242,10 +243,12 @@ testKeyboardDirAndBack posEnv posVirt way back =
         >>=
         \case
         Nothing -> fail (show baseInfo <> " can't move back with cursor keys")
-        Just updBack | updBack ^? GuiState.uCursor . traverse /= Just (posEnv ^. cursor) ->
-            show baseInfo <> "moving back with cursor keys goes to different place: " <>
-            show (updBack ^. GuiState.uCursor)
-            & fail
+        Just updBack
+            | Lens.anyOf (GuiState.uCursor . traverse)
+              (`WidgetId.isSubId` (posEnv ^. cursor)) updBack & not ->
+                show baseInfo <> "moving back with cursor keys goes to different place: " <>
+                show (updBack ^. GuiState.uCursor)
+                & fail
         Just{} -> pure ()
     where
         baseInfo =
@@ -305,19 +308,14 @@ testTabNavigation env virtCursor =
 testConsistentKeyboardNavigation :: Env.Env -> VirtualCursor -> T ViewM ()
 testConsistentKeyboardNavigation posEnv posVirt =
     do
-        unless (isLiteralEditId (posEnv ^. cursor))
-            -- TODO: Handle literal edits properly
-            ( traverse_ (uncurry (testKeyboardDirAndBack posEnv posVirt))
+        traverse_ (uncurry (testKeyboardDirAndBack posEnv posVirt))
             [ (k GLFW.Key'Up, k GLFW.Key'Down)
             , (k GLFW.Key'Down, k GLFW.Key'Up)
             , (k GLFW.Key'Left, k GLFW.Key'Right)
             , (k GLFW.Key'Right, k GLFW.Key'Left)
             ]
-            )
         testTabNavigation posEnv posVirt
     where
-        isLiteralEditId wid =
-            Widget.toAnimId wid & Lens.has (Lens.ix 1 . Lens.only "literal edit")
         k = MetaKey noMods
 
 testActions ::

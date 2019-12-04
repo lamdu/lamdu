@@ -1,15 +1,16 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module GUI.Momentu.Widget.Id
     ( Id(..)
-    , joinId, subId
+    , joinId, subId, isSubId
     ) where
 
-import Data.List (intercalate)
-import Data.List.Lens (prefixed)
-import GUI.Momentu.Animation.Id (AnimId)
-import Numeric.Extended (encodeHex)
+import qualified Control.Lens as Lens
+import           Data.List (intercalate)
+import           Data.List.Lens (prefixed)
+import           GUI.Momentu.Animation.Id (AnimId)
+import           Numeric.Extended (encodeHex)
 
-import Lamdu.Prelude
+import           Lamdu.Prelude
 
 newtype Id = Id
     { toAnimId :: AnimId
@@ -27,4 +28,7 @@ joinId :: Id -> AnimId -> Id
 joinId (Id x) y = x ++ y & Id
 
 subId :: Id -> Id -> Maybe AnimId
-subId (Id folder) (Id path) = path ^? prefixed folder
+Id short `subId` Id long = long ^? prefixed short
+
+isSubId :: Id -> Id -> Bool
+short `isSubId` long = short `subId` long & Lens.has Lens._Just
