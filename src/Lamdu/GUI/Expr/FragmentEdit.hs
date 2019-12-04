@@ -135,7 +135,7 @@ make fragment pl =
         postProcessAnn _ = pure id
 
         myId = WidgetIds.fromExprPayload pl
-        holeIds = myId <> Widget.Id ["hole"] & HoleWidgetIds.makeFrom
+        holeIds = WidgetIds.fragmentHoleId myId & HoleWidgetIds.makeFrom
         healEventMap keys env =
             fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor keys (fragmentDoc env (has . Texts.heal))

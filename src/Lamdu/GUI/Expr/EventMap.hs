@@ -19,6 +19,7 @@ import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
+import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -220,6 +221,8 @@ transformEventMap =
         Sugar.FragmentAlready holeId -> pure holeId
         Sugar.FragmentExprAlready holeId -> pure holeId
         <&> WidgetIds.fromEntityId
+        <&> WidgetIds.fragmentHoleId
+        <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
         & action
 
 detachEventMap ::

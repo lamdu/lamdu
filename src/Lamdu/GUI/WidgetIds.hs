@@ -47,3 +47,6 @@ replId = Id ["repl"]
 
 tagHoleId :: Id -> Id
 tagHoleId = (`WidgetId.joinId` ["hole"])
+
+fragmentHoleId :: Id -> Id
+fragmentHoleId = (`WidgetId.joinId` ["hole"])
