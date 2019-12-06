@@ -786,7 +786,7 @@
         }
     },
     {
-        "tagOrder": 1,
+        "tagOrder": 2,
         "tag": "520401f6286eba0f9d724ad242d48440",
         "names": {
             "hebrew": "התחלתי",
@@ -941,7 +941,7 @@
         "tag": "6b23c96867fb2b3082359dda58202ca9"
     },
     {
-        "tagOrder": 2,
+        "tagOrder": 1,
         "tag": "6c15f96848dfbcdafa7f239af12424b1",
         "names": {
             "hebrew": "פעולה_בינארית",
@@ -2181,8 +2181,8 @@
         "lamVar": "2973918529414ba783f46c576aa20e40",
         "lamFieldParams": [
             "1b6990743fcc77560fdb139d1ac01a2c",
-            "520401f6286eba0f9d724ad242d48440",
-            "6c15f96848dfbcdafa7f239af12424b1"
+            "6c15f96848dfbcdafa7f239af12424b1",
+            "520401f6286eba0f9d724ad242d48440"
         ]
     },
     {
@@ -16618,7 +16618,12 @@
     },
     {
         "tag": "255541b1d8c6185596fd889e8dd40fa2",
-        "defPresentationMode": "Verbose",
+        "defPresentationMode": {
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "6c15f96848dfbcdafa7f239af12424b1"
+            ]
+        },
         "def": "d742e997601e4a6f9fab3277d9fb50d5",
         "typ": {
             "schemeType": {
