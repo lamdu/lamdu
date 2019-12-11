@@ -2,6 +2,6 @@ set -eu
 cabal v1-build Tests
 cabal v1-build lamdu &
 execbuild=$!
-dist/build/Tests/Tests "$@"
+time dist/build/Tests/Tests "$@"
 echo "Test run successful"
 wait $! || (echo "Executable build failed" ; exit 1)
