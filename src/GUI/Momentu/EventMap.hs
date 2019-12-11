@@ -20,7 +20,10 @@ module GUI.Momentu.EventMap
     , deleteKey, deleteKeys
     , filterChars, filter, mapMaybe
     , -- exported for Tests
-      emKeyMap, dhDoc, dhFileLocation, dhHandler
+      DocHandler(..), dhDoc, dhFileLocation, dhHandler
+    , emKeyMap, emDropHandlers, emCharGroupHandlers, emAllCharsHandler
+    , cgDocHandler
+    , chDocHandler
     ) where
 
 import           Control.Applicative ((<|>))

@@ -326,14 +326,30 @@ testActions env virtCursor =
                 { Widget._eVirtualCursor = virtCursor
                 , Widget._ePrevTextRemainder = ""
                 } & w ^. Widget.fEventMap
-        eventMap
-            ^@.. E.emKeyMap . traverse . Lens.filteredBy E.dhDoc <. E.dhHandler . E._Doesn'tWantClipboard
-            & traverse_ testEvent
+        let events =
+                mconcat
+                [ eventMap ^@..
+                    E.emKeyMap . traverse . docHandler <. E._Doesn'tWantClipboard
+                , eventMap ^@..
+                    E.emCharGroupHandlers . traverse . E.cgDocHandler . docHandler
+                    <. traverse
+                , eventMap ^@..
+                    E.emAllCharsHandler . traverse . E.chDocHandler . docHandler
+                    >>= _2 exampleChars
+                ]
+        traverse_ testEvent events
     where
+        exampleChars f = [f 'a', f '1', f '_', f '+'] ^.. traverse . Lens._Just
         testEvent (doc, event) =
             event <&> (`GuiState.update` env)
             >>= makeGui (show doc <> " from " <> show (env ^. cursor))
             & Transaction.fork & void
+
+docHandler ::
+    (Lens.Indexable E.Doc p, Applicative f) =>
+    p a (f a) -> E.DocHandler a ->
+    f (E.DocHandler a)
+docHandler x = Lens.filteredBy E.dhDoc <. E.dhHandler $ x
 
 testActionsAndNavigation :: HasCallStack => Env -> VirtualCursor -> T ViewM ()
 testActionsAndNavigation = testConsistentKeyboardNavigation <> testActions
