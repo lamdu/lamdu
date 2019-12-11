@@ -335,17 +335,17 @@ testActions env virtCursor =
             >>= makeGui (show doc <> " from " <> show (env ^. cursor))
             & Transaction.fork & void
 
+testActionsAndNavigation :: HasCallStack => Env -> VirtualCursor -> T ViewM ()
+testActionsAndNavigation = testConsistentKeyboardNavigation <> testActions
+
 testProgramGuiAtPos ::
     HasCallStack =>
     Env.Env -> Widget.EnterResult (T ViewM GuiState.Update) -> T ViewM ()
 testProgramGuiAtPos baseEnv enter =
     do
         upd <- enter ^. Widget.enterResultEvent
-        let newEnv = GuiState.update upd baseEnv
-        testConsistentKeyboardNavigation newEnv virtCursor
-        testActions newEnv virtCursor
-    where
-        virtCursor = VirtualCursor (enter ^. Widget.enterResultRect)
+        testActionsAndNavigation (GuiState.update upd baseEnv)
+            (VirtualCursor (enter ^. Widget.enterResultRect))
 
 nubOn :: Ord k => (a -> k) -> [a] -> [a]
 nubOn f xs = (xs <&> (\x -> (f x, x)) & Map.fromList) ^.. Lens.folded
@@ -365,11 +365,8 @@ programTest baseEnv filename =
         w <- focusedWidget baseGui & either fail pure
         case w ^. Widget.fMEnterPoint of
             Nothing ->
-                do
-                    testConsistentKeyboardNavigation baseEnv virtCursor
-                    testActions baseEnv virtCursor
-                where
-                    virtCursor = VirtualCursor (w ^?! Widget.fFocalAreas . Lens.ix 0)
+                VirtualCursor (w ^?! Widget.fFocalAreas . Lens.ix 0)
+                & testActionsAndNavigation baseEnv
             Just enterPoint ->
                 Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
                 <&> enterPoint
