@@ -410,16 +410,16 @@ hoverOptions ::
       )
 hoverOptions =
     (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> (Glue.mkPoly ?? Glue.Vertical) <*> Hover.hover
-    <&> \(Glue.Poly (|||), Glue.Poly (|---|), hover) pos annotation results searchTerm ->
+    <&> \(Glue.Poly (|||), Glue.Poly (|---|), hover) pos ann results searchTerm ->
     let resultsAbove alignment =
             results ^. Hover.backward
             & Align.tValue %~ hover
             & Align.fromWithTextPos alignment
-        annotatedTerm alignment = searchTerm |---| annotation & Aligned alignment
+        annotatedTerm alignment = searchTerm |---| ann & Aligned alignment
         aboveRight = resultsAbove 0 |---| annotatedTerm 0
         aboveLeft = resultsAbove 1 |---| annotatedTerm 1
         annotatedResultsBelow =
-            (results ^. Hover.forward) |---| annotation
+            (results ^. Hover.forward) |---| ann
             & Align.tValue %~ hover
         belowRight =
             Aligned 0 searchTerm
@@ -463,12 +463,12 @@ makeHovered ::
     ( PickFirstResult f
     , Placement -> Widget f -> Widget f
     )
-makeHovered myId annotation options =
+makeHovered myId ann options =
     do
         mkHoverOptions <- hoverOptions
         anc <- Hover.anchor
-        make myId (annotation ^. Element.width) options
+        make myId (ann ^. Element.width) options
             <&> _2 %~ \menu placement term ->
                 let a = anc term
                 in
-                Hover.hoverInPlaceOf (mkHoverOptions placement annotation menu a) a
+                Hover.hoverInPlaceOf (mkHoverOptions placement ann menu a) a

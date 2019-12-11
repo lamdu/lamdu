@@ -120,26 +120,26 @@ processAnnotationGui postProcessAnnotation =
     <*> Spacer.getSpaceSize
     <*> postProcessAnnotation
     where
-        f th stdSpacing postProcess minWidth annotation
-            | annotationWidth > minWidth + max shrinkAtLeast expansionLimit
+        f th stdSpacing postProcess minWidth ann
+            | annWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
-                postProcess shrinkRatio annotation
+                postProcess shrinkRatio ann
             | otherwise =
-                maybeTooNarrow annotation & postProcess 1.0
+                maybeTooNarrow ann & postProcess 1.0
             where
-                annotationWidth = annotation ^. Element.width
+                annWidth = ann ^. Element.width
                 expansionLimit = th ^. ValAnnotation.valAnnotationWidthExpansionLimit
                 maxWidth = minWidth + expansionLimit
                 shrinkAtLeast = th ^. ValAnnotation.valAnnotationShrinkAtLeast
                 heightShrinkRatio =
                     th ^. ValAnnotation.valAnnotationMaxHeight * stdSpacing ^. _2
-                    / annotation ^. Element.height
+                    / ann ^. Element.height
                 shrinkRatio =
-                    annotationWidth - shrinkAtLeast & min maxWidth & max minWidth
-                    & (/ annotationWidth) & min heightShrinkRatio & pure
+                    annWidth - shrinkAtLeast & min maxWidth & max minWidth
+                    & (/ annWidth) & min heightShrinkRatio & pure
                 maybeTooNarrow
-                    | minWidth > annotationWidth =
-                        Element.padAround (Vector2 ((minWidth - annotationWidth) / 2) 0)
+                    | minWidth > annWidth =
+                        Element.padAround (Vector2 ((minWidth - annWidth) / 2) 0)
                     | otherwise = id
 
 data EvalResDisplay name = EvalResDisplay
@@ -219,14 +219,14 @@ addAnnotationH f postProcess =
         annotationLayout <- f <&> (^. Align.tValue)
         processAnn <- processAnnotationGui postProcess
         padToSize <- Element.padToSize
-        let annotation minWidth w =
+        let ann minWidth w =
                 processAnn (w ^. Element.width) annotationLayout
                 & padToSize (Vector2 theMinWidth 0) 0
                 where
                     theMinWidth = minWidth (w ^. Element.width)
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         let onAlignedWidget minWidth w =
-                w |---| vspace |---| annotation minWidth w
+                w |---| vspace |---| ann minWidth w
         pure $ \minWidth -> onAlignedWidget minWidth
 
 addInferredType ::
@@ -304,20 +304,20 @@ getAnnotationMode ::
     Monad i =>
     EvalAnnotationOptions -> Sugar.EvaluationScopes name i ->
     GuiM env i o (Maybe (EvalResDisplay name, Maybe (NeighborVals (Maybe (EvalResDisplay name)))))
-getAnnotationMode opt annotation =
+getAnnotationMode opt ann =
     do
         neighbourVals <-
             case opt of
             NormalEvalAnnotation -> pure Nothing
             WithNeighbouringEvalAnnotations neighbors ->
-                -- neighbors <&> (>>= valOfScopePreferCur annotation . (^. Sugar.bParamScopeId))
+                -- neighbors <&> (>>= valOfScopePreferCur ann . (^. Sugar.bParamScopeId))
                 -- & Just
                 neighbors & traverse . Lens._Just %%~
-                    GuiM.im . valOfScopePreferCur annotation . (^. Sugar.bParamScopeId)
+                    GuiM.im . valOfScopePreferCur ann . (^. Sugar.bParamScopeId)
                 <&> traverse %~ join
                 <&> Just
         GuiM.readMScopeId
-            >>= GuiM.im . valOfScope annotation
+            >>= GuiM.im . valOfScope ann
             <&> Lens.mapped %~ (, neighbourVals)
 
 maybeAddAnnotationWith ::
@@ -327,11 +327,11 @@ maybeAddAnnotationWith ::
     EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
     Sugar.Annotation Name i ->
     GuiM env i o (Widget o -> Widget o)
-maybeAddAnnotationWith opt postProcessAnnotation annotation =
-    case annotation of
+maybeAddAnnotationWith opt postProcessAnnotation ann =
+    case ann of
     Sugar.AnnotationNone -> pure id
     Sugar.AnnotationType typ -> addInferredType typ postProcessAnnotation
-    Sugar.AnnotationVal ann -> maybeAddValAnnotationWith opt postProcessAnnotation ann
+    Sugar.AnnotationVal val -> maybeAddValAnnotationWith opt postProcessAnnotation val
 
 maybeAddValAnnotationWith ::
     ( Monad i, Monad o, Glue.HasTexts env
@@ -368,10 +368,10 @@ valOfScope ::
     Applicative i =>
     Sugar.EvaluationScopes name i -> CurAndPrev (Maybe Sugar.ScopeId) ->
     i (Maybe (EvalResDisplay name))
-valOfScope annotation mScopeIds =
+valOfScope curPrevAnn mScopeIds =
     go
     <$> curPrevTag
-    <*> annotation
+    <*> curPrevAnn
     <*> mScopeIds
     & fallbackToPrev
     & sequenceA
@@ -384,4 +384,4 @@ valOfScopePreferCur ::
     Applicative i =>
     Sugar.EvaluationScopes name i -> Sugar.ScopeId ->
     i (Maybe (EvalResDisplay name))
-valOfScopePreferCur annotation = valOfScope annotation . pure . Just
+valOfScopePreferCur ann = valOfScope ann . pure . Just

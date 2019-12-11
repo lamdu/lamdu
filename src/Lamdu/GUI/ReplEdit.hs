@@ -30,7 +30,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Ann, type (#), hVal)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config

@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Ann(..), hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Lamdu.Config.Theme (Theme)

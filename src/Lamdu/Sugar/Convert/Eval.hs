@@ -14,7 +14,6 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
 import           Data.UUID (UUID)
-import           Hyper (Pure(..), Ann(..), type (#), hVal)
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Type.AST.Scheme (QVarInstances(..))

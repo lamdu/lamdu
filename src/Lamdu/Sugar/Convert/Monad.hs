@@ -28,7 +28,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import qualified GUI.Momentu.Direction as Dir
-import           Hyper (Pure, Ann, type (#))
 import           Hyper.Unify.Binding (UVar)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache

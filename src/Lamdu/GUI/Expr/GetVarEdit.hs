@@ -33,7 +33,6 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper (Ann(..))
 import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config

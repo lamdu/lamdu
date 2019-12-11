@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
-import           Hyper (Ann(..), Pure(..), HWitness(..), HFunctor(..), type (#), _Pure, htraverse)
+import           Hyper (HWitness(..), HFunctor(..), htraverse)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))

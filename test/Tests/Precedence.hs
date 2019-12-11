@@ -3,7 +3,6 @@ module Tests.Precedence where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
-import           Hyper (annotation, hVal)
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.SugarStubs (($$), ($.))

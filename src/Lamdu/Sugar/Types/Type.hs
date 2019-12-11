@@ -9,7 +9,7 @@ module Lamdu.Sugar.Types.Type
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (type (#), type (:#), makeHTraversableAndBases)
+import           Hyper (makeHTraversableAndBases)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType)
 import           Hyper.Type.AST.Scheme (QVars)

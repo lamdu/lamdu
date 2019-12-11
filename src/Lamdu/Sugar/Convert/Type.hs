@@ -9,7 +9,6 @@ module Lamdu.Sugar.Convert.Type
 
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
-import           Hyper (Pure(..), Ann(..), type (#), _Pure)
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))

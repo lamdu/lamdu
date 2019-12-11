@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Nominal
     ) where
 
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
-import           Hyper (Ann(..), type (#), _ANode)
+import           Hyper (_ANode)
 import           Hyper.Type.AST.Nominal (ToNom(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder

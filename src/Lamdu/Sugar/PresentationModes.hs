@@ -7,7 +7,6 @@ import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
-import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Data.Anchors as Anchors

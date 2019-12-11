@@ -20,7 +20,6 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
-import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.GUI.CodeEdit as CodeEdit

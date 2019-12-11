@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Composite
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

@@ -23,7 +23,6 @@ import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.UUID (UUID)
 import qualified Hyper
-import           Hyper (Ann(..), type (:#))
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Identifier (identHex, identFromHex)

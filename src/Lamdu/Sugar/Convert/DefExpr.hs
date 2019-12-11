@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.DefExpr
 
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
-import           Hyper (Pure, Ann, type (#), hAnn)
 import           Hyper.Infer (inferResult)
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Binding (UVar)

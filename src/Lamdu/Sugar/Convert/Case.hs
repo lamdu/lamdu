@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Case
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
-import           Hyper (Ann(..), type (#), annotation, hVal, hAnn, _ANode)
+import           Hyper (_ANode)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

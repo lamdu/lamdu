@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import           Data.Property (Property(..))
-import           Hyper (Ann(..), type (#))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef

@@ -7,7 +7,6 @@ module Tests.Sugar where
 import qualified Control.Lens as Lens
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
-import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V

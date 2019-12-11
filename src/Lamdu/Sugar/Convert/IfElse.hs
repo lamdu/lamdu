@@ -3,7 +3,6 @@
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Ann(..), type (#), _Pure, annotation, hVal)
 import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T

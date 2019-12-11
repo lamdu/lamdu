@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.GetField
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Ann(..), type (#), hAnn, _ANode)
+import           Hyper (_ANode)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef

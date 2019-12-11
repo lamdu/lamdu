@@ -10,7 +10,6 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Hyper (Ann(..), type (#))
 import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.App (appChildren)
 import           Hyper.Type.AST.FuncType (FuncType(..))

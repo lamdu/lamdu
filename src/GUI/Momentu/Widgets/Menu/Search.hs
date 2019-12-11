@@ -315,13 +315,13 @@ make ::
     (ResultsContext -> m (Menu.OptionList (Menu.Option m f))) ->
     View -> Id ->
     m (Menu.Placement -> TextWidget f)
-make makeSearchTerm makeOptions annotation myId =
+make makeSearchTerm makeOptions ann myId =
     readSearchTerm myId <&> (`ResultsContext` resultsIdPrefix myId)
     >>= makeOptions
     >>=
     \options ->
     do
-        (mPickFirst, makeMenu) <- Menu.makeHovered myId annotation options
+        (mPickFirst, makeMenu) <- Menu.makeHovered myId ann options
         makeSearchTerm mPickFirst
             <&> \term placement ->
                 term ^. termWidget <&> makeMenu placement

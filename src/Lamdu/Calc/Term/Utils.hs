@@ -8,7 +8,7 @@ module Lamdu.Calc.Term.Utils
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Ann(..), Recursively(..), HFoldable(..), type (#), (#>), withDict)
+import           Hyper (Recursively(..), HFoldable(..), (#>), withDict)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

@@ -6,7 +6,6 @@
 module Tests.JsExport where
 
 import qualified Data.ByteString as BS
-import           Hyper (Ann, type (#))
 import           Lamdu.Calc.Term (Term)
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout

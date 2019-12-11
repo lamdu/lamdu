@@ -4,7 +4,6 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (Ann(..), type (#), hVal, hAnn)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
