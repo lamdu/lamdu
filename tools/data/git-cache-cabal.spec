@@ -1,5 +1,5 @@
 { "outputFiles" : ["dist/build/lamdu/lamdu"]
-, "cmd" : "cabal"
-, "cmdArgs" : ["build"]
+, "cmd" : "sh"
+, "cmdArgs" : ["tools/cabal_build.sh"]
 , "db" : "git-cache"
 }
