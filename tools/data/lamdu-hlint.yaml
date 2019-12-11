@@ -20,6 +20,7 @@
     - hint: {lhs: "zipWith a [0..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "zipWith a [0::Int ..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "map (uncurry a) (Data.Map.toList b)", rhs: "Control.Lens.imap a b ^.. Control.Lens.folded"}
+    - hint: {lhs: "mempty & (Control.Lens.at a ?~ b)", rhs: "a Control.Lens.Extended.==> b"}
 
 - group:
     name: generalise-for-conciseness

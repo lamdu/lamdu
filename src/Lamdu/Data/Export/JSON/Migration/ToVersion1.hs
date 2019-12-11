@@ -11,6 +11,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion1 (migrate) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import qualified Data.Aeson as Aeson
 import           Data.Foldable (asum)
 import qualified Data.Map.Extended as Map
@@ -69,8 +70,7 @@ addFrozenDeps nominalMap frozenDefTypes defObj =
             (Left "undefined noms used")
         let frozenNominals = Map.setMapIntersection usedNoms nominalMap
         let frozenDeps =
-                mempty
-                & Lens.at "defTypes" ?~ frozenDefTypes
+                "defTypes" ==> frozenDefTypes
                 & Lens.at "nominals" .~
                     (Aeson.toJSON frozenNominals <$ guard (frozenNominals /= mempty))
                 & Aeson.Object
@@ -105,25 +105,13 @@ replDefExpr nominalMap defMap val =
     do
         usedVars <- scanVars val
         let frozenDefs = Map.setMapIntersection usedVars defMap & Aeson.toJSON
-        mempty
-            & Lens.at "val" ?~ val
-            & addFrozenDeps nominalMap frozenDefs
-            <&> Aeson.Object
+        "val" ==> val & addFrozenDeps nominalMap frozenDefs <&> Aeson.Object
 
 -- | Represents "forall a. a"
 schemeAny :: Aeson.Value
 schemeAny =
-    mempty
-    & Lens.at "schemeBinders" ?~
-      ( mempty
-        & Lens.at "typeVars" ?~ Aeson.toJSON [var]
-        & Aeson.Object
-      )
-    & Lens.at "schemeType" ?~
-      ( mempty
-        & Lens.at "typeVar" ?~ var
-        & Aeson.Object
-      )
+    "schemeBinders" ==> Aeson.Object ("typeVars" ==> Aeson.toJSON [var])
+    <> "schemeType" ==> Aeson.Object ("typeVar" ==> var)
     & Aeson.Object
     where
         var = Aeson.String "61"
@@ -168,11 +156,10 @@ collectNominals (Aeson.Object obj) =
         case obj ^. Lens.at "nomType" of
         Nothing -> Left "Malformed 'nom' node"
         Just nomType ->
-            mempty & Lens.at nomId ?~ frozenNom & Right
+            nomId ==> frozenNom & Right
             where
                 frozenNom =
-                    mempty
-                    & Lens.at "nomType" ?~ nomType
+                    "nomType" ==> nomType
                     & Lens.at "typeParams" .~ (obj ^. Lens.at "typeParams")
                     & Aeson.Object
     Just _ -> Left "Malformed 'nom' id"
@@ -193,7 +180,7 @@ collectDefs (Aeson.Object obj) =
                 Just defType ->
                     do
                         fixed <- fixScheme defType
-                        mempty & Lens.at defId ?~ fixed & Right
+                        defId ==> fixed & Right
                 Nothing -> Left "Malformed 'def' node"
     Just _ -> Left "Malformed 'def' id"
     Nothing -> Right mempty

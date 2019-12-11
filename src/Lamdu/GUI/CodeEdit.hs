@@ -9,6 +9,7 @@ module Lamdu.GUI.CodeEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Property as Property
@@ -241,7 +242,7 @@ makeNewDefinition cp =
             (Definition.BodyExpr (Definition.Expr holeI mempty))
             ( _Pure # Scheme
                 { _sForAlls =
-                    T.Types (QVars (mempty & Lens.at "a" ?~ mempty)) (QVars mempty)
+                    T.Types (QVars ("a" ==> mempty)) (QVars mempty)
                 , _sTyp = _Pure # T.TVar "a"
             }) ()
             & DataOps.newPublicDefinitionWithPane cp

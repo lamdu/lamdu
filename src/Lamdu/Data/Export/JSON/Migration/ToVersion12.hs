@@ -2,6 +2,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion12 (migrate) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (key, members, _Array)
 import           Data.List (sortOn)
@@ -12,8 +13,7 @@ import qualified Lamdu.Data.Export.JSON.Migration.Common as Migration
 import           Lamdu.Prelude
 
 operatorPresentationMode :: Aeson.Array -> Aeson.Value
-operatorPresentationMode tags =
-    mempty & Lens.at "Operator" ?~ Aeson.Array tags & Aeson.Object
+operatorPresentationMode tags = "Operator" ==> Aeson.Array tags & Aeson.Object
 
 migrateObject ::
     Migration.TagMap -> Aeson.Object -> Aeson.Value -> Either Text Aeson.Array

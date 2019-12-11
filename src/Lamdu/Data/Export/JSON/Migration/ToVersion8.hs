@@ -1,6 +1,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion8 (migrate) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object)
 import           Data.HashMap.Strict (HashMap)
@@ -16,14 +17,12 @@ migrateTerm (Aeson.Object x) =
         (_Object . traverse) migrateTerm nomVal
         <&>
         \fixedVal ->
-        mempty
-        & Lens.at "id" ?~ Aeson.toJSON i
-        & Lens.at "applyArg" ?~ fixedVal
-        & Lens.at "applyFunc" ?~
-            ( mempty
-            & Lens.at "id" ?~ Aeson.toJSON (UUIDUtils.augment "to-version-8" i)
-            & Lens.at "fromNomId" ?~ nomId
-            & Aeson.Object
+        "id" ==> Aeson.toJSON i
+        <> "applyArg" ==> fixedVal
+        <> "applyFunc" ==>
+            Aeson.Object
+            ( "id" ==> Aeson.toJSON (UUIDUtils.augment "to-version-8" i)
+            <> "fromNomId" ==> nomId
             )
     (Nothing, Nothing, _) -> traverse migrateTerm x
     _ -> Left "Malformed from-nom term"

@@ -1,6 +1,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion9 (migrate) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object)
 import qualified Data.HashMap.Strict as HashMap
@@ -19,12 +20,11 @@ collectNominals obj =
     case obj ^. Lens.at "nom" of
     Just (Aeson.String nomId) ->
         case obj ^. Lens.at "typeParams" of
-        Nothing -> mempty & Lens.at nomId ?~ mempty & Right
+        Nothing -> nomId ==> mempty & Right
         Just typeParams ->
             case Aeson.fromJSON typeParams of
             Aeson.Error str -> fail str
-            Aeson.Success nomParams ->
-                mempty & Lens.at nomId ?~ nomParams & Right
+            Aeson.Success nomParams -> nomId ==> nomParams & Right
     Just _ -> Left "Malformed 'nom' id"
     Nothing -> Right mempty
 
