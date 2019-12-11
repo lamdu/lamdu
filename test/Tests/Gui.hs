@@ -2,7 +2,7 @@
 
 module Tests.Gui where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))

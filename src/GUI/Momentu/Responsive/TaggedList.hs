@@ -5,7 +5,7 @@ module GUI.Momentu.Responsive.TaggedList
     , taggedList
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.List as List
 import           Data.Vector.Vector2 (Vector2(..))

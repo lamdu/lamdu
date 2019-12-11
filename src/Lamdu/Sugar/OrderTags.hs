@@ -4,7 +4,7 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Data.List (sortOn)
 import           Hyper
 import           Lamdu.Data.Tag (tagOrder)

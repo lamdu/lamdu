@@ -6,7 +6,7 @@ module GUI.Momentu.Render
     ) where
 
 import           Data.Vector.Vector2 (Vector2(..))
-import qualified Graphics.DrawingCombinators.Extended as Draw
+import qualified Graphics.DrawingCombinators as Draw
 import           Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.GLFW as GLFW

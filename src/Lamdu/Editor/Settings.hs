@@ -3,7 +3,7 @@ module Lamdu.Editor.Settings
     ) where
 
 import           Control.Exception.Lens (handling, _IOException)
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Control.Monad.Except (runExceptT, throwError)
 import           Data.Aeson (eitherDecode')
 import qualified Data.Aeson.Encode.Pretty as AesonPretty

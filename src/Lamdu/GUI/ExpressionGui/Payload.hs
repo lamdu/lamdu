@@ -5,7 +5,7 @@ module Lamdu.GUI.ExpressionGui.Payload
     , mParensId
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Binder
     , convertBinder
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')

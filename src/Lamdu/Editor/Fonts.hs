@@ -2,7 +2,7 @@ module Lamdu.Editor.Fonts
     ( makeGetFonts
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
 import           GUI.Momentu.Font (Font)

@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ) where
 
 import           Control.Applicative ((<|>))
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid

@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Composite
     , ExtendVal(..), extendTag, extendValI, extendRest
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import           Hyper (Ann(..), type (#), annotation, hVal)
 import           Hyper.Combinator.Ann (Annotated)

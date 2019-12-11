@@ -24,7 +24,7 @@ module GUI.Momentu.EventMap
     ) where
 
 import           Control.Applicative ((<|>))
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)

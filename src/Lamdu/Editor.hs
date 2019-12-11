@@ -8,7 +8,7 @@ module Lamdu.Editor
 import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (evalWriterT)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (current)

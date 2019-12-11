@@ -14,7 +14,7 @@
 
 module Tests.Nix (test) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import qualified Data.Aeson.Lens as LensAeson
 import           Data.List (isInfixOf, isPrefixOf)
 import           Data.List.Split (splitOn)

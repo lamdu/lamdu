@@ -3,7 +3,7 @@ module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
 import           Hyper

@@ -19,7 +19,7 @@ import           Control.Monad.State (State, StateT(..), mapStateT, evalState, s
 import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)
 import qualified Crypto.Hash.SHA256 as SHA256
-import qualified Data.Binary.Extended as Binary
+import qualified Data.Binary as Binary
 import           Data.Bits (xor)
 import qualified Data.ByteString.Extended as BS
 import           Data.CurAndPrev (CurAndPrev(..))

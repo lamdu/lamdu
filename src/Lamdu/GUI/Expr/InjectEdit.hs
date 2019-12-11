@@ -3,8 +3,8 @@ module Lamdu.GUI.Expr.InjectEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
-import qualified Control.Lens.Extended as Lens
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
