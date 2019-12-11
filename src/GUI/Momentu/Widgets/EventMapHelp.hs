@@ -191,7 +191,7 @@ make size eventMap =
     do
         mkTreeView <- makeTreeView ?? size
         docs <- E.emDocHandlers
-        eventMap ^.. docs . Lens.withIndex
+        eventMap ^@.. docs
             <&> fromDocHandler . Tuple.swap
             & groupInputDocs & groupTree
             & traverse makeTextViews
