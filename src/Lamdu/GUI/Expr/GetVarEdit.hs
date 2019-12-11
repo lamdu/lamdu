@@ -366,7 +366,7 @@ make ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make getVar pl =
-    stdWrap pl <*> makeNoActions getVar (WidgetIds.fromExprPayload pl)
+    makeNoActions getVar (WidgetIds.fromExprPayload pl) & stdWrap pl
 
 makePunnedVars ::
     ( Monad i, Monad o

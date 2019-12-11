@@ -52,10 +52,9 @@ makeFunc ::
         (Const (Sugar.BinderVarRef Name o)) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
-    stdWrap pl <*>
-    ( GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId
-        <&> Responsive.fromWithTextPos
-    )
+    GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId
+    <&> Responsive.fromWithTextPos
+    & stdWrap pl
     where
         pl = func ^. annotation
         myId = WidgetIds.fromExprPayload pl
@@ -152,10 +151,8 @@ makeSimple ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeSimple (Sugar.App func arg) pl =
-    stdWrapParentExpr pl
-    <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-            <*> sequenceA
-            [ GuiM.makeSubexpression func
-            , GuiM.makeSubexpression arg
-            ]
-        )
+    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+    <*> sequenceA
+    [ GuiM.makeSubexpression func
+    , GuiM.makeSubexpression arg
+    ] & stdWrapParentExpr pl

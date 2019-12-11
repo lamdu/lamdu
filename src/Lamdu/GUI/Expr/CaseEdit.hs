@@ -124,9 +124,9 @@ make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
                 & pure
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
-        stdWrapParentExpr pl
-            <*> (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
+        Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui])
             <&> Widget.weakerEvents addAltEventMap
+            & stdWrapParentExpr pl
     where
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]

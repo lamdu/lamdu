@@ -184,13 +184,11 @@ make ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make ifElse pl =
-    stdWrapParentExpr pl
-    <*> ( renderRows (ExprGui.mParensId pl)
-            <*>
-            ( (:)
-                <$> makeIfThen Element.empty animId ifElse
-                <*> makeElse animId (ifElse ^. Sugar.iElse)
-            )
-        )
+    renderRows (ExprGui.mParensId pl)
+    <*>
+    ( (:)
+        <$> makeIfThen Element.empty animId ifElse
+        <*> makeElse animId (ifElse ^. Sugar.iElse)
+    ) & stdWrapParentExpr pl
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId

@@ -285,12 +285,11 @@ make ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make lit pl =
-    stdWrap pl
-    <*>
     case lit of
     Sugar.LiteralNum x -> numEdit x pl <&> Responsive.fromWithTextPos
     Sugar.LiteralBytes x -> genericEdit Style.bytes x pl
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
+    & stdWrap pl
 
 makeLiteralEventMap ::
     ( MonadReader env m, Monad o

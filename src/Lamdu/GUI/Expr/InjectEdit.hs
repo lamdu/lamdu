@@ -64,7 +64,6 @@ makeInject ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeInject val tag pl =
-    stdWrapParentExpr pl <*>
     do
         env <- Lens.view id
         let delDoc = E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete]
@@ -83,6 +82,7 @@ makeInject val tag pl =
                 <&> Responsive.fromWithTextPos
                 <&> (: [arg])
             )
+        & stdWrapParentExpr pl
     where
         mReplaceParent = val ^. annotation . Sugar.plActions . Sugar.mReplaceParent
 
@@ -125,12 +125,11 @@ makeNullaryInject nullary tag pl =
                         , has . Texts.inject
                         , has . Texts.value
                         ]) ":"
-            stdWrapParentExpr pl <*>
-                ( TagEdit.makeVariantTag tag
-                    /|/ injectIndicator Texts.nullaryInjectSymbol
-                    <&> Responsive.fromWithTextPos
-                    <&> Widget.weakerEvents expandNullaryVal
-                )
+            TagEdit.makeVariantTag tag
+                /|/ injectIndicator Texts.nullaryInjectSymbol
+                <&> Responsive.fromWithTextPos
+                <&> Widget.weakerEvents expandNullaryVal
+                & stdWrapParentExpr pl
     where
         nullaryRecEntityId =
             nullary ^. annotation . Sugar.plEntityId

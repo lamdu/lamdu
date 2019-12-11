@@ -112,14 +112,13 @@ makeUnit pl =
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
         addFieldEventMap <- mkAddFieldEventMap myId
         env <- Lens.view id
-        stdWrap pl
-            <*> ( grammar (label Texts.recordOpener)
-                    /|/ grammar (label Texts.recordCloser)
-                    <&> makeFocusable
-                    <&> Align.tValue %~ Widget.weakerEvents
-                        (addFieldEventMap <> addFieldWithSearchTermEventMap env myId)
-                    <&> Responsive.fromWithTextPos
-                )
+        grammar (label Texts.recordOpener)
+            /|/ grammar (label Texts.recordCloser)
+            <&> makeFocusable
+            <&> Align.tValue %~ Widget.weakerEvents
+                (addFieldEventMap <> addFieldWithSearchTermEventMap env myId)
+            <&> Responsive.fromWithTextPos
+            & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
 
@@ -144,8 +143,8 @@ make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         if isAddField
             then
-                stdWrapParentExpr pl
-                <*> (makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure)
+                makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure
+                & stdWrapParentExpr pl
             else makeUnit pl
 make (Sugar.Composite fields punned recordTail addField) pl =
     do
@@ -176,9 +175,10 @@ make (Sugar.Composite fields punned recordTail addField) pl =
                     [ has . MomentuTexts.navigation
                     , has . Texts.goToParent
                     ]) "}"
-        stdWrapParentExpr pl
-            <*> (makeRecord postProcess (fieldGuis ++ addFieldGuis) <&> Widget.weakerEvents goToRecordEventMap)
+        makeRecord postProcess (fieldGuis ++ addFieldGuis)
+            <&> Widget.weakerEvents goToRecordEventMap
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
+            & stdWrapParentExpr pl
     where
         postProcess =
             case recordTail of

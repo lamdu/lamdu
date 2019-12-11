@@ -66,17 +66,15 @@ makeToNom (Sugar.Nominal tid binder) pl =
                 binder ^.
                 annotation . Sugar.plActions . Sugar.mReplaceParent .
                 Lens._Just . Lens.to mkEventMap
-        stdWrapParentExpr pl
-            <*> ( (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-                    <*>
-                    sequence
-                    [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
-                        <*> mkNomLabel Texts.toNom tid
-                        <&> Responsive.fromWithTextPos
-                        <&> Widget.weakerEvents eventMap
-                    , GuiM.makeBinder binder
-                    ]
-                )
+        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+            <*>
+            sequence
+            [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
+                <*> mkNomLabel Texts.toNom tid
+                <&> Responsive.fromWithTextPos
+                <&> Widget.weakerEvents eventMap
+            , GuiM.makeBinder binder
+            ] & stdWrapParentExpr pl
     where
         myId = WidgetIds.fromExprPayload pl
         nameId = Widget.joinId myId ["name"]
@@ -93,8 +91,8 @@ makeFromNom ::
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeFromNom nom pl =
-    stdWrapParentExpr pl
-    <*> (mkNomLabel Texts.fromNom nom <&> Responsive.fromTextView)
+    mkNomLabel Texts.fromNom nom <&> Responsive.fromTextView
+    & stdWrapParentExpr pl
 
 mkNomLabel ::
     (Monad i, Has (Texts.Code Text) env, Has (Texts.Name Text) env) =>

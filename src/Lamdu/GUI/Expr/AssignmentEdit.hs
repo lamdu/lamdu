@@ -70,12 +70,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-data Parts o = Parts
+data Parts i o = Parts
     { pMParamsEdit :: Maybe (Responsive o)
     , pMScopesEdit :: Maybe (Widget o)
     , pBodyEdit :: Responsive o
     , pEventMap :: EventMap (o GuiState.Update)
-    , pWrap :: Responsive o -> Responsive o
+    , pMLamPayload :: Maybe (Sugar.Payload Name i o ExprGui.Payload)
     , pRhsId :: Widget.Id
     }
 
@@ -383,7 +383,6 @@ makeFunctionParts ::
     , SearchMenu.HasTexts env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
@@ -391,7 +390,7 @@ makeFunctionParts ::
     Sugar.Function Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     Widget.Id ->
-    GuiM env i o (Parts o)
+    GuiM env i o (Parts i o)
 makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
@@ -414,8 +413,7 @@ makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
             rhs <- GuiM.makeBinder (func ^. Sugar.fBody)
-            wrap <- stdWrap pl
-            Parts paramsEdit mScopeNavEdit rhs scopeEventMap wrap bodyId & pure
+            Parts paramsEdit mScopeNavEdit rhs scopeEventMap (Just pl) bodyId & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
@@ -446,7 +444,7 @@ makePlainParts ::
     Sugar.AssignPlain Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     Widget.Id ->
-    GuiM env i o (Parts o)
+    GuiM env i o (Parts i o)
 makePlainParts assignPlain pl delVarBackwardsId =
     do
         mParamsEdit <-
@@ -455,7 +453,7 @@ makePlainParts assignPlain pl delVarBackwardsId =
         rhs <-
             assignPlain ^. Sugar.apBody & Ann (Const pl)
             & GuiM.makeBinder
-        Parts mParamsEdit Nothing rhs mempty id myId & pure
+        Parts mParamsEdit Nothing rhs mempty Nothing myId & pure
     where
         myId = WidgetIds.fromExprPayload pl
 
@@ -466,7 +464,6 @@ makeParts ::
     , SearchMenu.HasTexts env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
@@ -474,7 +471,7 @@ makeParts ::
     Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Sugar.Assignment Name i o) ->
     Widget.Id ->
-    GuiM env i o (Parts o)
+    GuiM env i o (Parts i o)
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
     case assignmentBody of
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
@@ -498,9 +495,9 @@ make ::
     (Sugar.Assignment Name i o) ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
+    makeParts Sugar.UnlimitedFuncApply assignment delParamDest
+    >>= \(Parts mParamsEdit mScopeEdit bodyEdit eventMap mLamPl rhsId) ->
     do
-        Parts mParamsEdit mScopeEdit bodyEdit eventMap wrap rhsId <-
-            makeParts Sugar.UnlimitedFuncApply assignment delParamDest
         env <- Lens.view id
         rhsJumperEquals <-
             GuiM.mkPrejumpPosSaver
@@ -543,10 +540,10 @@ make pMode tag color assignment =
                 & hbox
             , bodyEdit
             ]
-            & wrap
-            & Widget.weakerEvents eventMap
             & pure
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        & maybe id stdWrap mLamPl
+        <&> Widget.weakerEvents eventMap
     where
         myId = WidgetIds.fromExprPayload pl
         delParamDest = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId

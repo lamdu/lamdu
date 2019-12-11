@@ -134,16 +134,13 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
                     ]) . void)
         mOuterScopeId <- GuiM.readMScopeId
         let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
-        stdWrapParentExpr pl
+        Responsive.vboxSpaced
             <*>
-            ( Responsive.vboxSpaced
-                <*>
-                sequence
-                [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
-                , make body
-                & GuiM.withLocalMScopeId letBodyScope
-                ]
-            )
+            sequence
+            [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
+            , make body & GuiM.withLocalMScopeId letBodyScope
+            ]
+        & stdWrapParentExpr pl
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl

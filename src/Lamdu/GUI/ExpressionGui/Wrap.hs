@@ -61,14 +61,15 @@ stdWrap ::
     , Grid.HasTexts env
     ) =>
     Sugar.Payload Name i o ExprGui.Payload ->
-    GuiM env i o
-    (Responsive o -> Responsive o)
-stdWrap pl =
-    (takeFocusIfNeeded pl <&> (Widget.widget %~))
-    <<< (maybeAddAnnotationPl pl <&> (Widget.widget %~))
-    <<< ExprEventMap.add ExprEventMap.defaultOptions pl
+    GuiM env i o (Responsive o) ->
+    GuiM env i o (Responsive o)
+stdWrap pl act =
+    act
+    >>> (takeFocusIfNeeded pl <&> (Widget.widget %~))
+    >>> (maybeAddAnnotationPl pl <&> (Widget.widget %~))
+    >>> ExprEventMap.add ExprEventMap.defaultOptions pl
     where
-        f <<< g = (.) <$> f <*> g
+        a >>> f = f <*> a
 
 parentDelegator ::
     ( HasCallStack, MonadReader env m, Has Config env
@@ -92,11 +93,10 @@ stdWrapParentExpr ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.Payload Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o -> Responsive o)
-stdWrapParentExpr pl =
-    (.)
-    <$> stdWrap pl
-    <*> parentDelegator (WidgetIds.fromExprPayload pl)
+    GuiM env i o (Responsive o) ->
+    GuiM env i o (Responsive o)
+stdWrapParentExpr pl act =
+    parentDelegator (WidgetIds.fromExprPayload pl) <*> act & stdWrap pl
 
 takeFocusIfNeeded ::
     Monad i =>
