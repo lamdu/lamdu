@@ -13,7 +13,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 import           System.TimeIt (timeItT)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data PerfCounters = PerfCounters
     { renderTime :: Double

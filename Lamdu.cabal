@@ -231,6 +231,7 @@ Library
                   , GUI.Momentu.Main.Events.Loop
                   , GUI.Momentu.MetaKey
                   , GUI.Momentu.ModKey
+                  , GUI.Momentu.Prelude
                   , GUI.Momentu.Rect
                   , GUI.Momentu.Render
                   , GUI.Momentu.Responsive

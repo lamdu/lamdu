@@ -23,7 +23,7 @@ import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as Id
 import           Generic.Data (Generically(..))
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 -- The virtual cursor is the focal area that would ideally match the
 -- direction of user movements

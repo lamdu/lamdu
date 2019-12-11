@@ -67,7 +67,7 @@ import qualified GUI.Momentu.Widget.Id as Id
 import           GUI.Momentu.Widget.Instances
 import           GUI.Momentu.Widget.Types as Types
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 class HasWidget w where widget :: Lens.Setter (w a) (w b) (Widget a) (Widget b)
 instance HasWidget Widget where widget = id

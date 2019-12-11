@@ -20,7 +20,7 @@ import qualified GUI.Momentu.Main.Events.Loop as EventLoop
 import           GUI.Momentu.Render (render, PerfCounters(..))
 import qualified Graphics.UI.GLFW as GLFW
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Handlers = Handlers
     { reportPerfCounters :: PerfCounters -> IO ()

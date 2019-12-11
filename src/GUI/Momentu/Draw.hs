@@ -16,7 +16,7 @@ import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified Graphics.DrawingCombinators as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 type Image = Draw.Image ()
 

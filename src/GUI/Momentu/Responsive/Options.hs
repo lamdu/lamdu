@@ -27,7 +27,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data WideLayouts f = WideLayouts
     { _lWide :: TextWidget f

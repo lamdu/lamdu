@@ -8,7 +8,7 @@ import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.MetaKey as MetaKey
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data DirKeys key = DirKeys
     { keysLeft :: [key]

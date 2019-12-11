@@ -23,7 +23,7 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.I18N as MomentuTexts
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 newtype Texts a = Texts
     { _stroll :: a

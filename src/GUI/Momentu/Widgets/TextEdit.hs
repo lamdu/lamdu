@@ -40,7 +40,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Texts a = Texts
     { _textWord :: a

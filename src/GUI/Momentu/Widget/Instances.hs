@@ -39,7 +39,7 @@ import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget.Types
 import           GUI.Momentu.Widgets.StdKeys (stdDirKeys, dirKey)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 sizedState :: Lens.IndexedLens' Size (Widget f) (State (f State.Update))
 sizedState f (Widget sz state) = Lens.indexed f sz state <&> Widget sz

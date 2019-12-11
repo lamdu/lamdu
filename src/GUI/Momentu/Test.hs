@@ -19,7 +19,7 @@ import           GUI.Momentu.Main.Events (Event(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           Control.Monad (foldM)
 
-import           Lamdu.Prelude hiding (lookup)
+import           GUI.Momentu.Prelude hiding (lookup)
 
 data TestEvent m a = TestEvent
     { _teLookupEvent :: EventMap a -> Maybe a

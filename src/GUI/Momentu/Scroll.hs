@@ -9,7 +9,7 @@ import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Widget (Widget(..))
 import qualified GUI.Momentu.Widget as Widget
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 -- Focus area into the given region
 focusAreaInto ::

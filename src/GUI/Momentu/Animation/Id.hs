@@ -8,9 +8,10 @@ module GUI.Momentu.Animation.Id
 import qualified Control.Lens as Lens
 import           Data.Binary.Extended (encodeS)
 import qualified Data.ByteString.Char8 as SBS8
+import           Data.Proxy (Proxy(..))
 import           Data.Typeable (Typeable, typeRep)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 type AnimId = [ByteString]
 

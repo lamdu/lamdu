@@ -53,7 +53,7 @@ import           Graphics.UI.GLFW (MouseButton(..), MouseButtonState(..))
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Texts a = Texts
     { _textQuit :: a

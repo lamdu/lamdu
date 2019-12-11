@@ -23,7 +23,7 @@ import qualified Text.PrettyPrint as Pretty
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 import           Text.Read (readMaybe)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data ModifierKeys = ModifierKeys
     { _cmdOn :: Bool -- Ctrl on most platforms. Cmd on macOS

@@ -42,9 +42,9 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget.Id (Id)
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
-import qualified Lamdu.Prelude as Prelude
+import qualified GUI.Momentu.Prelude as Prelude
 
-import           Lamdu.Prelude hiding (lookup, filter, repeat)
+import           GUI.Momentu.Prelude hiding (lookup, filter, repeat)
 
 {-# ANN module ("HLint: ignore Use camelCase"::String) #-}
 

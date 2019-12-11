@@ -15,7 +15,7 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 make :: View.Size -> View
 make size = View size mempty

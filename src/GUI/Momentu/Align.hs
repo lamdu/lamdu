@@ -20,7 +20,7 @@ import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Aligned a = Aligned
     { _alignmentRatio :: Vector2 R

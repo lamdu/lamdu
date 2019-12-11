@@ -20,7 +20,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           Graphics.DrawingCombinators ((%%), R)
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Font
     = Font Draw.Font

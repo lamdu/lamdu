@@ -16,7 +16,7 @@ import           GUI.Momentu.Responsive
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data TaggedItem f = TaggedItem
     { _tagPre :: Maybe (TextWidget f)

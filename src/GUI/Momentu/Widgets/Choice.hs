@@ -26,7 +26,7 @@ import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 newtype Texts a = Texts
     { _chooseSelected :: a

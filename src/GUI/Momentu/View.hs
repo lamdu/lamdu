@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue (Glue)
 import qualified GUI.Momentu.Glue as Glue
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data View = View
     { _vSize :: Size

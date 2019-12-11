@@ -21,7 +21,7 @@ import           GUI.Momentu.Rect (Rect(Rect))
 import qualified GUI.Momentu.Rect as Rect
 import qualified Graphics.DrawingCombinators as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Config = Config
     { acTimePeriod :: NominalDiffTime

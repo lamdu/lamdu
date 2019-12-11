@@ -13,7 +13,7 @@ import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import           GUI.Momentu.Zoom (Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Config = Config
     { _cAnim :: IO Anim.Config

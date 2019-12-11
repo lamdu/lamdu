@@ -23,7 +23,7 @@ import           Generic.Data (Generically(..))
 import           Graphics.DrawingCombinators (R, (%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 type Size = Vector2 R
 

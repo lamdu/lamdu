@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 groupSize ::
     (Functor f, Foldable f) =>

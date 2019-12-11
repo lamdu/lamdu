@@ -27,7 +27,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Style = Style
     { _indentBarWidth :: Double

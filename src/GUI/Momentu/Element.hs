@@ -18,7 +18,7 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified Graphics.DrawingCombinators as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 -- | LayeredImage is a list of animation frames that overlay on top of each
 -- other (first element is most obscured one). When composing Views,

@@ -56,7 +56,7 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data NarrowLayoutParams = NarrowLayoutParams
     { _layoutWidth :: Widget.R

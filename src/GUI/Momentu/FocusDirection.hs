@@ -7,7 +7,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Rect (R, Range, rangeStart)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data GeometricOrigin = GeometricOrigin
     { oOrientation :: Dir.Orientation

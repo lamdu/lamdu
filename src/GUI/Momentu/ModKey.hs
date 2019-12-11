@@ -15,7 +15,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Instances ()
 import qualified System.Info as SysInfo
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 instance Semigroup GLFW.ModifierKeys where
     GLFW.ModifierKeys a0 b0 c0 d0 <> GLFW.ModifierKeys a1 b1 c1 d1 =

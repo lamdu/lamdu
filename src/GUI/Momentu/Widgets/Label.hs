@@ -12,7 +12,7 @@ import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 make ::
     ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env

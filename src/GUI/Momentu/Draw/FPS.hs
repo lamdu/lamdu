@@ -18,7 +18,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 import           Text.Printf (printf)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 newtype FPS = FPS (IORef UTCTime)
 

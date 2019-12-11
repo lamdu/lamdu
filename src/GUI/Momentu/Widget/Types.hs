@@ -22,7 +22,7 @@ import           GUI.Momentu.Rect (Rect)
 import           GUI.Momentu.State (VirtualCursor, Update)
 import           GUI.Momentu.Widget.Id (Id)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Widget f = Widget
     { _wSize :: Size

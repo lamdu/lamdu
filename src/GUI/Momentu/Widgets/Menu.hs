@@ -46,7 +46,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Texts a = Texts
     { _noResults :: a

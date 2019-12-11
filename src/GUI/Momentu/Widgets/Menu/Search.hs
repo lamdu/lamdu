@@ -58,7 +58,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Texts a = Texts
     { _textPickNotApplicable :: a

@@ -52,7 +52,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Graphics.DrawingCombinators as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data IsHelpShown = HelpShown | HelpNotShown
     deriving (Generic, Eq, Ord, Read, Show)

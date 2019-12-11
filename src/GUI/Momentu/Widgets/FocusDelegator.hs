@@ -15,7 +15,7 @@ import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data FocusEntryTarget = FocusEntryChild | FocusEntryParent
 

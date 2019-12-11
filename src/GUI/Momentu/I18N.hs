@@ -6,7 +6,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           GUI.Momentu.Animation.Id (ElemIds)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Texts a = Texts
     { _edit :: a

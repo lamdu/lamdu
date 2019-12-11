@@ -33,7 +33,7 @@ import qualified GUI.Momentu.View as View
 import           GUI.Momentu.Widget (Widget(..), R)
 import qualified GUI.Momentu.Widget as Widget
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Style = Style
     { _frameColor :: Draw.Color

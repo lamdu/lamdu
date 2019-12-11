@@ -31,7 +31,7 @@ import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.DrawingCombinators.Extended as Draw
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Style = Style
     { _styleColor :: Draw.Color

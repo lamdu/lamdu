@@ -20,7 +20,7 @@ import qualified GUI.Momentu.State as State
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Decay = Decay
     { heightUnit :: Draw.R

@@ -37,7 +37,7 @@ import qualified GUI.Momentu.Widget.Instances as WidgetGlue
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import           GUI.Momentu.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Texts a = Texts
     { _moreLeft :: a

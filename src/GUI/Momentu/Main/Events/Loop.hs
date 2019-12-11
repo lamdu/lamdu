@@ -15,7 +15,7 @@ import           GUI.Momentu.Main.Events
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFW.Utils
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 -- | The output of the event handler back to the event-loop.
 data Next

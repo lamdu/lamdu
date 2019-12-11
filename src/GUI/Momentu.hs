@@ -90,7 +90,7 @@ import qualified GUI.Momentu.Zoom as Zoom
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 type MainLoopEnv = MainLoop.Env
 

@@ -15,7 +15,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Rect (Rect, R)
 import qualified GUI.Momentu.Rect as Rect
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 data Layout
     = LeftToRight -- ^ e.g: latin languages

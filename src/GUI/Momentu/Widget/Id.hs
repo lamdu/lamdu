@@ -10,7 +10,7 @@ import           Data.List.Lens (prefixed)
 import           GUI.Momentu.Animation.Id (AnimId)
 import           Numeric.Extended (encodeHex)
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 newtype Id = Id
     { toAnimId :: AnimId

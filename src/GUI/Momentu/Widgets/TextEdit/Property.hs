@@ -17,7 +17,7 @@ import qualified GUI.Momentu.State as State
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 
-import           Lamdu.Prelude
+import           GUI.Momentu.Prelude
 
 make ::
     ( MonadReader env m, Applicative f
