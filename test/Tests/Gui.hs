@@ -322,12 +322,13 @@ testActions ::
 testActions env virtCursor =
     do
         w <- makeFocusedWidget "" env
-        (w ^. Widget.fEventMap)
-            Widget.EventContext
-            { Widget._eVirtualCursor = virtCursor
-            , Widget._ePrevTextRemainder = ""
-            }
-            ^.. (E.emKeyMap . traverse . Lens.filteredBy E.dhDoc <. (E.dhHandler . E._Doesn'tWantClipboard)) . Lens.withIndex
+        let eventMap =
+                Widget.EventContext
+                { Widget._eVirtualCursor = virtCursor
+                , Widget._ePrevTextRemainder = ""
+                } & w ^. Widget.fEventMap
+        eventMap
+            ^@.. E.emKeyMap . traverse . Lens.filteredBy E.dhDoc <. E.dhHandler . E._Doesn'tWantClipboard
             & traverse_ testEvent
     where
         testEvent (doc, event) =
