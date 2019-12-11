@@ -3,7 +3,8 @@ module Lamdu.Sugar.Names.Clash
     ( Info, infoOf, isClash, collide
     ) where
 
-import qualified Control.Lens.Extended as Lens
+import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import           Control.Monad (foldM)
 import           Data.MMap (MMap)
 import qualified Data.MMap as MMap
@@ -84,7 +85,7 @@ nameContextMatch x y = MMap.unionWithM groupNameContextMatch x y & maybe Clash N
 
 groupNameContextOf :: UUID -> Maybe Disambiguator -> GroupNameContext
 groupNameContextOf uuid Nothing = Ambiguous (Single uuid)
-groupNameContextOf uuid (Just d) = Lens.singletonAt d (Single uuid) & Disambiguated
+groupNameContextOf uuid (Just d) = d ==> Single uuid & Disambiguated
 
 nameContextOf :: Annotated.Name -> NameContext
 nameContextOf (Annotated.Name (InternalName (Just nameCtx) _tag) disamb nameType) =

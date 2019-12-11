@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 module Control.Lens.Extended
     ( module Control.Lens
-    , singletonAt
+    , (==>)
     , filteredByIndex
     , OneOf
     ) where
@@ -21,7 +21,8 @@ filteredByIndex fold f =
     Just proof -> indexed f proof val
 
 -- Generalization of Data.Map.singleton
-singletonAt :: (At a, Monoid a) => Index a -> IxValue a -> a
-singletonAt k v = mempty & at k ?~ v
+{-# ANN (==>) ("HLint: ignore Use ==>"::String) #-}
+(==>) :: (At a, Monoid a) => Index a -> IxValue a -> a
+k ==> v = mempty & at k ?~ v
 
 type OneOf f = forall a. Lens' (f a) a
