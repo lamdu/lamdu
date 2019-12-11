@@ -332,7 +332,7 @@ testActions env virtCursor =
                     E.emKeyMap . traverse . docHandler <. E._Doesn'tWantClipboard
                 , eventMap ^@..
                     E.emCharGroupHandlers . traverse . E.cgDocHandler . docHandler
-                    <. traverse
+                    <. Lens.taking 1 traverse
                 , eventMap ^@..
                     E.emAllCharsHandler . traverse . E.chDocHandler . docHandler
                     >>= _2 exampleChars
