@@ -217,13 +217,16 @@ transformEventMap =
             <&> (detach <&>)
     in  case exprInfoActions exprInfo ^. Sugar.detach of
         Sugar.DetachAction detach ->
-            addOperatorSetHoleState options & maybe detach pure
-        Sugar.FragmentAlready holeId -> pure holeId
-        Sugar.FragmentExprAlready holeId -> pure holeId
-        <&> WidgetIds.fromEntityId
-        <&> WidgetIds.fragmentHoleId
-        <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
+            addOperatorSetHoleState options & maybe detachAndOpen widgetId
+            <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
+            where
+                detachAndOpen =
+                    detach <&> WidgetIds.fromEntityId <&> WidgetIds.fragmentHoleId
+        Sugar.FragmentAlready holeId -> widgetId holeId
+        Sugar.FragmentExprAlready holeId -> widgetId holeId
         & action
+    where
+        widgetId = pure . WidgetIds.fromEntityId
 
 detachEventMap ::
     ( MonadReader env m, Has Config env
