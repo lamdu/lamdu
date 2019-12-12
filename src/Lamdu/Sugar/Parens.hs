@@ -127,7 +127,7 @@ loopExprBody parentPrec body_ =
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyFromNom      x -> result False (BodyFromNom x)
     BodyHole         x -> result False (BodyHole x)
-    BodyFragment     x -> rightSymbol fExpr 0 BodyFragment x
+    BodyFragment     x -> rightSymbol fExpr 7 BodyFragment x
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
     BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result False
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
