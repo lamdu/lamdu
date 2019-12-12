@@ -223,7 +223,9 @@ transformEventMap =
                 detachAndOpen =
                     detach <&> WidgetIds.fromEntityId <&> WidgetIds.fragmentHoleId
         Sugar.FragmentAlready holeId -> widgetId holeId
-        Sugar.FragmentExprAlready holeId -> widgetId holeId
+        Sugar.FragmentExprAlready holeId ->
+            widgetId holeId
+            <&> WidgetIds.fragmentHoleId <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
         & action
     where
         widgetId = pure . WidgetIds.fromEntityId
