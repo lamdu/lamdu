@@ -349,7 +349,7 @@ docHandler ::
     (Lens.Indexable E.Doc p, Applicative f) =>
     p a (f a) -> E.DocHandler a ->
     f (E.DocHandler a)
-docHandler x = Lens.filteredBy E.dhDoc <. E.dhHandler $ x
+docHandler = Lens.filteredBy E.dhDoc <. E.dhHandler
 
 testActionsAndNavigation :: HasCallStack => Env -> VirtualCursor -> T ViewM ()
 testActionsAndNavigation = testConsistentKeyboardNavigation <> testActions
