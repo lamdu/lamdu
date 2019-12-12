@@ -38,10 +38,8 @@ import qualified Lamdu.Data.Tag as Tag
 
 import           Lamdu.Prelude hiding ((.=))
 
-type Encoded = Aeson.Value
-
-type Encoder a = a -> Encoded
-type Decoder a = Encoded -> AesonTypes.Parser a
+type Encoder a = a -> Aeson.Value
+type Decoder a = Aeson.Value -> AesonTypes.Parser a
 
 type TagOrder = Int
 
@@ -257,7 +255,7 @@ decodeType json =
     ]
     <&> (_Pure #)
 
-encodeCompositeVarConstraints :: T.RConstraints -> [Encoded]
+encodeCompositeVarConstraints :: T.RConstraints -> [Aeson.Value]
 encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
     | scopeLevel == mempty =
         Set.toList forbidden
@@ -268,7 +266,7 @@ encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
         error "encodeCompositeVarConstraints does not support inner-scoped types"
 
 decodeCompositeConstraints ::
-    [Encoded] -> AesonTypes.Parser T.RConstraints
+    [Aeson.Value] -> AesonTypes.Parser T.RConstraints
 decodeCompositeConstraints json =
     traverse decodeIdent json <&> map T.Tag <&> Set.fromList
     <&> (`T.RowConstraints` mempty)
@@ -401,7 +399,7 @@ instance Codec V.Term where
             "toNomVal" ==> c x
         V.BLeaf x -> encodeLeaf x
         where
-            encBody :: V.Term # Const Encoded
+            encBody :: V.Term # Const Aeson.Value
             encBody = hmap (Proxy @Codec #> Lens.Const . encodeVal) body
             c x = x ^. Lens._Wrapped
     decodeBody obj =
@@ -441,7 +439,7 @@ instance Codec V.Term where
         ] >>=
         htraverse (Proxy @Codec #> decodeVal . (^. Lens._Wrapped))
         where
-            c :: Encoded -> Const Encoded # n
+            c :: Aeson.Value -> Const Aeson.Value # n
             c = Lens.Const
 
 instance Codec (HCompose Prune T.Type) where
