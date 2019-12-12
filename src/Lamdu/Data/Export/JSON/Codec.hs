@@ -6,6 +6,7 @@ module Lamdu.Data.Export.JSON.Codec
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import           Data.Aeson ((.=), (.:))
 import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson as Aeson
@@ -196,7 +197,7 @@ encodeComposite  =
     where
         go (Pure T.REmpty) = []
         go (Pure (T.RVar (T.Var name))) =
-            [mempty & Lens.at "rowVar" ?~ encodeIdent name & Aeson.Object]
+            ["rowVar" ==> encodeIdent name & Aeson.Object]
         go (Pure (T.RExtend (RowExtend t v r))) =
             (encodeType v & _Object . Lens.at "rowTag" ?~ encodeTagId t) : go r
 
@@ -462,7 +463,7 @@ instance Codec (HCompose Prune T.Type) where
             <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
     encodeBody (HCompose Pruned) = mempty
     encodeBody (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
-        mempty & Lens.at "record" ?~ (Aeson.Array . Vector.fromList) (go row)
+        "record" ==> (Aeson.Array . Vector.fromList) (go row)
         where
             go (Ann uuid (HCompose b)) =
                 Aeson.Object (insertField "rowId" uuid x) : xs
@@ -477,8 +478,7 @@ instance Codec (HCompose Prune T.Type) where
                                     (RowExtend t
                                         (HCompose (Ann fId (HCompose Pruned)))
                                         (HCompose r)))) ->
-                            ( mempty
-                                & Lens.at "rowTag" ?~ encodeTagId t
+                            ( "rowTag" ==> encodeTagId t
                                 & insertField "id" fId
                             , go r
                             )

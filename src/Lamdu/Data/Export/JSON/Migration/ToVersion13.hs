@@ -1,6 +1,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion13 (migrate) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((==>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Array, _Object, _String)
 import           Data.Binary.Extended (encodeS)
@@ -28,14 +29,12 @@ collectLamParams _ = Right mempty
 encodeParamList :: UUID -> Maybe [TagId] -> Aeson.Object
 encodeParamList _ Nothing = mempty
 encodeParamList baseId (Just params) =
-    mempty
-    & Lens.at "record" ?~
-        (Aeson.Array . Vector.fromList)
-        ((zip [0 :: Int ..] params <&> uncurry mkField) <> [rowTail])
+    "record" ==>
+    (Aeson.Array . Vector.fromList)
+    ((zip [0 :: Int ..] params <&> uncurry mkField) <> [rowTail])
     where
         rowTail =
-            mempty
-            & Lens.at "rowId" ?~ Aeson.toJSON (UUIDUtils.augment "tail" baseId)
+            "rowId" ==> Aeson.toJSON (UUIDUtils.augment "tail" baseId)
             & Aeson.Object
         mkField i tagId =
             mempty
@@ -78,7 +77,7 @@ migrateRow (Aeson.Array v) =
     case v ^.. traverse of
     [Aeson.Object obj, Aeson.String rest] ->
         migrateRowFields obj
-        <&> (<> [mempty & Lens.at "rowVar" ?~ Aeson.String rest & Aeson.Object])
+        <&> (<> ["rowVar" ==> Aeson.String rest & Aeson.Object])
         <&> Aeson.Array . Vector.fromList
     _ -> Left "Malformed row"
 migrateRow _ = Left "Malformed row"
@@ -115,8 +114,8 @@ migrateEntity lamsMap (Aeson.Object obj)
         >>= (Lens.ix "frozenDeps" . _Object) migrateFrozenDeps
         >>= (Lens.ix "repl" . _Object . Lens.ix "val" . _Object) (migrateExpr lamsMap)
         >>= (Lens.ix "repl" . _Object . Lens.ix "frozenDeps" . _Object) migrateFrozenDeps
-        >>= (Lens.ix "typ") migrateScheme
-        >>= (Lens.ix "nomType") migrateScheme
+        >>= Lens.ix "typ" migrateScheme
+        >>= Lens.ix "nomType" migrateScheme
         <&> (:[]) . Aeson.Object
 migrateEntity _ x = Right [x]
 
