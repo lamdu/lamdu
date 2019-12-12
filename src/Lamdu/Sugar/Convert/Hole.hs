@@ -477,7 +477,7 @@ mkResultVals sugarContext scope seed =
         do
             id .= newInferState
             form <-
-                Suggest.termTransformsWithModify (Const () :*:) (^. _2) i
+                Suggest.termTransformsWithModify scope (Const () :*:) (^. _2) i
                 & mapStateT ListClass.fromList
             pure (newDeps, form & hflipped %~ hmap (const (_1 .~ WriteNew)))
     where

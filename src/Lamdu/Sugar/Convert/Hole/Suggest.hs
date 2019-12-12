@@ -33,18 +33,19 @@ type TypedTerm m = Ann (InferResult (UVarOf m)) # V.Term
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
+    V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
-termTransforms mkPl getInferred src =
+termTransforms srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody . T._TRecord)
     >>=
     \case
     Just row | Lens.nullOf (hVal . V._BRecExtend) src ->
         transformGetFields mkPl src row
-    _ -> termTransformsWithoutSplit mkPl getInferred src
+    _ -> termTransformsWithoutSplit srcScope mkPl getInferred src
 
 transformGetFields ::
     (InferResult UVar # V.Term -> a # V.Term) ->
@@ -69,11 +70,12 @@ liftInfer e act =
             Right (r, newState) -> r <$ State.put newState
 
 termTransformsWithoutSplit ::
+    V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
-termTransformsWithoutSplit mkPl getInferred src =
+termTransformsWithoutSplit srcScope mkPl getInferred src =
     do
         -- Don't modify a redex from the outside.
         -- Such transform are more suitable in it!
@@ -91,8 +93,8 @@ termTransformsWithoutSplit mkPl getInferred src =
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
                             & V.BApp & mkResult resultType & pure
-                    & liftInfer (V.emptyScope @UVar)
-                    >>= termOptionalTransformsWithoutSplit mkPl getInferred
+                    & liftInfer srcScope
+                    >>= termOptionalTransformsWithoutSplit srcScope mkPl getInferred
             Just (T.TVariant row) | Lens.nullOf (hVal . V._BInject) src ->
                 do
                     dstType <- newUnbound
@@ -121,19 +123,20 @@ termTransformsWithoutSplit mkPl getInferred src =
                             -- If the suggested argument has holes in it
                             -- then stop suggesting there to avoid "overwhelming"..
                             Lens.nullOf (ExprLens.valLeafs . V._LHole) arg & guard
-                            termTransformsWithoutSplit mkPl getInferred applied
+                            termTransformsWithoutSplit srcScope mkPl getInferred applied
             _ -> empty
     where
         mkResult t = Ann (mkPl (inferResult # t))
 
 termOptionalTransformsWithoutSplit ::
+    V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
-termOptionalTransformsWithoutSplit mkPl getInferred src =
+termOptionalTransformsWithoutSplit srcScope mkPl getInferred src =
     pure src <|>
-    termTransformsWithoutSplit mkPl getInferred src
+    termTransformsWithoutSplit srcScope mkPl getInferred src
 
 -- | Suggest values that fit a type, may "split" once, to suggest many
 -- injects for a sum type. These are offerred in holes (not fragments).
@@ -272,16 +275,17 @@ fillHoles mkPl getInferred x =
 -- whereas fragments emplace their content inside holes of these
 -- results.
 termTransformsWithModify ::
+    V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
-termTransformsWithModify _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
-termTransformsWithModify _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+termTransformsWithModify _ _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
+termTransformsWithModify _ _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
     -- Variant:<hole> ==> Variant.
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
-termTransformsWithModify mkPl getInferred src =
+termTransformsWithModify srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
     <&> (^? _2 . _UTerm . uBody)
     >>=
@@ -292,4 +296,4 @@ termTransformsWithModify mkPl getInferred src =
     _ ->
         do
             t <- fillHoles mkPl getInferred src & liftInfer V.emptyScope
-            pure t <|> termTransforms mkPl getInferred t
+            pure t <|> termTransforms srcScope mkPl getInferred t

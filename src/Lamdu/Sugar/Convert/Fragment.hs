@@ -91,7 +91,7 @@ mkAppliedHoleSuggesteds ::
     [HoleOption InternalName (T m) (T m)]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
-    ( Suggest.termTransforms (WriteNew :*:) (^. _2)
+    ( Suggest.termTransforms (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
         ( argI & hflipped %~
             hmap
             ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
