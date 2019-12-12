@@ -54,7 +54,7 @@ data Entity
     | EntityLamVar T.Tag V.Var
 Lens.makePrisms ''Entity
 
-instance AesonTypes.ToJSON Entity where
+instance Aeson.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
     toJSON (EntityRepl x) = encodeRepl x
     toJSON (EntityDef def) = encodeDef def
@@ -62,7 +62,7 @@ instance AesonTypes.ToJSON Entity where
     toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
     toJSON (EntityLamVar tag var) = encodeTaggedLamVar (tag, var)
 
-instance AesonTypes.FromJSON Entity where
+instance Aeson.FromJSON Entity where
     parseJSON =
         decodeVariant "entity"
         [ ("repl", fmap EntityRepl . decodeRepl)
@@ -73,7 +73,7 @@ instance AesonTypes.FromJSON Entity where
         , ("schemaVersion", fmap EntitySchemaVersion . decodeSchemaVersion)
         ]
 
-array :: [AesonTypes.Value] -> AesonTypes.Value
+array :: [Aeson.Value] -> Aeson.Value
 array = Aeson.Array . Vector.fromList
 
 encodePresentationMode :: Encoder Meta.PresentationMode
@@ -150,7 +150,7 @@ encodeSquash ::
     Text -> (a -> j) -> a -> Aeson.Object
 encodeSquash name encode x
     | x == mempty = mempty
-    | otherwise = name ==> AesonTypes.toJSON (encode x)
+    | otherwise = name ==> Aeson.toJSON (encode x)
 
 -- | Parse object based on containing some traversal
 decodeVariantObj ::
@@ -166,7 +166,7 @@ decodeVariant ::
     String ->
     [(Text, Aeson.Object -> AesonTypes.Parser r)] ->
     Aeson.Value -> AesonTypes.Parser r
-decodeVariant msg options (AesonTypes.Object obj) =
+decodeVariant msg options (Aeson.Object obj) =
     decodeVariantObj msg options obj
 decodeVariant msg _ _ = "parseVariant of " <> msg <> " expected object!" & fail
 
@@ -311,7 +311,7 @@ decodeScheme =
         typ <- obj .: "schemeType" >>= decodeType
         _Pure # Scheme tvs typ & pure
 
-encodeLeaf :: V.Leaf -> AesonTypes.Object
+encodeLeaf :: V.Leaf -> Aeson.Object
 encodeLeaf =
     \case
     V.LHole -> l "hole"
@@ -326,7 +326,7 @@ encodeLeaf =
     where
         l x = x ==> Aeson.object []
 
-decodeLeaf :: AesonTypes.Object -> AesonTypes.Parser V.Leaf
+decodeLeaf :: Aeson.Object -> AesonTypes.Parser V.Leaf
 decodeLeaf =
     decodeVariantObj "leaf"
     [ l "hole" V.LHole
@@ -351,7 +351,7 @@ decodeLeaf =
             , \obj ->
                 obj .: key >>=
                 \case
-                AesonTypes.Object x | HashMap.null x -> pure v
+                Aeson.Object x | HashMap.null x -> pure v
                 x -> fail ("bad val for leaf " ++ show x)
             )
 
@@ -359,15 +359,15 @@ encodeVal :: Codec h => Encoder (Ann (Const UUID) # h)
 encodeVal (Ann uuid body) =
     encodeBody body
     & insertField "id" uuid
-    & AesonTypes.Object
+    & Aeson.Object
 
 class Codec h where
-    decodeBody :: AesonTypes.Object -> AesonTypes.Parser (h # Ann (Const UUID))
-    encodeBody :: h # Ann (Const UUID) -> AesonTypes.Object
+    decodeBody :: Aeson.Object -> AesonTypes.Parser (h # Ann (Const UUID))
+    encodeBody :: h # Ann (Const UUID) -> Aeson.Object
 
 decodeVal :: Codec h => Decoder (Ann (Const UUID) # h)
 decodeVal =
-    AesonTypes.withObject "val" $ \obj ->
+    Aeson.withObject "val" $ \obj ->
     Ann
     <$> (obj .: "id")
     <*> decodeBody obj
